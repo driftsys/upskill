@@ -3,6 +3,15 @@ use clap::{Parser, Subcommand};
 use upskill::{InstallSource, parse_install_source};
 
 const CANONICAL_TARGET: &str = ".agents/skills";
+const AGENT_SKILL_LINKS: [&str; 7] = [
+    ".claude/skills",
+    ".github/skills",
+    ".codex/skills",
+    ".cursor/skills",
+    ".kiro/skills",
+    ".windsurf/skills",
+    ".opencode/skills",
+];
 
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
@@ -24,6 +33,9 @@ enum Commands {
         /// Symlink to Copilot skills directory
         #[arg(long)]
         copilot: bool,
+        /// Symlink to every supported agent skills directory
+        #[arg(long)]
+        all: bool,
     },
 }
 
@@ -35,13 +47,14 @@ fn main() {
             source,
             claude,
             copilot,
-        } => run_add(&source, claude, copilot),
+            all,
+        } => run_add(&source, claude, copilot, all),
     };
 
     std::process::exit(exit_code);
 }
 
-fn run_add(source: &str, claude: bool, copilot: bool) -> i32 {
+fn run_add(source: &str, claude: bool, copilot: bool, all: bool) -> i32 {
     if let Err(err) = ensure_canonical_target() {
         eprintln!("error: {}", err);
         return 1;
@@ -49,7 +62,7 @@ fn run_add(source: &str, claude: bool, copilot: bool) -> i32 {
 
     match parse_install_source(source) {
         Ok(InstallSource::Github(repo)) => {
-            if let Err(err) = ensure_agent_symlinks(claude, copilot) {
+            if let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
                 eprintln!("error: {}", err);
                 return 1;
             }
@@ -65,7 +78,7 @@ fn run_add(source: &str, claude: bool, copilot: bool) -> i32 {
                 return 2;
             }
 
-            if let Err(err) = ensure_agent_symlinks(claude, copilot) {
+            if let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
                 eprintln!("error: {}", err);
                 return 1;
             }
@@ -90,7 +103,14 @@ fn ensure_canonical_target() -> Result<(), String> {
     })
 }
 
-fn ensure_agent_symlinks(claude: bool, copilot: bool) -> Result<(), String> {
+fn ensure_agent_symlinks(claude: bool, copilot: bool, all: bool) -> Result<(), String> {
+    if all {
+        for link in AGENT_SKILL_LINKS {
+            create_symlink(link)?;
+        }
+        return Ok(());
+    }
+
     let auto_detect = !claude && !copilot;
 
     let link_claude = claude || (auto_detect && std::path::Path::new(".claude").exists());
