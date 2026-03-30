@@ -43,3 +43,35 @@ fn add_rejects_missing_local_path() {
         .code(2)
         .stderr("error: local path does not exist: ./definitely-not-present-upskill-skill-path\n");
 }
+
+#[test]
+fn add_creates_canonical_target_for_github_source() {
+    let cwd = tempdir().expect("must create temp dir");
+    let canonical = cwd.path().join(".agents/skills");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills"])
+        .assert()
+        .success();
+
+    assert!(canonical.is_dir(), "canonical target must be created");
+}
+
+#[test]
+fn add_creates_canonical_target_for_local_source() {
+    let cwd = tempdir().expect("must create temp dir");
+    let local_source = cwd.path().join("source");
+    std::fs::create_dir_all(&local_source).expect("must create local source");
+    let canonical = cwd.path().join(".agents/skills");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", local_source.to_str().expect("utf8 path")])
+        .assert()
+        .success();
+
+    assert!(canonical.is_dir(), "canonical target must be created");
+}
