@@ -21,12 +21,26 @@ pub struct GithubRepo {
     pub name: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InstallSource {
+    Github(GithubRepo),
+    LocalPath(String),
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum SourceParseError {
     #[error("source must be in owner/repo format")]
     InvalidFormat,
     #[error("owner and repo must be non-empty")]
     EmptySegment,
+}
+
+pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
+    if source.starts_with("./") || source.starts_with("../") || source.starts_with('/') {
+        return Ok(InstallSource::LocalPath(source.to_string()));
+    }
+
+    parse_github_repo(source).map(InstallSource::Github)
 }
 
 pub fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseError> {
@@ -75,5 +89,29 @@ mod tests {
     fn reject_multiple_slashes() {
         let err = parse_github_repo("owner/repo/extra").expect_err("must fail");
         assert_eq!(err, SourceParseError::InvalidFormat);
+    }
+
+    #[test]
+    fn parse_local_relative_source() {
+        let source = parse_install_source("./skills").expect("must parse");
+        assert_eq!(source, InstallSource::LocalPath("./skills".to_string()));
+    }
+
+    #[test]
+    fn parse_local_absolute_source() {
+        let source = parse_install_source("/tmp/skills").expect("must parse");
+        assert_eq!(source, InstallSource::LocalPath("/tmp/skills".to_string()));
+    }
+
+    #[test]
+    fn parse_github_source_from_install_parser() {
+        let source = parse_install_source("owner/repo").expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::Github(GithubRepo {
+                owner: "owner".to_string(),
+                name: "repo".to_string(),
+            })
+        );
     }
 }
