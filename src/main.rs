@@ -1,9 +1,17 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, error::ErrorKind};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::{InstallSource, parse_install_source};
 
 const PROJECT_CANONICAL_TARGET: &str = ".agents/skills";
 const GLOBAL_CANONICAL_TARGET: &str = ".agents/skills";
+const EXIT_SUCCESS: i32 = 0;
+const EXIT_ERROR: i32 = 1;
+const EXIT_USAGE: i32 = 2;
+const EXIT_INTERRUPTED: i32 = 130;
+
+static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
 const AGENT_SKILL_LINKS: [&str; 7] = [
     ".claude/skills",
     ".github/skills",
@@ -64,9 +72,21 @@ enum Commands {
 }
 
 fn main() {
-    let cli = Cli::parse();
+    if let Err(err) = install_signal_handlers() {
+        eprintln!("error: {}", err);
+        std::process::exit(EXIT_ERROR);
+    }
 
-    let exit_code = match cli.command {
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            let code = map_clap_error(&err);
+            let _ = err.print();
+            std::process::exit(code);
+        }
+    };
+
+    let mut exit_code = match cli.command {
         Commands::Add {
             source,
             skills,
@@ -79,7 +99,29 @@ fn main() {
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
     };
 
+    if was_interrupted() {
+        exit_code = EXIT_INTERRUPTED;
+    }
+
     std::process::exit(exit_code);
+}
+
+fn install_signal_handlers() -> Result<(), String> {
+    ctrlc::set_handler(|| {
+        INTERRUPTED.store(true, Ordering::SeqCst);
+    })
+    .map_err(|err| format!("failed to install signal handler: {}", err))
+}
+
+fn was_interrupted() -> bool {
+    INTERRUPTED.load(Ordering::SeqCst)
+}
+
+fn map_clap_error(err: &clap::Error) -> i32 {
+    match err.kind() {
+        ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => EXIT_SUCCESS,
+        _ => EXIT_USAGE,
+    }
 }
 
 fn run_add(
