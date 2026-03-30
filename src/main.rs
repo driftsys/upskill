@@ -2,7 +2,8 @@ use clap::{Parser, Subcommand};
 
 use upskill::{InstallSource, parse_install_source};
 
-const CANONICAL_TARGET: &str = ".agents/skills";
+const PROJECT_CANONICAL_TARGET: &str = ".agents/skills";
+const GLOBAL_CANONICAL_TARGET: &str = ".agents/skills";
 const AGENT_SKILL_LINKS: [&str; 7] = [
     ".claude/skills",
     ".github/skills",
@@ -39,9 +40,16 @@ enum Commands {
         /// Symlink to every supported agent skills directory
         #[arg(long)]
         all: bool,
+        /// Use user-level global installation target
+        #[arg(short = 'g', long = "global")]
+        global: bool,
     },
     /// List installed skills
-    List,
+    List {
+        /// Read from user-level global installation target
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
     /// Remove an installed skill
     Remove {
         /// Skill name to remove
@@ -49,6 +57,9 @@ enum Commands {
         /// Skip confirmation prompt
         #[arg(long)]
         yes: bool,
+        /// Remove from user-level global installation target
+        #[arg(short = 'g', long = "global")]
+        global: bool,
     },
 }
 
@@ -62,16 +73,32 @@ fn main() {
             claude,
             copilot,
             all,
-        } => run_add(&source, &skills, claude, copilot, all),
-        Commands::List => run_list(),
-        Commands::Remove { skill, yes } => run_remove(&skill, yes),
+            global,
+        } => run_add(&source, &skills, claude, copilot, all, global),
+        Commands::List { global } => run_list(global),
+        Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
     };
 
     std::process::exit(exit_code);
 }
 
-fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bool) -> i32 {
-    if let Err(err) = ensure_canonical_target() {
+fn run_add(
+    source: &str,
+    skills: &[String],
+    claude: bool,
+    copilot: bool,
+    all: bool,
+    global: bool,
+) -> i32 {
+    let canonical_target = match canonical_target(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return 1;
+        }
+    };
+
+    if let Err(err) = ensure_canonical_target(&canonical_target) {
         eprintln!("error: {}", err);
         return 1;
     }
@@ -85,12 +112,14 @@ fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bo
             };
             let resolved_skills = resolve_requested_skills(skills, &repo.name);
 
-            if let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
+            if !global && let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
                 eprintln!("error: {}", err);
                 return 1;
             }
 
-            if let Err(err) = persist_installed_skills(&resolved_skills, &source_label) {
+            if let Err(err) =
+                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            {
                 eprintln!("error: {}", err);
                 return 1;
             }
@@ -117,13 +146,15 @@ fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bo
                 .unwrap_or("local-skill");
             let resolved_skills = resolve_requested_skills(skills, default_skill);
 
-            if let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
+            if !global && let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
                 eprintln!("error: {}", err);
                 return 1;
             }
 
             let source_label = format!("local:{}", path);
-            if let Err(err) = persist_installed_skills(&resolved_skills, &source_label) {
+            if let Err(err) =
+                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            {
                 eprintln!("error: {}", err);
                 return 1;
             }
@@ -140,18 +171,25 @@ fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bo
     }
 }
 
-fn run_list() -> i32 {
-    let canonical = std::path::Path::new(CANONICAL_TARGET);
+fn run_list(global: bool) -> i32 {
+    let canonical = match canonical_target(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return 1;
+        }
+    };
+
     if !canonical.exists() {
         println!("no skills installed");
         return 0;
     }
 
     let mut skills = Vec::new();
-    let entries = match std::fs::read_dir(canonical) {
+    let entries = match std::fs::read_dir(&canonical) {
         Ok(entries) => entries,
         Err(err) => {
-            eprintln!("error: failed to read {}: {}", CANONICAL_TARGET, err);
+            eprintln!("error: failed to read {}: {}", canonical.display(), err);
             return 1;
         }
     };
@@ -193,8 +231,16 @@ fn run_list() -> i32 {
     0
 }
 
-fn run_remove(skill: &str, yes: bool) -> i32 {
-    let skill_path = std::path::Path::new(CANONICAL_TARGET).join(skill);
+fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
+    let canonical = match canonical_target(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return 1;
+        }
+    };
+
+    let skill_path = canonical.join(skill);
     if !skill_path.is_dir() {
         eprintln!("error: skill not installed: {}", skill);
         return 2;
@@ -210,7 +256,7 @@ fn run_remove(skill: &str, yes: bool) -> i32 {
         return 1;
     }
 
-    if let Err(err) = cleanup_agent_symlinks_if_empty() {
+    if !global && let Err(err) = cleanup_agent_symlinks_if_empty(&canonical) {
         eprintln!("error: {}", err);
         return 1;
     }
@@ -235,8 +281,8 @@ fn confirm_removal(skill: &str) -> bool {
     matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes")
 }
 
-fn cleanup_agent_symlinks_if_empty() -> Result<(), String> {
-    if !canonical_has_skills()? {
+fn cleanup_agent_symlinks_if_empty(canonical: &std::path::Path) -> Result<(), String> {
+    if !canonical_has_skills(canonical)? {
         for link in AGENT_SKILL_LINKS {
             remove_symlink_if_exists(link)?;
         }
@@ -245,8 +291,7 @@ fn cleanup_agent_symlinks_if_empty() -> Result<(), String> {
     Ok(())
 }
 
-fn canonical_has_skills() -> Result<bool, String> {
-    let canonical = std::path::Path::new(CANONICAL_TARGET);
+fn canonical_has_skills(canonical: &std::path::Path) -> Result<bool, String> {
     if !canonical.exists() {
         return Ok(false);
     }
@@ -288,9 +333,13 @@ fn resolve_requested_skills(skills: &[String], default_skill: &str) -> Vec<Strin
     skills.to_vec()
 }
 
-fn persist_installed_skills(skills: &[String], source: &str) -> Result<(), String> {
+fn persist_installed_skills(
+    canonical_target: &std::path::Path,
+    skills: &[String],
+    source: &str,
+) -> Result<(), String> {
     for skill in skills {
-        let skill_dir = std::path::Path::new(CANONICAL_TARGET).join(skill);
+        let skill_dir = canonical_target.join(skill);
         std::fs::create_dir_all(&skill_dir)
             .map_err(|err| format!("failed to create {}: {}", skill_dir.display(), err))?;
         std::fs::write(skill_dir.join(".upskill-source"), source)
@@ -336,11 +385,23 @@ fn print_selected_skills(skills: &[String]) {
     println!("skills: {}", skills.join(","));
 }
 
-fn ensure_canonical_target() -> Result<(), String> {
-    std::fs::create_dir_all(CANONICAL_TARGET).map_err(|err| {
+fn canonical_target(global: bool) -> Result<std::path::PathBuf, String> {
+    if global {
+        let home = std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .ok_or_else(|| "HOME is not set".to_string())?;
+        return Ok(home.join(GLOBAL_CANONICAL_TARGET));
+    }
+
+    Ok(std::path::PathBuf::from(PROJECT_CANONICAL_TARGET))
+}
+
+fn ensure_canonical_target(canonical_target: &std::path::Path) -> Result<(), String> {
+    std::fs::create_dir_all(canonical_target).map_err(|err| {
         format!(
             "failed to create canonical target {}: {}",
-            CANONICAL_TARGET, err
+            canonical_target.display(),
+            err
         )
     })
 }
@@ -373,7 +434,7 @@ fn create_symlink(link_path: &str) -> Result<(), String> {
     let link = std::path::Path::new(link_path);
     let target = std::env::current_dir()
         .map_err(|err| format!("failed to resolve current dir: {}", err))?
-        .join(CANONICAL_TARGET);
+        .join(PROJECT_CANONICAL_TARGET);
 
     if let Some(parent) = link.parent() {
         std::fs::create_dir_all(parent)
