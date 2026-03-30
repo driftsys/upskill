@@ -19,6 +19,7 @@ use thiserror::Error;
 pub struct GithubRepo {
     pub owner: String,
     pub name: String,
+    pub subfolder: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,6 +34,8 @@ pub enum SourceParseError {
     InvalidFormat,
     #[error("owner and repo must be non-empty")]
     EmptySegment,
+    #[error("subfolder path must be non-empty")]
+    EmptySubfolder,
 }
 
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
@@ -40,7 +43,22 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
         return Ok(InstallSource::LocalPath(source.to_string()));
     }
 
-    parse_github_repo(source).map(InstallSource::Github)
+    parse_github_source(source).map(InstallSource::Github)
+}
+
+pub fn parse_github_source(source: &str) -> Result<GithubRepo, SourceParseError> {
+    let (repo_source, subfolder) = if let Some((repo_source, subfolder)) = source.split_once(':') {
+        if subfolder.trim().is_empty() {
+            return Err(SourceParseError::EmptySubfolder);
+        }
+        (repo_source, Some(subfolder.to_string()))
+    } else {
+        (source, None)
+    };
+
+    let mut repo = parse_github_repo(repo_source)?;
+    repo.subfolder = subfolder;
+    Ok(repo)
 }
 
 pub fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseError> {
@@ -59,6 +77,7 @@ pub fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseError> {
     Ok(GithubRepo {
         owner: owner.to_string(),
         name: name.to_string(),
+        subfolder: None,
     })
 }
 
@@ -71,6 +90,7 @@ mod tests {
         let repo = parse_github_repo("microsoft/skills").expect("must parse");
         assert_eq!(repo.owner, "microsoft");
         assert_eq!(repo.name, "skills");
+        assert_eq!(repo.subfolder, None);
     }
 
     #[test]
@@ -111,7 +131,27 @@ mod tests {
             InstallSource::Github(GithubRepo {
                 owner: "owner".to_string(),
                 name: "repo".to_string(),
+                subfolder: None,
             })
         );
+    }
+
+    #[test]
+    fn parse_github_source_with_subfolder() {
+        let source = parse_install_source("owner/repo:path/to/skills").expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::Github(GithubRepo {
+                owner: "owner".to_string(),
+                name: "repo".to_string(),
+                subfolder: Some("path/to/skills".to_string()),
+            })
+        );
+    }
+
+    #[test]
+    fn reject_empty_subfolder() {
+        let err = parse_install_source("owner/repo:").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptySubfolder);
     }
 }
