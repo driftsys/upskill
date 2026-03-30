@@ -115,7 +115,13 @@ fn run_add(
             } else {
                 format!("github:{}/{}", repo.owner, repo.name)
             };
-            let resolved_skills = resolve_requested_skills(skills, &repo.name);
+            let resolved_skills = match resolve_requested_skills(skills, &repo.name) {
+                Ok(skills) => skills,
+                Err(err) => {
+                    eprintln!("error: {}", err);
+                    return 1;
+                }
+            };
 
             if let Err(err) =
                 persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
@@ -138,7 +144,7 @@ fn run_add(
             if let Some(subfolder) = repo.subfolder {
                 println!("subfolder: {}", subfolder);
             }
-            print_selected_skills(skills);
+            print_selected_skills(&resolved_skills, skills.is_empty());
             0
         }
         Ok(InstallSource::LocalPath(path)) => {
@@ -152,7 +158,13 @@ fn run_add(
                 .and_then(|v| v.to_str())
                 .filter(|v| !v.is_empty())
                 .unwrap_or("local-skill");
-            let resolved_skills = resolve_requested_skills(skills, default_skill);
+            let resolved_skills = match resolve_requested_skills(skills, default_skill) {
+                Ok(skills) => skills,
+                Err(err) => {
+                    eprintln!("error: {}", err);
+                    return 1;
+                }
+            };
 
             let source_label = format!("local:{}", path);
             if let Err(err) =
@@ -172,7 +184,7 @@ fn run_add(
 
             println!("install source: local");
             println!("path: {}", path);
-            print_selected_skills(skills);
+            print_selected_skills(&resolved_skills, skills.is_empty());
             0
         }
         Err(err) => {
@@ -346,12 +358,52 @@ fn remove_symlink_if_exists(link_path: &str) -> Result<(), String> {
     }
 }
 
-fn resolve_requested_skills(skills: &[String], default_skill: &str) -> Vec<String> {
-    if skills.is_empty() {
-        return vec![default_skill.to_string()];
+fn resolve_requested_skills(skills: &[String], default_skill: &str) -> Result<Vec<String>, String> {
+    if !skills.is_empty() {
+        return Ok(skills.to_vec());
     }
 
-    skills.to_vec()
+    if !interactive_skill_selection_enabled() {
+        return Ok(vec![default_skill.to_string()]);
+    }
+
+    prompt_for_skill_selection(default_skill)
+}
+
+fn interactive_skill_selection_enabled() -> bool {
+    use std::io::IsTerminal;
+
+    std::env::var_os("UPSKILL_FORCE_INTERACTIVE").is_some() || std::io::stdin().is_terminal()
+}
+
+fn prompt_for_skill_selection(default_skill: &str) -> Result<Vec<String>, String> {
+    use std::io::{self, Write};
+
+    print!(
+        "select skills (comma-separated, empty for '{}'): ",
+        default_skill
+    );
+    io::stdout()
+        .flush()
+        .map_err(|err| format!("failed to flush prompt: {}", err))?;
+
+    let mut answer = String::new();
+    io::stdin()
+        .read_line(&mut answer)
+        .map_err(|err| format!("failed to read selected skills: {}", err))?;
+
+    let parsed: Vec<String> = answer
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect();
+
+    if parsed.is_empty() {
+        return Ok(vec![default_skill.to_string()]);
+    }
+
+    Ok(parsed)
 }
 
 fn persist_installed_skills(
@@ -398,8 +450,8 @@ fn detect_active_agents() -> Vec<String> {
     agents
 }
 
-fn print_selected_skills(skills: &[String]) {
-    if skills.is_empty() {
+fn print_selected_skills(skills: &[String], implicit_selection: bool) {
+    if skills.is_empty() || implicit_selection {
         return;
     }
 
