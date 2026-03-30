@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use upskill::parse_github_repo;
+use upskill::{InstallSource, parse_install_source};
 
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
@@ -30,11 +30,21 @@ fn main() {
 }
 
 fn run_add(source: &str) -> i32 {
-    match parse_github_repo(source) {
-        Ok(repo) => {
+    match parse_install_source(source) {
+        Ok(InstallSource::Github(repo)) => {
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
+            0
+        }
+        Ok(InstallSource::LocalPath(path)) => {
+            if !std::path::Path::new(&path).exists() {
+                eprintln!("error: local path does not exist: {}", path);
+                return 2;
+            }
+
+            println!("install source: local");
+            println!("path: {}", path);
             0
         }
         Err(err) => {
