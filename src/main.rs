@@ -27,6 +27,9 @@ enum Commands {
     Add {
         /// GitHub source in owner/repo format
         source: String,
+        /// Install only a specific skill (repeatable)
+        #[arg(long = "skill", short = 's')]
+        skills: Vec<String>,
         /// Symlink to Claude Code skills directory
         #[arg(long)]
         claude: bool,
@@ -45,16 +48,17 @@ fn main() {
     let exit_code = match cli.command {
         Commands::Add {
             source,
+            skills,
             claude,
             copilot,
             all,
-        } => run_add(&source, claude, copilot, all),
+        } => run_add(&source, &skills, claude, copilot, all),
     };
 
     std::process::exit(exit_code);
 }
 
-fn run_add(source: &str, claude: bool, copilot: bool, all: bool) -> i32 {
+fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bool) -> i32 {
     if let Err(err) = ensure_canonical_target() {
         eprintln!("error: {}", err);
         return 1;
@@ -70,6 +74,7 @@ fn run_add(source: &str, claude: bool, copilot: bool, all: bool) -> i32 {
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
+            print_selected_skills(skills);
             0
         }
         Ok(InstallSource::LocalPath(path)) => {
@@ -85,6 +90,7 @@ fn run_add(source: &str, claude: bool, copilot: bool, all: bool) -> i32 {
 
             println!("install source: local");
             println!("path: {}", path);
+            print_selected_skills(skills);
             0
         }
         Err(err) => {
@@ -92,6 +98,14 @@ fn run_add(source: &str, claude: bool, copilot: bool, all: bool) -> i32 {
             2
         }
     }
+}
+
+fn print_selected_skills(skills: &[String]) {
+    if skills.is_empty() {
+        return;
+    }
+
+    println!("skills: {}", skills.join(","));
 }
 
 fn ensure_canonical_target() -> Result<(), String> {
