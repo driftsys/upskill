@@ -2,6 +2,8 @@ use clap::{Parser, Subcommand};
 
 use upskill::{InstallSource, parse_install_source};
 
+const CANONICAL_TARGET: &str = ".agents/skills";
+
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
 #[command(about = "Upskill your coding agents")]
@@ -30,6 +32,11 @@ fn main() {
 }
 
 fn run_add(source: &str) -> i32 {
+    if let Err(err) = ensure_canonical_target() {
+        eprintln!("error: {}", err);
+        return 1;
+    }
+
     match parse_install_source(source) {
         Ok(InstallSource::Github(repo)) => {
             println!("install source: github");
@@ -52,4 +59,13 @@ fn run_add(source: &str) -> i32 {
             2
         }
     }
+}
+
+fn ensure_canonical_target() -> Result<(), String> {
+    std::fs::create_dir_all(CANONICAL_TARGET).map_err(|err| {
+        format!(
+            "failed to create canonical target {}: {}",
+            CANONICAL_TARGET, err
+        )
+    })
 }
