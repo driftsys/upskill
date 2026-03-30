@@ -40,6 +40,9 @@ enum Commands {
         /// Symlink to every supported agent skills directory
         #[arg(long)]
         all: bool,
+        /// Copy skills to agent directories instead of creating symlinks
+        #[arg(long)]
+        copy: bool,
         /// Use user-level global installation target
         #[arg(short = 'g', long = "global")]
         global: bool,
@@ -73,8 +76,9 @@ fn main() {
             claude,
             copilot,
             all,
+            copy,
             global,
-        } => run_add(&source, &skills, claude, copilot, all, global),
+        } => run_add(&source, &skills, claude, copilot, all, copy, global),
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
     };
@@ -88,6 +92,7 @@ fn run_add(
     claude: bool,
     copilot: bool,
     all: bool,
+    copy: bool,
     global: bool,
 ) -> i32 {
     let canonical_target = match canonical_target(global) {
@@ -112,13 +117,16 @@ fn run_add(
             };
             let resolved_skills = resolve_requested_skills(skills, &repo.name);
 
-            if !global && let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
+            if let Err(err) =
+                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            {
                 eprintln!("error: {}", err);
                 return 1;
             }
 
-            if let Err(err) =
-                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            if !global
+                && let Err(err) =
+                    ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
             {
                 eprintln!("error: {}", err);
                 return 1;
@@ -146,14 +154,17 @@ fn run_add(
                 .unwrap_or("local-skill");
             let resolved_skills = resolve_requested_skills(skills, default_skill);
 
-            if !global && let Err(err) = ensure_agent_symlinks(claude, copilot, all) {
+            let source_label = format!("local:{}", path);
+            if let Err(err) =
+                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            {
                 eprintln!("error: {}", err);
                 return 1;
             }
 
-            let source_label = format!("local:{}", path);
-            if let Err(err) =
-                persist_installed_skills(&canonical_target, &resolved_skills, &source_label)
+            if !global
+                && let Err(err) =
+                    ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
             {
                 eprintln!("error: {}", err);
                 return 1;
@@ -406,10 +417,16 @@ fn ensure_canonical_target(canonical_target: &std::path::Path) -> Result<(), Str
     })
 }
 
-fn ensure_agent_symlinks(claude: bool, copilot: bool, all: bool) -> Result<(), String> {
+fn ensure_agent_targets(
+    claude: bool,
+    copilot: bool,
+    all: bool,
+    copy: bool,
+    canonical_target: &std::path::Path,
+) -> Result<(), String> {
     if all {
         for link in AGENT_SKILL_LINKS {
-            create_symlink(link)?;
+            create_agent_target(link, copy, canonical_target)?;
         }
         return Ok(());
     }
@@ -420,21 +437,22 @@ fn ensure_agent_symlinks(claude: bool, copilot: bool, all: bool) -> Result<(), S
     let link_copilot = copilot || (auto_detect && std::path::Path::new(".github").exists());
 
     if link_claude {
-        create_symlink(".claude/skills")?;
+        create_agent_target(".claude/skills", copy, canonical_target)?;
     }
 
     if link_copilot {
-        create_symlink(".github/skills")?;
+        create_agent_target(".github/skills", copy, canonical_target)?;
     }
 
     Ok(())
 }
 
-fn create_symlink(link_path: &str) -> Result<(), String> {
+fn create_agent_target(
+    link_path: &str,
+    copy: bool,
+    canonical_target: &std::path::Path,
+) -> Result<(), String> {
     let link = std::path::Path::new(link_path);
-    let target = std::env::current_dir()
-        .map_err(|err| format!("failed to resolve current dir: {}", err))?
-        .join(PROJECT_CANONICAL_TARGET);
 
     if let Some(parent) = link.parent() {
         std::fs::create_dir_all(parent)
@@ -451,13 +469,18 @@ fn create_symlink(link_path: &str) -> Result<(), String> {
         }
     }
 
+    if copy {
+        copy_dir_all(canonical_target, link)?;
+        return Ok(());
+    }
+
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(&target, link).map_err(|err| {
+        std::os::unix::fs::symlink(canonical_target, link).map_err(|err| {
             format!(
                 "failed to create symlink {} -> {}: {}",
                 link.display(),
-                target.display(),
+                canonical_target.display(),
                 err
             )
         })?;
@@ -467,6 +490,35 @@ fn create_symlink(link_path: &str) -> Result<(), String> {
     {
         let _ = link;
         return Err("symlink creation is currently supported on unix platforms".to_string());
+    }
+
+    Ok(())
+}
+
+fn copy_dir_all(src: &std::path::Path, dst: &std::path::Path) -> Result<(), String> {
+    std::fs::create_dir_all(dst)
+        .map_err(|err| format!("failed to create {}: {}", dst.display(), err))?;
+
+    let entries = std::fs::read_dir(src)
+        .map_err(|err| format!("failed to read {}: {}", src.display(), err))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("failed to read {}: {}", src.display(), err))?;
+        let entry_path = entry.path();
+        let target_path = dst.join(entry.file_name());
+
+        if entry_path.is_dir() {
+            copy_dir_all(&entry_path, &target_path)?;
+        } else {
+            std::fs::copy(&entry_path, &target_path).map_err(|err| {
+                format!(
+                    "failed to copy {} to {}: {}",
+                    entry_path.display(),
+                    target_path.display(),
+                    err
+                )
+            })?;
+        }
     }
 
     Ok(())

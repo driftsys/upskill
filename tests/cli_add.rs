@@ -236,3 +236,57 @@ fn add_accepts_github_subfolder_source() {
             "install source: github\nowner: microsoft\nrepo: skills\nsubfolder: catalog/devops\n",
         );
 }
+
+#[test]
+fn add_copy_creates_directory_not_symlink_for_agent_target() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    cmd.current_dir(cwd.path())
+        .args([
+            "add",
+            "microsoft/skills",
+            "--skill",
+            "rust-lint",
+            "--claude",
+            "--copy",
+        ])
+        .assert()
+        .success();
+
+    let target = cwd.path().join(".claude/skills");
+    let meta = std::fs::symlink_metadata(&target).expect("metadata");
+    assert!(meta.is_dir(), "copy target must be a directory");
+    assert!(
+        !meta.file_type().is_symlink(),
+        "copy target must not be a symlink"
+    );
+    assert!(target.join("rust-lint/.upskill-source").is_file());
+}
+
+#[test]
+fn add_copy_works_for_local_source() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
+
+    let local_source = cwd.path().join("sample-skill");
+    std::fs::create_dir_all(&local_source).expect("must create local source");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    cmd.current_dir(cwd.path())
+        .args([
+            "add",
+            local_source.to_str().expect("utf8 path"),
+            "--claude",
+            "--copy",
+        ])
+        .assert()
+        .success();
+
+    assert!(
+        cwd.path()
+            .join(".claude/skills/sample-skill/.upskill-source")
+            .is_file()
+    );
+}
