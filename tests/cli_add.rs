@@ -161,3 +161,31 @@ fn add_auto_detects_agent_directories_when_no_flags() {
     assert!(std::fs::symlink_metadata(cwd.path().join(".claude/skills")).is_ok());
     assert!(std::fs::symlink_metadata(cwd.path().join(".github/skills")).is_ok());
 }
+
+#[test]
+fn add_all_creates_symlinks_for_all_supported_agents() {
+    let cwd = tempdir().expect("must create temp dir");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills", "--all"])
+        .assert()
+        .success();
+
+    let expected_links = [
+        ".claude/skills",
+        ".github/skills",
+        ".codex/skills",
+        ".cursor/skills",
+        ".kiro/skills",
+        ".windsurf/skills",
+        ".opencode/skills",
+    ];
+
+    for link in expected_links {
+        let path = cwd.path().join(link);
+        let meta = std::fs::symlink_metadata(&path).expect("symlink metadata");
+        assert!(meta.file_type().is_symlink(), "{link} must be a symlink");
+    }
+}
