@@ -222,3 +222,17 @@ fn add_accepts_multiple_skill_flags() {
             "install source: github\nowner: microsoft\nrepo: skills\nskills: rust-lint,release-check\n",
         );
 }
+
+#[test]
+fn add_accepts_github_subfolder_source() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills:catalog/devops"])
+        .assert()
+        .success()
+        .stdout(
+            "install source: github\nowner: microsoft\nrepo: skills\nsubfolder: catalog/devops\n",
+        );
+}

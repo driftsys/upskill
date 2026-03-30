@@ -74,6 +74,9 @@ fn run_add(source: &str, skills: &[String], claude: bool, copilot: bool, all: bo
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
+            if let Some(subfolder) = repo.subfolder {
+                println!("subfolder: {}", subfolder);
+            }
             print_selected_skills(skills);
             0
         }
