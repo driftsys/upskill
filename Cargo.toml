@@ -1,0 +1,13 @@
+[package]
+name = "upskill"
+version = "0.1.0"
+edition = "2021"
+description = "Upskill your coding agents — ultra-lightweight agent skills package manager"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/TODO/upskill"
+homepage = "https://github.com/TODO/upskill"
+readme = "README.md"
+keywords = ["agent", "skills", "cli", "ai", "package-manager"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
