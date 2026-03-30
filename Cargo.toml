@@ -1,9 +1,9 @@
 [package]
 name = "upskill"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Upskill your coding agents — ultra-lightweight agent skills package manager"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/driftsys/upskill"
 homepage = "https://github.com/driftsys/upskill"
 readme = "README.md"
@@ -11,3 +11,8 @@ keywords = ["agent", "skills", "cli", "ai", "package-manager"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

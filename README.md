@@ -12,4 +12,10 @@ Under active development. This is a name reservation — real implementation com
 
 ## License
 
-MIT OR Apache-2.0
+MIT
+
+<!-- git-std:bootstrap -->
+
+## Post-clone setup
+
+Run `./bootstrap` after `git clone` or `git worktree add`.
