@@ -189,3 +189,36 @@ fn add_all_creates_symlinks_for_all_supported_agents() {
         assert!(meta.file_type().is_symlink(), "{link} must be a symlink");
     }
 }
+
+#[test]
+fn add_accepts_single_skill_flag() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills", "--skill", "rust-lint"])
+        .assert()
+        .success()
+        .stdout("install source: github\nowner: microsoft\nrepo: skills\nskills: rust-lint\n");
+}
+
+#[test]
+fn add_accepts_multiple_skill_flags() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args([
+            "add",
+            "microsoft/skills",
+            "--skill",
+            "rust-lint",
+            "--skill",
+            "release-check",
+        ])
+        .assert()
+        .success()
+        .stdout(
+            "install source: github\nowner: microsoft\nrepo: skills\nskills: rust-lint,release-check\n",
+        );
+}
