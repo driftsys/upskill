@@ -42,6 +42,14 @@ enum Commands {
     },
     /// List installed skills
     List,
+    /// Remove an installed skill
+    Remove {
+        /// Skill name to remove
+        skill: String,
+        /// Skip confirmation prompt
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 fn main() {
@@ -56,6 +64,7 @@ fn main() {
             all,
         } => run_add(&source, &skills, claude, copilot, all),
         Commands::List => run_list(),
+        Commands::Remove { skill, yes } => run_remove(&skill, yes),
     };
 
     std::process::exit(exit_code);
@@ -182,6 +191,93 @@ fn run_list() -> i32 {
     }
 
     0
+}
+
+fn run_remove(skill: &str, yes: bool) -> i32 {
+    let skill_path = std::path::Path::new(CANONICAL_TARGET).join(skill);
+    if !skill_path.is_dir() {
+        eprintln!("error: skill not installed: {}", skill);
+        return 2;
+    }
+
+    if !yes && !confirm_removal(skill) {
+        eprintln!("error: removal cancelled");
+        return 1;
+    }
+
+    if let Err(err) = std::fs::remove_dir_all(&skill_path) {
+        eprintln!("error: failed to remove {}: {}", skill_path.display(), err);
+        return 1;
+    }
+
+    if let Err(err) = cleanup_agent_symlinks_if_empty() {
+        eprintln!("error: {}", err);
+        return 1;
+    }
+
+    println!("removed skill: {}", skill);
+    0
+}
+
+fn confirm_removal(skill: &str) -> bool {
+    use std::io::{self, Write};
+
+    print!("remove skill '{}' ? [y/N]: ", skill);
+    if io::stdout().flush().is_err() {
+        return false;
+    }
+
+    let mut answer = String::new();
+    if io::stdin().read_line(&mut answer).is_err() {
+        return false;
+    }
+
+    matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes")
+}
+
+fn cleanup_agent_symlinks_if_empty() -> Result<(), String> {
+    if !canonical_has_skills()? {
+        for link in AGENT_SKILL_LINKS {
+            remove_symlink_if_exists(link)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn canonical_has_skills() -> Result<bool, String> {
+    let canonical = std::path::Path::new(CANONICAL_TARGET);
+    if !canonical.exists() {
+        return Ok(false);
+    }
+
+    let entries = std::fs::read_dir(canonical)
+        .map_err(|err| format!("failed to inspect installed skills: {}", err))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("failed to inspect installed skills: {}", err))?;
+        if entry.path().is_dir() {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn remove_symlink_if_exists(link_path: &str) -> Result<(), String> {
+    let link = std::path::Path::new(link_path);
+    match std::fs::symlink_metadata(link) {
+        Ok(meta) => {
+            if meta.file_type().is_symlink() {
+                std::fs::remove_file(link).map_err(|err| {
+                    format!("failed to remove symlink {}: {}", link.display(), err)
+                })?;
+            }
+            Ok(())
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(format!("failed to inspect {}: {}", link.display(), err)),
+    }
 }
 
 fn resolve_requested_skills(skills: &[String], default_skill: &str) -> Vec<String> {
