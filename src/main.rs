@@ -1,0 +1,45 @@
+use clap::{Parser, Subcommand};
+
+use upskill::parse_github_repo;
+
+#[derive(Parser, Debug)]
+#[command(name = "upskill")]
+#[command(about = "Upskill your coding agents")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Install skills from a source
+    Add {
+        /// GitHub source in owner/repo format
+        source: String,
+    },
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    let exit_code = match cli.command {
+        Commands::Add { source } => run_add(&source),
+    };
+
+    std::process::exit(exit_code);
+}
+
+fn run_add(source: &str) -> i32 {
+    match parse_github_repo(source) {
+        Ok(repo) => {
+            println!("install source: github");
+            println!("owner: {}", repo.owner);
+            println!("repo: {}", repo.name);
+            0
+        }
+        Err(err) => {
+            eprintln!("error: {}", err);
+            2
+        }
+    }
+}
