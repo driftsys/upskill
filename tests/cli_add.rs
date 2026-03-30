@@ -3,9 +3,11 @@ use tempfile::tempdir;
 
 #[test]
 fn add_accepts_owner_repo_source() {
+    let cwd = tempdir().expect("must create temp dir");
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
 
-    cmd.args(["add", "microsoft/skills"])
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills"])
         .assert()
         .success()
         .stdout("install source: github\nowner: microsoft\nrepo: skills\n");
@@ -13,9 +15,11 @@ fn add_accepts_owner_repo_source() {
 
 #[test]
 fn add_rejects_invalid_source_format() {
+    let cwd = tempdir().expect("must create temp dir");
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
 
-    cmd.args(["add", "microsoft-skills"])
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft-skills"])
         .assert()
         .code(2)
         .stderr("error: source must be in owner/repo format\n");
@@ -25,10 +29,12 @@ fn add_rejects_invalid_source_format() {
 fn add_accepts_local_path_source() {
     let tmp = tempdir().expect("must create temp dir");
     let path = tmp.path().display().to_string();
+    let cwd = tempdir().expect("must create temp dir");
 
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
 
-    cmd.args(["add", path.as_str()])
+    cmd.current_dir(cwd.path())
+        .args(["add", path.as_str()])
         .assert()
         .success()
         .stdout(format!("install source: local\npath: {}\n", path));
@@ -36,9 +42,11 @@ fn add_accepts_local_path_source() {
 
 #[test]
 fn add_rejects_missing_local_path() {
+    let cwd = tempdir().expect("must create temp dir");
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
 
-    cmd.args(["add", "./definitely-not-present-upskill-skill-path"])
+    cmd.current_dir(cwd.path())
+        .args(["add", "./definitely-not-present-upskill-skill-path"])
         .assert()
         .code(2)
         .stderr("error: local path does not exist: ./definitely-not-present-upskill-skill-path\n");
@@ -74,4 +82,82 @@ fn add_creates_canonical_target_for_local_source() {
         .success();
 
     assert!(canonical.is_dir(), "canonical target must be created");
+}
+
+#[test]
+fn add_creates_claude_symlink_when_flag_is_set() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills", "--claude"])
+        .assert()
+        .success();
+
+    let link_path = cwd.path().join(".claude/skills");
+    assert!(
+        std::fs::symlink_metadata(&link_path)
+            .expect("metadata")
+            .file_type()
+            .is_symlink(),
+        "claude skills must be a symlink"
+    );
+}
+
+#[test]
+fn add_creates_copilot_symlink_when_flag_is_set() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills", "--copilot"])
+        .assert()
+        .success();
+
+    let link_path = cwd.path().join(".github/skills");
+    assert!(
+        std::fs::symlink_metadata(&link_path)
+            .expect("metadata")
+            .file_type()
+            .is_symlink(),
+        "copilot skills must be a symlink"
+    );
+}
+
+#[test]
+fn add_creates_both_symlinks_with_multiple_flags() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
+    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills", "--claude", "--copilot"])
+        .assert()
+        .success();
+
+    assert!(std::fs::symlink_metadata(cwd.path().join(".claude/skills")).is_ok());
+    assert!(std::fs::symlink_metadata(cwd.path().join(".github/skills")).is_ok());
+}
+
+#[test]
+fn add_auto_detects_agent_directories_when_no_flags() {
+    let cwd = tempdir().expect("must create temp dir");
+    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
+    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills"])
+        .assert()
+        .success();
+
+    assert!(std::fs::symlink_metadata(cwd.path().join(".claude/skills")).is_ok());
+    assert!(std::fs::symlink_metadata(cwd.path().join(".github/skills")).is_ok());
 }
