@@ -290,3 +290,34 @@ fn add_copy_works_for_local_source() {
             .is_file()
     );
 }
+
+#[test]
+fn add_interactive_selection_installs_selected_skills() {
+    let cwd = tempdir().expect("must create temp dir");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    cmd.current_dir(cwd.path())
+        .env("UPSKILL_FORCE_INTERACTIVE", "1")
+        .write_stdin("rust-lint,release-check\n")
+        .args(["add", "microsoft/skills"])
+        .assert()
+        .success();
+
+    assert!(cwd.path().join(".agents/skills/rust-lint").is_dir());
+    assert!(cwd.path().join(".agents/skills/release-check").is_dir());
+}
+
+#[test]
+fn add_interactive_empty_selection_uses_default_skill() {
+    let cwd = tempdir().expect("must create temp dir");
+
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    cmd.current_dir(cwd.path())
+        .env("UPSKILL_FORCE_INTERACTIVE", "1")
+        .write_stdin("\n")
+        .args(["add", "microsoft/skills"])
+        .assert()
+        .success();
+
+    assert!(cwd.path().join(".agents/skills/skills").is_dir());
+}
