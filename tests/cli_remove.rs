@@ -23,7 +23,7 @@ fn remove_deletes_installed_skill_with_yes() {
 }
 
 #[test]
-fn remove_requires_confirmation_without_yes() {
+fn remove_without_yes_skips_prompt_in_non_tty() {
     let cwd = tempdir().expect("must create temp dir");
 
     let mut add = Command::cargo_bin("upskill").expect("binary exists");
@@ -36,12 +36,11 @@ fn remove_requires_confirmation_without_yes() {
     remove
         .current_dir(cwd.path())
         .args(["remove", "rust-lint"])
-        .write_stdin("n\n")
         .assert()
-        .code(1)
-        .stderr("error: removal cancelled\n");
+        .success()
+        .stdout("removed skill: rust-lint\n");
 
-    assert!(cwd.path().join(".agents/skills/rust-lint").is_dir());
+    assert!(!cwd.path().join(".agents/skills/rust-lint").exists());
 }
 
 #[test]

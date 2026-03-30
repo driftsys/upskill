@@ -200,7 +200,7 @@ fn run_remove(skill: &str, yes: bool) -> i32 {
         return 2;
     }
 
-    if !yes && !confirm_removal(skill) {
+    if should_prompt_for_confirmation(yes) && !confirm_removal(skill) {
         eprintln!("error: removal cancelled");
         return 1;
     }
@@ -219,10 +219,20 @@ fn run_remove(skill: &str, yes: bool) -> i32 {
     0
 }
 
-fn confirm_removal(skill: &str) -> bool {
-    use std::io::{self, Write};
+fn should_prompt_for_confirmation(yes: bool) -> bool {
+    use std::io::IsTerminal;
 
-    print!("remove skill '{}' ? [y/N]: ", skill);
+    !yes && std::io::stdin().is_terminal()
+}
+
+fn confirm_removal(skill: &str) -> bool {
+    use std::io::{self, IsTerminal, Write};
+
+    if io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none() {
+        print!("\u{1b}[33mremove skill '{}' ? [y/N]:\u{1b}[0m ", skill);
+    } else {
+        print!("remove skill '{}' ? [y/N]: ", skill);
+    }
     if io::stdout().flush().is_err() {
         return false;
     }
