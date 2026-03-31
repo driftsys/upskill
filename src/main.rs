@@ -70,6 +70,14 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
+    /// Update installed skills to their latest versions
+    Update {
+        /// Skill names to update (omit for all)
+        names: Vec<String>,
+        /// Update user-level global installation target
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
 }
 
 fn main() {
@@ -100,6 +108,7 @@ fn main() {
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
         Commands::Check { global } => run_check(global),
+        Commands::Update { names, global } => run_update(&names, global),
     };
 
     if was_interrupted() {
@@ -421,6 +430,66 @@ fn run_check(global: bool) -> i32 {
     for skill in &lockfile.skills {
         let ref_label = skill.git_ref.as_deref().unwrap_or("latest");
         println!("{}\t{}\tpinned: {}", skill.name, skill.source, ref_label);
+    }
+
+    EXIT_SUCCESS
+}
+
+fn run_update(names: &[String], global: bool) -> i32 {
+    let lockfile_root = match lockfile_root(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let lockfile = Lockfile::load(&lockfile_root);
+
+    if lockfile.skills.is_empty() {
+        println!("no skills installed");
+        return EXIT_SUCCESS;
+    }
+
+    let skills_to_update: Vec<&LockedSkill> = if names.is_empty() {
+        lockfile.skills.iter().collect()
+    } else {
+        let mut selected = Vec::new();
+        for name in names {
+            match lockfile.skills.iter().find(|s| s.name == *name) {
+                Some(skill) => selected.push(skill),
+                None => {
+                    eprintln!("error: skill not in lockfile: {}", name);
+                    return EXIT_USAGE;
+                }
+            }
+        }
+        selected
+    };
+
+    let canonical_target = match install::canonical_target(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    if let Err(err) = install::ensure_canonical_target(&canonical_target) {
+        eprintln!("error: {}", err);
+        return EXIT_ERROR;
+    }
+
+    for skill in &skills_to_update {
+        if let Err(err) = install::persist_installed_skills(
+            &canonical_target,
+            std::slice::from_ref(&skill.name),
+            &skill.source,
+        ) {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+        println!("updated: {}", skill.name);
     }
 
     EXIT_SUCCESS
