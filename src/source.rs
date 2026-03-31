@@ -11,8 +11,18 @@ pub struct GithubRepo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitlabRepo {
+    pub host: String,
+    pub owner: String,
+    pub name: String,
+    pub git_ref: Option<String>,
+    pub subfolder: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstallSource {
     Github(GithubRepo),
+    Gitlab(GitlabRepo),
     LocalPath(PathBuf),
 }
 
@@ -33,7 +43,77 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
+    // gitlab: prefix
+    if let Some(rest) = source.strip_prefix("gitlab:") {
+        return parse_gitlab_source(rest, "gitlab.com").map(InstallSource::Gitlab);
+    }
+
+    // HTTPS URLs
+    if let Some(rest) = source.strip_prefix("https://") {
+        return parse_url_source(rest);
+    }
+
     parse_github_source(source).map(InstallSource::Github)
+}
+
+fn parse_url_source(url_without_scheme: &str) -> Result<InstallSource, SourceParseError> {
+    // Split host from path: "gitlab.com/owner/repo@ref:sub" or "github.com/owner/repo"
+    let (host_part, path_part) = url_without_scheme
+        .split_once('/')
+        .ok_or(SourceParseError::InvalidFormat)?;
+
+    // Strip port from host for comparison
+    let host_name = host_part.split(':').next().unwrap_or(host_part);
+
+    if host_name == "github.com" {
+        return parse_github_source(path_part).map(InstallSource::Github);
+    }
+
+    // Everything else (gitlab.com, self-hosted) treated as GitLab-compatible
+    parse_gitlab_source(path_part, host_part).map(InstallSource::Gitlab)
+}
+
+fn parse_gitlab_source(source: &str, host: &str) -> Result<GitlabRepo, SourceParseError> {
+    // Split off :subfolder first
+    let (before_subfolder, subfolder) = if let Some((before, sub)) = source.split_once(':') {
+        // Avoid confusing port numbers with subfolders — port is on the host, not here
+        if sub.trim().is_empty() {
+            return Err(SourceParseError::EmptySubfolder);
+        }
+        (before, Some(sub.to_string()))
+    } else {
+        (source, None)
+    };
+
+    // Split off @ref
+    let (repo_source, git_ref) = if let Some((before, r)) = before_subfolder.split_once('@') {
+        if r.trim().is_empty() {
+            return Err(SourceParseError::EmptyRef);
+        }
+        (before, Some(r.to_string()))
+    } else {
+        (before_subfolder, None)
+    };
+
+    let (owner, name) = repo_source
+        .split_once('/')
+        .ok_or(SourceParseError::InvalidFormat)?;
+
+    if owner.trim().is_empty() || name.trim().is_empty() {
+        return Err(SourceParseError::EmptySegment);
+    }
+
+    if repo_source.matches('/').count() != 1 {
+        return Err(SourceParseError::InvalidFormat);
+    }
+
+    Ok(GitlabRepo {
+        host: host.to_string(),
+        owner: owner.to_string(),
+        name: name.to_string(),
+        git_ref,
+        subfolder,
+    })
 }
 
 pub fn parse_github_source(source: &str) -> Result<GithubRepo, SourceParseError> {
@@ -231,5 +311,84 @@ mod tests {
     fn reject_empty_ref_with_subfolder() {
         let err = parse_install_source("microsoft/skills@:tools").expect_err("must fail");
         assert_eq!(err, SourceParseError::EmptyRef);
+    }
+
+    // GitLab source tests
+
+    #[test]
+    fn parse_gitlab_prefix() {
+        let source = parse_install_source("gitlab:team/skills").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "gitlab.com");
+        assert_eq!(repo.owner, "team");
+        assert_eq!(repo.name, "skills");
+    }
+
+    #[test]
+    fn parse_gitlab_prefix_with_ref() {
+        let source = parse_install_source("gitlab:team/skills@v2.0").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.git_ref.as_deref(), Some("v2.0"));
+    }
+
+    #[test]
+    fn parse_gitlab_prefix_with_subfolder() {
+        let source =
+            parse_install_source("gitlab:team/skills@v1.0:tools/lint").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.git_ref.as_deref(), Some("v1.0"));
+        assert_eq!(repo.subfolder.as_deref(), Some("tools/lint"));
+    }
+
+    #[test]
+    fn parse_gitlab_url() {
+        let source = parse_install_source("https://gitlab.com/team/skills").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "gitlab.com");
+        assert_eq!(repo.owner, "team");
+        assert_eq!(repo.name, "skills");
+    }
+
+    #[test]
+    fn parse_github_url() {
+        let source =
+            parse_install_source("https://github.com/microsoft/skills").expect("must parse");
+        let InstallSource::Github(repo) = source else {
+            panic!("expected Github");
+        };
+        assert_eq!(repo.owner, "microsoft");
+        assert_eq!(repo.name, "skills");
+    }
+
+    #[test]
+    fn parse_selfhosted_gitlab_url() {
+        let source =
+            parse_install_source("https://git.company.com/team/skills").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "git.company.com");
+        assert_eq!(repo.owner, "team");
+        assert_eq!(repo.name, "skills");
+    }
+
+    #[test]
+    fn parse_selfhosted_gitlab_with_port() {
+        let source =
+            parse_install_source("https://git.company.com:8443/team/skills").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "git.company.com:8443");
+        assert_eq!(repo.owner, "team");
+        assert_eq!(repo.name, "skills");
     }
 }
