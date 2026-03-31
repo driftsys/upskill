@@ -14,6 +14,7 @@
 //! See the repository for progress.
 
 pub mod agent;
+pub mod auth;
 pub mod install;
 pub mod source;
 pub mod ui;
