@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 const LOCKFILE_NAME: &str = ".upskill-lock.json";
 
@@ -16,6 +17,8 @@ pub struct LockedSkill {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ref")]
     pub git_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hash: Option<String>,
 }
 
 impl Default for Lockfile {
@@ -64,6 +67,40 @@ fn lockfile_path(project_root: &Path) -> PathBuf {
     project_root.join(LOCKFILE_NAME)
 }
 
+/// Compute a SHA-256 hash of all files in a directory (sorted, deterministic).
+pub fn hash_skill_dir(dir: &Path) -> Option<String> {
+    let mut files = Vec::new();
+    collect_files(dir, &mut files);
+    if files.is_empty() {
+        return None;
+    }
+    files.sort();
+    let mut hasher = Sha256::new();
+    for file in &files {
+        let relative = file.strip_prefix(dir).unwrap_or(file);
+        hasher.update(relative.to_string_lossy().as_bytes());
+        if let Ok(content) = std::fs::read(file) {
+            hasher.update(&content);
+        }
+    }
+    let result = hasher.finalize();
+    Some(result.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files(&path, files);
+        } else {
+            files.push(path);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,6 +112,7 @@ mod tests {
             name: "lint".into(),
             source: "github:ms/skills".into(),
             git_ref: None,
+            hash: None,
         });
         assert_eq!(lock.skills.len(), 1);
         assert_eq!(lock.skills[0].name, "lint");
@@ -87,11 +125,13 @@ mod tests {
             name: "lint".into(),
             source: "github:ms/skills".into(),
             git_ref: None,
+            hash: None,
         });
         lock.upsert(LockedSkill {
             name: "lint".into(),
             source: "github:ms/skills@v2".into(),
             git_ref: Some("v2".into()),
+            hash: None,
         });
         assert_eq!(lock.skills.len(), 1);
         assert_eq!(lock.skills[0].git_ref, Some("v2".into()));
@@ -104,11 +144,13 @@ mod tests {
             name: "a".into(),
             source: "s".into(),
             git_ref: None,
+            hash: None,
         });
         lock.upsert(LockedSkill {
             name: "b".into(),
             source: "s".into(),
             git_ref: None,
+            hash: None,
         });
         lock.remove("a");
         assert_eq!(lock.skills.len(), 1);
@@ -122,11 +164,13 @@ mod tests {
             name: "z".into(),
             source: "s".into(),
             git_ref: None,
+            hash: None,
         });
         lock.upsert(LockedSkill {
             name: "a".into(),
             source: "s".into(),
             git_ref: None,
+            hash: None,
         });
         let names: Vec<_> = lock.skills.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, vec!["a", "z"]);
@@ -140,6 +184,7 @@ mod tests {
             name: "lint".into(),
             source: "github:ms/skills@v1".into(),
             git_ref: Some("v1".into()),
+            hash: None,
         });
         lock.save(tmp.path()).expect("save");
 
