@@ -159,23 +159,28 @@ fn lockfile_root(global: bool) -> anyhow::Result<std::path::PathBuf> {
     }
 }
 
+struct AddContext {
+    claude: bool,
+    copilot: bool,
+    all: bool,
+    copy: bool,
+    global: bool,
+    /// true when --skill was not specified (implicit default)
+    implicit_skill: bool,
+}
+
 fn finish_install(
     canonical_target: &std::path::Path,
     lockfile_root: &std::path::Path,
     resolved_skills: &[String],
     source_label: &str,
     git_ref: Option<&str>,
-    claude: bool,
-    copilot: bool,
-    all: bool,
-    copy: bool,
-    global: bool,
-    explicit_skills: bool,
+    ctx: &AddContext,
 ) -> anyhow::Result<()> {
     install::persist_installed_skills(canonical_target, resolved_skills, source_label)?;
 
-    if !global {
-        agent::ensure_agent_targets(claude, copilot, all, copy, canonical_target)?;
+    if !ctx.global {
+        agent::ensure_agent_targets(ctx.claude, ctx.copilot, ctx.all, ctx.copy, canonical_target)?;
     }
 
     let mut lf = Lockfile::load(lockfile_root);
@@ -190,7 +195,7 @@ fn finish_install(
     }
     lf.save(lockfile_root)?;
 
-    ui::print_selected_skills(resolved_skills, explicit_skills);
+    ui::print_selected_skills(resolved_skills, ctx.implicit_skill);
     Ok(())
 }
 
@@ -258,12 +263,14 @@ fn run_add(
                 &resolved_skills,
                 &source_label,
                 repo.git_ref.as_deref(),
-                claude,
-                copilot,
-                all,
-                copy,
-                global,
-                skills.is_empty(),
+                &AddContext {
+                    claude,
+                    copilot,
+                    all,
+                    copy,
+                    global,
+                    implicit_skill: skills.is_empty(),
+                },
             ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
@@ -307,12 +314,14 @@ fn run_add(
                 &resolved_skills,
                 &source_label,
                 repo.git_ref.as_deref(),
-                claude,
-                copilot,
-                all,
-                copy,
-                global,
-                skills.is_empty(),
+                &AddContext {
+                    claude,
+                    copilot,
+                    all,
+                    copy,
+                    global,
+                    implicit_skill: skills.is_empty(),
+                },
             ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
@@ -351,12 +360,14 @@ fn run_add(
                 &resolved_skills,
                 &source_label,
                 None,
-                claude,
-                copilot,
-                all,
-                copy,
-                global,
-                skills.is_empty(),
+                &AddContext {
+                    claude,
+                    copilot,
+                    all,
+                    copy,
+                    global,
+                    implicit_skill: skills.is_empty(),
+                },
             ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
