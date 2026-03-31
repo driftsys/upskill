@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -54,12 +55,11 @@ impl Lockfile {
     }
 
     /// Write the lockfile to disk.
-    pub fn save(&self, project_root: &Path) -> Result<(), String> {
+    pub fn save(&self, project_root: &Path) -> Result<()> {
         let path = lockfile_path(project_root);
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| format!("failed to serialize lockfile: {}", e))?;
+        let json = serde_json::to_string_pretty(self).context("failed to serialize lockfile")?;
         std::fs::write(&path, format!("{}\n", json))
-            .map_err(|e| format!("failed to write {}: {}", path.display(), e))
+            .with_context(|| format!("failed to write {}", path.display()))
     }
 }
 

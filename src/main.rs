@@ -1,3 +1,4 @@
+use anyhow::Context;
 use clap::{Parser, Subcommand, error::ErrorKind};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -130,11 +131,11 @@ fn main() {
     std::process::exit(exit_code);
 }
 
-fn install_signal_handlers() -> Result<(), String> {
+fn install_signal_handlers() -> anyhow::Result<()> {
     ctrlc::set_handler(|| {
         INTERRUPTED.store(true, Ordering::SeqCst);
     })
-    .map_err(|err| format!("failed to install signal handler: {}", err))
+    .context("failed to install signal handler")
 }
 
 fn was_interrupted() -> bool {
@@ -148,14 +149,49 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn lockfile_root(global: bool) -> Result<std::path::PathBuf, String> {
+fn lockfile_root(global: bool) -> anyhow::Result<std::path::PathBuf> {
     if global {
         std::env::var_os("HOME")
             .map(std::path::PathBuf::from)
-            .ok_or_else(|| "HOME is not set".to_string())
+            .ok_or_else(|| anyhow::anyhow!("HOME is not set"))
     } else {
-        std::env::current_dir().map_err(|e| format!("failed to get current directory: {}", e))
+        std::env::current_dir().context("failed to get current directory")
     }
+}
+
+fn finish_install(
+    canonical_target: &std::path::Path,
+    lockfile_root: &std::path::Path,
+    resolved_skills: &[String],
+    source_label: &str,
+    git_ref: Option<&str>,
+    claude: bool,
+    copilot: bool,
+    all: bool,
+    copy: bool,
+    global: bool,
+    explicit_skills: bool,
+) -> anyhow::Result<()> {
+    install::persist_installed_skills(canonical_target, resolved_skills, source_label)?;
+
+    if !global {
+        agent::ensure_agent_targets(claude, copilot, all, copy, canonical_target)?;
+    }
+
+    let mut lf = Lockfile::load(lockfile_root);
+    for skill in resolved_skills {
+        let skill_dir = canonical_target.join(skill);
+        lf.upsert(LockedSkill {
+            name: skill.clone(),
+            source: source_label.to_string(),
+            git_ref: git_ref.map(str::to_string),
+            hash: lockfile::hash_skill_dir(&skill_dir),
+        });
+    }
+    lf.save(lockfile_root)?;
+
+    ui::print_selected_skills(resolved_skills, explicit_skills);
+    Ok(())
 }
 
 fn run_add(
@@ -191,98 +227,66 @@ fn run_add(
     match parse_install_source(source) {
         Ok(InstallSource::Github(repo)) => {
             let mut source_label = format!("github:{}/{}", repo.owner, repo.name);
-            if let Some(git_ref) = &repo.git_ref {
-                source_label.push_str(&format!("@{}", git_ref));
+            if let Some(r) = &repo.git_ref {
+                source_label.push_str(&format!("@{}", r));
             }
-            if let Some(subfolder) = &repo.subfolder {
-                source_label.push_str(&format!(":{}", subfolder));
+            if let Some(s) = &repo.subfolder {
+                source_label.push_str(&format!(":{}", s));
             }
+
             let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
-                Ok(skills) => skills,
+                Ok(s) => s,
                 Err(err) => {
                     eprintln!("error: {}", err);
                     return EXIT_ERROR;
                 }
             };
-
-            if let Err(err) = install::persist_installed_skills(
-                &canonical_target,
-                &resolved_skills,
-                &source_label,
-            ) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
-            if !global
-                && let Err(err) =
-                    agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
-            {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
 
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
-            if let Some(git_ref) = &repo.git_ref {
-                println!("ref: {}", git_ref);
+            if let Some(r) = &repo.git_ref {
+                println!("ref: {}", r);
             }
-            if let Some(subfolder) = repo.subfolder {
-                println!("subfolder: {}", subfolder);
-            }
-
-            // Update lockfile
-            let mut lockfile = Lockfile::load(&lockfile_root);
-            for skill in &resolved_skills {
-                let skill_dir = canonical_target.join(skill);
-                lockfile.upsert(LockedSkill {
-                    name: skill.clone(),
-                    source: source_label.clone(),
-                    git_ref: repo.git_ref.clone(),
-                    hash: lockfile::hash_skill_dir(&skill_dir),
-                });
-            }
-            if let Err(err) = lockfile.save(&lockfile_root) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
+            if let Some(s) = &repo.subfolder {
+                println!("subfolder: {}", s);
             }
 
-            ui::print_selected_skills(&resolved_skills, skills.is_empty());
-            EXIT_SUCCESS
-        }
-        Ok(InstallSource::Gitlab(repo)) => {
-            let mut source_label = format!("gitlab:{}/{}", repo.owner, repo.name);
-            if let Some(git_ref) = &repo.git_ref {
-                source_label.push_str(&format!("@{}", git_ref));
-            }
-            if let Some(subfolder) = &repo.subfolder {
-                source_label.push_str(&format!(":{}", subfolder));
-            }
-            let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
-                Ok(skills) => skills,
-                Err(err) => {
-                    eprintln!("error: {}", err);
-                    return EXIT_ERROR;
-                }
-            };
-
-            if let Err(err) = install::persist_installed_skills(
+            if let Err(err) = finish_install(
                 &canonical_target,
+                &lockfile_root,
                 &resolved_skills,
                 &source_label,
+                repo.git_ref.as_deref(),
+                claude,
+                copilot,
+                all,
+                copy,
+                global,
+                skills.is_empty(),
             ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
             }
 
-            if !global
-                && let Err(err) =
-                    agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
-            {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
+            EXIT_SUCCESS
+        }
+        Ok(InstallSource::Gitlab(repo)) => {
+            let mut source_label = format!("gitlab:{}/{}", repo.owner, repo.name);
+            if let Some(r) = &repo.git_ref {
+                source_label.push_str(&format!("@{}", r));
             }
+            if let Some(s) = &repo.subfolder {
+                source_label.push_str(&format!(":{}", s));
+            }
+
+            let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
+                Ok(s) => s,
+                Err(err) => {
+                    eprintln!("error: {}", err);
+                    return EXIT_ERROR;
+                }
+            };
 
             println!("install source: gitlab");
             println!("owner: {}", repo.owner);
@@ -290,30 +294,30 @@ fn run_add(
             if repo.host != "gitlab.com" {
                 println!("host: {}", repo.host);
             }
-            if let Some(git_ref) = &repo.git_ref {
-                println!("ref: {}", git_ref);
+            if let Some(r) = &repo.git_ref {
+                println!("ref: {}", r);
             }
-            if let Some(subfolder) = repo.subfolder {
-                println!("subfolder: {}", subfolder);
+            if let Some(s) = &repo.subfolder {
+                println!("subfolder: {}", s);
             }
 
-            // Update lockfile
-            let mut lockfile = Lockfile::load(&lockfile_root);
-            for skill in &resolved_skills {
-                let skill_dir = canonical_target.join(skill);
-                lockfile.upsert(LockedSkill {
-                    name: skill.clone(),
-                    source: source_label.clone(),
-                    git_ref: repo.git_ref.clone(),
-                    hash: lockfile::hash_skill_dir(&skill_dir),
-                });
-            }
-            if let Err(err) = lockfile.save(&lockfile_root) {
+            if let Err(err) = finish_install(
+                &canonical_target,
+                &lockfile_root,
+                &resolved_skills,
+                &source_label,
+                repo.git_ref.as_deref(),
+                claude,
+                copilot,
+                all,
+                copy,
+                global,
+                skills.is_empty(),
+            ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
             }
 
-            ui::print_selected_skills(&resolved_skills, skills.is_empty());
             EXIT_SUCCESS
         }
         Ok(InstallSource::LocalPath(path)) => {
@@ -327,8 +331,9 @@ fn run_add(
                 .and_then(|v| v.to_str())
                 .filter(|v| !v.is_empty())
                 .unwrap_or("local-skill");
+
             let resolved_skills = match install::resolve_requested_skills(skills, default_skill) {
-                Ok(skills) => skills,
+                Ok(s) => s,
                 Err(err) => {
                     eprintln!("error: {}", err);
                     return EXIT_ERROR;
@@ -336,43 +341,27 @@ fn run_add(
             };
 
             let source_label = format!("local:{}", path.display());
-            if let Err(err) = install::persist_installed_skills(
+
+            println!("install source: local");
+            println!("path: {}", path.display());
+
+            if let Err(err) = finish_install(
                 &canonical_target,
+                &lockfile_root,
                 &resolved_skills,
                 &source_label,
+                None,
+                claude,
+                copilot,
+                all,
+                copy,
+                global,
+                skills.is_empty(),
             ) {
                 eprintln!("error: {}", err);
                 return EXIT_ERROR;
             }
 
-            if !global
-                && let Err(err) =
-                    agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
-            {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
-            println!("install source: local");
-            println!("path: {}", path.display());
-
-            // Update lockfile
-            let mut lockfile = Lockfile::load(&lockfile_root);
-            for skill in &resolved_skills {
-                let skill_dir = canonical_target.join(skill);
-                lockfile.upsert(LockedSkill {
-                    name: skill.clone(),
-                    source: source_label.clone(),
-                    git_ref: None,
-                    hash: lockfile::hash_skill_dir(&skill_dir),
-                });
-            }
-            if let Err(err) = lockfile.save(&lockfile_root) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
-            ui::print_selected_skills(&resolved_skills, skills.is_empty());
             EXIT_SUCCESS
         }
         Err(err) => {
