@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,7 +12,7 @@ pub struct GithubRepo {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstallSource {
     Github(GithubRepo),
-    LocalPath(String),
+    LocalPath(PathBuf),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -25,7 +27,7 @@ pub enum SourceParseError {
 
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
     if source.starts_with("./") || source.starts_with("../") || source.starts_with('/') {
-        return Ok(InstallSource::LocalPath(source.to_string()));
+        return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
     parse_github_source(source).map(InstallSource::Github)
@@ -46,7 +48,7 @@ pub fn parse_github_source(source: &str) -> Result<GithubRepo, SourceParseError>
     Ok(repo)
 }
 
-pub fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseError> {
+pub(crate) fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseError> {
     let Some((owner, name)) = source.split_once('/') else {
         return Err(SourceParseError::InvalidFormat);
     };
@@ -105,7 +107,10 @@ mod tests {
     #[test]
     fn parse_local_path_dot_slash() {
         let source = parse_install_source("./my-skills").expect("must parse");
-        assert_eq!(source, InstallSource::LocalPath("./my-skills".to_string()));
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from("./my-skills"))
+        );
     }
 
     #[test]
@@ -113,14 +118,17 @@ mod tests {
         let source = parse_install_source("../shared/skills").expect("must parse");
         assert_eq!(
             source,
-            InstallSource::LocalPath("../shared/skills".to_string())
+            InstallSource::LocalPath(PathBuf::from("../shared/skills"))
         );
     }
 
     #[test]
     fn parse_local_path_absolute() {
         let source = parse_install_source("/tmp/skills").expect("must parse");
-        assert_eq!(source, InstallSource::LocalPath("/tmp/skills".to_string()));
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from("/tmp/skills"))
+        );
     }
 
     #[test]

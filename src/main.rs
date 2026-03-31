@@ -132,13 +132,13 @@ fn run_add(
         Ok(path) => path,
         Err(err) => {
             eprintln!("error: {}", err);
-            return 1;
+            return EXIT_ERROR;
         }
     };
 
     if let Err(err) = install::ensure_canonical_target(&canonical_target) {
         eprintln!("error: {}", err);
-        return 1;
+        return EXIT_ERROR;
     }
 
     match parse_install_source(source) {
@@ -152,7 +152,7 @@ fn run_add(
                 Ok(skills) => skills,
                 Err(err) => {
                     eprintln!("error: {}", err);
-                    return 1;
+                    return EXIT_ERROR;
                 }
             };
 
@@ -162,7 +162,7 @@ fn run_add(
                 &source_label,
             ) {
                 eprintln!("error: {}", err);
-                return 1;
+                return EXIT_ERROR;
             }
 
             if !global
@@ -170,7 +170,7 @@ fn run_add(
                     agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
             {
                 eprintln!("error: {}", err);
-                return 1;
+                return EXIT_ERROR;
             }
 
             println!("install source: github");
@@ -180,15 +180,15 @@ fn run_add(
                 println!("subfolder: {}", subfolder);
             }
             ui::print_selected_skills(&resolved_skills, skills.is_empty());
-            0
+            EXIT_SUCCESS
         }
         Ok(InstallSource::LocalPath(path)) => {
-            if !std::path::Path::new(&path).exists() {
-                eprintln!("error: local path does not exist: {}", path);
-                return 2;
+            if !path.exists() {
+                eprintln!("error: local path does not exist: {}", path.display());
+                return EXIT_USAGE;
             }
 
-            let default_skill = std::path::Path::new(&path)
+            let default_skill = path
                 .file_name()
                 .and_then(|v| v.to_str())
                 .filter(|v| !v.is_empty())
@@ -197,18 +197,18 @@ fn run_add(
                 Ok(skills) => skills,
                 Err(err) => {
                     eprintln!("error: {}", err);
-                    return 1;
+                    return EXIT_ERROR;
                 }
             };
 
-            let source_label = format!("local:{}", path);
+            let source_label = format!("local:{}", path.display());
             if let Err(err) = install::persist_installed_skills(
                 &canonical_target,
                 &resolved_skills,
                 &source_label,
             ) {
                 eprintln!("error: {}", err);
-                return 1;
+                return EXIT_ERROR;
             }
 
             if !global
@@ -216,17 +216,17 @@ fn run_add(
                     agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
             {
                 eprintln!("error: {}", err);
-                return 1;
+                return EXIT_ERROR;
             }
 
             println!("install source: local");
-            println!("path: {}", path);
+            println!("path: {}", path.display());
             ui::print_selected_skills(&resolved_skills, skills.is_empty());
-            0
+            EXIT_SUCCESS
         }
         Err(err) => {
             eprintln!("error: {}", err);
-            2
+            EXIT_USAGE
         }
     }
 }
@@ -236,13 +236,13 @@ fn run_list(global: bool) -> i32 {
         Ok(path) => path,
         Err(err) => {
             eprintln!("error: {}", err);
-            return 1;
+            return EXIT_ERROR;
         }
     };
 
     if !canonical.exists() {
         println!("no skills installed");
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     let mut skills = Vec::new();
@@ -250,7 +250,7 @@ fn run_list(global: bool) -> i32 {
         Ok(entries) => entries,
         Err(err) => {
             eprintln!("error: failed to read {}: {}", canonical.display(), err);
-            return 1;
+            return EXIT_ERROR;
         }
     };
 
@@ -274,7 +274,7 @@ fn run_list(global: bool) -> i32 {
     skills.sort_by(|a, b| a.0.cmp(&b.0));
     if skills.is_empty() {
         println!("no skills installed");
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     let active_agents = agent::detect_active_agents();
@@ -288,7 +288,7 @@ fn run_list(global: bool) -> i32 {
         println!("{}\tsource={}\tsymlinks={}", name, source, symlink_text);
     }
 
-    0
+    EXIT_SUCCESS
 }
 
 fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
@@ -296,31 +296,31 @@ fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
         Ok(path) => path,
         Err(err) => {
             eprintln!("error: {}", err);
-            return 1;
+            return EXIT_ERROR;
         }
     };
 
     let skill_path = canonical.join(skill);
     if !skill_path.is_dir() {
         eprintln!("error: skill not installed: {}", skill);
-        return 2;
+        return EXIT_USAGE;
     }
 
     if ui::should_prompt_for_confirmation(yes) && !ui::confirm_removal(skill) {
         eprintln!("error: removal cancelled");
-        return 1;
+        return EXIT_ERROR;
     }
 
     if let Err(err) = std::fs::remove_dir_all(&skill_path) {
         eprintln!("error: failed to remove {}: {}", skill_path.display(), err);
-        return 1;
+        return EXIT_ERROR;
     }
 
     if !global && let Err(err) = agent::cleanup_agent_symlinks_if_empty(&canonical) {
         eprintln!("error: {}", err);
-        return 1;
+        return EXIT_ERROR;
     }
 
     println!("removed skill: {}", skill);
-    0
+    EXIT_SUCCESS
 }

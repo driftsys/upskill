@@ -1,41 +1,51 @@
 use std::path::Path;
 
-pub const AGENT_SKILL_LINKS: [&str; 7] = [
-    ".claude/skills",
-    ".github/skills",
-    ".codex/skills",
-    ".cursor/skills",
-    ".kiro/skills",
-    ".windsurf/skills",
-    ".opencode/skills",
+struct AgentDef {
+    name: &'static str,
+    skill_link: &'static str,
+}
+
+const AGENT_DEFS: [AgentDef; 7] = [
+    AgentDef {
+        name: "claude",
+        skill_link: ".claude/skills",
+    },
+    AgentDef {
+        name: "copilot",
+        skill_link: ".github/skills",
+    },
+    AgentDef {
+        name: "codex",
+        skill_link: ".codex/skills",
+    },
+    AgentDef {
+        name: "cursor",
+        skill_link: ".cursor/skills",
+    },
+    AgentDef {
+        name: "kiro",
+        skill_link: ".kiro/skills",
+    },
+    AgentDef {
+        name: "windsurf",
+        skill_link: ".windsurf/skills",
+    },
+    AgentDef {
+        name: "opencode",
+        skill_link: ".opencode/skills",
+    },
 ];
 
+pub fn all_skill_links() -> impl Iterator<Item = &'static str> {
+    AGENT_DEFS.iter().map(|a| a.skill_link)
+}
+
 pub fn detect_active_agents() -> Vec<String> {
-    let mut agents = Vec::new();
-
-    if std::fs::symlink_metadata(".claude/skills").is_ok() {
-        agents.push("claude".to_string());
-    }
-    if std::fs::symlink_metadata(".github/skills").is_ok() {
-        agents.push("copilot".to_string());
-    }
-    if std::fs::symlink_metadata(".codex/skills").is_ok() {
-        agents.push("codex".to_string());
-    }
-    if std::fs::symlink_metadata(".cursor/skills").is_ok() {
-        agents.push("cursor".to_string());
-    }
-    if std::fs::symlink_metadata(".kiro/skills").is_ok() {
-        agents.push("kiro".to_string());
-    }
-    if std::fs::symlink_metadata(".windsurf/skills").is_ok() {
-        agents.push("windsurf".to_string());
-    }
-    if std::fs::symlink_metadata(".opencode/skills").is_ok() {
-        agents.push("opencode".to_string());
-    }
-
-    agents
+    AGENT_DEFS
+        .iter()
+        .filter(|a| std::fs::symlink_metadata(a.skill_link).is_ok())
+        .map(|a| a.name.to_string())
+        .collect()
 }
 
 pub fn ensure_agent_targets(
@@ -46,7 +56,7 @@ pub fn ensure_agent_targets(
     canonical_target: &Path,
 ) -> Result<(), String> {
     if all {
-        for link in AGENT_SKILL_LINKS {
+        for link in all_skill_links() {
             create_agent_target(link, copy, canonical_target)?;
         }
         return Ok(());
@@ -70,7 +80,7 @@ pub fn ensure_agent_targets(
 
 pub fn cleanup_agent_symlinks_if_empty(canonical: &Path) -> Result<(), String> {
     if !canonical_has_skills(canonical)? {
-        for link in AGENT_SKILL_LINKS {
+        for link in all_skill_links() {
             remove_symlink_if_exists(link)?;
         }
     }
