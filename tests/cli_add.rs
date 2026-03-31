@@ -321,3 +321,80 @@ fn add_interactive_empty_selection_uses_default_skill() {
 
     assert!(cwd.path().join(".agents/skills/skills").is_dir());
 }
+
+#[test]
+fn add_accepts_pinned_branch_ref() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@main"])
+        .assert()
+        .success()
+        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: main\n");
+}
+
+#[test]
+fn add_accepts_pinned_tag_ref() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@v1.0"])
+        .assert()
+        .success()
+        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: v1.0\n");
+}
+
+#[test]
+fn add_accepts_pinned_commit_sha() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@abc1234"])
+        .assert()
+        .success()
+        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: abc1234\n");
+}
+
+#[test]
+fn add_accepts_pinned_ref_with_subfolder() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@v1.0:tools/lint"])
+        .assert()
+        .success()
+        .stdout(
+            "install source: github\nowner: microsoft\nrepo: skills\nref: v1.0\nsubfolder: tools/lint\n",
+        );
+}
+
+#[test]
+fn add_records_ref_in_source_metadata() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@v2.0"])
+        .assert()
+        .success();
+
+    let source = std::fs::read_to_string(cwd.path().join(".agents/skills/skills/.upskill-source"))
+        .expect("must read source");
+    assert_eq!(source, "github:microsoft/skills@v2.0");
+}
+
+#[test]
+fn add_rejects_empty_ref() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "microsoft/skills@"])
+        .assert()
+        .code(2)
+        .stderr("error: ref must be non-empty\n");
+}

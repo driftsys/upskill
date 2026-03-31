@@ -143,11 +143,13 @@ fn run_add(
 
     match parse_install_source(source) {
         Ok(InstallSource::Github(repo)) => {
-            let source_label = if let Some(subfolder) = &repo.subfolder {
-                format!("github:{}/{}:{}", repo.owner, repo.name, subfolder)
-            } else {
-                format!("github:{}/{}", repo.owner, repo.name)
-            };
+            let mut source_label = format!("github:{}/{}", repo.owner, repo.name);
+            if let Some(git_ref) = &repo.git_ref {
+                source_label.push_str(&format!("@{}", git_ref));
+            }
+            if let Some(subfolder) = &repo.subfolder {
+                source_label.push_str(&format!(":{}", subfolder));
+            }
             let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
                 Ok(skills) => skills,
                 Err(err) => {
@@ -176,6 +178,9 @@ fn run_add(
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
+            if let Some(git_ref) = repo.git_ref {
+                println!("ref: {}", git_ref);
+            }
             if let Some(subfolder) = repo.subfolder {
                 println!("subfolder: {}", subfolder);
             }
