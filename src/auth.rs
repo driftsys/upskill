@@ -59,6 +59,61 @@ impl GitHubAuth {
     }
 }
 
+/// Resolved authentication for a GitLab API request.
+#[derive(Debug, PartialEq, Eq)]
+pub enum GitLabAuth {
+    Token(String),
+    None,
+}
+
+/// Resolve a GitLab token from environment variables or the `glab` CLI.
+///
+/// Checks in order:
+/// 1. `GITLAB_TOKEN` environment variable
+/// 2. `GL_TOKEN` environment variable
+/// 3. `glab auth token` CLI output
+pub fn resolve_gitlab_token() -> GitLabAuth {
+    if let Some(token) = env_token("GITLAB_TOKEN") {
+        return GitLabAuth::Token(token);
+    }
+
+    if let Some(token) = env_token("GL_TOKEN") {
+        return GitLabAuth::Token(token);
+    }
+
+    if let Some(token) = glab_auth_token() {
+        return GitLabAuth::Token(token);
+    }
+
+    GitLabAuth::None
+}
+
+fn glab_auth_token() -> Option<String> {
+    let output = Command::new("glab").args(["auth", "token"]).output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let token = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    if token.is_empty() { None } else { Some(token) }
+}
+
+impl GitLabAuth {
+    /// Returns the token string if present.
+    pub fn token(&self) -> Option<&str> {
+        match self {
+            GitLabAuth::Token(t) => Some(t),
+            GitLabAuth::None => None,
+        }
+    }
+
+    /// Returns true if authentication is available.
+    pub fn is_authenticated(&self) -> bool {
+        matches!(self, GitLabAuth::Token(_))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,6 +219,55 @@ mod tests {
         assert!(auth.is_authenticated());
 
         let none = GitHubAuth::None;
+        assert_eq!(none.token(), None);
+        assert!(!none.is_authenticated());
+    }
+
+    // GitLab auth tests
+
+    #[test]
+    fn gitlab_token_env_is_used() {
+        with_env(
+            &[("GITLAB_TOKEN", Some("glpat_test")), ("GL_TOKEN", None)],
+            || {
+                let auth = resolve_gitlab_token();
+                assert_eq!(auth, GitLabAuth::Token("glpat_test".into()));
+            },
+        );
+    }
+
+    #[test]
+    fn gl_token_env_is_used_as_fallback() {
+        with_env(
+            &[("GITLAB_TOKEN", None), ("GL_TOKEN", Some("gl_fallback"))],
+            || {
+                let auth = resolve_gitlab_token();
+                assert_eq!(auth, GitLabAuth::Token("gl_fallback".into()));
+            },
+        );
+    }
+
+    #[test]
+    fn gitlab_token_takes_precedence() {
+        with_env(
+            &[
+                ("GITLAB_TOKEN", Some("glpat_primary")),
+                ("GL_TOKEN", Some("gl_secondary")),
+            ],
+            || {
+                let auth = resolve_gitlab_token();
+                assert_eq!(auth, GitLabAuth::Token("glpat_primary".into()));
+            },
+        );
+    }
+
+    #[test]
+    fn gitlab_token_accessor() {
+        let auth = GitLabAuth::Token("abc".into());
+        assert_eq!(auth.token(), Some("abc"));
+        assert!(auth.is_authenticated());
+
+        let none = GitLabAuth::None;
         assert_eq!(none.token(), None);
         assert!(!none.is_authenticated());
     }

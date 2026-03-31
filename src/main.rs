@@ -251,6 +251,71 @@ fn run_add(
             ui::print_selected_skills(&resolved_skills, skills.is_empty());
             EXIT_SUCCESS
         }
+        Ok(InstallSource::Gitlab(repo)) => {
+            let mut source_label = format!("gitlab:{}/{}", repo.owner, repo.name);
+            if let Some(git_ref) = &repo.git_ref {
+                source_label.push_str(&format!("@{}", git_ref));
+            }
+            if let Some(subfolder) = &repo.subfolder {
+                source_label.push_str(&format!(":{}", subfolder));
+            }
+            let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
+                Ok(skills) => skills,
+                Err(err) => {
+                    eprintln!("error: {}", err);
+                    return EXIT_ERROR;
+                }
+            };
+
+            if let Err(err) = install::persist_installed_skills(
+                &canonical_target,
+                &resolved_skills,
+                &source_label,
+            ) {
+                eprintln!("error: {}", err);
+                return EXIT_ERROR;
+            }
+
+            if !global
+                && let Err(err) =
+                    agent::ensure_agent_targets(claude, copilot, all, copy, &canonical_target)
+            {
+                eprintln!("error: {}", err);
+                return EXIT_ERROR;
+            }
+
+            println!("install source: gitlab");
+            println!("owner: {}", repo.owner);
+            println!("repo: {}", repo.name);
+            if repo.host != "gitlab.com" {
+                println!("host: {}", repo.host);
+            }
+            if let Some(git_ref) = &repo.git_ref {
+                println!("ref: {}", git_ref);
+            }
+            if let Some(subfolder) = repo.subfolder {
+                println!("subfolder: {}", subfolder);
+            }
+
+            // Update lockfile
+            let mut lockfile = Lockfile::load(&lockfile_root);
+            for skill in &resolved_skills {
+                let skill_dir = canonical_target.join(skill);
+                lockfile.upsert(LockedSkill {
+                    name: skill.clone(),
+                    source: source_label.clone(),
+                    git_ref: repo.git_ref.clone(),
+                    hash: lockfile::hash_skill_dir(&skill_dir),
+                });
+            }
+            if let Err(err) = lockfile.save(&lockfile_root) {
+                eprintln!("error: {}", err);
+                return EXIT_ERROR;
+            }
+
+            ui::print_selected_skills(&resolved_skills, skills.is_empty());
+            EXIT_SUCCESS
+        }
         Ok(InstallSource::LocalPath(path)) => {
             if !path.exists() {
                 eprintln!("error: local path does not exist: {}", path.display());
