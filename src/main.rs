@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::agent;
 use upskill::install;
+use upskill::lockfile;
 use upskill::lockfile::{LockedSkill, Lockfile};
 use upskill::source::{InstallSource, parse_install_source};
 use upskill::ui;
@@ -77,6 +78,9 @@ enum Commands {
         /// Preview changes without applying them
         #[arg(long = "dry-run")]
         dry_run: bool,
+        /// Force update even if local modifications are detected
+        #[arg(short = 'f', long = "force")]
+        force: bool,
         /// Update user-level global installation target
         #[arg(short = 'g', long = "global")]
         global: bool,
@@ -114,8 +118,9 @@ fn main() {
         Commands::Update {
             names,
             dry_run,
+            force,
             global,
-        } => run_update(&names, dry_run, global),
+        } => run_update(&names, dry_run, force, global),
     };
 
     if was_interrupted() {
@@ -230,10 +235,12 @@ fn run_add(
             // Update lockfile
             let mut lockfile = Lockfile::load(&lockfile_root);
             for skill in &resolved_skills {
+                let skill_dir = canonical_target.join(skill);
                 lockfile.upsert(LockedSkill {
                     name: skill.clone(),
                     source: source_label.clone(),
                     git_ref: repo.git_ref.clone(),
+                    hash: lockfile::hash_skill_dir(&skill_dir),
                 });
             }
             if let Err(err) = lockfile.save(&lockfile_root) {
@@ -287,10 +294,12 @@ fn run_add(
             // Update lockfile
             let mut lockfile = Lockfile::load(&lockfile_root);
             for skill in &resolved_skills {
+                let skill_dir = canonical_target.join(skill);
                 lockfile.upsert(LockedSkill {
                     name: skill.clone(),
                     source: source_label.clone(),
                     git_ref: None,
+                    hash: lockfile::hash_skill_dir(&skill_dir),
                 });
             }
             if let Err(err) = lockfile.save(&lockfile_root) {
@@ -442,7 +451,7 @@ fn run_check(global: bool) -> i32 {
     EXIT_SUCCESS
 }
 
-fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
+fn run_update(names: &[String], dry_run: bool, force: bool, global: bool) -> i32 {
     let lockfile_root = match lockfile_root(global) {
         Ok(path) => path,
         Err(err) => {
@@ -498,7 +507,23 @@ fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
         return EXIT_ERROR;
     }
 
+    let mut skipped = Vec::new();
+
     for skill in &skills_to_update {
+        // Check for local modifications
+        if !force && let Some(stored_hash) = &skill.hash {
+            let skill_dir = canonical_target.join(&skill.name);
+            let current_hash = lockfile::hash_skill_dir(&skill_dir);
+            if current_hash.as_deref() != Some(stored_hash.as_str()) {
+                eprintln!(
+                    "warning: {} has local modifications, skipping (use --force to overwrite)",
+                    skill.name
+                );
+                skipped.push(skill.name.as_str());
+                continue;
+            }
+        }
+
         if let Err(err) = install::persist_installed_skills(
             &canonical_target,
             std::slice::from_ref(&skill.name),
@@ -508,6 +533,13 @@ fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
             return EXIT_ERROR;
         }
         println!("updated: {}", skill.name);
+    }
+
+    if !skipped.is_empty() {
+        eprintln!(
+            "{} skill(s) skipped due to local modifications",
+            skipped.len()
+        );
     }
 
     EXIT_SUCCESS
