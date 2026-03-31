@@ -6,6 +6,7 @@ use thiserror::Error;
 pub struct GithubRepo {
     pub owner: String,
     pub name: String,
+    pub git_ref: Option<String>,
     pub subfolder: Option<String>,
 }
 
@@ -23,6 +24,8 @@ pub enum SourceParseError {
     EmptySegment,
     #[error("subfolder path must be non-empty")]
     EmptySubfolder,
+    #[error("ref must be non-empty")]
+    EmptyRef,
 }
 
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
@@ -34,16 +37,28 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
 }
 
 pub fn parse_github_source(source: &str) -> Result<GithubRepo, SourceParseError> {
-    let (repo_source, subfolder) = if let Some((repo_source, subfolder)) = source.split_once(':') {
-        if subfolder.trim().is_empty() {
+    // Split off :subfolder first
+    let (before_subfolder, subfolder) = if let Some((before, sub)) = source.split_once(':') {
+        if sub.trim().is_empty() {
             return Err(SourceParseError::EmptySubfolder);
         }
-        (repo_source, Some(subfolder.to_string()))
+        (before, Some(sub.to_string()))
     } else {
         (source, None)
     };
 
+    // Split off @ref
+    let (repo_source, git_ref) = if let Some((before, r)) = before_subfolder.split_once('@') {
+        if r.trim().is_empty() {
+            return Err(SourceParseError::EmptyRef);
+        }
+        (before, Some(r.to_string()))
+    } else {
+        (before_subfolder, None)
+    };
+
     let mut repo = parse_github_repo(repo_source)?;
+    repo.git_ref = git_ref;
     repo.subfolder = subfolder;
     Ok(repo)
 }
@@ -64,6 +79,7 @@ pub(crate) fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseE
     Ok(GithubRepo {
         owner: owner.to_string(),
         name: name.to_string(),
+        git_ref: None,
         subfolder: None,
     })
 }
@@ -163,5 +179,57 @@ mod tests {
     fn reject_whitespace_subfolder() {
         let err = parse_install_source("microsoft/skills: ").expect_err("must fail");
         assert_eq!(err, SourceParseError::EmptySubfolder);
+    }
+
+    #[test]
+    fn parse_ref_branch() {
+        let source = parse_install_source("microsoft/skills@main").expect("must parse");
+        let InstallSource::Github(repo) = source else {
+            panic!("expected Github");
+        };
+        assert_eq!(repo.owner, "microsoft");
+        assert_eq!(repo.name, "skills");
+        assert_eq!(repo.git_ref.as_deref(), Some("main"));
+        assert_eq!(repo.subfolder, None);
+    }
+
+    #[test]
+    fn parse_ref_tag() {
+        let source = parse_install_source("microsoft/skills@v1.0").expect("must parse");
+        let InstallSource::Github(repo) = source else {
+            panic!("expected Github");
+        };
+        assert_eq!(repo.git_ref.as_deref(), Some("v1.0"));
+    }
+
+    #[test]
+    fn parse_ref_commit_sha() {
+        let source = parse_install_source("microsoft/skills@abc1234def5678").expect("must parse");
+        let InstallSource::Github(repo) = source else {
+            panic!("expected Github");
+        };
+        assert_eq!(repo.git_ref.as_deref(), Some("abc1234def5678"));
+    }
+
+    #[test]
+    fn parse_ref_with_subfolder() {
+        let source = parse_install_source("microsoft/skills@v1.0:tools/lint").expect("must parse");
+        let InstallSource::Github(repo) = source else {
+            panic!("expected Github");
+        };
+        assert_eq!(repo.git_ref.as_deref(), Some("v1.0"));
+        assert_eq!(repo.subfolder.as_deref(), Some("tools/lint"));
+    }
+
+    #[test]
+    fn reject_empty_ref() {
+        let err = parse_install_source("microsoft/skills@").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptyRef);
+    }
+
+    #[test]
+    fn reject_empty_ref_with_subfolder() {
+        let err = parse_install_source("microsoft/skills@:tools").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptyRef);
     }
 }
