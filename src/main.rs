@@ -64,6 +64,12 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
+    /// Check installed skills for available updates
+    Check {
+        /// Check user-level global installation target
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
 }
 
 fn main() {
@@ -93,6 +99,7 @@ fn main() {
         } => run_add(&source, &skills, claude, copilot, all, copy, global),
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
+        Commands::Check { global } => run_check(global),
     };
 
     if was_interrupted() {
@@ -392,5 +399,29 @@ fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
     }
 
     println!("removed skill: {}", skill);
+    EXIT_SUCCESS
+}
+
+fn run_check(global: bool) -> i32 {
+    let lockfile_root = match lockfile_root(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let lockfile = Lockfile::load(&lockfile_root);
+
+    if lockfile.skills.is_empty() {
+        println!("no skills installed");
+        return EXIT_SUCCESS;
+    }
+
+    for skill in &lockfile.skills {
+        let ref_label = skill.git_ref.as_deref().unwrap_or("latest");
+        println!("{}\t{}\tpinned: {}", skill.name, skill.source, ref_label);
+    }
+
     EXIT_SUCCESS
 }
