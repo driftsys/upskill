@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::agent;
 use upskill::install;
+use upskill::lockfile::{LockedSkill, Lockfile};
 use upskill::source::{InstallSource, parse_install_source};
 use upskill::ui;
 
@@ -119,6 +120,16 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
+fn lockfile_root(global: bool) -> Result<std::path::PathBuf, String> {
+    if global {
+        std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .ok_or_else(|| "HOME is not set".to_string())
+    } else {
+        std::env::current_dir().map_err(|e| format!("failed to get current directory: {}", e))
+    }
+}
+
 fn run_add(
     source: &str,
     skills: &[String],
@@ -129,6 +140,14 @@ fn run_add(
     global: bool,
 ) -> i32 {
     let canonical_target = match install::canonical_target(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let lockfile_root = match lockfile_root(global) {
         Ok(path) => path,
         Err(err) => {
             eprintln!("error: {}", err);
@@ -178,12 +197,27 @@ fn run_add(
             println!("install source: github");
             println!("owner: {}", repo.owner);
             println!("repo: {}", repo.name);
-            if let Some(git_ref) = repo.git_ref {
+            if let Some(git_ref) = &repo.git_ref {
                 println!("ref: {}", git_ref);
             }
             if let Some(subfolder) = repo.subfolder {
                 println!("subfolder: {}", subfolder);
             }
+
+            // Update lockfile
+            let mut lockfile = Lockfile::load(&lockfile_root);
+            for skill in &resolved_skills {
+                lockfile.upsert(LockedSkill {
+                    name: skill.clone(),
+                    source: source_label.clone(),
+                    git_ref: repo.git_ref.clone(),
+                });
+            }
+            if let Err(err) = lockfile.save(&lockfile_root) {
+                eprintln!("error: {}", err);
+                return EXIT_ERROR;
+            }
+
             ui::print_selected_skills(&resolved_skills, skills.is_empty());
             EXIT_SUCCESS
         }
@@ -226,6 +260,21 @@ fn run_add(
 
             println!("install source: local");
             println!("path: {}", path.display());
+
+            // Update lockfile
+            let mut lockfile = Lockfile::load(&lockfile_root);
+            for skill in &resolved_skills {
+                lockfile.upsert(LockedSkill {
+                    name: skill.clone(),
+                    source: source_label.clone(),
+                    git_ref: None,
+                });
+            }
+            if let Err(err) = lockfile.save(&lockfile_root) {
+                eprintln!("error: {}", err);
+                return EXIT_ERROR;
+            }
+
             ui::print_selected_skills(&resolved_skills, skills.is_empty());
             EXIT_SUCCESS
         }
@@ -305,6 +354,14 @@ fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
         }
     };
 
+    let lockfile_root = match lockfile_root(global) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
     let skill_path = canonical.join(skill);
     if !skill_path.is_dir() {
         eprintln!("error: skill not installed: {}", skill);
@@ -318,6 +375,14 @@ fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
 
     if let Err(err) = std::fs::remove_dir_all(&skill_path) {
         eprintln!("error: failed to remove {}: {}", skill_path.display(), err);
+        return EXIT_ERROR;
+    }
+
+    // Update lockfile
+    let mut lockfile = Lockfile::load(&lockfile_root);
+    lockfile.remove(skill);
+    if let Err(err) = lockfile.save(&lockfile_root) {
+        eprintln!("error: {}", err);
         return EXIT_ERROR;
     }
 
