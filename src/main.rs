@@ -74,6 +74,9 @@ enum Commands {
     Update {
         /// Skill names to update (omit for all)
         names: Vec<String>,
+        /// Preview changes without applying them
+        #[arg(long = "dry-run")]
+        dry_run: bool,
         /// Update user-level global installation target
         #[arg(short = 'g', long = "global")]
         global: bool,
@@ -108,7 +111,11 @@ fn main() {
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
         Commands::Check { global } => run_check(global),
-        Commands::Update { names, global } => run_update(&names, global),
+        Commands::Update {
+            names,
+            dry_run,
+            global,
+        } => run_update(&names, dry_run, global),
     };
 
     if was_interrupted() {
@@ -435,7 +442,7 @@ fn run_check(global: bool) -> i32 {
     EXIT_SUCCESS
 }
 
-fn run_update(names: &[String], global: bool) -> i32 {
+fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
     let lockfile_root = match lockfile_root(global) {
         Ok(path) => path,
         Err(err) => {
@@ -466,6 +473,17 @@ fn run_update(names: &[String], global: bool) -> i32 {
         }
         selected
     };
+
+    if dry_run {
+        for skill in &skills_to_update {
+            let ref_label = skill.git_ref.as_deref().unwrap_or("latest");
+            println!(
+                "dry-run: would update {} from {} ({})",
+                skill.name, skill.source, ref_label
+            );
+        }
+        return EXIT_SUCCESS;
+    }
 
     let canonical_target = match install::canonical_target(global) {
         Ok(path) => path,
