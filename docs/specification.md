@@ -23,35 +23,31 @@ coding agents from a single static Rust binary.
 
 ### 1.2 Features
 
-- [ ] **Install from GitHub/GitLab** — fetch via tarball with
-      `git clone --depth 1` fallback for self-hosted or non-standard hosts
-- [ ] **Canonical `.agents/skills/` target** — always install to the cross-agent
+- [x] **Install from GitHub/GitLab** — fetch via `git clone --depth 1`; supports
+      GitHub shorthand, GitLab prefix, full URLs, self-hosted GitLab
+- [x] **Canonical `.agents/skills/` target** — always install to the cross-agent
       standard directory
-- [ ] **Agent symlinks** — auto-detect or explicitly target Claude Code,
-      Copilot, Codex, Cursor, Kiro, Windsurf, OpenCode
-- [ ] **Selective install** — pick specific skills by name (`--skill`) or
-      interactive multi-select
-- [ ] **Install from local path** — use a local directory as source for testing
+- [x] **Agent symlinks** — auto-detect or explicitly target Claude Code (`--claude`)
+      and Copilot (`--copilot`); `--all` targets all 7 supported agents
+- [x] **Selective install** — pick specific skills by name (`--skill`) or
+      interactive multi-select in a TTY
+- [x] **Install from local path** — use a local directory as source for testing
       or monorepo workflows
-- [ ] **List installed skills** — show name, description, source, and symlink
-      status (`list`)
-- [ ] **Remove skills** — clean removal of canonical copy and all agent symlinks
+- [x] **List installed skills** — show name, source, and symlink status (`list`)
+- [x] **Remove skills** — clean removal of canonical copy and all agent symlinks
       (`remove`)
-- [ ] **Global install** — install to `~/.agents/skills/` for cross-project
+- [x] **Global install** — install to `~/.agents/skills/` for cross-project
       availability (`-g`)
-- [ ] **CI-friendly mode** — `--yes` flag, no prompts, TTY detection for color
-      and spinners
-- [ ] **Lockfile** — track installed skills with source, branch, and commit SHA
-- [ ] **Branch/tag/commit pinning** — install a specific ref with
-      `owner/repo@v1.0`
-- [ ] **Private repos** — authenticate via `GITHUB_TOKEN` / `GITLAB_TOKEN` env
+- [x] **CI-friendly mode** — no prompts in non-TTY, TTY detection for color
+- [x] **Lockfile** — track installed skills with source, pinned ref, and content hash
+- [x] **Branch/tag/commit pinning** — install a specific ref with `owner/repo@v1.0`
+- [x] **Private repos** — authenticate via `GITHUB_TOKEN` / `GITLAB_TOKEN` env
       vars, or reuse existing `gh` / `glab` CLI login
-- [ ] **Check and update** — compare installed skills against upstream, re-fetch
-      outdated ones
-- [ ] **Registry search** — search skills across well-known registries
-      (skills.sh, awesome-copilot, anthropics/skills, microsoft/skills)
+- [x] **Update** — re-fetch skills from their recorded source; hash-based local
+      modification detection skips modified skills unless `--force` is passed
+- [x] **Registry search** — `upskill search <query>` hits the skills.sh public API
 - [ ] **Custom registries** — configure private or internal skill sources via
-      `registries.toml`
+      `.upskill/registries.toml` (v0.4)
 
 ## 2. Installation
 
@@ -92,31 +88,29 @@ upskill add <source> [options]
 | Flag          | Short | Description                                    |
 | ------------- | ----- | ---------------------------------------------- |
 | `--skill <n>` | `-s`  | Specific skill name(s) to install. Repeatable. |
-| `--all`       |       | Install all skills from the source.            |
-| `--list`      | `-l`  | List available skills without installing.      |
+| `--all`       |       | Symlink to all 7 supported agent directories.  |
 | `--global`    | `-g`  | Install to `~/.agents/skills/` (user-level).   |
-| `--yes`       | `-y`  | Skip confirmation prompts.                     |
 | `--copy`      |       | Independent copies instead of symlinks.        |
 | `--claude`    |       | Symlink to `.claude/skills/`.                  |
 | `--copilot`   |       | Symlink to `.github/skills/`.                  |
-| `--codex`     |       | Symlink to `.codex/skills/`.                   |
-| `--cursor`    |       | Symlink to `.cursor/skills/`.                  |
-| `--kiro`      |       | Symlink to `.kiro/skills/`.                    |
-| `--windsurf`  |       | Symlink to `.windsurf/skills/`.                |
-| `--opencode`  |       | Symlink to `.opencode/skills/`.                |
+
+No explicit flag: auto-detect from existing agent config directories in CWD.
 
 **Behavior:**
 
-1. Fetch the source (tarball for GitHub, direct read for local).
-2. Scan for `SKILL.md` files (max depth 4).
-3. Select skills: `--all`, `--skill <n>`, or interactive multi-select.
-4. Copy to `.agents/skills/<name>/` (always).
+1. Fetch the source (`git clone --depth 1` for GitHub/GitLab, direct read for
+   local).
+2. Resolve the subfolder if `:path` was specified.
+3. Select skills: `--skill <n>`, interactive prompt in a TTY, or default to repo
+   name in CI.
+4. Copy to `.agents/skills/<name>/` (canonical target).
 5. Create agent-specific symlinks:
-   - If agent flags (`--claude`, `--kiro`, etc.) are given → symlink only those.
-   - If `--all` → symlink all known agent dirs.
-   - If no flags → auto-detect existing agent dirs in project root, symlink
+   - If `--claude` or `--copilot` flags given → symlink only those.
+   - If `--all` → symlink all 7 supported agent dirs.
+   - If no flags → auto-detect: walk CWD for existing agent config dirs, symlink
      those.
-6. For `--global`: same logic but under `$HOME`.
+6. Write/update `.upskill-lock.json` with source, pinned ref, and content hash.
+7. For `--global`: install to `~/.agents/skills/`, no agent symlinks created.
 
 **Examples:**
 
@@ -156,61 +150,25 @@ Lists all skills found in `.agents/skills/` (project) or `~/.agents/skills/`
 ### 3.3 `upskill search` — search for skills
 
 ```
-upskill search [query] [options]
+upskill search <query> [options]
 ```
 
-| Flag             | Description                                |
-| ---------------- | ------------------------------------------ |
-| `--registry <n>` | Search a specific registry only.           |
-| `--local`        | Search installed skills only (no network). |
+| Flag      | Default | Description                |
+| --------- | ------- | -------------------------- |
+| `--limit` | `10`    | Maximum number of results. |
 
-Searches for skills across installed skills and configured registries.
-
-**Local search (no query or `--local`):**
+Queries the [skills.sh](https://skills.sh) public search API (no auth required).
 
 ```
-$ upskill search --local pdf
-  .agents/skills/pdf   Extract text, fill forms, merge PDFs   (anthropics/skills)
+$ upskill search rust
+rust-mcp-server-generator    7608 installs    upskill add awesome-copilot --skill rust-mcp-server-generator
+rust-analyzer                3200 installs    upskill add anthropics/skills --skill rust-analyzer
 ```
 
-**Registry search (default when query is given):**
+Each result includes the install command to copy-paste directly.
 
-Queries all well-known registries plus any custom registries from
-`registries.toml`:
-
-```
-$ upskill search deployment
-
-  SOURCE                SKILL                DESCRIPTION
-  internal              k8s-deploy           Deploy to production k8s clusters
-  microsoft/skills      azure-deploy-py      Azure deployment workflow
-  awesome-copilot       deploy-checklist     Pre-deployment safety checks
-```
-
-Install directly from a search result:
-
-```
-upskill add microsoft/skills --skill azure-deploy-py
-```
-
-**Well-known registries** (queried by default):
-
-| Name            | Source                   |
-| --------------- | ------------------------ |
-| skills.sh       | skills.sh index API      |
-| anthropic       | `anthropics/skills`      |
-| microsoft       | `microsoft/skills`       |
-| awesome-copilot | `github/awesome-copilot` |
-
-**How registry search works:**
-
-1. For each registry, fetch the skill index (tarball scan, cached locally for 1
-   hour).
-2. Match `query` against skill `name` and `description` fields (case-insensitive
-   substring).
-3. Deduplicate by skill name across registries (first match wins by registry
-   order).
-4. Display results sorted by registry priority.
+**Custom registries** (v0.4): once `.upskill/registries.toml` is supported,
+`upskill search` will also query configured private registries.
 
 ### 3.4 `upskill remove` — remove skills
 
@@ -226,7 +184,7 @@ upskill remove [name...] [options]
 Removes the skill directory from `.agents/skills/` and any symlinks in
 agent-specific directories. Without arguments: interactive multi-select.
 
-### 3.5 `upskill check` — check for updates (v0.2)
+### 3.5 `upskill check` — show lockfile state
 
 ```
 upskill check [options]
@@ -236,50 +194,17 @@ upskill check [options]
 | ---------- | ------------------------- |
 | `--global` | Check global skills only. |
 
-Compares installed skills against their upstream source using the lockfile.
-
-**Prerequisite:** `.upskill-lock.json` must exist in the project root (or
-`~/.upskill-lock.json` for global). Skills installed before lockfile support are
-not tracked — re-install with v0.2+ to enable tracking.
+Reads `.upskill-lock.json` and prints each skill's recorded source and pinned ref.
 
 ```
 $ upskill check
-No lockfile found. Re-install skills with `upskill add` to enable update tracking.
+my-skill    github:owner/repo    pinned: latest
+other-skill github:owner/repo    pinned: v1.2
 ```
 
-**Behavior:**
+Does not make any network requests — use `upskill update` to re-fetch.
 
-1. Read `.upskill-lock.json`.
-2. For each installed skill, query the source repo's latest commit on the
-   recorded branch:
-   - GitHub: `HEAD https://api.github.com/repos/{owner}/{repo}/commits/{branch}`
-     — returns SHA, lightweight.
-   - GitLab:
-     `GET https://gitlab.com/api/v4/projects/{id}/repository/branches/{branch}`.
-   - Local source: compare file modification times against lockfile timestamp.
-3. Compare remote HEAD SHA against lockfile's recorded `commit`.
-4. Print results:
-
-```
-$ upskill check
-  markspec         owner/markspec@main   ✓ up to date
-  azure-cosmos-db  microsoft/skills@main ⬆ update available (abc123 → def456)
-  my-local-tool    ./my-tools            — local source (no remote tracking)
-
-1 update available. Run `upskill update` to apply.
-```
-
-**Pinned skills** (installed with a specific ref like `owner/repo@v1.0`) are
-reported as pinned and not checked:
-
-```
-markspec  owner/markspec@v1.0  📌 pinned to v1.0
-```
-
-**Rate limits:** uses conditional requests (`If-None-Match` / ETag) to minimize
-API calls. Checking 10 skills = 10 lightweight HEAD requests.
-
-### 3.6 `upskill update` — update installed skills (v0.2)
+### 3.6 `upskill update` — re-install skills from recorded sources
 
 ```
 upskill update [name...] [options]
@@ -288,53 +213,32 @@ upskill update [name...] [options]
 | Flag        | Description                              |
 | ----------- | ---------------------------------------- |
 | `--global`  | Update global skills only.               |
-| `--yes`     | Skip confirmation.                       |
+| `--force`   | Overwrite locally modified skills.       |
 | `--dry-run` | Show what would change without applying. |
 
 **Behavior:**
 
-1. Run `check` internally to identify outdated skills.
-2. If no `name` arguments: update all outdated skills. If names given: update
-   only those.
-3. For each skill to update: a. Re-fetch the source tarball (same mechanism as
-   `add`). b. Extract the specific skill directory. c. Replace the canonical
-   copy in `.agents/skills/<name>/`. d. Existing symlinks remain intact — they
-   point to the canonical dir, which was updated in-place. e. Update lockfile
-   with the new commit SHA and timestamp.
-4. Print summary:
+1. Load `.upskill-lock.json`.
+2. Filter to requested names (or all if none given).
+3. If `--dry-run`: print what would be updated and return.
+4. For each skill:
+   - Compare SHA-256 content hash against the lockfile's stored hash.
+   - If hash differs and `--force` is not set: warn and skip.
+   - Otherwise: re-run `persist_installed_skills` from the recorded source.
+5. Print updated skill names; warn about skipped skills.
 
 ```
 $ upskill update
-  ⬆ azure-cosmos-db  abc123 → def456
-  ✓ 1 skill updated.
-```
-
-**Local modification detection:** if the user has edited an installed skill
-(detected by comparing file content hashes against the lockfile), warn and
-prompt:
-
-```
-⚠ markspec has local modifications. Overwrite? [y/N]
-```
-
-With `--yes`: overwrite without prompting. No backup — skills should be in
-version control.
-
-**Pinned skills are never auto-updated.** A skill installed with
-`owner/repo@v1.0` stays at v1.0. To move to a new version, the user must
-explicitly re-add:
-
-```bash
-upskill add owner/repo@v2.0 --skill markspec
+updated: my-skill
+warning: other-skill has local modifications, skipping (use --force to overwrite)
+1 skill(s) skipped due to local modifications
 ```
 
 **`--dry-run` output:**
 
 ```
 $ upskill update --dry-run
-  Would update azure-cosmos-db: abc123 → def456 (microsoft/skills@main)
-  Skipping markspec: pinned to v1.0
-  0 skills would be updated.
+dry-run: would update my-skill from github:owner/repo (latest)
 ```
 
 ## 4. Agent directory conventions
@@ -414,105 +318,31 @@ detects the source type from the format of the string:
 
 ### 5.2 GitHub fetch
 
-**Mechanism:** archive tarball via the GitHub archive endpoint. No `git` binary
-required. Single HTTP request, streamed through gzip decompression and tar
-extraction into a temporary directory.
-
-**URL construction:**
+**Mechanism:** `git clone --depth 1` into a temporary directory. Requires `git`
+on PATH. The clone is cleaned up after install.
 
 ```
-https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.tar.gz
+git clone --depth 1 [--branch <ref>] https://github.com/{owner}/{repo}.git <tmpdir>
 ```
 
-For tag/commit refs (v0.2):
+**Ref support:** when `@ref` is specified, passed as `--branch <ref>`. Accepts
+branch names, tag names, and full commit SHAs.
 
-```
-https://github.com/{owner}/{repo}/archive/refs/tags/{tag}.tar.gz
-https://github.com/{owner}/{repo}/archive/{commit}.tar.gz
-```
-
-**Branch resolution (v0.1):**
-
-1. Try `main`.
-2. Fall back to `master`.
-3. Fail with error:
-   `"Could not fetch {owner}/{repo}: neither 'main' nor 'master' branch found."`
-
-**Ref resolution (v0.2):** when `@ref` is specified, use it directly. No
-fallback. Accepts branch names, tag names, and full commit SHAs.
-
-**Subfolder filtering:** when `:path` is specified, after extraction, only the
-subtree at `path` is scanned for skills. The full tarball is still downloaded
-(GitHub does not support partial archive downloads), but only the relevant
-subtree is searched.
+**Subfolder filtering:** when `:path` is specified, only the subtree at `path`
+within the cloned repo is used for install. The full shallow clone is still
+fetched.
 
 **Authentication (resolution order):**
 
-| Priority | Method                 | Mechanism                                                 |
-| -------- | ---------------------- | --------------------------------------------------------- |
-| 1        | `GITHUB_TOKEN` env var | `Authorization: Bearer $GITHUB_TOKEN` header.             |
-| 2        | `GH_TOKEN` env var     | Same as above (matches `gh` CLI convention).              |
-| 3        | `gh auth token` output | Shell out to `gh auth token`, use result as bearer token. |
-| 4        | Unauthenticated        | Public repos only. Private repos fail with guidance.      |
+| Priority | Method                 | Mechanism                                                        |
+| -------- | ---------------------- | ---------------------------------------------------------------- |
+| 1        | `GITHUB_TOKEN` env var | Injected into clone URL as `https://token@github.com/...`.       |
+| 2        | `GH_TOKEN` env var     | Same as above (matches `gh` CLI convention).                     |
+| 3        | `gh auth token` output | Shell out to `gh auth token`, use result.                        |
+| 4        | Unauthenticated        | Public repos only. Private repos fail with git credential error. |
 
 The `gh` CLI fallback means: if the user already ran `gh auth login`, `upskill`
-reuses that session. No extra configuration needed. If `gh` is not on PATH, this
-step is silently skipped.
-
-**Rate limits:** GitHub tarball downloads for public repos are not subject to
-the REST API rate limit (60/hr unauthenticated). Authenticated requests get
-higher limits.
-
-**Error handling:**
-
-| HTTP status | Behavior                                                   |
-| ----------- | ---------------------------------------------------------- |
-| 200         | Stream, decompress, extract.                               |
-| 404         | Branch not found → try fallback → fail with clear error.   |
-| 401 / 403   | Auth failure → suggest setting `GITHUB_TOKEN`.             |
-| 429         | Rate limited → print retry-after and exit.                 |
-| Network err | Connection refused / timeout → print error, suggest proxy. |
-
-### 5.2.1 Git clone fallback
-
-If the tarball download fails (404, non-standard host, custom auth middleware),
-`upskill` falls back to `git clone`:
-
-```
-git clone --depth 1 --filter=blob:none <repo-url> <tmpdir>
-```
-
-**Fallback chain:**
-
-```
-1. Tarball endpoint          ← fast, no git binary needed
-   ↓ (on failure)
-2. git clone --depth 1       ← works with any host, any auth, any git config
-   ↓ (git not found)
-3. Error with guidance       ← "Install git or set GITHUB_TOKEN for tarball auth"
-```
-
-**When git fallback is used:**
-
-- Self-hosted GitLab/GitHub Enterprise with non-standard archive URLs.
-- Hosts behind corporate proxies that block direct downloads but allow git
-  protocol.
-- Any source URL that doesn't match known tarball URL patterns.
-
-**Git inherits the user's auth configuration:** SSH keys, credential helpers,
-`.netrc`, `~/.gitconfig` — all respected transparently. This means private repos
-that work with `git clone` also work with `upskill add`.
-
-**Output:**
-
-```
-$ upskill add gitlab.internal.com/team/skills --skill k8s-deploy
-  ⚠ Tarball not available, falling back to git clone
-  ✓ Fetched gitlab.internal.com/team/skills
-  ✓ k8s-deploy → .agents/skills/k8s-deploy
-```
-
-The fallback is silent except for the warning line. No user action required.
+reuses that session without any extra configuration.
 
 ### 5.3 GitLab fetch (v0.2)
 
@@ -666,14 +496,15 @@ same source are still offered for installation.
 
 ### 6.4 Environment variables
 
-| Variable       | Purpose                                           |
-| -------------- | ------------------------------------------------- |
-| `NO_COLOR`     | Disable colored output.                           |
-| `GITHUB_TOKEN` | Authenticate GitHub requests (private repos).     |
-| `GH_TOKEN`     | Fallback for `GITHUB_TOKEN` (matches `gh` CLI).   |
-| `GITLAB_TOKEN` | Authenticate GitLab requests (private repos).     |
-| `GL_TOKEN`     | Fallback for `GITLAB_TOKEN` (matches `glab` CLI). |
-| `HTTPS_PROXY`  | HTTP proxy for network requests.                  |
+| Variable               | Purpose                                                         |
+| ---------------------- | --------------------------------------------------------------- |
+| `NO_COLOR`             | Disable colored output.                                         |
+| `GITHUB_TOKEN`         | Authenticate GitHub requests (private repos).                   |
+| `GH_TOKEN`             | Fallback for `GITHUB_TOKEN` (matches `gh` CLI).                 |
+| `GITLAB_TOKEN`         | Authenticate GitLab requests (private repos).                   |
+| `GL_TOKEN`             | Fallback for `GITLAB_TOKEN` (matches `glab` CLI).               |
+| `UPSKILL_REGISTRY_URL` | Override the skills.sh base URL (default: `https://skills.sh`). |
+| `HTTPS_PROXY`          | HTTP proxy for network requests.                                |
 
 If no token env var is set, `upskill` shells out to `gh auth token` or
 `glab auth token` as a final fallback before falling back to unauthenticated
@@ -724,25 +555,32 @@ project/
 └── ...
 ```
 
-### 7.3 Lockfile (v0.2)
+### 7.3 Lockfile
 
-`.upskill-lock.json` in project root:
+`.upskill-lock.json` in project root (or `~/.upskill-lock.json` for global):
 
 ```json
 {
-  "version": 1,
   "skills": [
     {
-      "name": "markspec",
-      "source": "owner/markspec",
-      "subpath": "skills/markspec",
-      "branch": "main",
-      "commit": "abc123def456...",
-      "installed_at": "2026-03-30T12:00:00Z"
+      "name": "my-skill",
+      "source": "github:owner/repo@v1.2",
+      "ref": "v1.2",
+      "hash": "a3f8c2..."
     }
   ]
 }
 ```
+
+| Field    | Description                                                               |
+| -------- | ------------------------------------------------------------------------- |
+| `name`   | Skill directory name.                                                     |
+| `source` | Full source label including prefix and ref.                               |
+| `ref`    | Pinned git ref (omitted if tracking latest).                              |
+| `hash`   | SHA-256 of all files in the skill directory (for modification detection). |
+
+Skills are sorted by name (deterministic output). Commit this file to track
+exact skill versions across environments.
 
 ### 7.4 Registries configuration
 

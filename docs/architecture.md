@@ -19,19 +19,19 @@ Rust 2024 edition. MSRV: 1.85 (first stable release to support edition 2024).
 | `sha2`       | 0.11.x  | SHA-256 hashing         | Lockfile content hash for modification detection. |
 | `thiserror`  | 2.x     | Typed parse errors      | `SourceParseError` in `source.rs`.                |
 | `anyhow`     | 1.x     | Error handling          | Ergonomic error chains with `.context()`.         |
+| `ureq`       | 2.x     | HTTP client             | skills.sh API calls in `search.rs`.               |
 
 **Not included:**
 
-| Crate        | Why not                                                              |
-| ------------ | -------------------------------------------------------------------- |
-| `tokio`      | No async needed. All I/O is sequential: one fetch, one scan.         |
-| `reqwest`    | Pulls in tokio. Tarball download is done via `git clone`.            |
-| `ureq`       | HTTP tarball download not yet used — fetch delegates to `git clone`. |
-| `git2`       | Libgit2 binding is heavy (~5 MB). Shell out to `git` instead.        |
-| `walkdir`    | Not needed — `std::fs::read_dir` is sufficient for current depth.    |
-| `dialoguer`  | Interactive prompts are simple enough with raw stdin.                |
-| `serde_yaml` | No SKILL.md frontmatter parsing yet (v0.3+).                         |
-| `toml`       | No `registries.toml` config yet (v0.3+).                             |
+| Crate        | Why not                                                           |
+| ------------ | ----------------------------------------------------------------- |
+| `tokio`      | No async needed. All I/O is sequential: one fetch, one scan.      |
+| `reqwest`    | Pulls in tokio. Fetch delegates to `git clone`.                   |
+| `git2`       | Libgit2 binding is heavy (~5 MB). Shell out to `git` instead.     |
+| `walkdir`    | Not needed — `std::fs::read_dir` is sufficient for current depth. |
+| `dialoguer`  | Interactive prompts are simple enough with raw stdin.             |
+| `serde_yaml` | No SKILL.md frontmatter parsing yet (v0.4+).                      |
+| `toml`       | No `registries.toml` config yet (v0.4+).                          |
 
 ### 1.3 Build profile
 
@@ -72,6 +72,7 @@ src/
 ├── agent.rs      Agent detection, AGENT_DEFS, symlink/copy targets
 ├── install.rs    Canonical target, persist, skill selection
 ├── lockfile.rs   Lock file read/write, content hash
+├── search.rs     skills.sh API search, registry URL resolution
 ├── ui.rs         Interactive prompts, TTY detection, colored output
 └── auth.rs       Token resolution (env vars, gh/glab CLI fallback)
 ```
@@ -86,6 +87,7 @@ main.rs
   ├── agent.rs      (filesystem checks, symlink operations)
   ├── install.rs    (uses: ui — canonical target, skill selection)
   ├── lockfile.rs   (uses: serde_json, sha2 — file I/O)
+  ├── search.rs     (uses: ureq — HTTP GET to registry API)
   └── ui.rs         (stdin/stdout — TTY detection, prompts)
 ```
 
@@ -436,14 +438,13 @@ Command::cargo_bin("upskill")
 
 Test files by area: `cli_add`, `cli_list`, `cli_remove`, `cli_check`,
 `cli_update`, `cli_lockfile`, `cli_moddetect`, `cli_dryrun`, `cli_global`,
-`cli_gitlab`, `cli_ci_mode`, `cli_exit_codes`.
+`cli_gitlab`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`.
 
-## 8. Planned (v0.3+)
+## 8. Planned (v0.4+)
 
 Features not yet implemented but tracked in the backlog:
 
 - **Skill discovery** (`skill.rs`) — `SKILL.md` frontmatter scanning, validation, name/description extraction.
-- **Registry search** (`search.rs`) — search well-known and custom registries by keyword.
 - **Custom registries** (`registry.rs`) — `.upskill/registries.toml` for project and global registry config.
 - **Named registry install** — `upskill add <registry> --skill <name>`.
-- **Local search cache** — 1-hour TTL cache per registry in platform cache dir.
+- **Local search cache** — 1-hour TTL cache per registry in platform cache dir (relevant once git-based registries are added).

@@ -88,6 +88,31 @@ my-skill    source=github:owner/repo    symlinks=claude,copilot
 other-skill source=local:/path/to/src  symlinks=none
 ```
 
+### `upskill search <query>`
+
+Search the public skills registry (skills.sh).
+
+```bash
+upskill search rust
+upskill search code-review
+upskill search --limit 20 python
+```
+
+Output:
+
+```
+rust-mcp-server-generator    7608 installs    upskill add awesome-copilot --skill rust-mcp-server-generator
+rust-analyzer                3200 installs    upskill add anthropics/skills --skill rust-analyzer
+```
+
+Each result includes the install command to use directly.
+
+**Flags:**
+
+| Flag      | Default | Description                |
+| --------- | ------- | -------------------------- |
+| `--limit` | `10`    | Maximum number of results. |
+
 ### `upskill remove <skill>`
 
 Remove an installed skill and clean up agent symlinks.
@@ -147,6 +172,16 @@ In a non-TTY environment (CI, pipes), `upskill` automatically:
 
 - Skips interactive prompts and uses defaults.
 - Disables colored output when `NO_COLOR` is set.
+
+### Override the search registry URL
+
+For testing or private deployments:
+
+```bash
+UPSKILL_REGISTRY_URL=https://my-registry.example.com upskill search query
+```
+
+Defaults to `https://skills.sh`.
 
 ### Private repositories
 
