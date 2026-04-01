@@ -18,6 +18,7 @@ pub mod auth;
 pub mod fetch;
 pub mod install;
 pub mod lockfile;
+pub mod search;
 pub mod source;
 pub mod ui;
 

@@ -6,6 +6,7 @@ use upskill::agent;
 use upskill::install;
 use upskill::lockfile;
 use upskill::lockfile::{LockedSkill, Lockfile};
+use upskill::search;
 use upskill::source::{InstallSource, parse_install_source};
 use upskill::ui;
 
@@ -72,6 +73,14 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
+    /// Search the public skills registry
+    Search {
+        /// Search query
+        query: String,
+        /// Maximum number of results
+        #[arg(long, default_value = "10")]
+        limit: usize,
+    },
     /// Update installed skills to their latest versions
     Update {
         /// Skill names to update (omit for all)
@@ -116,6 +125,7 @@ fn main() {
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
         Commands::Check { global } => run_check(global),
+        Commands::Search { query, limit } => run_search(&query, limit),
         Commands::Update {
             names,
             dry_run,
@@ -608,4 +618,31 @@ fn run_update(names: &[String], dry_run: bool, force: bool, global: bool) -> i32
     }
 
     EXIT_SUCCESS
+}
+
+fn run_search(query: &str, limit: usize) -> i32 {
+    match search::search(query, limit) {
+        Err(err) => {
+            eprintln!("error: {}", err);
+            EXIT_ERROR
+        }
+        Ok(results) if results.is_empty() => {
+            println!("no skills found for '{}'", query);
+            EXIT_SUCCESS
+        }
+        Ok(results) => {
+            for skill in &results {
+                // source from API is "github/owner/repo" or "github/owner" — extract repo part
+                let repo = skill
+                    .source
+                    .trim_start_matches("github/")
+                    .trim_start_matches("gitlab/");
+                println!(
+                    "{}\t{} installs\tupskill add {} --skill {}",
+                    skill.name, skill.installs, repo, skill.name
+                );
+            }
+            EXIT_SUCCESS
+        }
+    }
 }
