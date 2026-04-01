@@ -1,5 +1,7 @@
 # upskill
 
+[![docs](https://img.shields.io/badge/docs-driftsys.github.io/upskill-blue)](https://driftsys.github.io/upskill/)
+
 > Upskill your coding agents.
 
 Ultra-lightweight [Agent Skills](https://agentskills.io/) package manager in Rust — no Node.js, no npm, no runtime dependencies.
