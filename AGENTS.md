@@ -27,10 +27,37 @@ Primary crate:
 
 - `upskill` — library/CLI implementation and domain logic in Rust.
 
+### Module layout
+
+```
+src/
+├── main.rs       CLI entry point, clap derive, command dispatch
+├── lib.rs        Module declarations and re-exports
+├── source.rs     Source URL parsing and classification
+├── fetch.rs      Git clone, shallow clone, local path resolution
+├── agent.rs      Agent detection, AGENT_DEFS, symlink/copy targets
+├── install.rs    Canonical target, persist, skill selection
+├── lockfile.rs   Lock file read/write, content hash
+├── ui.rs         Interactive prompts, TTY detection, colored output
+└── auth.rs       Token resolution (env vars, gh/glab CLI fallback)
+```
+
 Core docs:
 
 - `docs/specification.md`
 - `docs/architecture.md`
+- `docs/usage.md`
+
+### Key conventions
+
+- **Error handling**: `anyhow::Result<T>` + `.with_context()` everywhere except
+  `source.rs`, which uses `thiserror` for typed `SourceParseError`.
+- **`main.rs` only does I/O orchestration** — call modules, handle errors, print
+  results. Business logic lives in the library modules.
+- **Zero warnings policy** — compiler, clippy, and docs tooling. `-D warnings`
+  is enforced in CI.
+- **Clippy `too_many_arguments`** — group related flags into structs
+  (e.g. `AddContext`) when a function would exceed 7 params.
 
 ## Workflow
 
@@ -52,7 +79,7 @@ Story/Task -> ATDD -> TDD -> Implement -> Update SPEC/USAGE -> PR -> Review -> M
 7. After opening a PR, fix CI issues first, then respond to review comments.
 8. Fix critical findings immediately.
 9. Track non-critical follow-up work as debt in a story.
-10. Merge with a merge commit (not squash) to preserve PR linkage in history.
+10. Merge with a squash commit to keep history clean.
 
 Agent-specific rules:
 
