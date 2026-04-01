@@ -1,10 +1,22 @@
-# upskill — Usage
+# upskill
 
-> Upskill your coding agents — lightweight agent skills package manager.
+`upskill` is a package manager for [Agent Skills][agent-skills] — the shared
+skill format supported by Claude Code, GitHub Copilot, Codex, Cursor, Kiro,
+Windsurf, and OpenCode.
 
-## Getting started
+It installs skills from any GitHub or GitLab repository into your project in
+one command. Skills land in `.agents/skills/` and are automatically linked into
+whichever agent config directories already exist in your project. No Node.js.
+No npm. A single static binary.
 
-### Installation
+```bash
+upskill search code-review          # find skills
+upskill add owner/repo              # install from a GitHub repo
+upskill list                        # see what's installed
+upskill update                      # re-fetch from source
+```
+
+## Installation
 
 ```bash
 cargo install upskill
@@ -12,17 +24,17 @@ cargo install upskill
 
 Or download a pre-built binary from the [releases page][releases].
 
-### Quick start
+## Quick start
 
 ```bash
-# Install skills from a GitHub repo into the current project
-upskill add owner/repo
+# Search the public registry
+upskill search python
 
-# List installed skills
+# Install a skill (auto-detects your agents)
+upskill add anthropics/skills --skill python-best-practices
+
+# See what's installed and which agents are linked
 upskill list
-
-# Remove a skill
-upskill remove my-skill
 ```
 
 Skills are installed to `.agents/skills/` in the current directory. Agent
@@ -299,3 +311,4 @@ overwriting.
 | OpenCode | `.opencode/skills` |
 
 [releases]: https://github.com/driftsys/upskill/releases
+[agent-skills]: https://agentskills.io/specification
