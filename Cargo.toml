@@ -11,6 +11,7 @@ keywords = ["agent", "skills", "cli", "ai", "package-manager"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
+anyhow = "1"
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -28,3 +29,5 @@ tempfile = "3.14"
 lto = true
 strip = true
 codegen-units = 1
+opt-level = "z"
+panic = "abort"

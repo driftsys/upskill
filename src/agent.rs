@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use std::path::Path;
 
 struct AgentDef {
@@ -54,7 +55,7 @@ pub fn ensure_agent_targets(
     all: bool,
     copy: bool,
     canonical_target: &Path,
-) -> Result<(), String> {
+) -> Result<()> {
     if all {
         for link in all_skill_links() {
             create_agent_target(link, copy, canonical_target)?;
@@ -64,21 +65,28 @@ pub fn ensure_agent_targets(
 
     let auto_detect = !claude && !copilot;
 
-    let link_claude = claude || (auto_detect && Path::new(".claude").exists());
-    let link_copilot = copilot || (auto_detect && Path::new(".github").exists());
-
-    if link_claude {
-        create_agent_target(".claude/skills", copy, canonical_target)?;
-    }
-
-    if link_copilot {
-        create_agent_target(".github/skills", copy, canonical_target)?;
+    if auto_detect {
+        for agent in &AGENT_DEFS {
+            let parent = Path::new(agent.skill_link)
+                .parent()
+                .unwrap_or(Path::new("."));
+            if parent.exists() {
+                create_agent_target(agent.skill_link, copy, canonical_target)?;
+            }
+        }
+    } else {
+        if claude {
+            create_agent_target(".claude/skills", copy, canonical_target)?;
+        }
+        if copilot {
+            create_agent_target(".github/skills", copy, canonical_target)?;
+        }
     }
 
     Ok(())
 }
 
-pub fn cleanup_agent_symlinks_if_empty(canonical: &Path) -> Result<(), String> {
+pub fn cleanup_agent_symlinks_if_empty(canonical: &Path) -> Result<()> {
     if !canonical_has_skills(canonical)? {
         for link in all_skill_links() {
             remove_symlink_if_exists(link)?;
@@ -88,16 +96,20 @@ pub fn cleanup_agent_symlinks_if_empty(canonical: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn canonical_has_skills(canonical: &Path) -> Result<bool, String> {
+fn canonical_has_skills(canonical: &Path) -> Result<bool> {
     if !canonical.exists() {
         return Ok(false);
     }
 
-    let entries = std::fs::read_dir(canonical)
-        .map_err(|err| format!("failed to inspect installed skills: {}", err))?;
+    let entries = std::fs::read_dir(canonical).with_context(|| {
+        format!(
+            "failed to inspect installed skills in {}",
+            canonical.display()
+        )
+    })?;
 
     for entry in entries {
-        let entry = entry.map_err(|err| format!("failed to inspect installed skills: {}", err))?;
+        let entry = entry.context("failed to inspect installed skills")?;
         if entry.path().is_dir() {
             return Ok(true);
         }
@@ -106,37 +118,36 @@ fn canonical_has_skills(canonical: &Path) -> Result<bool, String> {
     Ok(false)
 }
 
-fn remove_symlink_if_exists(link_path: &str) -> Result<(), String> {
+fn remove_symlink_if_exists(link_path: &str) -> Result<()> {
     let link = Path::new(link_path);
     match std::fs::symlink_metadata(link) {
         Ok(meta) => {
             if meta.file_type().is_symlink() {
-                std::fs::remove_file(link).map_err(|err| {
-                    format!("failed to remove symlink {}: {}", link.display(), err)
-                })?;
+                std::fs::remove_file(link)
+                    .with_context(|| format!("failed to remove symlink {}", link.display()))?;
             }
             Ok(())
         }
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(format!("failed to inspect {}: {}", link.display(), err)),
+        Err(err) => Err(err).with_context(|| format!("failed to inspect {}", link.display())),
     }
 }
 
-fn create_agent_target(link_path: &str, copy: bool, canonical_target: &Path) -> Result<(), String> {
+fn create_agent_target(link_path: &str, copy: bool, canonical_target: &Path) -> Result<()> {
     let link = Path::new(link_path);
 
     if let Some(parent) = link.parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|err| format!("failed to create {}: {}", parent.display(), err))?;
+            .with_context(|| format!("failed to create {}", parent.display()))?;
     }
 
     if link.exists() || std::fs::symlink_metadata(link).is_ok() {
         if link.is_dir() && !link.is_symlink() {
             std::fs::remove_dir_all(link)
-                .map_err(|err| format!("failed to reset {}: {}", link.display(), err))?;
+                .with_context(|| format!("failed to reset {}", link.display()))?;
         } else {
             std::fs::remove_file(link)
-                .map_err(|err| format!("failed to reset {}: {}", link.display(), err))?;
+                .with_context(|| format!("failed to reset {}", link.display()))?;
         }
     }
 
@@ -147,12 +158,11 @@ fn create_agent_target(link_path: &str, copy: bool, canonical_target: &Path) -> 
 
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(canonical_target, link).map_err(|err| {
+        std::os::unix::fs::symlink(canonical_target, link).with_context(|| {
             format!(
-                "failed to create symlink {} -> {}: {}",
+                "failed to create symlink {} -> {}",
                 link.display(),
                 canonical_target.display(),
-                err
             )
         })?;
     }
@@ -160,33 +170,31 @@ fn create_agent_target(link_path: &str, copy: bool, canonical_target: &Path) -> 
     #[cfg(not(unix))]
     {
         let _ = link;
-        return Err("symlink creation is currently supported on unix platforms".to_string());
+        anyhow::bail!("symlink creation is currently supported on unix platforms");
     }
 
     Ok(())
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
-    std::fs::create_dir_all(dst)
-        .map_err(|err| format!("failed to create {}: {}", dst.display(), err))?;
+fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir_all(dst).with_context(|| format!("failed to create {}", dst.display()))?;
 
-    let entries = std::fs::read_dir(src)
-        .map_err(|err| format!("failed to read {}: {}", src.display(), err))?;
+    let entries =
+        std::fs::read_dir(src).with_context(|| format!("failed to read {}", src.display()))?;
 
     for entry in entries {
-        let entry = entry.map_err(|err| format!("failed to read {}: {}", src.display(), err))?;
+        let entry = entry.with_context(|| format!("failed to read {}", src.display()))?;
         let entry_path = entry.path();
         let target_path = dst.join(entry.file_name());
 
         if entry_path.is_dir() {
             copy_dir_all(&entry_path, &target_path)?;
         } else {
-            std::fs::copy(&entry_path, &target_path).map_err(|err| {
+            std::fs::copy(&entry_path, &target_path).with_context(|| {
                 format!(
-                    "failed to copy {} to {}: {}",
+                    "failed to copy {} to {}",
                     entry_path.display(),
                     target_path.display(),
-                    err
                 )
             })?;
         }

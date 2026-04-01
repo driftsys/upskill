@@ -1,22 +1,21 @@
+use anyhow::{Context, Result};
 use std::io::{self, IsTerminal, Write};
 
 pub fn interactive_skill_selection_enabled() -> bool {
     std::env::var_os("UPSKILL_FORCE_INTERACTIVE").is_some() || io::stdin().is_terminal()
 }
 
-pub fn prompt_for_skill_selection(default_skill: &str) -> Result<Vec<String>, String> {
+pub fn prompt_for_skill_selection(default_skill: &str) -> Result<Vec<String>> {
     print!(
         "select skills (comma-separated, empty for '{}'): ",
         default_skill
     );
-    io::stdout()
-        .flush()
-        .map_err(|err| format!("failed to flush prompt: {}", err))?;
+    io::stdout().flush().context("failed to flush prompt")?;
 
     let mut answer = String::new();
     io::stdin()
         .read_line(&mut answer)
-        .map_err(|err| format!("failed to read selected skills: {}", err))?;
+        .context("failed to read selected skills")?;
 
     let parsed: Vec<String> = answer
         .split(',')
