@@ -1,0 +1,9 @@
+[book]
+title = "upskill"
+authors = ["driftsys"]
+src = "docs"
+
+[output.html]
+site-url = "/upskill/"
+git-repository-url = "https://github.com/driftsys/upskill"
+edit-url-template = "https://github.com/driftsys/upskill/edit/main/docs/{path}"
