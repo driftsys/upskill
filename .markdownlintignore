@@ -1,2 +1,4 @@
 target/
 CHANGELOG.md
+CLAUDE.md
+tests/fixtures/
