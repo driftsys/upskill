@@ -14,6 +14,6 @@
 #   ? cargo test          # run tests, never block commit
 #
 # Enable/disable this hook:
-#   git std hooks enable prepare-commit-msg
-#   git std hooks disable prepare-commit-msg
+#   git std hook enable prepare-commit-msg
+#   git std hook disable prepare-commit-msg
 #
