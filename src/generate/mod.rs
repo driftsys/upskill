@@ -2,7 +2,7 @@
 //!
 //! Pure rendering. No filesystem writes — those land in Phase 3.
 
-use crate::model::Skill;
+use crate::model::{Rule, Skill};
 use anyhow::{Context, Result};
 use serde_yaml_ng::{Mapping, Value};
 
@@ -53,6 +53,26 @@ pub fn render_skill(skill: &Skill, body: &str, client: Client) -> Result<String>
         Client::Claude => claude::skill_frontmatter(skill)?,
         Client::Copilot => copilot::skill_frontmatter(skill)?,
         Client::OpenCode => opencode::skill_frontmatter(skill)?,
+    };
+    let combined = assemble(&frontmatter, &processed_body);
+    format::format_markdown(&combined)
+}
+
+/// Render a rule to its client-specific markdown string.
+///
+/// Per spec §7 / ADR-0003:
+/// - Claude: `paths:` array from `scope.paths`.
+/// - Copilot: `applyTo:` comma-joined string (default `"**"` if no scope).
+/// - opencode: scope is dropped (opencode does not support per-rule
+///   path-scoping per spec §3.2). The renderer still produces a string
+///   for API symmetry; the install layer (Phase 3) decides whether to
+///   write it or just register the SSOT path in `opencode.json`.
+pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
+    let processed_body = directives::process(body, client)?;
+    let frontmatter = match client {
+        Client::Claude => claude::rule_frontmatter(rule)?,
+        Client::Copilot => copilot::rule_frontmatter(rule)?,
+        Client::OpenCode => opencode::rule_frontmatter(rule)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
