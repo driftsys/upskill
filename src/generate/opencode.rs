@@ -1,6 +1,6 @@
 //! opencode generation (§7.3).
 
-use crate::model::{Rule, Skill};
+use crate::model::{Agent, Mode, Rule, Skill, ToolCap};
 use anyhow::{Context, Result};
 use serde_yaml_ng::{Mapping, Value};
 
@@ -34,4 +34,67 @@ pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
     }
 
     serde_yaml_ng::to_string(&map).context("serializing opencode rule frontmatter")
+}
+
+/// Agent frontmatter per §7.3 / Appendix B: `description`, `mode`,
+/// `model`, `tools` (lowercase). `name` is in filename per Appendix B
+/// and not emitted. `preload-skills` has no opencode equivalent and is
+/// dropped. `mode` defaults to `subagent` per spec §3.4 when absent.
+pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
+    let mut map = Mapping::new();
+    map.insert(
+        Value::from("description"),
+        Value::from(agent.description.clone()),
+    );
+
+    let mode = agent.mode.unwrap_or(Mode::Subagent);
+    map.insert(Value::from("mode"), Value::from(mode_str(mode)));
+
+    if let Some(model) = &agent.model {
+        map.insert(Value::from("model"), Value::from(model.clone()));
+    }
+
+    if !agent.tools.is_empty() {
+        let tools: Vec<Value> = agent
+            .tools
+            .iter()
+            .map(|t| Value::from(map_tool(*t)))
+            .collect();
+        map.insert(Value::from("tools"), Value::Sequence(tools));
+    }
+
+    if let Some(Value::Mapping(pt)) = agent.opencode.as_ref() {
+        for (k, v) in pt {
+            map.insert(k.clone(), v.clone());
+        }
+    }
+
+    serde_yaml_ng::to_string(&map).context("serializing opencode agent frontmatter")
+}
+
+fn mode_str(m: Mode) -> &'static str {
+    match m {
+        Mode::Primary => "primary",
+        Mode::Subagent => "subagent",
+        Mode::All => "all",
+    }
+}
+
+/// Map a capability-level tool name to opencode's lowercase form.
+///
+/// Per spec §4: opencode has no documented mapping for `web-fetch` or
+/// `web-search` (both `—`). Pass them through as kebab-case identifiers
+/// rather than dropping them — opencode's tool registry may add support
+/// later, and dropping silently would surprise authors.
+fn map_tool(t: ToolCap) -> &'static str {
+    match t {
+        ToolCap::Read => "read",
+        ToolCap::Write => "write",
+        ToolCap::Edit => "edit",
+        ToolCap::Bash => "bash",
+        ToolCap::Grep => "grep",
+        ToolCap::Glob => "glob",
+        ToolCap::WebFetch => "web-fetch",
+        ToolCap::WebSearch => "web-search",
+    }
 }

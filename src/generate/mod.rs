@@ -2,7 +2,7 @@
 //!
 //! Pure rendering. No filesystem writes — those land in Phase 3.
 
-use crate::model::{Rule, Skill};
+use crate::model::{Agent, Rule, Skill};
 use anyhow::{Context, Result};
 use serde_yaml_ng::{Mapping, Value};
 
@@ -73,6 +73,29 @@ pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
         Client::Claude => claude::rule_frontmatter(rule)?,
         Client::Copilot => copilot::rule_frontmatter(rule)?,
         Client::OpenCode => opencode::rule_frontmatter(rule)?,
+    };
+    let combined = assemble(&frontmatter, &processed_body);
+    format::format_markdown(&combined)
+}
+
+/// Render an agent to its client-specific markdown string.
+///
+/// Per spec §7 / Appendix B:
+/// - Claude: `name`, `description`, `model`, `tools` (capitalized),
+///   `skills:` (renamed from `preload-skills`). `mode` is implicit by
+///   file location and not emitted.
+/// - Copilot: `name`, `description`, `model`, `tools` (per §4 mapping
+///   where defined, else passthrough). `mode` not emitted.
+///   `preload-skills` dropped (no equivalent).
+/// - opencode: `description`, `mode` (defaults to `subagent`), `model`,
+///   `tools` (lowercase). `name` is in filename per Appendix B and not
+///   emitted. `preload-skills` dropped (no equivalent).
+pub fn render_agent(agent: &Agent, body: &str, client: Client) -> Result<String> {
+    let processed_body = directives::process(body, client)?;
+    let frontmatter = match client {
+        Client::Claude => claude::agent_frontmatter(agent)?,
+        Client::Copilot => copilot::agent_frontmatter(agent)?,
+        Client::OpenCode => opencode::agent_frontmatter(agent)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
