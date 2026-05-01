@@ -16,6 +16,7 @@
 pub mod agent;
 pub mod auth;
 pub mod fetch;
+pub mod generate;
 pub mod install;
 pub mod lockfile;
 pub mod model;
