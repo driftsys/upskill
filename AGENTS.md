@@ -8,6 +8,28 @@ upskill is a Rust CLI project for managing Agent Skills packages across coding
 agents. It focuses on a lightweight binary workflow and shared repository
 conventions used across driftsys projects.
 
+**Design priority**: ultra-light single binary. No Node.js, no npm, no async
+runtime. Targets ~2–3 MB stripped release binary.
+
+> The README still says "name reservation — real implementation coming soon."
+> That line is stale. The CLI is fully implemented (`add`, `list`, `remove`,
+> `check`, `search`, `update`) with 13 integration test files.
+
+## Stack
+
+- **Language**: Rust, edition 2024. **MSRV: 1.85** (first stable to support
+  edition 2024).
+- **Crate**: `upskill` is both library (`lib.rs`) and binary (`main.rs`).
+- **Dependencies** (kept deliberately small):
+  - `clap` 4 (derive), `anyhow` 1, `thiserror` 2, `serde` 1, `serde_json` 1,
+    `sha2` 0.11, `ureq` 2, `ctrlc` 3.
+- **Deliberately NOT used**: `tokio`, `reqwest`, `git2`, `walkdir`,
+  `dialoguer`, `serde_yaml`, `toml`. Reasons in `docs/architecture.md`. Don't
+  reach for these without a strong reason — shell out to `git`, use
+  `std::fs::read_dir`, etc.
+- **Release profile**: `opt-level = "z"`, `lto`, `codegen-units = 1`, `strip`,
+  `panic = "abort"`.
+
 ## Build commands
 
 ```bash
@@ -20,6 +42,10 @@ just build              # Assemble + check
 just verify             # Commit check + build — run before PR
 just fmt                # Format Rust + Markdown
 ```
+
+After `git clone` or `git worktree add`, run `./bootstrap` once. It installs
+`git-std` (from `driftsys/git-std`) into `~/.local/bin` and runs
+`git std bootstrap`. Release tagging (`just release`) uses `git std bump`.
 
 ## Architecture
 
@@ -42,11 +68,11 @@ src/
 └── auth.rs       Token resolution (env vars, gh/glab CLI fallback)
 ```
 
-Core docs:
+Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
-- `docs/specification.md`
-- `docs/architecture.md`
-- `docs/usage.md`
+- `docs/specification.md` — behavioral spec
+- `docs/architecture.md` — implementation guide (data structures, algorithms)
+- `docs/usage.md` — user-facing guide
 
 ### Key conventions
 
@@ -54,10 +80,75 @@ Core docs:
   `source.rs`, which uses `thiserror` for typed `SourceParseError`.
 - **`main.rs` only does I/O orchestration** — call modules, handle errors, print
   results. Business logic lives in the library modules.
+- **Only `main.rs` and `ui.rs` write to stdout/stderr.** Every other module
+  returns data structures or `Result<T>`; presentation belongs in `main.rs`.
 - **Zero warnings policy** — compiler, clippy, and docs tooling. `-D warnings`
   is enforced in CI.
 - **Clippy `too_many_arguments`** — group related flags into structs
   (e.g. `AddContext`) when a function would exceed 7 params.
+
+### Install layout
+
+| Scope   | Canonical skills target | Lockfile                   |
+| ------- | ----------------------- | -------------------------- |
+| Project | `.agents/skills`        | `{cwd}/.upskill-lock.json` |
+| Global  | `$HOME/.agents/skills`  | `~/.upskill-lock.json`     |
+
+Per-agent skill directories (symlinks or copies of the canonical target):
+`.claude/skills`, `.github/skills`, `.codex/skills`, `.cursor/skills`,
+`.kiro/skills`, `.windsurf/skills`, `.opencode/skills`. Source of truth:
+`AGENT_DEFS` in `src/agent.rs`.
+
+### Source format
+
+`upskill add` accepts:
+
+- `owner/repo` — GitHub shorthand
+- `owner/repo@ref` — pinned ref/tag/branch
+- `owner/repo:path/to/skill` — subfolder
+- `owner/repo@ref:path` — combined
+- `https://github.com/owner/repo[...]` — full URL
+- `gitlab:owner/repo[...]` or `https://gitlab.com/...` — GitLab
+- `./path`, `../path`, `/abs/path`, `~/path` — local paths
+
+### Authentication
+
+Token resolution order:
+
+- GitHub: `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` → none.
+- GitLab: `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → none.
+
+### Exit codes
+
+| Outcome       | Code |
+| ------------- | ---- |
+| Success       | 0    |
+| General error | 1    |
+| Usage error   | 2    |
+| SIGINT        | 130  |
+
+### Testing
+
+- **Unit tests** live alongside modules. `source.rs` is pure — test parsing
+  exhaustively. Other unit tests cover flag resolution, lockfile read/write,
+  hash computation, env-var precedence, fetch with subfolder, etc.
+- **Integration tests** live in `tests/` as `cli_*.rs` files and use
+  `assert_cmd` + `tempfile`. Pattern:
+
+  ```rust
+  Command::cargo_bin("upskill")
+      .unwrap()
+      .current_dir(&tmp)
+      .args(["add", "owner/repo", "--claude"])
+      .assert()
+      .success();
+  ```
+
+- Existing test files (one per concern): `cli_add`, `cli_check`, `cli_ci_mode`,
+  `cli_dryrun`, `cli_exit_codes`, `cli_gitlab`, `cli_global`, `cli_list`,
+  `cli_lockfile`, `cli_moddetect`, `cli_remove`, `cli_search`, `cli_update`.
+  When adding behavior, prefer extending the matching file or creating a new
+  `cli_<area>.rs`.
 
 ## Workflow
 
@@ -86,7 +177,8 @@ Agent-specific rules:
 - Start from acceptance criteria first.
 - Work by example: start with ATDD integration tests using CLI/snapshot testing,
   then move to TDD with focused unit tests.
-- Every branch must be sandboxed in its own git worktree.
+- Every branch must be sandboxed in its own git worktree, in
+  `.claude/worktrees/<branch>` (already gitignored).
 - Keep code, tests, and docs in the same PR.
 - Use Conventional Commits (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
 - Before opening a PR, run `just fmt` then `just verify`.
