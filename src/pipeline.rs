@@ -663,6 +663,88 @@ fn hash_source_items(
     out
 }
 
+/// One entry in a [`ListReport`] — a single installed item as recorded
+/// in the lockfile. Mirrors the lockfile shape; no per-client expansion.
+#[derive(Debug, Clone)]
+pub struct ListedItem {
+    pub kind: ItemKind,
+    pub name: String,
+    pub source: String,
+    pub git_ref: Option<String>,
+}
+
+/// One installed bundle as recorded in the lockfile (the per-bundle
+/// breakdown — see [`crate::lockfile_v2::LockedBundle`]).
+#[derive(Debug, Clone)]
+pub struct ListedBundle {
+    pub name: String,
+    pub source: String,
+    pub git_ref: Option<String>,
+    pub items: Vec<String>,
+}
+
+/// What `upskill list` reports: every item the lockfile records, plus
+/// any installed bundles. Items are grouped by kind; the per-kind
+/// vectors are sorted by name for deterministic output.
+#[derive(Debug, Default, Clone)]
+pub struct ListReport {
+    pub rules: Vec<ListedItem>,
+    pub skills: Vec<ListedItem>,
+    pub agents: Vec<ListedItem>,
+    pub bundles: Vec<ListedBundle>,
+}
+
+impl ListReport {
+    /// True when the lockfile contains no items and no bundles.
+    pub fn is_empty(&self) -> bool {
+        self.rules.is_empty()
+            && self.skills.is_empty()
+            && self.agents.is_empty()
+            && self.bundles.is_empty()
+    }
+}
+
+/// List installed content from `<target>/.upskill-lock.json`. No
+/// filesystem walk, no fetch — pure lockfile dump grouped by kind.
+/// Empty lockfile (or missing file) is not an error; the returned
+/// report is empty.
+pub fn list(target: &Path) -> Result<ListReport> {
+    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let mut report = ListReport::default();
+    for entry in &lock.items {
+        let kind = parse_kind(&entry.kind).with_context(|| {
+            format!(
+                "lockfile entry {}: unknown kind `{}`",
+                entry.name, entry.kind
+            )
+        })?;
+        let listed = ListedItem {
+            kind,
+            name: entry.name.clone(),
+            source: entry.source.clone(),
+            git_ref: entry.git_ref.clone(),
+        };
+        match kind {
+            ItemKind::Rule => report.rules.push(listed),
+            ItemKind::Skill => report.skills.push(listed),
+            ItemKind::Agent => report.agents.push(listed),
+        }
+    }
+    for bucket in [&mut report.rules, &mut report.skills, &mut report.agents] {
+        bucket.sort_by(|a, b| a.name.cmp(&b.name));
+    }
+    for bundle in &lock.bundles {
+        report.bundles.push(ListedBundle {
+            name: bundle.name.clone(),
+            source: bundle.source.clone(),
+            git_ref: bundle.git_ref.clone(),
+            items: bundle.items.clone(),
+        });
+    }
+    report.bundles.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(report)
+}
+
 /// Install items from any supported source into `target`.
 ///
 /// Dispatches on the source variant. All git-backed variants funnel

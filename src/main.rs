@@ -4,8 +4,9 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::pipeline::{
-    DoctorReport, InstallReport, ItemKind, OrphanReason, RemoveFilter, RemoveReport, UpdateMode,
-    UpdateReport, UpdateStatus, doctor, install_with_lockfile, remove, update,
+    DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
+    RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
+    install_with_lockfile, list, remove, update,
 };
 use upskill::search;
 use upskill::source::parse_install_source;
@@ -75,8 +76,17 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// List installed content. (Phase B-and-beyond.)
-    List,
+    /// List installed content recorded in `.upskill-lock.json`.
+    ///
+    /// Items are grouped by kind (rules, skills, agents). Bundles, when
+    /// present, are surfaced as a separate section. The command never
+    /// fetches and never inspects per-client output files — for that, run
+    /// `upskill doctor`.
+    List {
+        /// Read `$HOME/.upskill-lock.json` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
     /// Verify installed-state consistency.
     ///
     /// Three independent buckets per ADR-0004:
@@ -128,7 +138,7 @@ fn main() {
             dry_run,
             global,
         } => run_update(&names, dry_run, global),
-        Commands::List => unimplemented_stub("list", "B"),
+        Commands::List { global } => run_list(global),
         Commands::Doctor { global } => run_doctor(global),
         Commands::Search { query, limit } => run_search(&query, limit),
     };
@@ -426,6 +436,67 @@ fn kind_label(kind: ItemKind) -> &'static str {
     }
 }
 
+fn run_list(global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    match list(&target) {
+        Ok(report) => {
+            print_list_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_list_report(report: &ListReport) {
+    if report.is_empty() {
+        println!("no items installed");
+        return;
+    }
+
+    print_list_section("rules", &report.rules);
+    print_list_section("skills", &report.skills);
+    print_list_section("agents", &report.agents);
+    print_list_bundles(&report.bundles);
+}
+
+fn print_list_section(label: &str, items: &[ListedItem]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("{label} ({})", items.len());
+    for item in items {
+        let pinned = match &item.git_ref {
+            Some(r) => format!("@{r}"),
+            None => String::new(),
+        };
+        println!("  {:<32} {}{}", item.name, item.source, pinned);
+    }
+}
+
+fn print_list_bundles(bundles: &[ListedBundle]) {
+    if bundles.is_empty() {
+        return;
+    }
+    println!("bundles ({})", bundles.len());
+    for bundle in bundles {
+        let pinned = match &bundle.git_ref {
+            Some(r) => format!("@{r}"),
+            None => String::new(),
+        };
+        println!("  {:<32} {}{}", bundle.name, bundle.source, pinned);
+    }
+}
+
 fn run_search(query: &str, limit: usize) -> i32 {
     match search::search(query, limit) {
         Err(err) => {
@@ -450,12 +521,4 @@ fn run_search(query: &str, limit: usize) -> i32 {
             EXIT_SUCCESS
         }
     }
-}
-
-/// Print a friendly "this command lands in <phase>" message and exit
-/// with `EXIT_ERROR`. The CLI surface is final; the implementations land
-/// over the rest of Phase B.
-fn unimplemented_stub(cmd: &str, phase: &str) -> i32 {
-    eprintln!("error: `upskill {cmd}` is not yet implemented (lands in Phase {phase})");
-    EXIT_ERROR
 }
