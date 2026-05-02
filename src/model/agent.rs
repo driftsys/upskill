@@ -34,7 +34,7 @@ pub struct Agent {
     pub name: String,
     pub description: String,
 
-    /// §3.1: top-level audience (promoted from `metadata.audience`).
+    /// §3.1: top-level audience targeting.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Audience>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

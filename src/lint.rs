@@ -131,7 +131,7 @@ pub(crate) fn is_consumer_project(root: &Path) -> bool {
     } else {
         return false;
     };
-    dir.join(crate::lockfile_v2::LOCKFILE_NAME).is_file()
+    dir.join(crate::lockfile::LOCKFILE_NAME).is_file()
 }
 
 /// Inputs to [`check_file`] — the kind drives both the dir-name
