@@ -207,11 +207,6 @@ Per [specification §4](./specification.md#4-state-files):
 | `.upskill-lock.json`        | Per-project | Yes        | Deterministic regeneration in CI.    |
 | `~/.upskill/installed.json` | Per-user    | No         | Global install state, source caches. |
 
-v0.1 users keep the same `.upskill-lock.json` filename. v0.2 stamps a
-`schema: 2` field on first run and rewrites the file in place with the new
-entry shape — see
-[ADR-0003](./adr/0003-generation-pipeline.md). No manual migration step.
-
 ## Per-client output paths
 
 Per [ADR-0003](./adr/0003-generation-pipeline.md):

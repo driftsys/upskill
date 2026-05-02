@@ -10,9 +10,8 @@ pub struct Skill {
     pub name: String,
     pub description: String,
 
-    /// §3.1: top-level audience targeting (promoted from `metadata.audience`
-    /// per format-spec PR #76). When present, generation only emits for
-    /// listed clients. `metadata.audience` is still accepted as a fallback.
+    /// §3.1: top-level audience targeting. When present, generation only
+    /// emits for listed clients.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Audience>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

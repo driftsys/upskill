@@ -14,7 +14,7 @@ pub mod fetch;
 pub mod fmt;
 pub mod generate;
 pub mod lint;
-pub mod lockfile_v2;
+pub mod lockfile;
 pub mod model;
 pub mod parse;
 pub mod pipeline;

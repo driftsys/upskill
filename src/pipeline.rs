@@ -17,9 +17,8 @@
 //! URL-injected into the clone URL. With no token, clones fall back to
 //! git's own credential helpers.
 //!
-//! Audience filter: prefers the top-level `audience` field (per
-//! format-spec §3.1) and falls back to `metadata.audience` when the
-//! top-level is absent — accepts both shapes for back-compat.
+//! Audience filter: the top-level `audience` field (per format-spec §3.1)
+//! restricts emission to listed clients; absence means all clients.
 
 use anyhow::{Context, Result, anyhow};
 use sha2::{Digest, Sha256};
@@ -47,7 +46,7 @@ pub struct InstalledItem {
     /// Path relative to the install target root.
     pub output_path: PathBuf,
     /// SHA-256 of the SSOT item directory at install time. Used by the
-    /// lockfile (#schema-2) for drift detection. Repeated across the per-
+    /// lockfile for drift detection. Repeated across the per-
     /// client entries for the same item — they share one SSOT input.
     pub source_hash: Option<String>,
 }
@@ -65,7 +64,7 @@ pub struct InstallReport {
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
 
 /// Install every item under `source` into `target`, generating per-client
-/// output for each client unless filtered by `metadata.audience`.
+/// output for each client unless filtered by the item's `audience` field.
 ///
 /// Bundle dispatch: when `source` is a `*.bundle.md` file (not a
 /// directory), discovers sibling bundles in the registry root walked up
@@ -172,7 +171,7 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// Install + write lockfile. Consumer-facing entry point.
 ///
 /// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
-/// into `<target>/.upskill-lock.json` via [`crate::lockfile_v2`]. Existing
+/// into `<target>/.upskill-lock.json` via [`crate::lockfile`]. Existing
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
 ///
@@ -193,16 +192,16 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
         .iter()
         .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
         .collect();
-    let new_items = crate::lockfile_v2::items_from_report(&report, &label, git_ref, |k, n| {
+    let new_items = crate::lockfile::items_from_report(&report, &label, git_ref, |k, n| {
         hashes.get(&(k, n.to_string())).cloned().flatten()
     });
 
-    let mut lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
     for item in new_items {
         lock.upsert(item);
     }
     for bundle in &report.bundles {
-        lock.upsert_bundle(crate::lockfile_v2::LockedBundle {
+        lock.upsert_bundle(crate::lockfile::LockedBundle {
             name: bundle.name.clone(),
             source: label.clone(),
             git_ref: git_ref.map(str::to_string),
@@ -273,9 +272,9 @@ pub struct RemovedItem {
 /// `.vscode/settings.json`) are deliberately left alone — they are
 /// user-owned after creation per ADR-0003.
 pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
-    let mut lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
 
-    let to_remove: Vec<crate::lockfile_v2::LockedItem> = match &filter {
+    let to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
         RemoveFilter::ByNames(names) => lock
             .items
             .iter()
@@ -422,7 +421,7 @@ impl DoctorReport {
 /// Doctor never fetches. Remote-source drift is detected by
 /// `update --dry-run`, which does fetch.
 pub fn doctor(target: &Path) -> Result<DoctorReport> {
-    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let lock = crate::lockfile::Lockfile::load(target)?;
     let mut report = DoctorReport::default();
 
     for entry in &lock.items {
@@ -537,12 +536,12 @@ pub struct UpdateReport {
 ///
 /// `update` always fetches per ADR-0004 — there is no `--offline`.
 pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<UpdateReport> {
-    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let lock = crate::lockfile::Lockfile::load(target)?;
 
-    let entries: Vec<crate::lockfile_v2::LockedItem> = if names.is_empty() {
+    let entries: Vec<crate::lockfile::LockedItem> = if names.is_empty() {
         lock.items.clone()
     } else {
-        let matched: Vec<crate::lockfile_v2::LockedItem> = lock
+        let matched: Vec<crate::lockfile::LockedItem> = lock
             .items
             .iter()
             .filter(|i| names.iter().any(|n| n == &i.name))
@@ -563,7 +562,7 @@ pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<Updat
 
     // Group by source: installing or hashing once per source covers every
     // matching entry sharing it.
-    let mut by_source: std::collections::BTreeMap<String, Vec<crate::lockfile_v2::LockedItem>> =
+    let mut by_source: std::collections::BTreeMap<String, Vec<crate::lockfile::LockedItem>> =
         std::collections::BTreeMap::new();
     for entry in entries {
         by_source
@@ -674,7 +673,7 @@ pub struct ListedItem {
 }
 
 /// One installed bundle as recorded in the lockfile (the per-bundle
-/// breakdown — see [`crate::lockfile_v2::LockedBundle`]).
+/// breakdown — see [`crate::lockfile::LockedBundle`]).
 #[derive(Debug, Clone)]
 pub struct ListedBundle {
     pub name: String,
@@ -709,7 +708,7 @@ impl ListReport {
 /// Empty lockfile (or missing file) is not an error; the returned
 /// report is empty.
 pub fn list(target: &Path) -> Result<ListReport> {
-    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let lock = crate::lockfile::Lockfile::load(target)?;
     let mut report = ListReport::default();
     for entry in &lock.items {
         let kind = parse_kind(&entry.kind).with_context(|| {
@@ -947,11 +946,11 @@ fn install_skills(
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (skill, body) = frontmatter::parse::<Skill>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(skill.audience.as_ref(), skill.metadata.as_ref());
+        let audience = skill.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
-            if !targets(client, audience.as_deref()) {
+            if !targets(client, audience) {
                 continue;
             }
             let rendered = generate::render_skill(&skill, body, client)
@@ -990,11 +989,11 @@ fn install_rules(
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (rule, body) = frontmatter::parse::<Rule>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(rule.audience.as_ref(), rule.metadata.as_ref());
+        let audience = rule.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
-            if !targets(client, audience.as_deref()) {
+            if !targets(client, audience) {
                 continue;
             }
             let rendered = generate::render_rule(&rule, body, client)
@@ -1033,11 +1032,11 @@ fn install_agents(
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (agent, body) = frontmatter::parse::<Agent>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(agent.audience.as_ref(), agent.metadata.as_ref());
+        let audience = agent.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
-            if !targets(client, audience.as_deref()) {
+            if !targets(client, audience) {
                 continue;
             }
             let rendered = generate::render_agent(&agent, body, client)
@@ -1175,18 +1174,6 @@ fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
     }
     out.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(out)
-}
-
-/// Resolve the effective audience for an item. Top-level (§3.1) wins; falls
-/// back to `metadata.audience` for back-compat with v0.1-draft fixtures.
-fn audience_of(
-    top_level: Option<&Vec<Audience>>,
-    metadata: Option<&crate::model::Metadata>,
-) -> Option<Vec<Audience>> {
-    if let Some(list) = top_level {
-        return Some(list.clone());
-    }
-    metadata.and_then(|m| m.audience.clone())
 }
 
 fn targets(client: Client, audience: Option<&[Audience]>) -> bool {
@@ -1381,7 +1368,7 @@ mod tests {
 
     #[test]
     fn parse_kind_round_trips_lockfile_strings() {
-        // The labels written by `lockfile_v2::items_from_report` MUST round-
+        // The labels written by `lockfile::items_from_report` MUST round-
         // trip through `parse_kind` so `remove` can dispatch on them.
         for k in [ItemKind::Rule, ItemKind::Skill, ItemKind::Agent] {
             let label = match k {
