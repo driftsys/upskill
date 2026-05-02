@@ -95,7 +95,7 @@ or `--project` explicitly to override.
 ### Project lock file
 
 Consumer commands (`add`, `remove`, `update`) read and write
-**`.upskill.lock`** at the consumer project root. The lock file is
+**`.upskill-lock.json`** at the consumer project root. The lock file is
 **committed alongside the project** — it records the bundles and items
 added, their source-registry URLs, resolved git refs, and per-item
 content hashes. Plays the same role as `package-lock.json`: deterministic

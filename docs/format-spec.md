@@ -24,6 +24,19 @@ Authors of AI-assistance content (rules, skills, agents) targeting multiple AI c
 single source. Implementers of tools that consume this format to generate client-specific outputs.
 Maintainers of CI pipelines that validate content against this specification.
 
+## Conformance keywords
+
+The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document
+are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) when,
+and only when, they appear in all uppercase as shown.
+
+## Client-name conventions
+
+This document uses the full client names — **Claude Code**, **GitHub Copilot**, and **opencode**
+— in prose. The short forms `claude`, `copilot`, and `opencode` are reserved as the lowercase
+identifiers used in passthrough block keys (§3.5), `audience` lists (§3.1), and conditional
+content directives (§6).
+
 ---
 
 ## 1. Terminology
@@ -110,6 +123,10 @@ Bundles are flat manifest files, not directories:
 ```
 
 - The filename stem (before `.bundle.md`) MUST match the `name` field in the bundle's frontmatter.
+- Bundle files MAY live anywhere within a source registry — alongside item directories under
+  `<item-root>` (§2.1), in a sibling directory, or in a dedicated `bundles/` directory.
+  Implementations discover bundles by scanning for the `.bundle.md` suffix and MUST NOT depend
+  on a specific bundle-root path.
 
 ### 2.3 Per-client override files
 
@@ -119,7 +136,7 @@ Any item MAY have optional per-client body overrides alongside the canonical ent
 rules/<name>/
 ├── RULE.md                    # canonical, always required
 ├── RULE.claude.md             # optional — Claude Code body override
-├── RULE.copilot.md            # optional — Copilot body override
+├── RULE.copilot.md            # optional — GitHub Copilot body override
 └── RULE.opencode.md           # optional — opencode body override
 ```
 
@@ -129,10 +146,17 @@ Override file rules:
 
 - Override files contain body content only; they MUST NOT include YAML frontmatter.
 - Frontmatter is always taken from the canonical entrypoint.
-- If both a per-client override file and inline `<!-- @client: -->` directives exist for the same
-  client, the override file takes precedence; directives in the canonical body are not processed
-  for that client.
 - The `<client>` suffix MUST be one of the known client identifiers (see §6.1).
+
+**Body-resolution order for a given client (canonical statement).** Implementations resolve the
+body for client `C` as follows:
+
+1. If `<KIND>.<C>.md` exists, use its body verbatim. Directives in the canonical body are NOT
+   processed for client `C`.
+2. Otherwise, use the canonical body with `<!-- @client: -->` directives (§6) processed for
+   client `C`.
+
+§6.4 cross-references this rule; this section is the authoritative statement.
 
 ### 2.4 Supporting resources
 
@@ -152,7 +176,6 @@ skills/<name>/
 - Supporting files are referenced from the entrypoint body using standard markdown relative links.
 - Implementations MUST preserve supporting files and their directory structure during generation
   (copy them alongside the generated entrypoint into the client-expected location).
-- SKILL.md bodies SHOULD stay under 500 lines; detailed reference material belongs in separate files.
 
 ---
 
@@ -163,13 +186,14 @@ by `---` markers. Frontmatter is followed by a blank line and then markdown body
 
 ### 3.1 Common fields (all kinds and bundles)
 
-| Field         | Type    | Required | Description                                                  |
-| ------------- | ------- | -------- | ------------------------------------------------------------ |
-| `schema`      | integer | YES      | Protocol version of this specification. Current: `1`.        |
-| `name`        | string  | YES      | Stable identifier. See §2.1 for format constraints.          |
-| `description` | string  | YES      | What this item does and when to use it. Max 1024 characters. |
-| `license`     | string  | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).   |
-| `metadata`    | map     | no       | Free-form governance block. See §3.6.                        |
+| Field         | Type     | Required | Description                                                                                                                                                          |
+| ------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                |
+| `name`        | string   | YES      | Stable identifier. See §2.1 for format constraints.                                                                                                                  |
+| `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                      |
+| `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                           |
+| `audience`    | string[] | no       | Target clients (`claude`, `copilot`, `opencode`). When present, implementations MUST generate output only for listed clients. When absent, all clients are targeted. |
+| `metadata`    | map      | no       | Free-form governance block. See §3.6.                                                                                                                                |
 
 Example:
 
@@ -195,6 +219,12 @@ Field semantics:
   decides whether to load the full body. For rules and agents, it serves as documentation. Front-load
   the key use case. Convention: start with "Use when…" for skills and agents.
 - `license`: if the item might be shared outside the authoring organization, SHOULD be populated.
+- `audience`: the canonical mechanism for restricting an item to a subset of clients. Conditional
+  body directives (§6) limit body content per client; passthrough blocks (§3.5) emit
+  client-specific frontmatter; `audience` is the only mechanism that filters whether the item is
+  generated at all. The three are complementary: use `audience` to scope the item, directives
+  to scope body content within an emitted item, and passthrough blocks to add client-specific
+  frontmatter to an emitted item.
 - `metadata`: see §3.6. Implementations MUST preserve unknown keys within `metadata`.
 
 ### 3.2 Rule-specific fields
@@ -216,13 +246,19 @@ scope:
 When `scope.paths` is present, implementations:
 
 - SHOULD emit the rule with path-scoping for clients that support it (Claude Code's `paths:` array,
-  Copilot's `applyTo:` comma-joined string).
+  GitHub Copilot's `applyTo:` comma-joined string).
 - SHOULD emit the rule unconditionally for clients that lack path-scoping (opencode), accepting the
   token-cost trade-off.
 
 ### 3.3 Skill-specific fields
 
 No additional required fields beyond §3.1.
+
+**Skill description length.** For skills, `description` is the activation hint: discovering
+clients read it on every selection decision and the text contributes to runtime context cost.
+The §3.1 1024-character cap MUST be respected, but skill authors SHOULD aim for ~200 characters
+or fewer. This is tighter than rules and agents, where `description` serves only as
+documentation.
 
 The Agent Skills open standard defines optional fields (`allowed-tools`, `when_to_use`,
 `disable-model-invocation`, `context`, `agent`, `argument-hint`, `paths`, etc.) which implementations
@@ -246,18 +282,52 @@ preload-skills:
   - security-baseline
 ```
 
-| Field            | Type     | Required | Default    | Description                                                             |
-| ---------------- | -------- | -------- | ---------- | ----------------------------------------------------------------------- |
-| `mode`           | string   | no       | `subagent` | `primary`, `subagent`, or `all`. Mapped to client equivalents.          |
-| `model`          | string   | no       | `sonnet`   | Short alias. Implementations maintain alias → client model ID mappings. |
-| `tools`          | string[] | no       | (all)      | Capability-level tool names. See §4.                                    |
-| `preload-skills` | string[] | no       | (none)     | Skill names to load at agent startup.                                   |
+| Field            | Type     | Required | Default             | Description                                                                             |
+| ---------------- | -------- | -------- | ------------------- | --------------------------------------------------------------------------------------- |
+| `mode`           | string   | no       | `subagent`          | `primary`, `subagent`, or `all`. Primary consumer is opencode; see notes below.         |
+| `model`          | string   | no       | `sonnet`            | Short alias. Spec-guaranteed aliases listed below.                                      |
+| `tools`          | string[] | no       | client-supported §4 | Capability-level tool names. See §4. Default semantics defined below.                   |
+| `preload-skills` | string[] | no       | (none)              | Skill names to load at agent startup. Primary consumer is Claude Code; see notes below. |
+
+**`mode` is opencode-primary.** opencode's agent definition has a real top-level `mode:` field
+with `subagent` / `primary` / `all` semantics that change agent selection behavior. Claude Code
+derives mode from file location (`.claude/agents/` is always subagent); GitHub Copilot has no
+equivalent concept. Implementations MUST emit `mode:` for opencode; they MAY omit it for other
+clients. Authors who need opencode-specific mode behavior with no analog elsewhere SHOULD prefer
+`opencode.mode` in the passthrough block (§3.5) over a top-level `mode:` field, to make the
+intent explicit.
+
+**`preload-skills` is Claude-Code-primary.** Claude Code emits this list as `skills:` in agent
+frontmatter so the named skills are loaded at agent startup. GitHub Copilot and opencode have no
+equivalent and ignore the field. Implementations MUST emit `skills:` for Claude Code; they MUST
+NOT emit a corresponding field for clients without an equivalent.
+
+**`model` aliases.** This specification guarantees the following short aliases:
+
+| Alias    | Family                           |
+| -------- | -------------------------------- |
+| `sonnet` | Anthropic Claude Sonnet (latest) |
+| `opus`   | Anthropic Claude Opus (latest)   |
+| `haiku`  | Anthropic Claude Haiku (latest)  |
+
+Implementations MUST resolve these aliases to a current client-appropriate model identifier.
+Implementations MAY accept additional aliases or pass through fully-qualified model identifiers
+(`anthropic/claude-sonnet-4-6`, `openai/gpt-5`, etc.); these are not guaranteed portable across
+implementations.
+
+**`tools` default.** When `tools:` is absent, implementations MUST emit, for each target client,
+the set of §4 capabilities documented as supported by that client (the non-`—` cells in the §4
+table). When `tools:` is present, only the listed capabilities are emitted, subject to the §4
+generation rules (capability dropped with a warning when the target client has no mapping).
 
 Implementations map these fields to each client's agent definition format:
 
-- Claude Code: `.claude/agents/<name>.md` with `tools:` as capitalized names, `model:` as literal.
-- Copilot: `.github/agents/<name>.agent.md` or similar.
-- opencode: `.opencode/agents/<name>.md` with `mode:`, `permission:`, `temperature:`, etc.
+- Claude Code: `.claude/agents/<name>.md` with `tools:` as capitalized names, `model:` as literal,
+  `skills:` from `preload-skills`.
+- GitHub Copilot: `.github/agents/<name>.agent.md` with `tools:` filtered per §4 mapping; `mode`
+  and `preload-skills` omitted.
+- opencode: `.opencode/agents/<name>.md` with `mode:`, `permission:` map (per §7.3), and
+  passthrough fields. `preload-skills` omitted.
 
 ### 3.5 Client-specific passthrough blocks
 
@@ -287,26 +357,26 @@ extensions.
 
 Recommended conventions (not required by this specification):
 
-| Key        | Type     | Convention                                                                                                                 |
-| ---------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `version`  | string   | Semver, quoted (e.g., `"1.0.0"`). MUST be quoted to avoid YAML float coercion.                                             |
-| `author`   | string   | Team or individual identifier.                                                                                             |
-| `audience` | string[] | Target clients (`claude`, `copilot`, `opencode`). When present, generate only for listed clients. When absent, target all. |
-| `updated`  | string   | ISO 8601 date of last content change.                                                                                      |
+| Key       | Type   | Convention                                                                     |
+| --------- | ------ | ------------------------------------------------------------------------------ |
+| `version` | string | Semver, quoted (e.g., `"1.0.0"`). MUST be quoted to avoid YAML float coercion. |
+| `author`  | string | Team or individual identifier.                                                 |
+| `updated` | string | ISO 8601 date of last content change.                                          |
+
+Audience targeting is a top-level field with spec-defined semantics; see `audience` in §3.1.
 
 Implementations:
 
 - MUST preserve all keys within `metadata` during processing.
 - MUST NOT require any specific key within `metadata` beyond what the implementation itself needs.
 - SHOULD validate `version` as semver when present.
-- SHOULD respect `audience` when present to limit generation targets.
 
 ### 3.7 Bundle schema
 
 Bundles are **source-registry artifacts**. They reference items by `name`; the items themselves
 live in source registries (potentially the same repo, potentially others). Consumer projects do
 not contain bundle files — an implementation records which bundles a consumer project has
-installed in its own state file (e.g. `.upskill.lock` for the upskill CLI).
+installed in its own state file (e.g. `.upskill-lock.json` for the upskill CLI).
 
 ```yaml
 ---
@@ -350,17 +420,27 @@ What this bundle provides, who it targets, changelog...
 | `requires`     | array    | no       | Bundle dependencies. See below.      |
 | `metadata`     | map      | no       | Same as §3.6.                        |
 
-`requires` entries:
+`requires` entries are maps. Each entry references another bundle by `name`, optionally pinned
+with a semver `version` constraint:
 
-- String form: `"platform-baseline"` — any version.
-- Map form: `{ name: "platform-baseline", version: "^1.0.0" }` — with semver constraint.
+```yaml
+requires:
+  - { name: "platform-baseline", version: "^1.0.0" }
+  - { name: "rust-baseline" } # any version
+```
+
+The single-form (map-only) shape avoids the polymorphic-string-or-map alternative until that
+flexibility has a documented author need.
 
 Implementations:
 
 - MUST resolve `items.*` entries against configured item sources by matching the `name` field.
 - MUST report unresolved item names as errors.
-- SHOULD resolve `requires` transitively.
-- SHOULD reject circular dependencies.
+- MUST resolve `requires` transitively: installing a bundle implies installing every bundle in
+  its transitive `requires` closure, then unioning the items contributed by all reached
+  bundles. Item-level conflicts (the same item name resolving to different sources or versions)
+  MUST be reported as errors.
+- MUST reject circular `requires` chains as errors.
 
 ---
 
@@ -369,16 +449,16 @@ Implementations:
 Agent frontmatter and item bodies reference tools by neutral capability names rather than
 client-specific identifiers. This decouples content from any single client's naming conventions.
 
-| Capability   | Meaning                   | Claude Code | Copilot      | opencode |
-| ------------ | ------------------------- | ----------- | ------------ | -------- |
-| `read`       | Read file contents        | `Read`      | —            | `read`   |
-| `write`      | Create or overwrite files | `Write`     | —            | `write`  |
-| `edit`       | Modify existing files     | `Edit`      | —            | `edit`   |
-| `bash`       | Execute shell commands    | `Bash`      | `shell`      | `bash`   |
-| `grep`       | Search file contents      | `Grep`      | —            | `grep`   |
-| `glob`       | Match file paths          | `Glob`      | —            | `glob`   |
-| `web-fetch`  | Retrieve URL content      | `WebFetch`  | `fetch`      | —        |
-| `web-search` | Search the web            | `WebSearch` | `web_search` | —        |
+| Capability   | Meaning                   | Claude Code | GitHub Copilot | opencode |
+| ------------ | ------------------------- | ----------- | -------------- | -------- |
+| `read`       | Read file contents        | `Read`      | —              | `read`   |
+| `write`      | Create or overwrite files | `Write`     | —              | `write`  |
+| `edit`       | Modify existing files     | `Edit`      | —              | `edit`   |
+| `bash`       | Execute shell commands    | `Bash`      | `shell`        | `bash`   |
+| `grep`       | Search file contents      | `Grep`      | —              | `grep`   |
+| `glob`       | Match file paths          | `Glob`      | —              | `glob`   |
+| `web-fetch`  | Retrieve URL content      | `WebFetch`  | `fetch`        | —        |
+| `web-search` | Search the web            | `WebSearch` | `web_search`   | —        |
 
 Implementations maintain the mapping from capability names to client-specific identifiers. The mapping
 table above is informational; clients may change their tool names independently of this specification.
@@ -395,13 +475,19 @@ desired capability in natural language rather than naming a client-specific tool
 output, implementations process each entry in the SSOT `tools:` list per the table above:
 
 - Capabilities **with** a documented client mapping are emitted using the client's name.
-- Capabilities **without** a documented mapping for a client (`—` cells above) are **dropped
-  silently** from that client's output. They are not passed through under the SSOT name —
-  emitting an unrecognized identifier would produce a field the client does not consume.
+- Capabilities **without** a documented mapping for a client (`—` cells above) are dropped from
+  that client's output, and implementations SHOULD log a warning at generation time identifying
+  the dropped capability and the affected client. They are not passed through under the SSOT
+  name — emitting an unrecognized identifier would produce a field the client does not consume.
 
 Authors who need client-specific tool names beyond the documented mappings use that client's
 passthrough block (`claude:`, `copilot:`, `opencode:` per §3.5). The passthrough mechanism is
 the supported way to surface non-spec tooling in generated output.
+
+**opencode caveat.** opencode does not consume a `tools:` array; it consumes a `permission:`
+map, with capabilities mapped per a permission model where `write` rolls into `edit`. The §4
+table shows the opencode capability identifier for reference, but the actual emission into
+opencode agent frontmatter follows the permission-map shape documented in §7.3 and Appendix B.
 
 ---
 
@@ -412,8 +498,9 @@ is portable and passes standard markdown linting (markdownlint default ruleset).
 
 ### 5.1 Heading structure
 
-- Body content MUST NOT contain an H1 (`#`) heading. Implementations generate H1 from the item's
-  `name` or `description` during rendering for clients that require it.
+- Body content MUST NOT contain an H1 (`#`) heading. When a client requires an H1, implementations
+  MUST derive it from the item's `name` field (verbatim, no transformation). `description` is not
+  used for H1 derivation; using it would make the formatting guarantee in §7.4 unenforceable.
 - Body headings MUST start at H2 (`##`) and MUST NOT skip levels (no H2 → H4 without an intervening H3).
 
 Rationale: generated output prepends an H1 derived from the item metadata. An H1 in the body would
@@ -432,8 +519,8 @@ Body content SHOULD describe tools by capability rather than by client-specific 
 
 - YES: "Search the codebase for occurrences of the deprecated function"
 - YES: "Use `GitHub:create_issue` to file a tracking issue" (MCP tool in portable form)
-- NO: "Use the `Read` tool to open the file" (Claude-specific)
-- NO: "Use `#tool:read`" (Copilot-specific)
+- NO: "Use the `Read` tool to open the file" (Claude-Code-specific)
+- NO: "Use `#tool:read`" (GitHub-Copilot-specific)
 
 ### 5.4 File references
 
@@ -444,7 +531,7 @@ from the item directory:
 See [approved licenses](./allowed-licenses.txt) for the canonical list.
 ```
 
-Client-specific import syntax (`@path` for Claude Code, `#file:path` for Copilot) MUST NOT appear
+Client-specific import syntax (`@path` for Claude Code, `#file:path` for GitHub Copilot) MUST NOT appear
 in canonical bodies.
 
 ### 5.5 Prohibited constructs in canonical bodies
@@ -460,20 +547,20 @@ portion of the canonical entrypoint body that reaches every client. They are exp
   etc. — when the filename suffix matches the construct's client. Override files are loaded
   only by the matching client's generator.
 
-| Construct                       | Why prohibited (in always-rendered content) | Client      |
-| ------------------------------- | ------------------------------------------- | ----------- |
-| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable                       | Claude Code |
-| `${workspaceFolder}`, `${file}` | Substitution variable                       | Copilot     |
-| `` !`command` ``                | Shell pre-execution                         | Claude Code |
-| `@path/to/file`                 | File import                                 | Claude Code |
-| `#tool:name`                    | Tool reference                              | Copilot     |
-| `#file:path`                    | File reference                              | Copilot     |
-| `ultrathink`                    | Extended thinking trigger                   | Claude Code |
+| Construct                       | Why prohibited (in always-rendered content) | Client         |
+| ------------------------------- | ------------------------------------------- | -------------- |
+| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable                       | Claude Code    |
+| `${workspaceFolder}`, `${file}` | Substitution variable                       | GitHub Copilot |
+| `` !`command` ``                | Shell pre-execution                         | Claude Code    |
+| `@path/to/file`                 | File import                                 | Claude Code    |
+| `#tool:name`                    | Tool reference                              | GitHub Copilot |
+| `#file:path`                    | File reference                              | GitHub Copilot |
+| `ultrathink`                    | Extended thinking trigger                   | Claude Code    |
 
 If an item needs one of these constructs in content that would otherwise reach every client,
 wrap it in a matching-client directive block (§6) or move it to a matching-client override
 file (§2.3). Items that genuinely target only one client end-to-end MAY instead be marked
-single-client via `metadata.audience` (§3.6).
+single-client via `audience` (§3.1).
 
 ---
 
@@ -506,7 +593,7 @@ Positive (include for listed clients):
 ```markdown
 <!-- @client:claude,copilot -->
 
-This content appears in Claude and Copilot output, not in opencode.
+This content appears in Claude Code and GitHub Copilot output, not in opencode.
 
 <!-- @endclient -->
 ```
@@ -535,21 +622,23 @@ Implementations:
 
 ### 6.4 Interaction with override files
 
-If a per-client override file exists for a given client (§2.3), directives in the canonical body
-are NOT processed for that client. The override file's body is used as-is.
-
-Resolution order for a given client:
-
-1. If `<KIND>.<client>.md` exists → use its body.
-2. Else → use canonical body with directives processed for this client.
+Override-file precedence over directives is defined by §2.3 (per-client override file rules);
+this subsection exists only as a cross-reference. When generating output for a given client,
+implementations resolve the body per the rules in §2.3.
 
 ---
 
 ## 7. Generation: client-specific output
 
-This section describes the expected output per client. It is informational; client conventions may
-change independently of this specification. Implementations SHOULD verify output against actual
-client behavior.
+This section describes the expected output per client: which files an implementation writes for
+each item kind, and how SSOT frontmatter maps onto each client's frontmatter shape. It is
+informational; client conventions may change independently of this specification. Implementations
+SHOULD verify output against actual client behavior.
+
+This section is deliberately scoped to "what file and frontmatter each client reads". Adjacent
+behavior — bridging files, IDE configuration mutation, third-party config-file management — is
+installer behavior owned by the implementing tool (see, e.g., upskill's
+[ADR-0003](./adr/0003-generation-pipeline.md)) and intentionally out of this specification.
 
 ### 7.1 Claude Code
 
@@ -559,20 +648,13 @@ client behavior.
 | Skill     | `.claude/skills/<name>/SKILL.md` | `name:`, `description:` pass through. Agent Skills extended fields pass through. |
 | Agent     | `.claude/agents/<name>.md`       | `name:`, `description:`, `model:`, `tools:` (capitalized).                       |
 
-Additionally, implementations SHOULD generate a `CLAUDE.md` at repo root containing `@AGENTS.md`
-to bridge Claude Code to the project's `AGENTS.md` (which Claude Code does not read natively).
-
 ### 7.2 GitHub Copilot
 
-| Item kind | Output path                                   | Frontmatter mapping                                                                                                                                                                                                                  |
-| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present.                                                                                                            |
-| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                            |
-| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). Copilot-specific fields from passthrough block. |
-
-Additionally, implementations SHOULD generate or update `.vscode/settings.json` with
-`chat.instructionsFilesLocations` pointing to the item source directory, enabling VS Code Copilot
-to discover rules without file duplication.
+| Item kind | Output path                                   | Frontmatter mapping                                                                                                                                                                                                                         |
+| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present.                                                                                                                   |
+| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                                   |
+| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). GitHub Copilot-specific fields from passthrough block. |
 
 ### 7.3 opencode
 
@@ -582,18 +664,7 @@ to discover rules without file duplication.
 | Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory.                     |
 | Agent     | `.opencode/agents/<name>.md`     | `name:`, `description:`, `mode:`, `model:`, `permission:` map (allow per capability; write rolls into edit). opencode-specific fields from passthrough block. |
 
-### 7.4 Shared outputs
-
-Implementations SHOULD also generate or maintain:
-
-- `AGENTS.md` at repo root: project-specific content, hand-maintained by teams. Implementations
-  MUST NOT overwrite this file after initial creation.
-- `opencode.json`: at first opencode-rule install in a consumer project, implementations add
-  `".agents/rules/**/RULE.md"` to the `instructions[]` array (if not already present). Subsequent
-  rule installs/uninstalls MUST NOT mutate the file — opencode's `instructions[]` glob picks up
-  rule additions and removals automatically. Other config keys preserved.
-
-### 7.5 Formatting guarantee
+### 7.4 Formatting guarantee
 
 Generated output MUST be formatted such that:
 
@@ -632,32 +703,7 @@ Current version: **1**.
 
 ---
 
-## 9. MVP scope
-
-For a first implementation, the following MAY be deferred:
-
-- Per-client override files (§2.3): support only canonical entrypoint + directives.
-- `requires` in bundles (§3.7): support only flat item lists without bundle dependencies.
-- Negation in directives (`!opencode`): support only positive client lists.
-- `preload-skills` in agents (§3.4): treat as informational only.
-- Glob patterns in `scope.paths`: accept only literal path prefixes or simple `**/*.ext` patterns.
-- Custom metadata keys beyond `version`, `author`, `audience`: ignore silently.
-
-The following MUST be supported in any conforming MVP:
-
-- Common frontmatter schema (§3.1) including `schema` version field.
-- Kind-specific required fields (§3.2, §3.3, §3.4 — at minimum `scope.paths` for rules, `mode`
-  and `tools` for agents).
-- `schema` version rejection behavior (§8).
-- Body conventions: no-H1 rule (§5.1), fence language hints (§5.2).
-- At least positive-form `@client:<list>` directives (§6).
-- Bundle item resolution by name (§3.7).
-- Generation for at least one client (§7).
-- Formatting guarantee (§7.5).
-
----
-
-## 10. Conformance
+## 9. Conformance
 
 An implementation is conformant with this specification if:
 
@@ -669,14 +715,14 @@ An implementation is conformant with this specification if:
 5. It resolves bundle `items` references against available item sources and reports unresolved
    names as errors.
 6. It preserves supporting files from item directories in generated output per §2.4.
-7. Generated output satisfies the formatting guarantee per §7.5.
+7. Generated output satisfies the formatting guarantee per §7.4.
 
 A reference test corpus SHOULD accompany mature versions of this specification. For v0.1-draft,
 conformance is assessed against authored examples in the implementation's own test suite.
 
 ---
 
-## 11. Non-goals
+## 10. Non-goals
 
 This specification does not define:
 
@@ -686,7 +732,7 @@ This specification does not define:
 - CLI command surfaces, configuration files, or user-facing workflows.
 - Validation of semantic content quality. This is reserved for AI-review or other semantic
   analysis mechanisms outside the scope of format validation.
-- Formatting conventions beyond what §5 requires for portability and §7.5 requires for
+- Formatting conventions beyond what §5 requires for portability and §7.4 requires for
   generated output.
 - Signing, provenance, supply-chain verification, or trust models. These are important but
   separate concerns for a future specification.
@@ -696,7 +742,7 @@ This specification does not define:
 
 ---
 
-## 12. Open questions for future versions
+## 11. Open questions for future versions
 
 The following topics are explicitly deferred and tracked for future specification work:
 
@@ -742,7 +788,7 @@ metadata:
 - AGPL, SSPL, and BUSL code requires explicit approval from legal.
 ```
 
-### A.2 Rule — path-scoped, with Copilot passthrough
+### A.2 Rule — path-scoped, with GitHub Copilot passthrough
 
 ```yaml
 ---
@@ -808,6 +854,10 @@ schema: 1
 name: security-reviewer
 description: Use when reviewing code for injection flaws, authentication issues, secret leaks, and insecure data handling
 license: proprietary
+audience:
+  - claude
+  - copilot
+  - opencode
 mode: subagent
 model: sonnet
 tools:
@@ -822,10 +872,6 @@ opencode:
 metadata:
   version: "1.0.0"
   author: platform-security
-  audience:
-    - claude
-    - copilot
-    - opencode
 ---
 
 ## Security reviewer
@@ -878,12 +924,12 @@ Directory structure:
 ```text
 agents/security-reviewer/
 ├── AGENT.md                   # canonical
-├── AGENT.claude.md            # Claude-specific body
-└── AGENT.copilot.md           # Copilot-specific body
+├── AGENT.claude.md            # Claude Code body override
+└── AGENT.copilot.md           # GitHub Copilot body override
 ```
 
 `AGENT.md` frontmatter is used for all clients. `AGENT.claude.md` body is used when generating
-for Claude Code. `AGENT.copilot.md` body is used when generating for Copilot. For opencode,
+for Claude Code. `AGENT.copilot.md` body is used when generating for GitHub Copilot. For opencode,
 the canonical `AGENT.md` body is used (with directives processed).
 
 ---
@@ -893,7 +939,7 @@ the canonical `AGENT.md` body is used (with directives processed).
 This table summarizes how SSOT fields map to each client's frontmatter when generating output.
 This is informational and subject to change as clients evolve.
 
-| SSOT field       | Claude Code output          | Copilot output                              | opencode output                                                 |
+| SSOT field       | Claude Code output          | GitHub Copilot output                       | opencode output                                                 |
 | ---------------- | --------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
 | `name`           | `name:`                     | `name:`                                     | `name:`                                                         |
 | `description`    | `description:`              | `description:`                              | `description:`                                                  |
@@ -915,7 +961,7 @@ This is informational and subject to change as clients evolve.
 <!-- @client:claude -->           Include only in Claude Code output
 <!-- @client:copilot -->          Include only in Copilot output
 <!-- @client:opencode -->         Include only in opencode output
-<!-- @client:claude,copilot -->   Include in Claude and Copilot, not opencode
+<!-- @client:claude,copilot -->   Include in Claude Code and GitHub Copilot, not opencode
 <!-- @client:!opencode -->        Include everywhere except opencode
 <!-- @endclient -->               Close any directive block (required)
 ```
