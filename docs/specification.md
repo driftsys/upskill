@@ -240,16 +240,6 @@ machine and in CI.
 Tracks the user-global view: items installed at the global scope, drift
 state for the global location, and source-registry caches. Not committed.
 
-### 4.3 v0.1 lockfile migration
-
-The lockfile filename does not change between v0.1 and v0.2 — both versions
-use `.upskill-lock.json`. Per
-[ADR-0003](./adr/0003-generation-pipeline.md), v0.2 stamps a top-level
-`schema: 2` field; v0.1 lockfiles (no `schema` field) are read once on first
-invocation of a v0.2 command and rewritten in place with the v0.2 entry shape.
-Any user-global state moves into `~/.upskill/installed.json`. Existing v0.1
-users are not silently broken.
-
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

@@ -1,13 +1,13 @@
 //! ATDD tests for `pipeline::install_with_lockfile`.
 //!
-//! Validates that a successful install writes a v0.2 schema-2 lockfile
+//! Validates that a successful install writes a `schema: 1` lockfile
 //! (`.upskill-lock.json`) at the consumer-project root with one entry
 //! per `(kind, name)` carrying the source label, optional git ref, and
 //! SSOT content hash.
 
 use std::fs;
 use std::path::Path;
-use upskill::lockfile_v2::{CURRENT_SCHEMA, LockfileV2};
+use upskill::lockfile::{CURRENT_SCHEMA, Lockfile};
 use upskill::pipeline::install_with_lockfile;
 use upskill::source::InstallSource;
 
@@ -36,7 +36,7 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 #[test]
-fn install_writes_schema_2_lockfile_at_target_root() {
+fn install_writes_lockfile_at_target_root() {
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
@@ -52,7 +52,7 @@ fn install_writes_schema_2_lockfile_at_target_root() {
     );
 
     let raw = fs::read_to_string(&lock_path).unwrap();
-    let parsed: LockfileV2 = serde_json::from_str(&raw).expect("valid schema-2 JSON");
+    let parsed: Lockfile = serde_json::from_str(&raw).expect("valid lockfile JSON");
     assert_eq!(parsed.schema, CURRENT_SCHEMA);
 
     // 1 skill + 2 rules + 1 agent = 4 unique items (one entry per kind/name,
@@ -92,12 +92,12 @@ fn re_install_upserts_existing_entries() {
     fs::create_dir_all(&target).unwrap();
 
     install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install 1");
-    let lock1: LockfileV2 =
+    let lock1: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
 
     install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install 2");
-    let lock2: LockfileV2 =
+    let lock2: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
 
@@ -107,50 +107,8 @@ fn re_install_upserts_existing_entries() {
 }
 
 #[test]
-fn install_migrates_v1_lockfile_in_place() {
-    // A user with a pre-v0.2 .upskill-lock.json (no `schema` field, top-level
-    // `skills` array) runs `install_with_lockfile`. The file is migrated to
-    // schema 2 in place, the v0.1 entries survive, and the new install is
-    // merged on top.
-    let tmp = tempfile::tempdir().unwrap();
-    let source = tmp.path().join("source");
-    let target = tmp.path().join("target");
-    stage_source(&source);
-    fs::create_dir_all(&target).unwrap();
-
-    fs::write(
-        target.join(".upskill-lock.json"),
-        r#"{
-            "skills": [
-                {"name": "legacy-skill", "source": "github:legacy/repo@v0.1",
-                 "ref": "v0.1", "hash": "deadbeef"}
-            ]
-        }"#,
-    )
-    .unwrap();
-
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
-
-    let lock = LockfileV2::load(&target).expect("load");
-    assert_eq!(lock.schema, CURRENT_SCHEMA);
-
-    // 1 legacy entry (migrated as kind "skill") + 4 from this install = 5.
-    assert_eq!(lock.items.len(), 5, "{:#?}", lock.items);
-    assert!(
-        lock.items
-            .iter()
-            .any(|i| i.name == "legacy-skill" && i.source == "github:legacy/repo@v0.1"),
-        "v0.1 entry must survive migration"
-    );
-
-    // On-disk file is now in v0.2 shape (has `schema` field).
-    let raw = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
-    assert!(raw.contains("\"schema\""));
-}
-
-#[test]
 fn install_preserves_unrelated_existing_entries() {
-    use upskill::lockfile_v2::LockedItem;
+    use upskill::lockfile::LockedItem;
 
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
@@ -159,7 +117,7 @@ fn install_preserves_unrelated_existing_entries() {
     fs::create_dir_all(&target).unwrap();
 
     // Pre-seed the lockfile with an entry from a different source.
-    let mut seed = LockfileV2::new();
+    let mut seed = Lockfile::new();
     seed.upsert(LockedItem {
         kind: "skill".into(),
         name: "from-other-source".into(),
@@ -171,7 +129,7 @@ fn install_preserves_unrelated_existing_entries() {
 
     install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
 
-    let lock = LockfileV2::load(&target).expect("load");
+    let lock = Lockfile::load(&target).expect("load");
     // 4 from the install + 1 pre-seeded = 5.
     assert_eq!(lock.items.len(), 5);
     assert!(

@@ -64,12 +64,6 @@ pub struct Metadata {
     pub version: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
-    /// Deprecated: `audience` is now a top-level field per format-spec §3.1.
-    /// Accepted here only as a back-compat fallback; new content SHOULD put
-    /// `audience` at the top level. The pipeline prefers the top-level value
-    /// when both are present.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub audience: Option<Vec<Audience>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated: Option<String>,
     #[serde(flatten)]

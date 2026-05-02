@@ -84,17 +84,16 @@ src/
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
-└── lockfile_v2.rs       .upskill-lock.json (`schema: 2`) read/write
-                         + in-place v0.1 → v0.2 migration
+└── lockfile.rs          .upskill-lock.json (`schema: 1`) read/write
 ```
 
 Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
-- `docs/usage.md` — user-facing guide (entrypoint)
+- `docs/intro.md` — book entrypoint
+- `docs/getting-started.md` / `docs/commands.md` / `docs/recipes.md` — user guide
 - `docs/specification.md` — v0.2 behavioral spec
-- `docs/architecture.md` — implementation guide
 - `docs/format-spec.md` — portable on-disk content format
-- `docs/adr/` — architecture decision records (0001 umbrella + 0002–0005)
+- `docs/adr/` — architecture decision records (0000 baseline, 0001 umbrella, 0002–0005)
 
 ### Key conventions
 
@@ -112,12 +111,10 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 ### Install layout
 
 Per-item generated output, copy only (no symlinks). State split between
-`.upskill-lock.json` (per-project, committed, schema-versioned) and
-`~/.upskill/installed.json` (per-user). v0.1 lockfiles are migrated in
-place on first invocation — the filename is unchanged, the new file
-gains a `schema: 2` field. Per-client output paths and ancillary files
-(`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are specified
-in [ADR-0003](docs/adr/0003-generation-pipeline.md) and
+`.upskill-lock.json` (per-project, committed, `schema: 1`) and
+`~/.upskill/installed.json` (per-user). Per-client output paths and
+ancillary files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`)
+are specified in [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/format-spec.md).
 
 ### Source format
