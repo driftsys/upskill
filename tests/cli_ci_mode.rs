@@ -1,3 +1,6 @@
+//! Verify CLI error output is plain text with no ANSI escapes when
+//! `NO_COLOR` is set, so CI logs and pipes stay readable.
+
 use assert_cmd::Command;
 use tempfile::tempdir;
 

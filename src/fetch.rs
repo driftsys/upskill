@@ -18,8 +18,11 @@ pub fn clone_github_repo(repo: &GithubRepo, dest: &Path) -> Result<PathBuf, Stri
     )
 }
 
-/// Shallow clone a git URL into `dest/<dir_name>`.
-fn shallow_clone(
+/// Shallow clone a git URL into `dest/<dir_name>`. Visible inside the crate
+/// so the v0.2 pipeline can clone from arbitrary URL forms (`file://`,
+/// GitLab self-hosted, etc.) without going through the GitHub-specific
+/// `clone_github_repo` constructor.
+pub(crate) fn shallow_clone(
     url: &str,
     git_ref: Option<&str>,
     dir_name: &str,
@@ -53,7 +56,7 @@ fn shallow_clone(
     Ok(())
 }
 
-fn resolve_subfolder(
+pub(crate) fn resolve_subfolder(
     clone_dir: &Path,
     subfolder: Option<&str>,
     owner: &str,
@@ -61,7 +64,10 @@ fn resolve_subfolder(
 ) -> Result<PathBuf, String> {
     if let Some(sub) = subfolder {
         let sub_path = clone_dir.join(sub);
-        if !sub_path.is_dir() {
+        // Subfolders are usually directories (item-root paths) but bundle
+        // sources point at a `<name>.bundle.md` file directly. Accept
+        // both — the install layer dispatches on file vs dir.
+        if !sub_path.exists() {
             return Err(format!(
                 "subfolder '{}' not found in {}/{}",
                 sub, owner, name

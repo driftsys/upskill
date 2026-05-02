@@ -1,8 +1,8 @@
 [package]
 name = "upskill"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-description = "Upskill your coding agents — ultra-lightweight agent skills package manager"
+description = "Author and distribute AI-assistance content across coding agents"
 license = "MIT"
 repository = "https://github.com/driftsys/upskill"
 homepage = "https://driftsys.github.io/upskill/"
@@ -14,9 +14,13 @@ categories = ["command-line-utilities", "development-tools"]
 anyhow = "1"
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4"
+dprint-plugin-markdown = "=0.21.1"
+pulldown-cmark = "0.11"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+serde_yaml_ng = "0.10"
 sha2 = "0.11.0"
+tempfile = "3.14"
 thiserror = "2.0"
 ureq = { version = "2", features = ["json"] }
 
@@ -24,7 +28,6 @@ ureq = { version = "2", features = ["json"] }
 assert_cmd = "2.0"
 predicates = "3.1.4"
 serde_json = "1.0.149"
-tempfile = "3.14"
 
 [profile.release]
 lto = true

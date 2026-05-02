@@ -1,14 +1,18 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand, error::ErrorKind};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use upskill::agent;
-use upskill::install;
-use upskill::lockfile;
-use upskill::lockfile::{LockedSkill, Lockfile};
+use upskill::fmt::{FmtReport, fmt};
+use upskill::lint::{LintReport, lint};
+use upskill::pipeline::{
+    DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
+    RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
+    install_with_lockfile, list, remove, update,
+};
+use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
-use upskill::source::{InstallSource, parse_install_source};
-use upskill::ui;
+use upskill::source::parse_install_source;
 
 const EXIT_SUCCESS: i32 = 0;
 const EXIT_ERROR: i32 = 1;
@@ -19,7 +23,7 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
-#[command(about = "Upskill your coding agents")]
+#[command(about = "Author and distribute AI-assistance content across coding agents")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -27,73 +31,123 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Install skills from a source
+    /// Install rules / skills / agents from a source.
+    ///
+    /// Runs the v0.2 SSOT generation pipeline: parses each item from the
+    /// source, renders per-client output, and records the install in
+    /// `.upskill-lock.json`. Per format-spec §7 / ADR-0003.
     Add {
-        /// GitHub source in owner/repo format
+        /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
         source: String,
-        /// Install only a specific skill (repeatable)
-        #[arg(long = "skill", short = 's')]
-        skills: Vec<String>,
-        /// Symlink to Claude Code skills directory
-        #[arg(long)]
-        claude: bool,
-        /// Symlink to Copilot skills directory
-        #[arg(long)]
-        copilot: bool,
-        /// Symlink to every supported agent skills directory
-        #[arg(long)]
-        all: bool,
-        /// Copy skills to agent directories instead of creating symlinks
-        #[arg(long)]
-        copy: bool,
-        /// Use user-level global installation target
+        /// Install into `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// List installed skills
-    List {
-        /// Read from user-level global installation target
-        #[arg(short = 'g', long = "global")]
-        global: bool,
-    },
-    /// Remove an installed skill
+    /// Remove installed content.
+    ///
+    /// Either name one or more items, or pass `--source <label>` to
+    /// remove every item that came from a single source. Bare
+    /// `upskill remove` is rejected — be explicit per ADR-0004. Ancillary
+    /// files (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are
+    /// not touched.
     Remove {
-        /// Skill name to remove
-        skill: String,
-        /// Skip confirmation prompt
-        #[arg(long)]
-        yes: bool,
-        /// Remove from user-level global installation target
+        /// Item names to remove. Mutually exclusive with `--source`.
+        names: Vec<String>,
+        /// Remove every item whose lockfile `source` label matches this
+        /// string. Use the value reported by the install or shown in
+        /// `.upskill-lock.json` (e.g. `local:/path` or
+        /// `github:owner/repo`).
+        #[arg(long = "source")]
+        source: Option<String>,
+        /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// Check installed skills for available updates
-    Check {
-        /// Check user-level global installation target
+    /// Pull latest sources and regenerate changed items.
+    ///
+    /// Re-fetches the source for every (or just the named) lockfile
+    /// entries and reinstalls those sources. With `--dry-run`, hashes
+    /// the new SSOT and reports what would change without writing.
+    /// `update` always fetches per ADR-0004.
+    Update {
+        /// Item names to update (omit to update everything).
+        names: Vec<String>,
+        /// Report what would change without writing.
+        #[arg(long = "dry-run")]
+        dry_run: bool,
+        /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// Search the public skills registry
+    /// List installed content recorded in `.upskill-lock.json`.
+    ///
+    /// Items are grouped by kind (rules, skills, agents). Bundles, when
+    /// present, are surfaced as a separate section. The command never
+    /// fetches and never inspects per-client output files — for that, run
+    /// `upskill doctor`.
+    List {
+        /// Read `$HOME/.upskill-lock.json` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
+    /// Verify installed-state consistency.
+    ///
+    /// Three independent buckets per ADR-0004:
+    /// - missing per-client output files (reinstall fixes)
+    /// - SSOT hash drift on `local:` sources (update fixes)
+    /// - lockfile entries with no recoverable source (manual remove)
+    ///
+    /// Doctor never fetches; remote-source drift detection is
+    /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
+    Doctor {
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
+    /// Search the public skills registry.
     Search {
-        /// Search query
+        /// Search query.
         query: String,
-        /// Maximum number of results
+        /// Maximum number of results.
         #[arg(long, default_value = "10")]
         limit: usize,
     },
-    /// Update installed skills to their latest versions
-    Update {
-        /// Skill names to update (omit for all)
-        names: Vec<String>,
-        /// Preview changes without applying them
-        #[arg(long = "dry-run")]
-        dry_run: bool,
-        /// Force update even if local modifications are detected
-        #[arg(short = 'f', long = "force")]
-        force: bool,
-        /// Update user-level global installation target
-        #[arg(short = 'g', long = "global")]
-        global: bool,
+    /// Validate SSOT files against the format spec.
+    ///
+    /// Author command — runs only inside a source registry. Refuses to
+    /// run inside a consumer project (detected by `.upskill-lock.json`).
+    /// Default mode emits warnings and exits 0 unless an error rule
+    /// fires; `--strict` promotes warnings to errors (CI mode). With no
+    /// paths, lints the current directory.
+    Lint {
+        /// Files or directories to lint. Empty = current directory.
+        paths: Vec<PathBuf>,
+        /// Promote warnings to errors. Use in CI.
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Canonicalise YAML frontmatter in SSOT files.
+    ///
+    /// Author command — runs only inside a source registry. Body
+    /// markdown is left untouched (dprint's job). Refuses to run inside
+    /// a consumer project (detected by `.upskill-lock.json`). With no
+    /// paths, formats the current directory.
+    Fmt {
+        /// Files or directories to format. Empty = current directory.
+        paths: Vec<PathBuf>,
+    },
+    /// Scaffold a new rule, skill, or agent.
+    ///
+    /// Writes the minimum frontmatter the format spec requires plus
+    /// kind-specific defaults (e.g. `mode: subagent` / `model: sonnet`
+    /// for agents) into `<cwd>/<kind>s/<name>/<KIND>.md`. Author
+    /// command — refuses to run inside a consumer project.
+    New {
+        /// One of `rule`, `skill`, `agent`.
+        kind: String,
+        /// Item name. Lowercase letters, digits, hyphens; max 64 chars
+        /// per format-spec §2.1.
+        name: String,
     },
 }
 
@@ -113,25 +167,23 @@ fn main() {
     };
 
     let mut exit_code = match cli.command {
-        Commands::Add {
+        Commands::Add { source, global } => run_add(&source, global),
+        Commands::Remove {
+            names,
             source,
-            skills,
-            claude,
-            copilot,
-            all,
-            copy,
             global,
-        } => run_add(&source, &skills, claude, copilot, all, copy, global),
-        Commands::List { global } => run_list(global),
-        Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
-        Commands::Check { global } => run_check(global),
-        Commands::Search { query, limit } => run_search(&query, limit),
+        } => run_remove(&names, source.as_deref(), global),
         Commands::Update {
             names,
             dry_run,
-            force,
             global,
-        } => run_update(&names, dry_run, force, global),
+        } => run_update(&names, dry_run, global),
+        Commands::List { global } => run_list(global),
+        Commands::Doctor { global } => run_doctor(global),
+        Commands::Search { query, limit } => run_search(&query, limit),
+        Commands::Lint { paths, strict } => run_lint(&paths, strict),
+        Commands::Fmt { paths } => run_fmt(&paths),
+        Commands::New { kind, name } => run_new(&kind, &name),
     };
 
     if was_interrupted() {
@@ -159,465 +211,448 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn lockfile_root(global: bool) -> anyhow::Result<std::path::PathBuf> {
+fn run_add(source: &str, global: bool) -> i32 {
+    let parsed = match parse_install_source(source) {
+        Ok(s) => s,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_USAGE;
+        }
+    };
+
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    match install_with_lockfile(&parsed, &target) {
+        Ok(report) => {
+            print_install_report(&report, source);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn install_target(global: bool) -> anyhow::Result<PathBuf> {
     if global {
         std::env::var_os("HOME")
-            .map(std::path::PathBuf::from)
+            .map(PathBuf::from)
             .ok_or_else(|| anyhow::anyhow!("HOME is not set"))
     } else {
         std::env::current_dir().context("failed to get current directory")
     }
 }
 
-struct AddContext {
-    claude: bool,
-    copilot: bool,
-    all: bool,
-    copy: bool,
-    global: bool,
-    /// true when --skill was not specified (implicit default)
-    implicit_skill: bool,
+fn print_install_report(report: &InstallReport, source: &str) {
+    use std::collections::BTreeMap;
+
+    println!("Installed {} files from {}", report.items.len(), source);
+
+    let mut grouped: BTreeMap<(ItemKind, String), Vec<&'static str>> = BTreeMap::new();
+    for item in &report.items {
+        grouped
+            .entry((item.kind, item.name.clone()))
+            .or_default()
+            .push(item.client.name());
+    }
+    for ((kind, name), clients) in grouped {
+        let kind_label = match kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        println!("  {} {:<32} → {}", kind_label, name, clients.join(", "));
+    }
 }
 
-fn finish_install(
-    canonical_target: &std::path::Path,
-    lockfile_root: &std::path::Path,
-    resolved_skills: &[String],
-    source_label: &str,
-    git_ref: Option<&str>,
-    ctx: &AddContext,
-) -> anyhow::Result<()> {
-    install::persist_installed_skills(canonical_target, resolved_skills, source_label)?;
+fn run_remove(names: &[String], source: Option<&str>, global: bool) -> i32 {
+    let filter = match (names.is_empty(), source) {
+        (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
+        (false, None) => RemoveFilter::ByNames(names.to_vec()),
+        (true, None) => {
+            eprintln!(
+                "error: nothing to remove — pass one or more item names, or `--source <label>`"
+            );
+            return EXIT_USAGE;
+        }
+        (false, Some(_)) => {
+            eprintln!("error: `--source` and item names are mutually exclusive");
+            return EXIT_USAGE;
+        }
+    };
 
-    if !ctx.global {
-        agent::ensure_agent_targets(ctx.claude, ctx.copilot, ctx.all, ctx.copy, canonical_target)?;
-    }
-
-    let mut lf = Lockfile::load(lockfile_root);
-    for skill in resolved_skills {
-        let skill_dir = canonical_target.join(skill);
-        lf.upsert(LockedSkill {
-            name: skill.clone(),
-            source: source_label.to_string(),
-            git_ref: git_ref.map(str::to_string),
-            hash: lockfile::hash_skill_dir(&skill_dir),
-        });
-    }
-    lf.save(lockfile_root)?;
-
-    ui::print_selected_skills(resolved_skills, ctx.implicit_skill);
-    Ok(())
-}
-
-fn run_add(
-    source: &str,
-    skills: &[String],
-    claude: bool,
-    copilot: bool,
-    all: bool,
-    copy: bool,
-    global: bool,
-) -> i32 {
-    let canonical_target = match install::canonical_target(global) {
-        Ok(path) => path,
+    let target = match install_target(global) {
+        Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
             return EXIT_ERROR;
         }
     };
 
-    let lockfile_root = match lockfile_root(global) {
-        Ok(path) => path,
+    match remove(&target, filter) {
+        Ok(report) => {
+            print_remove_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_remove_report(report: &RemoveReport) {
+    if report.items.is_empty() {
+        println!("no matching items in lockfile");
+        return;
+    }
+    println!("Removed {} item(s)", report.items.len());
+    for item in &report.items {
+        let kind_label = match item.kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        println!(
+            "  {} {:<32} ({} file(s))",
+            kind_label,
+            item.name,
+            item.deleted_files.len()
+        );
+    }
+}
+
+fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+    let mode = if dry_run {
+        UpdateMode::DryRun
+    } else {
+        UpdateMode::Apply
+    };
+
+    match update(&target, names, mode) {
+        Ok(report) => {
+            print_update_report(&report, dry_run);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_update_report(report: &UpdateReport, dry_run: bool) {
+    if report.items.is_empty() {
+        println!("nothing to update — lockfile is empty");
+        return;
+    }
+    let header = if dry_run {
+        "Dry-run: would update"
+    } else {
+        "Updated"
+    };
+    let changes = report
+        .items
+        .iter()
+        .filter(|i| !matches!(i.status, UpdateStatus::UpToDate))
+        .count();
+    println!("{header} {} of {} item(s)", changes, report.items.len());
+    for item in &report.items {
+        let kind_label = match item.kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        let status = match &item.status {
+            UpdateStatus::UpToDate => "up to date".to_string(),
+            UpdateStatus::Updated { new_hash, .. } => format!("updated → {}", short(new_hash)),
+            UpdateStatus::WouldChange { new_hash, .. } => {
+                format!("would change → {}", short(new_hash))
+            }
+        };
+        println!("  {} {:<32} {}", kind_label, item.name, status);
+    }
+}
+
+fn short(h: &Option<String>) -> String {
+    match h {
+        Some(s) if s.len() >= 8 => s[..8].to_string(),
+        Some(s) => s.clone(),
+        None => "<no hash>".to_string(),
+    }
+}
+
+fn run_doctor(global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
             return EXIT_ERROR;
         }
     };
 
-    if let Err(err) = install::ensure_canonical_target(&canonical_target) {
-        eprintln!("error: {}", err);
-        return EXIT_ERROR;
+    match doctor(&target) {
+        Ok(report) => {
+            print_doctor_report(&report);
+            if report.is_clean() {
+                EXIT_SUCCESS
+            } else {
+                EXIT_ERROR
+            }
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_doctor_report(report: &DoctorReport) {
+    if report.is_clean() {
+        println!("doctor: clean");
+        return;
     }
 
-    match parse_install_source(source) {
-        Ok(InstallSource::Github(repo)) => {
-            let mut source_label = format!("github:{}/{}", repo.owner, repo.name);
-            if let Some(r) = &repo.git_ref {
-                source_label.push_str(&format!("@{}", r));
+    if !report.missing_outputs.is_empty() {
+        println!(
+            "doctor: missing per-client outputs ({} item(s)) — reinstall to fix",
+            report.missing_outputs.len()
+        );
+        for m in &report.missing_outputs {
+            println!("  {} {}", kind_label(m.kind), m.name);
+            for path in &m.missing_files {
+                println!("    - {}", path.display());
             }
-            if let Some(s) = &repo.subfolder {
-                source_label.push_str(&format!(":{}", s));
-            }
-
-            let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
-                Ok(s) => s,
-                Err(err) => {
-                    eprintln!("error: {}", err);
-                    return EXIT_ERROR;
-                }
-            };
-
-            println!("install source: github");
-            println!("owner: {}", repo.owner);
-            println!("repo: {}", repo.name);
-            if let Some(r) = &repo.git_ref {
-                println!("ref: {}", r);
-            }
-            if let Some(s) = &repo.subfolder {
-                println!("subfolder: {}", s);
-            }
-
-            if let Err(err) = finish_install(
-                &canonical_target,
-                &lockfile_root,
-                &resolved_skills,
-                &source_label,
-                repo.git_ref.as_deref(),
-                &AddContext {
-                    claude,
-                    copilot,
-                    all,
-                    copy,
-                    global,
-                    implicit_skill: skills.is_empty(),
-                },
-            ) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
-            EXIT_SUCCESS
         }
-        Ok(InstallSource::Gitlab(repo)) => {
-            let mut source_label = format!("gitlab:{}/{}", repo.owner, repo.name);
-            if let Some(r) = &repo.git_ref {
-                source_label.push_str(&format!("@{}", r));
-            }
-            if let Some(s) = &repo.subfolder {
-                source_label.push_str(&format!(":{}", s));
-            }
+    }
 
-            let resolved_skills = match install::resolve_requested_skills(skills, &repo.name) {
-                Ok(s) => s,
-                Err(err) => {
-                    eprintln!("error: {}", err);
-                    return EXIT_ERROR;
-                }
-            };
-
-            println!("install source: gitlab");
-            println!("owner: {}", repo.owner);
-            println!("repo: {}", repo.name);
-            if repo.host != "gitlab.com" {
-                println!("host: {}", repo.host);
-            }
-            if let Some(r) = &repo.git_ref {
-                println!("ref: {}", r);
-            }
-            if let Some(s) = &repo.subfolder {
-                println!("subfolder: {}", s);
-            }
-
-            if let Err(err) = finish_install(
-                &canonical_target,
-                &lockfile_root,
-                &resolved_skills,
-                &source_label,
-                repo.git_ref.as_deref(),
-                &AddContext {
-                    claude,
-                    copilot,
-                    all,
-                    copy,
-                    global,
-                    implicit_skill: skills.is_empty(),
-                },
-            ) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
-            EXIT_SUCCESS
+    if !report.stale_hashes.is_empty() {
+        println!(
+            "doctor: SSOT hash drift on local sources ({} item(s)) — `upskill update` to fix",
+            report.stale_hashes.len()
+        );
+        for s in &report.stale_hashes {
+            println!("  {} {} ({})", kind_label(s.kind), s.name, s.source);
         }
-        Ok(InstallSource::LocalPath(path)) => {
-            if !path.exists() {
-                eprintln!("error: local path does not exist: {}", path.display());
-                return EXIT_USAGE;
-            }
+    }
 
-            let default_skill = path
-                .file_name()
-                .and_then(|v| v.to_str())
-                .filter(|v| !v.is_empty())
-                .unwrap_or("local-skill");
-
-            let resolved_skills = match install::resolve_requested_skills(skills, default_skill) {
-                Ok(s) => s,
-                Err(err) => {
-                    eprintln!("error: {}", err);
-                    return EXIT_ERROR;
-                }
+    if !report.orphan_entries.is_empty() {
+        println!(
+            "doctor: lockfile entries with no recoverable source ({} item(s)) — `upskill remove` to clear",
+            report.orphan_entries.len()
+        );
+        for o in &report.orphan_entries {
+            let reason = match o.reason {
+                OrphanReason::LocalPathGone => "local path gone",
+                OrphanReason::ItemMissingInSource => "item not in source",
             };
+            println!(
+                "  {} {} ({}) — {}",
+                kind_label(o.kind),
+                o.name,
+                o.source,
+                reason
+            );
+        }
+    }
+}
 
-            let source_label = format!("local:{}", path.display());
+fn kind_label(kind: ItemKind) -> &'static str {
+    match kind {
+        ItemKind::Rule => "rule ",
+        ItemKind::Skill => "skill",
+        ItemKind::Agent => "agent",
+    }
+}
 
-            println!("install source: local");
-            println!("path: {}", path.display());
+fn run_list(global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
 
-            if let Err(err) = finish_install(
-                &canonical_target,
-                &lockfile_root,
-                &resolved_skills,
-                &source_label,
-                None,
-                &AddContext {
-                    claude,
-                    copilot,
-                    all,
-                    copy,
-                    global,
-                    implicit_skill: skills.is_empty(),
-                },
-            ) {
-                eprintln!("error: {}", err);
-                return EXIT_ERROR;
-            }
-
+    match list(&target) {
+        Ok(report) => {
+            print_list_report(&report);
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {}", err);
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_list_report(report: &ListReport) {
+    if report.is_empty() {
+        println!("no items installed");
+        return;
+    }
+
+    print_list_section("rules", &report.rules);
+    print_list_section("skills", &report.skills);
+    print_list_section("agents", &report.agents);
+    print_list_bundles(&report.bundles);
+}
+
+fn print_list_section(label: &str, items: &[ListedItem]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("{label} ({})", items.len());
+    for item in items {
+        let pinned = match &item.git_ref {
+            Some(r) => format!("@{r}"),
+            None => String::new(),
+        };
+        println!("  {:<32} {}{}", item.name, item.source, pinned);
+    }
+}
+
+fn print_list_bundles(bundles: &[ListedBundle]) {
+    if bundles.is_empty() {
+        return;
+    }
+    println!("bundles ({})", bundles.len());
+    for bundle in bundles {
+        let pinned = match &bundle.git_ref {
+            Some(r) => format!("@{r}"),
+            None => String::new(),
+        };
+        println!("  {:<32} {}{}", bundle.name, bundle.source, pinned);
+    }
+}
+
+fn run_lint(paths: &[PathBuf], strict: bool) -> i32 {
+    match lint(paths, strict) {
+        Ok(report) => {
+            print_lint_report(&report);
+            if report.has_errors() {
+                EXIT_ERROR
+            } else {
+                EXIT_SUCCESS
+            }
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            // Author-command misuse (consumer-project / unreadable
+            // path) maps to usage error. The lint module surfaces
+            // those as Err(_); per-rule findings travel inside Ok.
             EXIT_USAGE
         }
     }
 }
 
-fn run_list(global: bool) -> i32 {
-    let canonical = match install::canonical_target(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    if !canonical.exists() {
-        println!("no skills installed");
-        return EXIT_SUCCESS;
-    }
-
-    let mut skills = Vec::new();
-    let entries = match std::fs::read_dir(&canonical) {
-        Ok(entries) => entries,
-        Err(err) => {
-            eprintln!("error: failed to read {}: {}", canonical.display(), err);
-            return EXIT_ERROR;
-        }
-    };
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let Some(name) = path.file_name().and_then(|v| v.to_str()) else {
-            continue;
-        };
-
-        let source = std::fs::read_to_string(path.join(".upskill-source"))
-            .unwrap_or_else(|_| "unknown".to_string())
-            .trim()
-            .to_string();
-        skills.push((name.to_string(), source));
-    }
-
-    skills.sort_by(|a, b| a.0.cmp(&b.0));
-    if skills.is_empty() {
-        println!("no skills installed");
-        return EXIT_SUCCESS;
-    }
-
-    let active_agents = agent::detect_active_agents();
-    let symlink_text = if active_agents.is_empty() {
-        "none".to_string()
-    } else {
-        active_agents.join(",")
-    };
-
-    for (name, source) in skills {
-        println!("{}\tsource={}\tsymlinks={}", name, source, symlink_text);
-    }
-
-    EXIT_SUCCESS
-}
-
-fn run_remove(skill: &str, yes: bool, global: bool) -> i32 {
-    let canonical = match install::canonical_target(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    let lockfile_root = match lockfile_root(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    let skill_path = canonical.join(skill);
-    if !skill_path.is_dir() {
-        eprintln!("error: skill not installed: {}", skill);
-        return EXIT_USAGE;
-    }
-
-    if ui::should_prompt_for_confirmation(yes) && !ui::confirm_removal(skill) {
-        eprintln!("error: removal cancelled");
-        return EXIT_ERROR;
-    }
-
-    if let Err(err) = std::fs::remove_dir_all(&skill_path) {
-        eprintln!("error: failed to remove {}: {}", skill_path.display(), err);
-        return EXIT_ERROR;
-    }
-
-    // Update lockfile
-    let mut lockfile = Lockfile::load(&lockfile_root);
-    lockfile.remove(skill);
-    if let Err(err) = lockfile.save(&lockfile_root) {
-        eprintln!("error: {}", err);
-        return EXIT_ERROR;
-    }
-
-    if !global && let Err(err) = agent::cleanup_agent_symlinks_if_empty(&canonical) {
-        eprintln!("error: {}", err);
-        return EXIT_ERROR;
-    }
-
-    println!("removed skill: {}", skill);
-    EXIT_SUCCESS
-}
-
-fn run_check(global: bool) -> i32 {
-    let lockfile_root = match lockfile_root(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    let lockfile = Lockfile::load(&lockfile_root);
-
-    if lockfile.skills.is_empty() {
-        println!("no skills installed");
-        return EXIT_SUCCESS;
-    }
-
-    for skill in &lockfile.skills {
-        let ref_label = skill.git_ref.as_deref().unwrap_or("latest");
-        println!("{}\t{}\tpinned: {}", skill.name, skill.source, ref_label);
-    }
-
-    EXIT_SUCCESS
-}
-
-fn run_update(names: &[String], dry_run: bool, force: bool, global: bool) -> i32 {
-    let lockfile_root = match lockfile_root(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    let lockfile = Lockfile::load(&lockfile_root);
-
-    if lockfile.skills.is_empty() {
-        println!("no skills installed");
-        return EXIT_SUCCESS;
-    }
-
-    let skills_to_update: Vec<&LockedSkill> = if names.is_empty() {
-        lockfile.skills.iter().collect()
-    } else {
-        let mut selected = Vec::new();
-        for name in names {
-            match lockfile.skills.iter().find(|s| s.name == *name) {
-                Some(skill) => selected.push(skill),
-                None => {
-                    eprintln!("error: skill not in lockfile: {}", name);
-                    return EXIT_USAGE;
-                }
-            }
-        }
-        selected
-    };
-
-    if dry_run {
-        for skill in &skills_to_update {
-            let ref_label = skill.git_ref.as_deref().unwrap_or("latest");
-            println!(
-                "dry-run: would update {} from {} ({})",
-                skill.name, skill.source, ref_label
-            );
-        }
-        return EXIT_SUCCESS;
-    }
-
-    let canonical_target = match install::canonical_target(global) {
-        Ok(path) => path,
-        Err(err) => {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-    };
-
-    if let Err(err) = install::ensure_canonical_target(&canonical_target) {
-        eprintln!("error: {}", err);
-        return EXIT_ERROR;
-    }
-
-    let mut skipped = Vec::new();
-
-    for skill in &skills_to_update {
-        // Check for local modifications
-        if !force && let Some(stored_hash) = &skill.hash {
-            let skill_dir = canonical_target.join(&skill.name);
-            let current_hash = lockfile::hash_skill_dir(&skill_dir);
-            if current_hash.as_deref() != Some(stored_hash.as_str()) {
-                eprintln!(
-                    "warning: {} has local modifications, skipping (use --force to overwrite)",
-                    skill.name
-                );
-                skipped.push(skill.name.as_str());
-                continue;
-            }
-        }
-
-        if let Err(err) = install::persist_installed_skills(
-            &canonical_target,
-            std::slice::from_ref(&skill.name),
-            &skill.source,
-        ) {
-            eprintln!("error: {}", err);
-            return EXIT_ERROR;
-        }
-        println!("updated: {}", skill.name);
-    }
-
-    if !skipped.is_empty() {
-        eprintln!(
-            "{} skill(s) skipped due to local modifications",
-            skipped.len()
+fn print_lint_report(report: &LintReport) {
+    for f in &report.findings {
+        let line = f.line.map(|n| format!(":{n}")).unwrap_or_default();
+        println!(
+            "{}: {}{} [{}] {}",
+            f.severity.label(),
+            f.path.display(),
+            line,
+            f.rule_id,
+            f.message
         );
     }
+    println!(
+        "{} file(s) checked, {} findings",
+        report.files_checked,
+        report.findings.len()
+    );
+}
 
-    EXIT_SUCCESS
+fn run_fmt(paths: &[PathBuf]) -> i32 {
+    match fmt(paths) {
+        Ok(report) => {
+            print_fmt_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_USAGE
+        }
+    }
+}
+
+fn print_fmt_report(report: &FmtReport) {
+    if report.files_changed.is_empty() {
+        println!("{} file(s) checked, all formatted", report.files_checked);
+        return;
+    }
+    for path in &report.files_changed {
+        println!("formatted: {}", path.display());
+    }
+    println!(
+        "{} file(s) checked, {} file(s) changed",
+        report.files_checked,
+        report.files_changed.len()
+    );
+}
+
+fn run_new(kind: &str, name: &str) -> i32 {
+    let parsed_kind = match NewKind::parse(kind) {
+        Ok(k) => k,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_USAGE;
+        }
+    };
+    let cwd = match std::env::current_dir() {
+        Ok(p) => p,
+        Err(err) => {
+            eprintln!("error: get current directory: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+    match scaffold(&cwd, parsed_kind, name) {
+        Ok(report) => {
+            print_scaffold_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            let msg = format!("{:#}", err);
+            eprintln!("error: {}", msg);
+            // Author-command misuse (consumer-project) → usage error;
+            // every other failure → 1.
+            if msg.contains("consumer project") {
+                EXIT_USAGE
+            } else {
+                EXIT_ERROR
+            }
+        }
+    }
+}
+
+fn print_scaffold_report(report: &ScaffoldReport) {
+    let kind_label = match report.kind {
+        NewKind::Rule => "rule",
+        NewKind::Skill => "skill",
+        NewKind::Agent => "agent",
+    };
+    println!(
+        "scaffolded {kind_label} `{}` at {}",
+        report.name,
+        report.written.display()
+    );
+    println!("edit the file and replace the TODO body before publishing.");
 }
 
 fn run_search(query: &str, limit: usize) -> i32 {
@@ -632,7 +667,6 @@ fn run_search(query: &str, limit: usize) -> i32 {
         }
         Ok(results) => {
             for skill in &results {
-                // source from API is "github/owner/repo" or "github/owner" — extract repo part
                 let repo = skill
                     .source
                     .trim_start_matches("github/")

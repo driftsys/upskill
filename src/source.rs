@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::PathBuf;
 
 use thiserror::Error;
@@ -24,6 +25,44 @@ pub enum InstallSource {
     Github(GithubRepo),
     Gitlab(GitlabRepo),
     LocalPath(PathBuf),
+}
+
+/// Stable, round-trippable string label for use in lockfiles, log lines,
+/// and CLI output. Format mirrors what `parse_install_source` accepts:
+///
+/// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
+/// - `gitlab:<owner>/<name>[@<ref>][:<subfolder>]` (host omitted when
+///   `gitlab.com`; otherwise `gitlab+<host>:...`)
+/// - `local:<path>` (absolute when known, otherwise as-given)
+impl fmt::Display for InstallSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InstallSource::Github(r) => write!(f, "github:{}/{}", r.owner, r.name)
+                .and_then(|_| match &r.git_ref {
+                    Some(g) => write!(f, "@{}", g),
+                    None => Ok(()),
+                })
+                .and_then(|_| match &r.subfolder {
+                    Some(s) => write!(f, ":{}", s),
+                    None => Ok(()),
+                }),
+            InstallSource::Gitlab(r) => {
+                if r.host == "gitlab.com" {
+                    write!(f, "gitlab:{}/{}", r.owner, r.name)?;
+                } else {
+                    write!(f, "gitlab+{}:{}/{}", r.host, r.owner, r.name)?;
+                }
+                if let Some(g) = &r.git_ref {
+                    write!(f, "@{}", g)?;
+                }
+                if let Some(s) = &r.subfolder {
+                    write!(f, ":{}", s)?;
+                }
+                Ok(())
+            }
+            InstallSource::LocalPath(p) => write!(f, "local:{}", p.display()),
+        }
+    }
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -54,6 +93,38 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     }
 
     parse_github_source(source).map(InstallSource::Github)
+}
+
+/// Parse a lockfile source label produced by the [`Display`] impl back
+/// into an [`InstallSource`]. The inverse of `Display::fmt` and the
+/// counterpart to [`parse_install_source`], which accepts user-facing
+/// shorthand instead of the canonical labels.
+///
+/// Recognised labels:
+/// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
+/// - `gitlab:<owner>/<name>[@<ref>][:<subfolder>]` — host is `gitlab.com`
+/// - `gitlab+<host>:<owner>/<name>[@<ref>][:<subfolder>]` — self-hosted
+/// - `local:<path>` — absolute on round-trip; passed through verbatim
+pub fn parse_install_source_label(label: &str) -> Result<InstallSource, SourceParseError> {
+    if let Some(rest) = label.strip_prefix("local:") {
+        return Ok(InstallSource::LocalPath(PathBuf::from(rest)));
+    }
+    if let Some(rest) = label.strip_prefix("github:") {
+        return parse_github_source(rest).map(InstallSource::Github);
+    }
+    if let Some(rest) = label.strip_prefix("gitlab+") {
+        let (host, after) = rest
+            .split_once(':')
+            .ok_or(SourceParseError::InvalidFormat)?;
+        if host.is_empty() {
+            return Err(SourceParseError::EmptySegment);
+        }
+        return parse_gitlab_source(after, host).map(InstallSource::Gitlab);
+    }
+    if let Some(rest) = label.strip_prefix("gitlab:") {
+        return parse_gitlab_source(rest, "gitlab.com").map(InstallSource::Gitlab);
+    }
+    Err(SourceParseError::InvalidFormat)
 }
 
 fn parse_url_source(url_without_scheme: &str) -> Result<InstallSource, SourceParseError> {
@@ -390,5 +461,78 @@ mod tests {
         assert_eq!(repo.host, "git.company.com:8443");
         assert_eq!(repo.owner, "team");
         assert_eq!(repo.name, "skills");
+    }
+
+    // Lockfile source label round-trip — every shape Display can produce
+    // must round-trip through parse_install_source_label so `update` can
+    // reconstruct the source from a lockfile entry.
+
+    fn assert_label_roundtrip(s: &InstallSource) {
+        let label = s.to_string();
+        let parsed = parse_install_source_label(&label)
+            .unwrap_or_else(|e| panic!("round-trip failed for `{label}`: {e:?}"));
+        assert_eq!(&parsed, s, "round-trip mismatch for `{label}`");
+    }
+
+    #[test]
+    fn label_roundtrip_local_path() {
+        assert_label_roundtrip(&InstallSource::LocalPath(PathBuf::from("/abs/path")));
+        assert_label_roundtrip(&InstallSource::LocalPath(PathBuf::from(
+            "/path with spaces/x",
+        )));
+    }
+
+    #[test]
+    fn label_roundtrip_github_minimal() {
+        assert_label_roundtrip(&InstallSource::Github(GithubRepo {
+            owner: "driftsys".into(),
+            name: "skills".into(),
+            git_ref: None,
+            subfolder: None,
+        }));
+    }
+
+    #[test]
+    fn label_roundtrip_github_full() {
+        assert_label_roundtrip(&InstallSource::Github(GithubRepo {
+            owner: "driftsys".into(),
+            name: "skills".into(),
+            git_ref: Some("v1.2.3".into()),
+            subfolder: Some("rules/lint".into()),
+        }));
+    }
+
+    #[test]
+    fn label_roundtrip_gitlab_dot_com() {
+        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
+            host: "gitlab.com".into(),
+            owner: "team".into(),
+            name: "skills".into(),
+            git_ref: Some("main".into()),
+            subfolder: None,
+        }));
+    }
+
+    #[test]
+    fn label_roundtrip_gitlab_self_hosted() {
+        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
+            host: "gitlab.example.com".into(),
+            owner: "team".into(),
+            name: "rules".into(),
+            git_ref: None,
+            subfolder: Some("a/b".into()),
+        }));
+    }
+
+    #[test]
+    fn label_rejects_bare_string() {
+        let err = parse_install_source_label("driftsys/skills").expect_err("must reject");
+        assert_eq!(err, SourceParseError::InvalidFormat);
+    }
+
+    #[test]
+    fn label_rejects_gitlab_plus_without_host() {
+        let err = parse_install_source_label("gitlab+:team/x").expect_err("must reject");
+        assert_eq!(err, SourceParseError::EmptySegment);
     }
 }

@@ -1,400 +1,87 @@
+//! ATDD tests for `upskill add <source>`.
+//!
+//! Drives the v0.2 install pipeline end-to-end via the CLI: parses an
+//! `InstallSource`, runs `pipeline::install_with_lockfile`, and writes
+//! per-client output for rules / skills / agents (format-spec §7).
+//!
+//! Local-path source only — no network. GitHub/GitLab-source coverage is
+//! in `tests/pipeline_source.rs` at the library level.
+
 use assert_cmd::Command;
-use tempfile::tempdir;
+use std::fs;
+use std::path::Path;
 
-#[test]
-fn add_accepts_owner_repo_source() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills"])
-        .assert()
-        .success()
-        .stdout("install source: github\nowner: microsoft\nrepo: skills\n");
-}
-
-#[test]
-fn add_rejects_invalid_source_format() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft-skills"])
-        .assert()
-        .code(2)
-        .stderr("error: source must be in owner/repo format\n");
-}
-
-#[test]
-fn add_accepts_local_path_source() {
-    let tmp = tempdir().expect("must create temp dir");
-    let path = tmp.path().display().to_string();
-    let cwd = tempdir().expect("must create temp dir");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", path.as_str()])
-        .assert()
-        .success()
-        .stdout(format!("install source: local\npath: {}\n", path));
-}
-
-#[test]
-fn add_rejects_missing_local_path() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "./definitely-not-present-upskill-skill-path"])
-        .assert()
-        .code(2)
-        .stderr("error: local path does not exist: ./definitely-not-present-upskill-skill-path\n");
-}
-
-#[test]
-fn add_creates_canonical_target_for_github_source() {
-    let cwd = tempdir().expect("must create temp dir");
-    let canonical = cwd.path().join(".agents/skills");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills"])
-        .assert()
-        .success();
-
-    assert!(canonical.is_dir(), "canonical target must be created");
-}
-
-#[test]
-fn add_creates_canonical_target_for_local_source() {
-    let cwd = tempdir().expect("must create temp dir");
-    let local_source = cwd.path().join("source");
-    std::fs::create_dir_all(&local_source).expect("must create local source");
-    let canonical = cwd.path().join(".agents/skills");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", local_source.to_str().expect("utf8 path")])
-        .assert()
-        .success();
-
-    assert!(canonical.is_dir(), "canonical target must be created");
-}
-
-#[test]
-fn add_creates_claude_symlink_when_flag_is_set() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills", "--claude"])
-        .assert()
-        .success();
-
-    let link_path = cwd.path().join(".claude/skills");
-    assert!(
-        std::fs::symlink_metadata(&link_path)
-            .expect("metadata")
-            .file_type()
-            .is_symlink(),
-        "claude skills must be a symlink"
-    );
-}
-
-#[test]
-fn add_creates_copilot_symlink_when_flag_is_set() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills", "--copilot"])
-        .assert()
-        .success();
-
-    let link_path = cwd.path().join(".github/skills");
-    assert!(
-        std::fs::symlink_metadata(&link_path)
-            .expect("metadata")
-            .file_type()
-            .is_symlink(),
-        "copilot skills must be a symlink"
-    );
-}
-
-#[test]
-fn add_creates_both_symlinks_with_multiple_flags() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
-    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills", "--claude", "--copilot"])
-        .assert()
-        .success();
-
-    assert!(std::fs::symlink_metadata(cwd.path().join(".claude/skills")).is_ok());
-    assert!(std::fs::symlink_metadata(cwd.path().join(".github/skills")).is_ok());
-}
-
-#[test]
-fn add_auto_detects_agent_directories_when_no_flags() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
-    std::fs::create_dir_all(cwd.path().join(".github")).expect("must create .github");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills"])
-        .assert()
-        .success();
-
-    assert!(std::fs::symlink_metadata(cwd.path().join(".claude/skills")).is_ok());
-    assert!(std::fs::symlink_metadata(cwd.path().join(".github/skills")).is_ok());
-}
-
-#[test]
-fn add_all_creates_symlinks_for_all_supported_agents() {
-    let cwd = tempdir().expect("must create temp dir");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills", "--all"])
-        .assert()
-        .success();
-
-    let expected_links = [
-        ".claude/skills",
-        ".github/skills",
-        ".codex/skills",
-        ".cursor/skills",
-        ".kiro/skills",
-        ".windsurf/skills",
-        ".opencode/skills",
-    ];
-
-    for link in expected_links {
-        let path = cwd.path().join(link);
-        let meta = std::fs::symlink_metadata(&path).expect("symlink metadata");
-        assert!(meta.file_type().is_symlink(), "{link} must be a symlink");
+fn stage_source(source: &Path) {
+    for kind in ["skills", "rules", "agents"] {
+        let from = format!("{FIXTURES}/{kind}");
+        let to = source.join(kind);
+        copy_dir_all(Path::new(&from), &to).unwrap();
     }
 }
 
-#[test]
-fn add_accepts_single_skill_flag() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills", "--skill", "rust-lint"])
-        .assert()
-        .success()
-        .stdout("install source: github\nowner: microsoft\nrepo: skills\nskills: rust-lint\n");
+fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(to)?;
+    for entry in fs::read_dir(from)? {
+        let entry = entry?;
+        let to_path = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_all(&entry.path(), &to_path)?;
+        } else {
+            fs::copy(entry.path(), &to_path)?;
+        }
+    }
+    Ok(())
 }
 
 #[test]
-fn add_accepts_multiple_skill_flags() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+fn add_installs_local_ssot_to_cwd() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
 
-    cmd.current_dir(cwd.path())
-        .args([
-            "add",
-            "microsoft/skills",
-            "--skill",
-            "rust-lint",
-            "--skill",
-            "release-check",
-        ])
-        .assert()
-        .success()
-        .stdout(
-            "install source: github\nowner: microsoft\nrepo: skills\nskills: rust-lint,release-check\n",
-        );
-}
-
-#[test]
-fn add_accepts_github_subfolder_source() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills:catalog/devops"])
-        .assert()
-        .success()
-        .stdout(
-            "install source: github\nowner: microsoft\nrepo: skills\nsubfolder: catalog/devops\n",
-        );
-}
-
-#[test]
-fn add_copy_creates_directory_not_symlink_for_agent_target() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-    cmd.current_dir(cwd.path())
-        .args([
-            "add",
-            "microsoft/skills",
-            "--skill",
-            "rust-lint",
-            "--claude",
-            "--copy",
-        ])
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
         .assert()
         .success();
 
-    let target = cwd.path().join(".claude/skills");
-    let meta = std::fs::symlink_metadata(&target).expect("metadata");
-    assert!(meta.is_dir(), "copy target must be a directory");
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    // Report header includes the item count (12 outputs from
+    // 1 skill + 2 rules + 1 agent × 3 clients).
+    assert!(out.contains("Installed 12"), "stdout missing report: {out}");
+
+    // Spot-check one output per client at the expected per-client paths.
     assert!(
-        !meta.file_type().is_symlink(),
-        "copy target must not be a symlink"
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists()
     );
-    assert!(target.join("rust-lint/.upskill-source").is_file());
-}
-
-#[test]
-fn add_copy_works_for_local_source() {
-    let cwd = tempdir().expect("must create temp dir");
-    std::fs::create_dir_all(cwd.path().join(".claude")).expect("must create .claude");
-
-    let local_source = cwd.path().join("sample-skill");
-    std::fs::create_dir_all(&local_source).expect("must create local source");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-    cmd.current_dir(cwd.path())
-        .args([
-            "add",
-            local_source.to_str().expect("utf8 path"),
-            "--claude",
-            "--copy",
-        ])
-        .assert()
-        .success();
-
     assert!(
-        cwd.path()
-            .join(".claude/skills/sample-skill/.upskill-source")
-            .is_file()
+        target
+            .join(".github/instructions/api-conventions.instructions.md")
+            .exists()
+    );
+    assert!(
+        target
+            .join(".opencode/agents/security-reviewer.md")
+            .exists()
     );
 }
 
 #[test]
-fn add_interactive_selection_installs_selected_skills() {
-    let cwd = tempdir().expect("must create temp dir");
+fn add_invalid_source_returns_usage_error() {
+    let tmp = tempfile::tempdir().unwrap();
 
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-    cmd.current_dir(cwd.path())
-        .env("UPSKILL_FORCE_INTERACTIVE", "1")
-        .write_stdin("rust-lint,release-check\n")
-        .args(["add", "microsoft/skills"])
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["add", "not a valid source"])
         .assert()
-        .success();
-
-    assert!(cwd.path().join(".agents/skills/rust-lint").is_dir());
-    assert!(cwd.path().join(".agents/skills/release-check").is_dir());
-}
-
-#[test]
-fn add_interactive_empty_selection_uses_default_skill() {
-    let cwd = tempdir().expect("must create temp dir");
-
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-    cmd.current_dir(cwd.path())
-        .env("UPSKILL_FORCE_INTERACTIVE", "1")
-        .write_stdin("\n")
-        .args(["add", "microsoft/skills"])
-        .assert()
-        .success();
-
-    assert!(cwd.path().join(".agents/skills/skills").is_dir());
-}
-
-#[test]
-fn add_accepts_pinned_branch_ref() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@main"])
-        .assert()
-        .success()
-        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: main\n");
-}
-
-#[test]
-fn add_accepts_pinned_tag_ref() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@v1.0"])
-        .assert()
-        .success()
-        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: v1.0\n");
-}
-
-#[test]
-fn add_accepts_pinned_commit_sha() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@abc1234"])
-        .assert()
-        .success()
-        .stdout("install source: github\nowner: microsoft\nrepo: skills\nref: abc1234\n");
-}
-
-#[test]
-fn add_accepts_pinned_ref_with_subfolder() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@v1.0:tools/lint"])
-        .assert()
-        .success()
-        .stdout(
-            "install source: github\nowner: microsoft\nrepo: skills\nref: v1.0\nsubfolder: tools/lint\n",
-        );
-}
-
-#[test]
-fn add_records_ref_in_source_metadata() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@v2.0"])
-        .assert()
-        .success();
-
-    let source = std::fs::read_to_string(cwd.path().join(".agents/skills/skills/.upskill-source"))
-        .expect("must read source");
-    assert_eq!(source, "github:microsoft/skills@v2.0");
-}
-
-#[test]
-fn add_rejects_empty_ref() {
-    let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
-
-    cmd.current_dir(cwd.path())
-        .args(["add", "microsoft/skills@"])
-        .assert()
-        .code(2)
-        .stderr("error: ref must be non-empty\n");
+        .failure()
+        .code(2);
 }

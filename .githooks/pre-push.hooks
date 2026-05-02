@@ -14,7 +14,7 @@
 #   ? cargo test          # run tests, never block commit
 #
 # Enable/disable this hook:
-#   git std hooks enable pre-push
-#   git std hooks disable pre-push
+#   git std hook enable pre-push
+#   git std hook disable pre-push
 #
 ! just verify

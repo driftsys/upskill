@@ -14,6 +14,6 @@
 #   ? cargo test          # run tests, never block commit
 #
 # Enable/disable this hook:
-#   git std hooks enable post-commit
-#   git std hooks disable post-commit
+#   git std hook enable post-commit
+#   git std hook disable post-commit
 #

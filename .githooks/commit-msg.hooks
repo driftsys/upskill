@@ -14,7 +14,7 @@
 #   ? cargo test          # run tests, never block commit
 #
 # Enable/disable this hook:
-#   git std hooks enable commit-msg
-#   git std hooks disable commit-msg
+#   git std hook enable commit-msg
+#   git std hook disable commit-msg
 #
-! git std check --file {msg}
+! git std lint --file {msg}

@@ -4,13 +4,76 @@
 
 > Upskill your coding agents.
 
-Ultra-lightweight [Agent Skills](https://agentskills.io/) package manager in Rust — no Node.js, no npm, no runtime dependencies.
+A single Rust binary for authoring and distributing AI-assistance content
+— **rules**, **skills**, and **agents** — across multiple AI coding clients
+(Claude Code, GitHub Copilot, opencode) from a single source of truth.
 
-Install, list, update, and remove SKILL.md packages across all major coding agents (Claude Code, Copilot, Codex, Cursor, OpenCode).
+No Node.js. No npm. No runtime dependencies.
 
-## Status
+## Install (consumer)
 
-Under active development. This is a name reservation — real implementation coming soon.
+```bash
+cargo install upskill
+
+# Install everything from a source repo (auto-fans out to .claude/, .github/, .agents/)
+upskill add driftsys/skills
+
+# Or install a curated bundle — one entry, dependency-resolved
+upskill add driftsys/bundles:platform-baseline.bundle.md
+
+# Pull latest and regenerate
+upskill update
+
+# Inspect installed state
+upskill list
+upskill doctor
+```
+
+`.upskill-lock.json` records what was installed at which ref and hash —
+commit it alongside the project.
+
+## Author
+
+```bash
+# In a source-registry repo (where SSOT items live)
+upskill new skill code-review
+upskill lint --strict
+upskill fmt
+```
+
+## Two roles, no overlap
+
+- **Source registry** — repo where SSOT items live. Author commands run
+  here: `new`, `lint`, `fmt`.
+- **Consumer project** — repo where generated outputs land. Consumer
+  commands run here: `add`, `remove`, `update`, `list`, `doctor`,
+  `search`.
+
+The same repo can be both, but SSOT and generated outputs do not mix in
+the same tree.
+
+## Bundles
+
+A bundle is a flat manifest (`*.bundle.md`) that names the items it
+includes, and optionally other bundles it depends on. Installing a
+bundle resolves the transitive closure once and writes per-item output:
+
+```bash
+upskill add driftsys/bundles:platform-baseline.bundle.md
+```
+
+The lockfile records the bundle entry alongside the items, so
+`remove --source <bundle-label>` and future `remove <bundle-name>`
+flows know which items came from which bundle.
+
+## Documentation
+
+- User guide: [`docs/usage.md`](docs/usage.md).
+- Behavioural spec: [`docs/specification.md`](docs/specification.md).
+- On-disk contract: [`docs/format-spec.md`](docs/format-spec.md).
+- Architecture decisions: [`docs/adr/`](docs/adr/) — see
+  [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
+  umbrella decision.
 
 ## License
 

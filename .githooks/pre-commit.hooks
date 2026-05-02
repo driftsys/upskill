@@ -16,7 +16,7 @@
 #   ? cargo test          # run tests, never block commit
 #
 # Enable/disable this hook:
-#   git std hooks enable pre-commit
-#   git std hooks disable pre-commit
+#   git std hook enable pre-commit
+#   git std hook disable pre-commit
 #
 ~ just fmt
