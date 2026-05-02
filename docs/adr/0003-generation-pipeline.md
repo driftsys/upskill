@@ -64,11 +64,11 @@ moves here as part of the umbrella refactor.
 
 Per format-spec §7:
 
-| Item kind | Claude Code                             | Copilot                                                       | opencode                                       |
-| --------- | --------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
-| Rule      | `.claude/rules/<name>.md` with `paths:` | `.github/instructions/<name>.instructions.md` with `applyTo:` | path entry in `opencode.json` `instructions[]` |
-| Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (native)      |
-| Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                   |
+| Item kind | Claude Code                             | Copilot                                                       | opencode                                           |
+| --------- | --------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| Rule      | `.claude/rules/<name>.md` with `paths:` | `.github/instructions/<name>.instructions.md` with `applyTo:` | `.agents/rules/<name>/RULE.md` (canonical-store)   |
+| Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (canonical-store) |
+| Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                       |
 
 ### Copy, not symlink
 
@@ -80,14 +80,19 @@ symlink-first default is documented in
 
 ### Ancillary file handling
 
-Three ancillary files are managed idempotently:
+Two ancillary files are managed idempotently:
 
 - **`CLAUDE.md`** at repo root: created once with `@AGENTS.md` content if
   absent. Never overwritten — protects user customisations.
-- **`opencode.json`**: read existing file, update `instructions[]` array
-  additively, write back. Other keys preserved.
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
+
+`opencode.json` is **not** managed by upskill: opencode reads rules
+from `.agents/rules/<name>/RULE.md` and skills from
+`.agents/skills/<name>/SKILL.md` natively (canonical-store pattern), so
+no `instructions[]` configuration is required. Users may still maintain
+`opencode.json` manually for other opencode settings; upskill leaves
+the file untouched.
 
 ### State files and v0.1 lockfile migration
 

@@ -547,11 +547,11 @@ to discover rules without file duplication.
 
 ### 7.3 opencode
 
-| Item kind | Output path                      | Frontmatter mapping                                                                                               |
-| --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Rule      | (no file generation)             | Path added to `opencode.json` `instructions[]` array. File stays at SSOT location.                                |
-| Skill     | `.agents/skills/<name>/SKILL.md` | No generation needed if SSOT is already at this path (opencode walks `.agents/skills/` natively). Otherwise copy. |
-| Agent     | `.opencode/agents/<name>.md`     | `description:`, `mode:`, `model:`. opencode-specific fields from passthrough block.                               |
+| Item kind | Output path                      | Frontmatter mapping                                                                                                                       |
+| --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule      | `.agents/rules/<name>/RULE.md`   | `name:`, `description:`. opencode-specific fields from passthrough block. `scope.paths` dropped (no per-rule scoping per §3.2).           |
+| Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory. |
+| Agent     | `.opencode/agents/<name>.md`     | `description:`, `mode:`, `model:`. opencode-specific fields from passthrough block.                                                       |
 
 ### 7.4 Shared outputs
 
@@ -559,7 +559,6 @@ Implementations SHOULD also generate or maintain:
 
 - `AGENTS.md` at repo root: project-specific content, hand-maintained by teams. Implementations
   MUST NOT overwrite this file after initial creation.
-- `opencode.json`: updated `instructions[]` array for rules targeting opencode.
 
 ### 7.5 Formatting guarantee
 
