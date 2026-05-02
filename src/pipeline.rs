@@ -98,6 +98,11 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
     }
     lock.save(target)?;
 
+    // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file
+    // exists at the consumer-project root. Created once with `@AGENTS.md`
+    // content, never overwritten — protects user customisations.
+    crate::ancillary::ensure_claude_bridge(target)?;
+
     Ok(report)
 }
 
