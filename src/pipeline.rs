@@ -110,6 +110,12 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
     let has_rules = report.items.iter().any(|i| i.kind == ItemKind::Rule);
     crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
 
+    // Per ADR-0003: when the install includes any rule, register
+    // `.github/instructions` in `.vscode/settings.json`'s
+    // `chat.instructionsFilesLocations` so VS Code Copilot picks up the
+    // generated `<name>.instructions.md` files.
+    crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
+
     Ok(report)
 }
 

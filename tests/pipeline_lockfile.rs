@@ -221,6 +221,31 @@ fn install_registers_opencode_rules_glob_when_rules_present() {
 }
 
 #[test]
+fn install_registers_vscode_instructions_location_when_rules_present() {
+    // The fixture corpus includes 2 rules, so .vscode/settings.json should
+    // gain `.github/instructions: true` under chat.instructionsFilesLocations
+    // for VS Code Copilot rule discovery.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+
+    let raw = fs::read_to_string(target.join(".vscode/settings.json"))
+        .expect(".vscode/settings.json present");
+    let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    let map = doc["chat.instructionsFilesLocations"]
+        .as_object()
+        .expect("instructions-locations map");
+    assert_eq!(
+        map[".github/instructions"], true,
+        "vscode instructions path registered: {map:?}"
+    );
+}
+
+#[test]
 fn install_preserves_existing_claude_bridge() {
     // User customisations must not be clobbered.
     let tmp = tempfile::tempdir().unwrap();
