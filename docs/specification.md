@@ -2,8 +2,7 @@
 
 > Upskill your coding agents.
 
-**Status**: v0.2 design (in progress). Phases 0–2 implemented; Phase 3+ pending
-— see [§7 Implementation status](#7-implementation-status).
+**Status**: v0.2 — shipped in v0.2.0.
 
 ## 1. Overview
 
@@ -45,7 +44,7 @@ Per [ADR-0004](./adr/0004-cli-surface.md):
   (`new`, `lint`, `fmt`) operate here.
 - **Consumer project** — repository where generated outputs are installed
   for use by AI clients. Holds only generated per-client files. Consumer
-  commands (`add`, `remove`, `update`, `list`, `info`, `doctor`) operate
+  commands (`add`, `remove`, `update`, `list`, `doctor`, `search`) operate
   here.
 
 The same repository can be both, but SSOT and generated outputs do not mix
@@ -53,19 +52,19 @@ in the same tree.
 
 ## 2. CLI surface
 
-Per [ADR-0004](./adr/0004-cli-surface.md). Nine commands, no overlap.
+Per [ADR-0004](./adr/0004-cli-surface.md). No overlap between verbs.
 
-| Command  | Role     | Purpose                                                 |
-| -------- | -------- | ------------------------------------------------------- |
-| `add`    | Consumer | Install content from any source.                        |
-| `remove` | Consumer | Remove installed content.                               |
-| `update` | Consumer | Pull latest, regenerate changed items.                  |
-| `list`   | Consumer | Show installed content (or `--available` from sources). |
-| `info`   | Consumer | Show item or bundle details.                            |
-| `doctor` | Consumer | Verify installation consistency.                        |
-| `new`    | Author   | Scaffold a new rule, skill, or agent.                   |
-| `lint`   | Author   | Validate SSOT files against the format spec.            |
-| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting).     |
+| Command  | Role     | Purpose                                             |
+| -------- | -------- | --------------------------------------------------- |
+| `add`    | Consumer | Install content from any source.                    |
+| `remove` | Consumer | Remove installed content.                           |
+| `update` | Consumer | Pull latest, regenerate changed items.              |
+| `list`   | Consumer | Show installed content from the lock file.          |
+| `doctor` | Consumer | Verify installation consistency.                    |
+| `search` | Consumer | Look up skills via the public registry.             |
+| `new`    | Author   | Scaffold a new rule, skill, or agent.               |
+| `lint`   | Author   | Validate SSOT files against the format spec.        |
+| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
 
 ### 2.1 `add`
 
@@ -116,19 +115,26 @@ covered by passing local paths to `add` / `update`.
 ### 2.3 `remove`
 
 ```text
-upskill remove [name...] [--global|--project]
+upskill remove [name...] [--source <label>] [--global]
 ```
 
-Removes installed items from the matching scope. Without arguments,
-implementations may prompt or require an explicit name list.
+Removes installed items from the matching scope. Either name one or more
+items, or pass `--source <label>` to remove every item that came from a
+single source. Bare `upskill remove` is rejected — be explicit. Ancillary
+files (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are not
+touched.
 
-### 2.4 `list` / `info` / `doctor`
+### 2.4 `list` / `doctor`
 
-- `list [--available]` — show installed content, or available content from
-  configured sources.
-- `info <name>` — show item or bundle details (resolved source, version,
-  hash, generated paths).
-- `doctor` — verify on-disk state matches the lock file; report drift.
+- `list` — show installed content from `.upskill-lock.json`, grouped by
+  kind. Bundles are surfaced in a separate section. The `--available`
+  view (items discoverable from configured sources) is deferred for a
+  future release.
+- `doctor` — verify on-disk state matches the lock file. Three
+  independent buckets: missing per-client outputs (reinstall fixes),
+  SSOT hash drift on `local:` sources (`update` fixes), and lockfile
+  entries with no recoverable source (`remove` fixes). Exit 0 when
+  clean, 1 when any drift is found.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -289,21 +295,22 @@ Self-hosted GitLab is supported via full URL form
 
 ## 7. Implementation status
 
-Per [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md).
+Per [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md). All
+phases shipped in v0.2.0.
 
-| Phase | Scope                                                                                             | Status       |
-| ----- | ------------------------------------------------------------------------------------------------- | ------------ |
-| 0     | Tag, branch, deps, ADRs, model skeleton.                                                          | Done.        |
-| 1     | SSOT parser + generation pipeline for skills × all 3 clients.                                     | Done.        |
-| 2     | Pipeline extension to rules and agents.                                                           | Done.        |
-| 3     | `add` / `update` / `remove` over the pipeline; bundles; v0.1 lockfile migration; ancillary files. | In progress. |
-| 5     | `lint` + `fmt`.                                                                                   | Pending.     |
-| 6     | `new` (scaffolding).                                                                              | Pending.     |
-| 7     | Polish + v0.2.0 release.                                                                          | Pending.     |
+| Phase | Scope                                                                                             | Status |
+| ----- | ------------------------------------------------------------------------------------------------- | ------ |
+| 0     | Tag, branch, deps, ADRs, model skeleton.                                                          | Done.  |
+| 1     | SSOT parser + generation pipeline for skills × all 3 clients.                                     | Done.  |
+| 2     | Pipeline extension to rules and agents.                                                           | Done.  |
+| 3     | `add` / `update` / `remove` over the pipeline; bundles; v0.1 lockfile migration; ancillary files. | Done.  |
+| 5     | `lint` + `fmt`.                                                                                   | Done.  |
+| 6     | `new` (scaffolding).                                                                              | Done.  |
+| 7     | Polish + v0.2.0 release.                                                                          | Done.  |
 
-The v0.1 CLI surface (`add` / `list` / `remove` / `check` / `search` /
-`update` against `.upskill-lock.json`) remains the **shipped** behaviour
-until v0.2.0. v0.1 is supported via patch releases of the `v0.1.x` line.
+v0.1's surface (`install` / `uninstall` / `check` against the legacy
+lockfile) is dropped in v0.2.0; the unified verbs (`add` / `remove` /
+`doctor`) are canonical. Lockfile migration is automatic — see §4.3.
 
 ## 8. Out of scope
 
