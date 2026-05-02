@@ -107,6 +107,48 @@ fn re_install_upserts_existing_entries() {
 }
 
 #[test]
+fn install_migrates_v1_lockfile_in_place() {
+    // A user with a pre-v0.2 .upskill-lock.json (no `schema` field, top-level
+    // `skills` array) runs `install_with_lockfile`. The file is migrated to
+    // schema 2 in place, the v0.1 entries survive, and the new install is
+    // merged on top.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+
+    fs::write(
+        target.join(".upskill-lock.json"),
+        r#"{
+            "skills": [
+                {"name": "legacy-skill", "source": "github:legacy/repo@v0.1",
+                 "ref": "v0.1", "hash": "deadbeef"}
+            ]
+        }"#,
+    )
+    .unwrap();
+
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+
+    let lock = LockfileV2::load(&target).expect("load");
+    assert_eq!(lock.schema, CURRENT_SCHEMA);
+
+    // 1 legacy entry (migrated as kind "skill") + 4 from this install = 5.
+    assert_eq!(lock.items.len(), 5, "{:#?}", lock.items);
+    assert!(
+        lock.items
+            .iter()
+            .any(|i| i.name == "legacy-skill" && i.source == "github:legacy/repo@v0.1"),
+        "v0.1 entry must survive migration"
+    );
+
+    // On-disk file is now in v0.2 shape (has `schema` field).
+    let raw = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    assert!(raw.contains("\"schema\""));
+}
+
+#[test]
 fn install_preserves_unrelated_existing_entries() {
     use upskill::lockfile_v2::LockedItem;
 
