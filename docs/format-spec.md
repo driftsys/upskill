@@ -384,6 +384,18 @@ This vocabulary is intentionally small. It covers the tools common to all three 
 Future specification versions may extend it. For tools not covered, item bodies SHOULD describe the
 desired capability in natural language rather than naming a client-specific tool.
 
+**Generation behavior for the agent `tools:` field.** When generating a client-specific agent
+output, implementations process each entry in the SSOT `tools:` list per the table above:
+
+- Capabilities **with** a documented client mapping are emitted using the client's name.
+- Capabilities **without** a documented mapping for a client (`—` cells above) are **dropped
+  silently** from that client's output. They are not passed through under the SSOT name —
+  emitting an unrecognized identifier would produce a field the client does not consume.
+
+Authors who need client-specific tool names beyond the documented mappings use that client's
+passthrough block (`claude:`, `copilot:`, `opencode:` per §3.5). The passthrough mechanism is
+the supported way to surface non-spec tooling in generated output.
+
 ---
 
 ## 5. Body content conventions
@@ -535,11 +547,11 @@ to bridge Claude Code to the project's `AGENTS.md` (which Claude Code does not r
 
 ### 7.2 GitHub Copilot
 
-| Item kind | Output path                                   | Frontmatter mapping                                                                                                       |
-| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present. |
-| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                 |
-| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:`. Copilot-specific fields from passthrough block.                              |
+| Item kind | Output path                                   | Frontmatter mapping                                                                                                                                                                                                                  |
+| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present.                                                                                                            |
+| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                            |
+| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). Copilot-specific fields from passthrough block. |
 
 Additionally, implementations SHOULD generate or update `.vscode/settings.json` with
 `chat.instructionsFilesLocations` pointing to the item source directory, enabling VS Code Copilot
@@ -860,19 +872,19 @@ the canonical `AGENT.md` body is used (with directives processed).
 This table summarizes how SSOT fields map to each client's frontmatter when generating output.
 This is informational and subject to change as clients evolve.
 
-| SSOT field       | Claude Code output          | Copilot output                   | opencode output                                                 |
-| ---------------- | --------------------------- | -------------------------------- | --------------------------------------------------------------- |
-| `name`           | `name:`                     | `name:`                          | `name:`                                                         |
-| `description`    | `description:`              | `description:`                   | `description:`                                                  |
-| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string) | (not supported; always-on)                                      |
-| `mode`           | (implicit in file location) | (agent definition)               | `mode:`                                                         |
-| `model`          | `model:` (alias)            | `model:` (full ID)               | `model:` (provider/ID)                                          |
-| `tools` (agent)  | `tools:` capitalized names  | `tools:` client names            | `permission:` map (allow per capability; write rolls into edit) |
-| `preload-skills` | `skills:` in agent          | —                                | —                                                               |
-| `copilot.*`      | (stripped)                  | Merged into frontmatter          | (stripped)                                                      |
-| `opencode.*`     | (stripped)                  | (stripped)                       | Merged into frontmatter                                         |
-| `claude.*`       | Merged into frontmatter     | (stripped)                       | (stripped)                                                      |
-| `metadata.*`     | (stripped from output)      | (stripped from output)           | (stripped from output)                                          |
+| SSOT field       | Claude Code output          | Copilot output                              | opencode output                                                 |
+| ---------------- | --------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| `name`           | `name:`                     | `name:`                                     | `name:`                                                         |
+| `description`    | `description:`              | `description:`                              | `description:`                                                  |
+| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string)            | (not supported; always-on)                                      |
+| `mode`           | (implicit in file location) | (agent definition)                          | `mode:`                                                         |
+| `model`          | `model:` (alias)            | `model:` (full ID)                          | `model:` (provider/ID)                                          |
+| `tools` (agent)  | `tools:` capitalized names  | `tools:` mapped only (§4); unmapped dropped | `permission:` map (allow per capability; write rolls into edit) |
+| `preload-skills` | `skills:` in agent          | —                                           | —                                                               |
+| `copilot.*`      | (stripped)                  | Merged into frontmatter                     | (stripped)                                                      |
+| `opencode.*`     | (stripped)                  | (stripped)                                  | Merged into frontmatter                                         |
+| `claude.*`       | Merged into frontmatter     | (stripped)                                  | (stripped)                                                      |
+| `metadata.*`     | (stripped from output)      | (stripped from output)                      | (stripped from output)                                          |
 
 ---
 
