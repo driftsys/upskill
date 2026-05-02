@@ -130,9 +130,13 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
 /// - `Gitlab` — `https://<host>/<owner>/<repo>.git`. Self-hosted GitLab
 ///   works through the `host` field on `GitlabRepo`.
 ///
-/// Authentication: clone is plain HTTPS — git resolves credentials via
-/// its own helpers (`gh`/`glab`/keychain). Token-based URL injection
-/// (per ADR-0005 / format-spec §5.3) is a separate slice.
+/// Authentication: when a token is resolved via [`crate::auth`]
+/// (`GITHUB_TOKEN` / `GH_TOKEN` / `gh auth token` for GitHub;
+/// `GITLAB_TOKEN` / `GL_TOKEN` / `glab auth token` for GitLab), it is
+/// URL-encoded and injected into the clone URL as
+/// `https://<user>:<token>@<host>/...`. With no token, the clone falls
+/// back to git's own credential helpers (keychain, manager, etc.) so the
+/// previous behaviour is unchanged for users who rely on those.
 pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<InstallReport> {
     match source {
         InstallSource::LocalPath(path) => install_from_local_path(path, target),
@@ -142,8 +146,12 @@ pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<Inst
 }
 
 fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport> {
+    let url = match crate::auth::resolve_github_token().token() {
+        Some(token) => inject_basic_auth(&github_clone_url(repo), "x-access-token", token)?,
+        None => github_clone_url(repo),
+    };
     install_from_git_url(
-        &github_clone_url(repo),
+        &url,
         repo.git_ref.as_deref(),
         repo.subfolder.as_deref(),
         &repo.owner,
@@ -153,8 +161,12 @@ fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport
 }
 
 fn install_from_gitlab(repo: &GitlabRepo, target: &Path) -> Result<InstallReport> {
+    let url = match crate::auth::resolve_gitlab_token().token() {
+        Some(token) => inject_basic_auth(&gitlab_clone_url(repo), "oauth2", token)?,
+        None => gitlab_clone_url(repo),
+    };
     install_from_git_url(
-        &gitlab_clone_url(repo),
+        &url,
         repo.git_ref.as_deref(),
         repo.subfolder.as_deref(),
         &repo.owner,
@@ -169,6 +181,47 @@ fn github_clone_url(repo: &GithubRepo) -> String {
 
 fn gitlab_clone_url(repo: &GitlabRepo) -> String {
     format!("https://{}/{}/{}.git", repo.host, repo.owner, repo.name)
+}
+
+/// Inject HTTP Basic credentials into an `https://` URL so `git clone`
+/// can authenticate without depending on a credential helper. The token
+/// is percent-encoded against the RFC 3986 unreserved set; the user
+/// segment is encoded the same way (over-aggressive but safe — typical
+/// values are `oauth2` / `x-access-token`, both unreserved-only).
+///
+/// Returns an error if `url` does not start with `https://` or if `token`
+/// is empty (callers should not invoke with an empty token).
+fn inject_basic_auth(url: &str, user: &str, token: &str) -> Result<String> {
+    if token.is_empty() {
+        anyhow::bail!("refusing to inject empty token into URL");
+    }
+    let rest = url
+        .strip_prefix("https://")
+        .ok_or_else(|| anyhow!("expected https:// URL for token injection, got: {url}"))?;
+    Ok(format!(
+        "https://{}:{}@{}",
+        percent_encode_userinfo(user),
+        percent_encode_userinfo(token),
+        rest
+    ))
+}
+
+/// Percent-encode `s` keeping only RFC 3986 unreserved characters
+/// (`A-Z`, `a-z`, `0-9`, `-`, `_`, `.`, `~`). Used for the userinfo
+/// segment of an HTTPS clone URL — over-aggressive but always safe; the
+/// character set covers every realistic token format
+/// (`ghp_...`, `glpat-...`, etc.) without escaping.
+fn percent_encode_userinfo(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
+            out.push(b as char);
+        } else {
+            out.push('%');
+            out.push_str(&format!("{:02X}", b));
+        }
+    }
+    out
 }
 
 /// Shallow-clone `url` into a tempdir, resolve `subfolder` inside the clone,
@@ -476,5 +529,89 @@ mod tests {
             gitlab_clone_url(&self_hosted),
             "https://gitlab.example.com/team/rules.git"
         );
+    }
+
+    #[test]
+    fn inject_basic_auth_github_oauth_user() {
+        // Mirrors the call install_from_github makes when GITHUB_TOKEN is set.
+        let url = inject_basic_auth(
+            "https://github.com/driftsys/skills.git",
+            "x-access-token",
+            "ghp_AbCdEf1234567890",
+        )
+        .expect("inject");
+        assert_eq!(
+            url,
+            "https://x-access-token:ghp_AbCdEf1234567890@github.com/driftsys/skills.git"
+        );
+    }
+
+    #[test]
+    fn inject_basic_auth_gitlab_oauth_user() {
+        // Mirrors the call install_from_gitlab makes when GITLAB_TOKEN is set,
+        // and exercises self-hosted GitLab (per the plan: gitlab.example.com).
+        let url = inject_basic_auth(
+            "https://gitlab.example.com/team/rules.git",
+            "oauth2",
+            "glpat-XYZ_abc-123",
+        )
+        .expect("inject");
+        assert_eq!(
+            url,
+            "https://oauth2:glpat-XYZ_abc-123@gitlab.example.com/team/rules.git"
+        );
+    }
+
+    #[test]
+    fn inject_basic_auth_percent_encodes_special_chars() {
+        // Tokens containing `:`, `@`, `/`, `%` would otherwise corrupt the URL
+        // parse on the git side. Verify they're percent-encoded.
+        let url = inject_basic_auth(
+            "https://gitlab.com/o/r.git",
+            "oauth2",
+            "tok:en@with/special%chars",
+        )
+        .expect("inject");
+        assert_eq!(
+            url,
+            "https://oauth2:tok%3Aen%40with%2Fspecial%25chars@gitlab.com/o/r.git"
+        );
+    }
+
+    #[test]
+    fn inject_basic_auth_rejects_empty_token() {
+        let err = inject_basic_auth("https://github.com/o/r.git", "x-access-token", "")
+            .expect_err("must reject");
+        assert!(err.to_string().contains("empty token"));
+    }
+
+    #[test]
+    fn inject_basic_auth_rejects_non_https() {
+        let err = inject_basic_auth("http://github.com/o/r.git", "x-access-token", "tok")
+            .expect_err("must reject");
+        assert!(err.to_string().contains("https://"));
+
+        let err = inject_basic_auth("git@github.com:o/r.git", "x-access-token", "tok")
+            .expect_err("must reject ssh form");
+        assert!(err.to_string().contains("https://"));
+    }
+
+    #[test]
+    fn percent_encode_userinfo_passes_unreserved_unchanged() {
+        // RFC 3986 unreserved set: A-Z a-z 0-9 - _ . ~
+        assert_eq!(
+            percent_encode_userinfo("Abc-_.~123"),
+            "Abc-_.~123",
+            "unreserved chars unchanged"
+        );
+    }
+
+    #[test]
+    fn percent_encode_userinfo_escapes_userinfo_separators() {
+        // The chars that would actually break a URL parse if unescaped.
+        assert_eq!(percent_encode_userinfo(":"), "%3A");
+        assert_eq!(percent_encode_userinfo("@"), "%40");
+        assert_eq!(percent_encode_userinfo("/"), "%2F");
+        assert_eq!(percent_encode_userinfo("%"), "%25");
     }
 }
