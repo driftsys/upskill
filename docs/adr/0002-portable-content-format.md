@@ -57,6 +57,13 @@ A directory per item — for all three kinds — enables ancillary resources
 (templates, scripts, reference files) without future migration. Symmetry
 reduces cognitive load and simplifies tooling.
 
+This layout is the **source-registry form** — what authors edit and version
+in their item-source repos. Consumer projects (where developers run
+`upskill add`) never contain this SSOT layout; they only hold generated,
+client-specific outputs under `.claude/`, `.github/`, `.opencode/`, and
+`.agents/` (the last for opencode-style canonical-store outputs per
+[ADR-0003](./0003-generation-pipeline.md)).
+
 ### `metadata` block for governance
 
 A nested `metadata:` field carries versioning (`version`, quoted semver),

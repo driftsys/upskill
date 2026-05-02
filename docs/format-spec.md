@@ -53,6 +53,15 @@ which client-specific outputs are derived.
 **Client-specific output**: a file or configuration entry written for a particular client's expected
 location, layout, and frontmatter conventions. Generated from the SSOT by an implementing tool.
 
+**Source registry**: a git repository (or local path used as one) that holds SSOT items in their
+canonical form. Source registries are the only place SSOT items exist. Authors edit items in source
+registries; consumers fetch from them.
+
+**Consumer project**: a developer's working repository where they run `upskill add` (or equivalent)
+to install items. Consumer projects only ever contain generated, client-specific outputs — never
+SSOT items. The same applies to a consumer's global install location (`~/.agents/` and per-client
+directories under `~/.config/`, `~/.claude/`, etc.): generated content only.
+
 ---
 
 ## 2. File layout
@@ -81,8 +90,11 @@ Constraints:
 - `<name>` MUST consist of lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`).
 - `<name>` MUST NOT start or end with a hyphen.
 - `<name>` MUST be at most 64 characters.
-- `<item-root>` MAY be any path. Implementations SHOULD accept `.agents/` as the default convention
-  but MUST NOT require it.
+- `<item-root>` is the SSOT path within a **source registry** repository. SSOT items live only in
+  source registries; consumer projects (where developers run `upskill add`) only ever hold
+  generated, client-specific outputs and never SSOT items.
+- Within a source registry, `<item-root>` MAY be any path. Implementations SHOULD accept `.agents/`
+  as the default convention but MUST NOT require it.
 
 ### 2.2 Bundle files
 
