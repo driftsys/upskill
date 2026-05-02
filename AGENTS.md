@@ -89,11 +89,11 @@ src/
 
 Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
-- `docs/usage.md` — user-facing guide (entrypoint)
+- `docs/intro.md` — book entrypoint
+- `docs/getting-started.md` / `docs/commands.md` / `docs/recipes.md` — user guide
 - `docs/specification.md` — v0.2 behavioral spec
-- `docs/architecture.md` — implementation guide
 - `docs/format-spec.md` — portable on-disk content format
-- `docs/adr/` — architecture decision records (0001 umbrella + 0002–0005)
+- `docs/adr/` — architecture decision records (0000 baseline, 0001 umbrella, 0002–0005)
 
 ### Key conventions
 

@@ -68,7 +68,7 @@ flows know which items came from which bundle.
 
 ## Documentation
 
-- User guide: [`docs/usage.md`](docs/usage.md).
+- User guide: [Getting started](docs/getting-started.md), [Commands](docs/commands.md), [Recipes](docs/recipes.md).
 - Behavioural spec: [`docs/specification.md`](docs/specification.md).
 - On-disk contract: [`docs/format-spec.md`](docs/format-spec.md).
 - Architecture decisions: [`docs/adr/`](docs/adr/) — see

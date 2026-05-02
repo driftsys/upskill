@@ -314,12 +314,12 @@ lockfile) is dropped in v0.2.0; the unified verbs (`add` / `remove` /
 
 - Format spec: [`docs/format-spec.md`](./format-spec.md)
 - Architecture decisions:
+  [ADR-0000](./adr/0000-implementation-baseline.md) (implementation baseline),
   [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md) (umbrella),
   [ADR-0002](./adr/0002-portable-content-format.md) (format),
   [ADR-0003](./adr/0003-generation-pipeline.md) (pipeline),
   [ADR-0004](./adr/0004-cli-surface.md) (CLI),
   [ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md) (interop)
-- Implementation guide: [`docs/architecture.md`](./architecture.md)
-- User guide: [`docs/usage.md`](./usage.md)
+- User guide: [Getting started](./getting-started.md), [Commands](./commands.md), [Recipes](./recipes.md)
 - Agent Skills open standard: <https://agentskills.io>
 - skills.sh ecosystem: <https://skills.sh>
