@@ -177,8 +177,58 @@ fn read_target_tree(root: &Path) -> Vec<(String, String)> {
 }
 
 #[test]
+fn install_respects_top_level_audience_filter() {
+    // Audience as a top-level field per format-spec §3.1 — the canonical
+    // shape after PR #76. Pipeline emits only for listed clients.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+
+    let skill_dir = source.join("skills/claude-only-top");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        r#"---
+schema: 1
+name: claude-only-top
+description: Use only when working in Claude Code; this skill targets claude alone for testing top-level audience filtering.
+audience:
+  - claude
+---
+
+## Body
+
+Hello.
+"#,
+    )
+    .unwrap();
+
+    upskill::pipeline::install_from_local_path(&source, &target).expect("install");
+
+    assert!(
+        target
+            .join(".claude/skills/claude-only-top/SKILL.md")
+            .exists()
+    );
+    assert!(
+        !target
+            .join(".github/skills/claude-only-top/SKILL.md")
+            .exists()
+    );
+    assert!(
+        !target
+            .join(".agents/skills/claude-only-top/SKILL.md")
+            .exists()
+    );
+}
+
+#[test]
 fn install_respects_audience_filter() {
-    // Build a tiny custom source with one skill that targets only `claude`.
+    // Back-compat: audience under metadata still works (v0.1-draft shape).
+    // Pipeline reads top-level first, falls back to metadata.audience.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");

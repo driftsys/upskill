@@ -1,6 +1,6 @@
 //! Skill items (§3.3 + §3.1 common fields).
 
-use crate::model::common::{License, Metadata, SchemaVersion};
+use crate::model::common::{Audience, License, Metadata, SchemaVersion};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -10,6 +10,11 @@ pub struct Skill {
     pub name: String,
     pub description: String,
 
+    /// §3.1: top-level audience targeting (promoted from `metadata.audience`
+    /// per format-spec PR #76). When present, generation only emits for
+    /// listed clients. `metadata.audience` is still accepted as a fallback.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audience: Option<Vec<Audience>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub license: Option<License>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
