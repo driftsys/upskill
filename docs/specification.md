@@ -13,9 +13,7 @@ truth.
 
 The central abstraction is **generation**: the SSOT (Single Source of Truth)
 on disk is portable; per-client output is produced on demand by a generation
-pipeline. v0.1's fetch-and-copy installer model is replaced with this
-SSOT-to-client pipeline; see [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md)
-for the umbrella decision.
+pipeline.
 
 ### 1.1 Three item kinds
 
@@ -37,8 +35,6 @@ This document describes upskill's behaviour against that contract.
 
 ### 1.3 Two roles
 
-Per [ADR-0004](./adr/0004-cli-surface.md):
-
 - **Source registry** — repository where SSOT items are authored. Holds the
   canonical `RULE.md` / `SKILL.md` / `AGENT.md` files. Author commands
   (`new`, `lint`, `fmt`) operate here.
@@ -52,7 +48,7 @@ in the same tree.
 
 ## 2. CLI surface
 
-Per [ADR-0004](./adr/0004-cli-surface.md). No overlap between verbs.
+No overlap between verbs.
 
 | Command  | Role     | Purpose                                             |
 | -------- | -------- | --------------------------------------------------- |
@@ -72,8 +68,7 @@ Per [ADR-0004](./adr/0004-cli-surface.md). No overlap between verbs.
 upskill add <source> [items...] [--global|--project]
 ```
 
-`<source>` accepts (per [ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md),
-parity with `npx skills add`):
+`<source>` accepts (parity with `npx skills add`):
 
 - `owner/repo` — GitHub shorthand
 - `owner/repo@ref` — pinned ref (branch, tag, or commit SHA)
@@ -150,14 +145,12 @@ Author commands. Run inside a source-registry working tree.
 ### 2.6 Aliases
 
 `add` does **not** alias to `install`. `remove` does **not** alias to
-`uninstall`. v0.1's `install` and `uninstall` verbs are dropped — the unified
-verb names are canonical. Migration is covered in v0.2.0 release notes.
+`uninstall`. The unified verb names are canonical.
 
 ## 3. Generation pipeline
 
-Per [ADR-0003](./adr/0003-generation-pipeline.md). SSOT → per-client output
-runs on the developer's machine, on every install or update. No CI generation
-step. No committed `dist/` artifacts.
+SSOT → per-client output runs on the developer's machine, on every install
+or update. No CI generation step. No committed `dist/` artifacts.
 
 ### 3.1 Per-client output paths
 
@@ -168,24 +161,20 @@ step. No committed `dist/` artifacts.
 | Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                       |
 
 Per-client frontmatter mapping is defined in [format-spec §7](./format-spec.md#7-generation-client-specific-output)
-and Appendix B; behaviour rationale is in
-[ADR-0003](./adr/0003-generation-pipeline.md).
+and Appendix B.
 
 ### 3.2 Copy, not symlink
 
 All installation is file copy or generated output. No symlinks anywhere. One
 code path; Windows portability without Developer Mode or
-`core.symlinks=true`. The deliberate divergence from skills.sh's symlink
-default is documented in
-[ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md).
+`core.symlinks=true`.
 
 ### 3.3 Markdown formatting
 
 Generated output passes through embedded `dprint-plugin-markdown`
 (exact-pinned at `=0.21.1`) before writing. This guarantees idempotence under
 the same formatter in `dprint.json`. Authors who run `dprint` locally see no
-diffs on generated files. Rationale and version-pin discipline are in
-[ADR-0003](./adr/0003-generation-pipeline.md).
+diffs on generated files.
 
 ### 3.4 Ancillary file handling
 
@@ -202,8 +191,7 @@ Three files outside the per-item path tree are managed idempotently:
 
 ## 4. State files
 
-Per [ADR-0003](./adr/0003-generation-pipeline.md). State is split between
-two files, both schema-versioned (`schema: 1`).
+State is split between two files, both schema-versioned (`schema: 1`).
 
 ### 4.1 `.upskill-lock.json` (per-project, committed)
 
@@ -285,22 +273,17 @@ Self-hosted GitLab is supported via full URL form
 
 ## 7. Implementation status
 
-Per [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md). All
-phases shipped in v0.2.0.
+All phases shipped in v0.2.0.
 
-| Phase | Scope                                                                                             | Status |
-| ----- | ------------------------------------------------------------------------------------------------- | ------ |
-| 0     | Tag, branch, deps, ADRs, model skeleton.                                                          | Done.  |
-| 1     | SSOT parser + generation pipeline for skills × all 3 clients.                                     | Done.  |
-| 2     | Pipeline extension to rules and agents.                                                           | Done.  |
-| 3     | `add` / `update` / `remove` over the pipeline; bundles; v0.1 lockfile migration; ancillary files. | Done.  |
-| 5     | `lint` + `fmt`.                                                                                   | Done.  |
-| 6     | `new` (scaffolding).                                                                              | Done.  |
-| 7     | Polish + v0.2.0 release.                                                                          | Done.  |
-
-v0.1's surface (`install` / `uninstall` / `check` against the legacy
-lockfile) is dropped in v0.2.0; the unified verbs (`add` / `remove` /
-`doctor`) are canonical. Lockfile migration is automatic — see §4.3.
+| Phase | Scope                                                                    | Status |
+| ----- | ------------------------------------------------------------------------ | ------ |
+| 0     | Tag, branch, deps, model skeleton.                                       | Done.  |
+| 1     | SSOT parser + generation pipeline for skills × all 3 clients.            | Done.  |
+| 2     | Pipeline extension to rules and agents.                                  | Done.  |
+| 3     | `add` / `update` / `remove` over the pipeline; bundles; ancillary files. | Done.  |
+| 5     | `lint` + `fmt`.                                                          | Done.  |
+| 6     | `new` (scaffolding).                                                     | Done.  |
+| 7     | Polish + v0.2.0 release.                                                 | Done.  |
 
 ## 8. Out of scope
 
@@ -313,13 +296,6 @@ lockfile) is dropped in v0.2.0; the unified verbs (`add` / `remove` /
 ## 9. References
 
 - Format spec: [`docs/format-spec.md`](./format-spec.md)
-- Architecture decisions:
-  [ADR-0000](./adr/0000-implementation-baseline.md) (implementation baseline),
-  [ADR-0001](./adr/0001-multi-kind-compiler-architecture.md) (umbrella),
-  [ADR-0002](./adr/0002-portable-content-format.md) (format),
-  [ADR-0003](./adr/0003-generation-pipeline.md) (pipeline),
-  [ADR-0004](./adr/0004-cli-surface.md) (CLI),
-  [ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md) (interop)
 - User guide: [Getting started](./getting-started.md), [Commands](./commands.md), [Recipes](./recipes.md)
 - Agent Skills open standard: <https://agentskills.io>
 - skills.sh ecosystem: <https://skills.sh>

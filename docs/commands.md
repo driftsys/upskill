@@ -1,9 +1,8 @@
 # Commands
 
-`upskill` ships nine commands per
-[ADR-0004](./adr/0004-cli-surface.md). They split cleanly into
-**consumer** (run inside a project that consumes AI-assistance content)
-and **author** (run inside a source-registry repo).
+`upskill` ships nine commands. They split cleanly into **consumer**
+(run inside a project that consumes AI-assistance content) and
+**author** (run inside a source-registry repo).
 
 | Command  | Role     | Purpose                                             |
 | -------- | -------- | --------------------------------------------------- |
@@ -171,15 +170,10 @@ Files whose frontmatter is already canonical are left untouched (no
 | `.upskill-lock.json`        | Per-project | Yes        | Deterministic regeneration in CI.    |
 | `~/.upskill/installed.json` | Per-user    | No         | Global install state, source caches. |
 
-v0.1 users keep the same `.upskill-lock.json` filename. v0.2 stamps a
-`schema: 2` field on first run and rewrites the file in place with the
-new entry shape — see
-[ADR-0003](./adr/0003-generation-pipeline.md). No manual migration
-step.
+The lockfile carries a top-level `schema: 1` field for forward
+compatibility.
 
 ## Per-client output paths
-
-Per [ADR-0003](./adr/0003-generation-pipeline.md):
 
 | Item kind | Claude Code                | GitHub Copilot                                | opencode                       |
 | --------- | -------------------------- | --------------------------------------------- | ------------------------------ |
@@ -188,8 +182,7 @@ Per [ADR-0003](./adr/0003-generation-pipeline.md):
 | Agent     | `.claude/agents/<name>.md` | `.github/agents/<name>.agent.md`              | `.opencode/agents/<name>.md`   |
 
 All output is **copy** (not symlink) — Windows portability without
-Developer Mode. The deliberate divergence from skills.sh is documented
-in [ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md).
+Developer Mode.
 
 ## Exit codes
 

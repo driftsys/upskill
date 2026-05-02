@@ -637,8 +637,7 @@ SHOULD verify output against actual client behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client reads". Adjacent
 behavior — bridging files, IDE configuration mutation, third-party config-file management — is
-installer behavior owned by the implementing tool (see, e.g., upskill's
-[ADR-0003](./adr/0003-generation-pipeline.md)) and intentionally out of this specification.
+installer behavior owned by the implementing tool and intentionally out of this specification.
 
 ### 7.1 Claude Code
 
