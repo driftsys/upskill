@@ -5,11 +5,14 @@
 //! `remove` / `doctor` can reason about state. The filename is unchanged
 //! from v0.1; the `schema:` field discriminates.
 //!
-//! Scope of this slice:
+//! Scope:
 //! - Types + load/save/upsert for `schema: 2` items and (placeholder) bundles.
-//! - Wiring into [`crate::pipeline::install_from_source`] so the lockfile is
-//!   written after a successful install.
-//! - v0.1 → v0.2 in-place migration is a separate slice.
+//! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
+//!   is written after a successful install.
+//! - In-place v0.1 → v0.2 migration on first load: a v0.1
+//!   `.upskill-lock.json` (no `schema` field, top-level `skills` array) is
+//!   detected, translated to the v0.2 shape with `kind: "skill"` per entry,
+//!   and rewritten in place. Subsequent loads see schema 2 directly.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
 //!   bundle slice).
 
@@ -85,11 +88,15 @@ impl LockfileV2 {
     /// Load `<project_root>/.upskill-lock.json`. Returns an empty `schema: 2`
     /// lockfile when the file does not exist.
     ///
+    /// Migration: a v0.1-shape file (no `schema` field, top-level `skills`
+    /// array) is detected, translated in memory to schema 2, and rewritten
+    /// in place. Subsequent loads see the v0.2 shape directly. Existing v0.1
+    /// users are not silently broken.
+    ///
     /// Errors:
-    /// - File exists but cannot be parsed as JSON.
-    /// - File parses but its `schema` is not 2 (v0.1 schema-1 migration is a
-    ///   separate slice; this implementation refuses to silently downgrade
-    ///   or upgrade).
+    /// - File exists but is neither v0.2 nor recognisable v0.1 JSON.
+    /// - File parses as v0.2 but its `schema` is greater than the version
+    ///   this implementation supports.
     pub fn load(project_root: &Path) -> Result<Self> {
         let path = lockfile_path(project_root);
         let raw = match std::fs::read_to_string(&path) {
@@ -97,17 +104,36 @@ impl LockfileV2 {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::new()),
             Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
         };
-        let parsed: Self =
-            serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
-        if parsed.schema != CURRENT_SCHEMA {
-            anyhow::bail!(
-                "{}: schema {} not supported by this implementation (expected {})",
-                path.display(),
-                parsed.schema,
-                CURRENT_SCHEMA
-            );
+
+        if let Ok(parsed) = serde_json::from_str::<Self>(&raw) {
+            if parsed.schema == CURRENT_SCHEMA {
+                return Ok(parsed);
+            }
+            if parsed.schema > CURRENT_SCHEMA {
+                anyhow::bail!(
+                    "{}: schema {} is newer than this implementation supports \
+                     (max {}); upgrade upskill",
+                    path.display(),
+                    parsed.schema,
+                    CURRENT_SCHEMA
+                );
+            }
+            // schema < CURRENT_SCHEMA but with a `schema` field is unexpected
+            // (v0.1 had no schema field) — fall through to the v0.1 attempt.
         }
-        Ok(parsed)
+
+        if let Ok(v1) = serde_json::from_str::<crate::lockfile::Lockfile>(&raw) {
+            let migrated = migrate_v1(&v1);
+            migrated
+                .save(project_root)
+                .with_context(|| format!("persist v0.1 → v0.2 migration of {}", path.display()))?;
+            return Ok(migrated);
+        }
+
+        anyhow::bail!(
+            "{}: unrecognised lockfile shape (neither v0.2 schema-2 nor v0.1)",
+            path.display()
+        );
     }
 
     /// Add or replace by `(kind, name)`. Items are kept sorted for
@@ -178,6 +204,23 @@ fn kind_label(kind: ItemKind) -> &'static str {
         ItemKind::Skill => "skill",
         ItemKind::Agent => "agent",
     }
+}
+
+/// Translate a v0.1 lockfile (skills-only) into a v0.2 lockfile. Every
+/// v0.1 entry becomes a `kind: "skill"` item; v0.2-only fields (bundles)
+/// stay empty.
+pub fn migrate_v1(v1: &crate::lockfile::Lockfile) -> LockfileV2 {
+    let mut out = LockfileV2::new();
+    for s in &v1.skills {
+        out.upsert(LockedItem {
+            kind: "skill".to_string(),
+            name: s.name.clone(),
+            source: s.source.clone(),
+            git_ref: s.git_ref.clone(),
+            hash: s.hash.clone(),
+        });
+    }
+    out
 }
 
 #[cfg(test)]
@@ -263,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn load_rejects_unsupported_schema() {
+    fn load_rejects_newer_schema() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join(LOCKFILE_NAME),
@@ -275,19 +318,45 @@ mod tests {
     }
 
     #[test]
-    fn load_rejects_v1_schema_no_silent_downgrade() {
-        // v0.1 lockfiles do not have a `schema` field. Migration is a
-        // separate slice; until then, refuse to load to avoid silent
-        // schema downgrade.
+    fn load_migrates_v1_in_place() {
         let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(LOCKFILE_NAME);
+        // v0.1 shape: no `schema` field, top-level `skills` array.
         std::fs::write(
-            tmp.path().join(LOCKFILE_NAME),
-            r#"{"skills": [{"name": "x", "source": "y"}]}"#,
+            &path,
+            r#"{
+                "skills": [
+                    {"name": "code-review", "source": "github:driftsys/skills@v1.0",
+                     "ref": "v1.0", "hash": "abc"}
+                ]
+            }"#,
         )
         .unwrap();
+
+        let loaded = LockfileV2::load(tmp.path()).expect("load with migration");
+        assert_eq!(loaded.schema, CURRENT_SCHEMA);
+        assert_eq!(loaded.items.len(), 1);
+        let it = &loaded.items[0];
+        assert_eq!(it.kind, "skill");
+        assert_eq!(it.name, "code-review");
+        assert_eq!(it.source, "github:driftsys/skills@v1.0");
+        assert_eq!(it.git_ref, Some("v1.0".to_string()));
+        assert_eq!(it.hash, Some("abc".to_string()));
+
+        // Migration was persisted: the file now contains the schema field
+        // and a second load no longer triggers migration.
+        let on_disk = std::fs::read_to_string(&path).unwrap();
+        assert!(on_disk.contains("\"schema\""));
+        let reloaded = LockfileV2::load(tmp.path()).expect("reload");
+        assert_eq!(reloaded, loaded);
+    }
+
+    #[test]
+    fn load_rejects_unrecognised_shape() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(LOCKFILE_NAME), r#"{"random": "shape"}"#).unwrap();
         let err = LockfileV2::load(tmp.path()).expect_err("must reject");
-        // serde rejects missing required `schema` field.
-        assert!(err.to_string().contains("parse"));
+        assert!(err.to_string().contains("unrecognised"));
     }
 
     #[test]
