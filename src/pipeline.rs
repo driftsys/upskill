@@ -126,6 +126,114 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
     Ok(report)
 }
 
+/// What to remove. Per ADR-0004 the user must be explicit — bare
+/// `upskill remove` is not allowed; either name items or pass
+/// `--source <label>`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RemoveFilter {
+    /// Remove every lockfile entry whose `name` matches one of these
+    /// values, regardless of kind. An item name listed here that does not
+    /// match any entry is an error (the caller asked to remove a thing
+    /// that is not installed).
+    ByNames(Vec<String>),
+    /// Remove every lockfile entry whose `source` label matches this
+    /// string verbatim. No-op when the lockfile contains no entry from
+    /// the named source.
+    BySource(String),
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct RemoveReport {
+    pub items: Vec<RemovedItem>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RemovedItem {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Files actually deleted from disk (paths relative to `target`).
+    /// May be empty if the lockfile knew about the item but its outputs
+    /// were already gone.
+    pub deleted_files: Vec<PathBuf>,
+}
+
+/// Remove installed content recorded in `<target>/.upskill-lock.json`,
+/// matching `filter`. For each matching entry, deletes every per-client
+/// output file (per [`output_path`]) and drops the entry from the
+/// lockfile. Best-effort `rmdir` of empty per-item parent directories
+/// (e.g., `.claude/skills/<name>/`) so the workspace stays clean.
+///
+/// Ancillary files (`CLAUDE.md`, `opencode.json`,
+/// `.vscode/settings.json`) are deliberately left alone — they are
+/// user-owned after creation per ADR-0003.
+pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
+    let mut lock = crate::lockfile_v2::LockfileV2::load(target)?;
+
+    let to_remove: Vec<crate::lockfile_v2::LockedItem> = match &filter {
+        RemoveFilter::ByNames(names) => lock
+            .items
+            .iter()
+            .filter(|i| names.iter().any(|n| n == &i.name))
+            .cloned()
+            .collect(),
+        RemoveFilter::BySource(source) => lock
+            .items
+            .iter()
+            .filter(|i| &i.source == source)
+            .cloned()
+            .collect(),
+    };
+
+    if let RemoveFilter::ByNames(names) = &filter {
+        let matched: std::collections::BTreeSet<&str> =
+            to_remove.iter().map(|i| i.name.as_str()).collect();
+        let unknown: Vec<&str> = names
+            .iter()
+            .filter(|n| !matched.contains(n.as_str()))
+            .map(String::as_str)
+            .collect();
+        if !unknown.is_empty() {
+            anyhow::bail!("not in lockfile: {}", unknown.join(", "));
+        }
+    }
+
+    let mut report = RemoveReport::default();
+    for entry in &to_remove {
+        let kind = parse_kind(&entry.kind)
+            .with_context(|| format!("lockfile entry {}: unknown kind", entry.name))?;
+        let mut deleted_files = Vec::new();
+        for client in ALL_CLIENTS {
+            let rel = output_path(kind, client, &entry.name);
+            let full = target.join(&rel);
+            if full.exists() {
+                fs::remove_file(&full).with_context(|| format!("delete {}", full.display()))?;
+                deleted_files.push(rel);
+                if let Some(parent) = full.parent() {
+                    let _ = fs::remove_dir(parent);
+                }
+            }
+        }
+        lock.remove(&entry.kind, &entry.name);
+        report.items.push(RemovedItem {
+            kind,
+            name: entry.name.clone(),
+            deleted_files,
+        });
+    }
+
+    lock.save(target)?;
+    Ok(report)
+}
+
+fn parse_kind(s: &str) -> Result<ItemKind> {
+    match s {
+        "skill" => Ok(ItemKind::Skill),
+        "rule" => Ok(ItemKind::Rule),
+        "agent" => Ok(ItemKind::Agent),
+        other => anyhow::bail!("unknown kind `{other}`"),
+    }
+}
+
 /// Install items from any supported source into `target`.
 ///
 /// Dispatches on the source variant. All git-backed variants funnel
@@ -352,6 +460,18 @@ fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> R
         }
     }
     Ok(())
+}
+
+/// Where the install pipeline writes — and `remove` deletes — the per-
+/// client output for a given `(kind, name)`. Path is relative to the
+/// install target root and matches format-spec §7. Used by both
+/// `install_*` and [`remove`] so the two stay in lockstep.
+pub(crate) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
+    match kind {
+        ItemKind::Skill => skill_output_path(client, name),
+        ItemKind::Rule => rule_output_path(client, name),
+        ItemKind::Agent => agent_output_path(client, name),
+    }
 }
 
 /// Per format-spec §7 / ADR-0003. opencode `.agents/skills/<n>/SKILL.md`
@@ -663,5 +783,47 @@ mod tests {
         assert_eq!(percent_encode_userinfo("@"), "%40");
         assert_eq!(percent_encode_userinfo("/"), "%2F");
         assert_eq!(percent_encode_userinfo("%"), "%25");
+    }
+
+    #[test]
+    fn parse_kind_round_trips_lockfile_strings() {
+        // The labels written by `lockfile_v2::items_from_report` MUST round-
+        // trip through `parse_kind` so `remove` can dispatch on them.
+        for k in [ItemKind::Rule, ItemKind::Skill, ItemKind::Agent] {
+            let label = match k {
+                ItemKind::Rule => "rule",
+                ItemKind::Skill => "skill",
+                ItemKind::Agent => "agent",
+            };
+            assert_eq!(parse_kind(label).unwrap(), k);
+        }
+    }
+
+    #[test]
+    fn parse_kind_rejects_unknown_string() {
+        let err = parse_kind("bundle").expect_err("must reject");
+        assert!(err.to_string().contains("bundle"));
+    }
+
+    #[test]
+    fn output_path_dispatches_to_per_kind_helper() {
+        // The dispatcher must produce the same path as the per-kind
+        // function for the same `(kind, client, name)` tuple, otherwise
+        // `install` would write to one place and `remove` would look in
+        // another.
+        for client in ALL_CLIENTS {
+            assert_eq!(
+                output_path(ItemKind::Skill, client, "x"),
+                skill_output_path(client, "x")
+            );
+            assert_eq!(
+                output_path(ItemKind::Rule, client, "x"),
+                rule_output_path(client, "x")
+            );
+            assert_eq!(
+                output_path(ItemKind::Agent, client, "x"),
+                agent_output_path(client, "x")
+            );
+        }
     }
 }

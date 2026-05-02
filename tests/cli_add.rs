@@ -93,7 +93,6 @@ fn unimplemented_commands_emit_phase_message() {
     // the user at the phase that ships each command.
     let tmp = tempfile::tempdir().unwrap();
     for (cmd, phase) in [
-        ("remove", "Phase B1"),
         ("update", "Phase B2"),
         ("list", "Phase B"),
         ("doctor", "Phase B3"),
