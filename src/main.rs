@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::pipeline::{
-    InstallReport, ItemKind, RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus,
-    install_with_lockfile, remove, update,
+    DoctorReport, InstallReport, ItemKind, OrphanReason, RemoveFilter, RemoveReport, UpdateMode,
+    UpdateReport, UpdateStatus, doctor, install_with_lockfile, remove, update,
 };
 use upskill::search;
 use upskill::source::parse_install_source;
@@ -77,8 +77,20 @@ enum Commands {
     },
     /// List installed content. (Phase B-and-beyond.)
     List,
-    /// Verify installed-state consistency. (Phase B3.)
-    Doctor,
+    /// Verify installed-state consistency.
+    ///
+    /// Three independent buckets per ADR-0004:
+    /// - missing per-client output files (reinstall fixes)
+    /// - SSOT hash drift on `local:` sources (update fixes)
+    /// - lockfile entries with no recoverable source (manual remove)
+    ///
+    /// Doctor never fetches; remote-source drift detection is
+    /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
+    Doctor {
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
+    },
     /// Search the public skills registry.
     Search {
         /// Search query.
@@ -117,7 +129,7 @@ fn main() {
             global,
         } => run_update(&names, dry_run, global),
         Commands::List => unimplemented_stub("list", "B"),
-        Commands::Doctor => unimplemented_stub("doctor", "B3"),
+        Commands::Doctor { global } => run_doctor(global),
         Commands::Search { query, limit } => run_search(&query, limit),
     };
 
@@ -328,6 +340,89 @@ fn short(h: &Option<String>) -> String {
         Some(s) if s.len() >= 8 => s[..8].to_string(),
         Some(s) => s.clone(),
         None => "<no hash>".to_string(),
+    }
+}
+
+fn run_doctor(global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    match doctor(&target) {
+        Ok(report) => {
+            print_doctor_report(&report);
+            if report.is_clean() {
+                EXIT_SUCCESS
+            } else {
+                EXIT_ERROR
+            }
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_doctor_report(report: &DoctorReport) {
+    if report.is_clean() {
+        println!("doctor: clean");
+        return;
+    }
+
+    if !report.missing_outputs.is_empty() {
+        println!(
+            "doctor: missing per-client outputs ({} item(s)) — reinstall to fix",
+            report.missing_outputs.len()
+        );
+        for m in &report.missing_outputs {
+            println!("  {} {}", kind_label(m.kind), m.name);
+            for path in &m.missing_files {
+                println!("    - {}", path.display());
+            }
+        }
+    }
+
+    if !report.stale_hashes.is_empty() {
+        println!(
+            "doctor: SSOT hash drift on local sources ({} item(s)) — `upskill update` to fix",
+            report.stale_hashes.len()
+        );
+        for s in &report.stale_hashes {
+            println!("  {} {} ({})", kind_label(s.kind), s.name, s.source);
+        }
+    }
+
+    if !report.orphan_entries.is_empty() {
+        println!(
+            "doctor: lockfile entries with no recoverable source ({} item(s)) — `upskill remove` to clear",
+            report.orphan_entries.len()
+        );
+        for o in &report.orphan_entries {
+            let reason = match o.reason {
+                OrphanReason::LocalPathGone => "local path gone",
+                OrphanReason::ItemMissingInSource => "item not in source",
+            };
+            println!(
+                "  {} {} ({}) — {}",
+                kind_label(o.kind),
+                o.name,
+                o.source,
+                reason
+            );
+        }
+    }
+}
+
+fn kind_label(kind: ItemKind) -> &'static str {
+    match kind {
+        ItemKind::Rule => "rule ",
+        ItemKind::Skill => "skill",
+        ItemKind::Agent => "agent",
     }
 }
 
