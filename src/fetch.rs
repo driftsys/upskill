@@ -64,7 +64,10 @@ pub(crate) fn resolve_subfolder(
 ) -> Result<PathBuf, String> {
     if let Some(sub) = subfolder {
         let sub_path = clone_dir.join(sub);
-        if !sub_path.is_dir() {
+        // Subfolders are usually directories (item-root paths) but bundle
+        // sources point at a `<name>.bundle.md` file directly. Accept
+        // both — the install layer dispatches on file vs dir.
+        if !sub_path.exists() {
             return Err(format!(
                 "subfolder '{}' not found in {}/{}",
                 sub, owner, name

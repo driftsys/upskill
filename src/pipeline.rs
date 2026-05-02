@@ -55,20 +55,118 @@ pub struct InstalledItem {
 #[derive(Debug, Default, Clone)]
 pub struct InstallReport {
     pub items: Vec<InstalledItem>,
+    /// When the install resolved a bundle (entry `source` was a
+    /// `.bundle.md` file), every reached bundle in dependency order. The
+    /// last entry is the bundle the user named. Empty for non-bundle
+    /// installs.
+    pub bundles: Vec<crate::model::Bundle>,
 }
 
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
 
 /// Install every item under `source` into `target`, generating per-client
 /// output for each client unless filtered by `metadata.audience`.
+///
+/// Bundle dispatch: when `source` is a `*.bundle.md` file (not a
+/// directory), discovers sibling bundles in the registry root walked up
+/// from the file, resolves transitively (per [`crate::bundle::resolve`]),
+/// and installs only the resolved items. The reached bundles are
+/// surfaced via [`InstallReport::bundles`] so the lockfile slice can
+/// record them.
 pub fn install_from_local_path(source: &Path, target: &Path) -> Result<InstallReport> {
+    if is_bundle_file(source) {
+        return install_bundle_file(source, target);
+    }
     let mut report = InstallReport::default();
-
-    install_skills(source, target, &mut report)?;
-    install_rules(source, target, &mut report)?;
-    install_agents(source, target, &mut report)?;
-
+    install_skills(source, target, &mut report, None)?;
+    install_rules(source, target, &mut report, None)?;
+    install_agents(source, target, &mut report, None)?;
     Ok(report)
+}
+
+fn install_bundle_file(bundle_path: &Path, target: &Path) -> Result<InstallReport> {
+    let registry_root = find_registry_root(bundle_path).with_context(|| {
+        format!(
+            "find SSOT registry root containing skills/, rules/, agents/, or bundles/ \
+             above {}",
+            bundle_path.display()
+        )
+    })?;
+
+    let entry = crate::parse::bundle::load(bundle_path)
+        .with_context(|| format!("load entry bundle {}", bundle_path.display()))?;
+
+    let available: Vec<crate::model::Bundle> = crate::parse::bundle::discover(&registry_root)
+        .with_context(|| {
+            format!(
+                "discover sibling bundles under registry root {}",
+                registry_root.display()
+            )
+        })?
+        .into_iter()
+        .map(|(_, b)| b)
+        .collect();
+
+    let resolved = crate::bundle::resolve(&entry, &available)?;
+
+    let mut report = InstallReport {
+        bundles: resolved.bundles.clone(),
+        ..InstallReport::default()
+    };
+    install_skills(&registry_root, target, &mut report, Some(&resolved.items))?;
+    install_rules(&registry_root, target, &mut report, Some(&resolved.items))?;
+    install_agents(&registry_root, target, &mut report, Some(&resolved.items))?;
+    Ok(report)
+}
+
+fn is_bundle_file(path: &Path) -> bool {
+    path.is_file()
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX))
+}
+
+/// Walk up from `bundle_path`'s parent until a directory is found that
+/// contains at least one of `skills/`, `rules/`, `agents/`, `bundles/`.
+/// Falls back to the bundle's parent directory if no such ancestor
+/// exists, so a flat layout (bundle and items in the same dir) still
+/// works.
+fn find_registry_root(bundle_path: &Path) -> Result<PathBuf> {
+    let parent = bundle_path
+        .parent()
+        .ok_or_else(|| anyhow!("bundle path {} has no parent", bundle_path.display()))?;
+    let mut cursor = parent;
+    loop {
+        if has_ssot_layout(cursor) {
+            return Ok(cursor.to_path_buf());
+        }
+        match cursor.parent() {
+            Some(p) => cursor = p,
+            None => break,
+        }
+    }
+    Ok(parent.to_path_buf())
+}
+
+fn has_ssot_layout(dir: &Path) -> bool {
+    ["skills", "rules", "agents", "bundles"]
+        .iter()
+        .any(|child| dir.join(child).is_dir())
+}
+
+/// Flat list of every item name a single bundle declares (in
+/// rule/skill/agent order). Used by `install_with_lockfile` to populate
+/// `LockedBundle.items` — the per-bundle view, not the transitive
+/// closure.
+fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
+    let mut out = Vec::with_capacity(
+        bundle.items.rules.len() + bundle.items.skills.len() + bundle.items.agents.len(),
+    );
+    out.extend(bundle.items.rules.iter().cloned());
+    out.extend(bundle.items.skills.iter().cloned());
+    out.extend(bundle.items.agents.iter().cloned());
+    out
 }
 
 /// Install + write lockfile. Consumer-facing entry point.
@@ -102,6 +200,14 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
     let mut lock = crate::lockfile_v2::LockfileV2::load(target)?;
     for item in new_items {
         lock.upsert(item);
+    }
+    for bundle in &report.bundles {
+        lock.upsert_bundle(crate::lockfile_v2::LockedBundle {
+            name: bundle.name.clone(),
+            source: label.clone(),
+            git_ref: git_ref.map(str::to_string),
+            items: bundle_item_names(bundle),
+        });
     }
     lock.save(target)?;
 
@@ -739,8 +845,18 @@ pub fn install_from_git_url(
     install_from_local_path(&source, target)
 }
 
-fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> Result<()> {
+fn install_skills(
+    source: &Path,
+    target: &Path,
+    report: &mut InstallReport,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<()> {
     for (name, dir) in iter_item_dirs(&source.join("skills"))? {
+        if let Some(items) = filter
+            && !items.contains(ItemKind::Skill, &name)
+        {
+            continue;
+        }
         let entry_path = dir.join("SKILL.md");
         if !entry_path.exists() {
             continue;
@@ -772,8 +888,18 @@ fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> R
     Ok(())
 }
 
-fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Result<()> {
+fn install_rules(
+    source: &Path,
+    target: &Path,
+    report: &mut InstallReport,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<()> {
     for (name, dir) in iter_item_dirs(&source.join("rules"))? {
+        if let Some(items) = filter
+            && !items.contains(ItemKind::Rule, &name)
+        {
+            continue;
+        }
         let entry_path = dir.join("RULE.md");
         if !entry_path.exists() {
             continue;
@@ -805,8 +931,18 @@ fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Re
     Ok(())
 }
 
-fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> Result<()> {
+fn install_agents(
+    source: &Path,
+    target: &Path,
+    report: &mut InstallReport,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<()> {
     for (name, dir) in iter_item_dirs(&source.join("agents"))? {
+        if let Some(items) = filter
+            && !items.contains(ItemKind::Agent, &name)
+        {
+            continue;
+        }
         let entry_path = dir.join("AGENT.md");
         if !entry_path.exists() {
             continue;

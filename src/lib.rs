@@ -15,6 +15,7 @@
 
 pub mod ancillary;
 pub mod auth;
+pub mod bundle;
 pub mod fetch;
 pub mod generate;
 pub mod lockfile_v2;
