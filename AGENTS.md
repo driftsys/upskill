@@ -4,31 +4,37 @@ Instructions for AI coding agents working in this repository.
 
 ## Project
 
-upskill is a Rust CLI project for managing Agent Skills packages across coding
-agents. It focuses on a lightweight binary workflow and shared repository
-conventions used across driftsys projects.
+upskill is a Rust CLI for authoring and distributing AI-assistance content
+(rules, skills, agents) across multiple AI coding clients (Claude Code,
+Copilot, opencode) from a single source of truth. The central abstraction is
+**generation** — SSOT in, per-client output out.
 
-**Design priority**: ultra-light single binary. No Node.js, no npm, no async
-runtime. Targets ~2–3 MB stripped release binary.
+**v0.2 redesign in progress.** The shipped binary (`v0.1.x`, on `main`) is a
+skills-installer with the old fetch-and-copy model. The current branch
+(`v0.2-redesign`) is rebuilding around the SSOT-to-client pipeline. See
+[ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
+umbrella decision and the rest of `docs/adr/` for concern-specific design.
 
-> The README still says "name reservation — real implementation coming soon."
-> That line is stale. The CLI is fully implemented (`add`, `list`, `remove`,
-> `check`, `search`, `update`) with 13 integration test files.
+**Design priority**: single static binary, ~3 MB target. No Node.js, no npm,
+no async runtime, no `git2` (shell out to `git` instead). Other deps are
+admitted on a case-by-case basis — see ADR-0001 §3 (dependency philosophy
+relaxed for `serde_yaml_ng`, `pulldown-cmark`, `dprint-plugin-markdown`).
 
 ## Stack
 
 - **Language**: Rust, edition 2024. **MSRV: 1.85** (first stable to support
   edition 2024).
 - **Crate**: `upskill` is both library (`lib.rs`) and binary (`main.rs`).
-- **Dependencies** (kept deliberately small):
-  - `clap` 4 (derive), `anyhow` 1, `thiserror` 2, `serde` 1, `serde_json` 1,
-    `sha2` 0.11, `ureq` 2, `ctrlc` 3.
-- **Deliberately NOT used**: `tokio`, `reqwest`, `git2`, `walkdir`,
-  `dialoguer`, `serde_yaml`, `toml`. Reasons in `docs/architecture.md`. Don't
-  reach for these without a strong reason — shell out to `git`, use
-  `std::fs::read_dir`, etc.
-- **Release profile**: `opt-level = "z"`, `lto`, `codegen-units = 1`, `strip`,
-  `panic = "abort"`.
+- **Dependencies**: `clap` 4 (derive), `anyhow` 1, `thiserror` 2, `serde` 1,
+  `serde_json` 1, `serde_yaml_ng` 0.10, `pulldown-cmark` 0.11,
+  `dprint-plugin-markdown` `=0.21.1` (exact pin — see
+  [ADR-0003](docs/adr/0003-generation-pipeline.md)), `sha2` 0.11, `ureq` 2,
+  `ctrlc` 3.
+- **Out**: `tokio`, `reqwest` (no async, `ureq` is sync), `git2` (~5 MB —
+  shell out to `git`), `dialoguer` (raw stdin is enough). Don't add these
+  without a strong reason recorded in an ADR.
+- **Release profile**: `opt-level = "z"`, `lto`, `codegen-units = 1`,
+  `strip`, `panic = "abort"`.
 
 ## Build commands
 
@@ -57,22 +63,33 @@ Primary crate:
 
 ```
 src/
-├── main.rs       CLI entry point, clap derive, command dispatch
-├── lib.rs        Module declarations and re-exports
-├── source.rs     Source URL parsing and classification
-├── fetch.rs      Git clone, shallow clone, local path resolution
-├── agent.rs      Agent detection, AGENT_DEFS, symlink/copy targets
-├── install.rs    Canonical target, persist, skill selection
-├── lockfile.rs   Lock file read/write, content hash
-├── ui.rs         Interactive prompts, TTY detection, colored output
-└── auth.rs       Token resolution (env vars, gh/glab CLI fallback)
+├── main.rs              CLI entry point, clap derive, command dispatch
+├── lib.rs               Module declarations and re-exports
+│
+├── model/               SSOT data model (Phase 0): Rule, Skill, Agent + common
+├── parse/               SSOT parsing (Phase 0): YAML frontmatter
+├── generate/            SSOT → per-client rendering (Phase 1–2):
+│                        Client enum + claude/copilot/opencode + directives + dprint
+│
+├── source.rs            Source URL parsing and classification (typed errors)
+├── fetch.rs             Git clone, shallow clone, local path resolution
+├── auth.rs              Token resolution (env vars, gh/glab CLI fallback)
+├── search.rs            skills.sh API search
+├── ui.rs                Interactive prompts, TTY detection, colored output
+│
+├── agent.rs             v0.1 agent detection / symlink targets (retired in Phase 3)
+├── install.rs           v0.1 install flow (replaced in Phase 3)
+└── lockfile.rs          v0.1 .upskill-lock.json (replaced in Phase 3 with
+                         .upskill.lock + ~/.upskill/installed.json)
 ```
 
 Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
-- `docs/specification.md` — behavioral spec
-- `docs/architecture.md` — implementation guide (data structures, algorithms)
-- `docs/usage.md` — user-facing guide
+- `docs/usage.md` — user-facing guide (entrypoint)
+- `docs/specification.md` — v0.2 behavioral spec
+- `docs/architecture.md` — implementation guide
+- `docs/format-spec.md` — portable on-disk content format
+- `docs/adr/` — architecture decision records (0001 umbrella + 0002–0005)
 
 ### Key conventions
 
@@ -89,15 +106,18 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
 ### Install layout
 
-| Scope   | Canonical skills target | Lockfile                   |
-| ------- | ----------------------- | -------------------------- |
-| Project | `.agents/skills`        | `{cwd}/.upskill-lock.json` |
-| Global  | `$HOME/.agents/skills`  | `~/.upskill-lock.json`     |
+**v0.1 (shipped on `main`).** Skills install to `.agents/skills/` (project)
+or `~/.agents/skills/` (global) with per-agent symlinks. State in
+`.upskill-lock.json`. `AGENT_DEFS` in `src/agent.rs` is the source of truth.
 
-Per-agent skill directories (symlinks or copies of the canonical target):
-`.claude/skills`, `.github/skills`, `.codex/skills`, `.cursor/skills`,
-`.kiro/skills`, `.windsurf/skills`, `.opencode/skills`. Source of truth:
-`AGENT_DEFS` in `src/agent.rs`.
+**v0.2 (this branch, Phase 3 in flight).** Per-item generated output, copy
+only (no symlinks). State split between `.upskill.lock` (per-project,
+committed) and `~/.upskill/installed.json` (per-user). v0.1 lockfiles are
+read once on first invocation for migration. Per-client output paths and
+ancillary files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are
+specified in
+[ADR-0003](docs/adr/0003-generation-pipeline.md) and
+[format-spec §7](docs/format-spec.md).
 
 ### Source format
 
@@ -144,11 +164,14 @@ Token resolution order:
       .success();
   ```
 
-- Existing test files (one per concern): `cli_add`, `cli_check`, `cli_ci_mode`,
-  `cli_dryrun`, `cli_exit_codes`, `cli_gitlab`, `cli_global`, `cli_list`,
-  `cli_lockfile`, `cli_moddetect`, `cli_remove`, `cli_search`, `cli_update`.
-  When adding behavior, prefer extending the matching file or creating a new
-  `cli_<area>.rs`.
+- Existing test files:
+  - **CLI (v0.1 surface):** `cli_add`, `cli_check`, `cli_ci_mode`,
+    `cli_dryrun`, `cli_exit_codes`, `cli_gitlab`, `cli_global`, `cli_list`,
+    `cli_lockfile`, `cli_moddetect`, `cli_remove`, `cli_search`, `cli_update`.
+  - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
+    `generate_agents`. Golden fixtures in `tests/fixtures/`.
+  - When adding behavior, prefer extending the matching file or creating a
+    new `cli_<area>.rs` / `generate_<area>.rs`.
 
 ## Workflow
 

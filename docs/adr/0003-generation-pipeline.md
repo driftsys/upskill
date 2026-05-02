@@ -76,7 +76,7 @@ All installation is file copy or generated output. No symlinks anywhere.
 One code path; Windows portability without Developer Mode or
 `core.symlinks=true`. The deliberate divergence from skills.sh's
 symlink-first default is documented in
-[ADR-0005](./0005-vercel-skills-sh-interop.md).
+[ADR-0005](./0005-skills-sh-ecosystem-interop.md).
 
 ### Ancillary file handling
 
@@ -169,7 +169,7 @@ wasmtime runtime, adds a second runtime to debug, reimplements what
 ## References
 
 - Format spec §7 (generation): [`docs/format-spec.md`](../format-spec.md)
-- Parent ADR: [ADR-0001](./0001-v0.2-architectural-reset.md)
+- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
   [ADR-0004](./0004-cli-surface.md),
-  [ADR-0005](./0005-vercel-skills-sh-interop.md)
+  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)

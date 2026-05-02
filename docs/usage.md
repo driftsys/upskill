@@ -1,20 +1,26 @@
 # upskill
 
-`upskill` is a package manager for [Agent Skills][agent-skills] — the shared
-skill format supported by Claude Code, GitHub Copilot, Codex, Cursor, Kiro,
-Windsurf, and OpenCode.
-
-It installs skills from any GitHub or GitLab repository into your project in
-one command. Skills land in `.agents/skills/` and are automatically linked into
-whichever agent config directories already exist in your project. No Node.js.
-No npm. A single static binary.
+`upskill` lets you author and distribute AI-assistance content — **rules**,
+**skills**, and **agents** — across multiple AI coding clients (Claude Code,
+GitHub Copilot, opencode) from a single source of truth. One CLI, one set of
+files, per-client output generated on demand.
 
 ```bash
-upskill search code-review          # find skills
-upskill add owner/repo              # install from a GitHub repo
-upskill list                        # see what's installed
-upskill update                      # re-fetch from source
+upskill add owner/repo               # install everything from a source repo
+upskill update                       # pull latest, regenerate per-client files
+upskill list                         # see what's installed
+upskill new skill code-review        # scaffold a new SSOT skill (in a registry)
 ```
+
+> **Status.** v0.2 is in active development on the `v0.2-redesign` branch.
+> Phases 0–2 (model, parser, generation pipeline) have shipped; Phase 3+
+> (install/update/remove over the pipeline, bundles, lock file migration) is
+> in progress. The latest released binary (`cargo install upskill`) is
+> v0.1.x and exposes the v0.1 skills-installer surface; this guide describes
+> the v0.2 surface that lands in v0.2.0.
+>
+> For the full design, see [`specification.md`](./specification.md). For the
+> on-disk contract, see [`format-spec.md`](./format-spec.md).
 
 ## Installation
 
@@ -26,147 +32,142 @@ Or download a pre-built binary from the [releases page][releases].
 
 ## Quick start
 
+### As a consumer
+
+Inside a project where you want AI clients to pick up rules / skills /
+agents:
+
 ```bash
-# Search the public registry
-upskill search python
+# Install everything from a source repo (auto-detects clients)
+upskill add driftsys/skills
 
-# Install a skill (auto-detects your agents)
-upskill add anthropics/skills --skill python-best-practices
+# Install only specific items
+upskill add driftsys/skills code-review secret-scanner
 
-# See what's installed and which agents are linked
-upskill list
+# Pin to a tag, branch, or commit
+upskill add driftsys/skills@v1.2.0
 ```
 
-Skills are installed to `.agents/skills/` in the current directory. Agent
-symlinks (`.claude/skills`, `.github/skills`, etc.) are created automatically
-when the corresponding agent config directory is detected.
+Generated files land in `.claude/`, `.github/`, and `.agents/` per the
+[generation pipeline](./specification.md#3-generation-pipeline). The
+`.upskill.lock` file in your repo records what was installed and at which
+ref — commit it.
 
----
+### As an author
+
+Inside a source-registry repo (where SSOT items live):
+
+```bash
+# Scaffold a new item
+upskill new skill code-review
+
+# Validate the SSOT before publishing
+upskill lint
+
+# Canonicalise frontmatter (key order, quoting)
+upskill fmt
+```
 
 ## Commands
 
-### `upskill add <source>`
+### Consumer commands
 
-Install skills from a source into the current project (or globally with `-g`).
+#### `upskill add <source> [items...]`
 
-```bash
-upskill add owner/repo                   # GitHub shorthand
-upskill add owner/repo:path/to/skills    # Subfolder only
-upskill add owner/repo@v1.2              # Pin to tag
-upskill add owner/repo@main              # Pin to branch
-upskill add owner/repo@abc123            # Pin to commit SHA
-upskill add gitlab:owner/repo            # GitLab.com
-upskill add https://gitlab.example.com/owner/repo  # Self-hosted GitLab
-upskill add ./path/to/local              # Local directory
-```
-
-**Skill selection:**
+Install content from any source.
 
 ```bash
-upskill add owner/repo --skill my-skill         # Install one skill
-upskill add owner/repo -s foo -s bar            # Install multiple skills
-# (no --skill): interactive prompt in a TTY, default name in CI
+upskill add owner/repo                       # GitHub shorthand
+upskill add owner/repo:path/to/items         # subfolder
+upskill add owner/repo@v1.2                  # pin to tag
+upskill add owner/repo@main                  # pin to branch
+upskill add owner/repo@abc123                # pin to commit SHA
+upskill add gitlab:owner/repo                # GitLab.com
+upskill add https://gitlab.example.com/owner/repo  # self-hosted GitLab
+upskill add ./path/to/local                  # local directory
+upskill add platform-defaults                # bundle from a configured registry
 ```
 
-**Agent flags:**
+`upskill add <source>` installs **everything** the source contains. Append
+item names to filter:
 
 ```bash
-upskill add owner/repo --claude     # Symlink to .claude/skills
-upskill add owner/repo --copilot    # Symlink to .github/skills
-upskill add owner/repo --all        # Symlink to all 7 supported agents
-upskill add owner/repo --copy       # Copy instead of symlinking
-# (no flag): auto-detect from existing agent config directories
+upskill add driftsys/skills code-review secret-scanner
 ```
 
-**Other flags:**
+Default scope is `--project` (writes into `.agents/...` of the current repo),
+falling back to `--global` (`$HOME/.agents/...`) if you're not inside a git
+repo. Pass either flag explicitly to override.
+
+#### `upskill update [name...]`
+
+Pull latest sources and regenerate changed items.
 
 ```bash
-upskill add owner/repo -g           # Global install (~/.agents/skills)
+upskill update                       # update everything
+upskill update code-review           # update one item
+upskill update --dry-run             # preview changes without applying
 ```
 
-### `upskill list`
+`update` always fetches before regenerating; there is no separate `sync`. It
+also re-runs the generation pipeline against the current upskill version, so
+client-format updates land without a separate command.
 
-List installed skills and their agent symlinks.
+#### `upskill remove [name...]`
+
+Remove installed items.
 
 ```bash
-upskill list         # Project skills
-upskill list -g      # Global skills
+upskill remove code-review
+upskill remove --global code-review
 ```
 
-Output format:
+#### `upskill list [--available]`
 
-```
-my-skill    source=github:owner/repo    symlinks=claude,copilot
-other-skill source=local:/path/to/src  symlinks=none
-```
+Show installed content. With `--available`, list items the configured sources
+expose.
 
-### `upskill search <query>`
+#### `upskill info <name>`
 
-Search the public skills registry (skills.sh).
+Show details for an item or bundle: resolved source, version, hash, generated
+output paths.
+
+#### `upskill doctor`
+
+Verify on-disk state matches `.upskill.lock`. Reports drift (manual edits to
+generated files, missing files, hash mismatches).
+
+### Author commands
+
+Run inside a **source-registry** working tree.
+
+#### `upskill new <kind> <name>`
+
+Scaffold a new SSOT item directory.
 
 ```bash
-upskill search rust
-upskill search code-review
-upskill search --limit 20 python
+upskill new rule  no-direct-database-access
+upskill new skill code-review
+upskill new agent security-reviewer
 ```
 
-Output:
+Creates the kind-appropriate directory and entrypoint file (`RULE.md`,
+`SKILL.md`, `AGENT.md`) with starter frontmatter.
 
-```
-rust-mcp-server-generator    7608 installs    upskill add awesome-copilot --skill rust-mcp-server-generator
-rust-analyzer                3200 installs    upskill add anthropics/skills --skill rust-analyzer
-```
+#### `upskill lint [paths...]`
 
-Each result includes the install command to use directly.
-
-**Flags:**
-
-| Flag      | Default | Description                |
-| --------- | ------- | -------------------------- |
-| `--limit` | `10`    | Maximum number of results. |
-
-### `upskill remove <skill>`
-
-Remove an installed skill and clean up agent symlinks.
+Validate SSOT files against the [format spec](./format-spec.md).
 
 ```bash
-upskill remove my-skill         # Prompts for confirmation in a TTY
-upskill remove my-skill --yes   # Skip confirmation
-upskill remove my-skill -g      # Remove from global install
+upskill lint                # lint everything in the working tree
+upskill lint rules/         # lint a subtree
+upskill lint --strict       # CI mode: warnings become errors
 ```
 
-### `upskill check`
+#### `upskill fmt [paths...]`
 
-Show installed skills and their pinned refs.
-
-```bash
-upskill check     # Project lockfile
-upskill check -g  # Global lockfile
-```
-
-Output:
-
-```
-my-skill    github:owner/repo    pinned: latest
-other-skill github:owner/repo    pinned: v1.2
-```
-
-### `upskill update`
-
-Re-install skills from their recorded sources.
-
-```bash
-upskill update                      # Update all skills
-upskill update my-skill             # Update one skill
-upskill update --dry-run            # Preview without applying
-upskill update --force              # Overwrite locally modified skills
-upskill update -g                   # Update global skills
-```
-
-Local modifications are detected via a SHA-256 content hash stored in the
-lockfile. Modified skills are skipped with a warning unless `--force` is used.
-
----
+Canonicalise YAML frontmatter (key order, version quoting, indentation).
+Markdown body formatting is left to dprint — the two tools don't overlap.
 
 ## Recipes
 
@@ -176,116 +177,60 @@ lockfile. Modified skills are skipped with a warning unless `--force` is used.
 # Install without prompts (auto-detects NO_COLOR, non-TTY)
 upskill add owner/repo
 
-# Explicit non-interactive
-GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} upskill add owner/repo
+# Lint in CI (fail on warnings)
+upskill lint --strict
 ```
 
-In a non-TTY environment (CI, pipes), `upskill` automatically:
-
-- Skips interactive prompts and uses defaults.
-- Disables colored output when `NO_COLOR` is set.
-
-### Override the search registry URL
-
-For testing or private deployments:
-
-```bash
-UPSKILL_REGISTRY_URL=https://my-registry.example.com upskill search query
-```
-
-Defaults to `https://skills.sh`.
+In a non-TTY environment, `upskill` skips interactive prompts and disables
+colored output when `NO_COLOR` is set.
 
 ### Private repositories
 
-```bash
-# GitHub — set one of:
-export GITHUB_TOKEN=ghp_...
-export GH_TOKEN=ghp_...
-# or rely on `gh auth token` if the GitHub CLI is authenticated
-
-# GitLab — set one of:
-export GITLAB_TOKEN=glpat_...
-export GL_TOKEN=glpat_...
-# or rely on `glab auth token` if the GitLab CLI is authenticated
-```
-
-### Pin a skill to a specific version
+Token resolution per host:
 
 ```bash
-upskill add owner/repo@v1.2 --skill my-skill
+# GitHub
+export GITHUB_TOKEN=ghp_...      # or GH_TOKEN, or rely on `gh auth token`
+
+# GitLab
+export GITLAB_TOKEN=glpat_...    # or GL_TOKEN, or rely on `glab auth token`
 ```
 
-The pinned ref is recorded in `.upskill-lock.json`. `upskill update` will
-re-fetch from the same ref.
-
-### Install to all agents
+### Pin a source to a specific version
 
 ```bash
-upskill add owner/repo --all
+upskill add owner/repo@v1.2.0
 ```
 
-Creates symlinks in all 7 supported agent directories:
-`.claude/skills`, `.github/skills`, `.codex/skills`, `.cursor/skills`,
-`.kiro/skills`, `.windsurf/skills`, `.opencode/skills`.
+The pinned ref is recorded in `.upskill.lock`. `upskill update` re-fetches
+from the same ref unless you bump it.
 
-### Copy instead of symlinking
+## State files
 
-For environments where symlinks are not supported (e.g. some Windows
-setups, Docker mounts):
+Per [specification §4](./specification.md#4-state-files):
 
-```bash
-upskill add owner/repo --copy
-```
+| File                        | Scope       | Committed? | Purpose                              |
+| --------------------------- | ----------- | ---------- | ------------------------------------ |
+| `.upskill.lock`             | Per-project | Yes        | Deterministic regeneration in CI.    |
+| `~/.upskill/installed.json` | Per-user    | No         | Global install state, source caches. |
 
-Copies skill files directly into each agent directory. Copied skills are
-independent of the source after installation.
+v0.1 users with `.upskill-lock.json` get a one-time migration on first run
+of any v0.2 command — see
+[ADR-0003](./adr/0003-generation-pipeline.md).
 
-### Global install
+## Per-client output paths
 
-```bash
-upskill add owner/repo -g      # Install to ~/.agents/skills
-upskill list -g                # List global skills
-upskill remove my-skill -g     # Remove from global
-```
+Per [ADR-0003](./adr/0003-generation-pipeline.md):
 
-Global skills are not tied to a project directory.
+| Item kind | Claude Code                | GitHub Copilot                                | opencode                       |
+| --------- | -------------------------- | --------------------------------------------- | ------------------------------ |
+| Rule      | `.claude/rules/<name>.md`  | `.github/instructions/<name>.instructions.md` | `.agents/rules/<name>/RULE.md` |
+| Skill     | `.claude/skills/<name>/`   | `.github/skills/<name>/`                      | `.agents/skills/<name>/`       |
+| Agent     | `.claude/agents/<name>.md` | `.github/agents/<name>.agent.md`              | `.opencode/agents/<name>.md`   |
 
----
-
-## Lockfile
-
-Every `add` operation writes `.upskill-lock.json` in the project root (or
-`~/.upskill-lock.json` for global installs). Commit this file to track exact
-skill versions.
-
-Example:
-
-```json
-{
-  "skills": [
-    {
-      "name": "my-skill",
-      "source": "github:owner/repo@v1.2",
-      "ref": "v1.2",
-      "hash": "a3f8c2..."
-    }
-  ]
-}
-```
-
-Fields:
-
-| Field    | Description                                 |
-| -------- | ------------------------------------------- |
-| `name`   | Skill directory name                        |
-| `source` | Full source label including prefix and ref  |
-| `ref`    | Pinned git ref (omitted if tracking latest) |
-| `hash`   | SHA-256 of all files in the skill directory |
-
-The `hash` is used by `upskill update` to detect local modifications before
-overwriting.
-
----
+All output is **copy** (not symlink) — Windows portability without Developer
+Mode. The deliberate divergence from skills.sh is documented in
+[ADR-0005](./adr/0005-skills-sh-ecosystem-interop.md).
 
 ## Exit codes
 
@@ -296,19 +241,4 @@ overwriting.
 | 2    | Usage error (bad args) |
 | 130  | Interrupted (Ctrl+C)   |
 
----
-
-## Supported agents
-
-| Agent    | Skills directory   |
-| -------- | ------------------ |
-| Claude   | `.claude/skills`   |
-| Copilot  | `.github/skills`   |
-| Codex    | `.codex/skills`    |
-| Cursor   | `.cursor/skills`   |
-| Kiro     | `.kiro/skills`     |
-| Windsurf | `.windsurf/skills` |
-| OpenCode | `.opencode/skills` |
-
 [releases]: https://github.com/driftsys/upskill/releases
-[agent-skills]: https://agentskills.io/specification

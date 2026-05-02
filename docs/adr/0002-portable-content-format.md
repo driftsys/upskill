@@ -18,7 +18,7 @@ agent personas. We need one format that:
 - is self-describing so it can evolve without silently breaking older
   consumers.
 
-This ADR is one of four child ADRs of [ADR-0001](./0001-v0.2-architectural-reset.md).
+This ADR is one of four child ADRs of [ADR-0001](./0001-multi-kind-compiler-architecture.md).
 It owns the on-disk SSOT contract; [ADR-0003](./0003-generation-pipeline.md)
 owns how that SSOT becomes per-client output.
 
@@ -155,8 +155,8 @@ versioning from bundle versioning.
 ## References
 
 - Authoritative spec: [`docs/format-spec.md`](../format-spec.md)
-- Parent ADR: [ADR-0001](./0001-v0.2-architectural-reset.md)
+- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0003](./0003-generation-pipeline.md),
   [ADR-0004](./0004-cli-surface.md),
-  [ADR-0005](./0005-vercel-skills-sh-interop.md)
+  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
 - Agent Skills open standard: <https://agentskills.io>
