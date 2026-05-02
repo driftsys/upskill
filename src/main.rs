@@ -10,6 +10,7 @@ use upskill::pipeline::{
     RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
     install_with_lockfile, list, remove, update,
 };
+use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
 use upskill::source::parse_install_source;
 
@@ -135,6 +136,19 @@ enum Commands {
         /// Files or directories to format. Empty = current directory.
         paths: Vec<PathBuf>,
     },
+    /// Scaffold a new rule, skill, or agent.
+    ///
+    /// Writes the minimum frontmatter the format spec requires plus
+    /// kind-specific defaults (e.g. `mode: subagent` / `model: sonnet`
+    /// for agents) into `<cwd>/<kind>s/<name>/<KIND>.md`. Author
+    /// command — refuses to run inside a consumer project.
+    New {
+        /// One of `rule`, `skill`, `agent`.
+        kind: String,
+        /// Item name. Lowercase letters, digits, hyphens; max 64 chars
+        /// per format-spec §2.1.
+        name: String,
+    },
 }
 
 fn main() {
@@ -169,6 +183,7 @@ fn main() {
         Commands::Search { query, limit } => run_search(&query, limit),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
+        Commands::New { kind, name } => run_new(&kind, &name),
     };
 
     if was_interrupted() {
@@ -590,6 +605,54 @@ fn print_fmt_report(report: &FmtReport) {
         report.files_checked,
         report.files_changed.len()
     );
+}
+
+fn run_new(kind: &str, name: &str) -> i32 {
+    let parsed_kind = match NewKind::parse(kind) {
+        Ok(k) => k,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_USAGE;
+        }
+    };
+    let cwd = match std::env::current_dir() {
+        Ok(p) => p,
+        Err(err) => {
+            eprintln!("error: get current directory: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+    match scaffold(&cwd, parsed_kind, name) {
+        Ok(report) => {
+            print_scaffold_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            let msg = format!("{:#}", err);
+            eprintln!("error: {}", msg);
+            // Author-command misuse (consumer-project) → usage error;
+            // every other failure → 1.
+            if msg.contains("consumer project") {
+                EXIT_USAGE
+            } else {
+                EXIT_ERROR
+            }
+        }
+    }
+}
+
+fn print_scaffold_report(report: &ScaffoldReport) {
+    let kind_label = match report.kind {
+        NewKind::Rule => "rule",
+        NewKind::Skill => "skill",
+        NewKind::Agent => "agent",
+    };
+    println!(
+        "scaffolded {kind_label} `{}` at {}",
+        report.name,
+        report.written.display()
+    );
+    println!("edit the file and replace the TODO body before publishing.");
 }
 
 fn run_search(query: &str, limit: usize) -> i32 {
