@@ -424,7 +424,7 @@ fn run_pipeline_add(source: &str, global: bool) -> i32 {
         }
     };
 
-    let report = match upskill::pipeline::install_from_source(&parsed, &target) {
+    let report = match upskill::pipeline::install_with_lockfile(&parsed, &target) {
         Ok(r) => r,
         Err(err) => {
             eprintln!("error: {:#}", err);

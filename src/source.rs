@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::PathBuf;
 
 use thiserror::Error;
@@ -24,6 +25,44 @@ pub enum InstallSource {
     Github(GithubRepo),
     Gitlab(GitlabRepo),
     LocalPath(PathBuf),
+}
+
+/// Stable, round-trippable string label for use in lockfiles, log lines,
+/// and CLI output. Format mirrors what `parse_install_source` accepts:
+///
+/// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
+/// - `gitlab:<owner>/<name>[@<ref>][:<subfolder>]` (host omitted when
+///   `gitlab.com`; otherwise `gitlab+<host>:...`)
+/// - `local:<path>` (absolute when known, otherwise as-given)
+impl fmt::Display for InstallSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InstallSource::Github(r) => write!(f, "github:{}/{}", r.owner, r.name)
+                .and_then(|_| match &r.git_ref {
+                    Some(g) => write!(f, "@{}", g),
+                    None => Ok(()),
+                })
+                .and_then(|_| match &r.subfolder {
+                    Some(s) => write!(f, ":{}", s),
+                    None => Ok(()),
+                }),
+            InstallSource::Gitlab(r) => {
+                if r.host == "gitlab.com" {
+                    write!(f, "gitlab:{}/{}", r.owner, r.name)?;
+                } else {
+                    write!(f, "gitlab+{}:{}/{}", r.host, r.owner, r.name)?;
+                }
+                if let Some(g) = &r.git_ref {
+                    write!(f, "@{}", g)?;
+                }
+                if let Some(s) = &r.subfolder {
+                    write!(f, ":{}", s)?;
+                }
+                Ok(())
+            }
+            InstallSource::LocalPath(p) => write!(f, "local:{}", p.display()),
+        }
+    }
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
