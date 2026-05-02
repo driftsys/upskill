@@ -103,6 +103,13 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
     // content, never overwritten — protects user customisations.
     crate::ancillary::ensure_claude_bridge(target)?;
 
+    // Per ADR-0003 / format-spec §7.4: when the install includes any rule,
+    // register the opencode.json `instructions[]` glob so opencode picks up
+    // generated rules under `.agents/rules/`. Idempotent; preserves other
+    // keys.
+    let has_rules = report.items.iter().any(|i| i.kind == ItemKind::Rule);
+    crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+
     Ok(report)
 }
 

@@ -199,6 +199,28 @@ fn install_creates_claude_bridge_when_absent() {
 }
 
 #[test]
+fn install_registers_opencode_rules_glob_when_rules_present() {
+    // The fixture corpus includes 2 rules, so opencode.json should gain the
+    // `.agents/rules/**/RULE.md` entry under instructions[].
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+
+    let raw = fs::read_to_string(target.join("opencode.json")).expect("opencode.json present");
+    let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    let arr = doc["instructions"].as_array().expect("instructions array");
+    assert!(
+        arr.iter()
+            .any(|v| v.as_str() == Some(".agents/rules/**/RULE.md")),
+        "rules glob registered: {arr:?}"
+    );
+}
+
+#[test]
 fn install_preserves_existing_claude_bridge() {
     // User customisations must not be clobbered.
     let tmp = tempfile::tempdir().unwrap();
