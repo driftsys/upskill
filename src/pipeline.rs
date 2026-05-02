@@ -25,7 +25,7 @@ use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
 use crate::source::{GithubRepo, InstallSource};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ItemKind {
     Rule,
     Skill,

@@ -49,6 +49,14 @@ enum Commands {
         /// Use user-level global installation target
         #[arg(short = 'g', long = "global")]
         global: bool,
+        /// Use the v0.2 SSOT generation pipeline (rules/skills/agents → per-client output).
+        ///
+        /// Replaces the v0.1 fetch-and-symlink flow for this invocation. When set,
+        /// per-agent flags (--claude, --copilot, --all, --copy) and --skill are ignored;
+        /// the pipeline writes to the per-client paths defined in format-spec §7.
+        /// Will become the default in v0.2.0.
+        #[arg(long = "pipeline", hide = true)]
+        pipeline: bool,
     },
     /// List installed skills
     List {
@@ -121,7 +129,14 @@ fn main() {
             all,
             copy,
             global,
-        } => run_add(&source, &skills, claude, copilot, all, copy, global),
+            pipeline,
+        } => {
+            if pipeline {
+                run_pipeline_add(&source, global)
+            } else {
+                run_add(&source, &skills, claude, copilot, all, copy, global)
+            }
+        }
         Commands::List { global } => run_list(global),
         Commands::Remove { skill, yes, global } => run_remove(&skill, yes, global),
         Commands::Check { global } => run_check(global),
@@ -389,6 +404,69 @@ fn run_add(
             eprintln!("error: {}", err);
             EXIT_USAGE
         }
+    }
+}
+
+fn run_pipeline_add(source: &str, global: bool) -> i32 {
+    let parsed = match upskill::source::parse_install_source(source) {
+        Ok(s) => s,
+        Err(err) => {
+            eprintln!("error: invalid source: {}", err);
+            return EXIT_USAGE;
+        }
+    };
+
+    let target = match pipeline_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let report = match upskill::pipeline::install_from_source(&parsed, &target) {
+        Ok(r) => r,
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    print_pipeline_report(&report, source);
+    EXIT_SUCCESS
+}
+
+fn pipeline_target(global: bool) -> anyhow::Result<std::path::PathBuf> {
+    if global {
+        std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .ok_or_else(|| anyhow::anyhow!("HOME is not set"))
+    } else {
+        std::env::current_dir().context("failed to get current directory")
+    }
+}
+
+fn print_pipeline_report(report: &upskill::pipeline::InstallReport, source: &str) {
+    use std::collections::BTreeMap;
+    use upskill::pipeline::ItemKind;
+
+    println!("Installed {} files from {}", report.items.len(), source);
+
+    // Group by (kind, name) so each item lists its emitted clients on one line.
+    let mut grouped: BTreeMap<(ItemKind, String), Vec<&'static str>> = BTreeMap::new();
+    for item in &report.items {
+        grouped
+            .entry((item.kind, item.name.clone()))
+            .or_default()
+            .push(item.client.name());
+    }
+    for ((kind, name), clients) in grouped {
+        let kind_label = match kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        println!("  {} {:<32} → {}", kind_label, name, clients.join(", "));
     }
 }
 
