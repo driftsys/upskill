@@ -3,7 +3,9 @@ use clap::{Parser, Subcommand, error::ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use upskill::pipeline::{InstallReport, ItemKind, install_with_lockfile};
+use upskill::pipeline::{
+    InstallReport, ItemKind, RemoveFilter, RemoveReport, install_with_lockfile, remove,
+};
 use upskill::search;
 use upskill::source::parse_install_source;
 
@@ -36,10 +38,25 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// Remove installed content. (Phase B1.)
+    /// Remove installed content.
+    ///
+    /// Either name one or more items, or pass `--source <label>` to
+    /// remove every item that came from a single source. Bare
+    /// `upskill remove` is rejected — be explicit per ADR-0004. Ancillary
+    /// files (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are
+    /// not touched.
     Remove {
-        /// Item names to remove (omit to remove all from a single source).
+        /// Item names to remove. Mutually exclusive with `--source`.
         names: Vec<String>,
+        /// Remove every item whose lockfile `source` label matches this
+        /// string. Use the value reported by the install or shown in
+        /// `.upskill-lock.json` (e.g. `local:/path` or
+        /// `github:owner/repo`).
+        #[arg(long = "source")]
+        source: Option<String>,
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
     },
     /// Pull latest sources and regenerate changed items. (Phase B2.)
     Update {
@@ -80,7 +97,11 @@ fn main() {
 
     let mut exit_code = match cli.command {
         Commands::Add { source, global } => run_add(&source, global),
-        Commands::Remove { .. } => unimplemented_stub("remove", "B1"),
+        Commands::Remove {
+            names,
+            source,
+            global,
+        } => run_remove(&names, source.as_deref(), global),
         Commands::Update { .. } => unimplemented_stub("update", "B2"),
         Commands::List => unimplemented_stub("list", "B"),
         Commands::Doctor => unimplemented_stub("doctor", "B3"),
@@ -170,6 +191,63 @@ fn print_install_report(report: &InstallReport, source: &str) {
             ItemKind::Agent => "agent",
         };
         println!("  {} {:<32} → {}", kind_label, name, clients.join(", "));
+    }
+}
+
+fn run_remove(names: &[String], source: Option<&str>, global: bool) -> i32 {
+    let filter = match (names.is_empty(), source) {
+        (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
+        (false, None) => RemoveFilter::ByNames(names.to_vec()),
+        (true, None) => {
+            eprintln!(
+                "error: nothing to remove — pass one or more item names, or `--source <label>`"
+            );
+            return EXIT_USAGE;
+        }
+        (false, Some(_)) => {
+            eprintln!("error: `--source` and item names are mutually exclusive");
+            return EXIT_USAGE;
+        }
+    };
+
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+
+    match remove(&target, filter) {
+        Ok(report) => {
+            print_remove_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_remove_report(report: &RemoveReport) {
+    if report.items.is_empty() {
+        println!("no matching items in lockfile");
+        return;
+    }
+    println!("Removed {} item(s)", report.items.len());
+    for item in &report.items {
+        let kind_label = match item.kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        println!(
+            "  {} {:<32} ({} file(s))",
+            kind_label,
+            item.name,
+            item.deleted_files.len()
+        );
     }
 }
 
