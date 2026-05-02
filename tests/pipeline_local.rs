@@ -229,9 +229,6 @@ fn install_respects_audience_filter() {
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
-    let tmp = tempfile::tempdir().unwrap();
-    let source = tmp.path().join("source");
-    let target = tmp.path().join("target");
 
     let skill_dir = source.join("skills/claude-only");
     fs::create_dir_all(&skill_dir).unwrap();

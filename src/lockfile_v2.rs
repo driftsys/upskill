@@ -56,8 +56,11 @@ pub struct LockedItem {
     pub hash: Option<String>,
 }
 
-/// Placeholder for the bundle-install slice. Schema is finalised so the
-/// shape is forward-compatible; no bundle entries are produced today.
+/// Bundle entry recorded when an install resolves a `.bundle.md` file
+/// (the entry bundle and every transitive `requires`). The lockfile's
+/// per-item `items` array still carries each rule/skill/agent
+/// independently — this entry is metadata that pairs each bundle name
+/// to the items it resolved to.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LockedBundle {
     pub name: String,
@@ -65,7 +68,10 @@ pub struct LockedBundle {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ref")]
     pub git_ref: Option<String>,
-    /// Item names this bundle resolved to.
+    /// Item names declared by THIS bundle (not the transitive closure).
+    /// Resolution flattens the closure into `items`; the per-bundle
+    /// breakdown lives here so a future `remove <bundle>` can subtract
+    /// only that bundle's contribution.
     #[serde(default)]
     pub items: Vec<String>,
 }
@@ -149,6 +155,14 @@ impl LockfileV2 {
     pub fn remove(&mut self, kind: &str, name: &str) {
         self.items
             .retain(|existing| !(existing.kind == kind && existing.name == name));
+    }
+
+    /// Add or replace a bundle entry by `name`. Bundles are kept sorted
+    /// for deterministic on-disk output.
+    pub fn upsert_bundle(&mut self, bundle: LockedBundle) {
+        self.bundles.retain(|existing| existing.name != bundle.name);
+        self.bundles.push(bundle);
+        self.bundles.sort();
     }
 
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
@@ -383,6 +397,7 @@ mod tests {
         // Build a report with one skill installed for all three clients —
         // the lockfile should record it as one item, not three.
         let report = InstallReport {
+            bundles: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
