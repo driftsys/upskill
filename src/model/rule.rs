@@ -1,6 +1,6 @@
 //! Rule items (§3.2 + §3.1 common fields).
 
-use crate::model::common::{License, Metadata, SchemaVersion};
+use crate::model::common::{Audience, License, Metadata, SchemaVersion};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -17,6 +17,9 @@ pub struct Rule {
     pub name: String,
     pub description: String,
 
+    /// §3.1: top-level audience (promoted from `metadata.audience`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audience: Option<Vec<Audience>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub license: Option<License>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

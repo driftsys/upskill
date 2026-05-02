@@ -11,9 +11,9 @@
 //!   (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`).
 //! - No CLI wiring; this is library API only.
 //!
-//! Audience filter: respects `metadata.audience` per the current model
-//! shape. Promotion of `audience` to a top-level field (per the
-//! format-spec PR #76) is a separate task.
+//! Audience filter: prefers the top-level `audience` field (per
+//! format-spec §3.1) and falls back to `metadata.audience` when the
+//! top-level is absent — accepts both shapes for back-compat.
 
 use anyhow::{Context, Result, anyhow};
 use std::fs;
@@ -167,7 +167,7 @@ fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> R
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (skill, body) = frontmatter::parse::<Skill>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(skill.metadata.as_ref());
+        let audience = audience_of(skill.audience.as_ref(), skill.metadata.as_ref());
         let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
@@ -200,7 +200,7 @@ fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Re
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (rule, body) = frontmatter::parse::<Rule>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(rule.metadata.as_ref());
+        let audience = audience_of(rule.audience.as_ref(), rule.metadata.as_ref());
         let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
@@ -233,7 +233,7 @@ fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> R
             .with_context(|| format!("read {}", entry_path.display()))?;
         let (agent, body) = frontmatter::parse::<Agent>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = audience_of(agent.metadata.as_ref());
+        let audience = audience_of(agent.audience.as_ref(), agent.metadata.as_ref());
         let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
@@ -322,7 +322,15 @@ fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
     Ok(out)
 }
 
-fn audience_of(metadata: Option<&crate::model::Metadata>) -> Option<Vec<Audience>> {
+/// Resolve the effective audience for an item. Top-level (§3.1) wins; falls
+/// back to `metadata.audience` for back-compat with v0.1-draft fixtures.
+fn audience_of(
+    top_level: Option<&Vec<Audience>>,
+    metadata: Option<&crate::model::Metadata>,
+) -> Option<Vec<Audience>> {
+    if let Some(list) = top_level {
+        return Some(list.clone());
+    }
     metadata.and_then(|m| m.audience.clone())
 }
 
