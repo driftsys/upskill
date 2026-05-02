@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, error::ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
     RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
@@ -109,6 +110,20 @@ enum Commands {
         #[arg(long, default_value = "10")]
         limit: usize,
     },
+    /// Validate SSOT files against the format spec.
+    ///
+    /// Author command — runs only inside a source registry. Refuses to
+    /// run inside a consumer project (detected by `.upskill-lock.json`).
+    /// Default mode emits warnings and exits 0 unless an error rule
+    /// fires; `--strict` promotes warnings to errors (CI mode). With no
+    /// paths, lints the current directory.
+    Lint {
+        /// Files or directories to lint. Empty = current directory.
+        paths: Vec<PathBuf>,
+        /// Promote warnings to errors. Use in CI.
+        #[arg(long)]
+        strict: bool,
+    },
 }
 
 fn main() {
@@ -141,6 +156,7 @@ fn main() {
         Commands::List { global } => run_list(global),
         Commands::Doctor { global } => run_doctor(global),
         Commands::Search { query, limit } => run_search(&query, limit),
+        Commands::Lint { paths, strict } => run_lint(&paths, strict),
     };
 
     if was_interrupted() {
@@ -495,6 +511,45 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
         };
         println!("  {:<32} {}{}", bundle.name, bundle.source, pinned);
     }
+}
+
+fn run_lint(paths: &[PathBuf], strict: bool) -> i32 {
+    match lint(paths, strict) {
+        Ok(report) => {
+            print_lint_report(&report);
+            if report.has_errors() {
+                EXIT_ERROR
+            } else {
+                EXIT_SUCCESS
+            }
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            // Author-command misuse (consumer-project / unreadable
+            // path) maps to usage error. The lint module surfaces
+            // those as Err(_); per-rule findings travel inside Ok.
+            EXIT_USAGE
+        }
+    }
+}
+
+fn print_lint_report(report: &LintReport) {
+    for f in &report.findings {
+        let line = f.line.map(|n| format!(":{n}")).unwrap_or_default();
+        println!(
+            "{}: {}{} [{}] {}",
+            f.severity.label(),
+            f.path.display(),
+            line,
+            f.rule_id,
+            f.message
+        );
+    }
+    println!(
+        "{} file(s) checked, {} findings",
+        report.files_checked,
+        report.findings.len()
+    );
 }
 
 fn run_search(query: &str, limit: usize) -> i32 {
