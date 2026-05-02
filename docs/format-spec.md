@@ -53,6 +53,15 @@ which client-specific outputs are derived.
 **Client-specific output**: a file or configuration entry written for a particular client's expected
 location, layout, and frontmatter conventions. Generated from the SSOT by an implementing tool.
 
+**Source registry**: a git repository (or local path used as one) that holds SSOT items in their
+canonical form. Source registries are the only place SSOT items exist. Authors edit items in source
+registries; consumers fetch from them.
+
+**Consumer project**: a developer's working repository where they run `upskill add` (or equivalent)
+to install items. Consumer projects only ever contain generated, client-specific outputs — never
+SSOT items. The same applies to a consumer's global install location (`~/.agents/` and per-client
+directories under `~/.config/`, `~/.claude/`, etc.): generated content only.
+
 ---
 
 ## 2. File layout
@@ -81,8 +90,13 @@ Constraints:
 - `<name>` MUST consist of lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`).
 - `<name>` MUST NOT start or end with a hyphen.
 - `<name>` MUST be at most 64 characters.
-- `<item-root>` MAY be any path. Implementations SHOULD accept `.agents/` as the default convention
-  but MUST NOT require it.
+- `<item-root>` is the SSOT path within a **source registry** repository. SSOT items live only in
+  source registries; consumer projects (where developers run `upskill add`) only ever hold
+  generated, client-specific outputs and never SSOT items.
+- Within a source registry, `<item-root>` MAY be any path that fits the team's organisation
+  (`content/`, `skills-src/`, etc.). Source registries SHOULD avoid `.agents/` as their
+  `<item-root>` to prevent confusion with the consumer-side opencode canonical-store path
+  (§7.3).
 
 ### 2.2 Bundle files
 
@@ -289,6 +303,11 @@ Implementations:
 
 ### 3.7 Bundle schema
 
+Bundles are **source-registry artifacts**. They reference items by `name`; the items themselves
+live in source registries (potentially the same repo, potentially others). Consumer projects do
+not contain bundle files — an implementation records which bundles a consumer project has
+installed in its own state file (e.g. `.upskill.lock` for the upskill CLI).
+
 ```yaml
 ---
 schema: 1
@@ -372,6 +391,18 @@ This vocabulary is intentionally small. It covers the tools common to all three 
 Future specification versions may extend it. For tools not covered, item bodies SHOULD describe the
 desired capability in natural language rather than naming a client-specific tool.
 
+**Generation behavior for the agent `tools:` field.** When generating a client-specific agent
+output, implementations process each entry in the SSOT `tools:` list per the table above:
+
+- Capabilities **with** a documented client mapping are emitted using the client's name.
+- Capabilities **without** a documented mapping for a client (`—` cells above) are **dropped
+  silently** from that client's output. They are not passed through under the SSOT name —
+  emitting an unrecognized identifier would produce a field the client does not consume.
+
+Authors who need client-specific tool names beyond the documented mappings use that client's
+passthrough block (`claude:`, `copilot:`, `opencode:` per §3.5). The passthrough mechanism is
+the supported way to surface non-spec tooling in generated output.
+
 ---
 
 ## 5. Body content conventions
@@ -418,21 +449,31 @@ in canonical bodies.
 
 ### 5.5 Prohibited constructs in canonical bodies
 
-The following MUST NOT appear in canonical entrypoint bodies. Use per-client override files (§2.3)
-or conditional directives (§6) instead:
+The following constructs MUST NOT appear in **always-rendered** body content — that is, the
+portion of the canonical entrypoint body that reaches every client. They are explicitly
+**permitted** inside:
 
-| Construct                       | Why prohibited            | Client      |
-| ------------------------------- | ------------------------- | ----------- |
-| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable     | Claude Code |
-| `${workspaceFolder}`, `${file}` | Substitution variable     | Copilot     |
-| `` !`command` ``                | Shell pre-execution       | Claude Code |
-| `@path/to/file`                 | File import               | Claude Code |
-| `#tool:name`                    | Tool reference            | Copilot     |
-| `#file:path`                    | File reference            | Copilot     |
-| `ultrathink`                    | Extended thinking trigger | Claude Code |
+- `<!-- @client:X -->` ... `<!-- @endclient -->` directive blocks (§6), when `X` matches the
+  construct's client. The directive processor strips the entire block from outputs targeting
+  any other client, so the construct never reaches a client that would not understand it.
+- Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`, `AGENT.opencode.md`,
+  etc. — when the filename suffix matches the construct's client. Override files are loaded
+  only by the matching client's generator.
 
-If an item genuinely requires any of these constructs, it SHOULD either be marked as single-client
-via `metadata.audience` or use a per-client override file.
+| Construct                       | Why prohibited (in always-rendered content) | Client      |
+| ------------------------------- | ------------------------------------------- | ----------- |
+| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable                       | Claude Code |
+| `${workspaceFolder}`, `${file}` | Substitution variable                       | Copilot     |
+| `` !`command` ``                | Shell pre-execution                         | Claude Code |
+| `@path/to/file`                 | File import                                 | Claude Code |
+| `#tool:name`                    | Tool reference                              | Copilot     |
+| `#file:path`                    | File reference                              | Copilot     |
+| `ultrathink`                    | Extended thinking trigger                   | Claude Code |
+
+If an item needs one of these constructs in content that would otherwise reach every client,
+wrap it in a matching-client directive block (§6) or move it to a matching-client override
+file (§2.3). Items that genuinely target only one client end-to-end MAY instead be marked
+single-client via `metadata.audience` (§3.6).
 
 ---
 
@@ -523,11 +564,11 @@ to bridge Claude Code to the project's `AGENTS.md` (which Claude Code does not r
 
 ### 7.2 GitHub Copilot
 
-| Item kind | Output path                                   | Frontmatter mapping                                                                                                       |
-| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present. |
-| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                 |
-| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:`. Copilot-specific fields from passthrough block.                              |
+| Item kind | Output path                                   | Frontmatter mapping                                                                                                                                                                                                                  |
+| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present.                                                                                                            |
+| Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                            |
+| Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). Copilot-specific fields from passthrough block. |
 
 Additionally, implementations SHOULD generate or update `.vscode/settings.json` with
 `chat.instructionsFilesLocations` pointing to the item source directory, enabling VS Code Copilot
@@ -535,11 +576,11 @@ to discover rules without file duplication.
 
 ### 7.3 opencode
 
-| Item kind | Output path                      | Frontmatter mapping                                                                                               |
-| --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Rule      | (no file generation)             | Path added to `opencode.json` `instructions[]` array. File stays at SSOT location.                                |
-| Skill     | `.agents/skills/<name>/SKILL.md` | No generation needed if SSOT is already at this path (opencode walks `.agents/skills/` natively). Otherwise copy. |
-| Agent     | `.opencode/agents/<name>.md`     | `description:`, `mode:`, `model:`. opencode-specific fields from passthrough block.                               |
+| Item kind | Output path                      | Frontmatter mapping                                                                                                                                           |
+| --------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule      | `.agents/rules/<name>/RULE.md`   | `name:`, `description:`. opencode-specific fields from passthrough block. `scope.paths` dropped (no per-rule scoping per §3.2).                               |
+| Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory.                     |
+| Agent     | `.opencode/agents/<name>.md`     | `name:`, `description:`, `mode:`, `model:`, `permission:` map (allow per capability; write rolls into edit). opencode-specific fields from passthrough block. |
 
 ### 7.4 Shared outputs
 
@@ -547,7 +588,10 @@ Implementations SHOULD also generate or maintain:
 
 - `AGENTS.md` at repo root: project-specific content, hand-maintained by teams. Implementations
   MUST NOT overwrite this file after initial creation.
-- `opencode.json`: updated `instructions[]` array for rules targeting opencode.
+- `opencode.json`: at first opencode-rule install in a consumer project, implementations add
+  `".agents/rules/**/RULE.md"` to the `instructions[]` array (if not already present). Subsequent
+  rule installs/uninstalls MUST NOT mutate the file — opencode's `instructions[]` glob picks up
+  rule additions and removals automatically. Other config keys preserved.
 
 ### 7.5 Formatting guarantee
 
@@ -849,19 +893,19 @@ the canonical `AGENT.md` body is used (with directives processed).
 This table summarizes how SSOT fields map to each client's frontmatter when generating output.
 This is informational and subject to change as clients evolve.
 
-| SSOT field       | Claude Code output          | Copilot output                   | opencode output            |
-| ---------------- | --------------------------- | -------------------------------- | -------------------------- |
-| `name`           | `name:`                     | `name:`                          | (in filename)              |
-| `description`    | `description:`              | `description:`                   | `description:`             |
-| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string) | (not supported; always-on) |
-| `mode`           | (implicit in file location) | (agent definition)               | `mode:`                    |
-| `model`          | `model:` (alias)            | `model:` (full ID)               | `model:` (provider/ID)     |
-| `tools`          | Capitalized names           | Client tool names                | Lowercase names            |
-| `preload-skills` | `skills:` in agent          | —                                | —                          |
-| `copilot.*`      | (stripped)                  | Merged into frontmatter          | (stripped)                 |
-| `opencode.*`     | (stripped)                  | (stripped)                       | Merged into frontmatter    |
-| `claude.*`       | Merged into frontmatter     | (stripped)                       | (stripped)                 |
-| `metadata.*`     | (stripped from output)      | (stripped from output)           | (stripped from output)     |
+| SSOT field       | Claude Code output          | Copilot output                              | opencode output                                                 |
+| ---------------- | --------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| `name`           | `name:`                     | `name:`                                     | `name:`                                                         |
+| `description`    | `description:`              | `description:`                              | `description:`                                                  |
+| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string)            | (not supported; always-on)                                      |
+| `mode`           | (implicit in file location) | (agent definition)                          | `mode:`                                                         |
+| `model`          | `model:` (alias)            | `model:` (full ID)                          | `model:` (provider/ID)                                          |
+| `tools` (agent)  | `tools:` capitalized names  | `tools:` mapped only (§4); unmapped dropped | `permission:` map (allow per capability; write rolls into edit) |
+| `preload-skills` | `skills:` in agent          | —                                           | —                                                               |
+| `copilot.*`      | (stripped)                  | Merged into frontmatter                     | (stripped)                                                      |
+| `opencode.*`     | (stripped)                  | (stripped)                                  | Merged into frontmatter                                         |
+| `claude.*`       | Merged into frontmatter     | (stripped)                                  | (stripped)                                                      |
+| `metadata.*`     | (stripped from output)      | (stripped from output)                      | (stripped from output)                                          |
 
 ---
 

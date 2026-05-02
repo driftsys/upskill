@@ -64,11 +64,11 @@ moves here as part of the umbrella refactor.
 
 Per format-spec §7:
 
-| Item kind | Claude Code                             | Copilot                                                       | opencode                                       |
-| --------- | --------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
-| Rule      | `.claude/rules/<name>.md` with `paths:` | `.github/instructions/<name>.instructions.md` with `applyTo:` | path entry in `opencode.json` `instructions[]` |
-| Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (native)      |
-| Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                   |
+| Item kind | Claude Code                             | Copilot                                                       | opencode                                           |
+| --------- | --------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| Rule      | `.claude/rules/<name>.md` with `paths:` | `.github/instructions/<name>.instructions.md` with `applyTo:` | `.agents/rules/<name>/RULE.md` (canonical-store)   |
+| Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (canonical-store) |
+| Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                       |
 
 ### Copy, not symlink
 
@@ -84,21 +84,55 @@ Three ancillary files are managed idempotently:
 
 - **`CLAUDE.md`** at repo root: created once with `@AGENTS.md` content if
   absent. Never overwritten — protects user customisations.
-- **`opencode.json`**: read existing file, update `instructions[]` array
-  additively, write back. Other keys preserved.
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
+- **`opencode.json`**: managed only on **first** opencode-rule install
+  in a consumer project. upskill adds `".agents/rules/**/RULE.md"` to
+  the `instructions[]` array (if not already present) and never mutates
+  the file thereafter. opencode's `instructions[]` glob expands to pick
+  up rule additions and removals automatically as files come and go
+  under `.agents/rules/`. Other config keys preserved; existing
+  `instructions[]` entries preserved.
 
-### State file and v0.1 lockfile migration
+Skills do not require an `opencode.json` entry — opencode walks
+`.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in
+opencode's source). Rules require the glob entry because opencode has
+no equivalent `EXTERNAL_RULE_PATTERN`; rules reach opencode only via
+`instructions[]`.
 
-State lives at `~/.upskill/installed.json`, schema-versioned (`schema: 1`).
-Tracks installed items, their source, and content hash for drift
-detection. Implementations refuse higher schema versions with a clear
-upgrade message and a reset offer.
+> **Note for Phase 3 implementation.** `.agents/` is dot-prefixed; some
+> glob libraries exclude hidden directories by default. opencode's
+> `instructions[]` glob does not pass `dot: true` (verified in opencode
+> source). Phase 3 should include a fixture test that confirms
+> `.agents/rules/**/RULE.md` actually matches files under `.agents/`.
 
-v0.1's per-project `.upskill-lock.json` is read once by a translator that
-produces equivalent entries in `~/.upskill/installed.json`. Existing v0.1
-users are not silently broken.
+### State files and v0.1 lockfile migration
+
+State is split between two files:
+
+- **`.upskill.lock`** — **per-project**, lives at the consumer project
+  root, **committed alongside the project**. The consumer-side record
+  of installed state. Bundles themselves live only in source registries
+  (per [ADR-0002](./0002-portable-content-format.md) / format-spec
+  §3.7); the lock file captures, per installed bundle: bundle name,
+  source registry URL, requested version spec, resolved git ref, and
+  the per-item content hashes resolved from the bundle. Ad-hoc items
+  (installed without a bundle) are recorded similarly. Plays the same
+  role as `package-lock.json` — guarantees deterministic regeneration
+  on another developer's machine and in CI.
+- **`~/.upskill/installed.json`** — **per-user**, schema-versioned
+  (`schema: 1`). Tracks the user-global view: which items the user has
+  installed at the global scope, drift-detection state for the global
+  install location, source-registry caches.
+
+Both files are schema-versioned. Implementations refuse higher schema
+versions with a clear upgrade message and a reset offer.
+
+v0.1's per-project `.upskill-lock.json` is read once by a translator
+that produces equivalent entries in the new files: bundle/item entries
+go into `.upskill.lock`; any user-global state goes into
+`~/.upskill/installed.json`. Existing v0.1 users are not silently
+broken.
 
 ## Consequences
 

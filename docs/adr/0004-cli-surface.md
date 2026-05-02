@@ -32,6 +32,25 @@ upskill lint [paths...]            Validate SSOT files.
 upskill fmt [paths...]             Canonicalise YAML frontmatter.
 ```
 
+### Author commands vs consumer commands
+
+The nine commands split by where they run:
+
+- **Author commands** — run inside a **source registry** working tree
+  (where SSOT items live and are edited):
+  - `new <kind> <name>` scaffolds a new SSOT item into the source repo.
+  - `lint [paths...]` validates SSOT files.
+  - `fmt [paths...]` canonicalises SSOT YAML frontmatter.
+- **Consumer commands** — run inside a **consumer project** (where only
+  generated outputs live):
+  - `add`, `remove`, `update`, `list`, `info`, `doctor`.
+
+Per [ADR-0002](./0002-portable-content-format.md), SSOT items only exist
+in source registries; consumer projects never contain SSOT. Author
+commands therefore have no meaning in a consumer project, and consumer
+commands have no meaning in a source registry. Implementations MAY
+detect the wrong context and emit a clear error.
+
 ### `add` unifies bundle and ad-hoc installation
 
 Source resolution is automatic: upskill checks the registry index first;
@@ -72,6 +91,16 @@ tools don't overlap.
 (`--project`). Falls back to `$HOME/.agents/...` (`--global`) if the
 current directory is not inside a git repo. Users can pass `--global`
 or `--project` explicitly to override.
+
+### Project lock file
+
+Consumer commands (`add`, `remove`, `update`) read and write
+**`.upskill.lock`** at the consumer project root. The lock file is
+**committed alongside the project** — it records the bundles and items
+added, their source-registry URLs, resolved git refs, and per-item
+content hashes. Plays the same role as `package-lock.json`: deterministic
+regeneration on another developer's machine or in CI. State design
+detailed in [ADR-0003](./0003-generation-pipeline.md).
 
 ### "Prolong" is a CLI behaviour contract
 
