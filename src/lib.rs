@@ -18,6 +18,7 @@ pub mod auth;
 pub mod bundle;
 pub mod fetch;
 pub mod generate;
+pub mod lint;
 pub mod lockfile_v2;
 pub mod model;
 pub mod parse;
