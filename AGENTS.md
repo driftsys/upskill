@@ -79,8 +79,8 @@ src/
 │
 ├── agent.rs             v0.1 agent detection / symlink targets (retired in Phase 3)
 ├── install.rs           v0.1 install flow (replaced in Phase 3)
-└── lockfile.rs          v0.1 .upskill-lock.json (replaced in Phase 3 with
-                         .upskill.lock + ~/.upskill/installed.json)
+└── lockfile.rs          v0.1 .upskill-lock.json schema (Phase 3 keeps
+                         the filename, bumps schema, adds ~/.upskill/installed.json)
 ```
 
 Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
@@ -111,9 +111,10 @@ or `~/.agents/skills/` (global) with per-agent symlinks. State in
 `.upskill-lock.json`. `AGENT_DEFS` in `src/agent.rs` is the source of truth.
 
 **v0.2 (this branch, Phase 3 in flight).** Per-item generated output, copy
-only (no symlinks). State split between `.upskill.lock` (per-project,
-committed) and `~/.upskill/installed.json` (per-user). v0.1 lockfiles are
-read once on first invocation for migration. Per-client output paths and
+only (no symlinks). State split between `.upskill-lock.json` (per-project,
+committed, schema-versioned) and `~/.upskill/installed.json` (per-user).
+The lockfile filename is unchanged from v0.1; v0.2 bumps a `schema:` field
+and rewrites in place on first invocation. Per-client output paths and
 ancillary files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are
 specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and

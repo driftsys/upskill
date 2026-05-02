@@ -97,18 +97,18 @@ src/
 
 ### 2.1 v0.2 module status
 
-| Module      | Status                                                                                                                                              |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model/`    | Done (Phase 0). Full schema for rules, skills, agents.                                                                                              |
-| `parse/`    | Done (Phase 0). YAML frontmatter parsing with `serde_yaml_ng`.                                                                                      |
-| `generate/` | Done (Phase 1–2). All three kinds × all three clients.                                                                                              |
-| `source`    | Reused from v0.1. Source format unchanged (parity with `npx skills`).                                                                               |
-| `fetch`     | Reused from v0.1. Git clone via shell-out.                                                                                                          |
-| `auth`      | Reused from v0.1. Token resolution unchanged.                                                                                                       |
-| `install`   | v0.1 logic. Phase 3 replaces with SSOT-pipeline install over `generate/`.                                                                           |
-| `lockfile`  | v0.1 schema. Phase 3 replaces with `.upskill.lock` (per-project) and `~/.upskill/installed.json` (per-user); v0.1 lockfile read once for migration. |
-| `agent`     | v0.1 symlink/copy targets. Phase 3 retires in favour of per-client output paths from the format spec.                                               |
-| `search`    | v0.1 skills.sh API. Carries forward unchanged.                                                                                                      |
+| Module      | Status                                                                                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model/`    | Done (Phase 0). Full schema for rules, skills, agents.                                                                                                   |
+| `parse/`    | Done (Phase 0). YAML frontmatter parsing with `serde_yaml_ng`.                                                                                           |
+| `generate/` | Done (Phase 1–2). All three kinds × all three clients.                                                                                                   |
+| `source`    | Reused from v0.1. Source format unchanged (parity with `npx skills`).                                                                                    |
+| `fetch`     | Reused from v0.1. Git clone via shell-out.                                                                                                               |
+| `auth`      | Reused from v0.1. Token resolution unchanged.                                                                                                            |
+| `install`   | v0.1 logic. Phase 3 replaces with SSOT-pipeline install over `generate/`.                                                                                |
+| `lockfile`  | v0.1 schema. Phase 3 replaces with `.upskill-lock.json` (per-project) and `~/.upskill/installed.json` (per-user); v0.1 lockfile read once for migration. |
+| `agent`     | v0.1 symlink/copy targets. Phase 3 retires in favour of per-client output paths from the format spec.                                                    |
+| `search`    | v0.1 skills.sh API. Carries forward unchanged.                                                                                                           |
 
 ## 3. Generation pipeline internals
 

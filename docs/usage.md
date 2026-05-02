@@ -50,7 +50,7 @@ upskill add driftsys/skills@v1.2.0
 
 Generated files land in `.claude/`, `.github/`, and `.agents/` per the
 [generation pipeline](./specification.md#3-generation-pipeline). The
-`.upskill.lock` file in your repo records what was installed and at which
+`.upskill-lock.json` file in your repo records what was installed and at which
 ref — commit it.
 
 ### As an author
@@ -134,7 +134,7 @@ output paths.
 
 #### `upskill doctor`
 
-Verify on-disk state matches `.upskill.lock`. Reports drift (manual edits to
+Verify on-disk state matches `.upskill-lock.json`. Reports drift (manual edits to
 generated files, missing files, hash mismatches).
 
 ### Author commands
@@ -202,7 +202,7 @@ export GITLAB_TOKEN=glpat_...    # or GL_TOKEN, or rely on `glab auth token`
 upskill add owner/repo@v1.2.0
 ```
 
-The pinned ref is recorded in `.upskill.lock`. `upskill update` re-fetches
+The pinned ref is recorded in `.upskill-lock.json`. `upskill update` re-fetches
 from the same ref unless you bump it.
 
 ## State files
@@ -211,11 +211,12 @@ Per [specification §4](./specification.md#4-state-files):
 
 | File                        | Scope       | Committed? | Purpose                              |
 | --------------------------- | ----------- | ---------- | ------------------------------------ |
-| `.upskill.lock`             | Per-project | Yes        | Deterministic regeneration in CI.    |
+| `.upskill-lock.json`        | Per-project | Yes        | Deterministic regeneration in CI.    |
 | `~/.upskill/installed.json` | Per-user    | No         | Global install state, source caches. |
 
-v0.1 users with `.upskill-lock.json` get a one-time migration on first run
-of any v0.2 command — see
+v0.1 users keep the same `.upskill-lock.json` filename. v0.2 stamps a
+`schema: 2` field on first run and rewrites the file in place with the new
+entry shape — see
 [ADR-0003](./adr/0003-generation-pipeline.md).
 
 ## Per-client output paths
