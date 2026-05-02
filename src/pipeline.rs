@@ -234,6 +234,185 @@ fn parse_kind(s: &str) -> Result<ItemKind> {
     }
 }
 
+/// Whether `update` writes or just reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpdateMode {
+    Apply,
+    DryRun,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UpdateStatus {
+    /// SSOT hash matches the lockfile — nothing to do.
+    UpToDate,
+    /// `Apply` mode: the lockfile hash changed (or was previously unset
+    /// and now resolved). Outputs were rewritten.
+    Updated {
+        old_hash: Option<String>,
+        new_hash: Option<String>,
+    },
+    /// `DryRun` mode: SSOT hash differs from the lockfile entry; an
+    /// `update` (without `--dry-run`) would rewrite outputs.
+    WouldChange {
+        old_hash: Option<String>,
+        new_hash: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdatedItem {
+    pub kind: ItemKind,
+    pub name: String,
+    pub source: String,
+    pub status: UpdateStatus,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct UpdateReport {
+    pub items: Vec<UpdatedItem>,
+}
+
+/// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
+/// either reinstall (`Apply`) or report what would change (`DryRun`).
+///
+/// `names` selects which lockfile entries to update; empty means "all".
+/// When names are given, the entries' source labels are used to fetch
+/// — so `update foo` may also re-render other items installed from the
+/// same source (the pipeline always reinstalls a source as a unit).
+/// Names that match no lockfile entry are an error.
+///
+/// `update` always fetches per ADR-0004 — there is no `--offline`.
+pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<UpdateReport> {
+    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+
+    let entries: Vec<crate::lockfile_v2::LockedItem> = if names.is_empty() {
+        lock.items.clone()
+    } else {
+        let matched: Vec<crate::lockfile_v2::LockedItem> = lock
+            .items
+            .iter()
+            .filter(|i| names.iter().any(|n| n == &i.name))
+            .cloned()
+            .collect();
+        let matched_names: std::collections::BTreeSet<&str> =
+            matched.iter().map(|i| i.name.as_str()).collect();
+        let unknown: Vec<&str> = names
+            .iter()
+            .filter(|n| !matched_names.contains(n.as_str()))
+            .map(String::as_str)
+            .collect();
+        if !unknown.is_empty() {
+            anyhow::bail!("not in lockfile: {}", unknown.join(", "));
+        }
+        matched
+    };
+
+    // Group by source: installing or hashing once per source covers every
+    // matching entry sharing it.
+    let mut by_source: std::collections::BTreeMap<String, Vec<crate::lockfile_v2::LockedItem>> =
+        std::collections::BTreeMap::new();
+    for entry in entries {
+        by_source
+            .entry(entry.source.clone())
+            .or_default()
+            .push(entry);
+    }
+
+    let mut report = UpdateReport::default();
+    for (source_label, source_entries) in by_source {
+        let source = crate::source::parse_install_source_label(&source_label)
+            .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
+
+        match mode {
+            UpdateMode::Apply => {
+                let install_report = install_with_lockfile(&source, target)?;
+                let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
+                    std::collections::BTreeMap::new();
+                for it in &install_report.items {
+                    new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
+                }
+                for entry in &source_entries {
+                    let kind = parse_kind(&entry.kind)?;
+                    let new_hash = new_hashes
+                        .get(&(kind, entry.name.clone()))
+                        .cloned()
+                        .flatten();
+                    let status = if new_hash == entry.hash {
+                        UpdateStatus::UpToDate
+                    } else {
+                        UpdateStatus::Updated {
+                            old_hash: entry.hash.clone(),
+                            new_hash,
+                        }
+                    };
+                    report.items.push(UpdatedItem {
+                        kind,
+                        name: entry.name.clone(),
+                        source: source_label.clone(),
+                        status,
+                    });
+                }
+            }
+            UpdateMode::DryRun => {
+                let (root, _guard) = fetch_ssot(&source)?;
+                let new_hashes = hash_source_items(&root);
+                for entry in &source_entries {
+                    let kind = parse_kind(&entry.kind)?;
+                    let new_hash = new_hashes
+                        .get(&(kind, entry.name.clone()))
+                        .cloned()
+                        .flatten();
+                    let status = if new_hash == entry.hash {
+                        UpdateStatus::UpToDate
+                    } else {
+                        UpdateStatus::WouldChange {
+                            old_hash: entry.hash.clone(),
+                            new_hash,
+                        }
+                    };
+                    report.items.push(UpdatedItem {
+                        kind,
+                        name: entry.name.clone(),
+                        source: source_label.clone(),
+                        status,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(report)
+}
+
+/// Hash every item directory under a SSOT root, keyed by `(kind, name)`.
+/// Used by `update --dry-run` to compute would-be hashes without
+/// installing. Mirrors the per-kind walk of `install_from_local_path`.
+fn hash_source_items(
+    source_root: &Path,
+) -> std::collections::BTreeMap<(ItemKind, String), Option<String>> {
+    let mut out = std::collections::BTreeMap::new();
+    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
+        let kind_dir = source_root.join(match kind {
+            ItemKind::Skill => "skills",
+            ItemKind::Rule => "rules",
+            ItemKind::Agent => "agents",
+        });
+        let Ok(entries) = fs::read_dir(&kind_dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                out.insert((kind, name.to_string()), hash_item_dir(&path));
+            }
+        }
+    }
+    out
+}
+
 /// Install items from any supported source into `target`.
 ///
 /// Dispatches on the source variant. All git-backed variants funnel
@@ -261,12 +440,8 @@ pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<Inst
 }
 
 fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport> {
-    let url = match crate::auth::resolve_github_token().token() {
-        Some(token) => inject_basic_auth(&github_clone_url(repo), "x-access-token", token)?,
-        None => github_clone_url(repo),
-    };
     install_from_git_url(
-        &url,
+        &github_authenticated_url(repo)?,
         repo.git_ref.as_deref(),
         repo.subfolder.as_deref(),
         &repo.owner,
@@ -276,12 +451,8 @@ fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport
 }
 
 fn install_from_gitlab(repo: &GitlabRepo, target: &Path) -> Result<InstallReport> {
-    let url = match crate::auth::resolve_gitlab_token().token() {
-        Some(token) => inject_basic_auth(&gitlab_clone_url(repo), "oauth2", token)?,
-        None => gitlab_clone_url(repo),
-    };
     install_from_git_url(
-        &url,
+        &gitlab_authenticated_url(repo)?,
         repo.git_ref.as_deref(),
         repo.subfolder.as_deref(),
         &repo.owner,
@@ -296,6 +467,67 @@ fn github_clone_url(repo: &GithubRepo) -> String {
 
 fn gitlab_clone_url(repo: &GitlabRepo) -> String {
     format!("https://{}/{}/{}.git", repo.host, repo.owner, repo.name)
+}
+
+fn github_authenticated_url(repo: &GithubRepo) -> Result<String> {
+    Ok(match crate::auth::resolve_github_token().token() {
+        Some(token) => inject_basic_auth(&github_clone_url(repo), "x-access-token", token)?,
+        None => github_clone_url(repo),
+    })
+}
+
+fn gitlab_authenticated_url(repo: &GitlabRepo) -> Result<String> {
+    Ok(match crate::auth::resolve_gitlab_token().token() {
+        Some(token) => inject_basic_auth(&gitlab_clone_url(repo), "oauth2", token)?,
+        None => gitlab_clone_url(repo),
+    })
+}
+
+/// Resolve the SSOT root for a source, fetching when remote.
+///
+/// Returns `(path, guard)`:
+/// - `path` is the on-disk SSOT root that callers walk for `skills/`,
+///   `rules/`, `agents/` subdirectories.
+/// - `guard` is `Some(TempDir)` for git sources (drop cleans up the
+///   clone) and `None` for local-path sources.
+///
+/// Used by `update` (especially `--dry-run`) where we want the SSOT on
+/// disk without committing to an install. For `install_*` the same
+/// fetch happens internally inside `install_from_git_url` — we keep
+/// that path independent so install can stay one tempdir-scoped pass.
+pub fn fetch_ssot(source: &InstallSource) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
+    match source {
+        InstallSource::LocalPath(p) => Ok((p.clone(), None)),
+        InstallSource::Github(repo) => clone_to_tempdir(
+            &github_authenticated_url(repo)?,
+            repo.git_ref.as_deref(),
+            repo.subfolder.as_deref(),
+            &repo.owner,
+            &repo.name,
+        ),
+        InstallSource::Gitlab(repo) => clone_to_tempdir(
+            &gitlab_authenticated_url(repo)?,
+            repo.git_ref.as_deref(),
+            repo.subfolder.as_deref(),
+            &repo.owner,
+            &repo.name,
+        ),
+    }
+}
+
+fn clone_to_tempdir(
+    url: &str,
+    git_ref: Option<&str>,
+    subfolder: Option<&str>,
+    owner: &str,
+    name: &str,
+) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
+    let tmp = tempfile::tempdir().context("create temp dir for clone")?;
+    fetch::shallow_clone(url, git_ref, "clone", tmp.path())
+        .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
+    let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
+        .map_err(|e| anyhow!("{}", e))?;
+    Ok((source, Some(tmp)))
 }
 
 /// Inject HTTP Basic credentials into an `https://` URL so `git clone`
