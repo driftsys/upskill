@@ -199,7 +199,7 @@ Three files outside the per-item path tree are managed idempotently:
 Per [ADR-0003](./adr/0003-generation-pipeline.md). State is split between
 two files, both schema-versioned (`schema: 1`).
 
-### 4.1 `.upskill.lock` (per-project, committed)
+### 4.1 `.upskill-lock.json` (per-project, committed)
 
 Lives at the consumer-project root. Records what was installed, from where,
 at what resolved git ref, with what content hashes. Plays the same role as
@@ -236,10 +236,13 @@ state for the global location, and source-registry caches. Not committed.
 
 ### 4.3 v0.1 lockfile migration
 
-v0.1's per-project `.upskill-lock.json` is read once by a translator that
-produces equivalent entries in the new files. Existing v0.1 users are not
-silently broken. The translator runs on first invocation of any v0.2 command
-in a directory containing a v0.1 lockfile.
+The lockfile filename does not change between v0.1 and v0.2 — both versions
+use `.upskill-lock.json`. Per
+[ADR-0003](./adr/0003-generation-pipeline.md), v0.2 stamps a top-level
+`schema: 2` field; v0.1 lockfiles (no `schema` field) are read once on first
+invocation of a v0.2 command and rewritten in place with the v0.2 entry shape.
+Any user-global state moves into `~/.upskill/installed.json`. Existing v0.1
+users are not silently broken.
 
 ## 5. Source format and authentication
 
