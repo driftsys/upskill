@@ -23,7 +23,7 @@ use crate::fetch;
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
-use crate::source::{GithubRepo, InstallSource};
+use crate::source::{GithubRepo, GitlabRepo, InstallSource};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ItemKind {
@@ -103,34 +103,54 @@ pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<In
 
 /// Install items from any supported source into `target`.
 ///
-/// Dispatches on the source variant:
+/// Dispatches on the source variant. All git-backed variants funnel
+/// through [`install_from_git_url`]; the only difference is URL
+/// construction.
+///
 /// - `LocalPath` — installs directly from the path on disk.
-/// - `Github` — shallow-clones `https://github.com/<owner>/<repo>` into a
-///   temp directory, resolves the optional subfolder, then runs the local
-///   install pipeline against the resolved path. The temp clone is removed
-///   on success or failure.
-/// - `Gitlab` — not yet supported in this slice; tracked as a follow-up.
+/// - `Github` — `https://github.com/<owner>/<repo>.git`.
+/// - `Gitlab` — `https://<host>/<owner>/<repo>.git`. Self-hosted GitLab
+///   works through the `host` field on `GitlabRepo`.
+///
+/// Authentication: clone is plain HTTPS — git resolves credentials via
+/// its own helpers (`gh`/`glab`/keychain). Token-based URL injection
+/// (per ADR-0005 / format-spec §5.3) is a separate slice.
 pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<InstallReport> {
     match source {
         InstallSource::LocalPath(path) => install_from_local_path(path, target),
         InstallSource::Github(repo) => install_from_github(repo, target),
-        InstallSource::Gitlab(_) => Err(anyhow!(
-            "GitLab sources are not yet supported by the v0.2 pipeline; \
-             use a GitHub source or a local path"
-        )),
+        InstallSource::Gitlab(repo) => install_from_gitlab(repo, target),
     }
 }
 
 fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport> {
-    let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
     install_from_git_url(
-        &url,
+        &github_clone_url(repo),
         repo.git_ref.as_deref(),
         repo.subfolder.as_deref(),
         &repo.owner,
         &repo.name,
         target,
     )
+}
+
+fn install_from_gitlab(repo: &GitlabRepo, target: &Path) -> Result<InstallReport> {
+    install_from_git_url(
+        &gitlab_clone_url(repo),
+        repo.git_ref.as_deref(),
+        repo.subfolder.as_deref(),
+        &repo.owner,
+        &repo.name,
+        target,
+    )
+}
+
+fn github_clone_url(repo: &GithubRepo) -> String {
+    format!("https://github.com/{}/{}.git", repo.owner, repo.name)
+}
+
+fn gitlab_clone_url(repo: &GitlabRepo) -> String {
+    format!("https://{}/{}/{}.git", repo.host, repo.owner, repo.name)
 }
 
 /// Shallow-clone `url` into a tempdir, resolve `subfolder` inside the clone,
@@ -395,5 +415,48 @@ mod tests {
         assert!(targets(Client::Claude, Some(&only_claude)));
         assert!(!targets(Client::Copilot, Some(&only_claude)));
         assert!(!targets(Client::OpenCode, Some(&only_claude)));
+    }
+
+    #[test]
+    fn github_clone_url_is_https_dot_git() {
+        let repo = GithubRepo {
+            owner: "driftsys".into(),
+            name: "skills".into(),
+            git_ref: None,
+            subfolder: None,
+        };
+        assert_eq!(
+            github_clone_url(&repo),
+            "https://github.com/driftsys/skills.git"
+        );
+    }
+
+    #[test]
+    fn gitlab_clone_url_uses_repo_host() {
+        // gitlab.com
+        let repo = GitlabRepo {
+            host: "gitlab.com".into(),
+            owner: "driftsys".into(),
+            name: "skills".into(),
+            git_ref: None,
+            subfolder: None,
+        };
+        assert_eq!(
+            gitlab_clone_url(&repo),
+            "https://gitlab.com/driftsys/skills.git"
+        );
+
+        // self-hosted GitLab
+        let self_hosted = GitlabRepo {
+            host: "gitlab.example.com".into(),
+            owner: "team".into(),
+            name: "rules".into(),
+            git_ref: None,
+            subfolder: None,
+        };
+        assert_eq!(
+            gitlab_clone_url(&self_hosted),
+            "https://gitlab.example.com/team/rules.git"
+        );
     }
 }
