@@ -12,15 +12,8 @@ upskill list                         # see what's installed
 upskill new skill code-review        # scaffold a new SSOT skill (in a registry)
 ```
 
-> **Status.** v0.2 is in active development on the `v0.2-redesign` branch.
-> Phases 0–2 (model, parser, generation pipeline) have shipped; Phase 3+
-> (install/update/remove over the pipeline, bundles, lock file migration) is
-> in progress. The latest released binary (`cargo install upskill`) is
-> v0.1.x and exposes the v0.1 skills-installer surface; this guide describes
-> the v0.2 surface that lands in v0.2.0.
->
-> For the full design, see [`specification.md`](./specification.md). For the
-> on-disk contract, see [`format-spec.md`](./format-spec.md).
+For the full behavioural spec, see [`specification.md`](./specification.md).
+For the on-disk contract, see [`format-spec.md`](./format-spec.md).
 
 ## Installation
 
@@ -122,20 +115,20 @@ upskill remove code-review
 upskill remove --global code-review
 ```
 
-#### `upskill list [--available]`
+#### `upskill list`
 
-Show installed content. With `--available`, list items the configured sources
-expose.
-
-#### `upskill info <name>`
-
-Show details for an item or bundle: resolved source, version, hash, generated
-output paths.
+Show installed content from `.upskill-lock.json`, grouped by kind. Bundles,
+when present, are surfaced as a separate section. (`--available` to dump
+items discoverable from configured sources is deferred for a future release;
+v0.2.0 ships the installed-state view only.)
 
 #### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports drift (manual edits to
-generated files, missing files, hash mismatches).
+Verify on-disk state matches `.upskill-lock.json`. Reports drift in three
+independent buckets: missing per-client output files (reinstall fixes),
+SSOT hash drift on `local:` sources (`update` fixes), and lockfile
+entries with no recoverable source (`remove` fixes). Exits non-zero
+when any bucket is non-empty.
 
 ### Author commands
 
@@ -217,7 +210,7 @@ Per [specification §4](./specification.md#4-state-files):
 v0.1 users keep the same `.upskill-lock.json` filename. v0.2 stamps a
 `schema: 2` field on first run and rewrites the file in place with the new
 entry shape — see
-[ADR-0003](./adr/0003-generation-pipeline.md).
+[ADR-0003](./adr/0003-generation-pipeline.md). No manual migration step.
 
 ## Per-client output paths
 

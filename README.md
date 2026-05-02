@@ -10,27 +10,70 @@ A single Rust binary for authoring and distributing AI-assistance content
 
 No Node.js. No npm. No runtime dependencies.
 
+## Install (consumer)
+
 ```bash
 cargo install upskill
 
-upskill add owner/repo               # install everything from a source repo
-upskill update                       # pull latest, regenerate per-client files
-upskill list                         # see what's installed
+# Install everything from a source repo (auto-fans out to .claude/, .github/, .agents/)
+upskill add driftsys/skills
+
+# Or install a curated bundle — one entry, dependency-resolved
+upskill add driftsys/bundles:platform-baseline.bundle.md
+
+# Pull latest and regenerate
+upskill update
+
+# Inspect installed state
+upskill list
+upskill doctor
 ```
 
-## Status
+`.upskill-lock.json` records what was installed at which ref and hash —
+commit it alongside the project.
 
-- **v0.1.x** — shipped on `main`, `cargo install upskill`. Skills-only
-  installer with the original fetch-and-copy model.
-- **v0.2** — in progress on `v0.2-redesign`. Adds rules and agents alongside
-  skills, with an SSOT-to-client generation pipeline. Phases 0–2 (model,
-  parser, generation) have shipped on the branch; Phase 3+ (install / update
-  over the pipeline, bundles, lockfile migration) is in flight.
+## Author
 
-See [`docs/specification.md`](docs/specification.md) for the v0.2 design and
-[`docs/adr/`](docs/adr/) for the architecture decisions
-([ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) is the
-umbrella).
+```bash
+# In a source-registry repo (where SSOT items live)
+upskill new skill code-review
+upskill lint --strict
+upskill fmt
+```
+
+## Two roles, no overlap
+
+- **Source registry** — repo where SSOT items live. Author commands run
+  here: `new`, `lint`, `fmt`.
+- **Consumer project** — repo where generated outputs land. Consumer
+  commands run here: `add`, `remove`, `update`, `list`, `doctor`,
+  `search`.
+
+The same repo can be both, but SSOT and generated outputs do not mix in
+the same tree.
+
+## Bundles
+
+A bundle is a flat manifest (`*.bundle.md`) that names the items it
+includes, and optionally other bundles it depends on. Installing a
+bundle resolves the transitive closure once and writes per-item output:
+
+```bash
+upskill add driftsys/bundles:platform-baseline.bundle.md
+```
+
+The lockfile records the bundle entry alongside the items, so
+`remove --source <bundle-label>` and future `remove <bundle-name>`
+flows know which items came from which bundle.
+
+## Documentation
+
+- User guide: [`docs/usage.md`](docs/usage.md).
+- Behavioural spec: [`docs/specification.md`](docs/specification.md).
+- On-disk contract: [`docs/format-spec.md`](docs/format-spec.md).
+- Architecture decisions: [`docs/adr/`](docs/adr/) — see
+  [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
+  umbrella decision.
 
 ## License
 

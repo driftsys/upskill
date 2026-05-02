@@ -6,12 +6,6 @@
 //! **generation** — SSOT in, per-client output out.
 //!
 //! No Node.js. No npm. No async runtime. Single static binary.
-//!
-//! ## Status
-//!
-//! v0.2 in development on the `v0.2-redesign` branch. v0.1.x (the
-//! skills-installer) is shipped from `main`. See the repository for
-//! progress.
 
 pub mod ancillary;
 pub mod auth;

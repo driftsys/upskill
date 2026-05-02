@@ -9,9 +9,8 @@ upskill is a Rust CLI for authoring and distributing AI-assistance content
 Copilot, opencode) from a single source of truth. The central abstraction is
 **generation** — SSOT in, per-client output out.
 
-**v0.2 redesign in progress.** The shipped binary (`v0.1.x`, on `main`) is a
-skills-installer with the old fetch-and-copy model. The current branch
-(`v0.2-redesign`) is rebuilding around the SSOT-to-client pipeline. See
+**v0.2.0 shipped.** The redesign around the SSOT-to-client generation
+pipeline is complete and released. See
 [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
 umbrella decision and the rest of `docs/adr/` for concern-specific design.
 
@@ -61,14 +60,14 @@ Primary crate:
 
 ### Module layout
 
-```
+```text
 src/
 ├── main.rs              CLI entry point, clap derive, command dispatch
 ├── lib.rs               Module declarations and re-exports
 │
-├── model/               SSOT data model (Phase 0): Rule, Skill, Agent + common
-├── parse/               SSOT parsing (Phase 0): YAML frontmatter
-├── generate/            SSOT → per-client rendering (Phase 1–2):
+├── model/               SSOT data model: Rule, Skill, Agent, Bundle + common
+├── parse/               SSOT parsing: YAML frontmatter + bundle loader/discovery
+├── generate/            SSOT → per-client rendering:
 │                        Client enum + claude/copilot/opencode + directives + dprint
 │
 ├── source.rs            Source URL parsing and classification (typed errors)
@@ -77,7 +76,12 @@ src/
 ├── search.rs            skills.sh API search
 │
 ├── pipeline.rs          Local + git → per-client install pipeline,
-│                        token-injected clone URLs, SSOT hashing
+│                        token-injected clone URLs, SSOT hashing,
+│                        list / remove / update / doctor over the lockfile
+├── bundle.rs            Bundle dependency resolution
+├── lint.rs              Author command — validate SSOT against the format spec
+├── fmt.rs               Author command — canonicalise YAML frontmatter
+├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile_v2.rs       .upskill-lock.json (`schema: 2`) read/write
@@ -107,19 +111,13 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
 ### Install layout
 
-**v0.1 (shipped on `main`).** Skills install to `.agents/skills/` (project)
-or `~/.agents/skills/` (global) with per-agent symlinks. State in
-`.upskill-lock.json`. v0.1 lives only on the `main` branch now — its
-modules and tests have been removed from `v0.2-redesign`.
-
-**v0.2 (this branch).** Per-item generated output, copy only (no
-symlinks). State split between `.upskill-lock.json` (per-project,
-committed, schema-versioned) and `~/.upskill/installed.json` (per-user).
-The lockfile filename is unchanged from v0.1; v0.2 bumps a `schema:`
-field and rewrites in place on first invocation. Per-client output paths
-and ancillary files (`CLAUDE.md`, `.vscode/settings.json`,
-`opencode.json`) are specified in
-[ADR-0003](docs/adr/0003-generation-pipeline.md) and
+Per-item generated output, copy only (no symlinks). State split between
+`.upskill-lock.json` (per-project, committed, schema-versioned) and
+`~/.upskill/installed.json` (per-user). v0.1 lockfiles are migrated in
+place on first invocation — the filename is unchanged, the new file
+gains a `schema: 2` field. Per-client output paths and ancillary files
+(`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are specified
+in [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/format-spec.md).
 
 ### Source format
