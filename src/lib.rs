@@ -1,31 +1,27 @@
 //! # upskill
 //!
-//! Upskill your coding agents.
+//! Author and distribute AI-assistance content (rules, skills, agents)
+//! across multiple AI coding clients (Claude Code, Copilot, opencode)
+//! from a single source of truth. The central abstraction is
+//! **generation** — SSOT in, per-client output out.
 //!
-//! Ultra-lightweight [Agent Skills](https://agentskills.io/) package manager
-//! in Rust. Install, list, update, and remove SKILL.md packages across
-//! coding agents (Claude Code, Copilot, Codex, Cursor, OpenCode).
-//!
-//! No Node.js. No npm. Single static binary.
+//! No Node.js. No npm. No async runtime. Single static binary.
 //!
 //! ## Status
 //!
-//! This crate is under active development. v0.1.0 is a name reservation.
-//! See the repository for progress.
+//! v0.2 in development on the `v0.2-redesign` branch. v0.1.x (the
+//! skills-installer) is shipped from `main`. See the repository for
+//! progress.
 
-pub mod agent;
 pub mod ancillary;
 pub mod auth;
 pub mod fetch;
 pub mod generate;
-pub mod install;
-pub mod lockfile;
 pub mod lockfile_v2;
 pub mod model;
 pub mod parse;
 pub mod pipeline;
 pub mod search;
 pub mod source;
-pub mod ui;
 
 pub use source::{InstallSource, parse_install_source};

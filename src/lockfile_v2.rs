@@ -122,7 +122,7 @@ impl LockfileV2 {
             // (v0.1 had no schema field) — fall through to the v0.1 attempt.
         }
 
-        if let Ok(v1) = serde_json::from_str::<crate::lockfile::Lockfile>(&raw) {
+        if let Ok(v1) = serde_json::from_str::<V1Lockfile>(&raw) {
             let migrated = migrate_v1(&v1);
             migrated
                 .save(project_root)
@@ -206,10 +206,29 @@ fn kind_label(kind: ItemKind) -> &'static str {
     }
 }
 
+/// In-memory representation of the v0.1 `.upskill-lock.json` shape, used
+/// only by the migration path in [`LockfileV2::load`]. Kept private — the
+/// v0.1 lockfile module is gone, and this struct exists solely so we can
+/// continue to read v0.1 files written by the previous binary.
+#[derive(Debug, Deserialize)]
+struct V1Lockfile {
+    skills: Vec<V1LockedSkill>,
+}
+
+#[derive(Debug, Deserialize)]
+struct V1LockedSkill {
+    name: String,
+    source: String,
+    #[serde(default, rename = "ref")]
+    git_ref: Option<String>,
+    #[serde(default)]
+    hash: Option<String>,
+}
+
 /// Translate a v0.1 lockfile (skills-only) into a v0.2 lockfile. Every
 /// v0.1 entry becomes a `kind: "skill"` item; v0.2-only fields (bundles)
 /// stay empty.
-pub fn migrate_v1(v1: &crate::lockfile::Lockfile) -> LockfileV2 {
+fn migrate_v1(v1: &V1Lockfile) -> LockfileV2 {
     let mut out = LockfileV2::new();
     for s in &v1.skills {
         out.upsert(LockedItem {
