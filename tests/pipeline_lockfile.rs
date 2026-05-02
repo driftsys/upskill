@@ -179,3 +179,42 @@ fn install_preserves_unrelated_existing_entries() {
         "pre-existing entry must survive install"
     );
 }
+
+#[test]
+fn install_creates_claude_bridge_when_absent() {
+    // ADR-0003 / format-spec §7.4: a fresh consumer project gets a CLAUDE.md
+    // bridge file (single line `@AGENTS.md`) so Claude Code picks up
+    // project-level instructions.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+
+    let claude_md = target.join("CLAUDE.md");
+    assert!(claude_md.exists(), "CLAUDE.md must be created");
+    assert_eq!(fs::read_to_string(&claude_md).unwrap(), "@AGENTS.md\n");
+}
+
+#[test]
+fn install_preserves_existing_claude_bridge() {
+    // User customisations must not be clobbered.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+
+    let user_content = "# Project CLAUDE.md\n\n@AGENTS.md\n\nExtra project notes here.\n";
+    fs::write(target.join("CLAUDE.md"), user_content).unwrap();
+
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+
+    assert_eq!(
+        fs::read_to_string(target.join("CLAUDE.md")).unwrap(),
+        user_content,
+        "user CLAUDE.md must be preserved verbatim"
+    );
+}

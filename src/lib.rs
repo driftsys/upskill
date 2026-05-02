@@ -14,6 +14,7 @@
 //! See the repository for progress.
 
 pub mod agent;
+pub mod ancillary;
 pub mod auth;
 pub mod fetch;
 pub mod generate;
