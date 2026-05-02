@@ -85,25 +85,3 @@ fn add_invalid_source_returns_usage_error() {
         .failure()
         .code(2);
 }
-
-#[test]
-fn unimplemented_commands_emit_phase_message() {
-    // The CLI surface lists every command from ADR-0004, but the
-    // implementations land progressively. Verify the stub message points
-    // the user at the phase that ships each command.
-    let tmp = tempfile::tempdir().unwrap();
-    for (cmd, phase) in [("list", "Phase B")] {
-        let assert = Command::cargo_bin("upskill")
-            .unwrap()
-            .current_dir(tmp.path())
-            .args([cmd])
-            .assert()
-            .failure()
-            .code(1);
-        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
-        assert!(
-            stderr.contains("not yet implemented") && stderr.contains(phase),
-            "{cmd} stub message wrong: {stderr}"
-        );
-    }
-}
