@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0] (2026-05-02)
+
+### Refactoring
+
+- drop pre-1.0 back-compat shims and rename lockfile module ([81a2dda])
+
+### Documentation
+
+- **book:** make book standalone, drop v0.1 migration mentions ([f85ad3d])
+- **book:** restructure as user-focused book; architecture → ADR-0000
+  ([f8e4d5e])
+
+[0.3.0]: https://github.com/driftsys/upskill/compare/v0.2.0...v0.3.0
+[81a2dda]: https://github.com/driftsys/upskill/commit/81a2dda
+[f85ad3d]: https://github.com/driftsys/upskill/commit/f85ad3d
+[f8e4d5e]: https://github.com/driftsys/upskill/commit/f8e4d5e
+
 ## [0.2.0] (2026-05-02)
 
 ### Features
