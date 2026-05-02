@@ -47,7 +47,7 @@ upskill's own surface.
 ### Directory-per-item layout, symmetric across kinds
 
 ```text
-.agents/
+<source-registry-root>/
 ├── rules/<name>/RULE.md
 ├── skills/<name>/SKILL.md
 └── agents/<name>/AGENT.md
@@ -57,12 +57,17 @@ A directory per item — for all three kinds — enables ancillary resources
 (templates, scripts, reference files) without future migration. Symmetry
 reduces cognitive load and simplifies tooling.
 
-This layout is the **source-registry form** — what authors edit and version
-in their item-source repos. Consumer projects (where developers run
-`upskill add`) never contain this SSOT layout; they only hold generated,
-client-specific outputs under `.claude/`, `.github/`, `.opencode/`, and
-`.agents/` (the last for opencode-style canonical-store outputs per
-[ADR-0003](./0003-generation-pipeline.md)).
+The diagram is **illustrative**, not normative. Source registries
+organise their SSOT however the team prefers (`content/`, `skills-src/`,
+mixed kinds, etc.). The only constraint is that each item is a directory
+containing its kind-specific entrypoint file (`RULE.md`, `SKILL.md`, or
+`AGENT.md`).
+
+The `.agents/` path is **not** a source-registry convention. It is
+purely the consumer-side generated-output path for the opencode
+canonical-store pattern (per [ADR-0003](./0003-generation-pipeline.md)).
+Source registries SHOULD avoid `.agents/` as their root to prevent
+confusion with the consumer-side meaning.
 
 ### `metadata` block for governance
 

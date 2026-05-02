@@ -80,30 +80,46 @@ symlink-first default is documented in
 
 ### Ancillary file handling
 
-Two ancillary files are managed idempotently:
+Three ancillary files are managed idempotently:
 
 - **`CLAUDE.md`** at repo root: created once with `@AGENTS.md` content if
   absent. Never overwritten — protects user customisations.
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
+- **`opencode.json`**: managed only on **first** opencode-rule install
+  in a consumer project. upskill adds `".agents/rules/**/RULE.md"` to
+  the `instructions[]` array (if not already present) and never mutates
+  the file thereafter. opencode's `instructions[]` glob expands to pick
+  up rule additions and removals automatically as files come and go
+  under `.agents/rules/`. Other config keys preserved; existing
+  `instructions[]` entries preserved.
 
-`opencode.json` is **not** managed by upskill: opencode reads rules
-from `.agents/rules/<name>/RULE.md` and skills from
-`.agents/skills/<name>/SKILL.md` natively (canonical-store pattern), so
-no `instructions[]` configuration is required. Users may still maintain
-`opencode.json` manually for other opencode settings; upskill leaves
-the file untouched.
+Skills do not require an `opencode.json` entry — opencode walks
+`.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in
+opencode's source). Rules require the glob entry because opencode has
+no equivalent `EXTERNAL_RULE_PATTERN`; rules reach opencode only via
+`instructions[]`.
+
+> **Note for Phase 3 implementation.** `.agents/` is dot-prefixed; some
+> glob libraries exclude hidden directories by default. opencode's
+> `instructions[]` glob does not pass `dot: true` (verified in opencode
+> source). Phase 3 should include a fixture test that confirms
+> `.agents/rules/**/RULE.md` actually matches files under `.agents/`.
 
 ### State files and v0.1 lockfile migration
 
 State is split between two files:
 
 - **`.upskill.lock`** — **per-project**, lives at the consumer project
-  root, **committed alongside the project**. Records the bundles and
-  items added to this project: source registry URL, requested version
-  spec, resolved git ref, per-item content hash. Plays the same role
-  as `package-lock.json` — guarantees deterministic regeneration on
-  another developer's machine and in CI.
+  root, **committed alongside the project**. The consumer-side record
+  of installed state. Bundles themselves live only in source registries
+  (per [ADR-0002](./0002-portable-content-format.md) / format-spec
+  §3.7); the lock file captures, per installed bundle: bundle name,
+  source registry URL, requested version spec, resolved git ref, and
+  the per-item content hashes resolved from the bundle. Ad-hoc items
+  (installed without a bundle) are recorded similarly. Plays the same
+  role as `package-lock.json` — guarantees deterministic regeneration
+  on another developer's machine and in CI.
 - **`~/.upskill/installed.json`** — **per-user**, schema-versioned
   (`schema: 1`). Tracks the user-global view: which items the user has
   installed at the global scope, drift-detection state for the global

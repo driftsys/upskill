@@ -93,8 +93,10 @@ Constraints:
 - `<item-root>` is the SSOT path within a **source registry** repository. SSOT items live only in
   source registries; consumer projects (where developers run `upskill add`) only ever hold
   generated, client-specific outputs and never SSOT items.
-- Within a source registry, `<item-root>` MAY be any path. Implementations SHOULD accept `.agents/`
-  as the default convention but MUST NOT require it.
+- Within a source registry, `<item-root>` MAY be any path that fits the team's organisation
+  (`content/`, `skills-src/`, etc.). Source registries SHOULD avoid `.agents/` as their
+  `<item-root>` to prevent confusion with the consumer-side opencode canonical-store path
+  (§7.3).
 
 ### 2.2 Bundle files
 
@@ -301,6 +303,11 @@ Implementations:
 
 ### 3.7 Bundle schema
 
+Bundles are **source-registry artifacts**. They reference items by `name`; the items themselves
+live in source registries (potentially the same repo, potentially others). Consumer projects do
+not contain bundle files — an implementation records which bundles a consumer project has
+installed in its own state file (e.g. `.upskill.lock` for the upskill CLI).
+
 ```yaml
 ---
 schema: 1
@@ -442,21 +449,31 @@ in canonical bodies.
 
 ### 5.5 Prohibited constructs in canonical bodies
 
-The following MUST NOT appear in canonical entrypoint bodies. Use per-client override files (§2.3)
-or conditional directives (§6) instead:
+The following constructs MUST NOT appear in **always-rendered** body content — that is, the
+portion of the canonical entrypoint body that reaches every client. They are explicitly
+**permitted** inside:
 
-| Construct                       | Why prohibited            | Client      |
-| ------------------------------- | ------------------------- | ----------- |
-| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable     | Claude Code |
-| `${workspaceFolder}`, `${file}` | Substitution variable     | Copilot     |
-| `` !`command` ``                | Shell pre-execution       | Claude Code |
-| `@path/to/file`                 | File import               | Claude Code |
-| `#tool:name`                    | Tool reference            | Copilot     |
-| `#file:path`                    | File reference            | Copilot     |
-| `ultrathink`                    | Extended thinking trigger | Claude Code |
+- `<!-- @client:X -->` ... `<!-- @endclient -->` directive blocks (§6), when `X` matches the
+  construct's client. The directive processor strips the entire block from outputs targeting
+  any other client, so the construct never reaches a client that would not understand it.
+- Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`, `AGENT.opencode.md`,
+  etc. — when the filename suffix matches the construct's client. Override files are loaded
+  only by the matching client's generator.
 
-If an item genuinely requires any of these constructs, it SHOULD either be marked as single-client
-via `metadata.audience` or use a per-client override file.
+| Construct                       | Why prohibited (in always-rendered content) | Client      |
+| ------------------------------- | ------------------------------------------- | ----------- |
+| `$ARGUMENTS`, `$0`, `$1`        | Substitution variable                       | Claude Code |
+| `${workspaceFolder}`, `${file}` | Substitution variable                       | Copilot     |
+| `` !`command` ``                | Shell pre-execution                         | Claude Code |
+| `@path/to/file`                 | File import                                 | Claude Code |
+| `#tool:name`                    | Tool reference                              | Copilot     |
+| `#file:path`                    | File reference                              | Copilot     |
+| `ultrathink`                    | Extended thinking trigger                   | Claude Code |
+
+If an item needs one of these constructs in content that would otherwise reach every client,
+wrap it in a matching-client directive block (§6) or move it to a matching-client override
+file (§2.3). Items that genuinely target only one client end-to-end MAY instead be marked
+single-client via `metadata.audience` (§3.6).
 
 ---
 
@@ -571,6 +588,10 @@ Implementations SHOULD also generate or maintain:
 
 - `AGENTS.md` at repo root: project-specific content, hand-maintained by teams. Implementations
   MUST NOT overwrite this file after initial creation.
+- `opencode.json`: at first opencode-rule install in a consumer project, implementations add
+  `".agents/rules/**/RULE.md"` to the `instructions[]` array (if not already present). Subsequent
+  rule installs/uninstalls MUST NOT mutate the file — opencode's `instructions[]` glob picks up
+  rule additions and removals automatically. Other config keys preserved.
 
 ### 7.5 Formatting guarantee
 
