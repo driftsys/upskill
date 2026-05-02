@@ -18,8 +18,11 @@ pub fn clone_github_repo(repo: &GithubRepo, dest: &Path) -> Result<PathBuf, Stri
     )
 }
 
-/// Shallow clone a git URL into `dest/<dir_name>`.
-fn shallow_clone(
+/// Shallow clone a git URL into `dest/<dir_name>`. Visible inside the crate
+/// so the v0.2 pipeline can clone from arbitrary URL forms (`file://`,
+/// GitLab self-hosted, etc.) without going through the GitHub-specific
+/// `clone_github_repo` constructor.
+pub(crate) fn shallow_clone(
     url: &str,
     git_ref: Option<&str>,
     dir_name: &str,
@@ -53,7 +56,7 @@ fn shallow_clone(
     Ok(())
 }
 
-fn resolve_subfolder(
+pub(crate) fn resolve_subfolder(
     clone_dir: &Path,
     subfolder: Option<&str>,
     owner: &str,

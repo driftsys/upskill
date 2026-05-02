@@ -15,13 +15,15 @@
 //! shape. Promotion of `audience` to a top-level field (per the
 //! format-spec PR #76) is a separate task.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::fetch;
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
+use crate::source::{GithubRepo, InstallSource};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ItemKind {
@@ -56,6 +58,62 @@ pub fn install_from_local_path(source: &Path, target: &Path) -> Result<InstallRe
     install_agents(source, target, &mut report)?;
 
     Ok(report)
+}
+
+/// Install items from any supported source into `target`.
+///
+/// Dispatches on the source variant:
+/// - `LocalPath` — installs directly from the path on disk.
+/// - `Github` — shallow-clones `https://github.com/<owner>/<repo>` into a
+///   temp directory, resolves the optional subfolder, then runs the local
+///   install pipeline against the resolved path. The temp clone is removed
+///   on success or failure.
+/// - `Gitlab` — not yet supported in this slice; tracked as a follow-up.
+pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<InstallReport> {
+    match source {
+        InstallSource::LocalPath(path) => install_from_local_path(path, target),
+        InstallSource::Github(repo) => install_from_github(repo, target),
+        InstallSource::Gitlab(_) => Err(anyhow!(
+            "GitLab sources are not yet supported by the v0.2 pipeline; \
+             use a GitHub source or a local path"
+        )),
+    }
+}
+
+fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport> {
+    let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
+    install_from_git_url(
+        &url,
+        repo.git_ref.as_deref(),
+        repo.subfolder.as_deref(),
+        &repo.owner,
+        &repo.name,
+        target,
+    )
+}
+
+/// Shallow-clone `url` into a tempdir, resolve `subfolder` inside the clone,
+/// and run the local install pipeline against the result. The tempdir is
+/// removed on return regardless of outcome (RAII via `tempfile::TempDir`).
+///
+/// Public so callers can install from arbitrary git URLs (mirrors, local
+/// `file://` clones, future GitLab self-hosted) without going through
+/// [`InstallSource`]. The high-level [`install_from_source`] is preferred
+/// when an `InstallSource` already exists.
+pub fn install_from_git_url(
+    url: &str,
+    git_ref: Option<&str>,
+    subfolder: Option<&str>,
+    owner: &str,
+    name: &str,
+    target: &Path,
+) -> Result<InstallReport> {
+    let tmp = tempfile::tempdir().context("create temp dir for clone")?;
+    fetch::shallow_clone(url, git_ref, "clone", tmp.path())
+        .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
+    let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
+        .map_err(|e| anyhow!("{}", e))?;
+    install_from_local_path(&source, target)
 }
 
 fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> Result<()> {
