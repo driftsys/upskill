@@ -2,11 +2,11 @@
 description: Use when reviewing code for injection flaws, authentication issues, secret leaks, and insecure data handling
 mode: subagent
 model: sonnet
-tools:
-- read
-- grep
-- glob
-- bash
+permission:
+  read: allow
+  grep: allow
+  glob: allow
+  bash: allow
 temperature: 0.2
 ---
 

@@ -54,13 +54,15 @@ pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
         map.insert(Value::from("model"), Value::from(model.clone()));
     }
 
-    if !agent.tools.is_empty() {
-        let tools: Vec<Value> = agent
-            .tools
-            .iter()
-            .map(|t| Value::from(map_tool(*t)))
-            .collect();
-        map.insert(Value::from("tools"), Value::Sequence(tools));
+    let mut perms = Mapping::new();
+    for tool in &agent.tools {
+        let key = Value::from(permission_key(*tool));
+        if !perms.contains_key(&key) {
+            perms.insert(key, Value::from("allow"));
+        }
+    }
+    if !perms.is_empty() {
+        map.insert(Value::from("permission"), Value::Mapping(perms));
     }
 
     if let Some(Value::Mapping(pt)) = agent.opencode.as_ref() {
@@ -80,21 +82,24 @@ fn mode_str(m: Mode) -> &'static str {
     }
 }
 
-/// Map a capability-level tool name to opencode's lowercase form.
+/// Map a capability-level tool name to opencode's `permission:` map key.
 ///
-/// Per spec §4: opencode has no documented mapping for `web-fetch` or
-/// `web-search` (both `—`). Pass them through as kebab-case identifiers
-/// rather than dropping them — opencode's tool registry may add support
-/// later, and dropping silently would surprise authors.
-fn map_tool(t: ToolCap) -> &'static str {
+/// Per opencode docs (https://opencode.ai/docs/agents), agents declare
+/// allowed capabilities via a `permission:` map (allow|ask|deny per key)
+/// rather than a `tools:` array. `write` rolls into `edit` since opencode
+/// has no separate write key. Other opencode-only permission keys
+/// (`task`, `external_directory`, `todowrite`, `lsp`, `skill`, `list`)
+/// have no neutral capability — authors who need them use the
+/// `opencode:` passthrough block.
+fn permission_key(t: ToolCap) -> &'static str {
     match t {
         ToolCap::Read => "read",
-        ToolCap::Write => "write",
+        ToolCap::Write => "edit",
         ToolCap::Edit => "edit",
         ToolCap::Bash => "bash",
         ToolCap::Grep => "grep",
         ToolCap::Glob => "glob",
-        ToolCap::WebFetch => "web-fetch",
-        ToolCap::WebSearch => "web-search",
+        ToolCap::WebFetch => "webfetch",
+        ToolCap::WebSearch => "websearch",
     }
 }
