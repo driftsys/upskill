@@ -1,21 +1,28 @@
-//! v0.2 install pipeline: local SSOT path → per-client output on disk.
+//! v0.2 install pipeline: SSOT (local path or git source) → per-client
+//! output on disk.
 //!
 //! Walks a source directory laid out per format-spec §2.1, parses each
 //! item's frontmatter into the model (§3), renders per-client output via
 //! `crate::generate`, and writes the result to the per-client paths
 //! defined in format-spec §7 / ADR-0003.
 //!
-//! Scope (Phase 3 first slice):
-//! - Local path source only (no git fetch).
-//! - No lockfile, no bundle resolution, no ancillary file management
-//!   (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`).
-//! - No CLI wiring; this is library API only.
+//! Entry points:
+//! - [`install_with_lockfile`] — consumer-facing; install + record state +
+//!   create ancillary files. Backs `upskill add`.
+//! - [`install_from_source`] / [`install_from_local_path`] /
+//!   [`install_from_git_url`] — library-only variants without lockfile or
+//!   ancillary handling.
+//!
+//! Authentication: when a token is resolved via [`crate::auth`], it is
+//! URL-injected into the clone URL. With no token, clones fall back to
+//! git's own credential helpers.
 //!
 //! Audience filter: prefers the top-level `audience` field (per
 //! format-spec §3.1) and falls back to `metadata.audience` when the
 //! top-level is absent — accepts both shapes for back-compat.
 
 use anyhow::{Context, Result, anyhow};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -259,7 +266,7 @@ fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> R
         let (skill, body) = frontmatter::parse::<Skill>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(skill.audience.as_ref(), skill.metadata.as_ref());
-        let source_hash = crate::lockfile::hash_skill_dir(&dir);
+        let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -292,7 +299,7 @@ fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Re
         let (rule, body) = frontmatter::parse::<Rule>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(rule.audience.as_ref(), rule.metadata.as_ref());
-        let source_hash = crate::lockfile::hash_skill_dir(&dir);
+        let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -325,7 +332,7 @@ fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> R
         let (agent, body) = frontmatter::parse::<Agent>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(agent.audience.as_ref(), agent.metadata.as_ref());
-        let source_hash = crate::lockfile::hash_skill_dir(&dir);
+        let source_hash = hash_item_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -384,6 +391,49 @@ fn write_output(target: &Path, rel: &Path, content: &str) -> Result<()> {
     }
     fs::write(&full, content).with_context(|| format!("write {}", full.display()))?;
     Ok(())
+}
+
+/// SHA-256 hash of every file under `dir`, with each file's path-relative
+/// name folded into the hash so renames register as drift. Recursive,
+/// deterministic (sorted file list), and `None` when `dir` is empty or
+/// unreadable. Used by the pipeline to populate `LockedItem.hash` and by
+/// `doctor` (Phase B3) to detect SSOT drift.
+pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
+    let mut files = Vec::new();
+    collect_files(dir, &mut files);
+    if files.is_empty() {
+        return None;
+    }
+    files.sort();
+    let mut hasher = Sha256::new();
+    for file in &files {
+        let relative = file.strip_prefix(dir).unwrap_or(file);
+        hasher.update(relative.to_string_lossy().as_bytes());
+        if let Ok(content) = fs::read(file) {
+            hasher.update(&content);
+        }
+    }
+    Some(
+        hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect(),
+    )
+}
+
+fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files(&path, files);
+        } else {
+            files.push(path);
+        }
+    }
 }
 
 /// Iterate `(name, dir)` for every immediate subdirectory of `kind_root`.

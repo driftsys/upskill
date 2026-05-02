@@ -75,12 +75,13 @@ src/
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── auth.rs              Token resolution (env vars, gh/glab CLI fallback)
 ├── search.rs            skills.sh API search
-├── ui.rs                Interactive prompts, TTY detection, colored output
 │
-├── agent.rs             v0.1 agent detection / symlink targets (retired in Phase 3)
-├── install.rs           v0.1 install flow (replaced in Phase 3)
-└── lockfile.rs          v0.1 .upskill-lock.json schema (Phase 3 keeps
-                         the filename, bumps schema, adds ~/.upskill/installed.json)
+├── pipeline.rs          Local + git → per-client install pipeline,
+│                        token-injected clone URLs, SSOT hashing
+├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
+│                        first-time hand-shake files
+└── lockfile_v2.rs       .upskill-lock.json (`schema: 2`) read/write
+                         + in-place v0.1 → v0.2 migration
 ```
 
 Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
@@ -97,8 +98,8 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
   `source.rs`, which uses `thiserror` for typed `SourceParseError`.
 - **`main.rs` only does I/O orchestration** — call modules, handle errors, print
   results. Business logic lives in the library modules.
-- **Only `main.rs` and `ui.rs` write to stdout/stderr.** Every other module
-  returns data structures or `Result<T>`; presentation belongs in `main.rs`.
+- **Only `main.rs` writes to stdout/stderr.** Every other module returns
+  data structures or `Result<T>`; presentation belongs in `main.rs`.
 - **Zero warnings policy** — compiler, clippy, and docs tooling. `-D warnings`
   is enforced in CI.
 - **Clippy `too_many_arguments`** — group related flags into structs
@@ -108,15 +109,16 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
 **v0.1 (shipped on `main`).** Skills install to `.agents/skills/` (project)
 or `~/.agents/skills/` (global) with per-agent symlinks. State in
-`.upskill-lock.json`. `AGENT_DEFS` in `src/agent.rs` is the source of truth.
+`.upskill-lock.json`. v0.1 lives only on the `main` branch now — its
+modules and tests have been removed from `v0.2-redesign`.
 
-**v0.2 (this branch, Phase 3 in flight).** Per-item generated output, copy
-only (no symlinks). State split between `.upskill-lock.json` (per-project,
+**v0.2 (this branch).** Per-item generated output, copy only (no
+symlinks). State split between `.upskill-lock.json` (per-project,
 committed, schema-versioned) and `~/.upskill/installed.json` (per-user).
-The lockfile filename is unchanged from v0.1; v0.2 bumps a `schema:` field
-and rewrites in place on first invocation. Per-client output paths and
-ancillary files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are
-specified in
+The lockfile filename is unchanged from v0.1; v0.2 bumps a `schema:`
+field and rewrites in place on first invocation. Per-client output paths
+and ancillary files (`CLAUDE.md`, `.vscode/settings.json`,
+`opencode.json`) are specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/format-spec.md).
 
@@ -166,13 +168,12 @@ Token resolution order:
   ```
 
 - Existing test files:
-  - **CLI (v0.1 surface):** `cli_add`, `cli_check`, `cli_ci_mode`,
-    `cli_dryrun`, `cli_exit_codes`, `cli_gitlab`, `cli_global`, `cli_list`,
-    `cli_lockfile`, `cli_moddetect`, `cli_remove`, `cli_search`, `cli_update`.
+  - **CLI:** `cli_add`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`.
+  - **Pipeline:** `pipeline_local`, `pipeline_source`, `pipeline_lockfile`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
     `generate_agents`. Golden fixtures in `tests/fixtures/`.
-  - When adding behavior, prefer extending the matching file or creating a
-    new `cli_<area>.rs` / `generate_<area>.rs`.
+  - When adding behavior, prefer extending the matching file or creating
+    a new `cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<area>.rs`.
 
 ## Workflow
 
