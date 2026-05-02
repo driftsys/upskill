@@ -121,8 +121,9 @@ pub fn lint(paths: &[PathBuf], strict: bool) -> Result<LintReport> {
 }
 
 /// True when `root/.upskill-lock.json` (or `root` itself, if it is a
-/// file in such a directory) exists.
-fn is_consumer_project(root: &Path) -> bool {
+/// file in such a directory) exists. Shared with `crate::fmt` so both
+/// author commands refuse running inside consumer projects.
+pub(crate) fn is_consumer_project(root: &Path) -> bool {
     let dir = if root.is_dir() {
         root.to_path_buf()
     } else if let Some(parent) = root.parent() {
@@ -158,8 +159,8 @@ impl FileKind {
 /// Walk `root` (file or directory) and return every entrypoint file
 /// the lint should inspect. SSOT items are detected by the
 /// `<kind>s/<name>/<KIND>.md` layout per format-spec §2.1; bundles by
-/// the `*.bundle.md` suffix.
-fn discover(root: &Path) -> Result<Vec<PathBuf>> {
+/// the `*.bundle.md` suffix. Shared with `crate::fmt`.
+pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if root.is_file() {
         if let Some(name) = root.file_name().and_then(|n| n.to_str())

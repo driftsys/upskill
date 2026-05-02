@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, error::ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use upskill::fmt::{FmtReport, fmt};
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
@@ -124,6 +125,16 @@ enum Commands {
         #[arg(long)]
         strict: bool,
     },
+    /// Canonicalise YAML frontmatter in SSOT files.
+    ///
+    /// Author command — runs only inside a source registry. Body
+    /// markdown is left untouched (dprint's job). Refuses to run inside
+    /// a consumer project (detected by `.upskill-lock.json`). With no
+    /// paths, formats the current directory.
+    Fmt {
+        /// Files or directories to format. Empty = current directory.
+        paths: Vec<PathBuf>,
+    },
 }
 
 fn main() {
@@ -157,6 +168,7 @@ fn main() {
         Commands::Doctor { global } => run_doctor(global),
         Commands::Search { query, limit } => run_search(&query, limit),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
+        Commands::Fmt { paths } => run_fmt(&paths),
     };
 
     if was_interrupted() {
@@ -549,6 +561,34 @@ fn print_lint_report(report: &LintReport) {
         "{} file(s) checked, {} findings",
         report.files_checked,
         report.findings.len()
+    );
+}
+
+fn run_fmt(paths: &[PathBuf]) -> i32 {
+    match fmt(paths) {
+        Ok(report) => {
+            print_fmt_report(&report);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_USAGE
+        }
+    }
+}
+
+fn print_fmt_report(report: &FmtReport) {
+    if report.files_changed.is_empty() {
+        println!("{} file(s) checked, all formatted", report.files_checked);
+        return;
+    }
+    for path in &report.files_changed {
+        println!("formatted: {}", path.display());
+    }
+    println!(
+        "{} file(s) checked, {} file(s) changed",
+        report.files_checked,
+        report.files_changed.len()
     );
 }
 

@@ -17,6 +17,7 @@ pub mod ancillary;
 pub mod auth;
 pub mod bundle;
 pub mod fetch;
+pub mod fmt;
 pub mod generate;
 pub mod lint;
 pub mod lockfile_v2;
