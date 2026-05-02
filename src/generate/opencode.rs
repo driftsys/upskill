@@ -36,12 +36,16 @@ pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
     serde_yaml_ng::to_string(&map).context("serializing opencode rule frontmatter")
 }
 
-/// Agent frontmatter per §7.3 / Appendix B: `description`, `mode`,
-/// `model`, `tools` (lowercase). `name` is in filename per Appendix B
-/// and not emitted. `preload-skills` has no opencode equivalent and is
-/// dropped. `mode` defaults to `subagent` per spec §3.4 when absent.
+/// Agent frontmatter per §7.3 — emits `name`, `description`, `mode`,
+/// `model`, `permission` map. `name` is emitted explicitly for cross-kind
+/// consistency with skills/rules and to support bookkeeping
+/// (`upskill list`/`doctor`, human readability), even though Appendix B
+/// originally suggested filename-only; opencode tolerates the redundant
+/// field. `preload-skills` has no opencode equivalent and is dropped.
+/// `mode` defaults to `subagent` per spec §3.4 when absent.
 pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
     let mut map = Mapping::new();
+    map.insert(Value::from("name"), Value::from(agent.name.clone()));
     map.insert(
         Value::from("description"),
         Value::from(agent.description.clone()),

@@ -1,4 +1,5 @@
 ---
+name: security-reviewer
 description: Use when reviewing code for injection flaws, authentication issues, secret leaks, and insecure data handling
 mode: subagent
 model: sonnet
