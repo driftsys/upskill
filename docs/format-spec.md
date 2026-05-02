@@ -547,11 +547,11 @@ to discover rules without file duplication.
 
 ### 7.3 opencode
 
-| Item kind | Output path                      | Frontmatter mapping                                                                                                                       |
-| --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Rule      | `.agents/rules/<name>/RULE.md`   | `name:`, `description:`. opencode-specific fields from passthrough block. `scope.paths` dropped (no per-rule scoping per §3.2).           |
-| Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory. |
-| Agent     | `.opencode/agents/<name>.md`     | `description:`, `mode:`, `model:`. opencode-specific fields from passthrough block.                                                       |
+| Item kind | Output path                      | Frontmatter mapping                                                                                                                                           |
+| --------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule      | `.agents/rules/<name>/RULE.md`   | `name:`, `description:`. opencode-specific fields from passthrough block. `scope.paths` dropped (no per-rule scoping per §3.2).                               |
+| Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory.                     |
+| Agent     | `.opencode/agents/<name>.md`     | `name:`, `description:`, `mode:`, `model:`, `permission:` map (allow per capability; write rolls into edit). opencode-specific fields from passthrough block. |
 
 ### 7.4 Shared outputs
 
@@ -860,19 +860,19 @@ the canonical `AGENT.md` body is used (with directives processed).
 This table summarizes how SSOT fields map to each client's frontmatter when generating output.
 This is informational and subject to change as clients evolve.
 
-| SSOT field       | Claude Code output          | Copilot output                   | opencode output            |
-| ---------------- | --------------------------- | -------------------------------- | -------------------------- |
-| `name`           | `name:`                     | `name:`                          | (in filename)              |
-| `description`    | `description:`              | `description:`                   | `description:`             |
-| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string) | (not supported; always-on) |
-| `mode`           | (implicit in file location) | (agent definition)               | `mode:`                    |
-| `model`          | `model:` (alias)            | `model:` (full ID)               | `model:` (provider/ID)     |
-| `tools`          | Capitalized names           | Client tool names                | Lowercase names            |
-| `preload-skills` | `skills:` in agent          | —                                | —                          |
-| `copilot.*`      | (stripped)                  | Merged into frontmatter          | (stripped)                 |
-| `opencode.*`     | (stripped)                  | (stripped)                       | Merged into frontmatter    |
-| `claude.*`       | Merged into frontmatter     | (stripped)                       | (stripped)                 |
-| `metadata.*`     | (stripped from output)      | (stripped from output)           | (stripped from output)     |
+| SSOT field       | Claude Code output          | Copilot output                   | opencode output                                                 |
+| ---------------- | --------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `name`           | `name:`                     | `name:`                          | `name:`                                                         |
+| `description`    | `description:`              | `description:`                   | `description:`                                                  |
+| `scope.paths`    | `paths:` (array)            | `applyTo:` (comma-joined string) | (not supported; always-on)                                      |
+| `mode`           | (implicit in file location) | (agent definition)               | `mode:`                                                         |
+| `model`          | `model:` (alias)            | `model:` (full ID)               | `model:` (provider/ID)                                          |
+| `tools` (agent)  | `tools:` capitalized names  | `tools:` client names            | `permission:` map (allow per capability; write rolls into edit) |
+| `preload-skills` | `skills:` in agent          | —                                | —                                                               |
+| `copilot.*`      | (stripped)                  | Merged into frontmatter          | (stripped)                                                      |
+| `opencode.*`     | (stripped)                  | (stripped)                       | Merged into frontmatter                                         |
+| `claude.*`       | Merged into frontmatter     | (stripped)                       | (stripped)                                                      |
+| `metadata.*`     | (stripped from output)      | (stripped from output)           | (stripped from output)                                          |
 
 ---
 
