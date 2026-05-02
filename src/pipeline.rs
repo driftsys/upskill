@@ -234,6 +234,154 @@ fn parse_kind(s: &str) -> Result<ItemKind> {
     }
 }
 
+fn kind_subdir(kind: ItemKind) -> &'static str {
+    match kind {
+        ItemKind::Skill => "skills",
+        ItemKind::Rule => "rules",
+        ItemKind::Agent => "agents",
+    }
+}
+
+/// One per-client output file the lockfile said should exist but doesn't.
+#[derive(Debug, Clone)]
+pub struct MissingOutput {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the install target.
+    pub missing_files: Vec<PathBuf>,
+}
+
+/// SSOT content hash differs from what the lockfile recorded at install
+/// time. Only computed for `local:` sources still on disk —
+/// remote-source drift is the job of `update --dry-run`, which fetches.
+#[derive(Debug, Clone)]
+pub struct StaleHash {
+    pub kind: ItemKind,
+    pub name: String,
+    pub source: String,
+    pub stored_hash: Option<String>,
+    pub current_hash: Option<String>,
+}
+
+/// Lockfile entry whose source can no longer be reached: the local
+/// path is gone or the named item has been removed from the SSOT
+/// directory. The user has to `remove` it explicitly to clear the
+/// lockfile, since `update` would just fail trying to fetch.
+#[derive(Debug, Clone)]
+pub struct OrphanEntry {
+    pub kind: ItemKind,
+    pub name: String,
+    pub source: String,
+    pub reason: OrphanReason,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OrphanReason {
+    /// `local:<path>` source no longer resolves to a directory on disk.
+    LocalPathGone,
+    /// Source still exists but no longer contains the item with this
+    /// `(kind, name)` (e.g., it was renamed or removed in the SSOT).
+    ItemMissingInSource,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct DoctorReport {
+    pub missing_outputs: Vec<MissingOutput>,
+    pub stale_hashes: Vec<StaleHash>,
+    pub orphan_entries: Vec<OrphanEntry>,
+}
+
+impl DoctorReport {
+    /// True when nothing is wrong — every per-client output is on disk,
+    /// every locally-sourced item still hashes the same, and every
+    /// lockfile entry has a recoverable source.
+    pub fn is_clean(&self) -> bool {
+        self.missing_outputs.is_empty()
+            && self.stale_hashes.is_empty()
+            && self.orphan_entries.is_empty()
+    }
+}
+
+/// Verify installed-state consistency against `.upskill-lock.json`.
+/// Three independent buckets per ADR-0004:
+/// - **missing outputs** — file paths the lockfile says should exist
+///   but don't. Reinstall (`upskill add <source>`) fixes it.
+/// - **stale hashes** — for `local:` sources still on disk, the SSOT
+///   item directory hashes to a value that does not match the lockfile.
+///   `upskill update` (or `--dry-run`) fixes it.
+/// - **orphan entries** — the lockfile points at a `local:` source that
+///   is gone, or at an item that no longer exists in its source. The
+///   user has to `upskill remove` to clear it.
+///
+/// Doctor never fetches. Remote-source drift is detected by
+/// `update --dry-run`, which does fetch.
+pub fn doctor(target: &Path) -> Result<DoctorReport> {
+    let lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    let mut report = DoctorReport::default();
+
+    for entry in &lock.items {
+        let kind = parse_kind(&entry.kind).with_context(|| {
+            format!(
+                "lockfile entry {}: unknown kind `{}`",
+                entry.name, entry.kind
+            )
+        })?;
+
+        let mut missing = Vec::new();
+        for client in ALL_CLIENTS {
+            let rel = output_path(kind, client, &entry.name);
+            if !target.join(&rel).exists() {
+                missing.push(rel);
+            }
+        }
+        if !missing.is_empty() {
+            report.missing_outputs.push(MissingOutput {
+                kind,
+                name: entry.name.clone(),
+                missing_files: missing,
+            });
+        }
+
+        if let Some(local_path) = entry.source.strip_prefix("local:") {
+            let ssot_root = Path::new(local_path);
+            if !ssot_root.is_dir() {
+                report.orphan_entries.push(OrphanEntry {
+                    kind,
+                    name: entry.name.clone(),
+                    source: entry.source.clone(),
+                    reason: OrphanReason::LocalPathGone,
+                });
+                continue;
+            }
+            let item_dir = ssot_root.join(kind_subdir(kind)).join(&entry.name);
+            if !item_dir.is_dir() {
+                report.orphan_entries.push(OrphanEntry {
+                    kind,
+                    name: entry.name.clone(),
+                    source: entry.source.clone(),
+                    reason: OrphanReason::ItemMissingInSource,
+                });
+                continue;
+            }
+            let current = hash_item_dir(&item_dir);
+            if current != entry.hash {
+                report.stale_hashes.push(StaleHash {
+                    kind,
+                    name: entry.name.clone(),
+                    source: entry.source.clone(),
+                    stored_hash: entry.hash.clone(),
+                    current_hash: current,
+                });
+            }
+        }
+        // Non-local sources: doctor only validates per-client outputs.
+        // Hash comparison would require a network fetch — out of scope
+        // here, see `update --dry-run`.
+    }
+
+    Ok(report)
+}
+
 /// Whether `update` writes or just reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpdateMode {
@@ -392,11 +540,7 @@ fn hash_source_items(
 ) -> std::collections::BTreeMap<(ItemKind, String), Option<String>> {
     let mut out = std::collections::BTreeMap::new();
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        let kind_dir = source_root.join(match kind {
-            ItemKind::Skill => "skills",
-            ItemKind::Rule => "rules",
-            ItemKind::Agent => "agents",
-        });
+        let kind_dir = source_root.join(kind_subdir(kind));
         let Ok(entries) = fs::read_dir(&kind_dir) else {
             continue;
         };
@@ -1035,6 +1179,52 @@ mod tests {
     fn parse_kind_rejects_unknown_string() {
         let err = parse_kind("bundle").expect_err("must reject");
         assert!(err.to_string().contains("bundle"));
+    }
+
+    #[test]
+    fn doctor_report_is_clean_when_all_buckets_empty() {
+        let report = DoctorReport::default();
+        assert!(report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_not_clean_with_any_drift() {
+        let mut report = DoctorReport::default();
+        report.missing_outputs.push(MissingOutput {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            missing_files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.stale_hashes.push(StaleHash {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            source: "local:/p".into(),
+            stored_hash: None,
+            current_hash: Some("abc".into()),
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.orphan_entries.push(OrphanEntry {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            source: "local:/p".into(),
+            reason: OrphanReason::LocalPathGone,
+        });
+        assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn kind_subdir_matches_install_pipeline_layout() {
+        // Format-spec §2.1: SSOT root has skills/, rules/, agents/.
+        // The doctor walks the same layout install_skills/_rules/_agents
+        // walk; pinning the subdir names here catches accidental rename.
+        assert_eq!(kind_subdir(ItemKind::Skill), "skills");
+        assert_eq!(kind_subdir(ItemKind::Rule), "rules");
+        assert_eq!(kind_subdir(ItemKind::Agent), "agents");
     }
 
     #[test]
