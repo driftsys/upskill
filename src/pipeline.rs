@@ -39,6 +39,10 @@ pub struct InstalledItem {
     pub client: Client,
     /// Path relative to the install target root.
     pub output_path: PathBuf,
+    /// SHA-256 of the SSOT item directory at install time. Used by the
+    /// lockfile (#schema-2) for drift detection. Repeated across the per-
+    /// client entries for the same item — they share one SSOT input.
+    pub source_hash: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -56,6 +60,43 @@ pub fn install_from_local_path(source: &Path, target: &Path) -> Result<InstallRe
     install_skills(source, target, &mut report)?;
     install_rules(source, target, &mut report)?;
     install_agents(source, target, &mut report)?;
+
+    Ok(report)
+}
+
+/// Install + write lockfile. Consumer-facing entry point.
+///
+/// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
+/// into `<target>/.upskill-lock.json` via [`crate::lockfile_v2`]. Existing
+/// lockfile entries for the same `(kind, name)` are replaced; entries
+/// installed from a different source are left in place.
+///
+/// `git_ref` recorded per item is taken from the source variant when one
+/// is pinned (Github/Gitlab `git_ref`); local-path sources record `None`.
+/// `source` label is the [`InstallSource`] `Display` form.
+pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<InstallReport> {
+    let report = install_from_source(source, target)?;
+
+    let label = source.to_string();
+    let git_ref = match source {
+        InstallSource::Github(r) => r.git_ref.as_deref(),
+        InstallSource::Gitlab(r) => r.git_ref.as_deref(),
+        InstallSource::LocalPath(_) => None,
+    };
+    let hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> = report
+        .items
+        .iter()
+        .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
+        .collect();
+    let new_items = crate::lockfile_v2::items_from_report(&report, &label, git_ref, |k, n| {
+        hashes.get(&(k, n.to_string())).cloned().flatten()
+    });
+
+    let mut lock = crate::lockfile_v2::LockfileV2::load(target)?;
+    for item in new_items {
+        lock.upsert(item);
+    }
+    lock.save(target)?;
 
     Ok(report)
 }
@@ -127,6 +168,7 @@ fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> R
         let (skill, body) = frontmatter::parse::<Skill>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(skill.metadata.as_ref());
+        let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -141,6 +183,7 @@ fn install_skills(source: &Path, target: &Path, report: &mut InstallReport) -> R
                 name: name.clone(),
                 client,
                 output_path: rel,
+                source_hash: source_hash.clone(),
             });
         }
     }
@@ -158,6 +201,7 @@ fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Re
         let (rule, body) = frontmatter::parse::<Rule>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(rule.metadata.as_ref());
+        let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -172,6 +216,7 @@ fn install_rules(source: &Path, target: &Path, report: &mut InstallReport) -> Re
                 name: name.clone(),
                 client,
                 output_path: rel,
+                source_hash: source_hash.clone(),
             });
         }
     }
@@ -189,6 +234,7 @@ fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> R
         let (agent, body) = frontmatter::parse::<Agent>(&raw)
             .with_context(|| format!("parse {}", entry_path.display()))?;
         let audience = audience_of(agent.metadata.as_ref());
+        let source_hash = crate::lockfile::hash_skill_dir(&dir);
 
         for client in ALL_CLIENTS {
             if !targets(client, audience.as_deref()) {
@@ -203,6 +249,7 @@ fn install_agents(source: &Path, target: &Path, report: &mut InstallReport) -> R
                 name: name.clone(),
                 client,
                 output_path: rel,
+                source_hash: source_hash.clone(),
             });
         }
     }

@@ -19,6 +19,7 @@ pub mod fetch;
 pub mod generate;
 pub mod install;
 pub mod lockfile;
+pub mod lockfile_v2;
 pub mod model;
 pub mod parse;
 pub mod pipeline;
