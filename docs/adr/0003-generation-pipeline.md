@@ -89,16 +89,29 @@ Three ancillary files are managed idempotently:
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
 
-### State file and v0.1 lockfile migration
+### State files and v0.1 lockfile migration
 
-State lives at `~/.upskill/installed.json`, schema-versioned (`schema: 1`).
-Tracks installed items, their source, and content hash for drift
-detection. Implementations refuse higher schema versions with a clear
-upgrade message and a reset offer.
+State is split between two files:
 
-v0.1's per-project `.upskill-lock.json` is read once by a translator that
-produces equivalent entries in `~/.upskill/installed.json`. Existing v0.1
-users are not silently broken.
+- **`.upskill.lock`** — **per-project**, lives at the consumer project
+  root, **committed alongside the project**. Records the bundles and
+  items added to this project: source registry URL, requested version
+  spec, resolved git ref, per-item content hash. Plays the same role
+  as `package-lock.json` — guarantees deterministic regeneration on
+  another developer's machine and in CI.
+- **`~/.upskill/installed.json`** — **per-user**, schema-versioned
+  (`schema: 1`). Tracks the user-global view: which items the user has
+  installed at the global scope, drift-detection state for the global
+  install location, source-registry caches.
+
+Both files are schema-versioned. Implementations refuse higher schema
+versions with a clear upgrade message and a reset offer.
+
+v0.1's per-project `.upskill-lock.json` is read once by a translator
+that produces equivalent entries in the new files: bundle/item entries
+go into `.upskill.lock`; any user-global state goes into
+`~/.upskill/installed.json`. Existing v0.1 users are not silently
+broken.
 
 ## Consequences
 

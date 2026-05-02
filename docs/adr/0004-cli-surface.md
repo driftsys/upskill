@@ -92,6 +92,16 @@ tools don't overlap.
 current directory is not inside a git repo. Users can pass `--global`
 or `--project` explicitly to override.
 
+### Project lock file
+
+Consumer commands (`add`, `remove`, `update`) read and write
+**`.upskill.lock`** at the consumer project root. The lock file is
+**committed alongside the project** — it records the bundles and items
+added, their source-registry URLs, resolved git refs, and per-item
+content hashes. Plays the same role as `package-lock.json`: deterministic
+regeneration on another developer's machine or in CI. State design
+detailed in [ADR-0003](./0003-generation-pipeline.md).
+
 ### "Prolong" is a CLI behaviour contract
 
 Two distinct things, both surfaced through `update`:
