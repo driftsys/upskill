@@ -92,12 +92,3 @@ upskill lint --strict
 
 `upskill fmt` is idempotent — files already in canonical form aren't
 rewritten, so you can run it on every commit hook without churn.
-
-## Migrating from v0.1
-
-v0.1 users on `.upskill-lock.json` get an automatic in-place migration
-on the first run of any v0.2 command — the file is rewritten with the
-new `schema: 2` entry shape and no manual step is required.
-
-The legacy verbs `install` and `uninstall` are gone in v0.2; use
-`add` and `remove` instead. `check` is replaced by `doctor`.

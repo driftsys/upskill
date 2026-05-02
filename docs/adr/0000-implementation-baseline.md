@@ -115,8 +115,7 @@ src/
 ├── bundle.rs            Bundle dependency resolution (transitive items closure).
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files.
-├── lockfile_v2.rs       .upskill-lock.json (`schema: 2`) read/write
-│                        + in-place v0.1 → v0.2 migration on first load.
+├── lockfile.rs          .upskill-lock.json (`schema: 1`) read/write.
 │
 ├── lint.rs              Author command — validate SSOT against the format spec.
 ├── fmt.rs               Author command — canonicalise YAML frontmatter.
@@ -170,7 +169,7 @@ Live alongside modules. Coverage focuses on pure logic:
   input.
 - `pipeline.rs` — install / remove / update / doctor / list against
   in-memory lockfiles.
-- `lockfile_v2.rs` — v0.1 → v0.2 migration, schema rejection.
+- `lockfile.rs` — schema rejection, upsert/remove ordering.
 - `lint.rs`, `fmt.rs`, `scaffold.rs` — per-rule findings, canonical
   round-trip, name validation.
 - `auth.rs`, `bundle.rs`, `ancillary.rs` — per-module logic.
