@@ -50,12 +50,13 @@ pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
         map.insert(Value::from("model"), Value::from(model.clone()));
     }
 
-    if !agent.tools.is_empty() {
-        let tools: Vec<Value> = agent
-            .tools
-            .iter()
-            .map(|t| Value::from(map_tool(*t)))
-            .collect();
+    let tools: Vec<Value> = agent
+        .tools
+        .iter()
+        .filter_map(|t| map_tool(*t))
+        .map(Value::from)
+        .collect();
+    if !tools.is_empty() {
         map.insert(Value::from("tools"), Value::Sequence(tools));
     }
 
@@ -70,19 +71,17 @@ pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
 
 /// Map a capability-level tool name to Copilot's form.
 ///
-/// Per spec §4: `bash` → `shell`, `web-fetch` → `fetch`,
-/// `web-search` → `web_search`. Other tools have no documented Copilot
-/// mapping (`—` in §4); pass them through using the kebab-case identifier
-/// so authors can rely on a sensible default while §4 evolves.
-fn map_tool(t: ToolCap) -> &'static str {
+/// Per spec §4, Copilot only has documented mappings for `bash → shell`,
+/// `web-fetch → fetch`, and `web-search → web_search`. Capabilities
+/// without a documented mapping (`read`, `write`, `edit`, `grep`, `glob`)
+/// return `None` and are dropped silently — emitting them as kebab-case
+/// would produce fields Copilot does not consume. Authors needing
+/// Copilot-specific tool names can use the `copilot:` passthrough block.
+fn map_tool(t: ToolCap) -> Option<&'static str> {
     match t {
-        ToolCap::Read => "read",
-        ToolCap::Write => "write",
-        ToolCap::Edit => "edit",
-        ToolCap::Bash => "shell",
-        ToolCap::Grep => "grep",
-        ToolCap::Glob => "glob",
-        ToolCap::WebFetch => "fetch",
-        ToolCap::WebSearch => "web_search",
+        ToolCap::Bash => Some("shell"),
+        ToolCap::WebFetch => Some("fetch"),
+        ToolCap::WebSearch => Some("web_search"),
+        ToolCap::Read | ToolCap::Write | ToolCap::Edit | ToolCap::Grep | ToolCap::Glob => None,
     }
 }

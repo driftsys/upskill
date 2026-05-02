@@ -3,9 +3,6 @@ name: security-reviewer
 description: Use when reviewing code for injection flaws, authentication issues, secret leaks, and insecure data handling
 model: sonnet
 tools:
-- read
-- grep
-- glob
 - shell
 ---
 
