@@ -15,7 +15,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use upskill::pipeline::{InstallReport, install_from_source};
-use upskill::source::{GitlabRepo, InstallSource};
+use upskill::source::InstallSource;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -70,25 +70,10 @@ fn install_from_source_local_path() {
     );
 }
 
-#[test]
-fn install_from_source_gitlab_returns_error_for_now() {
-    let tmp = tempfile::tempdir().unwrap();
-    let target = tmp.path().join("target");
-    let gitlab = InstallSource::Gitlab(GitlabRepo {
-        host: "gitlab.com".to_string(),
-        owner: "anyone".to_string(),
-        name: "anything".to_string(),
-        git_ref: None,
-        subfolder: None,
-    });
-
-    let err = install_from_source(&gitlab, &target).expect_err("must error");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("GitLab"),
-        "error should mention GitLab, got: {msg}"
-    );
-}
+// GitLab dispatch is covered by unit tests in src/pipeline.rs
+// (gitlab_clone_url_uses_repo_host) plus the existing file:// tests against
+// install_from_git_url, which is the shared code path. An end-to-end network
+// test would depend on a live GitLab instance and is intentionally omitted.
 
 /// Build a local bare repo containing the fixture SSOT corpus, return its
 /// path. The pipeline can then clone it via a `file://` URL — exercises the
