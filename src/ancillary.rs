@@ -18,8 +18,14 @@
 //!   discovers rules through this glob; without it, rules under
 //!   `.agents/rules/` are invisible.
 //!
-//! - `.vscode/settings.json` (chat.instructionsFilesLocations) is a
-//!   separate slice.
+//! - **`.vscode/settings.json`** — when an install includes any rule item,
+//!   the entry `".github/instructions": true` is added to the
+//!   `chat.instructionsFilesLocations` object. VS Code Copilot uses this map
+//!   (`Record<string, boolean>`) to discover instruction files. The default
+//!   already includes `.github/instructions`, but writing it explicitly
+//!   documents the project dependency. Idempotent and respectful of an
+//!   existing user value (true *or* false) for the same path. Unknown keys
+//!   preserved.
 
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
@@ -40,6 +46,19 @@ const OPENCODE_JSON: &str = "opencode.json";
 /// `.agents/rules/` are discovered (opencode walks the glob, which dot-aware
 /// matches the hidden `.agents/` directory per ADR-0003 implementation note).
 const OPENCODE_RULES_GLOB: &str = ".agents/rules/**/RULE.md";
+
+/// VS Code workspace settings file at the consumer-project root.
+const VSCODE_SETTINGS: &str = ".vscode/settings.json";
+
+/// VS Code Copilot setting key whose value is a `Record<string, boolean>`
+/// mapping path globs to whether VS Code searches them for instruction
+/// files.
+const VSCODE_INSTRUCTIONS_KEY: &str = "chat.instructionsFilesLocations";
+
+/// Path entry inserted into `chat.instructionsFilesLocations` so VS Code
+/// Copilot picks up generated rule files at `.github/instructions/`. Matches
+/// the per-client output path for Copilot rules in format-spec §7.
+const VSCODE_INSTRUCTIONS_PATH: &str = ".github/instructions";
 
 /// Outcome of a single ancillary write, surfaced for callers that want to
 /// log or report what happened.
@@ -129,6 +148,88 @@ pub fn ensure_opencode_rules_registered(target: &Path, has_rules: bool) -> Resul
 
             write_pretty_json(&path, &doc)?;
             Ok(entry)
+        }
+    }
+}
+
+/// Ensure `<target>/.vscode/settings.json` lists `.github/instructions` in
+/// `chat.instructionsFilesLocations` so VS Code Copilot discovers generated
+/// rule files. No-op when the install contains no rules.
+///
+/// Behaviour:
+/// - `has_rules == false` → `Preserved`, file untouched.
+/// - File absent + has_rules → `Created` with
+///   `{"chat.instructionsFilesLocations": {".github/instructions": true}}`.
+/// - File present without `chat.instructionsFilesLocations` → `Updated`,
+///   key added; other keys preserved.
+/// - File present with the path entry already (any boolean value) →
+///   `Preserved`. We respect `false` because the user explicitly turned the
+///   default location off; flipping it back would override their choice.
+/// - File present with the key but the path absent → `Updated`, entry
+///   appended with `true`; existing entries preserved.
+///
+/// `chat.instructionsFilesLocations` MUST be an object; if the existing
+/// file has it set to a non-object value, this function returns an error
+/// rather than clobbering user data. The same applies to the top level of
+/// `settings.json`.
+///
+/// Limitation: `serde_json` parses strict JSON. VS Code natively writes
+/// JSONC (line comments, trailing commas) and a user-edited
+/// `settings.json` may legally contain either. This function returns an
+/// error on those, matching the `opencode.json` handler. Tracked as a
+/// follow-up if it bites in practice.
+pub fn ensure_vscode_instructions_registered(
+    target: &Path,
+    has_rules: bool,
+) -> Result<AncillaryAction> {
+    if !has_rules {
+        return Ok(AncillaryAction::Preserved);
+    }
+
+    let path = target.join(VSCODE_SETTINGS);
+    match std::fs::read_to_string(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let new_doc = json!({
+                VSCODE_INSTRUCTIONS_KEY: { VSCODE_INSTRUCTIONS_PATH: true },
+            });
+            write_pretty_json(&path, &new_doc)?;
+            Ok(AncillaryAction::Created)
+        }
+        Err(e) => Err(e).with_context(|| format!("read {}", path.display())),
+        Ok(raw) => {
+            let mut doc: Value =
+                serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
+            if !doc.is_object() {
+                anyhow::bail!("{}: top-level value must be an object", path.display());
+            }
+
+            let obj = doc.as_object_mut().expect("checked is_object");
+            let action = match obj.get_mut(VSCODE_INSTRUCTIONS_KEY) {
+                None => {
+                    obj.insert(
+                        VSCODE_INSTRUCTIONS_KEY.to_string(),
+                        json!({ VSCODE_INSTRUCTIONS_PATH: true }),
+                    );
+                    AncillaryAction::Updated
+                }
+                Some(existing) => {
+                    let map = existing.as_object_mut().with_context(|| {
+                        format!(
+                            "{}: `{}` must be an object",
+                            path.display(),
+                            VSCODE_INSTRUCTIONS_KEY
+                        )
+                    })?;
+                    if map.contains_key(VSCODE_INSTRUCTIONS_PATH) {
+                        return Ok(AncillaryAction::Preserved);
+                    }
+                    map.insert(VSCODE_INSTRUCTIONS_PATH.to_string(), json!(true));
+                    AncillaryAction::Updated
+                }
+            };
+
+            write_pretty_json(&path, &doc)?;
+            Ok(action)
         }
     }
 }
@@ -276,6 +377,124 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(OPENCODE_JSON), r#"["not", "an", "object"]"#).unwrap();
         let err = ensure_opencode_rules_registered(tmp.path(), true).expect_err("must reject");
+        assert!(err.to_string().contains("object"));
+    }
+
+    fn read_vscode(target: &Path) -> Value {
+        let raw = std::fs::read_to_string(target.join(VSCODE_SETTINGS)).unwrap();
+        serde_json::from_str(&raw).unwrap()
+    }
+
+    #[test]
+    fn vscode_no_rules_is_no_op() {
+        let tmp = tempfile::tempdir().unwrap();
+        let action = ensure_vscode_instructions_registered(tmp.path(), false).expect("ensure");
+        assert_eq!(action, AncillaryAction::Preserved);
+        assert!(
+            !tmp.path().join(VSCODE_SETTINGS).exists(),
+            "no file created"
+        );
+    }
+
+    #[test]
+    fn vscode_creates_file_when_absent_and_has_rules() {
+        let tmp = tempfile::tempdir().unwrap();
+        let action = ensure_vscode_instructions_registered(tmp.path(), true).expect("ensure");
+        assert_eq!(action, AncillaryAction::Created);
+        let doc = read_vscode(tmp.path());
+        assert_eq!(doc[VSCODE_INSTRUCTIONS_KEY][VSCODE_INSTRUCTIONS_PATH], true);
+    }
+
+    #[test]
+    fn vscode_adds_key_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        std::fs::write(
+            tmp.path().join(VSCODE_SETTINGS),
+            r#"{"editor.tabSize": 2, "files.eol": "\n"}"#,
+        )
+        .unwrap();
+
+        let action = ensure_vscode_instructions_registered(tmp.path(), true).expect("ensure");
+        assert_eq!(action, AncillaryAction::Updated);
+        let doc = read_vscode(tmp.path());
+        assert_eq!(doc[VSCODE_INSTRUCTIONS_KEY][VSCODE_INSTRUCTIONS_PATH], true);
+        assert_eq!(doc["editor.tabSize"], 2, "other keys preserved");
+        assert_eq!(doc["files.eol"], "\n");
+    }
+
+    #[test]
+    fn vscode_appends_when_key_present_without_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        std::fs::write(
+            tmp.path().join(VSCODE_SETTINGS),
+            r#"{"chat.instructionsFilesLocations": {".cursor/rules": true}}"#,
+        )
+        .unwrap();
+
+        let action = ensure_vscode_instructions_registered(tmp.path(), true).expect("ensure");
+        assert_eq!(action, AncillaryAction::Updated);
+        let doc = read_vscode(tmp.path());
+        let map = doc[VSCODE_INSTRUCTIONS_KEY].as_object().unwrap();
+        assert_eq!(map.len(), 2);
+        assert_eq!(map[".cursor/rules"], true, "existing entry preserved");
+        assert_eq!(map[VSCODE_INSTRUCTIONS_PATH], true);
+    }
+
+    #[test]
+    fn vscode_preserves_when_path_already_true() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        let original = r#"{"chat.instructionsFilesLocations": {".github/instructions": true}}"#;
+        std::fs::write(tmp.path().join(VSCODE_SETTINGS), original).unwrap();
+
+        let action = ensure_vscode_instructions_registered(tmp.path(), true).expect("ensure");
+        assert_eq!(action, AncillaryAction::Preserved);
+    }
+
+    #[test]
+    fn vscode_preserves_when_path_explicitly_false() {
+        // User said "don't search here". We don't override the choice — only
+        // insert if the path key is absent altogether.
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        std::fs::write(
+            tmp.path().join(VSCODE_SETTINGS),
+            r#"{"chat.instructionsFilesLocations": {".github/instructions": false}}"#,
+        )
+        .unwrap();
+
+        let action = ensure_vscode_instructions_registered(tmp.path(), true).expect("ensure");
+        assert_eq!(action, AncillaryAction::Preserved);
+        let doc = read_vscode(tmp.path());
+        assert_eq!(
+            doc[VSCODE_INSTRUCTIONS_KEY][VSCODE_INSTRUCTIONS_PATH], false,
+            "user-set false is preserved"
+        );
+    }
+
+    #[test]
+    fn vscode_errors_on_non_object_instructions_value() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        std::fs::write(
+            tmp.path().join(VSCODE_SETTINGS),
+            r#"{"chat.instructionsFilesLocations": ["not", "an", "object"]}"#,
+        )
+        .unwrap();
+
+        let err = ensure_vscode_instructions_registered(tmp.path(), true)
+            .expect_err("must reject non-object value");
+        assert!(err.to_string().contains(VSCODE_INSTRUCTIONS_KEY));
+    }
+
+    #[test]
+    fn vscode_errors_on_non_object_top_level() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".vscode")).unwrap();
+        std::fs::write(tmp.path().join(VSCODE_SETTINGS), r#"["array", "top"]"#).unwrap();
+        let err = ensure_vscode_instructions_registered(tmp.path(), true).expect_err("must reject");
         assert!(err.to_string().contains("object"));
     }
 }
