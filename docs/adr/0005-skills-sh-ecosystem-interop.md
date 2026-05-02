@@ -1,4 +1,4 @@
-# Compatibility with the Vercel/skills.sh ecosystem
+# skills.sh ecosystem interop
 
 **Status**: Proposed (2026-05-01)
 
@@ -15,7 +15,7 @@ ecosystem and force developers to choose. Interoperating preserves both
 worlds: developers get one tool that works with our internal SSOT
 content **and** with anything published to skills.sh.
 
-This ADR is one of four child ADRs of [ADR-0001](./0001-v0.2-architectural-reset.md).
+This ADR is one of four child ADRs of [ADR-0001](./0001-multi-kind-compiler-architecture.md).
 It is the cross-cutting strategic alignment decision; the impact lands
 in [ADR-0002](./0002-portable-content-format.md) (format compatibility),
 [ADR-0003](./0003-generation-pipeline.md) (no behavioural surprises),
@@ -130,7 +130,7 @@ support-cost reduction.
 
 ## References
 
-- Parent ADR: [ADR-0001](./0001-v0.2-architectural-reset.md)
+- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
   [ADR-0003](./0003-generation-pipeline.md),
   [ADR-0004](./0004-cli-surface.md)

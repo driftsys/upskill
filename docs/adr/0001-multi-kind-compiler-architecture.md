@@ -1,4 +1,4 @@
-# v0.2 architectural reset — from skills installer to multi-kind portable-format compiler
+# Multi-kind compiler architecture — v0.2 redesign umbrella
 
 **Status**: Proposed (2026-05-01)
 
@@ -27,7 +27,7 @@ design is split across four concern-focused child ADRs:
   that originated as Phase 0's spike).
 - [ADR-0004](./0004-cli-surface.md) — CLI surface (the user-facing
   contract).
-- [ADR-0005](./0005-vercel-skills-sh-interop.md) — Compatibility with the
+- [ADR-0005](./0005-skills-sh-ecosystem-interop.md) — Compatibility with the
   Vercel/skills.sh ecosystem (cross-cutting strategic alignment).
 
 This ADR records the project-level decisions only: the pivot itself, the

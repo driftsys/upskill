@@ -14,7 +14,7 @@ was shaped around the skills-installer use case. v0.2's broader scope
 (create, manage, prolong content for three kinds across three clients)
 needs a surface that fits author workflows and bundle composition.
 
-This ADR is one of four child ADRs of [ADR-0001](./0001-v0.2-architectural-reset.md).
+This ADR is one of four child ADRs of [ADR-0001](./0001-multi-kind-compiler-architecture.md).
 
 ## Decision
 
@@ -57,7 +57,7 @@ Source resolution is automatic: upskill checks the registry index first;
 if no match, treats the source as a git repo or local path. Developers
 never decide between two install verbs. Source format parity with
 `npx skills add` is the subject of
-[ADR-0005](./0005-vercel-skills-sh-interop.md).
+[ADR-0005](./0005-skills-sh-ecosystem-interop.md).
 
 ### Install all by default
 
@@ -153,7 +153,7 @@ partial cases without TTY interaction (also: scriptable, CI-friendly).
 
 ## References
 
-- Parent ADR: [ADR-0001](./0001-v0.2-architectural-reset.md)
+- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
   [ADR-0003](./0003-generation-pipeline.md),
-  [ADR-0005](./0005-vercel-skills-sh-interop.md)
+  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
