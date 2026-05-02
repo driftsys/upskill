@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::pipeline::{
-    InstallReport, ItemKind, RemoveFilter, RemoveReport, install_with_lockfile, remove,
+    InstallReport, ItemKind, RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus,
+    install_with_lockfile, remove, update,
 };
 use upskill::search;
 use upskill::source::parse_install_source;
@@ -58,13 +59,21 @@ enum Commands {
         #[arg(short = 'g', long = "global")]
         global: bool,
     },
-    /// Pull latest sources and regenerate changed items. (Phase B2.)
+    /// Pull latest sources and regenerate changed items.
+    ///
+    /// Re-fetches the source for every (or just the named) lockfile
+    /// entries and reinstalls those sources. With `--dry-run`, hashes
+    /// the new SSOT and reports what would change without writing.
+    /// `update` always fetches per ADR-0004.
     Update {
         /// Item names to update (omit to update everything).
         names: Vec<String>,
         /// Report what would change without writing.
         #[arg(long = "dry-run")]
         dry_run: bool,
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global")]
+        global: bool,
     },
     /// List installed content. (Phase B-and-beyond.)
     List,
@@ -102,7 +111,11 @@ fn main() {
             source,
             global,
         } => run_remove(&names, source.as_deref(), global),
-        Commands::Update { .. } => unimplemented_stub("update", "B2"),
+        Commands::Update {
+            names,
+            dry_run,
+            global,
+        } => run_update(&names, dry_run, global),
         Commands::List => unimplemented_stub("list", "B"),
         Commands::Doctor => unimplemented_stub("doctor", "B3"),
         Commands::Search { query, limit } => run_search(&query, limit),
@@ -248,6 +261,73 @@ fn print_remove_report(report: &RemoveReport) {
             item.name,
             item.deleted_files.len()
         );
+    }
+}
+
+fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
+    let target = match install_target(global) {
+        Ok(t) => t,
+        Err(err) => {
+            eprintln!("error: {}", err);
+            return EXIT_ERROR;
+        }
+    };
+    let mode = if dry_run {
+        UpdateMode::DryRun
+    } else {
+        UpdateMode::Apply
+    };
+
+    match update(&target, names, mode) {
+        Ok(report) => {
+            print_update_report(&report, dry_run);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            eprintln!("error: {:#}", err);
+            EXIT_ERROR
+        }
+    }
+}
+
+fn print_update_report(report: &UpdateReport, dry_run: bool) {
+    if report.items.is_empty() {
+        println!("nothing to update — lockfile is empty");
+        return;
+    }
+    let header = if dry_run {
+        "Dry-run: would update"
+    } else {
+        "Updated"
+    };
+    let changes = report
+        .items
+        .iter()
+        .filter(|i| !matches!(i.status, UpdateStatus::UpToDate))
+        .count();
+    println!("{header} {} of {} item(s)", changes, report.items.len());
+    for item in &report.items {
+        let kind_label = match item.kind {
+            ItemKind::Rule => "rule ",
+            ItemKind::Skill => "skill",
+            ItemKind::Agent => "agent",
+        };
+        let status = match &item.status {
+            UpdateStatus::UpToDate => "up to date".to_string(),
+            UpdateStatus::Updated { new_hash, .. } => format!("updated → {}", short(new_hash)),
+            UpdateStatus::WouldChange { new_hash, .. } => {
+                format!("would change → {}", short(new_hash))
+            }
+        };
+        println!("  {} {:<32} {}", kind_label, item.name, status);
+    }
+}
+
+fn short(h: &Option<String>) -> String {
+    match h {
+        Some(s) if s.len() >= 8 => s[..8].to_string(),
+        Some(s) => s.clone(),
+        None => "<no hash>".to_string(),
     }
 }
 

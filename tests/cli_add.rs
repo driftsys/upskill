@@ -92,11 +92,7 @@ fn unimplemented_commands_emit_phase_message() {
     // implementations land progressively. Verify the stub message points
     // the user at the phase that ships each command.
     let tmp = tempfile::tempdir().unwrap();
-    for (cmd, phase) in [
-        ("update", "Phase B2"),
-        ("list", "Phase B"),
-        ("doctor", "Phase B3"),
-    ] {
+    for (cmd, phase) in [("list", "Phase B"), ("doctor", "Phase B3")] {
         let assert = Command::cargo_bin("upskill")
             .unwrap()
             .current_dir(tmp.path())
