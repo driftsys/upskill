@@ -191,14 +191,18 @@ Three files outside the per-item path tree are managed idempotently:
 
 ## 4. State files
 
-State is split between two files, both schema-versioned (`schema: 1`).
+`.upskill-lock.json` records what was installed, from where, at what
+resolved git ref, with what content hashes. Same schema (`schema: 1`),
+two possible locations:
 
-### 4.1 `.upskill-lock.json` (per-project, committed)
+| Scope   | Location                   | Committed? |
+| ------- | -------------------------- | ---------- |
+| Project | `<cwd>/.upskill-lock.json` | Yes        |
+| Global  | `$HOME/.upskill-lock.json` | No         |
 
-Lives at the consumer-project root. Records what was installed, from where,
-at what resolved git ref, with what content hashes. Plays the same role as
-`package-lock.json`: deterministic regeneration on another developer's
-machine and in CI.
+The lockfile plays the same role as `package-lock.json`: deterministic
+regeneration on another developer's machine and in CI for project scope,
+and across-repo continuity for global scope.
 
 ```json
 {
@@ -222,11 +226,6 @@ machine and in CI.
   ]
 }
 ```
-
-### 4.2 `~/.upskill/installed.json` (per-user)
-
-Tracks the user-global view: items installed at the global scope, drift
-state for the global location, and source-registry caches. Not committed.
 
 ## 5. Source format and authentication
 
