@@ -41,8 +41,12 @@ enum Commands {
         /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
         source: String,
         /// Install into `$HOME` instead of the current directory.
-        #[arg(short = 'g', long = "global")]
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
     },
     /// Remove installed content.
     ///
@@ -61,8 +65,12 @@ enum Commands {
         #[arg(long = "source")]
         source: Option<String>,
         /// Operate on `$HOME` instead of the current directory.
-        #[arg(short = 'g', long = "global")]
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
     },
     /// Pull latest sources and regenerate changed items.
     ///
@@ -77,8 +85,12 @@ enum Commands {
         #[arg(long = "dry-run")]
         dry_run: bool,
         /// Operate on `$HOME` instead of the current directory.
-        #[arg(short = 'g', long = "global")]
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
     },
     /// List installed content recorded in `.upskill-lock.json`.
     ///
@@ -88,8 +100,12 @@ enum Commands {
     /// `upskill doctor`.
     List {
         /// Read `$HOME/.upskill-lock.json` instead of the current directory.
-        #[arg(short = 'g', long = "global")]
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
     },
     /// Verify installed-state consistency.
     ///
@@ -102,8 +118,12 @@ enum Commands {
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
     Doctor {
         /// Operate on `$HOME` instead of the current directory.
-        #[arg(short = 'g', long = "global")]
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
     },
     /// Search the public skills registry.
     Search {
@@ -168,19 +188,25 @@ fn main() {
     };
 
     let mut exit_code = match cli.command {
-        Commands::Add { source, global } => run_add(&source, global),
+        Commands::Add {
+            source,
+            global,
+            project,
+        } => run_add(&source, global, project),
         Commands::Remove {
             names,
             source,
             global,
-        } => run_remove(&names, source.as_deref(), global),
+            project,
+        } => run_remove(&names, source.as_deref(), global, project),
         Commands::Update {
             names,
             dry_run,
             global,
-        } => run_update(&names, dry_run, global),
-        Commands::List { global } => run_list(global),
-        Commands::Doctor { global } => run_doctor(global),
+            project,
+        } => run_update(&names, dry_run, global, project),
+        Commands::List { global, project } => run_list(global, project),
+        Commands::Doctor { global, project } => run_doctor(global, project),
         Commands::Search { query, limit } => run_search(&query, limit),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
@@ -212,7 +238,7 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn run_add(source: &str, global: bool) -> i32 {
+fn run_add(source: &str, global: bool, project: bool) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -221,7 +247,7 @@ fn run_add(source: &str, global: bool) -> i32 {
         }
     };
 
-    let target = match install_target(global) {
+    let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
@@ -241,13 +267,53 @@ fn run_add(source: &str, global: bool) -> i32 {
     }
 }
 
-fn install_target(global: bool) -> anyhow::Result<PathBuf> {
-    if global {
-        std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| anyhow::anyhow!("HOME is not set"))
+/// Resolve the install target from the `-g/--global` and `-p/--project` flags.
+///
+/// Precedence:
+/// - `--project` (explicit) → cwd, regardless of git-repo state.
+/// - `--global` (explicit) → `$HOME`.
+/// - Neither → cwd if inside a git repo, else `$HOME` (per spec §2.1
+///   auto-fallback). The two flags are mutually exclusive at the clap layer.
+fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
+    let scope = if project {
+        Scope::Project
+    } else if global {
+        Scope::Global
+    } else if is_inside_git_repo() {
+        Scope::Project
     } else {
-        std::env::current_dir().context("failed to get current directory")
+        Scope::Global
+    };
+
+    match scope {
+        Scope::Project => std::env::current_dir().context("failed to get current directory"),
+        Scope::Global => std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| anyhow::anyhow!("HOME is not set")),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    Project,
+    Global,
+}
+
+/// Walk up from `cwd` looking for a `.git` entry (file or directory). Returns
+/// `false` on any I/O error so the caller falls back to global scope rather
+/// than crashing — that matches user expectation when `cwd` is unreadable.
+fn is_inside_git_repo() -> bool {
+    let mut dir = match std::env::current_dir() {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+    loop {
+        if dir.join(".git").exists() {
+            return true;
+        }
+        if !dir.pop() {
+            return false;
+        }
     }
 }
 
@@ -273,7 +339,7 @@ fn print_install_report(report: &InstallReport, source: &str) {
     }
 }
 
-fn run_remove(names: &[String], source: Option<&str>, global: bool) -> i32 {
+fn run_remove(names: &[String], source: Option<&str>, global: bool, project: bool) -> i32 {
     let filter = match (names.is_empty(), source) {
         (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
         (false, None) => RemoveFilter::ByNames(names.to_vec()),
@@ -289,7 +355,7 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool) -> i32 {
         }
     };
 
-    let target = match install_target(global) {
+    let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
@@ -330,8 +396,8 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(names: &[String], dry_run: bool, global: bool) -> i32 {
-    let target = match install_target(global) {
+fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i32 {
+    let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
@@ -397,8 +463,8 @@ fn short(h: &Option<String>) -> String {
     }
 }
 
-fn run_doctor(global: bool) -> i32 {
-    let target = match install_target(global) {
+fn run_doctor(global: bool, project: bool) -> i32 {
+    let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);
@@ -480,8 +546,8 @@ fn kind_label(kind: ItemKind) -> &'static str {
     }
 }
 
-fn run_list(global: bool) -> i32 {
-    let target = match install_target(global) {
+fn run_list(global: bool, project: bool) -> i32 {
+    let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
             eprintln!("error: {}", err);

@@ -68,6 +68,7 @@ fn update_no_change_reports_up_to_date() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let assert = Command::cargo_bin("upskill")
@@ -94,6 +95,7 @@ fn update_after_ssot_mutation_rewrites_outputs_and_lockfile_hash() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let original_hash = lockfile_hash_for(&target, "create-api-endpoint").unwrap();
@@ -133,6 +135,7 @@ fn update_dry_run_reports_change_without_writing() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let original_hash = lockfile_hash_for(&target, "create-api-endpoint").unwrap();
@@ -174,6 +177,7 @@ fn update_unknown_name_is_general_error() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let assert = Command::cargo_bin("upskill")
@@ -193,6 +197,7 @@ fn update_unknown_name_is_general_error() {
 #[test]
 fn update_empty_lockfile_is_no_op() {
     let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
     let assert = Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(tmp.path())

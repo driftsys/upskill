@@ -45,6 +45,7 @@ fn install(target: &Path, source: &Path) {
 #[test]
 fn list_empty_lockfile_reports_no_items() {
     let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
     let assert = Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(tmp.path())
@@ -65,6 +66,7 @@ fn list_groups_installed_items_by_kind() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let assert = Command::cargo_bin("upskill")
@@ -111,6 +113,7 @@ fn list_bundle_install_surfaces_bundles_section() {
     let target = tmp.path().join("target");
     fs::create_dir_all(&source).unwrap();
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     // Stage SSOT items + bundle file.
     stage_source(&source);

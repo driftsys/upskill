@@ -51,6 +51,7 @@ fn doctor_clean_install_exits_zero() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let assert = Command::cargo_bin("upskill")
@@ -66,6 +67,7 @@ fn doctor_clean_install_exits_zero() {
 #[test]
 fn doctor_empty_lockfile_exits_zero() {
     let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(tmp.path())
@@ -83,6 +85,7 @@ fn doctor_detects_missing_output_files() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let stolen = target.join(".claude/skills/create-api-endpoint/SKILL.md");
@@ -115,6 +118,7 @@ fn doctor_detects_ssot_hash_drift() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let skill_md = source.join("skills/create-api-endpoint/SKILL.md");
@@ -148,6 +152,7 @@ fn doctor_detects_orphan_when_local_path_gone() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     fs::remove_dir_all(&source).unwrap();
@@ -181,6 +186,7 @@ fn doctor_detects_orphan_when_item_removed_from_source() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     fs::remove_dir_all(source.join("skills/create-api-endpoint")).unwrap();
