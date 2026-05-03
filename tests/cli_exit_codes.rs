@@ -6,6 +6,32 @@ use assert_cmd::Command;
 use tempfile::tempdir;
 
 #[test]
+fn version_long_flag_prints_to_stdout_and_exits_zero() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    let expected = format!("upskill {}\n", env!("CARGO_PKG_VERSION"));
+    cmd.current_dir(cwd.path())
+        .args(["--version"])
+        .assert()
+        .code(0)
+        .stdout(expected);
+}
+
+#[test]
+fn version_short_flag_prints_to_stdout_and_exits_zero() {
+    let cwd = tempdir().expect("must create temp dir");
+    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+
+    let expected = format!("upskill {}\n", env!("CARGO_PKG_VERSION"));
+    cmd.current_dir(cwd.path())
+        .args(["-V"])
+        .assert()
+        .code(0)
+        .stdout(expected);
+}
+
+#[test]
 fn help_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");

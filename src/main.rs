@@ -23,6 +23,7 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
+#[command(version)]
 #[command(about = "Author and distribute AI-assistance content across coding agents")]
 struct Cli {
     #[command(subcommand)]
