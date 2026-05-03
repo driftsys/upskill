@@ -45,6 +45,7 @@ fn bundle_install_writes_only_referenced_items() {
     let target = tmp.path().join("target");
     stage_registry(&registry);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     let bundle = registry.join("bundles/platform-baseline.bundle.md");
     Command::cargo_bin("upskill")
@@ -81,6 +82,7 @@ fn bundle_install_records_bundle_in_lockfile() {
     let target = tmp.path().join("target");
     stage_registry(&registry);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     let bundle = registry.join("bundles/platform-baseline.bundle.md");
     Command::cargo_bin("upskill")
@@ -122,6 +124,7 @@ fn bundle_install_resolves_transitive_requires() {
     let target = tmp.path().join("target");
     stage_registry(&registry);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     // `extras` has rule `license-awareness`; baseline has the rest.
     // Mark them disjoint so the union is exact (no conflict).
@@ -177,6 +180,7 @@ fn bundle_install_errors_on_item_conflict() {
     let target = tmp.path().join("target");
     stage_registry(&registry);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     let extras = registry.join("bundles/platform-extras.bundle.md");
     let assert = Command::cargo_bin("upskill")

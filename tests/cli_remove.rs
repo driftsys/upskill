@@ -50,6 +50,7 @@ fn remove_by_name_deletes_all_per_client_outputs_and_lockfile_entry() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     // Sanity check: install put the skill files in place.
@@ -113,6 +114,7 @@ fn remove_by_source_drops_every_entry_from_that_source() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let source_label = format!("local:{}", source.display());
@@ -145,6 +147,7 @@ fn remove_preserves_ancillary_files() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let source_label = format!("local:{}", source.display());
@@ -203,6 +206,7 @@ fn remove_unknown_name_is_general_error() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
     let assert = Command::cargo_bin("upskill")

@@ -42,6 +42,9 @@ fn add_installs_local_ssot_to_cwd() {
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
+    // Mark `target` as a project directory so auto-fallback picks
+    // project scope (cwd) instead of global ($HOME).
+    fs::create_dir_all(target.join(".git")).unwrap();
 
     let assert = Command::cargo_bin("upskill")
         .unwrap()
