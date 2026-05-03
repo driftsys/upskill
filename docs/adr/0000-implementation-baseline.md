@@ -37,7 +37,7 @@ Rust 2024 edition. MSRV: 1.85 (first stable release to support edition
 | `anyhow`                 | 1         | Ergonomic error chains via `.context()`. |
 | `thiserror`              | 2         | Typed parse errors (`source.rs`).        |
 | `serde`                  | 1         | Serialisation framework.                 |
-| `serde_json`             | 1         | Lockfile and `installed.json` I/O.       |
+| `serde_json`             | 1         | Lockfile I/O.                            |
 | `serde_yaml_ng`          | 0.10      | SSOT YAML frontmatter parsing.           |
 | `pulldown-cmark`         | 0.11      | Markdown body parsing for directives.    |
 | `dprint-plugin-markdown` | `=0.21.1` | Embedded markdown formatter (exact pin). |

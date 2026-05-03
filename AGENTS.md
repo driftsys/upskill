@@ -110,11 +110,12 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
 ### Install layout
 
-Per-item generated output, copy only (no symlinks). State split between
-`.upskill-lock.json` (per-project, committed, `schema: 1`) and
-`~/.upskill/installed.json` (per-user). Per-client output paths and
-ancillary files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`)
-are specified in [ADR-0003](docs/adr/0003-generation-pipeline.md) and
+Per-item generated output, copy only (no symlinks). One lockfile
+shape (`.upskill-lock.json`, `schema: 1`) in two possible locations:
+`<cwd>/` (project scope, committed) or `$HOME/` (global scope, not
+committed). Per-client output paths and ancillary files (`CLAUDE.md`,
+`.vscode/settings.json`, `opencode.json`) are specified in
+[ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/format-spec.md).
 
 ### Source format

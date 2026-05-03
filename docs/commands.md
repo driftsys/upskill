@@ -165,10 +165,12 @@ Files whose frontmatter is already canonical are left untouched (no
 
 ## State files
 
-| File                        | Scope       | Committed? | Purpose                              |
-| --------------------------- | ----------- | ---------- | ------------------------------------ |
-| `.upskill-lock.json`        | Per-project | Yes        | Deterministic regeneration in CI.    |
-| `~/.upskill/installed.json` | Per-user    | No         | Global install state, source caches. |
+`.upskill-lock.json` lives in one of two places depending on scope:
+
+| Scope   | Location                   | Committed? | Purpose                                    |
+| ------- | -------------------------- | ---------- | ------------------------------------------ |
+| Project | `<cwd>/.upskill-lock.json` | Yes        | Deterministic regeneration in CI.          |
+| Global  | `$HOME/.upskill-lock.json` | No         | Cross-repo continuity for global installs. |
 
 The lockfile carries a top-level `schema: 1` field for forward
 compatibility.
