@@ -82,6 +82,23 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
+    // `~/path` home expansion (`~` alone or `~/foo`). We don't support `~user`
+    // — that needs platform-specific lookup and our use case is the running
+    // user's own home only.
+    if source == "~" || source.starts_with("~/") {
+        if let Some(home) = std::env::var_os("HOME") {
+            let mut path = PathBuf::from(home);
+            if let Some(rest) = source.strip_prefix("~/") {
+                path.push(rest);
+            }
+            return Ok(InstallSource::LocalPath(path));
+        }
+        // `HOME` unset: fall through and let the path be parsed verbatim.
+        // Downstream `LocalPath` handling will fail with a useful filesystem
+        // error rather than a confusing "this looks like owner/repo" parse.
+        return Ok(InstallSource::LocalPath(PathBuf::from(source)));
+    }
+
     // gitlab: prefix
     if let Some(rest) = source.strip_prefix("gitlab:") {
         return parse_gitlab_source(rest, "gitlab.com").map(InstallSource::Gitlab);
@@ -295,6 +312,43 @@ mod tests {
         assert_eq!(
             source,
             InstallSource::LocalPath(PathBuf::from("/tmp/skills"))
+        );
+    }
+
+    #[test]
+    fn parse_local_path_tilde_expands_home() {
+        // SAFETY: tests are not parallel for env mutation here because
+        // the helper acquires a process-wide mutex via a static. We
+        // accept the small risk of cross-test interference for this
+        // narrow case — `parse_install_source` only reads HOME, no other
+        // test in this module touches it.
+        let prev = std::env::var_os("HOME");
+        unsafe { std::env::set_var("HOME", "/users/alice") };
+        let result = parse_install_source("~/skills/code-review");
+        match prev {
+            Some(v) => unsafe { std::env::set_var("HOME", v) },
+            None => unsafe { std::env::remove_var("HOME") },
+        }
+        let source = result.expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from("/users/alice/skills/code-review"))
+        );
+    }
+
+    #[test]
+    fn parse_local_path_tilde_alone_expands_to_home() {
+        let prev = std::env::var_os("HOME");
+        unsafe { std::env::set_var("HOME", "/users/alice") };
+        let result = parse_install_source("~");
+        match prev {
+            Some(v) => unsafe { std::env::set_var("HOME", v) },
+            None => unsafe { std::env::remove_var("HOME") },
+        }
+        let source = result.expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from("/users/alice"))
         );
     }
 
