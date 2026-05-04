@@ -13,6 +13,7 @@ use upskill::pipeline::{
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
 use upskill::source::parse_install_source;
+use upskill::style;
 
 const EXIT_SUCCESS: i32 = 0;
 const EXIT_ERROR: i32 = 1;
@@ -26,6 +27,10 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 #[command(version)]
 #[command(about = "Author and distribute AI-assistance content across coding agents")]
 struct Cli {
+    /// Disable colored output. Honored alongside `NO_COLOR`,
+    /// `UPSKILL_NO_COLOR`, `TERM=dumb`, and TTY auto-detection.
+    #[arg(long = "no-color", global = true)]
+    no_color: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -173,11 +178,6 @@ enum Commands {
 }
 
 fn main() {
-    if let Err(err) = install_signal_handlers() {
-        eprintln!("error: {}", err);
-        std::process::exit(EXIT_ERROR);
-    }
-
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(err) => {
@@ -186,6 +186,13 @@ fn main() {
             std::process::exit(code);
         }
     };
+
+    style::init(cli.no_color);
+
+    if let Err(err) = install_signal_handlers() {
+        print_error(&err);
+        std::process::exit(EXIT_ERROR);
+    }
 
     let mut exit_code = match cli.command {
         Commands::Add {
@@ -231,6 +238,19 @@ fn was_interrupted() -> bool {
     INTERRUPTED.load(Ordering::SeqCst)
 }
 
+/// Print `error: <message>` to stderr, with the label colored when allowed
+/// by the disable chain. Centralises the convention so every error site
+/// uses the same shape.
+fn print_error(err: impl std::fmt::Display) {
+    eprintln!("{} {err}", style::error_label("error:"));
+}
+
+/// Like [`print_error`] but uses the `:#` formatter to print the full
+/// anyhow context chain (root cause last).
+fn print_error_chain(err: &anyhow::Error) {
+    eprintln!("{} {err:#}", style::error_label("error:"));
+}
+
 fn map_clap_error(err: &clap::Error) -> i32 {
     match err.kind() {
         ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => EXIT_SUCCESS,
@@ -242,7 +262,7 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_USAGE;
         }
     };
@@ -250,7 +270,7 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_ERROR;
         }
     };
@@ -261,7 +281,7 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_ERROR
         }
     }
@@ -320,7 +340,12 @@ fn is_inside_git_repo() -> bool {
 fn print_install_report(report: &InstallReport, source: &str) {
     use std::collections::BTreeMap;
 
-    println!("Installed {} files from {}", report.items.len(), source);
+    println!(
+        "{} {} files from {}",
+        style::success("Installed"),
+        report.items.len(),
+        style::dim(source)
+    );
 
     let mut grouped: BTreeMap<(ItemKind, String), Vec<&'static str>> = BTreeMap::new();
     for item in &report.items {
@@ -335,7 +360,12 @@ fn print_install_report(report: &InstallReport, source: &str) {
             ItemKind::Skill => "skill",
             ItemKind::Agent => "agent",
         };
-        println!("  {} {:<32} → {}", kind_label, name, clients.join(", "));
+        println!(
+            "  {} {:<32} → {}",
+            style::dim(kind_label),
+            style::name(&name),
+            clients.join(", ")
+        );
     }
 }
 
@@ -344,13 +374,11 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool, project: boo
         (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
         (false, None) => RemoveFilter::ByNames(names.to_vec()),
         (true, None) => {
-            eprintln!(
-                "error: nothing to remove — pass one or more item names, or `--source <label>`"
-            );
+            print_error("nothing to remove — pass one or more item names, or `--source <label>`");
             return EXIT_USAGE;
         }
         (false, Some(_)) => {
-            eprintln!("error: `--source` and item names are mutually exclusive");
+            print_error("`--source` and item names are mutually exclusive");
             return EXIT_USAGE;
         }
     };
@@ -358,7 +386,7 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool, project: boo
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_ERROR;
         }
     };
@@ -369,7 +397,7 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool, project: boo
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_ERROR
         }
     }
@@ -380,7 +408,11 @@ fn print_remove_report(report: &RemoveReport) {
         println!("no matching items in lockfile");
         return;
     }
-    println!("Removed {} item(s)", report.items.len());
+    println!(
+        "{} {} item(s)",
+        style::success("Removed"),
+        report.items.len()
+    );
     for item in &report.items {
         let kind_label = match item.kind {
             ItemKind::Rule => "rule ",
@@ -388,10 +420,10 @@ fn print_remove_report(report: &RemoveReport) {
             ItemKind::Agent => "agent",
         };
         println!(
-            "  {} {:<32} ({} file(s))",
-            kind_label,
-            item.name,
-            item.deleted_files.len()
+            "  {} {:<32} {}",
+            style::dim(kind_label),
+            style::name(&item.name),
+            style::dim(&format!("({} file(s))", item.deleted_files.len())),
         );
     }
 }
@@ -400,7 +432,7 @@ fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_ERROR;
         }
     };
@@ -416,7 +448,7 @@ fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_ERROR
         }
     }
@@ -427,10 +459,10 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         println!("nothing to update — lockfile is empty");
         return;
     }
-    let header = if dry_run {
-        "Dry-run: would update"
+    let header: colored::ColoredString = if dry_run {
+        style::warn("Dry-run: would update")
     } else {
-        "Updated"
+        style::success("Updated")
     };
     let changes = report
         .items
@@ -444,14 +476,21 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             ItemKind::Skill => "skill",
             ItemKind::Agent => "agent",
         };
-        let status = match &item.status {
-            UpdateStatus::UpToDate => "up to date".to_string(),
-            UpdateStatus::Updated { new_hash, .. } => format!("updated → {}", short(new_hash)),
+        let status: colored::ColoredString = match &item.status {
+            UpdateStatus::UpToDate => style::dim("up to date"),
+            UpdateStatus::Updated { new_hash, .. } => {
+                style::success(&format!("updated → {}", short(new_hash)))
+            }
             UpdateStatus::WouldChange { new_hash, .. } => {
-                format!("would change → {}", short(new_hash))
+                style::warn(&format!("would change → {}", short(new_hash)))
             }
         };
-        println!("  {} {:<32} {}", kind_label, item.name, status);
+        println!(
+            "  {} {:<32} {}",
+            style::dim(kind_label),
+            style::name(&item.name),
+            status
+        );
     }
 }
 
@@ -467,7 +506,7 @@ fn run_doctor(global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_ERROR;
         }
     };
@@ -482,7 +521,7 @@ fn run_doctor(global: bool, project: bool) -> i32 {
             }
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_ERROR
         }
     }
@@ -490,36 +529,48 @@ fn run_doctor(global: bool, project: bool) -> i32 {
 
 fn print_doctor_report(report: &DoctorReport) {
     if report.is_clean() {
-        println!("doctor: clean");
+        println!("{} clean", style::success("doctor:"));
         return;
     }
 
     if !report.missing_outputs.is_empty() {
         println!(
-            "doctor: missing per-client outputs ({} item(s)) — reinstall to fix",
+            "{} missing per-client outputs ({} item(s)) — reinstall to fix",
+            style::error_label("doctor:"),
             report.missing_outputs.len()
         );
         for m in &report.missing_outputs {
-            println!("  {} {}", kind_label(m.kind), m.name);
+            println!(
+                "  {} {}",
+                style::dim(kind_label(m.kind)),
+                style::name(&m.name)
+            );
             for path in &m.missing_files {
-                println!("    - {}", path.display());
+                println!("    - {}", style::dim(&path.display().to_string()));
             }
         }
     }
 
     if !report.stale_hashes.is_empty() {
         println!(
-            "doctor: SSOT hash drift on local sources ({} item(s)) — `upskill update` to fix",
+            "{} SSOT hash drift on local sources ({} item(s)) — `upskill update` to fix",
+            style::warn("doctor:"),
             report.stale_hashes.len()
         );
         for s in &report.stale_hashes {
-            println!("  {} {} ({})", kind_label(s.kind), s.name, s.source);
+            println!(
+                "  {} {} {}",
+                style::dim(kind_label(s.kind)),
+                style::name(&s.name),
+                style::dim(&format!("({})", s.source))
+            );
         }
     }
 
     if !report.orphan_entries.is_empty() {
         println!(
-            "doctor: lockfile entries with no recoverable source ({} item(s)) — `upskill remove` to clear",
+            "{} lockfile entries with no recoverable source ({} item(s)) — `upskill remove` to clear",
+            style::dim("doctor:"),
             report.orphan_entries.len()
         );
         for o in &report.orphan_entries {
@@ -528,11 +579,11 @@ fn print_doctor_report(report: &DoctorReport) {
                 OrphanReason::ItemMissingInSource => "item not in source",
             };
             println!(
-                "  {} {} ({}) — {}",
-                kind_label(o.kind),
-                o.name,
-                o.source,
-                reason
+                "  {} {} {} — {}",
+                style::dim(kind_label(o.kind)),
+                style::name(&o.name),
+                style::dim(&format!("({})", o.source)),
+                style::dim(reason),
             );
         }
     }
@@ -550,7 +601,7 @@ fn run_list(global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_ERROR;
         }
     };
@@ -561,7 +612,7 @@ fn run_list(global: bool, project: bool) -> i32 {
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_ERROR
         }
     }
@@ -583,13 +634,17 @@ fn print_list_section(label: &str, items: &[ListedItem]) {
     if items.is_empty() {
         return;
     }
-    println!("{label} ({})", items.len());
+    println!("{} ({})", style::name(label), items.len());
     for item in items {
         let pinned = match &item.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
-        println!("  {:<32} {}{}", item.name, item.source, pinned);
+        println!(
+            "  {:<32} {}",
+            style::name(&item.name),
+            style::dim(&format!("{}{pinned}", item.source))
+        );
     }
 }
 
@@ -597,13 +652,17 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
     if bundles.is_empty() {
         return;
     }
-    println!("bundles ({})", bundles.len());
+    println!("{} ({})", style::name("bundles"), bundles.len());
     for bundle in bundles {
         let pinned = match &bundle.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
-        println!("  {:<32} {}{}", bundle.name, bundle.source, pinned);
+        println!(
+            "  {:<32} {}",
+            style::name(&bundle.name),
+            style::dim(&format!("{}{pinned}", bundle.source))
+        );
     }
 }
 
@@ -618,7 +677,7 @@ fn run_lint(paths: &[PathBuf], strict: bool) -> i32 {
             }
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             // Author-command misuse (consumer-project / unreadable
             // path) maps to usage error. The lint module surfaces
             // those as Err(_); per-rule findings travel inside Ok.
@@ -630,12 +689,16 @@ fn run_lint(paths: &[PathBuf], strict: bool) -> i32 {
 fn print_lint_report(report: &LintReport) {
     for f in &report.findings {
         let line = f.line.map(|n| format!(":{n}")).unwrap_or_default();
+        let severity_label = match f.severity {
+            upskill::lint::Severity::Error => style::error_label(f.severity.label()),
+            upskill::lint::Severity::Warning => style::warn(f.severity.label()),
+        };
         println!(
-            "{}: {}{} [{}] {}",
-            f.severity.label(),
-            f.path.display(),
+            "{}: {}{} {} {}",
+            severity_label,
+            style::name(&f.path.display().to_string()),
             line,
-            f.rule_id,
+            style::dim(&format!("[{}]", f.rule_id)),
             f.message
         );
     }
@@ -653,7 +716,7 @@ fn run_fmt(paths: &[PathBuf]) -> i32 {
             EXIT_SUCCESS
         }
         Err(err) => {
-            eprintln!("error: {:#}", err);
+            print_error_chain(&err);
             EXIT_USAGE
         }
     }
@@ -665,7 +728,11 @@ fn print_fmt_report(report: &FmtReport) {
         return;
     }
     for path in &report.files_changed {
-        println!("formatted: {}", path.display());
+        println!(
+            "{} {}",
+            style::warn("formatted:"),
+            style::name(&path.display().to_string())
+        );
     }
     println!(
         "{} file(s) checked, {} file(s) changed",
@@ -678,14 +745,14 @@ fn run_new(kind: &str, name: &str) -> i32 {
     let parsed_kind = match NewKind::parse(kind) {
         Ok(k) => k,
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             return EXIT_USAGE;
         }
     };
     let cwd = match std::env::current_dir() {
         Ok(p) => p,
         Err(err) => {
-            eprintln!("error: get current directory: {}", err);
+            print_error(format!("get current directory: {err}"));
             return EXIT_ERROR;
         }
     };
@@ -696,7 +763,7 @@ fn run_new(kind: &str, name: &str) -> i32 {
         }
         Err(err) => {
             let msg = format!("{:#}", err);
-            eprintln!("error: {}", msg);
+            print_error(&msg);
             // Author-command misuse (consumer-project) → usage error;
             // every other failure → 1.
             if msg.contains("consumer project") {
@@ -715,9 +782,10 @@ fn print_scaffold_report(report: &ScaffoldReport) {
         NewKind::Agent => "agent",
     };
     println!(
-        "scaffolded {kind_label} `{}` at {}",
-        report.name,
-        report.written.display()
+        "{} {kind_label} `{}` at {}",
+        style::success("scaffolded"),
+        style::name(&report.name),
+        style::name(&report.written.display().to_string())
     );
     println!("edit the file and replace the TODO body before publishing.");
 }
@@ -725,7 +793,7 @@ fn print_scaffold_report(report: &ScaffoldReport) {
 fn run_search(query: &str, limit: usize) -> i32 {
     match search::search(query, limit) {
         Err(err) => {
-            eprintln!("error: {}", err);
+            print_error(&err);
             EXIT_ERROR
         }
         Ok(results) if results.is_empty() => {
@@ -739,8 +807,10 @@ fn run_search(query: &str, limit: usize) -> i32 {
                     .trim_start_matches("github/")
                     .trim_start_matches("gitlab/");
                 println!(
-                    "{}\t{} installs\tupskill add {} --skill {}",
-                    skill.name, skill.installs, repo, skill.name
+                    "{}\t{}\t{}",
+                    style::name(&skill.name),
+                    style::dim(&format!("{} installs", skill.installs)),
+                    style::dim(&format!("upskill add {repo} --skill {}", skill.name))
                 );
             }
             EXIT_SUCCESS

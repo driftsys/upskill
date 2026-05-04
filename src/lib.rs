@@ -21,5 +21,6 @@ pub mod pipeline;
 pub mod scaffold;
 pub mod search;
 pub mod source;
+pub mod style;
 
 pub use source::{InstallSource, parse_install_source};
