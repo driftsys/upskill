@@ -27,6 +27,7 @@ ureq = { version = "2", features = ["json"] }
 
 [dev-dependencies]
 assert_cmd = "2.0"
+clap_mangen = "0.2"
 predicates = "3.1.4"
 serde_json = "1.0.149"
 

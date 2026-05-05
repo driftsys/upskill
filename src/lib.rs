@@ -10,6 +10,7 @@
 pub mod ancillary;
 pub mod auth;
 pub mod bundle;
+pub mod cli;
 pub mod fetch;
 pub mod fmt;
 pub mod generate;
