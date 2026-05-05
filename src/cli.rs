@@ -128,6 +128,10 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
+        /// Emit a stable JSON document instead of the human-readable
+        /// grouping. See `docs/commands.md` for the schema.
+        #[arg(long = "json")]
+        json: bool,
     },
     /// Verify installed-state consistency.
     ///
@@ -149,6 +153,11 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
+        /// Emit the three drift buckets as a stable JSON document. Exit
+        /// code is unchanged (0 clean, 1 drifted). See `docs/commands.md`
+        /// for the schema.
+        #[arg(long = "json")]
+        json: bool,
     },
     /// Search the public skills registry.
     #[command(after_help = "EXAMPLES:\n  \

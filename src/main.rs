@@ -59,8 +59,16 @@ fn main() {
             global,
             project,
         } => run_update(&names, dry_run, global, project),
-        Commands::List { global, project } => run_list(global, project),
-        Commands::Doctor { global, project } => run_doctor(global, project),
+        Commands::List {
+            global,
+            project,
+            json,
+        } => run_list(global, project, json),
+        Commands::Doctor {
+            global,
+            project,
+            json,
+        } => run_doctor(global, project, json),
         Commands::Search { query, limit } => run_search(&query, limit),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
@@ -358,7 +366,7 @@ fn short(h: &Option<String>) -> String {
     }
 }
 
-fn run_doctor(global: bool, project: bool) -> i32 {
+fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -369,7 +377,11 @@ fn run_doctor(global: bool, project: bool) -> i32 {
 
     match doctor(&target) {
         Ok(report) => {
-            print_doctor_report(&report);
+            if json {
+                print_doctor_json(&report);
+            } else {
+                print_doctor_report(&report);
+            }
             if report.is_clean() {
                 EXIT_SUCCESS
             } else {
@@ -381,6 +393,16 @@ fn run_doctor(global: bool, project: bool) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+fn print_doctor_json(report: &DoctorReport) {
+    if style::is_quiet() {
+        return;
+    }
+    // serde_json::to_string_pretty cannot fail for owned data — every
+    // field on DoctorReport derives Serialize and contains no maps with
+    // non-string keys. unwrap is safe.
+    println!("{}", serde_json::to_string_pretty(report).unwrap());
 }
 
 fn print_doctor_report(report: &DoctorReport) {
@@ -456,7 +478,7 @@ fn kind_label(kind: ItemKind) -> &'static str {
     }
 }
 
-fn run_list(global: bool, project: bool) -> i32 {
+fn run_list(global: bool, project: bool, json: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -467,7 +489,11 @@ fn run_list(global: bool, project: bool) -> i32 {
 
     match list(&target) {
         Ok(report) => {
-            print_list_report(&report);
+            if json {
+                print_list_json(&report);
+            } else {
+                print_list_report(&report);
+            }
             EXIT_SUCCESS
         }
         Err(err) => {
@@ -475,6 +501,16 @@ fn run_list(global: bool, project: bool) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+fn print_list_json(report: &ListReport) {
+    if style::is_quiet() {
+        return;
+    }
+    // serde_json::to_string_pretty cannot fail for owned data — every
+    // field on ListReport derives Serialize and contains no maps with
+    // non-string keys. unwrap is safe.
+    println!("{}", serde_json::to_string_pretty(report).unwrap());
 }
 
 fn print_list_report(report: &ListReport) {
