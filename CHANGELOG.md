@@ -1,5 +1,190 @@
 # Changelog
 
+## [0.3.1] (2026-05-05)
+
+### Documentation
+
+- strike §4.2, simplify lockfile to one shape in two locations ([94efa95]),
+  closes 110.
+
+Following the `npx skills` reference model: the lockfile is the
+same
+shape (`.upskill-lock.json`, `schema: 1`) regardless of scope. It
+just
+lives in `<cwd>/` for project scope or `$HOME/` for global scope. No
+need
+for a separate `~/.upskill/installed.json` aggregator.
+
+### Features
+
+- **cli:** implement [items...] subset filter on add ([#132]) ([b8ea586]),
+  closes [#124]
+- **cli:** UX polish bundle — confirm, progress, timeout, signal, short flags
+  ([#131]) ([bdac6c3]), closes [#118]
+- **cli:** --json output for list and doctor ([#128]) ([424f180]), closes [#114]
+- **cli:** generate man pages via clap_mangen ([#127]) ([b69d339]), closes
+  [#117]
+- **cli:** add -q/--quiet global flag ([cef9dde]), closes [#115]
+- **help:** add bug-report URL, examples per subcommand, drop ADR refs
+  ([b5ea91c]), closes 116.
+
+clig.dev §Help findings:
+
+- **Bug-report URL** —
+  top-level `upskill --help` now ends with a
+  `DOCUMENTATION:` and `REPORT
+  BUGS:` block via clap's `after_help`.
+- **Examples per subcommand** — every
+  subcommand's `--help` now shows
+  an `EXAMPLES:` section with 2–6
+  representative invocations. Covers
+
+  add/remove/update/list/doctor/search/lint/fmt/new.
+- **ADR refs out of help
+  text** — five doc comments referenced
+  ADR-0003/0004 or `format-spec §`.
+  End users don't have those
+  documents loaded; trimmed to user-facing prose.
+  ADRs remain the
+  source of truth in `docs/adr/` for contributors.
+- **style:** color output with clig.dev disable chain ([7aa1608]), closes
+  108.
+
+Adds the universal palette and the five-signal disable chain promised
+by
+spec §6.2 / §6.3. Previously `NO_COLOR` was listed in the spec but
+no
+color logic existed at all — the test asserting it gave false
+confidence.
+
+## Color crate
+
+`colored = "3"` — one new dep, idiomatic API.
+Auto-detects TTY via the
+crate's defaults; the disable chain wraps that with
+explicit overrides.
+
+## Disable chain (clig.dev)
+
+In `src/style.rs::init()`,
+applied in order:
+
+1. `--no-color` flag (CLI)
+2. `NO_COLOR` env var
+   (non-empty)
+3. `UPSKILL_NO_COLOR` env var (app-specific override)
+4.
+
+`TERM=dumb`
+5. `!isatty(target)` — handled by `colored`
+defaults
+
+`FORCE_COLOR` (or `CLICOLOR_FORCE`) re-enables color even when
+piped.
+
+## Universal palette
+
+Applied across all 9 commands' output:
+
+- **red
+  bold** — error labels, missing outputs in `doctor`, error
+  severity in
+  `lint`
+- **yellow** — warnings, `would change` in `update --dry-run`,
+  `formatted:` in `fmt`, hash drift in `doctor`
+- **green** — `Installed`,
+  `Removed`, `updated`, `scaffolded`, `doctor: clean`
+- **dim/gray** —
+  secondary info: source labels, kind labels, paths, descriptions, orphan
+  reasons
+- **bold** — primary identifiers: item names, file paths, bundle
+  names
+
+## Centralised error printing
+
+New `print_error(...)` and
+`print_error_chain(...)` helpers replace 18
+direct `eprintln!("error: ...")`
+sites with a uniform red-bold label
+shape, while keeping the same plain text
+under disable.
+
+## Tests
+
+- 6 unit tests in `src/style.rs` exhaustively cover
+  the disable chain
+  with env var precedence (`NO_COLOR`, `UPSKILL_NO_COLOR`,
+  `TERM=dumb`, `FORCE_COLOR`, empty-`NO_COLOR`-doesn't-disable).
+- 6 ATDD tests
+  in `tests/cli_ci_mode.rs` (was the misleading
+  single-test file) pin the
+  contract through the actual binary:
+  - `NO_COLOR` env strips ANSI
+  -
+  `--no-color` flag strips ANSI
+  - `UPSKILL_NO_COLOR` strips ANSI
+  -
+  `TERM=dumb` strips ANSI
+  - piped output strips ANSI by default (no FORCE
+    override)
+  - `FORCE_COLOR=1` re-enables ANSI even when piped
+- **scope:** -p/--project flag, auto-fallback, positive --global tests
+  ([ff92224]), closes 109.
+
+Completes the partial `--global` implementation.
+Before: `-g` was wired
+to `install_target(global: bool)` but no positive
+integration test
+proved it wrote to `$HOME`. Behind: spec §2.1 promised
+auto-fallback
+to global when `cwd` is not in a git repo, and `-p/--project` as
+an
+explicit override (parity with `npx skills update -p`). Neither
+was
+implemented.
+
+- **cli:** --version flag and HTTPS_PROXY support in search ([f607955]), closes
+  [#106], #107.
+
+`--version` / `-V` now prints `upskill <version>` to stdout and
+exits 0, via clap's `#[command(version)]` reading the package version.
+Two
+integration tests pin the contract.
+
+`search` now configures `ureq` with
+`HTTPS_PROXY` (or lowercase
+`https_proxy`) so corporate users can reach
+skills.sh through their
+proxy. `git`/`gh`/`glab` already honor proxy env vars
+implicitly; this
+closes the gap for the only `ureq` call site. NO_PROXY host
+bypass is
+not implemented — corporate users with host-specific exclusions
+should
+configure that at the system level.
+
+[0.3.1]: https://github.com/driftsys/upskill/compare/v0.3.0...v0.3.1
+[94efa95]: https://github.com/driftsys/upskill/commit/94efa95
+[b8ea586]: https://github.com/driftsys/upskill/commit/b8ea586
+[#132]: https://github.com/driftsys/upskill/issues/132
+[#124]: https://github.com/driftsys/upskill/issues/124
+[bdac6c3]: https://github.com/driftsys/upskill/commit/bdac6c3
+[#131]: https://github.com/driftsys/upskill/issues/131
+[#118]: https://github.com/driftsys/upskill/issues/118
+[424f180]: https://github.com/driftsys/upskill/commit/424f180
+[#128]: https://github.com/driftsys/upskill/issues/128
+[#114]: https://github.com/driftsys/upskill/issues/114
+[b69d339]: https://github.com/driftsys/upskill/commit/b69d339
+[#127]: https://github.com/driftsys/upskill/issues/127
+[#117]: https://github.com/driftsys/upskill/issues/117
+[cef9dde]: https://github.com/driftsys/upskill/commit/cef9dde
+[#115]: https://github.com/driftsys/upskill/issues/115
+[b5ea91c]: https://github.com/driftsys/upskill/commit/b5ea91c
+[7aa1608]: https://github.com/driftsys/upskill/commit/7aa1608
+[ff92224]: https://github.com/driftsys/upskill/commit/ff92224
+[f607955]: https://github.com/driftsys/upskill/commit/f607955
+[#106]: https://github.com/driftsys/upskill/issues/106
+
 ## [0.3.0] (2026-05-02)
 
 ### Refactoring
