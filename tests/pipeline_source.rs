@@ -219,3 +219,111 @@ fn install_from_source_clone_subfolder() {
             .exists()
     );
 }
+
+#[test]
+fn re_install_after_upstream_push_picks_up_new_content() {
+    // Spec §2.2 update covers two behaviors: "Absorb client drift" (already
+    // tested via local-path mutation in cli_update.rs) and "Track upstream
+    // evolution" — a remote git source whose contents change between
+    // install and update.
+    //
+    // CLI `update` reads source labels from the lockfile and only knows
+    // `github:` / `gitlab:` / `gitlab+host:` / `local:` prefixes — none of
+    // which round-trip a `file://` clone URL. So this test exercises the
+    // underlying mechanism at the library layer: clone-install,
+    // upstream-push, clone-install again. The clone+install path is
+    // exactly what `update` triggers for a git source, just without the
+    // lockfile bookkeeping.
+    let tmp = tempfile::tempdir().unwrap();
+    let bare = tmp.path().join("ssot.git");
+    let work = tmp.path().join("work");
+    let target = tmp.path().join("target");
+    let url = format!("file://{}", bare.display());
+
+    git(&["init", "--bare", bare.to_str().unwrap()], None);
+    git(
+        &["clone", bare.to_str().unwrap(), work.to_str().unwrap()],
+        None,
+    );
+    stage_source(&work);
+    git(&["add", "."], Some(&work));
+    git(
+        &[
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@test.com",
+            "commit",
+            "-m",
+            "initial",
+        ],
+        Some(&work),
+    );
+    git(&["push"], Some(&work));
+
+    // First install — captures original SSOT hashes per (kind, name).
+    let first = upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target)
+        .expect("first install");
+    let original_hashes: std::collections::BTreeMap<(_, _), _> = first
+        .items
+        .iter()
+        .map(|i| ((i.kind, i.name.clone()), i.source_hash.clone()))
+        .collect();
+
+    let mutation_marker = "<!-- upstream evolution test -->";
+    let skill_md = work.join("skills/create-api-endpoint/SKILL.md");
+    let original_body = fs::read_to_string(&skill_md).unwrap();
+    fs::write(&skill_md, format!("{original_body}\n{mutation_marker}\n")).unwrap();
+    git(
+        &[
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@test.com",
+            "commit",
+            "-am",
+            "upstream change",
+        ],
+        Some(&work),
+    );
+    git(&["push"], Some(&work));
+
+    // Second install from the same URL — must clone the new commit and
+    // emit changed content.
+    let second = upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target)
+        .expect("second install");
+
+    // The mutated skill's hash must differ; an unrelated rule's hash
+    // must not.
+    let mutated_key = (
+        upskill::pipeline::ItemKind::Skill,
+        "create-api-endpoint".to_string(),
+    );
+    let unrelated_key = (
+        upskill::pipeline::ItemKind::Rule,
+        "license-awareness".to_string(),
+    );
+    let new_hashes: std::collections::BTreeMap<_, _> = second
+        .items
+        .iter()
+        .map(|i| ((i.kind, i.name.clone()), i.source_hash.clone()))
+        .collect();
+    assert_ne!(
+        original_hashes.get(&mutated_key),
+        new_hashes.get(&mutated_key),
+        "mutated SSOT must hash differently after upstream push"
+    );
+    assert_eq!(
+        original_hashes.get(&unrelated_key),
+        new_hashes.get(&unrelated_key),
+        "unrelated SSOT must hash identically"
+    );
+
+    // Per-client output reflects the new SSOT content.
+    let claude_out =
+        fs::read_to_string(target.join(".claude/skills/create-api-endpoint/SKILL.md")).unwrap();
+    assert!(
+        claude_out.contains(mutation_marker),
+        "regenerated output missing upstream mutation marker:\n{claude_out}"
+    );
+}
