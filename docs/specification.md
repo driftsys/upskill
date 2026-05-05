@@ -257,6 +257,8 @@ Self-hosted GitLab is supported via full URL form
 - POSIX/GNU long flags (`--flag-name`) and short flags (`-f`).
 - Stdout for data, stderr for progress and errors.
 - Honors `NO_COLOR` and TTY detection (no color in pipes/CI).
+- Global `-q` / `--quiet` suppresses informational stdout. Errors on
+  stderr and exit codes are unaffected.
 - Single static binary, no runtime dependencies.
 
 ### 6.3 Environment variables

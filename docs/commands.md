@@ -16,6 +16,17 @@
 | `lint`   | Author   | Validate SSOT files against the format spec.        |
 | `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
 
+## Global flags
+
+These work on every subcommand:
+
+| Flag              | Effect                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| `--no-color`      | Disable colored output. Honored alongside `NO_COLOR`, `TERM=dumb`.  |
+| `-q`, `--quiet`   | Suppress informational stdout. Errors and exit codes are unchanged. |
+| `-h`, `--help`    | Show help.                                                          |
+| `-V`, `--version` | Show version.                                                       |
+
 ## Consumer commands
 
 ### `upskill add <source> [items...]`

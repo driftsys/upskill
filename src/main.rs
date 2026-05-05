@@ -35,6 +35,11 @@ struct Cli {
     /// `UPSKILL_NO_COLOR`, `TERM=dumb`, and TTY auto-detection.
     #[arg(long = "no-color", global = true)]
     no_color: bool,
+    /// Suppress informational stdout. Errors on stderr and exit codes
+    /// are unaffected. Useful for CI use of `lint`, `update --dry-run`,
+    /// etc.
+    #[arg(short = 'q', long = "quiet", global = true)]
+    quiet: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -229,6 +234,7 @@ fn main() {
     };
 
     style::init(cli.no_color);
+    style::set_quiet(cli.quiet);
 
     if let Err(err) = install_signal_handlers() {
         print_error(&err);
@@ -379,6 +385,9 @@ fn is_inside_git_repo() -> bool {
 }
 
 fn print_install_report(report: &InstallReport, source: &str) {
+    if style::is_quiet() {
+        return;
+    }
     use std::collections::BTreeMap;
 
     println!(
@@ -445,6 +454,9 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool, project: boo
 }
 
 fn print_remove_report(report: &RemoveReport) {
+    if style::is_quiet() {
+        return;
+    }
     if report.items.is_empty() {
         println!("no matching items in lockfile");
         return;
@@ -496,6 +508,9 @@ fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i
 }
 
 fn print_update_report(report: &UpdateReport, dry_run: bool) {
+    if style::is_quiet() {
+        return;
+    }
     if report.items.is_empty() {
         println!("nothing to update — lockfile is empty");
         return;
@@ -569,6 +584,9 @@ fn run_doctor(global: bool, project: bool) -> i32 {
 }
 
 fn print_doctor_report(report: &DoctorReport) {
+    if style::is_quiet() {
+        return;
+    }
     if report.is_clean() {
         println!("{} clean", style::success("doctor:"));
         return;
@@ -660,6 +678,9 @@ fn run_list(global: bool, project: bool) -> i32 {
 }
 
 fn print_list_report(report: &ListReport) {
+    if style::is_quiet() {
+        return;
+    }
     if report.is_empty() {
         println!("no items installed");
         return;
@@ -728,6 +749,9 @@ fn run_lint(paths: &[PathBuf], strict: bool) -> i32 {
 }
 
 fn print_lint_report(report: &LintReport) {
+    if style::is_quiet() {
+        return;
+    }
     for f in &report.findings {
         let line = f.line.map(|n| format!(":{n}")).unwrap_or_default();
         let severity_label = match f.severity {
@@ -764,6 +788,9 @@ fn run_fmt(paths: &[PathBuf]) -> i32 {
 }
 
 fn print_fmt_report(report: &FmtReport) {
+    if style::is_quiet() {
+        return;
+    }
     if report.files_changed.is_empty() {
         println!("{} file(s) checked, all formatted", report.files_checked);
         return;
@@ -817,6 +844,9 @@ fn run_new(kind: &str, name: &str) -> i32 {
 }
 
 fn print_scaffold_report(report: &ScaffoldReport) {
+    if style::is_quiet() {
+        return;
+    }
     let kind_label = match report.kind {
         NewKind::Rule => "rule",
         NewKind::Skill => "skill",
@@ -838,21 +868,25 @@ fn run_search(query: &str, limit: usize) -> i32 {
             EXIT_ERROR
         }
         Ok(results) if results.is_empty() => {
-            println!("no skills found for '{}'", query);
+            if !style::is_quiet() {
+                println!("no skills found for '{}'", query);
+            }
             EXIT_SUCCESS
         }
         Ok(results) => {
-            for skill in &results {
-                let repo = skill
-                    .source
-                    .trim_start_matches("github/")
-                    .trim_start_matches("gitlab/");
-                println!(
-                    "{}\t{}\t{}",
-                    style::name(&skill.name),
-                    style::dim(&format!("{} installs", skill.installs)),
-                    style::dim(&format!("upskill add {repo} --skill {}", skill.name))
-                );
+            if !style::is_quiet() {
+                for skill in &results {
+                    let repo = skill
+                        .source
+                        .trim_start_matches("github/")
+                        .trim_start_matches("gitlab/");
+                    println!(
+                        "{}\t{}\t{}",
+                        style::name(&skill.name),
+                        style::dim(&format!("{} installs", skill.installs)),
+                        style::dim(&format!("upskill add {repo} --skill {}", skill.name))
+                    );
+                }
             }
             EXIT_SUCCESS
         }
