@@ -1,7 +1,13 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
+use std::time::Duration;
 
 const DEFAULT_REGISTRY_URL: &str = "https://skills.sh";
+
+/// Hard cap on the registry round-trip. Defends against a hung server or
+/// slow proxy — without this, `ureq`'s default is unbounded for the body
+/// read phase, which clig.dev §"Responsiveness" calls a UX bug.
+const REGISTRY_TIMEOUT: Duration = Duration::from_secs(15);
 
 pub fn registry_url() -> String {
     std::env::var("UPSKILL_REGISTRY_URL").unwrap_or_else(|_| DEFAULT_REGISTRY_URL.to_string())
@@ -20,7 +26,10 @@ fn proxy_from_env() -> Option<String> {
 }
 
 fn build_agent() -> Result<ureq::Agent> {
-    let mut builder = ureq::AgentBuilder::new();
+    let mut builder = ureq::AgentBuilder::new()
+        .timeout_connect(REGISTRY_TIMEOUT)
+        .timeout_read(REGISTRY_TIMEOUT)
+        .timeout_write(REGISTRY_TIMEOUT);
     if let Some(proxy_url) = proxy_from_env() {
         let proxy = ureq::Proxy::new(&proxy_url)
             .with_context(|| format!("invalid HTTPS_PROXY value: {proxy_url}"))?;

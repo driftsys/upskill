@@ -13,7 +13,7 @@ use upskill::pipeline::{
 };
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
-use upskill::source::parse_install_source;
+use upskill::source::{InstallSource, parse_install_source};
 use upskill::style;
 
 const EXIT_SUCCESS: i32 = 0;
@@ -52,7 +52,8 @@ fn main() {
             source,
             global,
             project,
-        } => run_remove(&names, source.as_deref(), global, project),
+            yes,
+        } => run_remove(&names, source.as_deref(), global, project, yes),
         Commands::Update {
             names,
             dry_run,
@@ -84,7 +85,14 @@ fn main() {
 
 fn install_signal_handlers() -> anyhow::Result<()> {
     ctrlc::set_handler(|| {
+        // Flag first, then notify. Setting INTERRUPTED before the print
+        // ensures the `was_interrupted()` check in main() sees true even
+        // if the eprintln races with process teardown.
         INTERRUPTED.store(true, Ordering::SeqCst);
+        // clig.dev §"Responsiveness": say something before cleanup so
+        // the user knows their Ctrl-C registered. Stderr only — never
+        // touches stdout-as-data.
+        eprintln!("\n{} cleaning up", style::warn("interrupted:"));
     })
     .context("failed to install signal handler")
 }
@@ -130,6 +138,7 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
         }
     };
 
+    print_install_progress(&parsed);
     match install_with_lockfile(&parsed, &target) {
         Ok(report) => {
             print_install_report(&report, source);
@@ -138,6 +147,61 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
         Err(err) => {
             print_error_chain(&err);
             EXIT_ERROR
+        }
+    }
+}
+
+/// Interactive y/n prompt for bulk removal by source label. Returns
+/// `true` to proceed. When stdin is not a TTY (CI / pipes), returns
+/// `true` without prompting — bulk removal in non-interactive contexts
+/// is the script author's responsibility, and blocking forever on a
+/// non-existent stdin would be worse than the footgun we're guarding.
+/// `--yes` short-circuits this entirely (callers check it first).
+fn confirm_bulk_remove(label: &str) -> bool {
+    use std::io::{BufRead, IsTerminal, Write};
+
+    if !std::io::stdin().is_terminal() {
+        return true;
+    }
+
+    eprint!(
+        "{} remove every item from {}? [y/N] ",
+        style::warn("warning:"),
+        style::name(label)
+    );
+    let _ = std::io::stderr().flush();
+
+    let stdin = std::io::stdin();
+    let mut line = String::new();
+    if stdin.lock().read_line(&mut line).is_err() {
+        return false;
+    }
+    matches!(line.trim().to_lowercase().as_str(), "y" | "yes")
+}
+
+/// Stderr progress line for git-backed installs. The clone happens deep
+/// in `pipeline.rs`, which is silent by contract — without a marker the
+/// CLI looks frozen for the seconds a clone takes. Local-path installs
+/// stay silent (sub-second latency, nothing to wait on).
+fn print_install_progress(source: &InstallSource) {
+    if style::is_quiet() {
+        return;
+    }
+    match source {
+        InstallSource::LocalPath(_) => {}
+        InstallSource::Github(repo) => {
+            eprintln!(
+                "{} {}",
+                style::dim("Cloning"),
+                style::name(&format!("github:{}/{}", repo.owner, repo.name))
+            );
+        }
+        InstallSource::Gitlab(repo) => {
+            eprintln!(
+                "{} {}",
+                style::dim("Cloning"),
+                style::name(&format!("{}:{}/{}", repo.host, repo.owner, repo.name))
+            );
         }
     }
 }
@@ -227,7 +291,13 @@ fn print_install_report(report: &InstallReport, source: &str) {
     }
 }
 
-fn run_remove(names: &[String], source: Option<&str>, global: bool, project: bool) -> i32 {
+fn run_remove(
+    names: &[String],
+    source: Option<&str>,
+    global: bool,
+    project: bool,
+    yes: bool,
+) -> i32 {
     let filter = match (names.is_empty(), source) {
         (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
         (false, None) => RemoveFilter::ByNames(names.to_vec()),
@@ -240,6 +310,14 @@ fn run_remove(names: &[String], source: Option<&str>, global: bool, project: boo
             return EXIT_USAGE;
         }
     };
+
+    if let RemoveFilter::BySource(label) = &filter
+        && !yes
+        && !confirm_bulk_remove(label)
+    {
+        eprintln!("aborted");
+        return EXIT_SUCCESS;
+    }
 
     let target = match install_target(global, project) {
         Ok(t) => t,
