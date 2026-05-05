@@ -86,6 +86,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files
 (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are not
 touched.
 
+`--source` triggers a y/N confirmation prompt on a TTY (it removes
+every item from that label at once). Pass `-y` / `--yes` to skip.
+Non-interactive contexts (CI, pipes) skip the prompt automatically.
+
 ### `upskill list`
 
 Show installed content from `.upskill-lock.json`, grouped by kind.

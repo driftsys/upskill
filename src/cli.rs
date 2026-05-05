@@ -76,7 +76,7 @@ pub enum Commands {
         /// string. Use the value reported by the install or shown in
         /// `.upskill-lock.json` (e.g. `local:/path` or
         /// `github:owner/repo`).
-        #[arg(long = "source")]
+        #[arg(short = 's', long = "source")]
         source: Option<String>,
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
@@ -85,6 +85,10 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
+        /// Skip the confirmation prompt that `--source` shows on a TTY.
+        /// Already implicit when stdin is not a terminal (CI / pipes).
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
     },
     /// Pull latest sources and regenerate changed items.
     ///
@@ -101,7 +105,7 @@ pub enum Commands {
         /// Item names to update (omit to update everything).
         names: Vec<String>,
         /// Report what would change without writing.
-        #[arg(long = "dry-run")]
+        #[arg(short = 'n', long = "dry-run")]
         dry_run: bool,
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
@@ -167,7 +171,7 @@ pub enum Commands {
         /// Search query.
         query: String,
         /// Maximum number of results.
-        #[arg(long, default_value = "10")]
+        #[arg(short = 'l', long, default_value = "10")]
         limit: usize,
     },
     /// Validate SSOT files against the format spec.
@@ -185,7 +189,7 @@ pub enum Commands {
         /// Files or directories to lint. Empty = current directory.
         paths: Vec<PathBuf>,
         /// Promote warnings to errors. Use in CI.
-        #[arg(long)]
+        #[arg(short = 's', long)]
         strict: bool,
     },
     /// Canonicalise YAML frontmatter in SSOT files.
