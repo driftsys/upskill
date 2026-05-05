@@ -11,9 +11,25 @@
 //!
 //! `FORCE_COLOR` (or `CLICOLOR_FORCE`) re-enables color even when piped.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use colored::ColoredString;
 use colored::Colorize;
 use colored::control;
+
+static QUIET: AtomicBool = AtomicBool::new(false);
+
+/// Enable or disable quiet mode. Set once from `main()` after parsing
+/// `--quiet`. Read by every `print_*` site to short-circuit informational
+/// stdout. Errors on stderr are unaffected.
+pub fn set_quiet(quiet: bool) {
+    QUIET.store(quiet, Ordering::SeqCst);
+}
+
+/// True when `--quiet` was passed (or `set_quiet(true)` was called).
+pub fn is_quiet() -> bool {
+    QUIET.load(Ordering::SeqCst)
+}
 
 /// Apply the disable chain at startup. Honors `--no-color` from the CLI plus
 /// the env-var signals listed in the module docs. Should be called once,
