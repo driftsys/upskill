@@ -43,12 +43,17 @@ pub enum Commands {
             upskill add owner/repo\n  \
             upskill add owner/repo@v1.2\n  \
             upskill add owner/repo:skills/code-review\n  \
+            upskill add owner/repo code-review secret-scanner\n  \
             upskill add gitlab:team/repo\n  \
             upskill add ./local-source\n  \
             upskill add owner/repo --global")]
     Add {
         /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
         source: String,
+        /// Optional subset filter — only items whose name matches one of
+        /// these is installed. Empty means install everything in the
+        /// source (the default).
+        items: Vec<String>,
         /// Install into `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,

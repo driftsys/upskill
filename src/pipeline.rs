@@ -74,14 +74,18 @@ const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenC
 /// and installs only the resolved items. The reached bundles are
 /// surfaced via [`InstallReport::bundles`] so the lockfile slice can
 /// record them.
-pub fn install_from_local_path(source: &Path, target: &Path) -> Result<InstallReport> {
+pub fn install_from_local_path(
+    source: &Path,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<InstallReport> {
     if is_bundle_file(source) {
         return install_bundle_file(source, target);
     }
     let mut report = InstallReport::default();
-    install_skills(source, target, &mut report, None)?;
-    install_rules(source, target, &mut report, None)?;
-    install_agents(source, target, &mut report, None)?;
+    install_skills(source, target, &mut report, filter)?;
+    install_rules(source, target, &mut report, filter)?;
+    install_agents(source, target, &mut report, filter)?;
     Ok(report)
 }
 
@@ -180,8 +184,29 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Gitlab `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
-pub fn install_with_lockfile(source: &InstallSource, target: &Path) -> Result<InstallReport> {
-    let report = install_from_source(source, target)?;
+pub fn install_with_lockfile(
+    source: &InstallSource,
+    target: &Path,
+    items: &[String],
+) -> Result<InstallReport> {
+    // Empty list means "install everything" (the historical default).
+    // Otherwise build a `ResolvedItems` filter with each name copied
+    // into all three buckets — the per-kind walks check by `(kind,
+    // name)` so unrelated kinds simply skip names that aren't theirs.
+    let resolved = if items.is_empty() {
+        None
+    } else {
+        Some(crate::bundle::ResolvedItems {
+            rules: items.to_vec(),
+            skills: items.to_vec(),
+            agents: items.to_vec(),
+        })
+    };
+    let report = install_from_source(source, target, resolved.as_ref())?;
+
+    if !items.is_empty() && report.items.is_empty() {
+        anyhow::bail!("no matching items in source for: {}", items.join(", "));
+    }
 
     let label = source.to_string();
     let git_ref = match source {
@@ -581,7 +606,7 @@ pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<Updat
 
         match mode {
             UpdateMode::Apply => {
-                let install_report = install_with_lockfile(&source, target)?;
+                let install_report = install_with_lockfile(&source, target, &[])?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
@@ -765,15 +790,23 @@ pub fn list(target: &Path) -> Result<ListReport> {
 /// `https://<user>:<token>@<host>/...`. With no token, the clone falls
 /// back to git's own credential helpers (keychain, manager, etc.) so the
 /// previous behaviour is unchanged for users who rely on those.
-pub fn install_from_source(source: &InstallSource, target: &Path) -> Result<InstallReport> {
+pub fn install_from_source(
+    source: &InstallSource,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<InstallReport> {
     match source {
-        InstallSource::LocalPath(path) => install_from_local_path(path, target),
-        InstallSource::Github(repo) => install_from_github(repo, target),
-        InstallSource::Gitlab(repo) => install_from_gitlab(repo, target),
+        InstallSource::LocalPath(path) => install_from_local_path(path, target, filter),
+        InstallSource::Github(repo) => install_from_github(repo, target, filter),
+        InstallSource::Gitlab(repo) => install_from_gitlab(repo, target, filter),
     }
 }
 
-fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport> {
+fn install_from_github(
+    repo: &GithubRepo,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<InstallReport> {
     install_from_git_url(
         &github_authenticated_url(repo)?,
         repo.git_ref.as_deref(),
@@ -781,10 +814,15 @@ fn install_from_github(repo: &GithubRepo, target: &Path) -> Result<InstallReport
         &repo.owner,
         &repo.name,
         target,
+        filter,
     )
 }
 
-fn install_from_gitlab(repo: &GitlabRepo, target: &Path) -> Result<InstallReport> {
+fn install_from_gitlab(
+    repo: &GitlabRepo,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<InstallReport> {
     install_from_git_url(
         &gitlab_authenticated_url(repo)?,
         repo.git_ref.as_deref(),
@@ -792,6 +830,7 @@ fn install_from_gitlab(repo: &GitlabRepo, target: &Path) -> Result<InstallReport
         &repo.owner,
         &repo.name,
         target,
+        filter,
     )
 }
 
@@ -920,13 +959,14 @@ pub fn install_from_git_url(
     owner: &str,
     name: &str,
     target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<InstallReport> {
     let tmp = tempfile::tempdir().context("create temp dir for clone")?;
     fetch::shallow_clone(url, git_ref, "clone", tmp.path())
         .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
     let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
         .map_err(|e| anyhow!("{}", e))?;
-    install_from_local_path(&source, target)
+    install_from_local_path(&source, target, filter)
 }
 
 fn install_skills(

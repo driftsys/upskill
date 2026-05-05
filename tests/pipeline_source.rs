@@ -49,7 +49,8 @@ fn install_from_source_local_path() {
     stage_source(&source);
 
     let report: InstallReport =
-        install_from_source(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+        install_from_source(&InstallSource::LocalPath(source.clone()), &target, None)
+            .expect("install");
 
     // Same expectation as the local-path direct test: 12 outputs.
     assert_eq!(report.items.len(), 12);
@@ -141,8 +142,9 @@ fn install_from_source_clones_local_bare_repo_via_file_url() {
     let target = tmp.path().join("target");
     let url = format!("file://{}", bare.display());
 
-    let report = upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target)
-        .expect("install via git url");
+    let report =
+        upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target, None)
+            .expect("install via git url");
 
     assert_eq!(report.items.len(), 12);
     assert!(
@@ -209,6 +211,7 @@ fn install_from_source_clone_subfolder() {
         "test",
         "ssot",
         &target,
+        None,
     )
     .expect("install via git url with subfolder");
 
@@ -262,8 +265,9 @@ fn re_install_after_upstream_push_picks_up_new_content() {
     git(&["push"], Some(&work));
 
     // First install — captures original SSOT hashes per (kind, name).
-    let first = upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target)
-        .expect("first install");
+    let first =
+        upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target, None)
+            .expect("first install");
     let original_hashes: std::collections::BTreeMap<(_, _), _> = first
         .items
         .iter()
@@ -290,8 +294,9 @@ fn re_install_after_upstream_push_picks_up_new_content() {
 
     // Second install from the same URL — must clone the new commit and
     // emit changed content.
-    let second = upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target)
-        .expect("second install");
+    let second =
+        upskill::pipeline::install_from_git_url(&url, None, None, "test", "ssot", &target, None)
+            .expect("second install");
 
     // The mutated skill's hash must differ; an unrelated rule's hash
     // must not.

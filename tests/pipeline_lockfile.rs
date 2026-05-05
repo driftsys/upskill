@@ -43,7 +43,8 @@ fn install_writes_lockfile_at_target_root() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     let lock_path = target.join(".upskill-lock.json");
     assert!(
@@ -91,12 +92,14 @@ fn re_install_upserts_existing_entries() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install 1");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install 1");
     let lock1: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install 2");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install 2");
     let lock2: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
@@ -127,7 +130,8 @@ fn install_preserves_unrelated_existing_entries() {
     });
     seed.save(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     let lock = Lockfile::load(&target).expect("load");
     // 4 from the install + 1 pre-seeded = 5.
@@ -149,7 +153,8 @@ fn install_creates_claude_bridge_when_absent() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     let claude_md = target.join("CLAUDE.md");
     assert!(claude_md.exists(), "CLAUDE.md must be created");
@@ -166,7 +171,8 @@ fn install_registers_opencode_rules_glob_when_rules_present() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     let raw = fs::read_to_string(target.join("opencode.json")).expect("opencode.json present");
     let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
@@ -189,7 +195,8 @@ fn install_registers_vscode_instructions_location_when_rules_present() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     let raw = fs::read_to_string(target.join(".vscode/settings.json"))
         .expect(".vscode/settings.json present");
@@ -215,7 +222,8 @@ fn install_preserves_existing_claude_bridge() {
     let user_content = "# Project CLAUDE.md\n\n@AGENTS.md\n\nExtra project notes here.\n";
     fs::write(target.join("CLAUDE.md"), user_content).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target).expect("install");
+    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
+        .expect("install");
 
     assert_eq!(
         fs::read_to_string(target.join("CLAUDE.md")).unwrap(),
