@@ -35,6 +35,10 @@ fmt:
 doc:
     cargo doc --open
 
+# Generate man pages into target/man/ (one .1 per command)
+man:
+    cargo run --example mangen --release --quiet
+
 # Bump version, update changelog, commit, and tag
 release:
     git std bump

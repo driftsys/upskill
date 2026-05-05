@@ -59,6 +59,30 @@ upskill fmt             # canonicalise YAML frontmatter
 You can also scaffold rules (`upskill new rule <name>`) and agents
 (`upskill new agent <name>`).
 
+## Man pages
+
+`upskill` ships a man-page generator. Run it from the source tree:
+
+```bash
+just man             # or: cargo run --example mangen --release
+```
+
+That writes one `.1` per command into `target/man/`:
+
+```text
+target/man/upskill.1
+target/man/upskill-add.1
+target/man/upskill-doctor.1
+…
+```
+
+Install system-wide:
+
+```bash
+sudo cp target/man/*.1 /usr/local/share/man/man1/
+man upskill          # or: man upskill-add
+```
+
 ## Where to next
 
 - **[Commands](./commands.md)** — every verb explained, with flags.
