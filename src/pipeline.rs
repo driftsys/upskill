@@ -21,6 +21,7 @@
 //! restricts emission to listed clients; absence means all clients.
 
 use anyhow::{Context, Result, anyhow};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,7 +32,8 @@ use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
 use crate::source::{GithubRepo, GitlabRepo, InstallSource};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ItemKind {
     Rule,
     Skill,
@@ -348,7 +350,7 @@ fn kind_subdir(kind: ItemKind) -> &'static str {
 }
 
 /// One per-client output file the lockfile said should exist but doesn't.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MissingOutput {
     pub kind: ItemKind,
     pub name: String,
@@ -359,7 +361,7 @@ pub struct MissingOutput {
 /// SSOT content hash differs from what the lockfile recorded at install
 /// time. Only computed for `local:` sources still on disk —
 /// remote-source drift is the job of `update --dry-run`, which fetches.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct StaleHash {
     pub kind: ItemKind,
     pub name: String,
@@ -372,7 +374,7 @@ pub struct StaleHash {
 /// path is gone or the named item has been removed from the SSOT
 /// directory. The user has to `remove` it explicitly to clear the
 /// lockfile, since `update` would just fail trying to fetch.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct OrphanEntry {
     pub kind: ItemKind,
     pub name: String,
@@ -380,7 +382,8 @@ pub struct OrphanEntry {
     pub reason: OrphanReason,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum OrphanReason {
     /// `local:<path>` source no longer resolves to a directory on disk.
     LocalPathGone,
@@ -389,7 +392,7 @@ pub enum OrphanReason {
     ItemMissingInSource,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
     pub stale_hashes: Vec<StaleHash>,
@@ -664,7 +667,7 @@ fn hash_source_items(
 
 /// One entry in a [`ListReport`] — a single installed item as recorded
 /// in the lockfile. Mirrors the lockfile shape; no per-client expansion.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ListedItem {
     pub kind: ItemKind,
     pub name: String,
@@ -674,7 +677,7 @@ pub struct ListedItem {
 
 /// One installed bundle as recorded in the lockfile (the per-bundle
 /// breakdown — see [`crate::lockfile::LockedBundle`]).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ListedBundle {
     pub name: String,
     pub source: String,
@@ -685,7 +688,7 @@ pub struct ListedBundle {
 /// What `upskill list` reports: every item the lockfile records, plus
 /// any installed bundles. Items are grouped by kind; the per-kind
 /// vectors are sorted by name for deterministic output.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct ListReport {
     pub rules: Vec<ListedItem>,
     pub skills: Vec<ListedItem>,

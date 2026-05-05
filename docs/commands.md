@@ -95,6 +95,21 @@ The `--available` view (items discoverable from configured sources) is
 deferred for a future release; v0.2.0 ships the installed-state view
 only.
 
+Pass `--json` for a stable machine-readable document:
+
+```json
+{
+  "rules":   [{ "kind": "rule",  "name": "...", "source": "...", "git_ref": null }],
+  "skills":  [{ "kind": "skill", "name": "...", "source": "...", "git_ref": null }],
+  "agents":  [{ "kind": "agent", "name": "...", "source": "...", "git_ref": null }],
+  "bundles": [{ "name": "...", "source": "...", "git_ref": null, "items": [] }]
+}
+```
+
+`kind` is one of `"rule"`, `"skill"`, `"agent"`. `git_ref` is the pinned
+ref/tag/branch when the source is a git URL, otherwise `null`. `source`
+matches the lockfile label (`local:/path` or `github:owner/repo` etc.).
+
 ### `upskill doctor`
 
 Verify on-disk state matches `.upskill-lock.json`. Reports drift in
@@ -109,6 +124,29 @@ three independent buckets:
 
 Exits 0 when clean, 1 when any bucket is non-empty. `doctor` never
 fetches; remote-source drift detection is `update --dry-run`.
+
+Pass `--json` for a stable machine-readable document. Exit code is
+unchanged.
+
+```json
+{
+  "missing_outputs": [
+    { "kind": "skill", "name": "...", "missing_files": ["..."] }
+  ],
+  "stale_hashes": [
+    { "kind": "rule",  "name": "...", "source": "local:...",
+      "stored_hash": "...", "current_hash": "..." }
+  ],
+  "orphan_entries": [
+    { "kind": "agent", "name": "...", "source": "local:...",
+      "reason": "local-path-gone" }
+  ]
+}
+```
+
+`reason` is `"local-path-gone"` or `"item-missing-in-source"`. Hashes
+may be `null` when the SSOT can't be hashed (e.g. unreadable). All three
+arrays are always present, possibly empty.
 
 ### `upskill search <query>`
 

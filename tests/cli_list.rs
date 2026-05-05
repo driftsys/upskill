@@ -154,3 +154,58 @@ fn list_bundle_install_surfaces_bundles_section() {
         "expected bundle name in output: {out}"
     );
 }
+
+#[test]
+fn list_json_empty_lockfile_emits_empty_buckets() {
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["list", "--json"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    for bucket in ["rules", "skills", "agents", "bundles"] {
+        let arr = v[bucket].as_array().unwrap_or_else(|| {
+            panic!("expected {bucket} to be an array, got: {v}");
+        });
+        assert!(arr.is_empty(), "expected empty {bucket}, got: {arr:?}");
+    }
+}
+
+#[test]
+fn list_json_groups_installed_items_by_kind() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["list", "--json"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+
+    assert_eq!(v["rules"].as_array().unwrap().len(), 2);
+    assert_eq!(v["skills"].as_array().unwrap().len(), 1);
+    assert_eq!(v["agents"].as_array().unwrap().len(), 1);
+
+    // Stable item shape: { name, source, git_ref }.
+    let first_rule = &v["rules"][0];
+    assert!(first_rule["name"].is_string());
+    assert!(first_rule["source"].as_str().unwrap().starts_with("local:"));
+    assert!(
+        first_rule.get("git_ref").is_some(),
+        "git_ref key required (null when absent)"
+    );
+}

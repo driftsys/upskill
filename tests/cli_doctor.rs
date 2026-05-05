@@ -204,3 +204,102 @@ fn doctor_detects_orphan_when_item_removed_from_source() {
         "expected orphan with reason: {out}"
     );
 }
+
+#[test]
+fn doctor_json_clean_install_emits_empty_buckets() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["doctor", "--json"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    for bucket in ["missing_outputs", "stale_hashes", "orphan_entries"] {
+        let arr = v[bucket].as_array().unwrap_or_else(|| {
+            panic!("expected {bucket} to be an array, got: {v}");
+        });
+        assert!(arr.is_empty(), "expected empty {bucket}, got: {arr:?}");
+    }
+}
+
+#[test]
+fn doctor_json_orphan_entry_has_kebab_case_reason() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    fs::remove_dir_all(&source).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["doctor", "--json"])
+        .assert()
+        .failure()
+        .code(1);
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert!(!orphans.is_empty(), "expected at least one orphan entry");
+    for o in orphans {
+        assert_eq!(o["reason"].as_str(), Some("local-path-gone"));
+        assert_eq!(o["kind"].as_str().unwrap_or("").len() > 0, true);
+        assert!(o["name"].is_string());
+        assert!(o["source"].as_str().unwrap().starts_with("local:"));
+    }
+}
+
+#[test]
+fn doctor_json_missing_output_lists_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    let stolen = target.join(".claude/skills/create-api-endpoint/SKILL.md");
+    fs::remove_file(&stolen).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["doctor", "--json"])
+        .assert()
+        .failure()
+        .code(1);
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let missing = v["missing_outputs"].as_array().unwrap();
+    assert_eq!(missing.len(), 1);
+    let entry = &missing[0];
+    assert_eq!(entry["name"].as_str(), Some("create-api-endpoint"));
+    assert_eq!(entry["kind"].as_str(), Some("skill"));
+    let files: Vec<&str> = entry["missing_files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f.as_str().unwrap())
+        .collect();
+    assert!(
+        files.iter().any(|p| p.contains("create-api-endpoint")),
+        "expected missing path entry, got: {files:?}"
+    );
+}
