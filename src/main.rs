@@ -44,9 +44,10 @@ fn main() {
     let mut exit_code = match cli.command {
         Commands::Add {
             source,
+            items,
             global,
             project,
-        } => run_add(&source, global, project),
+        } => run_add(&source, &items, global, project),
         Commands::Remove {
             names,
             source,
@@ -121,7 +122,7 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn run_add(source: &str, global: bool, project: bool) -> i32 {
+fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -139,7 +140,7 @@ fn run_add(source: &str, global: bool, project: bool) -> i32 {
     };
 
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target) {
+    match install_with_lockfile(&parsed, &target, items) {
         Ok(report) => {
             print_install_report(&report, source);
             EXIT_SUCCESS

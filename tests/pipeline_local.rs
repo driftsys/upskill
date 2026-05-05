@@ -61,7 +61,7 @@ fn install_writes_per_client_output_for_all_kinds() {
     let target = tmp.path().join("target");
     stage_source(&source);
 
-    let report: InstallReport = install_from_local_path(&source, &target).expect("install");
+    let report: InstallReport = install_from_local_path(&source, &target, None).expect("install");
 
     // Skill — written to .claude/skills/<n>/SKILL.md, .github/skills/<n>/SKILL.md,
     // .agents/skills/<n>/SKILL.md (opencode canonical-store).
@@ -147,10 +147,10 @@ fn install_is_idempotent() {
     let target = tmp.path().join("target");
     stage_source(&source);
 
-    install_from_local_path(&source, &target).expect("install 1");
+    install_from_local_path(&source, &target, None).expect("install 1");
     let snapshot = read_target_tree(&target);
 
-    install_from_local_path(&source, &target).expect("install 2");
+    install_from_local_path(&source, &target, None).expect("install 2");
     let snapshot2 = read_target_tree(&target);
 
     assert_eq!(snapshot, snapshot2, "second install must be byte-identical");
@@ -203,7 +203,7 @@ Hello.
     )
     .unwrap();
 
-    upskill::pipeline::install_from_local_path(&source, &target).expect("install");
+    upskill::pipeline::install_from_local_path(&source, &target, None).expect("install");
 
     assert!(
         target

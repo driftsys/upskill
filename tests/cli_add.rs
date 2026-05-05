@@ -88,3 +88,75 @@ fn add_invalid_source_returns_usage_error() {
         .failure()
         .code(2);
 }
+
+#[test]
+fn add_with_items_subset_installs_only_named_items() {
+    // Spec §2.1: `upskill add <source> [items...]` filters the install
+    // to a subset. Pick the skill (`create-api-endpoint`) and one rule
+    // (`license-awareness`); leave the agent and the second rule out.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "create-api-endpoint",
+            "license-awareness",
+        ])
+        .assert()
+        .success();
+
+    // Selected items are present.
+    assert!(
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists()
+    );
+    assert!(target.join(".claude/rules/license-awareness.md").exists());
+    // Non-selected items are absent (skipped during the filtered walk).
+    assert!(
+        !target.join(".claude/agents/security-reviewer.md").exists(),
+        "agent should not have been installed when not in the subset"
+    );
+    assert!(
+        !target.join(".claude/rules/api-conventions.md").exists(),
+        "second rule should not have been installed when not in the subset"
+    );
+}
+
+#[test]
+fn add_with_items_no_match_is_general_error() {
+    // No name in the list matches anything in the source — the install
+    // should refuse rather than silently emitting nothing.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "nope-not-real",
+            "also-fictional",
+        ])
+        .assert()
+        .failure()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("nope-not-real") || stderr.contains("no matching"),
+        "stderr should name the missing items or say no match: {stderr}"
+    );
+}
