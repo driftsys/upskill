@@ -19,7 +19,7 @@ fn new_skill_creates_skill_md_with_minimum_frontmatter() {
         .assert()
         .success();
 
-    let path = tmp.path().join("skills/code-review/SKILL.md");
+    let path = tmp.path().join("code-review/SKILL.md");
     assert!(path.is_file(), "{path:?} should exist");
     let body = fs::read_to_string(&path).unwrap();
     assert!(body.starts_with("---\n"), "{body}");
@@ -37,7 +37,7 @@ fn new_rule_creates_rule_md() {
         .args(["new", "rule", "license-awareness"])
         .assert()
         .success();
-    let path = tmp.path().join("rules/license-awareness/RULE.md");
+    let path = tmp.path().join("license-awareness/RULE.md");
     assert!(path.is_file());
     let body = fs::read_to_string(&path).unwrap();
     assert!(body.contains("\nname: license-awareness\n"), "{body}");
@@ -52,7 +52,7 @@ fn new_agent_emits_default_mode_and_model() {
         .args(["new", "agent", "security-reviewer"])
         .assert()
         .success();
-    let body = fs::read_to_string(tmp.path().join("agents/security-reviewer/AGENT.md")).unwrap();
+    let body = fs::read_to_string(tmp.path().join("security-reviewer/AGENT.md")).unwrap();
     assert!(body.contains("\nmode: subagent\n"), "{body}");
     assert!(body.contains("\nmodel: sonnet\n"), "{body}");
 }
@@ -60,8 +60,8 @@ fn new_agent_emits_default_mode_and_model() {
 #[test]
 fn new_refuses_existing_item_directory() {
     let tmp = tempfile::tempdir().unwrap();
-    fs::create_dir_all(tmp.path().join("skills/dup")).unwrap();
-    fs::write(tmp.path().join("skills/dup/SKILL.md"), "old").unwrap();
+    fs::create_dir_all(tmp.path().join("dup")).unwrap();
+    fs::write(tmp.path().join("dup/SKILL.md"), "old").unwrap();
 
     let assert = Command::cargo_bin("upskill")
         .unwrap()
@@ -74,7 +74,7 @@ fn new_refuses_existing_item_directory() {
     assert!(stderr.contains("already exists"), "{stderr}");
     // Existing file untouched.
     assert_eq!(
-        fs::read_to_string(tmp.path().join("skills/dup/SKILL.md")).unwrap(),
+        fs::read_to_string(tmp.path().join("dup/SKILL.md")).unwrap(),
         "old"
     );
 }

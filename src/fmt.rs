@@ -156,7 +156,7 @@ mod tests {
             "---\n",
             "## body\n",
         );
-        let out = canonicalise(raw, Path::new("skills/scrambled/SKILL.md")).unwrap();
+        let out = canonicalise(raw, Path::new("scrambled/SKILL.md")).unwrap();
         let yaml = &out[4..out[4..].find("\n---\n").unwrap() + 4];
         let s = yaml.find("schema:").unwrap();
         let n = yaml.find("name:").unwrap();
@@ -179,7 +179,7 @@ mod tests {
         );
         let raw =
             format!("---\nschema: 1\nname: preserve\ndescription: do not touch body.\n---\n{body}");
-        let out = canonicalise(&raw, Path::new("skills/preserve/SKILL.md")).unwrap();
+        let out = canonicalise(&raw, Path::new("preserve/SKILL.md")).unwrap();
         assert!(out.ends_with(body), "body changed:\n{out}");
     }
 
@@ -193,7 +193,7 @@ mod tests {
             "---\n",
             "## body\n",
         );
-        let path = Path::new("skills/out/SKILL.md");
+        let path = Path::new("out/SKILL.md");
         let pass1 = canonicalise(raw, path).unwrap();
         let pass2 = canonicalise(&pass1, path).unwrap();
         assert_eq!(pass1, pass2, "fmt must be idempotent");
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn fmt_skips_already_canonical_files() {
         let tmp = tempfile::tempdir().unwrap();
-        let item = tmp.path().join("skills/clean/SKILL.md");
+        let item = tmp.path().join("clean/SKILL.md");
         let canonical = concat!(
             "---\n",
             "schema: 1\n",
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn fmt_handles_rule_with_scope() {
         let tmp = tempfile::tempdir().unwrap();
-        let item = tmp.path().join("rules/api/RULE.md");
+        let item = tmp.path().join("api/RULE.md");
         write(
             &item,
             concat!(

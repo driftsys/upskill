@@ -1,6 +1,6 @@
 //! Golden-file tests for agent generation across all three clients.
 //!
-//! Input: `tests/fixtures/agents/<name>/AGENT.md`
+//! Input: `tests/fixtures/items/<name>/AGENT.md`
 //! Expected: `tests/fixtures/expected/<client>/<name>.AGENT.md`
 
 use std::fs;
@@ -11,7 +11,7 @@ use upskill::parse::frontmatter;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn load_agent(name: &str) -> (Agent, String) {
-    let path = format!("{FIXTURES}/agents/{name}/AGENT.md");
+    let path = format!("{FIXTURES}/items/{name}/AGENT.md");
     let raw = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let (agent, body) = frontmatter::parse::<Agent>(&raw).expect("parse fixture");
     (agent, body.to_string())

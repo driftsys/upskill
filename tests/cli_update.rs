@@ -12,11 +12,8 @@ use std::path::Path;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -45,7 +42,7 @@ fn install(target: &Path, source: &Path) {
 /// Mutate one fixture skill so its content hash will change on the next
 /// install. Appends a sentinel line to the SKILL body.
 fn mutate_skill(source: &Path) {
-    let path = source.join("skills/create-api-endpoint/SKILL.md");
+    let path = source.join("create-api-endpoint/SKILL.md");
     let original = fs::read_to_string(&path).unwrap();
     fs::write(path, format!("{original}\n<!-- mutated by test -->\n")).unwrap();
 }

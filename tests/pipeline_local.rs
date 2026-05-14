@@ -17,11 +17,8 @@ const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 /// Stage the entire fixture corpus into a temp source directory.
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -184,7 +181,7 @@ fn install_respects_top_level_audience_filter() {
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
 
-    let skill_dir = source.join("skills/claude-only-top");
+    let skill_dir = source.join("claude-only-top");
     fs::create_dir_all(&skill_dir).unwrap();
     fs::write(
         skill_dir.join("SKILL.md"),

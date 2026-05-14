@@ -198,7 +198,7 @@ rules ship out of the box:
 
 ```bash
 upskill lint                # lint everything in the working tree
-upskill lint rules/         # lint a subtree
+upskill lint my-skill/      # lint a single item directory
 upskill lint --strict       # CI mode: warnings become errors
 ```
 
@@ -210,7 +210,7 @@ tools don't overlap.
 
 ```bash
 upskill fmt                  # format everything in the working tree
-upskill fmt rules/           # format a subtree
+upskill fmt my-skill/        # format a single item directory
 ```
 
 Files whose frontmatter is already canonical are left untouched (no

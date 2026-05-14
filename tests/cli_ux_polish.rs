@@ -12,11 +12,8 @@ use std::path::Path;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -64,7 +61,7 @@ fn update_short_dry_run_flag_is_recognised() {
 #[test]
 fn lint_short_strict_flag_is_recognised() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/strict-h1/SKILL.md");
+    let item = tmp.path().join("strict-h1/SKILL.md");
     fs::create_dir_all(item.parent().unwrap()).unwrap();
     fs::write(
         &item,

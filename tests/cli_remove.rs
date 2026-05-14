@@ -13,11 +13,8 @@ use std::path::Path;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
