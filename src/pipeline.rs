@@ -133,10 +133,11 @@ fn is_bundle_file(path: &Path) -> bool {
 }
 
 /// Walk up from `bundle_path`'s parent until a directory is found that
-/// contains at least one of `skills/`, `rules/`, `agents/`, `bundles/`.
-/// Falls back to the bundle's parent directory if no such ancestor
-/// exists, so a flat layout (bundle and items in the same dir) still
-/// works.
+/// looks like an SSOT root — a directory whose direct children include
+/// at least one item directory (containing `RULE.md`, `SKILL.md`, or
+/// `AGENT.md`) or another bundle file. Falls back to the bundle's
+/// parent directory if no such ancestor exists, so a flat layout
+/// (bundle and items in the same dir) still works.
 fn find_registry_root(bundle_path: &Path) -> Result<PathBuf> {
     let parent = bundle_path
         .parent()
@@ -155,9 +156,21 @@ fn find_registry_root(bundle_path: &Path) -> Result<PathBuf> {
 }
 
 fn has_ssot_layout(dir: &Path) -> bool {
-    ["skills", "rules", "agents", "bundles"]
-        .iter()
-        .any(|child| dir.join(child).is_dir())
+    let Ok(entries) = fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
+            if path.join(entrypoint).is_file() {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Flat list of every item name a single bundle declares (in
@@ -366,14 +379,6 @@ fn parse_kind(s: &str) -> Result<ItemKind> {
     }
 }
 
-fn kind_subdir(kind: ItemKind) -> &'static str {
-    match kind {
-        ItemKind::Skill => "skills",
-        ItemKind::Rule => "rules",
-        ItemKind::Agent => "agents",
-    }
-}
-
 /// One per-client output file the lockfile said should exist but doesn't.
 #[derive(Debug, Clone, Serialize)]
 pub struct MissingOutput {
@@ -486,7 +491,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 });
                 continue;
             }
-            let item_dir = ssot_root.join(kind_subdir(kind)).join(&entry.name);
+            let item_dir = ssot_root.join(&entry.name);
             if !item_dir.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -667,23 +672,33 @@ pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<Updat
 
 /// Hash every item directory under a SSOT root, keyed by `(kind, name)`.
 /// Used by `update --dry-run` to compute would-be hashes without
-/// installing. Mirrors the per-kind walk of `install_from_local_path`.
+/// installing. Mirrors the discovery of `install_from_local_path`: an
+/// item directory `<source_root>/<name>/` contributes one entry per
+/// kind for which it holds an entrypoint (so co-located multi-kind
+/// items contribute multiple entries, one per kind).
 fn hash_source_items(
     source_root: &Path,
 ) -> std::collections::BTreeMap<(ItemKind, String), Option<String>> {
     let mut out = std::collections::BTreeMap::new();
-    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        let kind_dir = source_root.join(kind_subdir(kind));
-        let Ok(entries) = fs::read_dir(&kind_dir) else {
+    let Ok(entries) = fs::read_dir(source_root) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                out.insert((kind, name.to_string()), hash_item_dir(&path));
+        let hash = hash_item_dir(&path);
+        for (entrypoint, kind) in [
+            ("RULE.md", ItemKind::Rule),
+            ("SKILL.md", ItemKind::Skill),
+            ("AGENT.md", ItemKind::Agent),
+        ] {
+            if path.join(entrypoint).is_file() {
+                out.insert((kind, name.to_string()), hash.clone());
             }
         }
     }
@@ -975,7 +990,7 @@ fn install_skills(
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<()> {
-    for (name, dir) in iter_item_dirs(&source.join("skills"))? {
+    for (name, dir) in iter_item_dirs(source)? {
         if let Some(items) = filter
             && !items.contains(ItemKind::Skill, &name)
         {
@@ -1018,7 +1033,7 @@ fn install_rules(
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<()> {
-    for (name, dir) in iter_item_dirs(&source.join("rules"))? {
+    for (name, dir) in iter_item_dirs(source)? {
         if let Some(items) = filter
             && !items.contains(ItemKind::Rule, &name)
         {
@@ -1061,7 +1076,7 @@ fn install_agents(
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<()> {
-    for (name, dir) in iter_item_dirs(&source.join("agents"))? {
+    for (name, dir) in iter_item_dirs(source)? {
         if let Some(items) = filter
             && !items.contains(ItemKind::Agent, &name)
         {
@@ -1463,16 +1478,6 @@ mod tests {
             reason: OrphanReason::LocalPathGone,
         });
         assert!(!report.is_clean());
-    }
-
-    #[test]
-    fn kind_subdir_matches_install_pipeline_layout() {
-        // Format-spec §2.1: SSOT root has skills/, rules/, agents/.
-        // The doctor walks the same layout install_skills/_rules/_agents
-        // walk; pinning the subdir names here catches accidental rename.
-        assert_eq!(kind_subdir(ItemKind::Skill), "skills");
-        assert_eq!(kind_subdir(ItemKind::Rule), "rules");
-        assert_eq!(kind_subdir(ItemKind::Agent), "agents");
     }
 
     #[test]

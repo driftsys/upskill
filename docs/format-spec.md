@@ -1,8 +1,8 @@
 # Portable Format for AI-Assistance Content
 
-**Version**: 0.1.0-draft
+**Version**: 0.2.0-draft
 **Status**: Draft
-**Date**: 2026-05-01
+**Date**: 2026-05-13
 
 ---
 
@@ -81,35 +81,51 @@ directories under `~/.config/`, `~/.claude/`, etc.): generated content only.
 
 ### 2.1 Item directory structure
 
-Each item is a directory containing at minimum an entrypoint file. Kind is determined by directory
-location and entrypoint filename:
+Each item is a directory containing at minimum one entrypoint file. Kind is determined by the
+entrypoint filename:
 
 ```text
 <item-root>/
-├── rules/
-│   └── <name>/
-│       └── RULE.md
-├── skills/
-│   └── <name>/
-│       └── SKILL.md
-└── agents/
-    └── <name>/
-        └── AGENT.md
+├── <name-a>/
+│   └── RULE.md
+├── <name-b>/
+│   └── SKILL.md
+├── <name-c>/
+│   └── AGENT.md
+└── <name-d>/                # optional co-location: multiple kinds in one item directory
+    ├── SKILL.md             # name: <name-d>
+    └── AGENT.md             # name: <name-d>
 ```
 
 Constraints:
 
-- `<name>` MUST match the `name` field in the entrypoint's YAML frontmatter.
+- An item directory MUST contain at least one entrypoint file (`RULE.md`, `SKILL.md`, or
+  `AGENT.md`).
+- An item directory MAY contain more than one entrypoint when the entrypoints share a name and
+  represent a tightly-coupled set of kinds for one capability (for example, a skill paired
+  with its enforcing rule, or an agent paired with a skill it preloads). When multiple
+  entrypoints are present, every entrypoint's `name:` field MUST equal the directory name.
+  Co-location is optional; solo-kind item directories are the common case.
+- `<name>` MUST match the `name` field in every entrypoint within the directory.
 - `<name>` MUST consist of lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`).
 - `<name>` MUST NOT start or end with a hyphen.
 - `<name>` MUST be at most 64 characters.
+- Kind is determined by the entrypoint filename: `RULE.md` for a rule, `SKILL.md` for a skill,
+  `AGENT.md` for an agent. Implementations MUST NOT infer kind from any other source (parent
+  directory name, frontmatter field, etc.).
 - `<item-root>` is the SSOT path within a **source registry** repository. SSOT items live only in
   source registries; consumer projects (where developers run `upskill add`) only ever hold
   generated, client-specific outputs and never SSOT items.
 - Within a source registry, `<item-root>` MAY be any path that fits the team's organisation
-  (`content/`, `skills-src/`, etc.). Source registries SHOULD avoid `.agents/` as their
-  `<item-root>` to prevent confusion with the consumer-side opencode canonical-store path
-  (§7.3).
+  (`content/`, `skills-src/`, `skills/`, etc.). Source registries SHOULD avoid `.agents/` as
+  their `<item-root>` to prevent confusion with the consumer-side opencode canonical-store
+  path (§7.3).
+
+**Agent Skills standard compatibility.** A skill item directory `<item-root>/<name>/SKILL.md`
+is a valid Agent Skills directory per agentskills.io: the standard requires `<dir>/SKILL.md`
+with `name` matching the parent directory and permits "any additional files or directories"
+in the skill directory. A sibling `RULE.md` or `AGENT.md` is therefore standard-compliant
+additional content and is ignored by agentskills.io-only tooling.
 
 ### 2.2 Bundle files
 
@@ -130,17 +146,21 @@ Bundles are flat manifest files, not directories:
 
 ### 2.3 Per-client override files
 
-Any item MAY have optional per-client body overrides alongside the canonical entrypoint:
+Any entrypoint MAY have optional per-client body overrides alongside it in the same item
+directory:
 
 ```text
-rules/<name>/
+<name>/
 ├── RULE.md                    # canonical, always required
 ├── RULE.claude.md             # optional — Claude Code body override
 ├── RULE.copilot.md            # optional — GitHub Copilot body override
 └── RULE.opencode.md           # optional — opencode body override
 ```
 
-The same pattern applies to skills (`SKILL.claude.md`, etc.) and agents (`AGENT.claude.md`, etc.).
+The same pattern applies to skills (`SKILL.claude.md`, etc.) and agents (`AGENT.claude.md`,
+etc.). When an item directory holds multiple kinds (§2.1), each kind has its own set of
+override files keyed by entrypoint name (`RULE.claude.md`, `SKILL.claude.md`,
+`AGENT.claude.md`); they coexist in the same directory without ambiguity.
 
 Override file rules:
 
@@ -163,7 +183,7 @@ body for client `C` as follows:
 Items MAY contain supporting files in their directory:
 
 ```text
-skills/<name>/
+<name>/
 ├── SKILL.md
 ├── templates/
 │   └── handler.ts.tmpl
@@ -176,6 +196,9 @@ skills/<name>/
 - Supporting files are referenced from the entrypoint body using standard markdown relative links.
 - Implementations MUST preserve supporting files and their directory structure during generation
   (copy them alongside the generated entrypoint into the client-expected location).
+- When an item directory holds multiple kinds (§2.1), supporting resources are shared: any
+  entrypoint in the directory MAY reference them via relative links, and implementations MUST
+  copy them alongside each generated entrypoint that references them.
 
 ---
 

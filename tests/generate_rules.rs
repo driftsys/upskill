@@ -1,6 +1,6 @@
 //! Golden-file tests for rule generation across all three clients.
 //!
-//! Input: `tests/fixtures/rules/<name>/RULE.md`
+//! Input: `tests/fixtures/items/<name>/RULE.md`
 //! Expected: `tests/fixtures/expected/<client>/<name>.RULE.md`
 
 use std::fs;
@@ -11,7 +11,7 @@ use upskill::parse::frontmatter;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn load_rule(name: &str) -> (Rule, String) {
-    let path = format!("{FIXTURES}/rules/{name}/RULE.md");
+    let path = format!("{FIXTURES}/items/{name}/RULE.md");
     let raw = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let (rule, body) = frontmatter::parse::<Rule>(&raw).expect("parse fixture");
     (rule, body.to_string())

@@ -23,11 +23,8 @@ fn write(path: &Path, contents: &str) {
 fn lint_clean_fixture_corpus_exits_zero() {
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 
     let assert = Command::cargo_bin("upskill")
         .unwrap()
@@ -42,7 +39,7 @@ fn lint_clean_fixture_corpus_exits_zero() {
 #[test]
 fn lint_flags_h1_in_body_as_warning() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/bad-h1/SKILL.md");
+    let item = tmp.path().join("bad-h1/SKILL.md");
     write(
         &item,
         concat!(
@@ -74,7 +71,7 @@ fn lint_flags_h1_in_body_as_warning() {
 #[test]
 fn lint_flags_fence_without_language_as_warning() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/no-fence-lang/SKILL.md");
+    let item = tmp.path().join("no-fence-lang/SKILL.md");
     write(
         &item,
         concat!(
@@ -108,7 +105,7 @@ fn lint_flags_fence_without_language_as_warning() {
 #[test]
 fn lint_strict_promotes_warnings_to_errors() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/strict-h1/SKILL.md");
+    let item = tmp.path().join("strict-h1/SKILL.md");
     write(
         &item,
         concat!(
@@ -135,7 +132,7 @@ fn lint_strict_promotes_warnings_to_errors() {
 fn lint_flags_name_directory_mismatch_as_error() {
     let tmp = tempfile::tempdir().unwrap();
     // Directory named foo, frontmatter name is bar — error per §2.1.
-    let item = tmp.path().join("skills/foo/SKILL.md");
+    let item = tmp.path().join("foo/SKILL.md");
     write(
         &item,
         concat!(
@@ -161,7 +158,7 @@ fn lint_flags_name_directory_mismatch_as_error() {
 #[test]
 fn lint_flags_unbalanced_directive_as_error() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/unbalanced/SKILL.md");
+    let item = tmp.path().join("unbalanced/SKILL.md");
     write(
         &item,
         concat!(

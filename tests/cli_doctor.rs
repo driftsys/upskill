@@ -14,11 +14,8 @@ use std::path::Path;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -121,7 +118,7 @@ fn doctor_detects_ssot_hash_drift() {
     fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
-    let skill_md = source.join("skills/create-api-endpoint/SKILL.md");
+    let skill_md = source.join("create-api-endpoint/SKILL.md");
     let original = fs::read_to_string(&skill_md).unwrap();
     fs::write(&skill_md, format!("{original}\n<!-- mutation -->\n")).unwrap();
 
@@ -189,7 +186,7 @@ fn doctor_detects_orphan_when_item_removed_from_source() {
     fs::create_dir_all(target.join(".git")).unwrap();
     install(&target, &source);
 
-    fs::remove_dir_all(source.join("skills/create-api-endpoint")).unwrap();
+    fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
 
     let assert = Command::cargo_bin("upskill")
         .unwrap()

@@ -80,7 +80,7 @@ diffs the second time.
 ```bash
 # Inside a source-registry repo
 upskill new skill my-skill
-$EDITOR skills/my-skill/SKILL.md
+$EDITOR my-skill/SKILL.md
 
 # Validate as you go
 upskill lint

@@ -19,7 +19,7 @@ fn write(path: &Path, contents: &str) {
 #[test]
 fn fmt_reorders_frontmatter_keys_canonically() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/scrambled/SKILL.md");
+    let item = tmp.path().join("scrambled/SKILL.md");
     // Canonical order is schema → name → description → audience → license →
     // metadata. Author wrote them in the wrong order.
     write(
@@ -67,7 +67,7 @@ fn fmt_reorders_frontmatter_keys_canonically() {
 #[test]
 fn fmt_is_idempotent() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/already-canonical/SKILL.md");
+    let item = tmp.path().join("already-canonical/SKILL.md");
     write(
         &item,
         concat!(
@@ -106,7 +106,7 @@ fn fmt_is_idempotent() {
 #[test]
 fn fmt_does_not_touch_body() {
     let tmp = tempfile::tempdir().unwrap();
-    let item = tmp.path().join("skills/preserve-body/SKILL.md");
+    let item = tmp.path().join("preserve-body/SKILL.md");
     let body = concat!(
         "\n",
         "## A heading\n",
@@ -167,7 +167,7 @@ fn fmt_refuses_to_run_inside_consumer_project() {
 fn fmt_reports_files_changed_count() {
     let tmp = tempfile::tempdir().unwrap();
     write(
-        &tmp.path().join("skills/needs-fmt/SKILL.md"),
+        &tmp.path().join("needs-fmt/SKILL.md"),
         concat!(
             "---\n",
             "name: needs-fmt\n",
@@ -178,7 +178,7 @@ fn fmt_reports_files_changed_count() {
         ),
     );
     write(
-        &tmp.path().join("skills/clean/SKILL.md"),
+        &tmp.path().join("clean/SKILL.md"),
         concat!(
             "---\n",
             "schema: 1\n",

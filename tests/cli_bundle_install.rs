@@ -12,14 +12,17 @@ use std::path::Path;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
-/// Stage `tests/fixtures/{rules,skills,agents,bundles}` into a fresh
-/// registry root so each test starts with a clean copy.
+/// Stage `tests/fixtures/items` and `tests/fixtures/bundles` into a
+/// fresh registry root so each test starts with a clean copy. Items
+/// land at the root level (format-spec §2.1, ADR-0006); bundles keep
+/// their `bundles/` subdirectory.
 fn stage_registry(root: &Path) {
-    for kind in ["skills", "rules", "agents", "bundles"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = root.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    copy_dir_all(Path::new(&format!("{FIXTURES}/items")), root).unwrap();
+    copy_dir_all(
+        Path::new(&format!("{FIXTURES}/bundles")),
+        &root.join("bundles"),
+    )
+    .unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {

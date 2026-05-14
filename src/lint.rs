@@ -18,8 +18,8 @@
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
-//! directory (walk for `skills/*/SKILL.md`, `rules/*/RULE.md`,
-//! `agents/*/AGENT.md`, plus any `*.bundle.md`). With no paths, the
+//! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT}.md` per
+//! format-spec §2.1, plus any `*.bundle.md`). With no paths, the
 //! current directory is used.
 
 use anyhow::{Context, Result, anyhow};
@@ -158,7 +158,7 @@ impl FileKind {
 
 /// Walk `root` (file or directory) and return every entrypoint file
 /// the lint should inspect. SSOT items are detected by the
-/// `<kind>s/<name>/<KIND>.md` layout per format-spec §2.1; bundles by
+/// `<root>/<name>/<KIND>.md` layout per format-spec §2.1; bundles by
 /// the `*.bundle.md` suffix. Shared with `crate::fmt`.
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
@@ -178,34 +178,40 @@ pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
         ));
     }
 
-    for sub in ["skills", "rules", "agents"] {
-        let kind_root = root.join(sub);
-        if !kind_root.is_dir() {
+    discover_items(root, &mut out)?;
+    walk_bundles(root, &mut out)?;
+    Ok(out)
+}
+
+/// Walk one level deep under `root`, collecting every `RULE.md`,
+/// `SKILL.md`, and `AGENT.md` found in a subdirectory. Hidden
+/// directories are skipped. A single item directory may contribute
+/// more than one entrypoint when it holds multiple co-located kinds
+/// (format-spec §2.1).
+fn discover_items(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(root)
+        .with_context(|| format!("read {}", root.display()))?
+        .flatten()
+    {
+        let path = entry.path();
+        if !path.is_dir() {
             continue;
         }
-        let entry = match sub {
-            "skills" => "SKILL.md",
-            "rules" => "RULE.md",
-            "agents" => "AGENT.md",
-            _ => unreachable!(),
-        };
-        for item in fs::read_dir(&kind_root)
-            .with_context(|| format!("read {}", kind_root.display()))?
-            .flatten()
+        if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with('.'))
         {
-            let path = item.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let entry_path = path.join(entry);
+            continue;
+        }
+        for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
+            let entry_path = path.join(entrypoint);
             if entry_path.is_file() {
                 out.push(entry_path);
             }
         }
     }
-
-    walk_bundles(root, &mut out)?;
-    Ok(out)
+    Ok(())
 }
 
 /// Recurse into `root` looking for `*.bundle.md` files. Skips hidden
@@ -425,7 +431,7 @@ mod tests {
     fn lint_clean_skill_yields_no_findings() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/clean/SKILL.md"),
+            &tmp.path().join("clean/SKILL.md"),
             &skill("clean", "\n## Body\n\nText.\n"),
         );
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
@@ -441,7 +447,7 @@ mod tests {
     fn lint_detects_h1_in_body() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/has-h1/SKILL.md"),
+            &tmp.path().join("has-h1/SKILL.md"),
             &skill("has-h1", "\n# Forbidden\n\n## ok\n"),
         );
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
@@ -458,7 +464,7 @@ mod tests {
     fn lint_detects_fence_without_language() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/no-lang/SKILL.md"),
+            &tmp.path().join("no-lang/SKILL.md"),
             &skill("no-lang", "\n## ok\n\n```\nplain\n```\n"),
         );
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
@@ -474,7 +480,7 @@ mod tests {
     fn lint_skips_h1_inside_fence() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/in-fence/SKILL.md"),
+            &tmp.path().join("in-fence/SKILL.md"),
             &skill(
                 "in-fence",
                 "\n## ok\n\n```sh\n# real comment in shell\n```\n",
@@ -492,7 +498,7 @@ mod tests {
     fn lint_strict_promotes_warnings_to_errors() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/has-h1/SKILL.md"),
+            &tmp.path().join("has-h1/SKILL.md"),
             &skill("has-h1", "\n# bad\n"),
         );
         let report = lint(&[tmp.path().to_path_buf()], true).unwrap();
@@ -508,10 +514,7 @@ mod tests {
     #[test]
     fn lint_flags_name_directory_mismatch() {
         let tmp = tempfile::tempdir().unwrap();
-        write(
-            &tmp.path().join("skills/foo/SKILL.md"),
-            &skill("bar", "\n## ok\n"),
-        );
+        write(&tmp.path().join("foo/SKILL.md"), &skill("bar", "\n## ok\n"));
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
         let f = report
             .findings
@@ -529,7 +532,7 @@ mod tests {
     fn lint_flags_unbalanced_directive() {
         let tmp = tempfile::tempdir().unwrap();
         write(
-            &tmp.path().join("skills/dangling/SKILL.md"),
+            &tmp.path().join("dangling/SKILL.md"),
             &skill(
                 "dangling",
                 "\n## ok\n\n<!-- @client:claude -->\nnever closed\n",
@@ -554,6 +557,58 @@ mod tests {
         .unwrap();
         let err = lint(&[tmp.path().to_path_buf()], false).expect_err("must refuse");
         assert!(format!("{err:#}").contains("consumer project"));
+    }
+
+    #[test]
+    fn lint_flags_colocated_entrypoint_with_mismatched_name() {
+        // Format-spec §2.1, ADR-0006: when an item directory holds
+        // multiple entrypoints, every entrypoint's `name:` MUST equal
+        // the directory name. A solo per-file `name-matches-dir`
+        // check is sufficient — each mismatching entrypoint is
+        // flagged independently.
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            &tmp.path().join("security/SKILL.md"),
+            concat!(
+                "---\n",
+                "schema: 1\n",
+                "name: security\n",
+                "description: matches the directory.\n",
+                "---\n",
+                "\n## ok\n",
+            ),
+        );
+        write(
+            &tmp.path().join("security/AGENT.md"),
+            concat!(
+                "---\n",
+                "schema: 1\n",
+                "name: wrong-name\n",
+                "description: does not match the directory.\n",
+                "---\n",
+                "\n## ok\n",
+            ),
+        );
+        let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
+        // The skill (matches) produces no finding; the agent (mismatch) does.
+        let agent_finding = report.findings.iter().find(|f| {
+            f.rule_id == "name-matches-dir"
+                && f.path.file_name().and_then(|n| n.to_str()) == Some("AGENT.md")
+        });
+        assert!(
+            agent_finding.is_some(),
+            "expected co-located AGENT.md name mismatch to be flagged: {:?}",
+            report.findings
+        );
+        let skill_finding = report.findings.iter().find(|f| {
+            f.rule_id == "name-matches-dir"
+                && f.path.file_name().and_then(|n| n.to_str()) == Some("SKILL.md")
+        });
+        assert!(
+            skill_finding.is_none(),
+            "matching co-located SKILL.md must not be flagged: {:?}",
+            report.findings
+        );
     }
 
     #[test]

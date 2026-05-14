@@ -1,16 +1,25 @@
 //! `upskill new <kind> <name>` — scaffold a starter SSOT item.
 //!
 //! Author command per ADR-0004 — runs only inside a source-registry
-//! tree. Writes one file at `<cwd>/<kind>s/<name>/<KIND>.md` (per
-//! format-spec §2.1) with the minimum frontmatter the spec requires
-//! plus kind-specific defaults: `mode: subagent` / `model: sonnet`
-//! for agents.
+//! tree. Writes one file at `<cwd>/<name>/<KIND>.md` (per format-spec
+//! §2.1 and [ADR-0006](../../docs/adr/0006-flat-item-layout.md)) with
+//! the minimum frontmatter the spec requires plus kind-specific
+//! defaults: `mode: subagent` / `model: sonnet` for agents.
+//!
+//! When `<cwd>/<name>/` already exists with a different kind's
+//! entrypoint, the command adds the requested kind as a co-located
+//! sibling (format-spec §2.1) provided every existing entrypoint's
+//! `name:` already matches `<name>`. The user keeps a single item
+//! directory expressing one capability across multiple kinds.
 //!
 //! Refuses if:
 //!
 //! - `cwd/.upskill-lock.json` exists (consumer project, not a source
 //!   registry).
-//! - The target item directory already exists.
+//! - The target entrypoint file (`<name>/<KIND>.md`) already exists.
+//! - `<cwd>/<name>/` exists but is not an item directory (no
+//!   recognised entrypoints), or its existing entrypoints' `name:`
+//!   fields do not match `<name>`.
 //! - `<name>` does not satisfy format-spec §2.1
 //!   (`[a-z0-9-]{1,64}`, no leading/trailing hyphen).
 
@@ -38,14 +47,6 @@ impl NewKind {
         }
     }
 
-    fn dir(self) -> &'static str {
-        match self {
-            Self::Rule => "rules",
-            Self::Skill => "skills",
-            Self::Agent => "agents",
-        }
-    }
-
     fn entry(self) -> &'static str {
         match self {
             Self::Rule => "RULE.md",
@@ -54,6 +55,9 @@ impl NewKind {
         }
     }
 }
+
+/// Every entrypoint filename a co-located item directory may hold.
+const ALL_ENTRYPOINTS: &[&str] = &["RULE.md", "SKILL.md", "AGENT.md"];
 
 /// Outcome of one scaffold call — the path written, for the CLI to
 /// echo back.
@@ -67,6 +71,13 @@ pub struct ScaffoldReport {
 /// Scaffold a new item under `root`. `root` is typically
 /// `std::env::current_dir()`; it is also the consumer-project guard
 /// boundary.
+///
+/// Writes `<root>/<name>/<KIND>.md` (format-spec §2.1, ADR-0006). If
+/// `<root>/<name>/` already exists as a co-locatable item directory
+/// (its existing entrypoints' `name:` fields all equal `<name>`), the
+/// new entrypoint is added as a sibling. If the directory exists but
+/// holds entrypoints with a different `name:`, or no entrypoints at
+/// all, the command refuses.
 pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport> {
     if is_consumer_project(root) {
         return Err(anyhow!(
@@ -77,16 +88,29 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
     }
     validate_name(name)?;
 
-    let item_dir = root.join(kind.dir()).join(name);
+    let item_dir = root.join(name);
     let entry_path = item_dir.join(kind.entry());
-    if item_dir.exists() {
+
+    if entry_path.exists() {
         bail!(
-            "{}: target directory already exists — refusing to overwrite",
-            item_dir.display()
+            "{}: target entrypoint already exists — refusing to overwrite",
+            entry_path.display()
         );
     }
 
-    std::fs::create_dir_all(&item_dir).with_context(|| format!("create {}", item_dir.display()))?;
+    if item_dir.exists() {
+        if !item_dir.is_dir() {
+            bail!(
+                "{}: exists but is not a directory — refusing to scaffold into it",
+                item_dir.display()
+            );
+        }
+        validate_existing_item_dir_for_coloc(&item_dir, name)?;
+    } else {
+        std::fs::create_dir_all(&item_dir)
+            .with_context(|| format!("create {}", item_dir.display()))?;
+    }
+
     std::fs::write(&entry_path, render(kind, name))
         .with_context(|| format!("write {}", entry_path.display()))?;
 
@@ -95,6 +119,48 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
         kind,
         name: name.to_string(),
     })
+}
+
+/// Verify that `dir` is a co-locatable item directory for `name`: it
+/// contains at least one recognised entrypoint, and every entrypoint
+/// it does contain declares `name:` equal to `name`. Mirrors the spec
+/// §2.1 invariant — co-located entrypoints in one item directory share
+/// the directory's name.
+fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
+    let mut saw_entrypoint = false;
+    for entrypoint in ALL_ENTRYPOINTS {
+        let path = dir.join(entrypoint);
+        if !path.is_file() {
+            continue;
+        }
+        saw_entrypoint = true;
+        let raw =
+            std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
+        let existing_name = read_name_field(&raw, &path)?;
+        if existing_name != name {
+            bail!(
+                "{}: existing entrypoint declares `name: {existing_name}` — co-located \
+                 entrypoints must share the directory's name `{name}` (format-spec §2.1)",
+                path.display()
+            );
+        }
+    }
+    if !saw_entrypoint {
+        bail!(
+            "{}: directory exists but contains no recognised entrypoint — refusing to \
+             scaffold into a non-item directory",
+            dir.display()
+        );
+    }
+    Ok(())
+}
+
+/// Pull the `name:` field out of an existing entrypoint's frontmatter
+/// — kind-agnostic, since all kinds share the field.
+fn read_name_field(raw: &str, path: &Path) -> Result<String> {
+    let (skill, _) = crate::parse::frontmatter::parse::<crate::model::Skill>(raw)
+        .with_context(|| format!("parse frontmatter of {}", path.display()))?;
+    Ok(skill.name)
 }
 
 /// Format-spec §2.1: `[a-z0-9-]{1,64}`, no leading or trailing hyphen.
@@ -169,10 +235,7 @@ mod tests {
     fn scaffold_skill_writes_canonical_skill_md() {
         let tmp = tempfile::tempdir().unwrap();
         let report = scaffold(tmp.path(), NewKind::Skill, "code-review").unwrap();
-        assert_eq!(
-            report.written,
-            tmp.path().join("skills/code-review/SKILL.md")
-        );
+        assert_eq!(report.written, tmp.path().join("code-review/SKILL.md"));
         let content = std::fs::read_to_string(&report.written).unwrap();
         // Frontmatter parses against the model — guarantees the
         // scaffold is shape-correct for a brand-new author.
@@ -192,11 +255,48 @@ mod tests {
     }
 
     #[test]
-    fn scaffold_refuses_existing_directory() {
+    fn scaffold_refuses_existing_entrypoint() {
         let tmp = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(tmp.path().join("skills/dup")).unwrap();
+        scaffold(tmp.path(), NewKind::Skill, "dup").unwrap();
         let err = scaffold(tmp.path(), NewKind::Skill, "dup").expect_err("must refuse");
         assert!(format!("{err:#}").contains("already exists"));
+    }
+
+    #[test]
+    fn scaffold_colocates_when_existing_entrypoint_shares_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        // First, scaffold a skill.
+        scaffold(tmp.path(), NewKind::Skill, "security").unwrap();
+        // Then co-locate an agent under the same name — should succeed.
+        let report = scaffold(tmp.path(), NewKind::Agent, "security").unwrap();
+        assert_eq!(report.written, tmp.path().join("security/AGENT.md"));
+        assert!(tmp.path().join("security/SKILL.md").is_file());
+        assert!(tmp.path().join("security/AGENT.md").is_file());
+    }
+
+    #[test]
+    fn scaffold_refuses_coloc_when_existing_name_mismatches() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item_dir = tmp.path().join("foo");
+        std::fs::create_dir_all(&item_dir).unwrap();
+        // An existing entrypoint with a different name.
+        std::fs::write(
+            item_dir.join("SKILL.md"),
+            "---\nschema: 1\nname: bar\ndescription: x\n---\n\n## x\n",
+        )
+        .unwrap();
+        let err = scaffold(tmp.path(), NewKind::Rule, "foo").expect_err("must refuse");
+        let msg = format!("{err:#}");
+        assert!(msg.contains("name: bar"), "got: {msg}");
+        assert!(msg.contains("must share"), "got: {msg}");
+    }
+
+    #[test]
+    fn scaffold_refuses_when_dir_exists_without_entrypoint() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("empty-dir")).unwrap();
+        let err = scaffold(tmp.path(), NewKind::Skill, "empty-dir").expect_err("must refuse");
+        assert!(format!("{err:#}").contains("no recognised entrypoint"));
     }
 
     #[test]

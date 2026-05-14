@@ -47,8 +47,9 @@ Inside a source-registry repo (where SSOT items live):
 upskill new skill code-review
 ```
 
-This writes `skills/code-review/SKILL.md` with the minimum frontmatter
-the format spec requires. Open it, replace the `TODO` description and
+This writes `code-review/SKILL.md` with the minimum frontmatter the
+format spec requires (item directories live at one level under the
+source-registry root per format-spec §2.1). Open it, replace the `TODO` description and
 body, then run:
 
 ```bash

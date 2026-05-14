@@ -262,7 +262,7 @@ requires:
         );
         write_file(
             tmp.path(),
-            "skills/alongside.bundle.md",
+            "nested/alongside.bundle.md",
             &renamed(PLATFORM, "alongside"),
         );
         // Dot-directory contents should be skipped.
@@ -272,7 +272,7 @@ requires:
             "---\nschema: 1\nname: skipped\ndescription: nope\nitems: {}\n---\n",
         );
         // Non-bundle file should be ignored.
-        write_file(tmp.path(), "skills/x/SKILL.md", "---\nname: x\n---\nbody");
+        write_file(tmp.path(), "x/SKILL.md", "---\nname: x\n---\nbody");
 
         let found = discover(tmp.path()).expect("discover");
         let names: Vec<&str> = found.iter().map(|(_, b)| b.name.as_str()).collect();

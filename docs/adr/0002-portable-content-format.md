@@ -44,24 +44,29 @@ docs. Client-specific words (Copilot's "instructions", Claude's "subagent")
 appear only in generated output and per-client documentation, never in
 upskill's own surface.
 
-### Directory-per-item layout, symmetric across kinds
+### Directory-per-item layout
 
-```text
-<source-registry-root>/
-├── rules/<name>/RULE.md
-├── skills/<name>/SKILL.md
-└── agents/<name>/AGENT.md
-```
+> **Superseded by [ADR-0006](./0006-flat-item-layout.md)** for the
+> kind-subdir aspect. The decision that each item is its own directory
+> stands; the requirement that items live under `rules/`, `skills/`,
+> `agents/` subdirectories is dropped. Kind is determined by the
+> entrypoint filename alone.
 
 A directory per item — for all three kinds — enables ancillary resources
-(templates, scripts, reference files) without future migration. Symmetry
-reduces cognitive load and simplifies tooling.
+(templates, scripts, reference files) without future migration. Per
+ADR-0006, item directories live directly under `<item-root>`:
 
-The diagram is **illustrative**, not normative. Source registries
-organise their SSOT however the team prefers (`content/`, `skills-src/`,
-mixed kinds, etc.). The only constraint is that each item is a directory
-containing its kind-specific entrypoint file (`RULE.md`, `SKILL.md`, or
-`AGENT.md`).
+```text
+<item-root>/
+├── <name-a>/RULE.md
+├── <name-b>/SKILL.md
+└── <name-c>/AGENT.md
+```
+
+An item directory MAY contain more than one entrypoint when the
+entrypoints share a name; this expresses a tightly-coupled set of
+kinds for one capability. See ADR-0006 for the full layout contract
+and rationale.
 
 The `.agents/` path is **not** a source-registry convention. It is
 purely the consumer-side generated-output path for the opencode

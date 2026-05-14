@@ -20,11 +20,8 @@ use upskill::source::InstallSource;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
-    for kind in ["skills", "rules", "agents"] {
-        let from = format!("{FIXTURES}/{kind}");
-        let to = source.join(kind);
-        copy_dir_all(Path::new(&from), &to).unwrap();
-    }
+    let from = format!("{FIXTURES}/items");
+    copy_dir_all(Path::new(&from), &source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -275,7 +272,7 @@ fn re_install_after_upstream_push_picks_up_new_content() {
         .collect();
 
     let mutation_marker = "<!-- upstream evolution test -->";
-    let skill_md = work.join("skills/create-api-endpoint/SKILL.md");
+    let skill_md = work.join("create-api-endpoint/SKILL.md");
     let original_body = fs::read_to_string(&skill_md).unwrap();
     fs::write(&skill_md, format!("{original_body}\n{mutation_marker}\n")).unwrap();
     git(
