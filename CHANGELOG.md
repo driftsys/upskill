@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2] (2026-05-14)
+
+### Features
+
+- **layout:** flat item layout — drop kind subdirectories ([#134]) ([5d46dc6])
+
+[0.3.2]: https://github.com/driftsys/upskill/compare/v0.3.1...v0.3.2
+[5d46dc6]: https://github.com/driftsys/upskill/commit/5d46dc6
+[#134]: https://github.com/driftsys/upskill/issues/134
+
 ## [0.3.1] (2026-05-05)
 
 ### Documentation
