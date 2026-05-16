@@ -228,7 +228,7 @@ pub fn build(root: &Path, check: bool) -> Result<BuildOutcome> {
     if crate::lint::is_consumer_project(root) {
         anyhow::bail!(
             "{}: refusing to build — `.upskill-lock.json` indicates this is a consumer project, \
-             not a source registry",
+             not a source registry. Run `upskill registry build` inside the SSOT tree instead.",
             root.display()
         );
     }
