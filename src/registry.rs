@@ -122,7 +122,6 @@ fn manifest_path(root: &Path) -> PathBuf {
 struct EntrypointMeta {
     name: String,
     description: String,
-    #[serde(default)]
     metadata: Option<crate::model::Metadata>,
 }
 
@@ -139,7 +138,9 @@ pub fn scan(root: &Path) -> Result<(Vec<ManifestItem>, Vec<ManifestBundle>)> {
         if !dir.is_dir() {
             continue;
         }
-        let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let Some(dir_name) = dir.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
         if dir_name.starts_with('.') {
             continue;
         }
@@ -187,7 +188,7 @@ fn scan_bundles(root: &Path, dir: &Path, out: &mut Vec<ManifestBundle>) -> Resul
         }
         if path.is_dir() {
             scan_bundles(root, &path, out)?;
-        } else if path.is_file() && name_str.ends_with(".bundle.md") {
+        } else if path.is_file() && name_str.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
             let raw = std::fs::read_to_string(&path)
                 .with_context(|| format!("read {}", path.display()))?;
             let (meta, _body): (EntrypointMeta, &str) = crate::parse::frontmatter::parse(&raw)
