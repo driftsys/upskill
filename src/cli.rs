@@ -226,4 +226,27 @@ pub enum Commands {
         /// Item name. Lowercase letters, digits, hyphens; max 64 chars.
         name: String,
     },
+    /// Author a registry: generate `.upskill-registry.json`.
+    Registry {
+        #[command(subcommand)]
+        command: RegistryCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum RegistryCommands {
+    /// Scan the registry tree and write `.upskill-registry.json`.
+    ///
+    /// Reads `REGISTRY.md` identity, enumerates `RULE/SKILL/AGENT.md`
+    /// items and `*.bundle.md` bundles, writes a deterministic manifest.
+    /// Author command — refuses to run inside a consumer project.
+    #[command(after_help = "EXAMPLES:\n  \
+            upskill registry build\n  \
+            upskill registry build --check")]
+    Build {
+        /// Verify the on-disk manifest is up to date without writing.
+        /// Exit 1 if stale. Use in CI.
+        #[arg(long = "check")]
+        check: bool,
+    },
 }

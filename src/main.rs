@@ -11,6 +11,7 @@ use upskill::pipeline::{
     RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
     install_with_lockfile, list, remove, update,
 };
+use upskill::registry::{self, BuildOutcome};
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
 use upskill::source::{InstallSource, parse_install_source};
@@ -75,6 +76,9 @@ fn main() {
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
+        Commands::Registry { command } => match command {
+            upskill::cli::RegistryCommands::Build { check } => run_registry_build(check),
+        },
     };
 
     if was_interrupted() {
@@ -774,6 +778,45 @@ fn print_scaffold_report(report: &ScaffoldReport) {
         style::name(&report.written.display().to_string())
     );
     println!("edit the file and replace the TODO body before publishing.");
+}
+
+fn run_registry_build(check: bool) -> i32 {
+    let root = match std::env::current_dir() {
+        Ok(d) => d,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_ERROR;
+        }
+    };
+    match registry::build(&root, check) {
+        Ok(BuildOutcome::Written) => {
+            if !style::is_quiet() {
+                println!(
+                    "{} {}",
+                    style::success("registry:"),
+                    style::name(registry::MANIFEST_NAME)
+                );
+            }
+            EXIT_SUCCESS
+        }
+        Ok(BuildOutcome::Fresh) => {
+            if !style::is_quiet() {
+                println!("{} manifest up to date", style::success("registry:"));
+            }
+            EXIT_SUCCESS
+        }
+        Ok(BuildOutcome::Stale) => {
+            print_error(format!(
+                "{} is stale — run `upskill registry build`",
+                registry::MANIFEST_NAME
+            ));
+            EXIT_ERROR
+        }
+        Err(err) => {
+            print_error_chain(&err);
+            EXIT_ERROR
+        }
+    }
 }
 
 fn run_search(query: &str, limit: usize) -> i32 {
