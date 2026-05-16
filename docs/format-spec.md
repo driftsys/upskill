@@ -492,14 +492,18 @@ verifies it with `upskill registry build --check`:
 }
 ```
 
-| Field             | Type    | Notes                                            |
-| ----------------- | ------- | ------------------------------------------------ |
-| `schema`          | integer | `1`. Newer is rejected.                          |
-| `registry`        | map     | Lifted from `REGISTRY.md` frontmatter.           |
-| `items[].kind`    | string  | `rule`\|`skill`\|`agent`, from entrypoint name.  |
-| `items[].path`    | string  | Repo-root-relative item directory.               |
-| `items[].version` | string  | From item `metadata.version`; omitted if absent. |
-| `bundles[].path`  | string  | Repo-root-relative `*.bundle.md` path.           |
+| Field                   | Type    | Notes                                                  |
+| ----------------------- | ------- | ------------------------------------------------------ |
+| `schema`                | integer | `1`. Newer is rejected.                                |
+| `registry`              | map     | Lifted from `REGISTRY.md` frontmatter.                 |
+| `items[].name`          | string  | Item name (matches the entrypoint `name:`).            |
+| `items[].kind`          | string  | `rule`\|`skill`\|`agent`, from entrypoint name.        |
+| `items[].path`          | string  | Repo-root-relative item directory.                     |
+| `items[].description`   | string  | Item description (from the entrypoint `description:`). |
+| `items[].version`       | string  | From item `metadata.version`; omitted if absent.       |
+| `bundles[].name`        | string  | Bundle name.                                           |
+| `bundles[].description` | string  | Bundle description.                                    |
+| `bundles[].path`        | string  | Repo-root-relative `*.bundle.md` path.                 |
 
 Consumers fetch `.upskill-registry.json` directly via the git provider API. There is no Pages or
 `.well-known` endpoint. See ADR-0007.

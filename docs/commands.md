@@ -224,6 +224,11 @@ bundles, lifts `REGISTRY.md` identity, and writes `.upskill-registry.json`. `--c
 freshness without writing (exit 1 if stale) — run it in CI. Refuses to run inside a consumer
 project (`.upskill-lock.json`).
 
+```bash
+upskill registry build
+upskill registry build --check   # CI: exit 1 if .upskill-registry.json is stale
+```
+
 ## State files
 
 `.upskill-lock.json` lives in one of two places depending on scope:
