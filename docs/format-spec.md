@@ -465,6 +465,45 @@ Implementations:
   MUST be reported as errors.
 - MUST reject circular `requires` chains as errors.
 
+### 3.8 Registry manifest
+
+A **registry** is a git repo holding items (flat layout, §2.1) plus bundles. Identity lives in an
+authored `REGISTRY.md` (uppercase entrypoint + YAML frontmatter):
+
+```yaml
+---
+schema: 1
+name: platform-registry
+description: Baseline rules, skills, and agents
+maintainer: platform-dx     # optional
+homepage: https://github.com/acme/registry   # optional
+---
+```
+
+`upskill registry build` generates `.upskill-registry.json` (`schema: 1`) at the repo root and CI
+verifies it with `upskill registry build --check`:
+
+```json
+{
+  "schema": 1,
+  "registry": { "name": "...", "description": "...", "maintainer": "...", "homepage": "..." },
+  "items":   [ { "name": "...", "kind": "rule", "path": "...", "description": "...", "version": "1.2.0" } ],
+  "bundles": [ { "name": "...", "description": "...", "path": "x.bundle.md" } ]
+}
+```
+
+| Field             | Type    | Notes                                            |
+| ----------------- | ------- | ------------------------------------------------ |
+| `schema`          | integer | `1`. Newer is rejected.                          |
+| `registry`        | map     | Lifted from `REGISTRY.md` frontmatter.           |
+| `items[].kind`    | string  | `rule`\|`skill`\|`agent`, from entrypoint name.  |
+| `items[].path`    | string  | Repo-root-relative item directory.               |
+| `items[].version` | string  | From item `metadata.version`; omitted if absent. |
+| `bundles[].path`  | string  | Repo-root-relative `*.bundle.md` path.           |
+
+Consumers fetch `.upskill-registry.json` directly via the git provider API. There is no Pages or
+`.well-known` endpoint. See ADR-0007.
+
 ---
 
 ## 4. Capability-level tool vocabulary

@@ -75,6 +75,23 @@ upskill update              # apply
 `update` is always-fetch and idempotent; running it twice produces no
 diffs the second time.
 
+## Author a registry
+
+```bash
+upskill new skill code-review        # add items as usual
+cat > REGISTRY.md <<'EOF'
+---
+schema: 1
+name: my-registry
+description: Team content
+---
+EOF
+upskill registry build               # writes .upskill-registry.json
+```
+
+Commit `.upskill-registry.json`. Add a CI step `upskill registry build --check` so it never
+drifts.
+
 ## Author workflow
 
 ```bash
