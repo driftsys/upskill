@@ -14,16 +14,16 @@ Spec: `docs/superpowers/specs/2026-05-16-install-script-design.md`
 
 ## File Structure
 
-| File | Responsibility | Action |
-| --- | --- | --- |
-| `install.sh` | POSIX installer: detect platform, download, verify, install | Create (repo root) |
-| `tests/cli_install.rs` | ATDD: `--help` and unsupported-platform behavior | Create |
-| `.github/workflows/release.yml` | Tag-triggered build matrix + release publish | Create |
-| `justfile` | Add `shellcheck install.sh` to the `lint` recipe | Modify |
-| `.github/workflows/ci.yml` | Add `shellcheck` job; add it to the `ci` gate | Modify |
-| `README.md` | Add the `curl` one-liner above `cargo install` | Modify (lines 15-16) |
-| `docs/getting-started.md` | Add the `curl` one-liner + env-var note | Modify (lines 3-11) |
-| `docs/superpowers/specs/2026-05-16-install-script-design.md` | Flip `Status` to approved | Modify (line 4) |
+| File                                                         | Responsibility                                              | Action               |
+| ------------------------------------------------------------ | ----------------------------------------------------------- | -------------------- |
+| `install.sh`                                                 | POSIX installer: detect platform, download, verify, install | Create (repo root)   |
+| `tests/cli_install.rs`                                       | ATDD: `--help` and unsupported-platform behavior            | Create               |
+| `.github/workflows/release.yml`                              | Tag-triggered build matrix + release publish                | Create               |
+| `justfile`                                                   | Add `shellcheck install.sh` to the `lint` recipe            | Modify               |
+| `.github/workflows/ci.yml`                                   | Add `shellcheck` job; add it to the `ci` gate               | Modify               |
+| `README.md`                                                  | Add the `curl` one-liner above `cargo install`              | Modify (lines 15-16) |
+| `docs/getting-started.md`                                    | Add the `curl` one-liner + env-var note                     | Modify (lines 3-11)  |
+| `docs/superpowers/specs/2026-05-16-install-script-design.md` | Flip `Status` to approved                                   | Modify (line 4)      |
 
 ---
 
@@ -339,27 +339,28 @@ lint:
 - [ ] **Step 2: Add a `shellcheck` job to CI and add it to the gate**
 
 In `.github/workflows/ci.yml`, add this job immediately after the `convco`
-job and before the `ci` job:
+job and before the `ci` job (2-space job-key indentation, matching the
+other jobs):
 
 ```yaml
-  shellcheck:
-    name: ShellCheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - run: shellcheck install.sh
+shellcheck:
+  name: ShellCheck
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v6
+    - run: shellcheck install.sh
 ```
 
 Then change the `ci` job's `needs` line from:
 
 ```yaml
-    needs: [fmt, clippy, test, convco]
+needs: [fmt, clippy, test, convco]
 ```
 
 to:
 
 ```yaml
-    needs: [fmt, clippy, test, convco, shellcheck]
+needs: [fmt, clippy, test, convco, shellcheck]
 ```
 
 - [ ] **Step 3: Verify the lint recipe passes**
@@ -515,18 +516,18 @@ git commit -m "ci: add tag-triggered release workflow (4-target matrix)"
 
 - [ ] **Step 1: Update README install block**
 
-`README.md` line 16 is `cargo install upskill` inside a `bash` fence that
+`README.md` line 16 is `cargo install upskill` inside a bash fence that
 continues with more commands. This is a pure **insertion** of three lines
 directly above line 16 — do not touch any line below it.
 
-Find this exact line (it is the first line inside the ```` ```bash ```` fence
-under `## Install (consumer)`):
+Find this exact line (the first line inside the bash fence under
+`## Install (consumer)`):
 
 ```text
 cargo install upskill
 ```
 
-and replace just that line with:
+and replace just that one line with these four lines:
 
 ```text
 # Linux / macOS (Windows: run inside WSL)
@@ -541,9 +542,10 @@ that already follow `cargo install upskill` stay exactly as they are.
 
 - [ ] **Step 2: Update getting-started install section**
 
-In `docs/getting-started.md`, replace this exact block:
+In `docs/getting-started.md`, replace this exact block (it is the entire
+current `## Install` section, lines 3-11):
 
-```text
+````text
 ## Install
 
 ```bash
@@ -553,11 +555,11 @@ cargo install upskill
 Or download a pre-built binary from the [releases page][releases].
 
 `upskill` is a single static binary with no runtime dependencies.
-```
+````
 
-with:
+with this block:
 
-```text
+````text
 ## Install
 
 ```bash
@@ -578,9 +580,9 @@ cargo install upskill
 Or download a pre-built binary directly from the [releases page][releases].
 
 `upskill` is a single static binary with no runtime dependencies.
-```
+````
 
-(The `[releases]:` link reference at the bottom of the file stays as-is.)
+The `[releases]:` link reference at the bottom of the file stays as-is.
 
 - [ ] **Step 3: Format and lint the docs**
 
