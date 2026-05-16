@@ -227,6 +227,10 @@ pub enum Commands {
         name: String,
     },
     /// Author a registry: generate `.upskill-registry.json`.
+    ///
+    /// Author command — refuses to run inside a consumer project
+    /// (detected by `.upskill-lock.json`). Use `build` to write the
+    /// manifest; run `build --check` in CI to verify it is current.
     Registry {
         #[command(subcommand)]
         command: RegistryCommands,

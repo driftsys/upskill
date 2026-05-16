@@ -72,6 +72,7 @@ fn registry_build_check_fails_when_stale_and_passes_when_fresh() {
 #[test]
 fn registry_build_refuses_consumer_project() {
     let tmp = tempfile::tempdir().unwrap();
+    // Presence of .upskill-lock.json marks this as a consumer project; build must refuse.
     fs::write(tmp.path().join(".upskill-lock.json"), "{}").unwrap();
     Command::cargo_bin("upskill")
         .unwrap()

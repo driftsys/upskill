@@ -3,7 +3,7 @@ use clap::{Parser, error::ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use upskill::cli::{Cli, Commands};
+use upskill::cli::{Cli, Commands, RegistryCommands};
 use upskill::fmt::{FmtReport, fmt};
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
@@ -77,7 +77,7 @@ fn main() {
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
         Commands::Registry { command } => match command {
-            upskill::cli::RegistryCommands::Build { check } => run_registry_build(check),
+            RegistryCommands::Build { check } => run_registry_build(check),
         },
     };
 
@@ -784,7 +784,7 @@ fn run_registry_build(check: bool) -> i32 {
     let root = match std::env::current_dir() {
         Ok(d) => d,
         Err(err) => {
-            print_error(&err);
+            print_error(format!("get current directory: {err}"));
             return EXIT_ERROR;
         }
     };
