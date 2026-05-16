@@ -13,6 +13,10 @@ No Node.js. No npm. No runtime dependencies.
 ## Install (consumer)
 
 ```bash
+# Linux / macOS (Windows: run inside WSL)
+curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
+
+# Or, with a Rust toolchain:
 cargo install upskill
 
 # Install everything from a source repo (auto-fans out to .claude/, .github/, .agents/)
