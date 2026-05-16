@@ -8,7 +8,6 @@ set -eu
 
 REPO="driftsys/upskill"
 BIN="upskill"
-INSTALL_DIR="${UPSKILL_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${UPSKILL_VERSION:-latest}"
 
 usage() {
@@ -84,6 +83,15 @@ if [ "$VERSION" = "latest" ]; then
     base="https://github.com/${REPO}/releases/latest/download"
 else
     base="https://github.com/${REPO}/releases/download/${VERSION}"
+fi
+
+INSTALL_DIR="${UPSKILL_INSTALL_DIR:-}"
+if [ -z "$INSTALL_DIR" ]; then
+    if [ -n "${HOME:-}" ]; then
+        INSTALL_DIR="$HOME/.local/bin"
+    else
+        err "set UPSKILL_INSTALL_DIR or HOME to choose an install directory"
+    fi
 fi
 
 tmp="$(mktemp -d)"
