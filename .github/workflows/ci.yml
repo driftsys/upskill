@@ -54,10 +54,17 @@ jobs:
           chmod +x /usr/local/bin/convco
       - run: convco check ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
 
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: shellcheck install.sh
+
   ci:
     name: CI
     if: always()
-    needs: [fmt, clippy, test, convco]
+    needs: [fmt, clippy, test, convco, shellcheck]
     runs-on: ubuntu-latest
     steps:
       - name: Check results

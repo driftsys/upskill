@@ -15,6 +15,7 @@ lint:
     cargo fmt -- --check
     dprint check
     npx markdownlint-cli '**/*.md' --ignore node_modules
+    shellcheck install.sh
 
 # Run all checks (test + lint)
 check: test lint
