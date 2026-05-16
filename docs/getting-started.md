@@ -3,10 +3,21 @@
 ## Install
 
 ```bash
+# Linux / macOS (Windows: run inside WSL)
+curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
+```
+
+`UPSKILL_VERSION` pins a release tag (default: latest) and
+`UPSKILL_INSTALL_DIR` overrides the install location (default
+`$HOME/.local/bin`). Windows users run the same command inside WSL.
+
+With a Rust toolchain instead:
+
+```bash
 cargo install upskill
 ```
 
-Or download a pre-built binary from the [releases page][releases].
+Or download a pre-built binary directly from the [releases page][releases].
 
 `upskill` is a single static binary with no runtime dependencies.
 
