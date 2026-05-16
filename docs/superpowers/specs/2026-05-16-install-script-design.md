@@ -1,4 +1,4 @@
-# Design: `install.sh` / `install.ps1` + release workflow
+# Design: `install.sh` + release workflow
 
 Date: 2026-05-16
 Status: Approved (pending spec review)
@@ -8,29 +8,32 @@ Status: Approved (pending spec review)
 `upskill` ships as a single static binary, but the only documented install
 paths are `cargo install upskill` (requires a Rust toolchain) and an
 unpopulated GitHub Releases page. There is no `curl | sh` one-liner, no
-Windows installer, no GitHub Releases, and no release CI. Users on a fresh
-machine cannot get the binary without Rust.
+GitHub Releases, and no release CI. Users on a fresh machine cannot get the
+binary without Rust.
 
-Goal: a best-practice `curl | sh` (Unix) and `irm | iex` (Windows) install
-experience backed by real release artifacts, documented in the README and
-getting-started guide.
+Goal: a best-practice `curl | sh` install experience backed by real release
+artifacts, documented in the README and getting-started guide.
 
 ## Scope
 
+Native Windows is intentionally **out of scope**: Windows users run
+`upskill` under WSL, which is Linux and is fully covered by `install.sh` +
+the Linux musl binary.
+
 In scope:
 
-- `install.sh` (POSIX `sh`) at repo root — Linux + macOS.
-- `install.ps1` (PowerShell 5+) at repo root — Windows.
-- `.github/workflows/release.yml` building a 6-target matrix and publishing
+- `install.sh` (POSIX `sh`) at repo root — Linux (incl. WSL) + macOS.
+- `.github/workflows/release.yml` building a 4-target matrix and publishing
   GitHub Releases.
-- README + `docs/getting-started.md` updated with the curl/irm one-liners.
-- Lint + ATDD coverage for the scripts.
+- README + `docs/getting-started.md` updated with the curl one-liner.
+- Lint + ATDD coverage for the script.
 
 Out of scope:
 
+- Native Windows installer / `*-pc-windows-msvc` targets — WSL covers
+  Windows via the Linux path. Revisit only if a non-WSL need appears.
 - Bundling man pages in release archives (`just man` already documents the
   generator; revisit later).
-- Native Windows ARM test execution (build-only is acceptable).
 - Homebrew tap / scoop manifest / distro packaging (future work).
 - Signing / notarization (future work).
 
@@ -46,26 +49,24 @@ Out of scope:
 - C: build from source via `cargo` — slow, needs a toolchain, defeats the
   static-binary value proposition. Rejected.
 
-**Release workflow shape:** a build matrix across runners (no single-job
-shortcut, since Windows/macOS need their own runners). `cross` is used only
-where native compilation is unavailable (Linux aarch64).
+**Release workflow shape:** a build matrix across runners (macOS needs its
+own runner). `cross` is used only where native compilation is unavailable
+(Linux aarch64).
 
-## Release target matrix — 6 artifacts
+## Release target matrix — 4 artifacts
 
-| OS      | Arch   | Rust target                   | Archive  | Binary        |
-| ------- | ------ | ----------------------------- | -------- | ------------- |
-| Linux   | x86_64 | `x86_64-unknown-linux-musl`   | `.tar.gz`| `upskill`     |
-| Linux   | arm64  | `aarch64-unknown-linux-musl`  | `.tar.gz`| `upskill`     |
-| macOS   | x86_64 | `x86_64-apple-darwin`         | `.tar.gz`| `upskill`     |
-| macOS   | arm64  | `aarch64-apple-darwin`        | `.tar.gz`| `upskill`     |
-| Windows | x86_64 | `x86_64-pc-windows-msvc`      | `.zip`   | `upskill.exe` |
-| Windows | arm64  | `aarch64-pc-windows-msvc`     | `.zip`   | `upskill.exe` |
+| OS    | Arch   | Rust target                  | Archive   | Binary    |
+| ----- | ------ | ---------------------------- | --------- | --------- |
+| Linux | x86_64 | `x86_64-unknown-linux-musl`  | `.tar.gz` | `upskill` |
+| Linux | arm64  | `aarch64-unknown-linux-musl` | `.tar.gz` | `upskill` |
+| macOS | x86_64 | `x86_64-apple-darwin`        | `.tar.gz` | `upskill` |
+| macOS | arm64  | `aarch64-apple-darwin`       | `.tar.gz` | `upskill` |
 
 Linux uses **musl** for a fully static binary that runs on any distro
-(Alpine, old glibc). Asset naming is fixed and shared by the installers and
-the workflow:
+(Alpine, old glibc) and under WSL. Asset naming is fixed and shared by the
+installer and the workflow:
 
-- Archive: `upskill-<target>.tar.gz` (Unix) / `upskill-<target>.zip` (Windows)
+- Archive: `upskill-<target>.tar.gz`
 - Checksum sidecar: `<archive-name>.sha256` (one line: `<sha256>  <archive>`)
 
 ## `install.sh` (POSIX `sh`, repo root)
@@ -104,27 +105,7 @@ Failure modes are explicit: unsupported platform, no downloader, download
 404 (release/asset missing), checksum mismatch — each prints a distinct
 stderr message and exits non-zero.
 
-## `install.ps1` (PowerShell 5+, repo root)
-
-Behavior mirrors `install.sh`:
-
-1. **Config:** `$env:UPSKILL_VERSION` (default latest),
-   `$env:UPSKILL_INSTALL_DIR` (default `$env:LOCALAPPDATA\upskill\bin`);
-   `-Help` switch.
-2. **Arch detection:** `$env:PROCESSOR_ARCHITECTURE` →
-   `AMD64`→`x86_64-pc-windows-msvc`, `ARM64`→`aarch64-pc-windows-msvc`;
-   else error + `cargo install upskill` hint.
-3. **Download:** `Invoke-WebRequest` archive `.zip` + `.sha256` to a temp
-   dir (`[System.IO.Path]::GetTempPath()` + GUID).
-4. **Verify:** `Get-FileHash -Algorithm SHA256` vs sidecar; mismatch →
-   `throw`.
-5. **Install:** `Expand-Archive`, ensure install dir, copy `upskill.exe`.
-6. **PATH:** if install dir not on the **user** `PATH`
-   (`[Environment]::GetEnvironmentVariable('Path','User')`), prepend it and
-   print a "restart your shell" hint.
-7. **Finish:** print installed version + path.
-
-`$ErrorActionPreference = 'Stop'`; clean temp dir in `finally`.
+Windows users run this under WSL; no PowerShell installer is provided.
 
 ## Release workflow (`.github/workflows/release.yml`)
 
@@ -140,43 +121,34 @@ Behavior mirrors `install.sh`:
   - `macos-latest` (arm64 runner): `aarch64-apple-darwin` native +
     `x86_64-apple-darwin` via `rustup target add` (Apple toolchain
     cross-compiles both).
-  - `windows-latest`: `x86_64-pc-windows-msvc` native +
-    `aarch64-pc-windows-msvc` via `rustup target add` (build-only).
 - **Per leg:** build with the existing release profile (`opt-level=z`,
-  `lto`, `strip`, `panic=abort`) → package archive (`.tar.gz` Unix, `.zip`
-  Windows) containing just the binary → write `<archive>.sha256` →
-  upload as a workflow artifact.
+  `lto`, `strip`, `panic=abort`) → package `.tar.gz` containing just the
+  binary → write `<archive>.sha256` → upload as a workflow artifact.
 - **Publish job:** downloads all artifacts, runs
-  `softprops/action-gh-release` on the tag with all 12 files (6 archives +
-  6 checksums) attached. Body autogenerated from the tag; release marked
+  `softprops/action-gh-release` on the tag with all 8 files (4 archives +
+  4 checksums) attached. Body autogenerated from the tag; release marked
   non-draft, non-prerelease.
 
 ## Documentation
 
 `README.md` "Install (consumer)" and `docs/getting-started.md` "Install"
-gain two primary one-liners, placed **above** `cargo install upskill`:
+gain one primary one-liner, placed **above** `cargo install upskill`:
 
 ```bash
-# Linux / macOS
+# Linux / macOS (Windows: run inside WSL)
 curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
 ```
 
-```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/driftsys/upskill/main/install.ps1 | iex
-```
-
-Followed by a short note: `UPSKILL_VERSION` pins a release,
-`UPSKILL_INSTALL_DIR` overrides the location, and `cargo install upskill`
-remains the fallback for unsupported platforms. The existing
-`docs/getting-started.md` releases-page link is kept.
+Followed by a short note: Windows users run the same command under WSL;
+`UPSKILL_VERSION` pins a release, `UPSKILL_INSTALL_DIR` overrides the
+location, and `cargo install upskill` remains the fallback for unsupported
+platforms. The existing `docs/getting-started.md` releases-page link is
+kept.
 
 ## Testing
 
 - **Lint:** add `shellcheck install.sh` to the `lint` recipe in `justfile`
-  and a `shellcheck` step in CI (zero-warnings policy). `install.ps1` gets
-  a PowerShell parse check (`[ScriptBlock]::Create`) where a runner is
-  available; otherwise lint is best-effort and not gated.
+  and a `shellcheck` step in CI (zero-warnings policy).
 - **ATDD (`tests/cli_install.rs`):**
   - `sh install.sh --help` → exit 0, usage text on stdout.
   - `install.sh` with a forced unsupported `uname` (via a stub on `PATH`)
@@ -186,12 +158,13 @@ remains the fallback for unsupported platforms. The existing
 
 ## Acceptance criteria
 
-1. `install.sh` and `install.ps1` exist at repo root and pass lint.
+1. `install.sh` exists at repo root and passes `shellcheck`.
 2. On a supported platform with a published release, the one-liner
    downloads, checksum-verifies, and installs a runnable `upskill`.
 3. Unsupported platform/arch fails fast with the cargo hint.
-4. Pushing a `v*` tag produces a GitHub Release with all 6 archives + 6
+4. Pushing a `v*` tag produces a GitHub Release with all 4 archives + 4
    checksums.
-5. README and getting-started document both one-liners and the env knobs.
+5. README and getting-started document the one-liner (incl. the WSL note
+   for Windows) and the env knobs.
 6. `just verify` passes (tests, clippy, fmt, dprint, markdownlint,
    shellcheck).
