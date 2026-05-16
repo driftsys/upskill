@@ -116,6 +116,97 @@ fn manifest_path(root: &Path) -> PathBuf {
     root.join(MANIFEST_NAME)
 }
 
+/// Minimal frontmatter shared by every entrypoint kind. `name` and
+/// `description` are common §3.1 fields; `metadata.version` is optional.
+#[derive(Deserialize)]
+struct EntrypointMeta {
+    name: String,
+    description: String,
+    #[serde(default)]
+    metadata: Option<crate::model::Metadata>,
+}
+
+/// Walk `root` one level deep for `RULE/SKILL/AGENT.md` entrypoints and
+/// recurse for `*.bundle.md`. Returns `(items, bundles)`, each sorted
+/// for deterministic manifest output. Hidden directories are skipped.
+pub fn scan(root: &Path) -> Result<(Vec<ManifestItem>, Vec<ManifestBundle>)> {
+    let mut items = Vec::new();
+    for entry in std::fs::read_dir(root)
+        .with_context(|| format!("read {}", root.display()))?
+        .flatten()
+    {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if dir_name.starts_with('.') {
+            continue;
+        }
+        for (file, kind) in [
+            ("RULE.md", "rule"),
+            ("SKILL.md", "skill"),
+            ("AGENT.md", "agent"),
+        ] {
+            let entry_path = dir.join(file);
+            if !entry_path.is_file() {
+                continue;
+            }
+            let raw = std::fs::read_to_string(&entry_path)
+                .with_context(|| format!("read {}", entry_path.display()))?;
+            let (meta, _body): (EntrypointMeta, &str) = crate::parse::frontmatter::parse(&raw)
+                .with_context(|| format!("parse {}", entry_path.display()))?;
+            items.push(ManifestItem {
+                name: meta.name,
+                kind: kind.to_string(),
+                path: dir_name.to_string(),
+                description: meta.description,
+                version: meta.metadata.and_then(|m| m.version),
+            });
+        }
+    }
+
+    let mut bundles = Vec::new();
+    scan_bundles(root, root, &mut bundles)?;
+
+    items.sort();
+    bundles.sort();
+    Ok((items, bundles))
+}
+
+fn scan_bundles(root: &Path, dir: &Path, out: &mut Vec<ManifestBundle>) -> Result<()> {
+    for entry in std::fs::read_dir(dir)
+        .with_context(|| format!("read {}", dir.display()))?
+        .flatten()
+    {
+        let path = entry.path();
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        if name_str.starts_with('.') {
+            continue;
+        }
+        if path.is_dir() {
+            scan_bundles(root, &path, out)?;
+        } else if path.is_file() && name_str.ends_with(".bundle.md") {
+            let raw = std::fs::read_to_string(&path)
+                .with_context(|| format!("read {}", path.display()))?;
+            let (meta, _body): (EntrypointMeta, &str) = crate::parse::frontmatter::parse(&raw)
+                .with_context(|| format!("parse {}", path.display()))?;
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            out.push(ManifestBundle {
+                name: meta.name,
+                description: meta.description,
+                path: rel,
+            });
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,5 +262,42 @@ mod tests {
         let yaml = "schema: 2\nname: x\ndescription: y\n";
         let err = serde_yaml_ng::from_str::<RegistryMeta>(yaml).expect_err("must reject");
         assert!(err.to_string().contains("schema version 2"));
+    }
+
+    #[test]
+    fn scan_collects_items_and_bundles_sorted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir(root.join("zeta")).unwrap();
+        std::fs::write(
+            root.join("zeta/SKILL.md"),
+            "---\nschema: 1\nname: zeta\ndescription: a skill\nmetadata:\n  version: \"1.0.0\"\n---\nbody\n",
+        )
+        .unwrap();
+        std::fs::create_dir(root.join("alpha")).unwrap();
+        std::fs::write(
+            root.join("alpha/RULE.md"),
+            "---\nschema: 1\nname: alpha\ndescription: a rule\n---\nbody\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("base.bundle.md"),
+            "---\nschema: 1\nname: base\ndescription: a bundle\nitems: {}\n---\nbody\n",
+        )
+        .unwrap();
+
+        let (items, bundles) = scan(root).expect("scan");
+
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].name, "alpha"); // sorted
+        assert_eq!(items[0].kind, "rule");
+        assert_eq!(items[0].path, "alpha");
+        assert_eq!(items[0].version, None);
+        assert_eq!(items[1].name, "zeta");
+        assert_eq!(items[1].kind, "skill");
+        assert_eq!(items[1].version.as_deref(), Some("1.0.0"));
+        assert_eq!(bundles.len(), 1);
+        assert_eq!(bundles[0].name, "base");
+        assert_eq!(bundles[0].path, "base.bundle.md");
     }
 }
