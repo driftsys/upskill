@@ -121,8 +121,8 @@ pub fn lint(paths: &[PathBuf], strict: bool) -> Result<LintReport> {
 }
 
 /// True when `root/.upskill-lock.json` (or `root` itself, if it is a
-/// file in such a directory) exists. Shared with `crate::fmt` so both
-/// author commands refuse running inside consumer projects.
+/// file in such a directory) exists. Used by author commands (`lint`,
+/// `fmt`, `registry build`) to refuse running inside consumer projects.
 pub(crate) fn is_consumer_project(root: &Path) -> bool {
     let dir = if root.is_dir() {
         root.to_path_buf()
