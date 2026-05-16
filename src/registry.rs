@@ -208,9 +208,122 @@ fn scan_bundles(root: &Path, dir: &Path, out: &mut Vec<ManifestBundle>) -> Resul
     Ok(())
 }
 
+/// Result of a `build` call.
+#[derive(Debug, PartialEq, Eq)]
+pub enum BuildOutcome {
+    /// `--check`: on-disk manifest matches a fresh build.
+    Fresh,
+    /// `--check`: on-disk manifest is absent or out of date.
+    Stale,
+    /// Non-check: manifest was (re)written.
+    Written,
+}
+
+/// Build the manifest for the registry rooted at `root`.
+///
+/// Refuses to run inside a consumer project (a `.upskill-lock.json`
+/// present), mirroring `lint`/`fmt`. Requires `REGISTRY.md`. With
+/// `check`, compares against the on-disk manifest without writing.
+pub fn build(root: &Path, check: bool) -> Result<BuildOutcome> {
+    if crate::lint::is_consumer_project(root) {
+        anyhow::bail!(
+            "{}: refusing to build — `.upskill-lock.json` indicates this is a consumer project, \
+             not a source registry",
+            root.display()
+        );
+    }
+
+    let md_path = root.join(REGISTRY_MD);
+    let raw = std::fs::read_to_string(&md_path)
+        .with_context(|| format!("read {} (registry identity is required)", md_path.display()))?;
+    let (meta, _body): (RegistryMeta, &str) = crate::parse::frontmatter::parse(&raw)
+        .with_context(|| format!("parse {}", md_path.display()))?;
+
+    let (items, bundles) = scan(root)?;
+    let manifest = RegistryManifest {
+        schema: CURRENT_SCHEMA,
+        registry: RegistryIdentity {
+            name: meta.name,
+            description: meta.description,
+            maintainer: meta.maintainer,
+            homepage: meta.homepage,
+        },
+        items,
+        bundles,
+    };
+
+    if check {
+        let fresh = manifest.to_pretty_json()?;
+        let on_disk = std::fs::read_to_string(manifest_path(root)).unwrap_or_default();
+        return Ok(if on_disk == fresh {
+            BuildOutcome::Fresh
+        } else {
+            BuildOutcome::Stale
+        });
+    }
+
+    manifest.save(root)?;
+    Ok(BuildOutcome::Written)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn write_registry_md(root: &std::path::Path) {
+        std::fs::write(
+            root.join(REGISTRY_MD),
+            "---\nschema: 1\nname: platform-registry\ndescription: Baseline content\nmaintainer: platform-dx\n---\nWhat this provides.\n",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn build_writes_manifest_from_registry_md_and_scan() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_registry_md(root);
+        std::fs::create_dir(root.join("alpha")).unwrap();
+        std::fs::write(
+            root.join("alpha/RULE.md"),
+            "---\nschema: 1\nname: alpha\ndescription: a rule\n---\nbody\n",
+        )
+        .unwrap();
+
+        let outcome = build(root, false).expect("build");
+        assert!(matches!(outcome, BuildOutcome::Written));
+        let m = RegistryManifest::load(root).expect("load");
+        assert_eq!(m.registry.name, "platform-registry");
+        assert_eq!(m.items.len(), 1);
+        assert_eq!(m.items[0].name, "alpha");
+    }
+
+    #[test]
+    fn build_check_reports_stale_then_fresh() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_registry_md(root);
+        // No manifest yet → check is stale.
+        assert!(matches!(build(root, true).unwrap(), BuildOutcome::Stale));
+        // Write it, then check is fresh.
+        build(root, false).unwrap();
+        assert!(matches!(build(root, true).unwrap(), BuildOutcome::Fresh));
+    }
+
+    #[test]
+    fn build_refuses_consumer_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(crate::lockfile::LOCKFILE_NAME), "{}").unwrap();
+        let err = build(tmp.path(), false).expect_err("must refuse");
+        assert!(format!("{err:#}").contains("consumer project"));
+    }
+
+    #[test]
+    fn build_errors_when_registry_md_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let err = build(tmp.path(), false).expect_err("must error");
+        assert!(format!("{err:#}").contains("REGISTRY.md"));
+    }
 
     fn manifest() -> RegistryManifest {
         RegistryManifest {
