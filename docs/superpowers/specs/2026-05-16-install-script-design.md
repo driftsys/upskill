@@ -1,7 +1,7 @@
 # Design: `install.sh` + release workflow
 
 Date: 2026-05-16
-Status: Approved (pending spec review)
+Status: Approved
 
 ## Problem
 
