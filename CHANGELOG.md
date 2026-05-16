@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 (2026-05-16)
+
+### Features
+
+- curl|sh installer and release workflow (#135) (d9c4c01)
+- **layout:** flat item layout — drop kind subdirectories (#134) (5d46dc6)
+
 ## [0.3.1] (2026-05-05)
 
 ### Documentation
