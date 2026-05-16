@@ -64,9 +64,7 @@ pub struct RegistryMeta {
     pub schema: crate::model::SchemaVersion,
     pub name: String,
     pub description: String,
-    #[serde(default)]
     pub maintainer: Option<String>,
-    #[serde(default)]
     pub homepage: Option<String>,
 }
 
