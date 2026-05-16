@@ -1,20 +1,21 @@
 # Commands
 
-`upskill` ships nine commands. They split cleanly into **consumer**
+`upskill` ships ten commands. They split cleanly into **consumer**
 (run inside a project that consumes AI-assistance content) and
 **author** (run inside a source-registry repo).
 
-| Command  | Role     | Purpose                                             |
-| -------- | -------- | --------------------------------------------------- |
-| `add`    | Consumer | Install content from any source.                    |
-| `remove` | Consumer | Remove installed content.                           |
-| `update` | Consumer | Pull latest, regenerate changed items.              |
-| `list`   | Consumer | Show installed content from the lock file.          |
-| `doctor` | Consumer | Verify installation consistency.                    |
-| `search` | Consumer | Look up skills via the public registry.             |
-| `new`    | Author   | Scaffold a new rule, skill, or agent.               |
-| `lint`   | Author   | Validate SSOT files against the format spec.        |
-| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| Command          | Role     | Purpose                                             |
+| ---------------- | -------- | --------------------------------------------------- |
+| `add`            | Consumer | Install content from any source.                    |
+| `remove`         | Consumer | Remove installed content.                           |
+| `update`         | Consumer | Pull latest, regenerate changed items.              |
+| `list`           | Consumer | Show installed content from the lock file.          |
+| `doctor`         | Consumer | Verify installation consistency.                    |
+| `search`         | Consumer | Look up skills via the public registry.             |
+| `new`            | Author   | Scaffold a new rule, skill, or agent.               |
+| `lint`           | Author   | Validate SSOT files against the format spec.        |
+| `fmt`            | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| `registry build` | Author   | Generate `.upskill-registry.json` for a registry.   |
 
 ## Global flags
 
@@ -215,6 +216,18 @@ upskill fmt my-skill/        # format a single item directory
 
 Files whose frontmatter is already canonical are left untouched (no
 `mtime` thrash).
+
+### `upskill registry build [--check]`
+
+Author command. Scans the current registry for `RULE/SKILL/AGENT.md` items and `*.bundle.md`
+bundles, lifts `REGISTRY.md` identity, and writes `.upskill-registry.json`. `--check` verifies
+freshness without writing (exit 1 if stale) — run it in CI. Refuses to run inside a consumer
+project (`.upskill-lock.json`).
+
+```bash
+upskill registry build
+upskill registry build --check   # CI: exit 1 if .upskill-registry.json is stale
+```
 
 ## State files
 

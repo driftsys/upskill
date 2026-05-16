@@ -34,12 +34,12 @@ fn every_subcommand_renders_a_man_page() {
         .map(|s| s.get_name().to_string())
         .collect();
 
-    // Sanity: the audit-driven CLI ships nine commands. If this drifts,
+    // Sanity: the audit-driven CLI ships ten commands. If this drifts,
     // update the assert and the docs.
     assert_eq!(
         names.len(),
-        9,
-        "expected 9 subcommands, got {}: {names:?}",
+        10,
+        "expected 10 subcommands, got {}: {names:?}",
         names.len()
     );
 
