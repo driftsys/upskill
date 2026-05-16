@@ -80,7 +80,7 @@ fn registry_build_refuses_consumer_project() {
         .args(["registry", "build"])
         .assert()
         .failure()
-        .code(1);
+        .code(2);
 }
 
 #[test]

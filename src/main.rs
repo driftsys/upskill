@@ -813,8 +813,15 @@ fn run_registry_build(check: bool) -> i32 {
             EXIT_ERROR
         }
         Err(err) => {
-            print_error_chain(&err);
-            EXIT_ERROR
+            let msg = format!("{err:#}");
+            print_error(&msg);
+            // Author-command misuse (consumer-project) → usage error;
+            // every other failure → 1.
+            if msg.contains("consumer project") {
+                EXIT_USAGE
+            } else {
+                EXIT_ERROR
+            }
         }
     }
 }
