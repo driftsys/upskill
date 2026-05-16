@@ -82,3 +82,40 @@ fn registry_build_refuses_consumer_project() {
         .failure()
         .code(1);
 }
+
+#[test]
+fn registry_build_matches_golden_manifest() {
+    let tmp = tempfile::tempdir().unwrap();
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/registry");
+    for entry in walkdir(&src) {
+        let rel = entry.strip_prefix(&src).unwrap();
+        let dest = tmp.path().join(rel);
+        if entry.is_dir() {
+            fs::create_dir_all(&dest).unwrap();
+        } else if entry.file_name().unwrap() != "expected-manifest.json" {
+            fs::create_dir_all(dest.parent().unwrap()).unwrap();
+            fs::copy(&entry, &dest).unwrap();
+        }
+    }
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["registry", "build"])
+        .assert()
+        .success();
+
+    let got = fs::read_to_string(tmp.path().join(".upskill-registry.json")).unwrap();
+    let want = fs::read_to_string(src.join("expected-manifest.json")).unwrap();
+    assert_eq!(got, want, "manifest drifted from golden fixture");
+}
+
+fn walkdir(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = vec![root.to_path_buf()];
+    if root.is_dir() {
+        for e in fs::read_dir(root).unwrap().flatten() {
+            out.extend(walkdir(&e.path()));
+        }
+    }
+    out
+}
