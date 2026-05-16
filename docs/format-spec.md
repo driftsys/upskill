@@ -480,6 +480,14 @@ homepage: https://github.com/acme/registry   # optional
 ---
 ```
 
+| Field         | Type    | Required | Description                    |
+| ------------- | ------- | -------- | ------------------------------ |
+| `schema`      | integer | YES      | `1`. Newer is rejected.        |
+| `name`        | string  | YES      | Registry name.                 |
+| `description` | string  | YES      | One-line registry description. |
+| `maintainer`  | string  | no       | Maintainer handle or team.     |
+| `homepage`    | string  | no       | Registry homepage URL.         |
+
 `upskill registry build` generates `.upskill-registry.json` (`schema: 1`) at the repo root and CI
 verifies it with `upskill registry build --check`:
 
@@ -497,7 +505,7 @@ verifies it with `upskill registry build --check`:
 | `schema`                | integer | `1`. Newer is rejected.                                |
 | `registry`              | map     | Lifted from `REGISTRY.md` frontmatter.                 |
 | `items[].name`          | string  | Item name (matches the entrypoint `name:`).            |
-| `items[].kind`          | string  | `rule`\|`skill`\|`agent`, from entrypoint name.        |
+| `items[].kind`          | string  | `rule`\|`skill`\|`agent`, from entrypoint filename.    |
 | `items[].path`          | string  | Repo-root-relative item directory.                     |
 | `items[].description`   | string  | Item description (from the entrypoint `description:`). |
 | `items[].version`       | string  | From item `metadata.version`; omitted if absent.       |
@@ -507,6 +515,10 @@ verifies it with `upskill registry build --check`:
 
 Consumers fetch `.upskill-registry.json` directly via the git provider API. There is no Pages or
 `.well-known` endpoint. See ADR-0007.
+
+Implementations MUST reject a `.upskill-registry.json` whose `schema` is newer than they support.
+`upskill registry build --check` MUST exit non-zero when the on-disk manifest differs from a fresh
+build.
 
 ---
 
