@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 (2026-05-16)
+
+### Bug Fixes
+
+- install.sh resolves install dir without requiring HOME (#136) (9daeaca)
+
 ## 0.4.0 (2026-05-16)
 
 ### Features
