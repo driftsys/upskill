@@ -77,10 +77,6 @@ upskill add <source> [items...] [--global|--project]
 - `https://github.com/owner/repo[...]` — full HTTPS URL
 - `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
-- `<bundle-name>` — a bundle resolved from configured registries
-
-Source resolution order: registry index first; if no match, treat as git repo
-or local path.
 
 `upskill add <source>` installs everything the source contains. Optional
 `items...` after the source filter to a subset. There is no interactive
