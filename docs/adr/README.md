@@ -9,4 +9,3 @@ Numbered sequentially. Status one of: Proposed | Accepted | Superseded.
 - [0004 — upskill CLI surface](0004-cli-surface.md)
 - [0005 — skills.sh ecosystem interop](0005-skills-sh-ecosystem-interop.md)
 - [0006 — Flat item layout — drop kind subdirectories](0006-flat-item-layout.md)
-- [0007 — Git-native registry standard](0007-git-native-registry-standard.md)
