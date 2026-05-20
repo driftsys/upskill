@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0] (2026-05-20)
+
+### Refactoring
+
+- **registry:** remove git-native registry feature ([#141]) ([870dd21])
+
+### Documentation
+
+- reconcile ADR-0003 and registry spec/plan with code ([038c977])
+
+[0.5.0]: https://github.com/driftsys/upskill/compare/v0.4.2...v0.5.0
+[870dd21]: https://github.com/driftsys/upskill/commit/870dd21
+[#141]: https://github.com/driftsys/upskill/issues/141
+[038c977]: https://github.com/driftsys/upskill/commit/038c977
+
 ## [0.4.2] (2026-05-20)
 
 ### Features
