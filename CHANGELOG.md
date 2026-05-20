@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.2] (2026-05-20)
+
+### Features
+
+- **registry:** git-native registry standard ([#63]) ([711a241])
+
+### Documentation
+
+- drop unimplemented bundle-name source form from spec ([#139]) ([9cffdeb])
+
+[0.4.2]: https://github.com/driftsys/upskill/compare/v0.4.1...v0.4.2
+[711a241]: https://github.com/driftsys/upskill/commit/711a241
+[#63]: https://github.com/driftsys/upskill/issues/63
+[9cffdeb]: https://github.com/driftsys/upskill/commit/9cffdeb
+[#139]: https://github.com/driftsys/upskill/issues/139
+
 ## 0.4.1 (2026-05-16)
 
 ### Bug Fixes
