@@ -106,35 +106,31 @@ no equivalent `EXTERNAL_RULE_PATTERN`; rules reach opencode only via
 > source). Phase 3 should include a fixture test that confirms
 > `.agents/rules/**/RULE.md` actually matches files under `.agents/`.
 
-### State files and v0.1 lockfile migration
+### State file
 
-State is split between two files:
+`.upskill-lock.json` records what was installed, from where, at what
+resolved git ref, with what content hashes. One shape (`schema: 1`),
+two possible locations:
 
-- **`.upskill-lock.json`** — **per-project**, lives at the consumer
-  project root, **committed alongside the project**. The consumer-side
-  record of installed state. Bundles themselves live only in source
-  registries (per [ADR-0002](./0002-portable-content-format.md) /
-  format-spec §3.7); the lock file captures, per installed bundle:
-  bundle name, source registry URL, requested version spec, resolved
-  git ref, and the per-item content hashes resolved from the bundle.
-  Ad-hoc items (installed without a bundle) are recorded similarly.
-  Plays the same role as `package-lock.json` — guarantees deterministic
-  regeneration on another developer's machine and in CI. The filename
-  is shared with v0.1; v0.2 adds a top-level `schema: 2` field to
-  signal the new shape.
-- **`~/.upskill/installed.json`** — **per-user**, schema-versioned
-  (`schema: 1`). Tracks the user-global view: which items the user has
-  installed at the global scope, drift-detection state for the global
-  install location, source-registry caches.
+| Scope   | Location                   | Committed? |
+| ------- | -------------------------- | ---------- |
+| Project | `<cwd>/.upskill-lock.json` | Yes        |
+| Global  | `$HOME/.upskill-lock.json` | No         |
 
-Both files are schema-versioned. Implementations refuse higher schema
-versions with a clear upgrade message and a reset offer.
+Bundles themselves live only in source registries (per
+[ADR-0002](./0002-portable-content-format.md) / format-spec §3.7); the
+lockfile captures, per installed bundle: bundle name, source registry
+URL, requested version spec, resolved git ref, and the per-item content
+hashes resolved from the bundle. Ad-hoc items (installed without a
+bundle) are recorded similarly. Plays the same role as
+`package-lock.json` — guarantees deterministic regeneration on another
+developer's machine and in CI for project scope, and across-repo
+continuity for global scope.
 
-v0.1's per-project `.upskill-lock.json` (no `schema` field) is read
-once by an in-place schema migration that rewrites the file with
-`schema: 2` and the v0.2 entry shape; any user-global state moves into
-`~/.upskill/installed.json`. The filename does not change. Existing
-v0.1 users are not silently broken.
+The file is schema-versioned. Implementations refuse higher schema
+versions with a clear upgrade message and a reset offer. There is no
+separate `~/.upskill/` directory — the home-directory state is the
+same flat dotfile shape (see issue #110 / PR #120).
 
 ## Consequences
 
