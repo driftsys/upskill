@@ -31,5 +31,5 @@ roles; SSOT and generated outputs do not mix in the same tree.
   first scaffold.
 - **[Commands](./commands.md)** — full reference for every verb.
 - **[Recipes](./recipes.md)** — CI usage, private repos, pinning.
-- **[Behavioural specification](./specification.md)** — the contract.
+- **[Specification](./specification.md)** — the contract.
 - **[Portable format](./format-spec.md)** — the on-disk SSOT format.

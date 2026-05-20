@@ -2,8 +2,6 @@
 
 > Upskill your coding agents.
 
-**Status**: v0.2 — shipped in v0.2.0.
-
 ## 1. Overview
 
 `upskill` is a single-binary CLI that lets authors **create, manage, and
@@ -36,8 +34,8 @@ This document describes upskill's behaviour against that contract.
 ### 1.3 Two roles
 
 - **Source registry** — repository where SSOT items are authored. Holds the
-  canonical `RULE.md` / `SKILL.md` / `AGENT.md` files. Author commands
-  (`new`, `lint`, `fmt`) operate here.
+  canonical `RULE.md` / `SKILL.md` / `AGENT.md` files and `*.bundle.md`
+  manifests. Author commands (`new`, `lint`, `fmt`) operate here.
 - **Consumer project** — repository where generated outputs are installed
   for use by AI clients. Holds only generated per-client files. Consumer
   commands (`add`, `remove`, `update`, `list`, `doctor`, `search`) operate
@@ -52,7 +50,7 @@ No overlap between verbs.
 
 | Command  | Role     | Purpose                                             |
 | -------- | -------- | --------------------------------------------------- |
-| `add`    | Consumer | Install content from any source.                    |
+| `add`    | Consumer | Install items or bundles from any source.           |
 | `remove` | Consumer | Remove installed content.                           |
 | `update` | Consumer | Pull latest, regenerate changed items.              |
 | `list`   | Consumer | Show installed content from the lock file.          |
@@ -73,6 +71,7 @@ upskill add <source> [items...] [--global|--project]
 - `owner/repo` — GitHub shorthand
 - `owner/repo@ref` — pinned ref (branch, tag, or commit SHA)
 - `owner/repo:path/to/item` — subfolder
+- `owner/repo:path/to/name.bundle.md` — bundle file (resolves transitively, see §2.6)
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full HTTPS URL
 - `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
@@ -138,7 +137,33 @@ Author commands. Run inside a source-registry working tree.
 - `fmt [paths...]` — canonicalise YAML frontmatter only. Markdown body
   formatting is dprint's responsibility.
 
-### 2.6 Aliases
+### 2.6 Bundles
+
+A **bundle** is a `*.bundle.md` manifest that names a curated set of items
+and (optionally) other bundles to install together. Bundles contain no
+content of their own; they reference items by `name`. Frontmatter shape is
+defined in [format-spec §3.7](./format-spec.md#37-bundle-schema).
+
+`upskill add <source>:path/to/foo.bundle.md` installs a bundle.
+Implementation behaviour:
+
+- **Items.** Every entry in `items.rules`, `items.skills`, `items.agents` is
+  resolved against the same source repository and installed. Unresolved
+  names error out before any write.
+- **Transitive `requires:`.** When the bundle declares `requires:`, every
+  bundle in the transitive closure is resolved against the same source.
+  Cross-source bundle resolution is not supported; bundles and their
+  dependencies must live in one source repository. Circular `requires:`
+  is rejected.
+- **Lockfile.** Each installed bundle is recorded as a top-level `bundles[]`
+  entry in `.upskill-lock.json` alongside its resolved items. The same item
+  may appear in multiple bundle `items[]` lists; it is installed once.
+- **Removal.** `upskill remove --source <label>` removes every item that
+  came from that source, including those introduced via bundles. A
+  bundle-name-targeted removal (`remove <bundle-name>` removing only items
+  exclusive to that bundle) is not yet implemented.
+
+### 2.7 Aliases
 
 `add` does **not** alias to `install`. `remove` does **not** alias to
 `uninstall`. The unified verb names are canonical.
@@ -268,21 +293,7 @@ Self-hosted GitLab is supported via full URL form
 | `GL_TOKEN`     | Fallback for `GITLAB_TOKEN`.                  |
 | `HTTPS_PROXY`  | HTTP proxy for network requests.              |
 
-## 7. Implementation status
-
-All phases shipped in v0.2.0.
-
-| Phase | Scope                                                                    | Status |
-| ----- | ------------------------------------------------------------------------ | ------ |
-| 0     | Tag, branch, deps, model skeleton.                                       | Done.  |
-| 1     | SSOT parser + generation pipeline for skills × all 3 clients.            | Done.  |
-| 2     | Pipeline extension to rules and agents.                                  | Done.  |
-| 3     | `add` / `update` / `remove` over the pipeline; bundles; ancillary files. | Done.  |
-| 5     | `lint` + `fmt`.                                                          | Done.  |
-| 6     | `new` (scaffolding).                                                     | Done.  |
-| 7     | Polish + v0.2.0 release.                                                 | Done.  |
-
-## 8. Out of scope
+## 7. Out of scope
 
 - Runtime invocation of installed content (each AI client's responsibility).
 - Hosting a registry server or central marketplace.
@@ -290,7 +301,7 @@ All phases shipped in v0.2.0.
 - Telemetry, analytics, or usage tracking.
 - Publishing to non-Git destinations (npm, crates.io, PyPI).
 
-## 9. References
+## 8. References
 
 - Format spec: [`docs/format-spec.md`](./format-spec.md)
 - User guide: [Getting started](./getting-started.md), [Commands](./commands.md), [Recipes](./recipes.md)

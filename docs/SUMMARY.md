@@ -12,5 +12,5 @@
 
 # Reference
 
-- [Behavioural specification](specification.md)
+- [Specification](specification.md)
 - [Portable format](format-spec.md)
