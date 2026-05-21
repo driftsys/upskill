@@ -1,20 +1,29 @@
 # Changelog
 
-## Unreleased
+## [0.6.0] (2026-05-21)
 
-### Breaking Changes
+### Documentation
 
-- **bundle format:** bundle manifests are pure YAML files named
-  `<name>.bundle.yaml` (was Markdown-with-frontmatter `<name>.bundle.md`).
-  The schema is unchanged; only the file format changes. Discovery
-  matches the `.bundle.yaml` suffix and gates on a top-level integer
-  `schema:` key — YAML files without it are silently skipped. A bundle
-  MAY have an optional sibling `<name>.bundle.md` carrying human-readable
-  documentation; the parser ignores it. See
-  [ADR-0007](docs/adr/0007-bundle-yaml-format.md).
-  Migration (pre-1.0, no back-compat): rename `<name>.bundle.md` →
-  `<name>.bundle.yaml` and strip the `---` delimiters and Markdown body.
-  Move any worth-keeping prose to a sibling `<name>.bundle.md`.
+- **agents:** list just book / just book-serve in AGENTS.md ([913450e])
+- refactor source-registry layout page into an Upskill conventions doc
+  ([ca09ef2])
+- surface source-registry layout in a Conventions annexe ([32e6f93])
+
+### Features
+
+- **skills:** add v0.1 prompt-engineering meta-skills bundle ([b597100])
+
+### Refactoring
+
+- **bundle:** switch bundle manifest format to pure YAML (.bundle.yaml)
+  ([b1d8573])
+
+[0.6.0]: https://github.com/driftsys/upskill/compare/v0.5.1...v0.6.0
+[913450e]: https://github.com/driftsys/upskill/commit/913450e
+[ca09ef2]: https://github.com/driftsys/upskill/commit/ca09ef2
+[32e6f93]: https://github.com/driftsys/upskill/commit/32e6f93
+[b597100]: https://github.com/driftsys/upskill/commit/b597100
+[b1d8573]: https://github.com/driftsys/upskill/commit/b1d8573
 
 ## [0.5.1] (2026-05-21)
 
