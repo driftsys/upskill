@@ -1,0 +1,27 @@
+driftsys prompt-engineering meta-skills
+Copyright (c) driftsys
+
+This bundle adapts methodology from `obra/superpowers`:
+
+  https://github.com/obra/superpowers
+  Licensed under the MIT License.
+  Copyright (c) Jesse Vincent (@obra) and contributors.
+
+Specifically, the following methodological patterns are adapted from
+superpowers' `skills/writing-skills` and applied across the
+`evaluating-prompts`, `writing-rules`, and `writing-subagents` skills:
+
+  - The RED-GREEN-REFACTOR-for-docs cycle
+  - The pressure-scenario typology (time, sunk-cost, social, authority,
+    compassion, cleverness, edge-case)
+  - The rationalization-tracking discipline
+  - The "Iron Law" + "Red flags — STOP" framing
+
+The per-layer extensions (three-scenario format for rules, two-interface
+decomposition for subagents, managed-tier authority test) are
+driftsys-original applications of the upstream methodology and have not
+been validated against the same eval set as the upstream skills.
+
+When `writing-skills` itself is vendored into this bundle, this NOTICE
+will be extended to reproduce the upstream MIT license text in full as
+that license requires for binary or substantial-portion redistribution.
