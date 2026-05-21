@@ -61,6 +61,38 @@ later remove everything that came from it:
 upskill remove --source github:owner/bundles:platform-baseline.bundle.yaml
 ```
 
+## Adopt the prompt-engineering stack
+
+The driftsys [prompt-engineering bundle](https://github.com/driftsys/upskill/tree/main/skills)
+pairs with [`obra/superpowers`](https://github.com/obra/superpowers) — install
+both for the full meta-skills + engineering-discipline stack.
+
+### 1. Install superpowers (engineering discipline)
+
+Superpowers ships as a per-harness plugin; the install command differs by
+client:
+
+| Client      | Command                                                         |
+| ----------- | --------------------------------------------------------------- |
+| Claude Code | `/plugin install superpowers@claude-plugins-official`           |
+| Codex CLI   | `/plugins` → search "Superpowers"                               |
+| Gemini CLI  | `gemini extensions install https://github.com/obra/superpowers` |
+| Cursor      | `/add-plugin superpowers`                                       |
+| Copilot CLI | `copilot plugin install superpowers@superpowers-marketplace`    |
+
+If you use more than one harness, install superpowers separately for each.
+
+### 2. Install upskill's prompt-engineering bundle (authoring discipline)
+
+```bash
+upskill add driftsys/skills:skills/prompt-engineering.bundle.yaml
+```
+
+The bundle expands transitively into the meta-skills for authoring rules,
+skills, and agents (`prompt-engineering`, `prompt-distilling`,
+`writing-rules`, `writing-subagents`, `evaluating-prompts`,
+`using-upskill`).
+
 ## Bisect drift
 
 If a teammate's `.upskill-lock.json` shows different content than yours
