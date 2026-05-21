@@ -69,11 +69,12 @@ same well-known directories as skills.sh:
 
 ### Bundle format is additive
 
-The `<name>.bundle.md` manifest is an upskill-specific extension layered
+The `<name>.bundle.yaml` manifest is an upskill-specific extension layered
 on top of the open standard. It does not replace, redefine, or break
-any existing standard field. Tools that don't understand `.bundle.md`
+any existing standard field. Tools that don't understand `.bundle.yaml`
 (including `npx skills`) simply ignore them — bundles never appear in
-their output, and nothing else degrades.
+their output, and nothing else degrades. The bundle file format itself
+is settled in [ADR-0007](./0007-bundle-yaml-format.md).
 
 Bundle authors who want their bundles consumable by skills.sh need a
 separate publishing path (skills.sh doesn't currently understand the

@@ -31,7 +31,7 @@ agents:
 upskill add driftsys/skills
 
 # Or install a curated bundle
-upskill add driftsys/bundles:platform-baseline.bundle.md
+upskill add driftsys/bundles:platform-baseline.bundle.yaml
 
 # Pin to a tag, branch, or commit
 upskill add driftsys/skills@v1.2.0
@@ -72,7 +72,7 @@ upskill fmt             # canonicalise YAML frontmatter
 ```
 
 You can also scaffold rules (`upskill new rule <name>`) and agents
-(`upskill new agent <name>`). Bundles are plain `*.bundle.md` files that
+(`upskill new agent <name>`). Bundles are plain `*.bundle.yaml` files that
 sit alongside the items they reference, also under `skills/`.
 
 ## Man pages

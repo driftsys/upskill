@@ -19,7 +19,7 @@
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
 //! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT}.md` per
-//! format-spec §2.1, plus any `*.bundle.md`). With no paths, the
+//! format-spec §2.1, plus any `*.bundle.yaml`). With no paths, the
 //! current directory is used.
 
 use anyhow::{Context, Result, anyhow};
@@ -150,7 +150,7 @@ impl FileKind {
             "SKILL.md" => Some(Self::Skill),
             "RULE.md" => Some(Self::Rule),
             "AGENT.md" => Some(Self::Agent),
-            n if n.ends_with(".bundle.md") => Some(Self::Bundle),
+            n if n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) => Some(Self::Bundle),
             _ => None,
         }
     }
@@ -159,7 +159,7 @@ impl FileKind {
 /// Walk `root` (file or directory) and return every entrypoint file
 /// the lint should inspect. SSOT items are detected by the
 /// `<root>/<name>/<KIND>.md` layout per format-spec §2.1; bundles by
-/// the `*.bundle.md` suffix. Shared with `crate::fmt`.
+/// the `*.bundle.yaml` suffix. Shared with `crate::fmt`.
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if root.is_file() {
@@ -214,7 +214,7 @@ fn discover_items(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-/// Recurse into `root` looking for `*.bundle.md` files. Skips hidden
+/// Recurse into `root` looking for `*.bundle.yaml` files. Skips hidden
 /// directories (`.git`, `.upskill-…`, etc.) so the scan stays cheap.
 fn walk_bundles(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     let entries = fs::read_dir(root).with_context(|| format!("read {}", root.display()))?;
@@ -272,7 +272,10 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
     Ok(())
 }
 
-/// Parse frontmatter for the kind, returning `(name, body)`.
+/// Parse the entrypoint for the kind, returning `(name, body)`. Items
+/// are frontmatter+body; bundles are pure YAML with no body (§2.2,
+/// ADR-0007), so the bundle arm returns an empty body so the
+/// body-rules become no-ops.
 fn parse_kind(raw: &str, kind: FileKind) -> Result<(String, &str)> {
     match kind {
         FileKind::Skill => {
@@ -288,14 +291,14 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(String, &str)> {
             Ok((item.name, body))
         }
         FileKind::Bundle => {
-            let (item, body) = frontmatter::parse::<crate::model::Bundle>(raw)?;
-            Ok((item.name, body))
+            let bundle: crate::model::Bundle = serde_yaml_ng::from_str(raw)?;
+            Ok((bundle.name, ""))
         }
     }
 }
 
 fn check_name_matches_dir(file: &Path, name: &str, kind: FileKind, out: &mut Vec<Finding>) {
-    // Bundles match the filename stem (`<name>.bundle.md`); items
+    // Bundles match the filename stem (`<name>.bundle.yaml`); items
     // match the parent directory name.
     match kind {
         FileKind::Bundle => {
@@ -615,7 +618,6 @@ mod tests {
     fn lint_flags_bundle_filename_mismatch() {
         let tmp = tempfile::tempdir().unwrap();
         let body = concat!(
-            "---\n",
             "schema: 1\n",
             "name: foo\n",
             "description: filename stem says baseline.\n",
@@ -623,10 +625,8 @@ mod tests {
             "  rules: []\n",
             "  skills: []\n",
             "  agents: []\n",
-            "---\n",
-            "## ok\n",
         );
-        write(&tmp.path().join("bundles/baseline.bundle.md"), body);
+        write(&tmp.path().join("bundles/baseline.bundle.yaml"), body);
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
         let f = report
             .findings

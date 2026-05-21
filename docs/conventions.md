@@ -25,8 +25,8 @@ bundle files sit together under it, flat:
 ```text
 <source-registry-root>/
 └── skills/
-    ├── platform-baseline.bundle.md     # bundles
-    ├── android.bundle.md
+    ├── platform-baseline.bundle.yaml     # bundles
+    ├── android.bundle.yaml
     ├── license-awareness/               # rule item
     │   └── RULE.md
     ├── code-review/                     # skill item
@@ -55,7 +55,7 @@ Why this shape:
 
 ### When bundles outgrow the flat layout
 
-Once a registry holds enough bundles that `*.bundle.md` files start to
+Once a registry holds enough bundles that `*.bundle.yaml` files start to
 drown out the item directories in a single `ls`, move the bundles into a
 sibling `bundles/` subdirectory:
 
@@ -63,9 +63,9 @@ sibling `bundles/` subdirectory:
 <source-registry-root>/
 └── skills/
     ├── bundles/
-    │   ├── platform-baseline.bundle.md
-    │   ├── android.bundle.md
-    │   └── rust-embedded.bundle.md
+    │   ├── platform-baseline.bundle.yaml
+    │   ├── android.bundle.yaml
+    │   └── rust-embedded.bundle.yaml
     ├── license-awareness/
     │   └── RULE.md
     ├── code-review/
@@ -79,7 +79,7 @@ a clean separation between manifests and content. Rough heuristic: stick
 with the flat layout until scanning `skills/` for an item becomes harder
 than scanning it for a bundle.
 
-`upskill` discovers bundles by scanning for the `.bundle.md` suffix
+`upskill` discovers bundles by scanning for the `.bundle.yaml` suffix
 ([format-spec §2.2](./format-spec.md#22-bundle-files)) and is indifferent
 to which of these two sub-layouts the registry uses.
 
@@ -92,7 +92,7 @@ upskill new rule license-checks   # → skills/license-checks/RULE.md
 upskill new agent security-review # → skills/security-review/AGENT.md
 ```
 
-Bundles are plain `*.bundle.md` files you create alongside the items —
+Bundles are plain `*.bundle.yaml` files you create alongside the items —
 there is no scaffolder for them; copy the
 [format-spec §3.7](./format-spec.md#37-bundle-schema) example as a
 starting point.

@@ -1,7 +1,7 @@
 //! ATDD tests for `upskill add <bundle-file>` (bundle install path).
 //!
 //! `install_with_lockfile` detects when its source resolves to a
-//! `.bundle.md` file, walks up to the registry root, discovers sibling
+//! `.bundle.yaml` file, walks up to the registry root, discovers sibling
 //! bundles, resolves transitively, and installs only the items the
 //! resolution names. The lockfile records the entry bundle and every
 //! transitive dependency.
@@ -41,7 +41,7 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
 
 #[test]
 fn bundle_install_writes_only_referenced_items() {
-    // `platform-baseline.bundle.md` references every fixture item, so a
+    // `platform-baseline.bundle.yaml` references every fixture item, so a
     // bundle install renders the same files as a directory install.
     let tmp = tempfile::tempdir().unwrap();
     let registry = tmp.path().join("registry");
@@ -50,7 +50,7 @@ fn bundle_install_writes_only_referenced_items() {
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    let bundle = registry.join("bundles/platform-baseline.bundle.md");
+    let bundle = registry.join("bundles/platform-baseline.bundle.yaml");
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&target)
@@ -87,7 +87,7 @@ fn bundle_install_records_bundle_in_lockfile() {
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    let bundle = registry.join("bundles/platform-baseline.bundle.md");
+    let bundle = registry.join("bundles/platform-baseline.bundle.yaml");
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&target)
@@ -132,7 +132,7 @@ fn bundle_install_resolves_transitive_requires() {
     // `extras` has rule `license-awareness`; baseline has the rest.
     // Mark them disjoint so the union is exact (no conflict).
     // Adjust the extras fixture in-place: drop overlap with baseline.
-    let extras_path = registry.join("bundles/platform-extras.bundle.md");
+    let extras_path = registry.join("bundles/platform-extras.bundle.yaml");
     let extras = fs::read_to_string(&extras_path).unwrap();
     // The fixture lists `license-awareness` which overlaps with baseline.
     // Replace with a non-overlapping rule so the resolver succeeds.
@@ -185,7 +185,7 @@ fn bundle_install_errors_on_item_conflict() {
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    let extras = registry.join("bundles/platform-extras.bundle.md");
+    let extras = registry.join("bundles/platform-extras.bundle.yaml");
     let assert = Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&target)

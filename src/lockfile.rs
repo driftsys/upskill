@@ -51,7 +51,7 @@ pub struct LockedItem {
     pub hash: Option<String>,
 }
 
-/// Bundle entry recorded when an install resolves a `.bundle.md` file
+/// Bundle entry recorded when an install resolves a `.bundle.yaml` file
 /// (the entry bundle and every transitive `requires`). The lockfile's
 /// per-item `items` array still carries each rule/skill/agent
 /// independently — this entry is metadata that pairs each bundle name

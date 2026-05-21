@@ -57,7 +57,7 @@ pub struct InstalledItem {
 pub struct InstallReport {
     pub items: Vec<InstalledItem>,
     /// When the install resolved a bundle (entry `source` was a
-    /// `.bundle.md` file), every reached bundle in dependency order. The
+    /// `.bundle.yaml` file), every reached bundle in dependency order. The
     /// last entry is the bundle the user named. Empty for non-bundle
     /// installs.
     pub bundles: Vec<crate::model::Bundle>,
@@ -68,7 +68,7 @@ const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenC
 /// Install every item under `source` into `target`, generating per-client
 /// output for each client unless filtered by the item's `audience` field.
 ///
-/// Bundle dispatch: when `source` is a `*.bundle.md` file (not a
+/// Bundle dispatch: when `source` is a `*.bundle.yaml` file (not a
 /// directory), discovers sibling bundles in the registry root walked up
 /// from the file, resolves transitively (per [`crate::bundle::resolve`]),
 /// and installs only the resolved items. The reached bundles are

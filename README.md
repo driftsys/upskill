@@ -23,7 +23,7 @@ cargo install upskill
 upskill add driftsys/skills
 
 # Or install a curated bundle — one entry, dependency-resolved
-upskill add driftsys/bundles:platform-baseline.bundle.md
+upskill add driftsys/bundles:platform-baseline.bundle.yaml
 
 # Pull latest and regenerate
 upskill update
@@ -58,12 +58,12 @@ the same tree.
 
 ## Bundles
 
-A bundle is a flat manifest (`*.bundle.md`) that names the items it
+A bundle is a flat YAML manifest (`*.bundle.yaml`) that names the items it
 includes, and optionally other bundles it depends on. Installing a
 bundle resolves the transitive closure once and writes per-item output:
 
 ```bash
-upskill add driftsys/bundles:platform-baseline.bundle.md
+upskill add driftsys/bundles:platform-baseline.bundle.yaml
 ```
 
 The lockfile records the bundle entry alongside the items, so

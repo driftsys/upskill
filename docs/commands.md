@@ -42,7 +42,7 @@ upskill add owner/repo@abc123                       # pin to commit SHA
 upskill add gitlab:owner/repo                       # GitLab.com
 upskill add https://gitlab.example.com/owner/repo   # self-hosted GitLab
 upskill add ./path/to/local                         # local directory
-upskill add owner/repo:platform.bundle.md           # bundle file
+upskill add owner/repo:platform.bundle.yaml         # bundle file
 ```
 
 `upskill add <source>` installs **everything** the source contains.

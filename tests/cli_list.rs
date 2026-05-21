@@ -116,8 +116,8 @@ fn list_bundle_install_surfaces_bundles_section() {
     stage_source(&source);
     fs::create_dir_all(source.join("bundles")).unwrap();
     fs::copy(
-        format!("{FIXTURES}/bundles/platform-baseline.bundle.md"),
-        source.join("bundles/platform-baseline.bundle.md"),
+        format!("{FIXTURES}/bundles/platform-baseline.bundle.yaml"),
+        source.join("bundles/platform-baseline.bundle.yaml"),
     )
     .unwrap();
 
@@ -127,7 +127,7 @@ fn list_bundle_install_surfaces_bundles_section() {
         .args([
             "add",
             source
-                .join("bundles/platform-baseline.bundle.md")
+                .join("bundles/platform-baseline.bundle.yaml")
                 .to_str()
                 .unwrap(),
         ])
