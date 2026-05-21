@@ -117,7 +117,8 @@ Constraints:
   source registries; consumer projects (where developers run `upskill add`) only ever hold
   generated, client-specific outputs and never SSOT items.
 - Within a source registry, `<item-root>` MAY be any path that fits the team's organisation
-  (`content/`, `skills-src/`, `skills/`, etc.). Source registries SHOULD avoid `.agents/` as
+  (`content/`, `skills-src/`, `skills/`, etc.). The upskill project recommends `skills/`; see
+  Appendix D for the full recommended layout. Source registries SHOULD avoid `.agents/` as
   their `<item-root>` to prevent confusion with the consumer-side opencode canonical-store
   path (§7.3).
 
@@ -142,7 +143,8 @@ Bundles are flat manifest files, not directories:
 - Bundle files MAY live anywhere within a source registry — alongside item directories under
   `<item-root>` (§2.1), in a sibling directory, or in a dedicated `bundles/` directory.
   Implementations discover bundles by scanning for the `.bundle.md` suffix and MUST NOT depend
-  on a specific bundle-root path.
+  on a specific bundle-root path. The upskill project recommends placing bundles alongside item
+  directories under `skills/`; see Appendix D.
 
 ### 2.3 Per-client override files
 
@@ -987,5 +989,88 @@ This is informational and subject to change as clients evolve.
 <!-- @client:!opencode -->        Include everywhere except opencode
 <!-- @endclient -->               Close any directive block (required)
 ```
+
+---
+
+## Appendix D: Recommended source-registry layout
+
+The format permits any `<item-root>` path (§2.1) and any `<bundle-root>` path
+(§2.2). This appendix records the layout the upskill project recommends and
+that its tooling and documentation assume by default. Source registries MAY
+deviate; this appendix is non-normative and tooling MUST NOT reject deviations.
+
+### D.1 Layout
+
+A source registry SHOULD place item directories and bundle files together
+under a single top-level `skills/` directory, flat:
+
+```text
+<source-registry-root>/
+└── skills/
+    ├── platform-baseline.bundle.md     # bundles
+    ├── android.bundle.md
+    ├── license-awareness/               # rule item
+    │   └── RULE.md
+    ├── code-review/                     # skill item
+    │   └── SKILL.md
+    ├── security-reviewer/               # agent item
+    │   └── AGENT.md
+    └── api-handler/                     # co-located rule + skill (§2.1)
+        ├── RULE.md
+        └── SKILL.md
+```
+
+Rationale:
+
+- **Single discovery root.** Consumers cloning the registry know where SSOT
+  content lives without inspecting frontmatter.
+- **Flat bundle placement.** Bundles sit alongside the items they reference
+  rather than in a separate `bundles/` subdirectory, keeping `requires:` and
+  `items:` references visually near their targets.
+- **Matches `upskill new`.** Running `upskill new <kind> <name>` from inside
+  `skills/` produces `skills/<name>/<KIND>.md` with no further moves.
+- **Holds all three kinds.** Despite the directory name, `skills/` carries
+  rules and agents as well; kind is determined by the entrypoint filename
+  (§2.1), not the parent directory.
+
+### D.2 Alternative: `skills/bundles/` for large registries
+
+When a registry holds enough bundles that they start to drown out the item
+directories in a single `ls`, move them into a sibling `bundles/`
+subdirectory:
+
+```text
+<source-registry-root>/
+└── skills/
+    ├── bundles/
+    │   ├── platform-baseline.bundle.md
+    │   ├── android.bundle.md
+    │   └── rust-embedded.bundle.md
+    ├── license-awareness/
+    │   └── RULE.md
+    ├── code-review/
+    │   └── SKILL.md
+    └── security-reviewer/
+        └── AGENT.md
+```
+
+This trades visual adjacency between a bundle and the items it lists for a
+clean separation between manifests and content. As a rough heuristic, prefer
+the flat layout (D.1) until bundles begin to outnumber a typical screenful
+of item directories; switch to the nested layout when scanning `skills/`
+for an item becomes harder than scanning it for a bundle.
+
+`upskill` discovers bundles by scanning for the `.bundle.md` suffix (§2.2)
+and is indifferent to which sub-layout the registry uses.
+
+### D.3 What this appendix does not change
+
+- **Conformance.** `<item-root>` and `<bundle-root>` remain MAY-level per
+  §2.1 and §2.2; deviating registries are still conforming.
+- **Generation output.** Consumer-side paths (`.claude/skills/<name>/...`,
+  `.github/skills/...`, `.agents/skills/...`) are specified in §7 and are
+  unaffected by source-side layout.
+- **`.agents/` reservation.** The §2.1 guidance to avoid `.agents/` as
+  `<item-root>` still applies.
 
 Rules: one directive per line, no nesting, balanced open/close, known client identifiers only.

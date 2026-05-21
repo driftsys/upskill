@@ -78,11 +78,14 @@ diffs the second time.
 ## Author workflow
 
 ```bash
-# Inside a source-registry repo
+# Inside a source-registry repo, under the recommended skills/ root
+# (format-spec Appendix D — both items and *.bundle.md live here).
+cd skills/
 upskill new skill my-skill
 $EDITOR my-skill/SKILL.md
 
-# Validate as you go
+# Validate as you go (run from the registry root)
+cd ..
 upskill lint
 upskill fmt
 
