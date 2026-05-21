@@ -54,7 +54,7 @@ upskill update    # re-fetch sources and regenerate
 
 Inside a source-registry repo (where SSOT items live), the recommended
 layout puts all items and bundles under a top-level `skills/` directory
-(format-spec [Appendix D](./format-spec.md#appendix-d-recommended-source-registry-layout)):
+(see [Source-registry layout](./source-registry-layout.md)):
 
 ```bash
 mkdir -p skills && cd skills

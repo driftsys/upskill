@@ -91,6 +91,7 @@ Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
 
 - `docs/intro.md` — book entrypoint
 - `docs/getting-started.md` / `docs/commands.md` / `docs/recipes.md` — user guide
+- `docs/source-registry-layout.md` — recommended `skills/` layout for source registries
 - `docs/specification.md` — upskill specification
 - `docs/format-spec.md` — portable on-disk content format
 - `docs/adr/` — architecture decision records (0000 baseline, 0001 umbrella, 0002–0005)
