@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.1] (2026-05-21)
+
+### Documentation
+
+- document recommended skills/ source-registry layout ([87e437f])
+
+[0.5.1]: https://github.com/driftsys/upskill/compare/v0.5.0...v0.5.1
+[87e437f]: https://github.com/driftsys/upskill/commit/87e437f
+
 ## [0.5.0] (2026-05-20)
 
 ### Refactoring
