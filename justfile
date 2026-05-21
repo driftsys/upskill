@@ -40,6 +40,14 @@ doc:
 man:
     cargo run --example mangen --release --quiet
 
+# Build the mdBook docs into book/
+book:
+    mdbook build
+
+# Serve the mdBook docs with live reload (opens in browser)
+book-serve:
+    mdbook serve --open
+
 # Bump version, update changelog, commit, and tag
 release:
     git std bump

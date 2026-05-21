@@ -46,6 +46,8 @@ just check              # Run all checks (test + lint)
 just build              # Assemble + check
 just verify             # Commit check + build — run before PR
 just fmt                # Format Rust + Markdown
+just book               # Build the mdBook docs into book/
+just book-serve         # Serve the mdBook with live reload (opens in browser)
 ```
 
 After `git clone` or `git worktree add`, run `./bootstrap` once. It installs
