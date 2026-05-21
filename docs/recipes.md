@@ -79,7 +79,7 @@ diffs the second time.
 
 ```bash
 # Inside a source-registry repo, under the recommended skills/ root
-# (format-spec Appendix D — both items and *.bundle.md live here).
+# (see docs/conventions.md — items and *.bundle.md both live here).
 cd skills/
 upskill new skill my-skill
 $EDITOR my-skill/SKILL.md

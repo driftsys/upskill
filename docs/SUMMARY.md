@@ -9,6 +9,7 @@
 - [Getting started](getting-started.md)
 - [Commands](commands.md)
 - [Recipes](recipes.md)
+- [Conventions](conventions.md)
 
 # Reference
 
