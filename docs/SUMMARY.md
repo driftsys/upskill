@@ -9,12 +9,9 @@
 - [Getting started](getting-started.md)
 - [Commands](commands.md)
 - [Recipes](recipes.md)
+- [Conventions](conventions.md)
 
 # Reference
 
 - [Specification](specification.md)
 - [Portable format](format-spec.md)
-
-# Conventions
-
-- [Source-registry layout](source-registry-layout.md)

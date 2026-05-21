@@ -118,7 +118,7 @@ Constraints:
   generated, client-specific outputs and never SSOT items.
 - Within a source registry, `<item-root>` MAY be any path that fits the team's organisation
   (`content/`, `skills-src/`, `skills/`, etc.). The upskill project recommends `skills/`; see
-  [Source-registry layout](./source-registry-layout.md) for the full recommended layout.
+  [Conventions](./conventions.md) for the full recommended layout.
   Source registries SHOULD avoid `.agents/` as their `<item-root>` to prevent confusion with
   the consumer-side opencode canonical-store path (§7.3).
 
@@ -144,7 +144,7 @@ Bundles are flat manifest files, not directories:
   `<item-root>` (§2.1), in a sibling directory, or in a dedicated `bundles/` directory.
   Implementations discover bundles by scanning for the `.bundle.md` suffix and MUST NOT depend
   on a specific bundle-root path. The upskill project recommends placing bundles alongside item
-  directories under `skills/`; see [Source-registry layout](./source-registry-layout.md).
+  directories under `skills/`; see [Conventions](./conventions.md).
 
 ### 2.3 Per-client override files
 
@@ -1000,7 +1000,7 @@ project records its specific recommendation — a flat `skills/` directory
 holding both items and bundles, with a nested `skills/bundles/` variant
 for large registries — in the user guide:
 
-→ [Source-registry layout](./source-registry-layout.md)
+→ [Conventions](./conventions.md)
 
 That recommendation is non-normative; a conforming registry MAY deviate
 and conforming tooling MUST NOT reject deviations.
