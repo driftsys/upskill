@@ -52,16 +52,19 @@ upskill update    # re-fetch sources and regenerate
 
 ## Scaffold your first item (author)
 
-Inside a source-registry repo (where SSOT items live):
+Inside a source-registry repo (where SSOT items live), the recommended
+layout puts all items and bundles under a top-level `skills/` directory
+(format-spec [Appendix D](./format-spec.md#appendix-d-recommended-source-registry-layout)):
 
 ```bash
+mkdir -p skills && cd skills
 upskill new skill code-review
 ```
 
-This writes `code-review/SKILL.md` with the minimum frontmatter the
+This writes `skills/code-review/SKILL.md` with the minimum frontmatter the
 format spec requires (item directories live at one level under the
-source-registry root per format-spec §2.1). Open it, replace the `TODO` description and
-body, then run:
+source-registry root per format-spec §2.1). Open it, replace the `TODO`
+description and body, then run:
 
 ```bash
 upskill lint --strict   # validate against the format spec
@@ -69,7 +72,8 @@ upskill fmt             # canonicalise YAML frontmatter
 ```
 
 You can also scaffold rules (`upskill new rule <name>`) and agents
-(`upskill new agent <name>`).
+(`upskill new agent <name>`). Bundles are plain `*.bundle.md` files that
+sit alongside the items they reference, also under `skills/`.
 
 ## Man pages
 
