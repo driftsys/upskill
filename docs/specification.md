@@ -34,7 +34,7 @@ This document describes upskill's behaviour against that contract.
 ### 1.3 Two roles
 
 - **Source registry** — repository where SSOT items are authored. Holds the
-  canonical `RULE.md` / `SKILL.md` / `AGENT.md` files and `*.bundle.md`
+  canonical `RULE.md` / `SKILL.md` / `AGENT.md` files and `*.bundle.yaml`
   manifests. Author commands (`new`, `lint`, `fmt`) operate here.
 - **Consumer project** — repository where generated outputs are installed
   for use by AI clients. Holds only generated per-client files. Consumer
@@ -71,7 +71,7 @@ upskill add <source> [items...] [--global|--project]
 - `owner/repo` — GitHub shorthand
 - `owner/repo@ref` — pinned ref (branch, tag, or commit SHA)
 - `owner/repo:path/to/item` — subfolder
-- `owner/repo:path/to/name.bundle.md` — bundle file (resolves transitively, see §2.6)
+- `owner/repo:path/to/name.bundle.yaml` — bundle file (resolves transitively, see §2.6)
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full HTTPS URL
 - `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
@@ -139,12 +139,12 @@ Author commands. Run inside a source-registry working tree.
 
 ### 2.6 Bundles
 
-A **bundle** is a `*.bundle.md` manifest that names a curated set of items
+A **bundle** is a `*.bundle.yaml` manifest that names a curated set of items
 and (optionally) other bundles to install together. Bundles contain no
 content of their own; they reference items by `name`. Frontmatter shape is
 defined in [format-spec §3.7](./format-spec.md#37-bundle-schema).
 
-`upskill add <source>:path/to/foo.bundle.md` installs a bundle.
+`upskill add <source>:path/to/foo.bundle.yaml` installs a bundle.
 Implementation behaviour:
 
 - **Items.** Every entry in `items.rules`, `items.skills`, `items.agents` is

@@ -47,10 +47,10 @@ re-fetches from the same ref unless you bump it explicitly.
 ## Install a curated bundle
 
 ```bash
-upskill add owner/bundles:platform-baseline.bundle.md
+upskill add owner/bundles:platform-baseline.bundle.yaml
 ```
 
-A bundle is a manifest (`*.bundle.md`) that names the items it
+A bundle is a YAML manifest (`*.bundle.yaml`) that names the items it
 includes plus any other bundles it depends on. The dependency closure
 is resolved transitively before any items are written.
 
@@ -58,7 +58,7 @@ The lockfile records the bundle entry alongside the items, so you can
 later remove everything that came from it:
 
 ```bash
-upskill remove --source github:owner/bundles:platform-baseline.bundle.md
+upskill remove --source github:owner/bundles:platform-baseline.bundle.yaml
 ```
 
 ## Bisect drift
@@ -79,7 +79,7 @@ diffs the second time.
 
 ```bash
 # Inside a source-registry repo, under the recommended skills/ root
-# (see docs/conventions.md — items and *.bundle.md both live here).
+# (see docs/conventions.md — items and *.bundle.yaml both live here).
 cd skills/
 upskill new skill my-skill
 $EDITOR my-skill/SKILL.md

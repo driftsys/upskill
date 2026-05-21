@@ -89,9 +89,19 @@ fn format_file(path: &Path) -> Result<bool> {
 
 /// Produce the canonical form of `raw` for the kind inferred from
 /// `path`'s filename. Pure function — no I/O, no mutation.
+///
+/// Items (Skill/Rule/Agent) are frontmatter+body — body is preserved
+/// byte-for-byte. Bundles are pure YAML (§2.2, ADR-0007), so the file
+/// content is the canonical YAML verbatim, no `---` wrapping.
 fn canonicalise(raw: &str, path: &Path) -> Result<String> {
     let kind = file_kind(path)
         .ok_or_else(|| anyhow!("{}: unknown entrypoint filename", path.display()))?;
+
+    if let EntryKind::Bundle = kind {
+        let bundle: Bundle = serde_yaml_ng::from_str(raw)
+            .with_context(|| format!("parse bundle {}", path.display()))?;
+        return serde_yaml_ng::to_string(&bundle).context("serialise canonical bundle");
+    }
 
     let body = frontmatter::split(raw)
         .map(|(_, body)| body)
@@ -101,7 +111,7 @@ fn canonicalise(raw: &str, path: &Path) -> Result<String> {
         EntryKind::Skill => roundtrip::<Skill>(raw)?,
         EntryKind::Rule => roundtrip::<Rule>(raw)?,
         EntryKind::Agent => roundtrip::<Agent>(raw)?,
-        EntryKind::Bundle => roundtrip::<Bundle>(raw)?,
+        EntryKind::Bundle => unreachable!("bundle handled above"),
     };
 
     Ok(format!("---\n{yaml}---\n{body}"))
@@ -260,24 +270,28 @@ mod tests {
 
     #[test]
     fn fmt_handles_bundle() {
+        // Bundles are pure YAML (§2.2, ADR-0007). fmt reorders keys and
+        // strips the file down to canonical YAML — no `---` wrapping.
         let tmp = tempfile::tempdir().unwrap();
-        let item = tmp.path().join("bundles/baseline.bundle.md");
+        let item = tmp.path().join("bundles/baseline.bundle.yaml");
         write(
             &item,
             concat!(
-                "---\n",
                 "name: baseline\n",
                 "schema: 1\n",
                 "description: a bundle.\n",
                 "items:\n",
                 "  rules: [api]\n",
-                "---\n",
-                "## body\n",
             ),
         );
         let report = fmt(&[tmp.path().to_path_buf()]).unwrap();
         assert_eq!(report.files_changed.len(), 1);
         let after = fs::read_to_string(&item).unwrap();
         assert!(after.contains("- api"), "items.rules lost:\n{after}");
+        assert!(
+            !after.starts_with("---"),
+            "bundle file must not be wrapped in `---`:\n{after}"
+        );
+        assert!(after.starts_with("schema:"), "key order:\n{after}");
     }
 }

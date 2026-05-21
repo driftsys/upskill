@@ -130,21 +130,29 @@ additional content and is ignored by agentskills.io-only tooling.
 
 ### 2.2 Bundle files
 
-Bundles are flat manifest files, not directories:
+Bundles are flat YAML manifest files, not directories:
 
 ```text
 <bundle-root>/
-├── platform-baseline.bundle.md
-├── android.bundle.md
-└── rust-embedded.bundle.md
+├── platform-baseline.bundle.yaml
+├── android.bundle.yaml
+└── rust-embedded.bundle.yaml
 ```
 
-- The filename stem (before `.bundle.md`) MUST match the `name` field in the bundle's frontmatter.
+- A bundle manifest is a pure YAML file (no `---` delimiters, no markdown body).
+- The filename stem (before `.bundle.yaml`) MUST match the `name` field in the manifest.
 - Bundle files MAY live anywhere within a source registry — alongside item directories under
   `<item-root>` (§2.1), in a sibling directory, or in a dedicated `bundles/` directory.
-  Implementations discover bundles by scanning for the `.bundle.md` suffix and MUST NOT depend
-  on a specific bundle-root path. The upskill project recommends placing bundles alongside item
-  directories under `skills/`; see [Conventions](./conventions.md).
+  Implementations discover bundles by scanning for the `.bundle.yaml` suffix and MUST NOT depend
+  on a specific bundle-root path. A YAML file matching the suffix but lacking a top-level integer
+  `schema:` key is silently skipped in discovery (the schema field is the bundle contract gate);
+  explicit-path operations against such a file MUST surface a parse error. The upskill project
+  recommends placing bundles alongside item directories under `skills/`; see
+  [Conventions](./conventions.md).
+- A bundle MAY have an optional sibling Markdown file `<name>.bundle.md` carrying
+  human-readable documentation (install examples, adoption path, caveats). Implementations
+  ignore `<name>.bundle.md`; it exists for humans browsing the registry. See
+  [ADR-0007](./adr/0007-bundle-yaml-format.md).
 
 ### 2.3 Per-client override files
 
@@ -206,8 +214,10 @@ Items MAY contain supporting files in their directory:
 
 ## 3. Frontmatter schema
 
-All entrypoint files (RULE.md, SKILL.md, AGENT.md, *.bundle.md) begin with YAML frontmatter delimited
-by `---` markers. Frontmatter is followed by a blank line and then markdown body content.
+Item entrypoint files (RULE.md, SKILL.md, AGENT.md) begin with YAML frontmatter delimited by
+`---` markers, followed by a blank line and then markdown body content. Bundle manifests
+(`*.bundle.yaml`, §2.2) are pure YAML — the same schema, but the file content IS the YAML, with no
+`---` wrapping and no body.
 
 ### 3.1 Common fields (all kinds and bundles)
 
@@ -403,8 +413,9 @@ live in source registries (potentially the same repo, potentially others). Consu
 not contain bundle files — an implementation records which bundles a consumer project has
 installed in its own state file (e.g. `.upskill-lock.json` for the upskill CLI).
 
+`<bundle-root>/platform-baseline.bundle.yaml`:
+
 ```yaml
----
 schema: 1
 name: platform-baseline
 description: Baseline rules, skills, and agents for all repositories
@@ -425,12 +436,10 @@ requires: []
 metadata:
   version: "1.2.0"
   author: platform-dx
----
-
-# Platform baseline
-
-What this bundle provides, who it targets, changelog...
 ```
+
+An optional sibling `<bundle-root>/platform-baseline.bundle.md` MAY carry human-readable
+documentation; the parser ignores it (§2.2).
 
 | Field          | Type     | Required | Description                          |
 | -------------- | -------- | -------- | ------------------------------------ |

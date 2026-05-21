@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Breaking Changes
+
+- **bundle format:** bundle manifests are pure YAML files named
+  `<name>.bundle.yaml` (was Markdown-with-frontmatter `<name>.bundle.md`).
+  The schema is unchanged; only the file format changes. Discovery
+  matches the `.bundle.yaml` suffix and gates on a top-level integer
+  `schema:` key — YAML files without it are silently skipped. A bundle
+  MAY have an optional sibling `<name>.bundle.md` carrying human-readable
+  documentation; the parser ignores it. See
+  [ADR-0007](docs/adr/0007-bundle-yaml-format.md).
+  Migration (pre-1.0, no back-compat): rename `<name>.bundle.md` →
+  `<name>.bundle.yaml` and strip the `---` delimiters and Markdown body.
+  Move any worth-keeping prose to a sibling `<name>.bundle.md`.
+
 ## [0.5.1] (2026-05-21)
 
 ### Documentation
