@@ -153,6 +153,34 @@ fn is_bundle_file(path: &Path) -> bool {
             .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX))
 }
 
+/// Search `root` recursively for a file named `<name>.bundle.yaml`.
+/// Skips hidden directories. Returns the first match or `None`.
+fn find_bundle_by_name(root: &Path, name: &str) -> Option<PathBuf> {
+    let target_filename = format!("{}{}", name, crate::parse::bundle::BUNDLE_SUFFIX);
+    find_bundle_recursive(root, &target_filename)
+}
+
+fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
+    let entries = fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let entry_name = entry.file_name();
+        let name_str = entry_name.to_string_lossy();
+        if name_str.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_file() && name_str == target {
+            return Some(path);
+        }
+        if path.is_dir() {
+            if let Some(found) = find_bundle_recursive(&path, target) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
 /// at least one item directory (containing `RULE.md`, `SKILL.md`, or
@@ -1611,5 +1639,49 @@ mod tests {
                 agent_output_path(client, "x")
             );
         }
+    }
+
+    #[test]
+    fn find_bundle_by_name_finds_nested_bundle_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bundles_dir = tmp.path().join("bundles");
+        std::fs::create_dir_all(&bundles_dir).unwrap();
+        std::fs::write(
+            bundles_dir.join("baseline.bundle.yaml"),
+            "schema: 1\nname: baseline\ndescription: test\nitems:\n  rules: []\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "baseline");
+        assert_eq!(result, Some(bundles_dir.join("baseline.bundle.yaml")));
+    }
+
+    #[test]
+    fn find_bundle_by_name_returns_none_when_not_found() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("skills/foo")).unwrap();
+        std::fs::write(
+            tmp.path().join("skills/foo/SKILL.md"),
+            "---\nschema: 1\nname: foo\n---\n# body\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "foo");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn find_bundle_by_name_skips_hidden_dirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hidden = tmp.path().join(".hidden");
+        std::fs::create_dir_all(&hidden).unwrap();
+        std::fs::write(
+            hidden.join("secret.bundle.yaml"),
+            "schema: 1\nname: secret\ndescription: x\nitems:\n  rules: []\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "secret");
+        assert!(result.is_none());
     }
 }
