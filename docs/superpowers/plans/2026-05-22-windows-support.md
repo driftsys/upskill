@@ -486,7 +486,7 @@ With a Rust toolchain instead:
 cargo install upskill
 ```
 
-Or download a pre-built binary directly from the [releases page][releases].
+Or download a pre-built binary directly from the releases page.
 
 `upskill` is a single static binary with no runtime dependencies.
 
@@ -521,7 +521,7 @@ without any extra setup.
 **Windows (WSL):** use the Linux install command above inside your WSL
 terminal.
 
-Or download a pre-built binary directly from the [releases page][releases].
+Or download a pre-built binary directly from the releases page.
 
 `upskill` is a single static binary with no runtime dependencies.
 
