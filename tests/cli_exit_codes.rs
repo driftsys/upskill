@@ -56,15 +56,16 @@ fn usage_errors_exit_two() {
 #[test]
 fn general_errors_exit_one() {
     // `add --global` resolves the install target from `$HOME`. With HOME
-    // unset, the target lookup fails — a general error (exit 1), not a
-    // usage error.
+    // (and USERPROFILE on Windows) unset, the target lookup fails — a
+    // general error (exit 1), not a usage error.
     let cwd = tempdir().expect("must create temp dir");
     let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
 
     cmd.current_dir(cwd.path())
         .env_remove("HOME")
+        .env_remove("USERPROFILE")
         .args(["add", "--global", "owner/repo"])
         .assert()
         .code(1)
-        .stderr("error: HOME is not set\n");
+        .stderr("error: HOME (or USERPROFILE on Windows) is not set\n");
 }

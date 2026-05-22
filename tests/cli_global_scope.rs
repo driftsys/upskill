@@ -215,3 +215,60 @@ fn list_global_reads_home_lockfile() {
         "global list shows installed skill: {global_out}"
     );
 }
+
+#[test]
+fn add_global_uses_userprofile_when_home_unset() {
+    // Windows compatibility: when HOME is absent, USERPROFILE should be
+    // used as the global install target.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let home = tmp.path().join("fakehome");
+    let cwd = tmp.path().join("cwd");
+    stage_source(&source);
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(&cwd).unwrap();
+    fs::create_dir_all(cwd.join(".git")).unwrap();
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&cwd)
+        .env_remove("HOME")
+        .env("USERPROFILE", &home)
+        .args(["add", "--global", source.to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert!(
+        home.join(".upskill-lock.json").exists(),
+        "global lockfile written under USERPROFILE"
+    );
+    assert!(
+        home.join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "global skill output under USERPROFILE"
+    );
+}
+
+#[test]
+fn add_global_errors_clearly_when_neither_home_nor_userprofile_set() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cwd = tmp.path().join("cwd");
+    fs::create_dir_all(&cwd).unwrap();
+    fs::create_dir_all(cwd.join(".git")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&cwd)
+        .env_remove("HOME")
+        .env_remove("USERPROFILE")
+        .args(["add", "--global", "./nonexistent"])
+        .assert()
+        .failure()
+        .code(1);
+
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("USERPROFILE"),
+        "error mentions USERPROFILE: {stderr}"
+    );
+}

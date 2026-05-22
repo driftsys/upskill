@@ -25,4 +25,4 @@ pub mod search;
 pub mod source;
 pub mod style;
 
-pub use source::{InstallSource, parse_install_source};
+pub use source::{InstallSource, home_dir, parse_install_source};

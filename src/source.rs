@@ -77,8 +77,23 @@ pub enum SourceParseError {
     EmptyRef,
 }
 
+/// Resolve the running user's home directory.
+///
+/// Checks `HOME` first (standard on Unix, Git Bash, and WSL), then falls
+/// back to `USERPROFILE` (the canonical home-directory variable on native
+/// Windows). Returns `None` when neither variable is set.
+pub fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+}
+
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
-    if source.starts_with("./") || source.starts_with("../") || source.starts_with('/') {
+    if source.starts_with("./")
+        || source.starts_with("../")
+        || source.starts_with('/')
+        || is_windows_absolute(source)
+    {
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
@@ -86,16 +101,15 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     // — that needs platform-specific lookup and our use case is the running
     // user's own home only.
     if source == "~" || source.starts_with("~/") {
-        if let Some(home) = std::env::var_os("HOME") {
-            let mut path = PathBuf::from(home);
+        if let Some(mut path) = home_dir() {
             if let Some(rest) = source.strip_prefix("~/") {
                 path.push(rest);
             }
             return Ok(InstallSource::LocalPath(path));
         }
-        // `HOME` unset: fall through and let the path be parsed verbatim.
-        // Downstream `LocalPath` handling will fail with a useful filesystem
-        // error rather than a confusing "this looks like owner/repo" parse.
+        // Neither HOME nor USERPROFILE set: fall through and let the path be
+        // parsed verbatim. Downstream `LocalPath` handling will fail with a
+        // useful filesystem error rather than a confusing parse error.
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
@@ -110,6 +124,17 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     }
 
     parse_github_source(source).map(InstallSource::Github)
+}
+
+/// Returns `true` if `s` looks like a Windows absolute path (e.g. `C:\foo`
+/// or `D:/bar`). Checked on all platforms so that source labels round-trip
+/// correctly even when a lockfile is shared across OSes.
+fn is_windows_absolute(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
 /// Parse a lockfile source label produced by the [`Display`] impl back
@@ -255,6 +280,10 @@ pub(crate) fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseE
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// Serialise tests that mutate HOME / USERPROFILE env vars.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn parse_valid_owner_repo() {
@@ -316,12 +345,23 @@ mod tests {
     }
 
     #[test]
+    fn parse_local_path_windows_drive_letter() {
+        let source = parse_install_source(r"C:\Users\runner\skills").expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from(r"C:\Users\runner\skills"))
+        );
+        // Forward-slash variant
+        let source2 = parse_install_source("D:/projects/skills").expect("must parse");
+        assert_eq!(
+            source2,
+            InstallSource::LocalPath(PathBuf::from("D:/projects/skills"))
+        );
+    }
+
+    #[test]
     fn parse_local_path_tilde_expands_home() {
-        // SAFETY: tests are not parallel for env mutation here because
-        // the helper acquires a process-wide mutex via a static. We
-        // accept the small risk of cross-test interference for this
-        // narrow case — `parse_install_source` only reads HOME, no other
-        // test in this module touches it.
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev = std::env::var_os("HOME");
         unsafe { std::env::set_var("HOME", "/users/alice") };
         let result = parse_install_source("~/skills/code-review");
@@ -338,6 +378,7 @@ mod tests {
 
     #[test]
     fn parse_local_path_tilde_alone_expands_to_home() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev = std::env::var_os("HOME");
         unsafe { std::env::set_var("HOME", "/users/alice") };
         let result = parse_install_source("~");
@@ -588,5 +629,97 @@ mod tests {
     fn label_rejects_gitlab_plus_without_host() {
         let err = parse_install_source_label("gitlab+:team/x").expect_err("must reject");
         assert_eq!(err, SourceParseError::EmptySegment);
+    }
+
+    #[test]
+    fn home_dir_reads_home_var() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let prev_home = std::env::var_os("HOME");
+        let prev_up = std::env::var_os("USERPROFILE");
+        unsafe {
+            std::env::set_var("HOME", "/home/alice");
+            std::env::remove_var("USERPROFILE");
+        }
+        let result = home_dir();
+        unsafe {
+            match prev_home {
+                Some(v) => std::env::set_var("HOME", v),
+                None => std::env::remove_var("HOME"),
+            }
+            match prev_up {
+                Some(v) => std::env::set_var("USERPROFILE", v),
+                None => std::env::remove_var("USERPROFILE"),
+            }
+        }
+        assert_eq!(result, Some(PathBuf::from("/home/alice")));
+    }
+
+    #[test]
+    fn home_dir_falls_back_to_userprofile() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let prev_home = std::env::var_os("HOME");
+        let prev_up = std::env::var_os("USERPROFILE");
+        unsafe {
+            std::env::remove_var("HOME");
+            std::env::set_var("USERPROFILE", r"C:\Users\alice");
+        }
+        let result = home_dir();
+        unsafe {
+            match prev_home {
+                Some(v) => std::env::set_var("HOME", v),
+                None => std::env::remove_var("HOME"),
+            }
+            match prev_up {
+                Some(v) => std::env::set_var("USERPROFILE", v),
+                None => std::env::remove_var("USERPROFILE"),
+            }
+        }
+        assert_eq!(result, Some(PathBuf::from(r"C:\Users\alice")));
+    }
+
+    #[test]
+    fn home_dir_prefers_home_over_userprofile() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let prev_home = std::env::var_os("HOME");
+        let prev_up = std::env::var_os("USERPROFILE");
+        unsafe {
+            std::env::set_var("HOME", "/home/alice");
+            std::env::set_var("USERPROFILE", r"C:\Users\alice");
+        }
+        let result = home_dir();
+        unsafe {
+            match prev_home {
+                Some(v) => std::env::set_var("HOME", v),
+                None => std::env::remove_var("HOME"),
+            }
+            match prev_up {
+                Some(v) => std::env::set_var("USERPROFILE", v),
+                None => std::env::remove_var("USERPROFILE"),
+            }
+        }
+        assert_eq!(result, Some(PathBuf::from("/home/alice")));
+    }
+
+    #[test]
+    fn home_dir_returns_none_when_neither_set() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let prev_home = std::env::var_os("HOME");
+        let prev_up = std::env::var_os("USERPROFILE");
+        unsafe {
+            std::env::remove_var("HOME");
+            std::env::remove_var("USERPROFILE");
+        }
+        let result = home_dir();
+        unsafe {
+            match prev_home {
+                Some(v) => std::env::set_var("HOME", v),
+                None => std::env::remove_var("HOME"),
+            }
+            match prev_up {
+                Some(v) => std::env::set_var("USERPROFILE", v),
+                None => std::env::remove_var("USERPROFILE"),
+            }
+        }
+        assert_eq!(result, None);
     }
 }

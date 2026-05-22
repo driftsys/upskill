@@ -100,28 +100,37 @@ mod tests {
 
     #[test]
     fn proxy_from_env_reads_https_proxy() {
-        with_env(
-            &[
-                ("HTTPS_PROXY", Some("http://proxy.corp:8080")),
-                ("https_proxy", None),
-            ],
-            || {
-                assert_eq!(proxy_from_env(), Some("http://proxy.corp:8080".to_string()));
-            },
-        );
+        // On Windows env vars are case-insensitive — removing `https_proxy`
+        // also removes `HTTPS_PROXY`. Only set the uppercase form there.
+        #[cfg(not(windows))]
+        let vars: &[(&str, Option<&str>)] = &[
+            ("HTTPS_PROXY", Some("http://proxy.corp:8080")),
+            ("https_proxy", None),
+        ];
+        #[cfg(windows)]
+        let vars: &[(&str, Option<&str>)] = &[("HTTPS_PROXY", Some("http://proxy.corp:8080"))];
+
+        with_env(vars, || {
+            assert_eq!(proxy_from_env(), Some("http://proxy.corp:8080".to_string()));
+        });
     }
 
     #[test]
     fn proxy_from_env_falls_back_to_lowercase() {
-        with_env(
-            &[
-                ("HTTPS_PROXY", None),
-                ("https_proxy", Some("http://proxy.corp:8080")),
-            ],
-            || {
-                assert_eq!(proxy_from_env(), Some("http://proxy.corp:8080".to_string()));
-            },
-        );
+        // On Windows env vars are case-insensitive — `https_proxy` and
+        // `HTTPS_PROXY` are the same variable. The "fallback" path is
+        // unreachable, so this test only verifies on Unix.
+        #[cfg(not(windows))]
+        let vars: &[(&str, Option<&str>)] = &[
+            ("HTTPS_PROXY", None),
+            ("https_proxy", Some("http://proxy.corp:8080")),
+        ];
+        #[cfg(windows)]
+        let vars: &[(&str, Option<&str>)] = &[("https_proxy", Some("http://proxy.corp:8080"))];
+
+        with_env(vars, || {
+            assert_eq!(proxy_from_env(), Some("http://proxy.corp:8080".to_string()));
+        });
     }
 
     #[test]

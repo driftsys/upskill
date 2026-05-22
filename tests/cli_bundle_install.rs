@@ -134,6 +134,8 @@ fn bundle_install_resolves_transitive_requires() {
     // Adjust the extras fixture in-place: drop overlap with baseline.
     let extras_path = registry.join("bundles/platform-extras.bundle.yaml");
     let extras = fs::read_to_string(&extras_path).unwrap();
+    // Normalise line endings for Windows compatibility (git autocrlf).
+    let extras = extras.replace("\r\n", "\n");
     // The fixture lists `license-awareness` which overlaps with baseline.
     // Replace with a non-overlapping rule so the resolver succeeds.
     fs::write(
