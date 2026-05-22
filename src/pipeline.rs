@@ -1143,7 +1143,7 @@ fn clone_to_tempdir(
     name: &str,
 ) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
     let tmp = tempfile::tempdir().context("create temp dir for clone")?;
-    fetch::shallow_clone(url, git_ref, "clone", tmp.path())
+    fetch::shallow_clone(url, git_ref, "clone", tmp.path(), subfolder)
         .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
     let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
         .map_err(|e| anyhow!("{}", e))?;
@@ -1209,7 +1209,7 @@ pub fn install_from_git_url(
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<InstallReport> {
     let tmp = tempfile::tempdir().context("create temp dir for clone")?;
-    fetch::shallow_clone(url, git_ref, "clone", tmp.path())
+    fetch::shallow_clone(url, git_ref, "clone", tmp.path(), subfolder)
         .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
     let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
         .map_err(|e| anyhow!("{}", e))?;
