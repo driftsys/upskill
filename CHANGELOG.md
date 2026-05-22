@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.6.1] (2026-05-22)
+
+### Documentation
+
+- ADR-0008 plugin install shellout + format-spec §3.7 plugins ([#153])
+  ([13bbabb]), closes [#152]
+
+### Features
+
+- **plugin:** add src/plugin.rs client CLI shellout module ([#155]) ([4a2e927]),
+  closes 148
+
+* feat(plugin): add src/plugin.rs client CLI shellout module
+
+New
+module implementing the plugin install/uninstall surface per
+ADR-0008. Shells
+out to native client CLIs:
+
+- claude plugin marketplace add + claude plugin
+  install --scope
+- code --install-extension / --uninstall-extension
+- opencode
+  plugin / plugin remove
+
+Key design:
+
+- PluginOutcome enum: Success |
+  CliNotFound | Failed
+- PluginScope enum: Project | User (maps to claude
+  --scope flag)
+- is_cli_available() presence detection via
+  ErrorKind::NotFound
+- No new dependencies (std::process::Command only)
+- Never
+  writes to stdout/stderr (presentation in main.rs)
+
+Tests cover:
+
+- Scope flag
+  mapping
+- CLI availability detection (true for sh, false for nonexistent)
+- CliNotFound path for all three clients
+- Success/failure outcome from
+  run_command (true/false binaries)
+- Predicate methods on PluginOutcome, 149
+
+* feat(pipeline): wire plugin install into install_with_lockfile
+
+Add
+LockedPlugin struct to lockfile schema with upsert/remove methods.
+Wire plugin
+shellout into install_with_lockfile via
+install_plugins_from_bundles
+orchestrator. Only successful installs are
+recorded in the lockfile;
+CLI-not-found and failures are reported to
+the user via structured
+PluginResult entries., [#150]
+
+- **bundle:** add plugins: map to Bundle schema with typed descriptors ([#154])
+  ([8b6deeb]), closes [#148]
+
+[0.6.1]: https://github.com/driftsys/upskill/compare/v0.6.0...v0.6.1
+[13bbabb]: https://github.com/driftsys/upskill/commit/13bbabb
+[#153]: https://github.com/driftsys/upskill/issues/153
+[#152]: https://github.com/driftsys/upskill/issues/152
+[4a2e927]: https://github.com/driftsys/upskill/commit/4a2e927
+[#155]: https://github.com/driftsys/upskill/issues/155
+[#150]: https://github.com/driftsys/upskill/issues/150
+[8b6deeb]: https://github.com/driftsys/upskill/commit/8b6deeb
+[#154]: https://github.com/driftsys/upskill/issues/154
+[#148]: https://github.com/driftsys/upskill/issues/148
+
 ## [0.6.0] (2026-05-21)
 
 ### Documentation
