@@ -81,12 +81,16 @@ pub struct Requires {
 
 /// Per-plugin entry in the `plugins:` map. Contains optional descriptors
 /// for each supported client. A plugin MAY target a single client, a
-/// subset, or all three.
+/// subset, or all of them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PluginEntry {
     /// Claude Code plugin descriptor.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub claude: Option<ClaudePluginDescriptor>,
+
+    /// GitHub Copilot CLI plugin descriptor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copilot: Option<CopilotPluginDescriptor>,
 
     /// VS Code extension descriptor.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -103,6 +107,18 @@ pub struct ClaudePluginDescriptor {
     /// Marketplace source (passed to `claude plugin marketplace add`).
     pub source: String,
     /// Plugin identifier (passed to `claude plugin install`).
+    pub plugin: String,
+    /// URL shown in warn-skip message when CLI not found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_url: Option<String>,
+}
+
+/// Install descriptor for GitHub Copilot CLI plugins.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CopilotPluginDescriptor {
+    /// Marketplace source (passed to `copilot plugin marketplace add`).
+    pub source: String,
+    /// Plugin identifier (passed to `copilot plugin install`).
     pub plugin: String,
     /// URL shown in warn-skip message when CLI not found.
     #[serde(default, skip_serializing_if = "Option::is_none")]

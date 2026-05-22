@@ -399,6 +399,10 @@ plugins:
       source: anthropics/claude-plugins
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
+    copilot:
+      source: obra/superpowers-marketplace
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
     vscode:
       extension: anthropic.superpowers
       install_url: https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers
@@ -418,6 +422,14 @@ plugins:
         assert_eq!(claude.plugin, "superpowers");
         assert_eq!(
             claude.install_url.as_deref(),
+            Some("https://github.com/obra/superpowers#install")
+        );
+
+        let copilot = sp.copilot.as_ref().expect("copilot block");
+        assert_eq!(copilot.source, "obra/superpowers-marketplace");
+        assert_eq!(copilot.plugin, "superpowers");
+        assert_eq!(
+            copilot.install_url.as_deref(),
             Some("https://github.com/obra/superpowers#install")
         );
 

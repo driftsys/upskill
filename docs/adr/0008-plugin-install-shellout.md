@@ -12,19 +12,21 @@ right shape for rules, skills, and agents — they are content that
 each client consumes by reading files from a known path.
 
 Plugins do not fit that mold. Claude Code plugins (e.g.
-`superpowers`), VS Code extensions, and opencode modules carry hooks,
-slash commands, marketplace registration, and runtime state that the
-host client owns. Re-emitting that surface from upskill SSOT
-duplicates the upstream plugin, can't capture hooks and commands
-cleanly, and would have us shipping a second-class copy of artifacts
-like `superpowers` that already exist as fully-formed Claude Code
-plugins maintained upstream.
+`superpowers`), Copilot CLI plugins, VS Code extensions, and opencode
+modules carry hooks, slash commands, marketplace registration, and
+runtime state that the host client owns. Re-emitting that surface from
+upskill SSOT duplicates the upstream plugin, can't capture hooks and
+commands cleanly, and would have us shipping a second-class copy of
+artifacts like `superpowers` that already exist as fully-formed plugins
+maintained upstream.
 
-Each of the three target clients exposes a CLI for plugin/extension
+Each of the four target clients exposes a CLI for plugin/extension
 management:
 
 - `claude plugin marketplace add <source>` +
   `claude plugin install <plugin>@<marketplace> --scope <s>`
+- `copilot plugin marketplace add <source>` +
+  `copilot plugin install <plugin>@<marketplace>`
 - `code --install-extension <ext-id>`
 - `opencode plugin <module>`
 
@@ -53,6 +55,10 @@ plugins:
       source: anthropics/claude-plugins
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
+    copilot:
+      source: obra/superpowers-marketplace
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
     vscode:
       extension: anthropic.superpowers
       install_url: https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers
@@ -63,9 +69,9 @@ plugins:
 
 - The map key (`superpowers`) is the upskill-level identity — used in
   the lockfile, CLI output, and `upskill remove plugin superpowers`.
-- Per-client blocks (`claude`, `vscode`, `opencode`) are each
-  optional and typed to that client's actual install primitives. A
-  plugin that only exists for Claude Code carries only a `claude:`
+- Per-client blocks (`claude`, `copilot`, `vscode`, `opencode`) are
+  each optional and typed to that client's actual install primitives.
+  A plugin that only exists for Claude Code carries only a `claude:`
   block.
 - Each client block MAY carry `install_url:` — a URL surfaced in the
   warn-skip message when that client's CLI is not on PATH. The field
@@ -79,6 +85,7 @@ user has the matching client targeted, upskill shells out:
 | Client   | Commands                                                                                                                                                                  |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | claude   | `claude plugin marketplace add <source>` (idempotent — checked via `claude plugin marketplace list`), then `claude plugin install <plugin>@<marketplace> --scope <scope>` |
+| copilot  | `copilot plugin marketplace add <source>` (idempotent), then `copilot plugin install <plugin>@<marketplace>`                                                              |
 | vscode   | `code --install-extension <extension>` (naturally idempotent)                                                                                                             |
 | opencode | `opencode plugin <module>`                                                                                                                                                |
 
@@ -93,6 +100,9 @@ flag:
 Claude's `local` scope (machine-local, not committed) is not exposed
 via upskill; users who want it can call `claude plugin install`
 directly.
+
+Copilot CLI does not support a `--scope` flag — plugins are installed
+globally regardless of the upskill project/global context.
 
 ### CLI-missing policy: warn-skip
 
@@ -127,6 +137,7 @@ ADR-0001.
 
 The module exposes typed functions per client operation
 (`claude_marketplace_add`, `claude_plugin_install`,
+`copilot_marketplace_add`, `copilot_plugin_install`,
 `vscode_extension_install`, `opencode_plugin_install`, plus the
 inverse uninstall calls). All return `anyhow::Result<T>` and never
 write to stdout/stderr — presentation lives in `main.rs` per
@@ -239,3 +250,5 @@ extension; v0.5 bundles parse unchanged.
   — to be updated with the `plugins:` sub-shape.
 - Claude Code plugin CLI: `claude plugin --help`,
   `claude plugin marketplace --help`.
+- GitHub Copilot CLI plugin: `copilot plugin --help`,
+  `copilot plugin marketplace --help`.

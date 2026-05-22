@@ -262,7 +262,8 @@ fn is_inside_git_repo() -> bool {
 }
 
 /// Map the `--global` / `--project` CLI flags to a `PluginScope` for
-/// Claude Code plugin installation.
+/// plugin installation (used by clients that support scoped installs,
+/// e.g. Claude Code).
 fn scope_to_plugin_scope(global: bool, _project: bool) -> PluginScope {
     if global {
         PluginScope::User

@@ -510,6 +510,20 @@ fn install_plugins_from_bundles(
                     install_url: opencode.install_url.clone(),
                 });
             }
+
+            // Copilot CLI
+            if let Some(copilot) = &entry.copilot {
+                let outcome = crate::plugin::install_copilot_plugin(copilot);
+                let identifier = format!("{}@{}", copilot.plugin, copilot.source);
+                results.push(PluginResult {
+                    name: plugin_name.clone(),
+                    client: "copilot".into(),
+                    outcome,
+                    identifier,
+                    bundle: bundle.name.clone(),
+                    install_url: copilot.install_url.clone(),
+                });
+            }
         }
     }
 
