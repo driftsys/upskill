@@ -147,9 +147,9 @@ existing project conventions.
 
 Per PR #135 the supported Windows path is `install.sh` under
 WSL — `upskill` runs as a Linux ELF binary regardless of host
-OS. Inside WSL all three target CLIs are present on PATH as
-ordinary Linux executables (Claude Code, opencode, and VS Code
-each ship Linux builds; VS Code's WSL-remote workflow
+OS. Inside WSL all four target CLIs are present on PATH as
+ordinary Linux executables (Claude Code, Copilot, opencode, and
+VS Code each ship Linux builds; VS Code's WSL-remote workflow
 additionally injects a `code` shim that proxies to Windows-side
 `code.exe` via interop). Shellout is indistinguishable from
 native Linux — no `cfg!(windows)` branches, no `PATHEXT`
@@ -160,11 +160,14 @@ Presence detection for the warn-skip policy uses
 portable across every platform Rust targets — no `which` crate
 dependency, consistent with ADR-0001 §3.
 
-Users who side-step the stance via `cargo install upskill` on
-native Windows are unsupported. Native-Windows shellout (`.cmd`
-shims, `PATHEXT`, Rust 1.77 batch-argument escaping, VS Code
-Insiders discovery) would need its own ADR if that ever moves
-in-scope.
+Since PR #157, `upskill` itself builds and runs on native
+Windows (`cargo install upskill`, `USERPROFILE` fallback, Windows
+CI). However, plugin CLI shellout on native Windows has known
+limitations: `.cmd`/`.bat` shim resolution via `PATHEXT`, Rust
+1.77 batch-argument escaping, and VS Code Insiders discovery are
+not yet handled. WSL remains the primary supported path for
+plugin shellout; native Windows plugin support would need its own
+ADR if demand materialises.
 
 ## Consequences
 

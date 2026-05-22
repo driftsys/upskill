@@ -45,8 +45,8 @@ agents:
 # Install everything from a source repo
 upskill add driftsys/skills
 
-# Or install a curated bundle
-upskill add driftsys/bundles:platform-baseline.bundle.yaml
+# Or install a curated bundle (by name — resolves the .bundle.yaml automatically)
+upskill add driftsys/bundles platform-baseline
 
 # Pin to a tag, branch, or commit
 upskill add driftsys/skills@v1.2.0
