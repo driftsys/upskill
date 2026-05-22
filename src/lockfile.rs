@@ -92,6 +92,26 @@ pub struct LockedPlugin {
     pub scope: Option<String>,
     /// Bundle that declared this plugin.
     pub bundle: String,
+    /// Install outcome recorded at `upskill add` time.
+    /// `installed` — CLI shellout succeeded.
+    /// `skipped`   — CLI was not on PATH (warn-skip); doctor surfaces these.
+    /// Defaults to `installed` for backward-compatible lockfiles without
+    /// this field (pre-v0.6.x entries were always successful installs).
+    #[serde(default)]
+    pub status: PluginInstallStatus,
+}
+
+/// Install status of a plugin entry in the lockfile (ADR-0008 / issue #151).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum PluginInstallStatus {
+    /// Plugin was successfully installed via the client CLI.
+    #[default]
+    Installed,
+    /// Plugin was not installed because the client CLI was not on PATH at
+    /// install time (warn-skip outcome).  `upskill doctor` surfaces these
+    /// so the user can install the CLI and re-run `upskill update`.
+    Skipped,
 }
 
 impl Default for Lockfile {
@@ -392,6 +412,7 @@ mod tests {
             identifier: "superpowers@anthropics/claude-plugins".into(),
             scope: Some("project".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         assert_eq!(lock.plugins.len(), 1);
         assert_eq!(lock.plugins[0].name, "superpowers");
@@ -406,6 +427,7 @@ mod tests {
             identifier: "superpowers@old-source".into(),
             scope: Some("project".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
             name: "superpowers".into(),
@@ -413,6 +435,7 @@ mod tests {
             identifier: "superpowers@new-source".into(),
             scope: Some("user".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         assert_eq!(lock.plugins.len(), 1);
         assert_eq!(lock.plugins[0].identifier, "superpowers@new-source");
@@ -427,6 +450,7 @@ mod tests {
             identifier: "superpowers@src".into(),
             scope: Some("project".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
             name: "superpowers".into(),
@@ -434,6 +458,7 @@ mod tests {
             identifier: "anthropic.superpowers".into(),
             scope: None,
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         assert_eq!(lock.plugins.len(), 2);
     }
@@ -447,6 +472,7 @@ mod tests {
             identifier: "superpowers@src".into(),
             scope: Some("project".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
             name: "superpowers".into(),
@@ -454,6 +480,7 @@ mod tests {
             identifier: "anthropic.superpowers".into(),
             scope: None,
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         lock.remove_plugins_by_name("superpowers");
         assert!(lock.plugins.is_empty());
@@ -469,10 +496,41 @@ mod tests {
             identifier: "superpowers@anthropics/claude-plugins".into(),
             scope: Some("project".into()),
             bundle: "baseline".into(),
+            status: PluginInstallStatus::Installed,
         });
         lock.save(tmp.path()).expect("save");
         let loaded = Lockfile::load(tmp.path()).expect("load");
         assert_eq!(loaded.plugins, lock.plugins);
+    }
+
+    #[test]
+    fn skipped_plugin_roundtrips_through_save_and_load() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "vscode".into(),
+            identifier: "anthropic.superpowers".into(),
+            scope: None,
+            bundle: "baseline".into(),
+            status: PluginInstallStatus::Skipped,
+        });
+        lock.save(tmp.path()).expect("save");
+        let loaded = Lockfile::load(tmp.path()).expect("load");
+        assert_eq!(loaded.plugins[0].status, PluginInstallStatus::Skipped);
+    }
+
+    #[test]
+    fn plugin_without_status_field_defaults_to_installed_on_load() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Simulate a pre-v0.6.x lockfile that has plugins but no status field.
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 1, "items": [], "bundles": [], "plugins": [{"name": "sp", "client": "claude", "identifier": "sp@src", "bundle": "b"}]}"#,
+        )
+        .unwrap();
+        let lock = Lockfile::load(tmp.path()).expect("must parse");
+        assert_eq!(lock.plugins[0].status, PluginInstallStatus::Installed);
     }
 
     #[test]
