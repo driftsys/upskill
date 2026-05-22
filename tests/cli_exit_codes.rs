@@ -66,5 +66,5 @@ fn general_errors_exit_one() {
         .args(["add", "--global", "owner/repo"])
         .assert()
         .code(1)
-        .stderr("error: HOME is not set\n");
+        .stderr("error: HOME (or USERPROFILE on Windows) is not set\n");
 }

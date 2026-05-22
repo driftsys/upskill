@@ -13,7 +13,7 @@ use upskill::pipeline::{
 };
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
-use upskill::source::{InstallSource, parse_install_source};
+use upskill::source::{InstallSource, home_dir, parse_install_source};
 use upskill::style;
 
 const EXIT_SUCCESS: i32 = 0;
@@ -227,9 +227,9 @@ fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
 
     match scope {
         Scope::Project => std::env::current_dir().context("failed to get current directory"),
-        Scope::Global => std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| anyhow::anyhow!("HOME is not set")),
+        Scope::Global => {
+            home_dir().ok_or_else(|| anyhow::anyhow!("HOME (or USERPROFILE on Windows) is not set"))
+        }
     }
 }
 
