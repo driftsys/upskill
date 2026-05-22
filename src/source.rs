@@ -89,7 +89,11 @@ pub fn home_dir() -> Option<PathBuf> {
 }
 
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
-    if source.starts_with("./") || source.starts_with("../") || source.starts_with('/') {
+    if source.starts_with("./")
+        || source.starts_with("../")
+        || source.starts_with('/')
+        || is_windows_absolute(source)
+    {
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
@@ -120,6 +124,17 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     }
 
     parse_github_source(source).map(InstallSource::Github)
+}
+
+/// Returns `true` if `s` looks like a Windows absolute path (e.g. `C:\foo`
+/// or `D:/bar`). Checked on all platforms so that source labels round-trip
+/// correctly even when a lockfile is shared across OSes.
+fn is_windows_absolute(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
 /// Parse a lockfile source label produced by the [`Display`] impl back
@@ -322,6 +337,21 @@ mod tests {
         assert_eq!(
             source,
             InstallSource::LocalPath(PathBuf::from("/tmp/skills"))
+        );
+    }
+
+    #[test]
+    fn parse_local_path_windows_drive_letter() {
+        let source = parse_install_source(r"C:\Users\runner\skills").expect("must parse");
+        assert_eq!(
+            source,
+            InstallSource::LocalPath(PathBuf::from(r"C:\Users\runner\skills"))
+        );
+        // Forward-slash variant
+        let source2 = parse_install_source("D:/projects/skills").expect("must parse");
+        assert_eq!(
+            source2,
+            InstallSource::LocalPath(PathBuf::from("D:/projects/skills"))
         );
     }
 
