@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.6.2] (2026-05-22)
+
+### Features
+
+- **doctor:** plugin reconciliation — report missing/skipped plugins ([#151])
+  ([8fc9944])
+- **bundle:** add copilot: plugin descriptor for GitHub Copilot CLI ([20a4079]),
+  closes [#158]
+- **fetch:** use sparse clone for subfolder installs ([994d121]), closes [#60]
+- **pipeline:** bundle-by-name discovery for upskill add ([#160]) ([d5be7fb])
+- Windows support — USERPROFILE fallback + CI matrix ([#157]) ([a88b010])
+
+### Documentation
+
+- **doctor:** document plugin reconciliation in commands, spec, and format-spec
+  ([b62a2ee])
+- fix documentation gaps from PR review ([#157], [#160], [#166]) ([4f8b36d])
+
+### Bug Fixes
+
+- **doctor:** detect Windows cmd.exe 'is not recognized' via stderr ([80d09fd])
+- **doctor:** cross-platform fake CLI in tests (Windows .bat + correct PATH sep)
+  ([ba05f4f])
+- **install:** detect items in sibling-layout registries ([79b4f4b]), closes
+  [#161]
+- use --initial-branch=main for bare repos in tests ([c255d60])
+- **fetch:** ensure test repo uses deterministic branch name ([32332b6])
+- **lint:** discover entrypoints when pointing at an item directory ([ee20d09]),
+  closes [#159]
+
+[0.6.2]: https://github.com/driftsys/upskill/compare/v0.6.1...v0.6.2
+[8fc9944]: https://github.com/driftsys/upskill/commit/8fc9944
+[#151]: https://github.com/driftsys/upskill/issues/151
+[20a4079]: https://github.com/driftsys/upskill/commit/20a4079
+[#158]: https://github.com/driftsys/upskill/issues/158
+[994d121]: https://github.com/driftsys/upskill/commit/994d121
+[#60]: https://github.com/driftsys/upskill/issues/60
+[d5be7fb]: https://github.com/driftsys/upskill/commit/d5be7fb
+[#160]: https://github.com/driftsys/upskill/issues/160
+[a88b010]: https://github.com/driftsys/upskill/commit/a88b010
+[#157]: https://github.com/driftsys/upskill/issues/157
+[b62a2ee]: https://github.com/driftsys/upskill/commit/b62a2ee
+[4f8b36d]: https://github.com/driftsys/upskill/commit/4f8b36d
+[#166]: https://github.com/driftsys/upskill/issues/166
+[80d09fd]: https://github.com/driftsys/upskill/commit/80d09fd
+[ba05f4f]: https://github.com/driftsys/upskill/commit/ba05f4f
+[79b4f4b]: https://github.com/driftsys/upskill/commit/79b4f4b
+[#161]: https://github.com/driftsys/upskill/issues/161
+[c255d60]: https://github.com/driftsys/upskill/commit/c255d60
+[32332b6]: https://github.com/driftsys/upskill/commit/32332b6
+[ee20d09]: https://github.com/driftsys/upskill/commit/ee20d09
+[#159]: https://github.com/driftsys/upskill/issues/159
+
 ## [0.6.1] (2026-05-22)
 
 ### Documentation
