@@ -9,13 +9,14 @@ use std::fs;
 use std::path::Path;
 use upskill::lockfile::{CURRENT_SCHEMA, Lockfile};
 use upskill::pipeline::install_with_lockfile;
+use upskill::plugin::PluginScope;
 use upskill::source::InstallSource;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
     let from = format!("{FIXTURES}/items");
-    copy_dir_all(Path::new(&from), &source).unwrap();
+    copy_dir_all(Path::new(&from), source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -40,8 +41,13 @@ fn install_writes_lockfile_at_target_root() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     let lock_path = target.join(".upskill-lock.json");
     assert!(
@@ -89,14 +95,24 @@ fn re_install_upserts_existing_entries() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install 1");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install 1");
     let lock1: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install 2");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install 2");
     let lock2: Lockfile =
         serde_json::from_str(&fs::read_to_string(target.join(".upskill-lock.json")).unwrap())
             .unwrap();
@@ -127,8 +143,13 @@ fn install_preserves_unrelated_existing_entries() {
     });
     seed.save(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     let lock = Lockfile::load(&target).expect("load");
     // 4 from the install + 1 pre-seeded = 5.
@@ -150,8 +171,13 @@ fn install_creates_claude_bridge_when_absent() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     let claude_md = target.join("CLAUDE.md");
     assert!(claude_md.exists(), "CLAUDE.md must be created");
@@ -168,8 +194,13 @@ fn install_registers_opencode_rules_glob_when_rules_present() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     let raw = fs::read_to_string(target.join("opencode.json")).expect("opencode.json present");
     let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
@@ -192,8 +223,13 @@ fn install_registers_vscode_instructions_location_when_rules_present() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     let raw = fs::read_to_string(target.join(".vscode/settings.json"))
         .expect(".vscode/settings.json present");
@@ -219,12 +255,139 @@ fn install_preserves_existing_claude_bridge() {
     let user_content = "# Project CLAUDE.md\n\n@AGENTS.md\n\nExtra project notes here.\n";
     fs::write(target.join("CLAUDE.md"), user_content).unwrap();
 
-    install_with_lockfile(&InstallSource::LocalPath(source.clone()), &target, &[])
-        .expect("install");
+    install_with_lockfile(
+        &InstallSource::LocalPath(source.clone()),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
 
     assert_eq!(
         fs::read_to_string(target.join("CLAUDE.md")).unwrap(),
         user_content,
         "user CLAUDE.md must be preserved verbatim"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Plugin pipeline tests
+// ---------------------------------------------------------------------------
+
+/// Stage `tests/fixtures/items` + `tests/fixtures/bundles` into a registry
+/// (like `cli_bundle_install` does), then install the `with-plugins` bundle
+/// via the library function. Since the test environment doesn't have
+/// `claude`/`code`/`opencode` on PATH, plugins should be warn-skipped.
+fn stage_registry(root: &Path) {
+    let items = format!("{FIXTURES}/items");
+    let bundles = format!("{FIXTURES}/bundles");
+    copy_dir_all(Path::new(&items), root).unwrap();
+    copy_dir_all(Path::new(&bundles), &root.join("bundles")).unwrap();
+}
+
+#[test]
+fn bundle_with_plugins_produces_plugin_results() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    let bundle_path = registry.join("bundles/with-plugins.bundle.yaml");
+    let report = install_with_lockfile(
+        &InstallSource::LocalPath(bundle_path),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
+
+    // Two plugins attempted: superpowers (claude + vscode).
+    assert_eq!(
+        report.plugin_results.len(),
+        2,
+        "expected 2 plugin results (claude + vscode)"
+    );
+
+    // In CI/test environments, plugins won't successfully install (CLI
+    // missing or auth failure). The key invariant: the attempt was made
+    // and the result is structured.
+    for pr in &report.plugin_results {
+        assert!(
+            !pr.outcome.is_success(),
+            "plugin {} ({}) unexpectedly succeeded in test env",
+            pr.name,
+            pr.client
+        );
+    }
+}
+
+#[test]
+fn unsuccessful_plugins_not_recorded_in_lockfile() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    let bundle_path = registry.join("bundles/with-plugins.bundle.yaml");
+    install_with_lockfile(
+        &InstallSource::LocalPath(bundle_path),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
+
+    let lock = Lockfile::load(&target).expect("load lockfile");
+    // Only successful plugins are recorded — any non-success (CliNotFound
+    // or Failed) must NOT appear in the lockfile.
+    assert!(
+        lock.plugins.is_empty(),
+        "unsuccessful plugins should not appear in lockfile, got: {:?}",
+        lock.plugins
+    );
+}
+
+#[test]
+fn plugin_results_carry_correct_metadata() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    let bundle_path = registry.join("bundles/with-plugins.bundle.yaml");
+    let report = install_with_lockfile(
+        &InstallSource::LocalPath(bundle_path),
+        &target,
+        &[],
+        PluginScope::Project,
+    )
+    .expect("install");
+
+    let claude_result = report
+        .plugin_results
+        .iter()
+        .find(|r| r.client == "claude")
+        .expect("claude result");
+    assert_eq!(claude_result.name, "superpowers");
+    assert_eq!(
+        claude_result.identifier,
+        "superpowers@anthropics/claude-plugins"
+    );
+    assert_eq!(claude_result.bundle, "with-plugins");
+    assert_eq!(
+        claude_result.install_url.as_deref(),
+        Some("https://github.com/obra/superpowers#install")
+    );
+
+    let vscode_result = report
+        .plugin_results
+        .iter()
+        .find(|r| r.client == "vscode")
+        .expect("vscode result");
+    assert_eq!(vscode_result.name, "superpowers");
+    assert_eq!(vscode_result.identifier, "anthropic.superpowers");
+    assert_eq!(vscode_result.bundle, "with-plugins");
 }

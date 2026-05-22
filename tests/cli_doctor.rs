@@ -15,7 +15,7 @@ const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
     let from = format!("{FIXTURES}/items");
-    copy_dir_all(Path::new(&from), &source).unwrap();
+    copy_dir_all(Path::new(&from), source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -255,7 +255,7 @@ fn doctor_json_orphan_entry_has_kebab_case_reason() {
     assert!(!orphans.is_empty(), "expected at least one orphan entry");
     for o in orphans {
         assert_eq!(o["reason"].as_str(), Some("local-path-gone"));
-        assert_eq!(o["kind"].as_str().unwrap_or("").len() > 0, true);
+        assert!(!o["kind"].as_str().unwrap_or("").is_empty());
         assert!(o["name"].is_string());
         assert!(o["source"].as_str().unwrap().starts_with("local:"));
     }

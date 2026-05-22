@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn resolve_single_bundle_with_no_requires() {
         let entry = bundle("solo", items(&["r1"], &["s1"], &["a1"]), vec![]);
-        let resolved = resolve(&entry, &[entry.clone()]).unwrap();
+        let resolved = resolve(&entry, std::slice::from_ref(&entry)).unwrap();
 
         assert_eq!(resolved.bundles.len(), 1);
         assert_eq!(resolved.bundles[0].name, "solo");
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn resolve_errors_on_missing_requirement() {
         let a = bundle("a", items(&[], &[], &[]), vec!["does-not-exist"]);
-        let err = resolve(&a, &[a.clone()]).expect_err("missing");
+        let err = resolve(&a, std::slice::from_ref(&a)).expect_err("missing");
         let msg = format!("{:#}", err);
         assert!(msg.contains("does-not-exist"), "{msg}");
         assert!(msg.contains("not found"), "{msg}");
