@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.6.3] (2026-05-22)
+
+### Features
+
+- **skills:** add writing-skill-bundles skill ([7f46b4c])
+
+### Refactoring
+
+- **skills:** rename prompt-engineering skill to prompt-design ([0a2a83a])
+
+### Documentation
+
+- **skill:** update using-upskill doctor section with plugin reconciliation
+  ([3cb96db])
+- **readme:** add CI, crates.io, and version tag badges ([bbd91b0])
+
+[0.6.3]: https://github.com/driftsys/upskill/compare/v0.6.2...v0.6.3
+[7f46b4c]: https://github.com/driftsys/upskill/commit/7f46b4c
+[0a2a83a]: https://github.com/driftsys/upskill/commit/0a2a83a
+[3cb96db]: https://github.com/driftsys/upskill/commit/3cb96db
+[bbd91b0]: https://github.com/driftsys/upskill/commit/bbd91b0
+
 ## [0.6.2] (2026-05-22)
 
 ### Features
