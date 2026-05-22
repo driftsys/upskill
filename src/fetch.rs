@@ -255,7 +255,9 @@ mod tests {
             ],
             Some(&work),
         );
-        git(&["push"], Some(&work));
+        // Ensure the branch is named "main" regardless of init.defaultBranch.
+        git(&["branch", "-M", "main"], Some(&work));
+        git(&["push", "-u", "origin", "main"], Some(&work));
 
         repo
     }
