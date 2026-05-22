@@ -8,9 +8,10 @@ use upskill::fmt::{FmtReport, fmt};
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
-    RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
+    PluginResult, RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
     install_with_lockfile, list, remove, update,
 };
+use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
 use upskill::source::{InstallSource, parse_install_source};
@@ -139,10 +140,13 @@ fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
         }
     };
 
+    let plugin_scope = scope_to_plugin_scope(global, project);
+
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target, items) {
+    match install_with_lockfile(&parsed, &target, items, plugin_scope) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_plugin_results(&report);
             EXIT_SUCCESS
         }
         Err(err) => {
@@ -257,6 +261,19 @@ fn is_inside_git_repo() -> bool {
     }
 }
 
+/// Map the `--global` / `--project` CLI flags to a `PluginScope` for
+/// Claude Code plugin installation.
+fn scope_to_plugin_scope(global: bool, _project: bool) -> PluginScope {
+    if global {
+        PluginScope::User
+    } else if is_inside_git_repo() {
+        // `--project` or auto-detected git repo → project scope.
+        PluginScope::Project
+    } else {
+        PluginScope::User
+    }
+}
+
 fn print_install_report(report: &InstallReport, source: &str) {
     if style::is_quiet() {
         return;
@@ -289,6 +306,77 @@ fn print_install_report(report: &InstallReport, source: &str) {
             style::name(&name),
             clients.join(", ")
         );
+    }
+}
+
+/// Print plugin install results (success, skipped, failed) after an install.
+/// Follows the warn-skip policy: CLI-not-found prints a warning with an
+/// optional install URL; failures print the stderr output.
+fn print_plugin_results(report: &InstallReport) {
+    if style::is_quiet() || report.plugin_results.is_empty() {
+        return;
+    }
+
+    use upskill::plugin::PluginOutcome;
+
+    let successes: Vec<&PluginResult> = report
+        .plugin_results
+        .iter()
+        .filter(|r| r.outcome.is_success())
+        .collect();
+    let skipped: Vec<&PluginResult> = report
+        .plugin_results
+        .iter()
+        .filter(|r| r.outcome.is_cli_not_found())
+        .collect();
+    let failures: Vec<&PluginResult> = report
+        .plugin_results
+        .iter()
+        .filter(|r| !r.outcome.is_success() && !r.outcome.is_cli_not_found())
+        .collect();
+
+    if !successes.is_empty() {
+        println!(
+            "{} {} plugin(s) installed",
+            style::success("Plugins:"),
+            successes.len()
+        );
+        for r in &successes {
+            println!(
+                "  {} {} ({})",
+                style::dim("plugin"),
+                style::name(&r.name),
+                r.client
+            );
+        }
+    }
+
+    for r in &skipped {
+        let url_hint = r
+            .install_url
+            .as_deref()
+            .map(|u| format!(" — install manually: {u}"))
+            .unwrap_or_default();
+        eprintln!(
+            "{} plugin {} skipped — {} CLI not found{}",
+            style::warn("warning:"),
+            style::name(&r.name),
+            r.client,
+            url_hint
+        );
+    }
+
+    for r in &failures {
+        if let PluginOutcome::Failed { exit_code, stderr } = &r.outcome {
+            eprintln!(
+                "{} plugin {} ({}) failed (exit {:?}): {}",
+                style::warn("warning:"),
+                style::name(&r.name),
+                r.client,
+                exit_code,
+                stderr.trim()
+            );
+        }
     }
 }
 
@@ -382,7 +470,9 @@ fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i
         UpdateMode::Apply
     };
 
-    match update(&target, names, mode) {
+    let plugin_scope = scope_to_plugin_scope(global, project);
+
+    match update(&target, names, mode, plugin_scope) {
         Ok(report) => {
             print_update_report(&report, dry_run);
             EXIT_SUCCESS

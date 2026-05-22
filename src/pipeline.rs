@@ -61,6 +61,27 @@ pub struct InstallReport {
     /// last entry is the bundle the user named. Empty for non-bundle
     /// installs.
     pub bundles: Vec<crate::model::Bundle>,
+    /// Results of plugin install attempts (ADR-0008). One entry per
+    /// (plugin-name, client) pair attempted. Empty when no bundles with
+    /// plugins were resolved.
+    pub plugin_results: Vec<PluginResult>,
+}
+
+/// Result of a single plugin install attempt, for reporting to the user.
+#[derive(Debug, Clone)]
+pub struct PluginResult {
+    /// Upskill-level plugin name (key in the bundle's `plugins:` map).
+    pub name: String,
+    /// Client identifier: `"claude"`, `"vscode"`, or `"opencode"`.
+    pub client: String,
+    /// What happened.
+    pub outcome: crate::plugin::PluginOutcome,
+    /// Client-specific identifier (for lockfile recording and uninstall).
+    pub identifier: String,
+    /// Bundle that declared this plugin.
+    pub bundle: String,
+    /// URL shown in warn-skip message (if available from the descriptor).
+    pub install_url: Option<String>,
 }
 
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
@@ -201,6 +222,7 @@ pub fn install_with_lockfile(
     source: &InstallSource,
     target: &Path,
     items: &[String],
+    plugin_scope: crate::plugin::PluginScope,
 ) -> Result<InstallReport> {
     // Empty list means "install everything" (the historical default).
     // Otherwise build a `ResolvedItems` filter with each name copied
@@ -215,11 +237,19 @@ pub fn install_with_lockfile(
             agents: items.to_vec(),
         })
     };
-    let report = install_from_source(source, target, resolved.as_ref())?;
+    let mut report = install_from_source(source, target, resolved.as_ref())?;
 
     if !items.is_empty() && report.items.is_empty() {
         anyhow::bail!("no matching items in source for: {}", items.join(", "));
     }
+
+    // -- Plugin installation (ADR-0008) --
+    // After items are generated, iterate the resolved bundles' plugins
+    // and shell out to each client CLI. Results are appended to the
+    // report for main.rs to display; successful installs are recorded
+    // in the lockfile for remove/update/doctor.
+    let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope);
+    report.plugin_results = plugin_results;
 
     let label = source.to_string();
     let git_ref = match source {
@@ -248,6 +278,21 @@ pub fn install_with_lockfile(
             items: bundle_item_names(bundle),
         });
     }
+    // Record successfully installed plugins in the lockfile.
+    for pr in &report.plugin_results {
+        if pr.outcome.is_success() {
+            lock.upsert_plugin(crate::lockfile::LockedPlugin {
+                name: pr.name.clone(),
+                client: pr.client.clone(),
+                identifier: pr.identifier.clone(),
+                scope: match plugin_scope {
+                    crate::plugin::PluginScope::Project => Some("project".into()),
+                    crate::plugin::PluginScope::User => Some("user".into()),
+                },
+                bundle: pr.bundle.clone(),
+            });
+        }
+    }
     lock.save(target)?;
 
     // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file
@@ -269,6 +314,67 @@ pub fn install_with_lockfile(
     crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
 
     Ok(report)
+}
+
+// ---------------------------------------------------------------------------
+// Plugin installation orchestration (ADR-0008)
+// ---------------------------------------------------------------------------
+
+/// Iterate all resolved bundles, attempt to install each declared plugin for
+/// its target client(s), and return structured results. Follows the
+/// warn-skip policy: if a client CLI is not on PATH, records
+/// `PluginOutcome::CliNotFound` but does not fail the overall install.
+fn install_plugins_from_bundles(
+    bundles: &[crate::model::Bundle],
+    scope: crate::plugin::PluginScope,
+) -> Vec<PluginResult> {
+    let mut results = Vec::new();
+
+    for bundle in bundles {
+        for (plugin_name, entry) in &bundle.plugins {
+            // Claude
+            if let Some(claude) = &entry.claude {
+                let outcome = crate::plugin::install_claude_plugin(claude, scope);
+                let identifier = format!("{}@{}", claude.plugin, claude.source);
+                results.push(PluginResult {
+                    name: plugin_name.clone(),
+                    client: "claude".into(),
+                    outcome,
+                    identifier,
+                    bundle: bundle.name.clone(),
+                    install_url: claude.install_url.clone(),
+                });
+            }
+
+            // VS Code
+            if let Some(vscode) = &entry.vscode {
+                let outcome = crate::plugin::install_vscode_extension(vscode);
+                results.push(PluginResult {
+                    name: plugin_name.clone(),
+                    client: "vscode".into(),
+                    outcome,
+                    identifier: vscode.extension.clone(),
+                    bundle: bundle.name.clone(),
+                    install_url: vscode.install_url.clone(),
+                });
+            }
+
+            // opencode
+            if let Some(opencode) = &entry.opencode {
+                let outcome = crate::plugin::install_opencode_plugin(opencode);
+                results.push(PluginResult {
+                    name: plugin_name.clone(),
+                    client: "opencode".into(),
+                    outcome,
+                    identifier: opencode.module.clone(),
+                    bundle: bundle.name.clone(),
+                    install_url: opencode.install_url.clone(),
+                });
+            }
+        }
+    }
+
+    results
 }
 
 /// What to remove. Per ADR-0004 the user must be explicit — bare
@@ -568,7 +674,12 @@ pub struct UpdateReport {
 /// Names that match no lockfile entry are an error.
 ///
 /// `update` always fetches per ADR-0004 — there is no `--offline`.
-pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<UpdateReport> {
+pub fn update(
+    target: &Path,
+    names: &[String],
+    mode: UpdateMode,
+    plugin_scope: crate::plugin::PluginScope,
+) -> Result<UpdateReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
 
     let entries: Vec<crate::lockfile::LockedItem> = if names.is_empty() {
@@ -611,7 +722,7 @@ pub fn update(target: &Path, names: &[String], mode: UpdateMode) -> Result<Updat
 
         match mode {
             UpdateMode::Apply => {
-                let install_report = install_with_lockfile(&source, target, &[])?;
+                let install_report = install_with_lockfile(&source, target, &[], plugin_scope)?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {

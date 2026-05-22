@@ -15,7 +15,7 @@ const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn stage_source(source: &Path) {
     let from = format!("{FIXTURES}/items");
-    copy_dir_all(Path::new(&from), &source).unwrap();
+    copy_dir_all(Path::new(&from), source).unwrap();
 }
 
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
