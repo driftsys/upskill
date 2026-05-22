@@ -181,6 +181,19 @@ fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
     None
 }
 
+/// Check whether a source directory contains any item (skill, rule, or
+/// agent) with the given name. An item exists when a subdirectory named
+/// `name` contains at least one of `SKILL.md`, `RULE.md`, or `AGENT.md`.
+fn has_matching_items(source: &Path, name: &str) -> bool {
+    let item_dir = source.join(name);
+    if !item_dir.is_dir() {
+        return false;
+    }
+    item_dir.join("SKILL.md").is_file()
+        || item_dir.join("RULE.md").is_file()
+        || item_dir.join("AGENT.md").is_file()
+}
+
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
 /// at least one item directory (containing `RULE.md`, `SKILL.md`, or
@@ -1683,5 +1696,41 @@ mod tests {
 
         let result = find_bundle_by_name(tmp.path(), "secret");
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn has_matching_items_true_when_skill_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let skill_dir = tmp.path().join("code-review");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nschema: 1\nname: code-review\n---\n# body\n",
+        )
+        .unwrap();
+
+        assert!(has_matching_items(tmp.path(), "code-review"));
+    }
+
+    #[test]
+    fn has_matching_items_false_when_no_item_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("other")).unwrap();
+
+        assert!(!has_matching_items(tmp.path(), "nonexistent"));
+    }
+
+    #[test]
+    fn has_matching_items_true_for_rules_and_agents() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule_dir = tmp.path().join("my-rule");
+        std::fs::create_dir_all(&rule_dir).unwrap();
+        std::fs::write(
+            rule_dir.join("RULE.md"),
+            "---\nschema: 1\nname: my-rule\n---\n# body\n",
+        )
+        .unwrap();
+
+        assert!(has_matching_items(tmp.path(), "my-rule"));
     }
 }
