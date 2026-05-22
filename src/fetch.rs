@@ -230,7 +230,15 @@ mod tests {
             );
         };
 
-        git(&["init", "--bare", repo.to_str().unwrap()], None);
+        git(
+            &[
+                "init",
+                "--bare",
+                "--initial-branch=main",
+                repo.to_str().unwrap(),
+            ],
+            None,
+        );
         git(
             &["clone", repo.to_str().unwrap(), work.to_str().unwrap()],
             None,
@@ -256,7 +264,6 @@ mod tests {
             Some(&work),
         );
         // Ensure the branch is named "main" regardless of init.defaultBranch.
-        git(&["branch", "-M", "main"], Some(&work));
         git(&["push", "-u", "origin", "main"], Some(&work));
 
         repo
