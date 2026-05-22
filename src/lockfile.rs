@@ -30,6 +30,8 @@ pub struct Lockfile {
     pub items: Vec<LockedItem>,
     #[serde(default)]
     pub bundles: Vec<LockedBundle>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub plugins: Vec<LockedPlugin>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -71,6 +73,27 @@ pub struct LockedBundle {
     pub items: Vec<String>,
 }
 
+/// Plugin entry recorded when a bundle's `plugins:` map is installed via
+/// client CLI shellout (ADR-0008). One entry per (plugin-name, client)
+/// pair so `remove`/`update`/`doctor` can invoke the inverse CLI command.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LockedPlugin {
+    /// Upskill-level plugin name (key in the bundle's `plugins:` map).
+    pub name: String,
+    /// Client identifier: `"claude"`, `"vscode"`, or `"opencode"`.
+    pub client: String,
+    /// Client-specific identifier used for uninstall:
+    /// - claude: `"<plugin>@<source>"`
+    /// - vscode: `"<extension-id>"`
+    /// - opencode: `"<module>"`
+    pub identifier: String,
+    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
+    /// Bundle that declared this plugin.
+    pub bundle: String,
+}
+
 impl Default for Lockfile {
     fn default() -> Self {
         Self::new()
@@ -83,6 +106,7 @@ impl Lockfile {
             schema: CURRENT_SCHEMA,
             items: Vec::new(),
             bundles: Vec::new(),
+            plugins: Vec::new(),
         }
     }
 
@@ -145,6 +169,20 @@ impl Lockfile {
         self.bundles.retain(|existing| existing.name != bundle.name);
         self.bundles.push(bundle);
         self.bundles.sort();
+    }
+
+    /// Add or replace a plugin entry by `(name, client)`. Plugins are
+    /// kept sorted for deterministic on-disk output.
+    pub fn upsert_plugin(&mut self, plugin: LockedPlugin) {
+        self.plugins
+            .retain(|existing| !(existing.name == plugin.name && existing.client == plugin.client));
+        self.plugins.push(plugin);
+        self.plugins.sort();
+    }
+
+    /// Remove all plugin entries matching `name` (across all clients).
+    pub fn remove_plugins_by_name(&mut self, name: &str) {
+        self.plugins.retain(|existing| existing.name != name);
     }
 
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
@@ -309,6 +347,7 @@ mod tests {
         // the lockfile should record it as one item, not three.
         let report = InstallReport {
             bundles: Vec::new(),
+            plugin_results: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -342,5 +381,110 @@ mod tests {
         assert_eq!(items[0].name, "code-review");
         assert_eq!(items[0].source, "local:./src");
         assert_eq!(items[0].hash, Some("sha256:abc".into()));
+    }
+
+    #[test]
+    fn upsert_plugin_adds_new_entry() {
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@anthropics/claude-plugins".into(),
+            scope: Some("project".into()),
+            bundle: "baseline".into(),
+        });
+        assert_eq!(lock.plugins.len(), 1);
+        assert_eq!(lock.plugins[0].name, "superpowers");
+    }
+
+    #[test]
+    fn upsert_plugin_replaces_by_name_and_client() {
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@old-source".into(),
+            scope: Some("project".into()),
+            bundle: "baseline".into(),
+        });
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@new-source".into(),
+            scope: Some("user".into()),
+            bundle: "baseline".into(),
+        });
+        assert_eq!(lock.plugins.len(), 1);
+        assert_eq!(lock.plugins[0].identifier, "superpowers@new-source");
+    }
+
+    #[test]
+    fn upsert_plugin_keeps_different_clients_separate() {
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@src".into(),
+            scope: Some("project".into()),
+            bundle: "baseline".into(),
+        });
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "vscode".into(),
+            identifier: "anthropic.superpowers".into(),
+            scope: None,
+            bundle: "baseline".into(),
+        });
+        assert_eq!(lock.plugins.len(), 2);
+    }
+
+    #[test]
+    fn remove_plugins_by_name_removes_all_clients() {
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@src".into(),
+            scope: Some("project".into()),
+            bundle: "baseline".into(),
+        });
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "vscode".into(),
+            identifier: "anthropic.superpowers".into(),
+            scope: None,
+            bundle: "baseline".into(),
+        });
+        lock.remove_plugins_by_name("superpowers");
+        assert!(lock.plugins.is_empty());
+    }
+
+    #[test]
+    fn plugins_roundtrip_through_save_and_load() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        lock.upsert_plugin(LockedPlugin {
+            name: "superpowers".into(),
+            client: "claude".into(),
+            identifier: "superpowers@anthropics/claude-plugins".into(),
+            scope: Some("project".into()),
+            bundle: "baseline".into(),
+        });
+        lock.save(tmp.path()).expect("save");
+        let loaded = Lockfile::load(tmp.path()).expect("load");
+        assert_eq!(loaded.plugins, lock.plugins);
+    }
+
+    #[test]
+    fn existing_lockfile_without_plugins_field_loads_fine() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Simulates a lockfile from before the plugins field existed.
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 1, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let lock = Lockfile::load(tmp.path()).expect("must parse");
+        assert!(lock.plugins.is_empty());
     }
 }
