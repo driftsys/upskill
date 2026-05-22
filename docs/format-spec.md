@@ -500,6 +500,10 @@ plugins:
       source: anthropics/claude-plugins
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
+    copilot:
+      source: obra/superpowers-marketplace
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
     vscode:
       extension: anthropic.superpowers
       install_url: https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers
@@ -510,15 +514,18 @@ plugins:
 
 **Per-client descriptor fields:**
 
-| Client     | Field         | Type   | Required | Description                                                     |
-| ---------- | ------------- | ------ | -------- | --------------------------------------------------------------- |
-| `claude`   | `source`      | string | YES      | Marketplace source (passed to `claude plugin marketplace add`). |
-| `claude`   | `plugin`      | string | YES      | Plugin identifier (passed to `claude plugin install`).          |
-| `claude`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
-| `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).            |
-| `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
-| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                      |
-| `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
+| Client     | Field         | Type   | Required | Description                                                      |
+| ---------- | ------------- | ------ | -------- | ---------------------------------------------------------------- |
+| `claude`   | `source`      | string | YES      | Marketplace source (passed to `claude plugin marketplace add`).  |
+| `claude`   | `plugin`      | string | YES      | Plugin identifier (passed to `claude plugin install`).           |
+| `claude`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
+| `copilot`  | `source`      | string | YES      | Marketplace source (passed to `copilot plugin marketplace add`). |
+| `copilot`  | `plugin`      | string | YES      | Plugin identifier (passed to `copilot plugin install`).          |
+| `copilot`  | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
+| `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).             |
+| `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
+| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                       |
+| `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
 
 A plugin entry MAY declare any subset of client blocks. A plugin that only exists for Claude
 Code carries only a `claude:` block; clients without a matching block skip installation
@@ -529,6 +536,7 @@ silently.
 | Client   | CLI commands                                                                                             |
 | -------- | -------------------------------------------------------------------------------------------------------- |
 | claude   | `claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<source> --scope <scope>` |
+| copilot  | `copilot plugin marketplace add <source>`, then `copilot plugin install <plugin>@<source>`               |
 | vscode   | `code --install-extension <extension>`                                                                   |
 | opencode | `opencode plugin <module>`                                                                               |
 

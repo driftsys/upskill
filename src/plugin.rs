@@ -2,6 +2,7 @@
 //!
 //! Plugins are installed by shelling out to each client's native CLI:
 //! - Claude Code: `claude plugin marketplace add` + `claude plugin install`
+//! - Copilot CLI: `copilot plugin marketplace add` + `copilot plugin install`
 //! - VS Code: `code --install-extension`
 //! - opencode: `opencode plugin`
 //!
@@ -10,7 +11,8 @@
 //! and handle CLI-not-found gracefully per the warn-skip policy.
 
 use crate::model::bundle::{
-    ClaudePluginDescriptor, OpencodePluginDescriptor, VscodePluginDescriptor,
+    ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
+    VscodePluginDescriptor,
 };
 use std::io::ErrorKind;
 use std::process::Command;
@@ -106,6 +108,26 @@ pub fn install_opencode_plugin(descriptor: &OpencodePluginDescriptor) -> PluginO
     run_command("opencode", &["plugin", &descriptor.module])
 }
 
+/// Install a GitHub Copilot CLI plugin via `copilot plugin marketplace add`
+/// followed by `copilot plugin install`. The marketplace-add step is
+/// idempotent. Unlike Claude, Copilot CLI does not support a `--scope` flag.
+pub fn install_copilot_plugin(descriptor: &CopilotPluginDescriptor) -> PluginOutcome {
+    // Step 1: Add marketplace source (idempotent).
+    let result = run_command(
+        "copilot",
+        &["plugin", "marketplace", "add", &descriptor.source],
+    );
+    match result {
+        PluginOutcome::CliNotFound => return PluginOutcome::CliNotFound,
+        PluginOutcome::Failed { .. } => return result,
+        PluginOutcome::Success => {}
+    }
+
+    // Step 2: Install plugin from marketplace.
+    let install_ref = format!("{}@{}", descriptor.plugin, descriptor.source);
+    run_command("copilot", &["plugin", "install", &install_ref])
+}
+
 // ---------------------------------------------------------------------------
 // Uninstall functions
 // ---------------------------------------------------------------------------
@@ -133,6 +155,12 @@ pub fn uninstall_vscode_extension(extension: &str) -> PluginOutcome {
 /// Uninstall an opencode module.
 pub fn uninstall_opencode_plugin(module: &str) -> PluginOutcome {
     run_command("opencode", &["plugin", "remove", module])
+}
+
+/// Uninstall a GitHub Copilot CLI plugin.
+pub fn uninstall_copilot_plugin(plugin: &str, source: &str) -> PluginOutcome {
+    let install_ref = format!("{plugin}@{source}");
+    run_command("copilot", &["plugin", "uninstall", &install_ref])
 }
 
 // ---------------------------------------------------------------------------
@@ -277,5 +305,26 @@ mod tests {
     fn outcome_is_cli_not_found_predicate() {
         assert!(PluginOutcome::CliNotFound.is_cli_not_found());
         assert!(!PluginOutcome::Success.is_cli_not_found());
+    }
+
+    #[test]
+    fn install_copilot_returns_cli_not_found_when_binary_missing() {
+        // Using a descriptor that references a nonexistent binary would
+        // require overriding the program name. Instead, we test via
+        // run_command directly (same pattern as the Claude tests above).
+        let result = run_command(
+            "nonexistent-copilot-xyz-42",
+            &["plugin", "marketplace", "add", "test-source"],
+        );
+        assert_eq!(result, PluginOutcome::CliNotFound);
+    }
+
+    #[test]
+    fn uninstall_copilot_returns_cli_not_found_when_binary_missing() {
+        let result = run_command(
+            "nonexistent-copilot-xyz-42",
+            &["plugin", "uninstall", "test@source"],
+        );
+        assert_eq!(result, PluginOutcome::CliNotFound);
     }
 }

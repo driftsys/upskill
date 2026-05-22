@@ -302,22 +302,23 @@ fn bundle_with_plugins_produces_plugin_results() {
     )
     .expect("install");
 
-    // Two plugins attempted: superpowers (claude + vscode).
+    // Three plugins attempted: superpowers (claude + copilot + vscode).
     assert_eq!(
         report.plugin_results.len(),
-        2,
-        "expected 2 plugin results (claude + vscode)"
+        3,
+        "expected 3 plugin results (claude + copilot + vscode)"
     );
 
-    // In CI/test environments, plugins won't successfully install (CLI
-    // missing or auth failure). The key invariant: the attempt was made
-    // and the result is structured.
+    // Each result carries structured data regardless of success/failure.
+    // On developer machines some CLIs may be present and succeed; in CI
+    // they are typically absent. The invariant is that the attempt was
+    // made and the result is well-formed.
     for pr in &report.plugin_results {
+        assert!(!pr.name.is_empty(), "plugin result should carry a name");
+        assert!(!pr.client.is_empty(), "plugin result should carry a client");
         assert!(
-            !pr.outcome.is_success(),
-            "plugin {} ({}) unexpectedly succeeded in test env",
-            pr.name,
-            pr.client
+            !pr.identifier.is_empty(),
+            "plugin result should carry an identifier"
         );
     }
 }
@@ -331,7 +332,7 @@ fn unsuccessful_plugins_not_recorded_in_lockfile() {
     fs::create_dir_all(&target).unwrap();
 
     let bundle_path = registry.join("bundles/with-plugins.bundle.yaml");
-    install_with_lockfile(
+    let report = install_with_lockfile(
         &InstallSource::LocalPath(bundle_path),
         &target,
         &[],
@@ -340,13 +341,42 @@ fn unsuccessful_plugins_not_recorded_in_lockfile() {
     .expect("install");
 
     let lock = Lockfile::load(&target).expect("load lockfile");
+
     // Only successful plugins are recorded — any non-success (CliNotFound
     // or Failed) must NOT appear in the lockfile.
-    assert!(
-        lock.plugins.is_empty(),
-        "unsuccessful plugins should not appear in lockfile, got: {:?}",
-        lock.plugins
+    let failed_count = report
+        .plugin_results
+        .iter()
+        .filter(|pr| !pr.outcome.is_success())
+        .count();
+    let locked_count = lock.plugins.len();
+    let total = report.plugin_results.len();
+
+    // locked = total - failed (i.e., only successes are recorded)
+    assert_eq!(
+        locked_count,
+        total - failed_count,
+        "lockfile should only contain successful plugins; \
+         got {locked_count} locked but expected {total} - {failed_count} = {}",
+        total - failed_count
     );
+
+    // No failed plugin should appear in the lockfile
+    for pr in report
+        .plugin_results
+        .iter()
+        .filter(|pr| !pr.outcome.is_success())
+    {
+        assert!(
+            !lock
+                .plugins
+                .iter()
+                .any(|lp| lp.client == pr.client && lp.name == pr.name),
+            "failed plugin {} ({}) should not be in lockfile",
+            pr.name,
+            pr.client
+        );
+    }
 }
 
 #[test]
@@ -390,6 +420,22 @@ fn plugin_results_carry_correct_metadata() {
     assert_eq!(vscode_result.name, "superpowers");
     assert_eq!(vscode_result.identifier, "anthropic.superpowers");
     assert_eq!(vscode_result.bundle, "with-plugins");
+
+    let copilot_result = report
+        .plugin_results
+        .iter()
+        .find(|r| r.client == "copilot")
+        .expect("copilot result");
+    assert_eq!(copilot_result.name, "superpowers");
+    assert_eq!(
+        copilot_result.identifier,
+        "superpowers@obra/superpowers-marketplace"
+    );
+    assert_eq!(copilot_result.bundle, "with-plugins");
+    assert_eq!(
+        copilot_result.install_url.as_deref(),
+        Some("https://github.com/obra/superpowers#install")
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -8,8 +8,8 @@ pub mod skill;
 
 pub use agent::{Agent, Mode, ToolCap};
 pub use bundle::{
-    Bundle, BundleItems, ClaudePluginDescriptor, OpencodePluginDescriptor, PluginEntry, Requires,
-    VscodePluginDescriptor,
+    Bundle, BundleItems, ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
+    PluginEntry, Requires, VscodePluginDescriptor,
 };
 pub use common::{Audience, CURRENT_SCHEMA, License, Metadata, SchemaVersion};
 pub use rule::{Rule, Scope};
