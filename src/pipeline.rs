@@ -326,20 +326,30 @@ pub fn install_with_lockfile(
             items: bundle_item_names(bundle),
         });
     }
-    // Record successfully installed plugins in the lockfile.
+    // Record installed and warn-skipped plugins in the lockfile so that
+    // `doctor` can surface skipped ones and verify installed ones.
+    // Plugins that failed (non-zero exit) are NOT recorded — they are
+    // transient errors; the CLI is present but misbehaving.
     for pr in &report.plugin_results {
-        if pr.outcome.is_success() {
-            lock.upsert_plugin(crate::lockfile::LockedPlugin {
-                name: pr.name.clone(),
-                client: pr.client.clone(),
-                identifier: pr.identifier.clone(),
-                scope: match plugin_scope {
-                    crate::plugin::PluginScope::Project => Some("project".into()),
-                    crate::plugin::PluginScope::User => Some("user".into()),
-                },
-                bundle: pr.bundle.clone(),
-            });
-        }
+        use crate::lockfile::PluginInstallStatus;
+        use crate::plugin::PluginOutcome;
+
+        let status = match &pr.outcome {
+            PluginOutcome::Success => PluginInstallStatus::Installed,
+            PluginOutcome::CliNotFound => PluginInstallStatus::Skipped,
+            PluginOutcome::Failed { .. } => continue,
+        };
+        lock.upsert_plugin(crate::lockfile::LockedPlugin {
+            name: pr.name.clone(),
+            client: pr.client.clone(),
+            identifier: pr.identifier.clone(),
+            scope: match plugin_scope {
+                crate::plugin::PluginScope::Project => Some("project".into()),
+                crate::plugin::PluginScope::User => Some("user".into()),
+            },
+            bundle: pr.bundle.clone(),
+            status,
+        });
     }
     lock.save(target)?;
 
@@ -681,21 +691,56 @@ pub enum OrphanReason {
     ItemMissingInSource,
 }
 
+/// Plugin in lockfile (status: installed) but not found when querying the
+/// client CLI.  Likely uninstalled out-of-band.
+#[derive(Debug, Clone, Serialize)]
+pub struct MissingPlugin {
+    pub name: String,
+    pub client: String,
+    pub identifier: String,
+    pub bundle: String,
+}
+
+/// Plugin in lockfile (status: skipped) because the client CLI was not on
+/// PATH at install time.  The plugin has never been installed.
+#[derive(Debug, Clone, Serialize)]
+pub struct SkippedPlugin {
+    pub name: String,
+    pub client: String,
+    pub identifier: String,
+    pub bundle: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
     pub stale_hashes: Vec<StaleHash>,
     pub orphan_entries: Vec<OrphanEntry>,
+    /// Plugins recorded in the lockfile as `installed` but absent from the
+    /// client's installed list (uninstalled out-of-band).  Non-empty →
+    /// `is_clean()` returns false → exit 1.
+    pub missing_plugins: Vec<MissingPlugin>,
+    /// Plugins recorded in the lockfile as `skipped` (warn-skip at install
+    /// time). Informational only — does NOT cause `is_clean()` to return
+    /// false or trigger exit 1. Run `upskill update` after installing the
+    /// missing CLI to install them.
+    pub skipped_plugins: Vec<SkippedPlugin>,
 }
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
-    /// every locally-sourced item still hashes the same, and every
-    /// lockfile entry has a recoverable source.
+    /// every locally-sourced item still hashes the same, every lockfile
+    /// entry has a recoverable source, and no installed plugin is missing
+    /// from its client.
+    ///
+    /// `skipped_plugins` (warn-skip outcomes) are informational: the user
+    /// never had the CLI at install time, so this is the expected state.
+    /// They are reported but do not affect cleanness.
     pub fn is_clean(&self) -> bool {
         self.missing_outputs.is_empty()
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
+            && self.missing_plugins.is_empty()
     }
 }
 
@@ -774,6 +819,62 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --dry-run`.
+    }
+
+    // -- Plugin reconciliation (ADR-0008 / issue #151) --
+    // Walk the lockfile's plugin entries and reconcile against each client's
+    // installed plugin list.
+    //
+    // Two buckets:
+    // - skipped_plugins: status == Skipped (CLI was absent at install time).
+    //   Always surface; does not affect is_clean().
+    // - missing_plugins: status == Installed but the client no longer has the
+    //   plugin.  This is drift → is_clean() returns false → exit 1.
+    for plugin in &lock.plugins {
+        use crate::lockfile::PluginInstallStatus;
+        use crate::plugin::{
+            PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
+            check_vscode_extension_installed,
+        };
+
+        match &plugin.status {
+            PluginInstallStatus::Skipped => {
+                // Plugin was never installed because the CLI was missing.
+                // Report it so it is not silently ignored.
+                report.skipped_plugins.push(SkippedPlugin {
+                    name: plugin.name.clone(),
+                    client: plugin.client.clone(),
+                    identifier: plugin.identifier.clone(),
+                    bundle: plugin.bundle.clone(),
+                });
+            }
+            PluginInstallStatus::Installed => {
+                // Query the client to verify the plugin is still there.
+                let check = match plugin.client.as_str() {
+                    "claude" => {
+                        let scope = match plugin.scope.as_deref() {
+                            Some("user") => PluginScope::User,
+                            _ => PluginScope::Project,
+                        };
+                        check_claude_plugin_installed(&plugin.name, scope)
+                    }
+                    "vscode" => check_vscode_extension_installed(&plugin.identifier),
+                    "opencode" => check_opencode_plugin_installed(&plugin.identifier),
+                    // Unknown client — skip silently.
+                    _ => continue,
+                };
+                if check.is_not_installed() {
+                    report.missing_plugins.push(MissingPlugin {
+                        name: plugin.name.clone(),
+                        client: plugin.client.clone(),
+                        identifier: plugin.identifier.clone(),
+                        bundle: plugin.bundle.clone(),
+                    });
+                }
+                // CliNotFound or QueryFailed: cannot determine state — skip
+                // silently to avoid false positives.
+            }
+        }
     }
 
     Ok(report)

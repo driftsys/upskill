@@ -581,7 +581,7 @@ fn print_doctor_report(report: &DoctorReport) {
     }
     if report.is_clean() {
         println!("{} clean", style::success("doctor:"));
-        return;
+        // Fall through: still print skipped_plugins warnings if any.
     }
 
     if !report.missing_outputs.is_empty() {
@@ -638,6 +638,47 @@ fn print_doctor_report(report: &DoctorReport) {
             );
         }
     }
+
+    if !report.missing_plugins.is_empty() {
+        println!(
+            "{} {} plugin(s) recorded as installed but missing from client — `upskill update` to fix",
+            style::error_label("doctor:"),
+            report.missing_plugins.len()
+        );
+        for p in &report.missing_plugins {
+            println!(
+                "  {} {} ({})",
+                style::dim("plugin"),
+                style::name(&p.name),
+                p.client,
+            );
+        }
+    }
+
+    print_doctor_skipped_plugins(report);
+}
+
+fn print_doctor_skipped_plugins(report: &DoctorReport) {
+    if report.skipped_plugins.is_empty() {
+        return;
+    }
+    println!(
+        "{} {} plugin(s) never installed — client CLI was missing at install time",
+        style::warn("doctor:"),
+        report.skipped_plugins.len()
+    );
+    for p in &report.skipped_plugins {
+        println!(
+            "  {} {} ({})",
+            style::dim("plugin"),
+            style::name(&p.name),
+            p.client,
+        );
+    }
+    println!(
+        "  {}",
+        style::dim("install the missing CLI then run `upskill update` to install them")
+    );
 }
 
 fn kind_label(kind: ItemKind) -> &'static str {

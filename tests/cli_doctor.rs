@@ -5,6 +5,10 @@
 //! - SSOT hash drift on `local:` sources (update fixes)
 //! - lockfile entries with no recoverable source (manual remove)
 //!
+//! Also verifies plugin reconciliation per issue #151 / ADR-0008:
+//! - skipped plugins (warn-skip outcomes) surfaced as informational warnings
+//! - installed plugins missing from the client surfaced as drift (exit 1)
+//!
 //! Doctor never fetches; remote-source drift detection is `update --dry-run`.
 
 use assert_cmd::Command;
@@ -298,5 +302,223 @@ fn doctor_json_missing_output_lists_files() {
     assert!(
         files.iter().any(|p| p.contains("create-api-endpoint")),
         "expected missing path entry, got: {files:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Plugin reconciliation tests (issue #151 / ADR-0008)
+// ---------------------------------------------------------------------------
+
+/// Write a minimal lockfile JSON with one skipped plugin.
+fn write_lockfile_with_skipped_plugin(target: &Path, plugin_name: &str, client: &str) {
+    let content = serde_json::json!({
+        "schema": 1,
+        "items": [],
+        "bundles": [],
+        "plugins": [{
+            "name": plugin_name,
+            "client": client,
+            "identifier": format!("{plugin_name}@some-source"),
+            "scope": "project",
+            "bundle": "test-bundle",
+            "status": "skipped"
+        }]
+    });
+    fs::write(
+        target.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&content).unwrap(),
+    )
+    .unwrap();
+}
+
+/// Write a minimal lockfile JSON with one installed plugin.
+fn write_lockfile_with_installed_plugin(
+    target: &Path,
+    plugin_name: &str,
+    client: &str,
+    identifier: &str,
+) {
+    let content = serde_json::json!({
+        "schema": 1,
+        "items": [],
+        "bundles": [],
+        "plugins": [{
+            "name": plugin_name,
+            "client": client,
+            "identifier": identifier,
+            "bundle": "test-bundle",
+            "status": "installed"
+        }]
+    });
+    fs::write(
+        target.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&content).unwrap(),
+    )
+    .unwrap();
+}
+
+/// Create a fake CLI binary in `bin_dir` that prints `output` to stdout.
+/// Cross-platform: writes a `#!/bin/sh` heredoc script on Unix and a
+/// `.bat` file on Windows (so `Command::new(name)` resolves it via PATHEXT).
+fn write_fake_cli(bin_dir: &Path, name: &str, output: &str) {
+    #[cfg(unix)]
+    {
+        let script = bin_dir.join(name);
+        // Use a heredoc so literal newlines inside `output` are preserved exactly.
+        // `printf '%s\n' {output:?}` would debug-escape `\n` to a backslash-n pair.
+        fs::write(
+            &script,
+            format!("#!/bin/sh\ncat <<'UPSKILLEOF'\n{output}\nUPSKILLEOF\n"),
+        )
+        .unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script, perms).unwrap();
+    }
+    #[cfg(windows)]
+    {
+        // Windows: write a .bat file — Command::new("code") resolves code.bat via PATHEXT.
+        let script = bin_dir.join(format!("{name}.bat"));
+        let mut content = String::from("@echo off\r\n");
+        for line in output.lines() {
+            // `echo.` is the batch idiom for a blank line; otherwise `echo <text>`.
+            if line.is_empty() {
+                content.push_str("echo.\r\n");
+            } else {
+                content.push_str(&format!("echo {line}\r\n"));
+            }
+        }
+        fs::write(&script, content).unwrap();
+    }
+}
+
+/// Prepend `dir` to the current PATH using the platform-correct separator.
+fn prepend_to_path(dir: &Path) -> std::ffi::OsString {
+    let mut entries = vec![dir.to_owned()];
+    if let Some(val) = std::env::var_os("PATH") {
+        entries.extend(std::env::split_paths(&val));
+    }
+    std::env::join_paths(entries).expect("join paths")
+}
+
+#[test]
+fn doctor_skipped_plugin_exits_zero_and_reports_it() {
+    // A lockfile with a Skipped plugin should exit 0 (not drift) but still
+    // surface the plugin in the output so it is not silently lost.
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_lockfile_with_skipped_plugin(tmp.path(), "superpowers", "claude");
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["doctor"])
+        .assert()
+        .success(); // exit 0 — skipped plugins are warnings, not drift
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("superpowers"),
+        "expected skipped plugin name in output: {out}"
+    );
+    assert!(
+        out.contains("never installed") || out.contains("skipped"),
+        "expected warn-skip context in output: {out}"
+    );
+}
+
+#[test]
+fn doctor_installed_plugin_missing_from_client_exits_one() {
+    // A lockfile records a vscode plugin as Installed, but the fake `code`
+    // binary returns an empty extension list.  Doctor must exit 1 and report
+    // the plugin as missing from the client.
+    let tmp = tempfile::tempdir().unwrap();
+    let bin_dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_lockfile_with_installed_plugin(
+        tmp.path(),
+        "superpowers",
+        "vscode",
+        "anthropic.superpowers",
+    );
+    // Fake `code` that lists no extensions (empty stdout).
+    write_fake_cli(bin_dir.path(), "code", "");
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .env("PATH", prepend_to_path(bin_dir.path()))
+        .current_dir(tmp.path())
+        .args(["doctor"])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("superpowers"),
+        "expected missing plugin name in output: {out}"
+    );
+    assert!(
+        out.contains("missing") || out.contains("not installed"),
+        "expected missing-plugin context in output: {out}"
+    );
+}
+
+#[test]
+fn doctor_installed_plugin_present_in_client_exits_zero() {
+    // A lockfile records a vscode plugin as Installed. The fake `code` binary
+    // returns a list that includes the extension.  Doctor must exit 0.
+    let tmp = tempfile::tempdir().unwrap();
+    let bin_dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_lockfile_with_installed_plugin(
+        tmp.path(),
+        "superpowers",
+        "vscode",
+        "anthropic.superpowers",
+    );
+    // Fake `code` that lists the extension.
+    write_fake_cli(
+        bin_dir.path(),
+        "code",
+        "anthropic.superpowers\nms-python.python",
+    );
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .env("PATH", prepend_to_path(bin_dir.path()))
+        .current_dir(tmp.path())
+        .args(["doctor"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn doctor_json_includes_skipped_plugins_bucket() {
+    // --json output must include a skipped_plugins array even when empty.
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["doctor", "--json"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    // New plugin buckets must always appear in JSON output.
+    assert!(
+        v.get("skipped_plugins").is_some(),
+        "expected skipped_plugins key in JSON: {v}"
+    );
+    assert!(
+        v.get("missing_plugins").is_some(),
+        "expected missing_plugins key in JSON: {v}"
     );
 }

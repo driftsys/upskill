@@ -173,7 +173,8 @@ pub fn uninstall_copilot_plugin(plugin: &str, source: &str) -> PluginOutcome {
 /// `ErrorKind::NotFound`. Does not validate the command succeeds — only
 /// that the binary can be spawned.
 pub fn is_cli_available(cli: &str) -> bool {
-    match Command::new(cli).arg("--version").output() {
+    match spawn_command(cli, &["--version"]) {
+        Ok(out) if is_command_not_found(&out) => false,
         Ok(_) => true,
         Err(e) if e.kind() == ErrorKind::NotFound => false,
         // Other errors (e.g., permission denied) — the binary exists but
@@ -184,12 +185,184 @@ pub fn is_cli_available(cli: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers
+// Plugin list / reconciliation (ADR-0008 / issue #151)
 // ---------------------------------------------------------------------------
+
+/// Result of checking whether a specific plugin is currently installed in
+/// the client.  Used by `doctor` for plugin reconciliation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PluginCheckResult {
+    /// Plugin found in the client's installed list.
+    Installed,
+    /// Plugin NOT found — present in lockfile but absent from client.
+    NotInstalled,
+    /// Client CLI not found on PATH — install state cannot be determined.
+    CliNotFound,
+    /// CLI present but the list command returned non-zero.
+    QueryFailed {
+        exit_code: Option<i32>,
+        stderr: String,
+    },
+}
+
+impl PluginCheckResult {
+    /// True when the plugin is confirmed installed.
+    pub fn is_installed(&self) -> bool {
+        matches!(self, Self::Installed)
+    }
+
+    /// True when the plugin is confirmed NOT installed.
+    pub fn is_not_installed(&self) -> bool {
+        matches!(self, Self::NotInstalled)
+    }
+
+    /// True when the CLI was not found on PATH.
+    pub fn is_cli_not_found(&self) -> bool {
+        matches!(self, Self::CliNotFound)
+    }
+}
+
+/// Check whether a Claude Code plugin is installed for the given scope.
+///
+/// Runs `claude plugin list --scope <scope>` and searches for `plugin_name`
+/// as a substring of any output line.
+pub fn check_claude_plugin_installed(plugin_name: &str, scope: PluginScope) -> PluginCheckResult {
+    let out = run_command_output(
+        "claude",
+        &["plugin", "list", "--scope", scope.as_claude_flag()],
+    );
+    check_output_for_substring(out, plugin_name)
+}
+
+/// Check whether a VS Code extension is installed.
+///
+/// Runs `code --list-extensions` and checks for the extension ID as an
+/// exact (case-insensitive) line match.
+pub fn check_vscode_extension_installed(extension_id: &str) -> PluginCheckResult {
+    let out = run_command_output("code", &["--list-extensions"]);
+    check_output_for_exact_line(out, extension_id)
+}
+
+/// Check whether an opencode plugin is installed.
+///
+/// Runs `opencode plugin list` and searches for `module_name` as a
+/// substring of any output line.
+pub fn check_opencode_plugin_installed(module_name: &str) -> PluginCheckResult {
+    let out = run_command_output("opencode", &["plugin", "list"]);
+    check_output_for_substring(out, module_name)
+}
+
+// ---------------------------------------------------------------------------
+// Internal command output helpers
+// ---------------------------------------------------------------------------
+
+/// Captured result of a CLI invocation.
+enum CommandOutput {
+    Success {
+        stdout: String,
+    },
+    CliNotFound,
+    Failed {
+        exit_code: Option<i32>,
+        stderr: String,
+    },
+}
+
+fn run_command_output(program: &str, args: &[&str]) -> CommandOutput {
+    let result = spawn_command(program, args);
+    match result {
+        Ok(out) if out.status.success() => CommandOutput::Success {
+            stdout: String::from_utf8_lossy(&out.stdout).to_string(),
+        },
+        Ok(out) if is_command_not_found(&out) => CommandOutput::CliNotFound,
+        Ok(out) => CommandOutput::Failed {
+            exit_code: out.status.code(),
+            stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
+        },
+        Err(e) if e.kind() == ErrorKind::NotFound => CommandOutput::CliNotFound,
+        Err(e) => CommandOutput::Failed {
+            exit_code: None,
+            stderr: format!("failed to spawn {program}: {e}"),
+        },
+    }
+}
+
+/// Spawn a command, using `cmd /c` on Windows so that PATHEXT resolution
+/// finds `.cmd` and `.bat` wrappers (e.g. `code.cmd` for VS Code).
+fn spawn_command(program: &str, args: &[&str]) -> std::io::Result<std::process::Output> {
+    #[cfg(windows)]
+    {
+        let mut cmd_args = vec!["/c", program];
+        cmd_args.extend(args);
+        Command::new("cmd").args(&cmd_args).output()
+    }
+    #[cfg(not(windows))]
+    {
+        Command::new(program).args(args).output()
+    }
+}
+
+/// On Windows, `cmd /c nonexistent` prints "is not recognized" to stderr.
+/// The exit code varies by Windows version (1 or 9009), so we detect
+/// the stderr message instead.
+fn is_command_not_found(output: &std::process::Output) -> bool {
+    #[cfg(windows)]
+    {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        stderr.contains("is not recognized")
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = output;
+        false
+    }
+}
+
+/// Map `CommandOutput` to `PluginCheckResult` by searching for `needle` as
+/// a substring of any stdout line.
+fn check_output_for_substring(output: CommandOutput, needle: &str) -> PluginCheckResult {
+    match output {
+        CommandOutput::CliNotFound => PluginCheckResult::CliNotFound,
+        CommandOutput::Failed { exit_code, stderr } => {
+            PluginCheckResult::QueryFailed { exit_code, stderr }
+        }
+        CommandOutput::Success { stdout } => {
+            if stdout.lines().any(|line| line.contains(needle)) {
+                PluginCheckResult::Installed
+            } else {
+                PluginCheckResult::NotInstalled
+            }
+        }
+    }
+}
+
+/// Map `CommandOutput` to `PluginCheckResult` by checking for `needle` as an
+/// exact (case-insensitive, trimmed) line in stdout.
+fn check_output_for_exact_line(output: CommandOutput, needle: &str) -> PluginCheckResult {
+    match output {
+        CommandOutput::CliNotFound => PluginCheckResult::CliNotFound,
+        CommandOutput::Failed { exit_code, stderr } => {
+            PluginCheckResult::QueryFailed { exit_code, stderr }
+        }
+        CommandOutput::Success { stdout } => {
+            if stdout
+                .lines()
+                .any(|line| line.trim().eq_ignore_ascii_case(needle))
+            {
+                PluginCheckResult::Installed
+            } else {
+                PluginCheckResult::NotInstalled
+            }
+        }
+    }
+}
 
 /// Execute a CLI command and map the result to a `PluginOutcome`.
 fn run_command(program: &str, args: &[&str]) -> PluginOutcome {
-    let output = match Command::new(program).args(args).output() {
+    let output = match spawn_command(program, args) {
+        Ok(output) if is_command_not_found(&output) => {
+            return PluginOutcome::CliNotFound;
+        }
         Ok(output) => output,
         Err(e) if e.kind() == ErrorKind::NotFound => {
             return PluginOutcome::CliNotFound;
@@ -326,5 +499,115 @@ mod tests {
             &["plugin", "uninstall", "test@source"],
         );
         assert_eq!(result, PluginOutcome::CliNotFound);
+    }
+
+    // -----------------------------------------------------------------------
+    // PluginCheckResult tests (check_output_for_* helpers)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn check_output_for_exact_line_finds_matching_extension() {
+        let output = CommandOutput::Success {
+            stdout: "ms-python.python\nanthropic.superpowers\n".to_string(),
+        };
+        assert_eq!(
+            check_output_for_exact_line(output, "anthropic.superpowers"),
+            PluginCheckResult::Installed
+        );
+    }
+
+    #[test]
+    fn check_output_for_exact_line_case_insensitive() {
+        let output = CommandOutput::Success {
+            stdout: "Anthropic.SuperPowers\n".to_string(),
+        };
+        assert_eq!(
+            check_output_for_exact_line(output, "anthropic.superpowers"),
+            PluginCheckResult::Installed
+        );
+    }
+
+    #[test]
+    fn check_output_for_exact_line_returns_not_installed_when_absent() {
+        let output = CommandOutput::Success {
+            stdout: "ms-python.python\n".to_string(),
+        };
+        assert_eq!(
+            check_output_for_exact_line(output, "anthropic.superpowers"),
+            PluginCheckResult::NotInstalled
+        );
+    }
+
+    #[test]
+    fn check_output_for_exact_line_cli_not_found() {
+        assert_eq!(
+            check_output_for_exact_line(CommandOutput::CliNotFound, "anything"),
+            PluginCheckResult::CliNotFound
+        );
+    }
+
+    #[test]
+    fn check_output_for_substring_finds_plugin_name() {
+        let output = CommandOutput::Success {
+            stdout: "superpowers@anthropics/claude-plugins\nother-plugin\n".to_string(),
+        };
+        assert_eq!(
+            check_output_for_substring(output, "superpowers"),
+            PluginCheckResult::Installed
+        );
+    }
+
+    #[test]
+    fn check_output_for_substring_returns_not_installed_when_absent() {
+        let output = CommandOutput::Success {
+            stdout: "other-plugin\n".to_string(),
+        };
+        assert_eq!(
+            check_output_for_substring(output, "superpowers"),
+            PluginCheckResult::NotInstalled
+        );
+    }
+
+    #[test]
+    fn check_output_for_substring_cli_not_found() {
+        assert_eq!(
+            check_output_for_substring(CommandOutput::CliNotFound, "anything"),
+            PluginCheckResult::CliNotFound
+        );
+    }
+
+    #[test]
+    fn check_output_query_failed_maps_correctly() {
+        let output = CommandOutput::Failed {
+            exit_code: Some(1),
+            stderr: "some error".to_string(),
+        };
+        assert!(matches!(
+            check_output_for_substring(output, "anything"),
+            PluginCheckResult::QueryFailed {
+                exit_code: Some(1),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn check_vscode_extension_installed_returns_cli_not_found_when_no_binary() {
+        // `nonexistent-code-xyz-42` is never on PATH.
+        let result =
+            check_output_for_exact_line(CommandOutput::CliNotFound, "anthropic.superpowers");
+        assert_eq!(result, PluginCheckResult::CliNotFound);
+    }
+
+    #[test]
+    fn plugin_check_result_predicates() {
+        assert!(PluginCheckResult::Installed.is_installed());
+        assert!(!PluginCheckResult::NotInstalled.is_installed());
+
+        assert!(PluginCheckResult::NotInstalled.is_not_installed());
+        assert!(!PluginCheckResult::Installed.is_not_installed());
+
+        assert!(PluginCheckResult::CliNotFound.is_cli_not_found());
+        assert!(!PluginCheckResult::Installed.is_cli_not_found());
     }
 }
