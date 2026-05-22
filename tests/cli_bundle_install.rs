@@ -202,3 +202,93 @@ fn bundle_install_errors_on_item_conflict() {
         "expected item-conflict error: {stderr}"
     );
 }
+
+/// Stage a registry with the **sibling layout**: bundles and items live
+/// in separate peer directories under the registry root. This is the
+/// layout described in format-spec §2.2 and used by metapowers.
+///
+/// ```text
+/// registry/
+/// ├── bundles/
+/// │   └── sibling-test.bundle.yaml
+/// └── skills/
+///     └── license-awareness/
+///         └── RULE.md
+/// ```
+fn stage_sibling_layout_registry(root: &Path) {
+    // bundles/ subdir
+    let bundles_dir = root.join("bundles");
+    fs::create_dir_all(&bundles_dir).unwrap();
+    fs::write(
+        bundles_dir.join("sibling-test.bundle.yaml"),
+        "\
+schema: 1
+name: sibling-test
+description: Test bundle with sibling layout
+license: MIT
+
+items:
+  rules:
+    - license-awareness
+",
+    )
+    .unwrap();
+
+    // skills/ subdir containing the item
+    let item_dir = root.join("skills/license-awareness");
+    fs::create_dir_all(&item_dir).unwrap();
+    fs::copy(
+        Path::new(&format!("{FIXTURES}/items/license-awareness/RULE.md")),
+        item_dir.join("RULE.md"),
+    )
+    .unwrap();
+}
+
+#[test]
+fn bundle_install_sibling_layout_discovers_items_in_peer_directories() {
+    // Regression test for #161: when bundles/ and skills/ are siblings
+    // under the registry root, `find_registry_root` must detect the
+    // registry root and `install_*` must find items in subdirectories.
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_sibling_layout_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let bundle = registry.join("bundles/sibling-test.bundle.yaml");
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["add", bundle.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // The rule must be installed for all clients.
+    assert!(
+        target
+            .join(".github/instructions/license-awareness.instructions.md")
+            .exists(),
+        "copilot rule installed from sibling layout"
+    );
+    assert!(
+        target
+            .join(".agents/rules/license-awareness/RULE.md")
+            .exists(),
+        "opencode rule installed from sibling layout"
+    );
+
+    // Lockfile must record the bundle and item.
+    let raw = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    let lock: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    let items: Vec<&str> = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["name"].as_str().unwrap())
+        .collect();
+    assert!(
+        items.contains(&"license-awareness"),
+        "lockfile records installed item: {items:?}"
+    );
+}

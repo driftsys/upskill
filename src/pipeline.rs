@@ -226,13 +226,31 @@ fn has_ssot_layout(dir: &Path) -> bool {
         if !path.is_dir() {
             continue;
         }
-        for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
-            if path.join(entrypoint).is_file() {
-                return true;
+        // Direct item check: dir/<item>/ENTRY.md
+        if is_item_dir(&path) {
+            return true;
+        }
+        // Grandchild check: dir/<category>/<item>/ENTRY.md
+        // Handles sibling layouts where items live in subdirectories
+        // (e.g. `skills/<item>/RULE.md` alongside `bundles/`).
+        if let Ok(sub_entries) = fs::read_dir(&path) {
+            for sub_entry in sub_entries.flatten() {
+                let sub_path = sub_entry.path();
+                if sub_path.is_dir() && is_item_dir(&sub_path) {
+                    return true;
+                }
             }
         }
     }
     false
+}
+
+/// Returns true when the directory contains at least one SSOT entrypoint
+/// file (`RULE.md`, `SKILL.md`, or `AGENT.md`).
+fn is_item_dir(path: &Path) -> bool {
+    path.join("RULE.md").is_file()
+        || path.join("SKILL.md").is_file()
+        || path.join("AGENT.md").is_file()
 }
 
 /// Flat list of every item name a single bundle declares (in
@@ -1455,12 +1473,31 @@ fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
         if !path.is_dir() {
             continue;
         }
-        let name = entry
-            .file_name()
-            .to_str()
-            .map(str::to_owned)
-            .with_context(|| format!("non-UTF8 name in {}", kind_root.display()))?;
-        out.push((name, path));
+        if is_item_dir(&path) {
+            // Direct item: kind_root/<item>/ENTRY.md
+            let name = entry
+                .file_name()
+                .to_str()
+                .map(str::to_owned)
+                .with_context(|| format!("non-UTF8 name in {}", kind_root.display()))?;
+            out.push((name, path));
+        } else {
+            // Category subdir: kind_root/<category>/<item>/ENTRY.md
+            // Descend one level to find items in subdirectories (format-spec §2.2).
+            if let Ok(sub_entries) = fs::read_dir(&path) {
+                for sub_entry in sub_entries.flatten() {
+                    let sub_path = sub_entry.path();
+                    if sub_path.is_dir() && is_item_dir(&sub_path) {
+                        let name = sub_entry
+                            .file_name()
+                            .to_str()
+                            .map(str::to_owned)
+                            .with_context(|| format!("non-UTF8 name in {}", path.display()))?;
+                        out.push((name, sub_path));
+                    }
+                }
+            }
+        }
     }
     out.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(out)
@@ -1812,5 +1849,84 @@ mod tests {
         .unwrap();
 
         assert!(has_matching_items(tmp.path(), "my-rule"));
+    }
+
+    #[test]
+    fn has_ssot_layout_detects_direct_children() {
+        // Flat layout: root/<item>/RULE.md
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("my-rule");
+        std::fs::create_dir_all(&item).unwrap();
+        std::fs::write(item.join("RULE.md"), "").unwrap();
+
+        assert!(has_ssot_layout(tmp.path()));
+    }
+
+    #[test]
+    fn has_ssot_layout_detects_grandchild_entrypoints() {
+        // Sibling layout: root/skills/<item>/RULE.md
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("skills/my-rule");
+        std::fs::create_dir_all(&item).unwrap();
+        std::fs::write(item.join("RULE.md"), "").unwrap();
+
+        assert!(
+            has_ssot_layout(tmp.path()),
+            "has_ssot_layout must detect items nested one level deeper"
+        );
+    }
+
+    #[test]
+    fn has_ssot_layout_returns_false_for_empty_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!has_ssot_layout(tmp.path()));
+    }
+
+    #[test]
+    fn find_registry_root_returns_parent_for_sibling_layout() {
+        // registry/bundles/x.bundle.yaml + registry/skills/<item>/RULE.md
+        // → find_registry_root must return registry/
+        let tmp = tempfile::tempdir().unwrap();
+        let registry = tmp.path().join("registry");
+        std::fs::create_dir_all(registry.join("bundles")).unwrap();
+        std::fs::create_dir_all(registry.join("skills/my-rule")).unwrap();
+        std::fs::write(registry.join("skills/my-rule/RULE.md"), "").unwrap();
+        let bundle = registry.join("bundles/test.bundle.yaml");
+        std::fs::write(&bundle, "").unwrap();
+
+        let root = find_registry_root(&bundle).unwrap();
+        assert_eq!(root, registry);
+    }
+
+    #[test]
+    fn iter_item_dirs_finds_items_in_category_subdirs() {
+        // registry/skills/<item>/SKILL.md should be discovered
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("skills/my-skill");
+        std::fs::create_dir_all(&item).unwrap();
+        std::fs::write(item.join("SKILL.md"), "").unwrap();
+
+        let dirs = iter_item_dirs(tmp.path()).unwrap();
+        let names: Vec<&str> = dirs.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(
+            names.contains(&"my-skill"),
+            "iter_item_dirs must find items in category subdirectories: {names:?}"
+        );
+    }
+
+    #[test]
+    fn iter_item_dirs_still_finds_direct_children() {
+        // Flat layout: root/<item>/RULE.md must still work
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("my-rule");
+        std::fs::create_dir_all(&item).unwrap();
+        std::fs::write(item.join("RULE.md"), "").unwrap();
+
+        let dirs = iter_item_dirs(tmp.path()).unwrap();
+        let names: Vec<&str> = dirs.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(
+            names.contains(&"my-rule"),
+            "iter_item_dirs must still find direct item children: {names:?}"
+        );
     }
 }
