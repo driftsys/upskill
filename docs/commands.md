@@ -118,7 +118,7 @@ matches the lockfile label (`local:/path` or `github:owner/repo` etc.).
 ### `upskill doctor`
 
 Verify on-disk state matches `.upskill-lock.json`. Reports drift in
-three independent buckets:
+five independent buckets:
 
 - **Missing per-client output files** — reinstall fixes (`upskill add
   <source>`).
@@ -126,9 +126,18 @@ three independent buckets:
 - **Lockfile entries with no recoverable source** (the local path went
   away, or the named item was removed in the source) — `upskill remove`
   to clear.
+- **Missing plugins** — recorded as `installed` in the lockfile but no
+  longer found in the client. Likely uninstalled out-of-band; `upskill
+  update` reinstalls them. Causes exit 1.
+- **Skipped plugins** (informational) — recorded as `skipped` because
+  the client CLI was not on PATH at install time. Install the CLI then
+  run `upskill update` to install them. Does **not** cause exit 1.
 
-Exits 0 when clean, 1 when any bucket is non-empty. `doctor` never
-fetches; remote-source drift detection is `update --dry-run`.
+Exits 0 when clean, 1 when any drift bucket is non-empty (missing
+outputs, stale hashes, orphan entries, or missing plugins). Skipped
+plugins are informational warnings and do not affect the exit code.
+`doctor` never fetches; remote-source drift detection is `update
+--dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is
 unchanged.
@@ -145,12 +154,21 @@ unchanged.
   "orphan_entries": [
     { "kind": "agent", "name": "...", "source": "local:...",
       "reason": "local-path-gone" }
+  ],
+  "missing_plugins": [
+    { "name": "superpowers", "client": "vscode",
+      "identifier": "anthropic.superpowers", "bundle": "baseline" }
+  ],
+  "skipped_plugins": [
+    { "name": "superpowers", "client": "claude",
+      "identifier": "superpowers@anthropics/claude-plugins",
+      "bundle": "baseline" }
   ]
 }
 ```
 
 `reason` is `"local-path-gone"` or `"item-missing-in-source"`. Hashes
-may be `null` when the SSOT can't be hashed (e.g. unreadable). All three
+may be `null` when the SSOT can't be hashed (e.g. unreadable). All five
 arrays are always present, possibly empty.
 
 ### `upskill search <query>`

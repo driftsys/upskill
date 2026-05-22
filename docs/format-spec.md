@@ -552,12 +552,33 @@ implementation MUST print a warning and continue installing the rest of the bund
 `install_url` is present, it MUST be included in the warning message. The rules, skills, and
 agents portion of the bundle MUST install regardless of plugin installation success.
 
-**Lockfile recording:** Each successfully installed plugin MUST be recorded in the lockfile
-with its client, identifier, and scope so that `remove`, `update`, and `doctor` can invoke the
-inverse CLI command.
+**Lockfile recording:** Each installed or warn-skipped plugin MUST be recorded in the lockfile
+with its client, identifier, scope, and install status so that `remove`, `update`, and `doctor`
+can reconcile state. The `status` field distinguishes outcomes:
 
-> **Note:** A future revision will extend lockfile recording to include warn-skipped plugins
-> (with `status: "skipped"`) so that `doctor` can surface them. See issue #151.
+| `status`      | Meaning                                                 |
+| ------------- | ------------------------------------------------------- |
+| `"installed"` | Plugin successfully installed via the client CLI.       |
+| `"skipped"`   | Client CLI was not on PATH at install time (warn-skip). |
+
+Plugins that fail for other reasons (non-zero exit from a present CLI) MUST NOT be recorded —
+these are transient errors and should not pollute the lockfile.
+
+Lockfile plugin entry shape:
+
+```json
+{
+  "name": "superpowers",
+  "client": "claude",
+  "identifier": "superpowers@anthropics/claude-plugins",
+  "scope": "project",
+  "bundle": "baseline",
+  "status": "installed"
+}
+```
+
+The `status` field defaults to `"installed"` when absent (backward-compatible with
+pre-v0.6.x lockfiles that lacked this field).
 
 Implementations:
 

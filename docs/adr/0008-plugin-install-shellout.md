@@ -1,6 +1,6 @@
 # Plugin installation — extend Bundle, shell out to client CLIs
 
-**Status**: Proposed (2026-05-22)
+**Status**: Accepted (2026-05-22)
 
 ## Context
 

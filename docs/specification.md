@@ -120,11 +120,14 @@ touched.
   kind. Bundles are surfaced in a separate section. The `--available`
   view (items discoverable from configured sources) is deferred for a
   future release.
-- `doctor` — verify on-disk state matches the lock file. Three
+- `doctor` — verify on-disk state matches the lock file. Five
   independent buckets: missing per-client outputs (reinstall fixes),
-  SSOT hash drift on `local:` sources (`update` fixes), and lockfile
-  entries with no recoverable source (`remove` fixes). Exit 0 when
-  clean, 1 when any drift is found.
+  SSOT hash drift on `local:` sources (`update` fixes), lockfile
+  entries with no recoverable source (`remove` fixes), installed
+  plugins missing from the client (`update` reinstalls), and skipped
+  plugins (informational — CLI was absent at install time). Exit 0
+  when clean, 1 when any drift bucket is non-empty. Skipped plugins
+  are warnings and do not affect the exit code.
 
 ### 2.5 `new` / `lint` / `fmt`
 
