@@ -31,6 +31,12 @@ pub struct Bundle {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub requires: Vec<Requires>,
 
+    /// Client-native plugins installed via shellout (ADR-0008, §3.7).
+    /// Map key is the upskill-level plugin name; value carries per-client
+    /// install descriptors.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub plugins: BTreeMap<String, PluginEntry>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
@@ -71,4 +77,54 @@ pub struct Requires {
     /// the resolver to interpret in C2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+}
+
+/// Per-plugin entry in the `plugins:` map. Contains optional descriptors
+/// for each supported client. A plugin MAY target a single client, a
+/// subset, or all three.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PluginEntry {
+    /// Claude Code plugin descriptor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claude: Option<ClaudePluginDescriptor>,
+
+    /// VS Code extension descriptor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vscode: Option<VscodePluginDescriptor>,
+
+    /// opencode module descriptor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opencode: Option<OpencodePluginDescriptor>,
+}
+
+/// Install descriptor for Claude Code plugins.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClaudePluginDescriptor {
+    /// Marketplace source (passed to `claude plugin marketplace add`).
+    pub source: String,
+    /// Plugin identifier (passed to `claude plugin install`).
+    pub plugin: String,
+    /// URL shown in warn-skip message when CLI not found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_url: Option<String>,
+}
+
+/// Install descriptor for VS Code extensions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VscodePluginDescriptor {
+    /// Extension ID (passed to `code --install-extension`).
+    pub extension: String,
+    /// URL shown in warn-skip message when CLI not found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_url: Option<String>,
+}
+
+/// Install descriptor for opencode modules.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OpencodePluginDescriptor {
+    /// Module name (passed to `opencode plugin`).
+    pub module: String,
+    /// URL shown in warn-skip message when CLI not found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_url: Option<String>,
 }

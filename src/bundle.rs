@@ -192,6 +192,7 @@ mod tests {
                     version: None,
                 })
                 .collect(),
+            plugins: Default::default(),
             metadata: None,
             extra: Default::default(),
         }
