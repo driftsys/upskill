@@ -384,4 +384,112 @@ requires:
     fn renamed(template: &str, new_name: &str) -> String {
         template.replace("name: platform-baseline", &format!("name: {new_name}"))
     }
+
+    #[test]
+    fn load_parses_plugins_with_all_clients() {
+        let content = "schema: 1
+name: with-plugins
+description: Bundle with plugins declared
+items:
+  rules:
+    - license-awareness
+plugins:
+  superpowers:
+    claude:
+      source: anthropics/claude-plugins
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
+    vscode:
+      extension: anthropic.superpowers
+      install_url: https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers
+    opencode:
+      module: superpowers-opencode
+      install_url: https://opencode.ai/plugins/superpowers
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "with-plugins.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.plugins.len(), 1);
+
+        let sp = &bundle.plugins["superpowers"];
+        let claude = sp.claude.as_ref().expect("claude block");
+        assert_eq!(claude.source, "anthropics/claude-plugins");
+        assert_eq!(claude.plugin, "superpowers");
+        assert_eq!(
+            claude.install_url.as_deref(),
+            Some("https://github.com/obra/superpowers#install")
+        );
+
+        let vscode = sp.vscode.as_ref().expect("vscode block");
+        assert_eq!(vscode.extension, "anthropic.superpowers");
+        assert_eq!(
+            vscode.install_url.as_deref(),
+            Some("https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers")
+        );
+
+        let opencode = sp.opencode.as_ref().expect("opencode block");
+        assert_eq!(opencode.module, "superpowers-opencode");
+        assert_eq!(
+            opencode.install_url.as_deref(),
+            Some("https://opencode.ai/plugins/superpowers")
+        );
+    }
+
+    #[test]
+    fn load_parses_plugins_with_single_client() {
+        // A plugin that only targets one client is valid.
+        let content = "schema: 1
+name: claude-only
+description: Plugin for Claude only
+items:
+  skills: []
+plugins:
+  my-plugin:
+    claude:
+      source: my-org/marketplace
+      plugin: my-plugin
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "claude-only.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.plugins.len(), 1);
+
+        let plugin = &bundle.plugins["my-plugin"];
+        assert!(plugin.claude.is_some());
+        assert!(plugin.vscode.is_none());
+        assert!(plugin.opencode.is_none());
+    }
+
+    #[test]
+    fn load_accepts_bundle_without_plugins() {
+        // Bundles without plugins: are valid (existing behavior).
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "platform-baseline.bundle.yaml", PLATFORM);
+
+        let bundle = load(&path).expect("load");
+        assert!(bundle.plugins.is_empty());
+    }
+
+    #[test]
+    fn plugins_round_trips_through_serialize() {
+        let content = "schema: 1
+name: roundtrip
+description: Roundtrip test
+items:
+  rules: []
+plugins:
+  example:
+    vscode:
+      extension: publisher.example
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "roundtrip.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        let serialized = serde_yaml_ng::to_string(&bundle).expect("serialize");
+        let reparsed: Bundle = serde_yaml_ng::from_str(&serialized).expect("reparse");
+        assert_eq!(bundle.plugins, reparsed.plugins);
+    }
 }

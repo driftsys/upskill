@@ -7,7 +7,10 @@ pub mod rule;
 pub mod skill;
 
 pub use agent::{Agent, Mode, ToolCap};
-pub use bundle::{Bundle, BundleItems, Requires};
+pub use bundle::{
+    Bundle, BundleItems, ClaudePluginDescriptor, OpencodePluginDescriptor, PluginEntry, Requires,
+    VscodePluginDescriptor,
+};
 pub use common::{Audience, CURRENT_SCHEMA, License, Metadata, SchemaVersion};
 pub use rule::{Rule, Scope};
 pub use skill::Skill;

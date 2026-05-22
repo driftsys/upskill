@@ -1,0 +1,17 @@
+schema: 1
+name: with-plugins
+description: Bundle that also declares client-native plugins
+license: proprietary
+
+items:
+  rules:
+    - license-awareness
+
+plugins:
+  superpowers:
+    claude:
+      source: anthropics/claude-plugins
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
+    vscode:
+      extension: anthropic.superpowers

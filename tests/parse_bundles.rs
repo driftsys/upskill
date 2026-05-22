@@ -16,8 +16,8 @@ fn discovers_every_fixture_bundle() {
     let names: Vec<&str> = bundles.iter().map(|(_, b)| b.name.as_str()).collect();
     assert_eq!(
         names,
-        vec!["platform-baseline", "platform-extras"],
-        "fixture set is two bundles, sorted by path"
+        vec!["platform-baseline", "platform-extras", "with-plugins"],
+        "fixture set is three bundles, sorted by name"
     );
 }
 
@@ -51,4 +51,30 @@ fn extras_pins_baseline_with_caret_constraint() {
     assert_eq!(extras.requires.len(), 1);
     assert_eq!(extras.requires[0].name, "platform-baseline");
     assert_eq!(extras.requires[0].version.as_deref(), Some("^1.0.0"));
+}
+
+#[test]
+fn with_plugins_declares_client_native_plugins() {
+    let bundles = discover(Path::new(FIXTURES)).expect("discover");
+    let (_, bundle) = bundles
+        .iter()
+        .find(|(_, b)| b.name == "with-plugins")
+        .expect("with-plugins present");
+
+    assert_eq!(bundle.plugins.len(), 1);
+
+    let sp = &bundle.plugins["superpowers"];
+    let claude = sp.claude.as_ref().expect("claude descriptor");
+    assert_eq!(claude.source, "anthropics/claude-plugins");
+    assert_eq!(claude.plugin, "superpowers");
+    assert_eq!(
+        claude.install_url.as_deref(),
+        Some("https://github.com/obra/superpowers#install")
+    );
+
+    let vscode = sp.vscode.as_ref().expect("vscode descriptor");
+    assert_eq!(vscode.extension, "anthropic.superpowers");
+    assert!(vscode.install_url.is_none());
+
+    assert!(sp.opencode.is_none());
 }
