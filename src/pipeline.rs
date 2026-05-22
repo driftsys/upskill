@@ -265,24 +265,13 @@ pub fn install_with_lockfile(
     items: &[String],
     plugin_scope: crate::plugin::PluginScope,
 ) -> Result<InstallReport> {
-    // Empty list means "install everything" (the historical default).
-    // Otherwise build a `ResolvedItems` filter with each name copied
-    // into all three buckets — the per-kind walks check by `(kind,
-    // name)` so unrelated kinds simply skip names that aren't theirs.
-    let resolved = if items.is_empty() {
-        None
+    let mut report = if items.is_empty() {
+        // No names → install everything (existing default).
+        install_from_source(source, target, None)?
     } else {
-        Some(crate::bundle::ResolvedItems {
-            rules: items.to_vec(),
-            skills: items.to_vec(),
-            agents: items.to_vec(),
-        })
+        // Names provided → try item-filter first, then bundle-by-name.
+        install_with_name_resolution(source, target, items)?
     };
-    let mut report = install_from_source(source, target, resolved.as_ref())?;
-
-    if !items.is_empty() && report.items.is_empty() {
-        anyhow::bail!("no matching items in source for: {}", items.join(", "));
-    }
 
     // -- Plugin installation (ADR-0008) --
     // After items are generated, iterate the resolved bundles' plugins
@@ -355,6 +344,97 @@ pub fn install_with_lockfile(
     crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
 
     Ok(report)
+}
+
+/// Resolve positional names against both items and bundles.
+///
+/// For each name:
+/// - If it matches items AND a bundle → error (ambiguity).
+/// - If it matches only a bundle → install via bundle dispatch.
+/// - If it matches only items → install via item filter.
+/// - If it matches neither → error.
+///
+/// When the list contains a mix (some names are bundles, some are items),
+/// all bundle installs run first, then item installs run with the
+/// remaining names as a filter.
+fn install_with_name_resolution(
+    source: &InstallSource,
+    target: &Path,
+    names: &[String],
+) -> Result<InstallReport> {
+    let (local_source, _tmp) = fetch_ssot(source)?;
+
+    let mut bundle_paths: Vec<PathBuf> = Vec::new();
+    let mut item_names: Vec<String> = Vec::new();
+
+    for name in names {
+        let has_items = has_matching_items(&local_source, name);
+        let bundle_path = find_bundle_by_name(&local_source, name);
+
+        match (has_items, bundle_path) {
+            (true, Some(bp)) => {
+                let rel = bp
+                    .strip_prefix(&local_source)
+                    .unwrap_or(&bp)
+                    .display()
+                    .to_string();
+                anyhow::bail!(
+                    "'{}' matches both an item and a bundle\n\n  \
+                     item:   {}/{}\n  \
+                     bundle: {}\n\n\
+                     Disambiguate by using the full path to the bundle:\n  \
+                     upskill add <source>:{}",
+                    name,
+                    name,
+                    detect_item_entrypoint(&local_source, name),
+                    rel,
+                    rel,
+                );
+            }
+            (false, Some(bp)) => bundle_paths.push(bp),
+            (true, None) => item_names.push(name.clone()),
+            (false, None) => {
+                anyhow::bail!("no matching items or bundles in source for: {}", name);
+            }
+        }
+    }
+
+    let mut report = InstallReport::default();
+
+    // Install bundles first.
+    for bp in &bundle_paths {
+        let bundle_report = install_bundle_file(bp, target)?;
+        report.items.extend(bundle_report.items);
+        report.bundles.extend(bundle_report.bundles);
+    }
+
+    // Install remaining items via the standard filter path.
+    if !item_names.is_empty() {
+        let filter = crate::bundle::ResolvedItems {
+            rules: item_names.clone(),
+            skills: item_names.clone(),
+            agents: item_names.clone(),
+        };
+        let item_report = install_from_local_path(&local_source, target, Some(&filter))?;
+        report.items.extend(item_report.items);
+    }
+
+    Ok(report)
+}
+
+/// Detect which entrypoint file (SKILL.md, RULE.md, AGENT.md) exists for
+/// an item, for use in error messages.
+fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str {
+    let dir = source.join(name);
+    if dir.join("SKILL.md").is_file() {
+        "SKILL.md"
+    } else if dir.join("RULE.md").is_file() {
+        "RULE.md"
+    } else if dir.join("AGENT.md").is_file() {
+        "AGENT.md"
+    } else {
+        "SKILL.md" // fallback for error message
+    }
 }
 
 // ---------------------------------------------------------------------------
