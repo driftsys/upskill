@@ -179,6 +179,14 @@ shape. Common findings:
 - Lockfile references an item whose source is no longer reachable
 - Orphan per-client files not recorded in the lockfile (a previous
   install or hand-creation that needs reconciling)
+- Plugin recorded as installed but missing from the client (uninstalled
+  out-of-band → `update` reinstalls)
+- Plugin skipped at install time because the client CLI was not on PATH
+  (informational warning — install the CLI then run `update`)
+
+Exits 0 when clean. Exits 1 when drift is found (missing outputs, stale
+hashes, orphan entries, or missing plugins). Skipped plugins are
+warnings only and do not affect the exit code.
 
 ## Conventions to remember
 
