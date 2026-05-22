@@ -16,6 +16,7 @@
 //! | `body-h1`         | warning  | §5.1               |
 //! | `fence-lang`      | warning  | §5.2               |
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
+//! | `name-collision`  | error    | cross-file (bundle vs item name) |
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
 //! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT}.md` per
@@ -106,6 +107,13 @@ pub fn lint(paths: &[PathBuf], strict: bool) -> Result<LintReport> {
         for file in discover(root)? {
             report.files_checked += 1;
             check_file(&file, &mut report.findings)?;
+        }
+    }
+
+    // Cross-file checks: bundle-item name collisions.
+    for root in roots {
+        if root.is_dir() {
+            check_bundle_item_name_collisions(root, &mut report.findings)?;
         }
     }
 
@@ -410,6 +418,81 @@ fn check_directives(file: &Path, body: &str, out: &mut Vec<Finding>) {
             line: None,
             message: format!("{:#}", err),
         });
+    }
+}
+
+/// Cross-file lint: detect when a bundle's `name:` collides with an item
+/// directory name in the same registry.
+fn check_bundle_item_name_collisions(root: &Path, out: &mut Vec<Finding>) -> Result<()> {
+    // Collect item names (directories containing SKILL.md/RULE.md/AGENT.md).
+    let mut item_names: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    if let Ok(entries) = fs::read_dir(root) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let dirname = entry.file_name().to_string_lossy().to_string();
+            if dirname.starts_with('.') {
+                continue;
+            }
+            if path.join("SKILL.md").is_file()
+                || path.join("RULE.md").is_file()
+                || path.join("AGENT.md").is_file()
+            {
+                item_names.insert(dirname);
+            }
+        }
+    }
+
+    if item_names.is_empty() {
+        return Ok(());
+    }
+
+    // Discover bundles and check for collisions.
+    let mut bundle_files: Vec<PathBuf> = Vec::new();
+    walk_bundles(root, &mut bundle_files)?;
+
+    for bundle_path in bundle_files {
+        let raw = fs::read_to_string(&bundle_path)
+            .with_context(|| format!("read {}", bundle_path.display()))?;
+        if let Some(name) = extract_bundle_name(&raw)
+            && item_names.contains(&name)
+        {
+            let item_kind = detect_item_kind(root, &name);
+            out.push(Finding {
+                rule_id: "name-collision",
+                severity: Severity::Error,
+                path: bundle_path,
+                line: None,
+                message: format!(
+                    "bundle name '{}' collides with {} '{}'",
+                    name, item_kind, name
+                ),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+/// Extract the `name:` field from a bundle YAML without full parse.
+fn extract_bundle_name(raw: &str) -> Option<String> {
+    let parsed: Result<crate::model::Bundle, _> = serde_yaml_ng::from_str(raw);
+    parsed.ok().map(|b| b.name)
+}
+
+/// Detect what kind of item a name corresponds to, for error messages.
+fn detect_item_kind(root: &Path, name: &str) -> &'static str {
+    let dir = root.join(name);
+    if dir.join("SKILL.md").is_file() {
+        "skill"
+    } else if dir.join("RULE.md").is_file() {
+        "rule"
+    } else if dir.join("AGENT.md").is_file() {
+        "agent"
+    } else {
+        "item"
     }
 }
 

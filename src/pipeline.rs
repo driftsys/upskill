@@ -153,6 +153,47 @@ fn is_bundle_file(path: &Path) -> bool {
             .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX))
 }
 
+/// Search `root` recursively for a file named `<name>.bundle.yaml`.
+/// Skips hidden directories. Returns the first match or `None`.
+fn find_bundle_by_name(root: &Path, name: &str) -> Option<PathBuf> {
+    let target_filename = format!("{}{}", name, crate::parse::bundle::BUNDLE_SUFFIX);
+    find_bundle_recursive(root, &target_filename)
+}
+
+fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
+    let entries = fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let entry_name = entry.file_name();
+        let name_str = entry_name.to_string_lossy();
+        if name_str.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_file() && name_str == target {
+            return Some(path);
+        }
+        if path.is_dir()
+            && let Some(found) = find_bundle_recursive(&path, target)
+        {
+            return Some(found);
+        }
+    }
+    None
+}
+
+/// Check whether a source directory contains any item (skill, rule, or
+/// agent) with the given name. An item exists when a subdirectory named
+/// `name` contains at least one of `SKILL.md`, `RULE.md`, or `AGENT.md`.
+fn has_matching_items(source: &Path, name: &str) -> bool {
+    let item_dir = source.join(name);
+    if !item_dir.is_dir() {
+        return false;
+    }
+    item_dir.join("SKILL.md").is_file()
+        || item_dir.join("RULE.md").is_file()
+        || item_dir.join("AGENT.md").is_file()
+}
+
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
 /// at least one item directory (containing `RULE.md`, `SKILL.md`, or
@@ -224,24 +265,13 @@ pub fn install_with_lockfile(
     items: &[String],
     plugin_scope: crate::plugin::PluginScope,
 ) -> Result<InstallReport> {
-    // Empty list means "install everything" (the historical default).
-    // Otherwise build a `ResolvedItems` filter with each name copied
-    // into all three buckets — the per-kind walks check by `(kind,
-    // name)` so unrelated kinds simply skip names that aren't theirs.
-    let resolved = if items.is_empty() {
-        None
+    let mut report = if items.is_empty() {
+        // No names → install everything (existing default).
+        install_from_source(source, target, None)?
     } else {
-        Some(crate::bundle::ResolvedItems {
-            rules: items.to_vec(),
-            skills: items.to_vec(),
-            agents: items.to_vec(),
-        })
+        // Names provided → try item-filter first, then bundle-by-name.
+        install_with_name_resolution(source, target, items)?
     };
-    let mut report = install_from_source(source, target, resolved.as_ref())?;
-
-    if !items.is_empty() && report.items.is_empty() {
-        anyhow::bail!("no matching items in source for: {}", items.join(", "));
-    }
 
     // -- Plugin installation (ADR-0008) --
     // After items are generated, iterate the resolved bundles' plugins
@@ -314,6 +344,97 @@ pub fn install_with_lockfile(
     crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
 
     Ok(report)
+}
+
+/// Resolve positional names against both items and bundles.
+///
+/// For each name:
+/// - If it matches items AND a bundle → error (ambiguity).
+/// - If it matches only a bundle → install via bundle dispatch.
+/// - If it matches only items → install via item filter.
+/// - If it matches neither → error.
+///
+/// When the list contains a mix (some names are bundles, some are items),
+/// all bundle installs run first, then item installs run with the
+/// remaining names as a filter.
+fn install_with_name_resolution(
+    source: &InstallSource,
+    target: &Path,
+    names: &[String],
+) -> Result<InstallReport> {
+    let (local_source, _tmp) = fetch_ssot(source)?;
+
+    let mut bundle_paths: Vec<PathBuf> = Vec::new();
+    let mut item_names: Vec<String> = Vec::new();
+
+    for name in names {
+        let has_items = has_matching_items(&local_source, name);
+        let bundle_path = find_bundle_by_name(&local_source, name);
+
+        match (has_items, bundle_path) {
+            (true, Some(bp)) => {
+                let rel = bp
+                    .strip_prefix(&local_source)
+                    .unwrap_or(&bp)
+                    .display()
+                    .to_string();
+                anyhow::bail!(
+                    "'{}' matches both an item and a bundle\n\n  \
+                     item:   {}/{}\n  \
+                     bundle: {}\n\n\
+                     Disambiguate by using the full path to the bundle:\n  \
+                     upskill add <source>:{}",
+                    name,
+                    name,
+                    detect_item_entrypoint(&local_source, name),
+                    rel,
+                    rel,
+                );
+            }
+            (false, Some(bp)) => bundle_paths.push(bp),
+            (true, None) => item_names.push(name.clone()),
+            (false, None) => {
+                anyhow::bail!("no matching items or bundles in source for: {}", name);
+            }
+        }
+    }
+
+    let mut report = InstallReport::default();
+
+    // Install bundles first.
+    for bp in &bundle_paths {
+        let bundle_report = install_bundle_file(bp, target)?;
+        report.items.extend(bundle_report.items);
+        report.bundles.extend(bundle_report.bundles);
+    }
+
+    // Install remaining items via the standard filter path.
+    if !item_names.is_empty() {
+        let filter = crate::bundle::ResolvedItems {
+            rules: item_names.clone(),
+            skills: item_names.clone(),
+            agents: item_names.clone(),
+        };
+        let item_report = install_from_local_path(&local_source, target, Some(&filter))?;
+        report.items.extend(item_report.items);
+    }
+
+    Ok(report)
+}
+
+/// Detect which entrypoint file (SKILL.md, RULE.md, AGENT.md) exists for
+/// an item, for use in error messages.
+fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str {
+    let dir = source.join(name);
+    if dir.join("SKILL.md").is_file() {
+        "SKILL.md"
+    } else if dir.join("RULE.md").is_file() {
+        "RULE.md"
+    } else if dir.join("AGENT.md").is_file() {
+        "AGENT.md"
+    } else {
+        "SKILL.md" // fallback for error message
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1611,5 +1732,85 @@ mod tests {
                 agent_output_path(client, "x")
             );
         }
+    }
+
+    #[test]
+    fn find_bundle_by_name_finds_nested_bundle_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bundles_dir = tmp.path().join("bundles");
+        std::fs::create_dir_all(&bundles_dir).unwrap();
+        std::fs::write(
+            bundles_dir.join("baseline.bundle.yaml"),
+            "schema: 1\nname: baseline\ndescription: test\nitems:\n  rules: []\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "baseline");
+        assert_eq!(result, Some(bundles_dir.join("baseline.bundle.yaml")));
+    }
+
+    #[test]
+    fn find_bundle_by_name_returns_none_when_not_found() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("skills/foo")).unwrap();
+        std::fs::write(
+            tmp.path().join("skills/foo/SKILL.md"),
+            "---\nschema: 1\nname: foo\n---\n# body\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "foo");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn find_bundle_by_name_skips_hidden_dirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hidden = tmp.path().join(".hidden");
+        std::fs::create_dir_all(&hidden).unwrap();
+        std::fs::write(
+            hidden.join("secret.bundle.yaml"),
+            "schema: 1\nname: secret\ndescription: x\nitems:\n  rules: []\n",
+        )
+        .unwrap();
+
+        let result = find_bundle_by_name(tmp.path(), "secret");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn has_matching_items_true_when_skill_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let skill_dir = tmp.path().join("code-review");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nschema: 1\nname: code-review\n---\n# body\n",
+        )
+        .unwrap();
+
+        assert!(has_matching_items(tmp.path(), "code-review"));
+    }
+
+    #[test]
+    fn has_matching_items_false_when_no_item_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("other")).unwrap();
+
+        assert!(!has_matching_items(tmp.path(), "nonexistent"));
+    }
+
+    #[test]
+    fn has_matching_items_true_for_rules_and_agents() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rule_dir = tmp.path().join("my-rule");
+        std::fs::create_dir_all(&rule_dir).unwrap();
+        std::fs::write(
+            rule_dir.join("RULE.md"),
+            "---\nschema: 1\nname: my-rule\n---\n# body\n",
+        )
+        .unwrap();
+
+        assert!(has_matching_items(tmp.path(), "my-rule"));
     }
 }

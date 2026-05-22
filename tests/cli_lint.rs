@@ -208,6 +208,39 @@ fn lint_refuses_to_run_inside_consumer_project() {
     );
 }
 
+#[test]
+fn lint_flags_bundle_item_name_collision() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+
+    // Create a skill named "baseline"
+    let skill_dir = root.join("baseline");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        "---\nschema: 1\nname: baseline\ndescription: a skill\n---\n# body\n",
+    )
+    .unwrap();
+
+    // Create a bundle also named "baseline"
+    let bundles_dir = root.join("bundles");
+    fs::create_dir_all(&bundles_dir).unwrap();
+    fs::write(
+        bundles_dir.join("baseline.bundle.yaml"),
+        "schema: 1\nname: baseline\ndescription: a bundle\nitems:\n  skills:\n    - baseline\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(root)
+        .args(["lint"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("name-collision"))
+        .stdout(predicates::str::contains("baseline"));
+}
+
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from)? {

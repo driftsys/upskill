@@ -391,3 +391,92 @@ fn plugin_results_carry_correct_metadata() {
     assert_eq!(vscode_result.identifier, "anthropic.superpowers");
     assert_eq!(vscode_result.bundle, "with-plugins");
 }
+
+// ---------------------------------------------------------------------------
+// Bundle-by-name discovery tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn install_by_name_discovers_bundle_when_no_item_matches() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    // "with-plugins" is a bundle name, not an item name.
+    let report = install_with_lockfile(
+        &InstallSource::LocalPath(registry.clone()),
+        &target,
+        &["with-plugins".into()],
+        PluginScope::Project,
+    )
+    .expect("install");
+
+    // Bundle dispatch should have fired — items from the bundle are installed.
+    assert!(
+        !report.items.is_empty(),
+        "expected bundle items to be installed"
+    );
+    assert!(
+        !report.bundles.is_empty(),
+        "expected bundle to appear in report"
+    );
+    assert_eq!(report.bundles[0].name, "with-plugins");
+}
+
+#[test]
+fn install_by_name_errors_on_ambiguity() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    // Create an item directory that collides with bundle name "with-plugins"
+    let collision_dir = registry.join("with-plugins");
+    fs::create_dir_all(&collision_dir).unwrap();
+    fs::write(
+        collision_dir.join("SKILL.md"),
+        "---\nschema: 1\nname: with-plugins\ndescription: collision\n---\n# body\n",
+    )
+    .unwrap();
+
+    let err = install_with_lockfile(
+        &InstallSource::LocalPath(registry.clone()),
+        &target,
+        &["with-plugins".into()],
+        PluginScope::Project,
+    )
+    .expect_err("should error on ambiguity");
+
+    let msg = format!("{:#}", err);
+    assert!(
+        msg.contains("matches both"),
+        "error mentions ambiguity: {msg}"
+    );
+}
+
+#[test]
+fn install_by_name_prefers_items_when_only_items_match() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let target = tmp.path().join("target");
+    stage_registry(&registry);
+    fs::create_dir_all(&target).unwrap();
+
+    // "license-awareness" is a rule item, not a bundle.
+    let report = install_with_lockfile(
+        &InstallSource::LocalPath(registry.clone()),
+        &target,
+        &["license-awareness".into()],
+        PluginScope::Project,
+    )
+    .expect("install");
+
+    assert!(!report.items.is_empty());
+    assert!(
+        report.bundles.is_empty(),
+        "no bundle dispatch for item-only match"
+    );
+}
