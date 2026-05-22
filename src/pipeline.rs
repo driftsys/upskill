@@ -172,10 +172,10 @@ fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
         if path.is_file() && name_str == target {
             return Some(path);
         }
-        if path.is_dir() {
-            if let Some(found) = find_bundle_recursive(&path, target) {
-                return Some(found);
-            }
+        if path.is_dir()
+            && let Some(found) = find_bundle_recursive(&path, target)
+        {
+            return Some(found);
         }
     }
     None

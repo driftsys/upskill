@@ -456,20 +456,20 @@ fn check_bundle_item_name_collisions(root: &Path, out: &mut Vec<Finding>) -> Res
     for bundle_path in bundle_files {
         let raw = fs::read_to_string(&bundle_path)
             .with_context(|| format!("read {}", bundle_path.display()))?;
-        if let Some(name) = extract_bundle_name(&raw) {
-            if item_names.contains(&name) {
-                let item_kind = detect_item_kind(root, &name);
-                out.push(Finding {
-                    rule_id: "name-collision",
-                    severity: Severity::Error,
-                    path: bundle_path,
-                    line: None,
-                    message: format!(
-                        "bundle name '{}' collides with {} '{}'",
-                        name, item_kind, name
-                    ),
-                });
-            }
+        if let Some(name) = extract_bundle_name(&raw)
+            && item_names.contains(&name)
+        {
+            let item_kind = detect_item_kind(root, &name);
+            out.push(Finding {
+                rule_id: "name-collision",
+                severity: Severity::Error,
+                path: bundle_path,
+                line: None,
+                message: format!(
+                    "bundle name '{}' collides with {} '{}'",
+                    name, item_kind, name
+                ),
+            });
         }
     }
 
