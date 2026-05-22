@@ -17,6 +17,7 @@ items:
   - writing-subagents         # authoring: bounded sub-task delegation
   - evaluating-prompts        # eval: RED-GREEN-REFACTOR
   - using-upskill             # ops: add / update / audit
+  - writing-skill-bundles     # authoring: .bundle.yaml manifests + plugins
 
 # Free-form metadata. `version` should be quoted in strict registries
 # to avoid YAML float coercion, but bare floats round-trip here too.

@@ -25,6 +25,8 @@ skills/
 │   └── SKILL.md
 ├── evaluating-prompts/                  RED-GREEN-REFACTOR cycle + scenario batteries
 │   └── SKILL.md
+├── writing-skill-bundles/               .bundle.yaml authoring + plugin declarations
+│   └── SKILL.md
 └── using-upskill/                       lifecycle operations
     └── SKILL.md
 ```
