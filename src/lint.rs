@@ -168,6 +168,10 @@ impl FileKind {
 /// the lint should inspect. SSOT items are detected by the
 /// `<root>/<name>/<KIND>.md` layout per format-spec §2.1; bundles by
 /// the `*.bundle.yaml` suffix. Shared with `crate::fmt`.
+///
+/// When `root` is itself an item directory (directly contains
+/// `RULE.md`/`SKILL.md`/`AGENT.md`), those files are collected
+/// directly — fixing the silent false-pass described in issue #159.
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if root.is_file() {
@@ -186,9 +190,28 @@ pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
         ));
     }
 
+    // Check if `root` itself is an item directory (contains entrypoint
+    // files directly). This handles `upskill lint skills/my-rule/`.
+    discover_self_entrypoints(root, &mut out);
+
+    // If root is an item directory we already collected its entrypoints
+    // above; still walk subdirectories so a mixed layout works (e.g. a
+    // registry root that also happens to contain a bundle).
     discover_items(root, &mut out)?;
     walk_bundles(root, &mut out)?;
     Ok(out)
+}
+
+/// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`) that
+/// exist directly inside `dir`. This handles the case where `dir` is
+/// itself an item directory rather than a registry root.
+fn discover_self_entrypoints(dir: &Path, out: &mut Vec<PathBuf>) {
+    for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
+        let path = dir.join(entrypoint);
+        if path.is_file() {
+            out.push(path);
+        }
+    }
 }
 
 /// Walk one level deep under `root`, collecting every `RULE.md`,
@@ -630,6 +653,72 @@ mod tests {
             f.is_some(),
             "missing directive finding: {:?}",
             report.findings
+        );
+    }
+
+    #[test]
+    fn lint_item_directory_discovers_entrypoint() {
+        // Issue #159: pointing lint at a single item directory
+        // (e.g., `skills/karpathy-guidelines/`) should discover the
+        // entrypoint file inside it, not report "0 file(s) checked".
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            &tmp.path().join("my-rule/RULE.md"),
+            &format!(
+                "---\nschema: 1\nname: my-rule\ndescription: a test rule.\n---\n\n## Body\n\nText.\n"
+            ),
+        );
+        // Lint the item directory directly (not the parent registry root).
+        let item_dir = tmp.path().join("my-rule");
+        let report = lint(&[item_dir], false).unwrap();
+        assert_eq!(
+            report.files_checked, 1,
+            "expected 1 file checked when pointing at an item directory; got {}",
+            report.files_checked
+        );
+    }
+
+    #[test]
+    fn lint_item_directory_reports_findings() {
+        // Issue #159: lint should actually validate the content when
+        // given an item directory, not silently pass.
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            &tmp.path().join("bad-rule/RULE.md"),
+            &format!(
+                "---\nschema: 1\nname: bad-rule\ndescription: has lint issues.\n---\n\n# Forbidden H1\n"
+            ),
+        );
+        let item_dir = tmp.path().join("bad-rule");
+        let report = lint(&[item_dir], false).unwrap();
+        assert_eq!(report.files_checked, 1);
+        let f = report.findings.iter().find(|f| f.rule_id == "body-h1");
+        assert!(
+            f.is_some(),
+            "expected body-h1 finding when linting an item directory; got: {:?}",
+            report.findings
+        );
+    }
+
+    #[test]
+    fn lint_item_directory_with_multiple_entrypoints() {
+        // Format-spec §2.1: an item directory may hold multiple
+        // co-located entrypoints. All should be discovered.
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            &tmp.path().join("multi/SKILL.md"),
+            &skill("multi", "\n## ok\n"),
+        );
+        write(
+            &tmp.path().join("multi/AGENT.md"),
+            &format!("---\nschema: 1\nname: multi\ndescription: co-located agent.\n---\n\n## ok\n"),
+        );
+        let item_dir = tmp.path().join("multi");
+        let report = lint(&[item_dir], false).unwrap();
+        assert_eq!(
+            report.files_checked, 2,
+            "expected 2 files checked for co-located item directory; got {}",
+            report.files_checked
         );
     }
 
