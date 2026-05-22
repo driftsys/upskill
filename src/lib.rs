@@ -19,6 +19,7 @@ pub mod lockfile;
 pub mod model;
 pub mod parse;
 pub mod pipeline;
+pub mod plugin;
 pub mod scaffold;
 pub mod search;
 pub mod source;
