@@ -8,7 +8,13 @@ use crate::source::GithubRepo;
 /// cleaning up the returned directory.
 pub fn clone_github_repo(repo: &GithubRepo, dest: &Path) -> Result<PathBuf, String> {
     let url = format!("https://github.com/{}/{}.git", repo.owner, repo.name);
-    shallow_clone(&url, repo.git_ref.as_deref(), &repo.name, dest)?;
+    shallow_clone(
+        &url,
+        repo.git_ref.as_deref(),
+        &repo.name,
+        dest,
+        repo.subfolder.as_deref(),
+    )?;
     let clone_dir = dest.join(&repo.name);
     resolve_subfolder(
         &clone_dir,
@@ -22,17 +28,37 @@ pub fn clone_github_repo(repo: &GithubRepo, dest: &Path) -> Result<PathBuf, Stri
 /// so the v0.2 pipeline can clone from arbitrary URL forms (`file://`,
 /// GitLab self-hosted, etc.) without going through the GitHub-specific
 /// `clone_github_repo` constructor.
+///
+/// When `subfolder` is `Some`, uses partial clone (`--filter=blob:none
+/// --sparse`) followed by `git sparse-checkout set <subfolder>` to fetch
+/// only the target path. This avoids downloading blobs for the entire repo
+/// when only a single skill or bundle is needed. Falls back to a regular
+/// shallow clone if the sparse checkout step fails (e.g. older git
+/// versions that don't support `sparse-checkout set`).
 pub(crate) fn shallow_clone(
     url: &str,
     git_ref: Option<&str>,
     dir_name: &str,
     dest: &Path,
+    subfolder: Option<&str>,
 ) -> Result<(), String> {
     let clone_dir = dest.join(dir_name);
     let clone_str = clone_dir
         .to_str()
         .ok_or_else(|| "clone path is not valid UTF-8".to_string())?;
 
+    if let Some(sub) = subfolder {
+        // Try sparse clone: only fetch tree metadata, then check out the
+        // target subfolder. This is significantly faster for large repos.
+        if try_sparse_clone(url, git_ref, clone_str, sub).is_ok() {
+            return Ok(());
+        }
+        // Sparse checkout not supported — fall through to regular clone.
+        // Remove any partial clone directory before retrying.
+        let _ = std::fs::remove_dir_all(&clone_dir);
+    }
+
+    // Regular shallow clone — fetches all blobs at depth 1.
     let mut args: Vec<&str> = vec!["clone", "--depth", "1"];
     if let Some(r) = git_ref {
         args.push("--branch");
@@ -53,6 +79,54 @@ pub(crate) fn shallow_clone(
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!("git clone failed: {}", stderr.trim()));
     }
+    Ok(())
+}
+
+/// Attempt a sparse clone: `--depth 1 --filter=blob:none --sparse` followed
+/// by `git sparse-checkout set <subfolder>`. Returns `Ok(())` on success or
+/// an error if any step fails (caller should fall back to regular clone).
+fn try_sparse_clone(
+    url: &str,
+    git_ref: Option<&str>,
+    clone_str: &str,
+    subfolder: &str,
+) -> Result<(), String> {
+    let mut args: Vec<&str> = vec!["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
+    if let Some(r) = git_ref {
+        args.push("--branch");
+        args.push(r);
+    }
+    args.push(url);
+    args.push(clone_str);
+
+    let output = Command::new("git")
+        .args(&args)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .map_err(|err| format!("failed to run git clone --sparse: {}", err))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git clone --sparse failed: {}", stderr.trim()));
+    }
+
+    // Set the sparse-checkout cone to the target subfolder.
+    let output = Command::new("git")
+        .args(["sparse-checkout", "set", subfolder])
+        .current_dir(clone_str)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .map_err(|err| format!("failed to run git sparse-checkout set: {}", err))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git sparse-checkout set failed: {}", stderr.trim()));
+    }
+
     Ok(())
 }
 
@@ -194,7 +268,7 @@ mod tests {
         fs::create_dir_all(&dest).unwrap();
 
         let url = format!("file://{}", bare.display());
-        shallow_clone(&url, None, "cloned", &dest).expect("clone must succeed");
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone must succeed");
 
         assert!(dest.join("cloned/my-skill/SKILL.md").exists());
     }
@@ -207,7 +281,7 @@ mod tests {
         fs::create_dir_all(&dest).unwrap();
 
         let url = format!("file://{}", bare.display());
-        shallow_clone(&url, None, "cloned", &dest).expect("clone");
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone");
 
         let sub = resolve_subfolder(&dest.join("cloned"), Some("catalog/lint"), "test", "repo")
             .expect("subfolder must resolve");
@@ -223,7 +297,7 @@ mod tests {
         fs::create_dir_all(&dest).unwrap();
 
         let url = format!("file://{}", bare.display());
-        shallow_clone(&url, None, "cloned", &dest).expect("clone");
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone");
 
         let err = resolve_subfolder(&dest.join("cloned"), Some("nonexistent"), "test", "repo")
             .expect_err("must fail");
@@ -263,6 +337,55 @@ mod tests {
             fs::read_to_string(dest.join("a/b/c/file.txt")).unwrap(),
             "content"
         );
+    }
+
+    #[test]
+    fn sparse_clone_fetches_only_subfolder() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        // Clone with subfolder hint — only "catalog/lint" should be checked out
+        shallow_clone(&url, None, "cloned", &dest, Some("catalog/lint"))
+            .expect("sparse clone must succeed");
+
+        // The subfolder content must exist
+        assert!(dest.join("cloned/catalog/lint/SKILL.md").exists());
+        // Content outside the sparse cone must NOT be checked out
+        assert!(!dest.join("cloned/my-skill/SKILL.md").exists());
+    }
+
+    #[test]
+    fn sparse_clone_with_git_ref() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        // Sparse clone pinned to a branch (the default branch pushed by make_test_repo)
+        shallow_clone(&url, Some("main"), "cloned", &dest, Some("catalog/lint"))
+            .expect("sparse clone with ref must succeed");
+
+        assert!(dest.join("cloned/catalog/lint/SKILL.md").exists());
+        assert!(!dest.join("cloned/my-skill/SKILL.md").exists());
+    }
+
+    #[test]
+    fn shallow_clone_without_subfolder_fetches_everything() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        // Clone without subfolder — should get everything (backward compat)
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone must succeed");
+
+        assert!(dest.join("cloned/my-skill/SKILL.md").exists());
+        assert!(dest.join("cloned/catalog/lint/SKILL.md").exists());
     }
 
     #[test]
