@@ -1,5 +1,8 @@
 # upskill
 
+[![CI](https://github.com/driftsys/upskill/actions/workflows/ci.yml/badge.svg)](https://github.com/driftsys/upskill/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/upskill)](https://crates.io/crates/upskill)
+[![GitHub tag](https://img.shields.io/github/v/tag/driftsys/upskill?sort=semver)](https://github.com/driftsys/upskill/releases)
 [![docs](https://img.shields.io/badge/docs-driftsys.github.io/upskill-blue)](https://driftsys.github.io/upskill/)
 
 > Upskill your coding agents.
