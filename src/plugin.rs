@@ -302,12 +302,14 @@ fn spawn_command(program: &str, args: &[&str]) -> std::io::Result<std::process::
     }
 }
 
-/// On Windows, `cmd /c nonexistent` exits with code 9009 ("not recognized").
-/// This detects that specific pattern as "command not found".
+/// On Windows, `cmd /c nonexistent` prints "is not recognized" to stderr.
+/// The exit code varies by Windows version (1 or 9009), so we detect
+/// the stderr message instead.
 fn is_command_not_found(output: &std::process::Output) -> bool {
     #[cfg(windows)]
     {
-        output.status.code() == Some(9009)
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        stderr.contains("is not recognized")
     }
     #[cfg(not(windows))]
     {
