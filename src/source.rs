@@ -280,6 +280,10 @@ pub(crate) fn parse_github_repo(source: &str) -> Result<GithubRepo, SourceParseE
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// Serialise tests that mutate HOME / USERPROFILE env vars.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn parse_valid_owner_repo() {
@@ -357,11 +361,7 @@ mod tests {
 
     #[test]
     fn parse_local_path_tilde_expands_home() {
-        // SAFETY: tests are not parallel for env mutation here because
-        // the helper acquires a process-wide mutex via a static. We
-        // accept the small risk of cross-test interference for this
-        // narrow case — `parse_install_source` only reads HOME, no other
-        // test in this module touches it.
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev = std::env::var_os("HOME");
         unsafe { std::env::set_var("HOME", "/users/alice") };
         let result = parse_install_source("~/skills/code-review");
@@ -378,6 +378,7 @@ mod tests {
 
     #[test]
     fn parse_local_path_tilde_alone_expands_to_home() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev = std::env::var_os("HOME");
         unsafe { std::env::set_var("HOME", "/users/alice") };
         let result = parse_install_source("~");
@@ -632,6 +633,7 @@ mod tests {
 
     #[test]
     fn home_dir_reads_home_var() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev_home = std::env::var_os("HOME");
         let prev_up = std::env::var_os("USERPROFILE");
         unsafe {
@@ -654,6 +656,7 @@ mod tests {
 
     #[test]
     fn home_dir_falls_back_to_userprofile() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev_home = std::env::var_os("HOME");
         let prev_up = std::env::var_os("USERPROFILE");
         unsafe {
@@ -676,6 +679,7 @@ mod tests {
 
     #[test]
     fn home_dir_prefers_home_over_userprofile() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev_home = std::env::var_os("HOME");
         let prev_up = std::env::var_os("USERPROFILE");
         unsafe {
@@ -698,6 +702,7 @@ mod tests {
 
     #[test]
     fn home_dir_returns_none_when_neither_set() {
+        let _lock = ENV_LOCK.lock().unwrap();
         let prev_home = std::env::var_os("HOME");
         let prev_up = std::env::var_os("USERPROFILE");
         unsafe {
