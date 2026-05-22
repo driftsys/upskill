@@ -433,6 +433,12 @@ items:
 
 requires: []
 
+plugins:
+  superpowers:
+    claude:
+      source: anthropics/claude-plugins
+      plugin: superpowers
+
 metadata:
   version: "1.2.0"
   author: platform-dx
@@ -452,6 +458,7 @@ documentation; the parser ignores it (§2.2).
 | `items.skills` | string[] | no       | Skill names.                         |
 | `items.agents` | string[] | no       | Agent names.                         |
 | `requires`     | array    | no       | Bundle dependencies. See below.      |
+| `plugins`      | map      | no       | Client-native plugins. See below.    |
 | `metadata`     | map      | no       | Same as §3.6.                        |
 
 `requires` entries are maps. Each entry references another bundle by `name`, optionally pinned
@@ -475,6 +482,80 @@ Implementations:
   bundles. Item-level conflicts (the same item name resolving to different sources or versions)
   MUST be reported as errors.
 - MUST reject circular `requires` chains as errors.
+
+#### `plugins` map
+
+The optional `plugins` map declares client-native plugins that accompany this bundle. Unlike
+rules, skills, and agents (which are SSOT content rendered per-client by the generation
+pipeline), plugins are installed via each client's native CLI. See
+[ADR-0008](adr/0008-plugin-install-shellout.md) for design rationale.
+
+Each entry in the `plugins` map is keyed by an upskill-level plugin name (used in the lockfile,
+CLI output, and `upskill remove`). The value is a map of per-client install descriptors:
+
+```yaml
+plugins:
+  superpowers:
+    claude:
+      source: anthropics/claude-plugins
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
+    vscode:
+      extension: anthropic.superpowers
+      install_url: https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers
+    opencode:
+      module: superpowers-opencode
+      install_url: https://opencode.ai/plugins/superpowers
+```
+
+**Per-client descriptor fields:**
+
+| Client     | Field         | Type   | Required | Description                                                     |
+| ---------- | ------------- | ------ | -------- | --------------------------------------------------------------- |
+| `claude`   | `source`      | string | YES      | Marketplace source (passed to `claude plugin marketplace add`). |
+| `claude`   | `plugin`      | string | YES      | Plugin identifier (passed to `claude plugin install`).          |
+| `claude`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
+| `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).            |
+| `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
+| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                      |
+| `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.              |
+
+A plugin entry MAY declare any subset of client blocks. A plugin that only exists for Claude
+Code carries only a `claude:` block; clients without a matching block skip installation
+silently.
+
+**Install behavior:**
+
+| Client   | CLI commands                                                                                             |
+| -------- | -------------------------------------------------------------------------------------------------------- |
+| claude   | `claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<source> --scope <scope>` |
+| vscode   | `code --install-extension <extension>`                                                                   |
+| opencode | `opencode plugin <module>`                                                                               |
+
+Claude's `--scope` derives from upskill's project/global context:
+
+| upskill scope | `claude --scope` |
+| ------------- | ---------------- |
+| project       | `project`        |
+| global        | `user`           |
+
+**CLI-missing policy (warn-skip):** If the target client's CLI is not on PATH, the
+implementation MUST print a warning and continue installing the rest of the bundle. If
+`install_url` is present, it MUST be included in the warning message. The rules, skills, and
+agents portion of the bundle MUST install regardless of plugin installation success.
+
+**Lockfile recording:** Each successfully installed plugin MUST be recorded in the lockfile
+with its client, identifier, and scope so that `remove`, `update`, and `doctor` can invoke the
+inverse CLI command.
+
+Implementations:
+
+- MUST shell out to the native client CLI for plugin installation — MUST NOT manipulate client
+  config files directly.
+- MUST treat plugin install as idempotent (re-running on an already-installed plugin is a
+  no-op).
+- MUST use warn-skip when the target client CLI is not found (`ErrorKind::NotFound`).
+- MUST NOT fail the entire bundle install when a single plugin install fails or is skipped.
 
 ---
 
