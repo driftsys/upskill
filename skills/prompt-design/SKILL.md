@@ -1,6 +1,6 @@
 ---
 schema: 1
-name: prompt-engineering
+name: prompt-design
 description: Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to prompt-distilling, writing-rules, writing-skills, writing-subagents, or using-upskill.
 metadata:
   version: 0.1.0

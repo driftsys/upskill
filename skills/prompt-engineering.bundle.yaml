@@ -11,7 +11,7 @@ license: MIT
 # registry the bundle lives in.
 items:
   skills:
-  - prompt-engineering        # umbrella entry point
+  - prompt-design             # umbrella entry point
   - prompt-distilling         # placement: intent → layer
   - writing-rules             # authoring: always-loaded invariants
   - writing-subagents         # authoring: bounded sub-task delegation

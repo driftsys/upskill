@@ -15,7 +15,7 @@ skills/
 ├── README.md                            (this file)
 ├── NOTICE                               attribution for vendored methodology
 ├── prompt-engineering.bundle.yaml       one-shot install of the discipline
-├── prompt-engineering/                  umbrella / orientation
+├── prompt-design/                      umbrella / orientation
 │   └── SKILL.md
 ├── prompt-distilling/                   decompose authoring intent + place across layers
 │   └── SKILL.md
@@ -91,7 +91,7 @@ To install one item without the rest of the bundle, point at the
 registry directory and pass the item name as a filter:
 
 ```bash
-upskill add ./skills prompt-engineering   # just the umbrella skill
+upskill add ./skills prompt-design   # just the umbrella skill
 ```
 
 See `using-upskill/SKILL.md` for the full lifecycle.

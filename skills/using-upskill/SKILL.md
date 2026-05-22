@@ -226,7 +226,7 @@ this skill does not assume one exists.
 
 | Situation                                              | Hand off to                                              |
 | ------------------------------------------------------ | -------------------------------------------------------- |
-| Newcomer to the framework needing orientation          | `prompt-engineering`                                     |
+| Newcomer to the framework needing orientation          | `prompt-design`                                          |
 | Deciding where new content belongs                     | `prompt-distilling`                                      |
 | Authoring a new rule                                   | `writing-rules`                                          |
 | Authoring a new skill                                  | `superpowers:writing-skills`                             |
