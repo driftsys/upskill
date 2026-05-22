@@ -173,7 +173,8 @@ pub fn uninstall_copilot_plugin(plugin: &str, source: &str) -> PluginOutcome {
 /// `ErrorKind::NotFound`. Does not validate the command succeeds — only
 /// that the binary can be spawned.
 pub fn is_cli_available(cli: &str) -> bool {
-    match Command::new(cli).arg("--version").output() {
+    match spawn_command(cli, &["--version"]) {
+        Ok(out) if is_command_not_found(&out) => false,
         Ok(_) => true,
         Err(e) if e.kind() == ErrorKind::NotFound => false,
         // Other errors (e.g., permission denied) — the binary exists but
@@ -268,10 +269,12 @@ enum CommandOutput {
 }
 
 fn run_command_output(program: &str, args: &[&str]) -> CommandOutput {
-    match Command::new(program).args(args).output() {
+    let result = spawn_command(program, args);
+    match result {
         Ok(out) if out.status.success() => CommandOutput::Success {
             stdout: String::from_utf8_lossy(&out.stdout).to_string(),
         },
+        Ok(out) if is_command_not_found(&out) => CommandOutput::CliNotFound,
         Ok(out) => CommandOutput::Failed {
             exit_code: out.status.code(),
             stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
@@ -281,6 +284,35 @@ fn run_command_output(program: &str, args: &[&str]) -> CommandOutput {
             exit_code: None,
             stderr: format!("failed to spawn {program}: {e}"),
         },
+    }
+}
+
+/// Spawn a command, using `cmd /c` on Windows so that PATHEXT resolution
+/// finds `.cmd` and `.bat` wrappers (e.g. `code.cmd` for VS Code).
+fn spawn_command(program: &str, args: &[&str]) -> std::io::Result<std::process::Output> {
+    #[cfg(windows)]
+    {
+        let mut cmd_args = vec!["/c", program];
+        cmd_args.extend(args);
+        Command::new("cmd").args(&cmd_args).output()
+    }
+    #[cfg(not(windows))]
+    {
+        Command::new(program).args(args).output()
+    }
+}
+
+/// On Windows, `cmd /c nonexistent` exits with code 9009 ("not recognized").
+/// This detects that specific pattern as "command not found".
+fn is_command_not_found(output: &std::process::Output) -> bool {
+    #[cfg(windows)]
+    {
+        output.status.code() == Some(9009)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = output;
+        false
     }
 }
 
@@ -325,7 +357,10 @@ fn check_output_for_exact_line(output: CommandOutput, needle: &str) -> PluginChe
 
 /// Execute a CLI command and map the result to a `PluginOutcome`.
 fn run_command(program: &str, args: &[&str]) -> PluginOutcome {
-    let output = match Command::new(program).args(args).output() {
+    let output = match spawn_command(program, args) {
+        Ok(output) if is_command_not_found(&output) => {
+            return PluginOutcome::CliNotFound;
+        }
         Ok(output) => output,
         Err(e) if e.kind() == ErrorKind::NotFound => {
             return PluginOutcome::CliNotFound;

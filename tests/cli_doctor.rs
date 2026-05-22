@@ -358,23 +358,48 @@ fn write_lockfile_with_installed_plugin(
 }
 
 /// Create a fake CLI binary in `bin_dir` that prints `output` to stdout.
-/// Returns the script path (the caller must keep `bin_dir` alive).
+/// Cross-platform: writes a `#!/bin/sh` heredoc script on Unix and a
+/// `.bat` file on Windows (so `Command::new(name)` resolves it via PATHEXT).
 fn write_fake_cli(bin_dir: &Path, name: &str, output: &str) {
-    let script = bin_dir.join(name);
-    // Use a heredoc so literal newlines inside `output` are preserved exactly.
-    // `printf '%s\n' {output:?}` would debug-escape `\n` to a backslash-n pair.
-    fs::write(
-        &script,
-        format!("#!/bin/sh\ncat <<'UPSKILLEOF'\n{output}\nUPSKILLEOF\n"),
-    )
-    .unwrap();
     #[cfg(unix)]
     {
+        let script = bin_dir.join(name);
+        // Use a heredoc so literal newlines inside `output` are preserved exactly.
+        // `printf '%s\n' {output:?}` would debug-escape `\n` to a backslash-n pair.
+        fs::write(
+            &script,
+            format!("#!/bin/sh\ncat <<'UPSKILLEOF'\n{output}\nUPSKILLEOF\n"),
+        )
+        .unwrap();
         use std::os::unix::fs::PermissionsExt;
         let mut perms = fs::metadata(&script).unwrap().permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&script, perms).unwrap();
     }
+    #[cfg(windows)]
+    {
+        // Windows: write a .bat file — Command::new("code") resolves code.bat via PATHEXT.
+        let script = bin_dir.join(format!("{name}.bat"));
+        let mut content = String::from("@echo off\r\n");
+        for line in output.lines() {
+            // `echo.` is the batch idiom for a blank line; otherwise `echo <text>`.
+            if line.is_empty() {
+                content.push_str("echo.\r\n");
+            } else {
+                content.push_str(&format!("echo {line}\r\n"));
+            }
+        }
+        fs::write(&script, content).unwrap();
+    }
+}
+
+/// Prepend `dir` to the current PATH using the platform-correct separator.
+fn prepend_to_path(dir: &Path) -> std::ffi::OsString {
+    let mut entries = vec![dir.to_owned()];
+    if let Some(val) = std::env::var_os("PATH") {
+        entries.extend(std::env::split_paths(&val));
+    }
+    std::env::join_paths(entries).expect("join paths")
 }
 
 #[test]
@@ -419,12 +444,9 @@ fn doctor_installed_plugin_missing_from_client_exits_one() {
     // Fake `code` that lists no extensions (empty stdout).
     write_fake_cli(bin_dir.path(), "code", "");
 
-    let original_path = std::env::var("PATH").unwrap_or_default();
-    let patched = format!("{}:{}", bin_dir.path().display(), original_path);
-
     let assert = Command::cargo_bin("upskill")
         .unwrap()
-        .env("PATH", &patched)
+        .env("PATH", prepend_to_path(bin_dir.path()))
         .current_dir(tmp.path())
         .args(["doctor"])
         .assert()
@@ -461,12 +483,9 @@ fn doctor_installed_plugin_present_in_client_exits_zero() {
         "anthropic.superpowers\nms-python.python",
     );
 
-    let original_path = std::env::var("PATH").unwrap_or_default();
-    let patched = format!("{}:{}", bin_dir.path().display(), original_path);
-
     Command::cargo_bin("upskill")
         .unwrap()
-        .env("PATH", &patched)
+        .env("PATH", prepend_to_path(bin_dir.path()))
         .current_dir(tmp.path())
         .args(["doctor"])
         .assert()
