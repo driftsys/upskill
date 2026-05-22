@@ -556,6 +556,9 @@ agents portion of the bundle MUST install regardless of plugin installation succ
 with its client, identifier, and scope so that `remove`, `update`, and `doctor` can invoke the
 inverse CLI command.
 
+> **Note:** A future revision will extend lockfile recording to include warn-skipped plugins
+> (with `status: "skipped"`) so that `doctor` can surface them. See issue #151.
+
 Implementations:
 
 - MUST shell out to the native client CLI for plugin installation — MUST NOT manipulate client
