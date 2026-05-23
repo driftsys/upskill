@@ -481,7 +481,7 @@ fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str {
 fn install_plugins_from_bundles(
     bundles: &[crate::model::Bundle],
     scope: crate::plugin::PluginScope,
-    _target: &Path,
+    target: &Path,
 ) -> Vec<PluginResult> {
     use crate::model::bundle::{
         ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
@@ -603,15 +603,16 @@ fn install_plugins_from_bundles(
                         });
                     }
                     OpencodePluginDescriptor::ConfigWrite {
-                        plugin_uri: _,
+                        plugin_uri,
                         install_url,
                     } => {
-                        // Placeholder: actual config-write will be wired up later.
+                        let outcome =
+                            crate::ancillary::write_opencode_plugin_uri(target, plugin_uri);
                         results.push(PluginResult {
                             name: plugin_name.clone(),
                             client: "opencode".into(),
-                            outcome: crate::plugin::PluginOutcome::Success,
-                            identifier: String::new(),
+                            outcome,
+                            identifier: plugin_uri.clone(),
                             bundle: bundle.name.clone(),
                             install_url: install_url.clone(),
                             instructions_url: None,
