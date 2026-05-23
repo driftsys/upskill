@@ -33,13 +33,13 @@ File must be named `<name>.bundle.yaml` (pure YAML, no Markdown
 frontmatter).
 
 ```yaml
-schema: 1                          # required — always 1
-name: my-bundle                    # required — must match filename stem
-description: >-                    # required — human-readable purpose
+schema: 1 # required — always 1
+name: my-bundle # required — must match filename stem
+description: >- # required — human-readable purpose
   One-line description of what this bundle provides.
-license: MIT                       # optional — SPDX identifier or "proprietary"
+license: MIT # optional — SPDX identifier or "proprietary"
 
-items:                             # required — may be empty {} for meta-bundles
+items: # required — may be empty {} for meta-bundles
   skills:
     - skill-one
     - skill-two
@@ -48,11 +48,11 @@ items:                             # required — may be empty {} for meta-bundl
   agents:
     - agent-one
 
-requires:                          # optional — dependencies on other bundles
+requires: # optional — dependencies on other bundles
   - name: other-bundle
-    version: ">=0.2.0"             # opaque, not enforced yet (future C2)
+    version: ">=0.2.0" # opaque, not enforced yet (future C2)
 
-plugins:                           # optional — client-native plugin deps
+plugins: # optional — client-native plugin deps
   superpowers:
     claude:
       source: claude-plugins-official
@@ -66,7 +66,7 @@ plugins:                           # optional — client-native plugin deps
       module: superpowers
       install_url: https://github.com/obra/superpowers
 
-metadata:                          # optional — freeform
+metadata: # optional — freeform
   version: 0.1.0
   author: your-org
 ```
@@ -97,9 +97,9 @@ reconciles after install.
 plugins:
   plugin-name:
     claude:
-      source: <marketplace-source>   # required
-      plugin: <plugin-id>            # required
-      install_url: <url>             # optional — shown when CLI missing
+      source: <marketplace-source> # required
+      plugin: <plugin-id> # required
+      install_url: <url> # optional — shown when CLI missing
 ```
 
 **Copilot CLI:**
@@ -108,9 +108,9 @@ plugins:
 plugins:
   plugin-name:
     copilot:
-      source: <marketplace-source>   # required
-      plugin: <plugin-id>            # required
-      install_url: <url>             # optional
+      source: <marketplace-source> # required
+      plugin: <plugin-id> # required
+      install_url: <url> # optional
 ```
 
 **VS Code:**
@@ -119,8 +119,8 @@ plugins:
 plugins:
   plugin-name:
     vscode:
-      extension: <extension-id>      # required — e.g. publisher.name
-      install_url: <url>             # optional
+      extension: <extension-id> # required — e.g. publisher.name
+      install_url: <url> # optional
 ```
 
 **opencode:**
@@ -129,8 +129,8 @@ plugins:
 plugins:
   plugin-name:
     opencode:
-      module: <module-name>          # required
-      install_url: <url>             # optional
+      module: <module-name> # required
+      install_url: <url> # optional
 ```
 
 A plugin entry MAY target one client, a subset, or all four.
@@ -163,7 +163,7 @@ Bundles can depend on other bundles in the same registry:
 requires:
   - name: base-bundle
   - name: other-bundle
-    version: ">=1.0.0"    # stored but not enforced yet
+    version: ">=1.0.0" # stored but not enforced yet
 ```
 
 **Resolution rules:**

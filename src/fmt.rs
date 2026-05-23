@@ -1,32 +1,93 @@
-//! `upskill fmt` — canonicalise YAML frontmatter in SSOT files.
+//! `upskill fmt` — canonicalise YAML key order in SSOT files.
 //!
 //! Per [ADR-0004](../../docs/adr/0004-cli-surface.md), `fmt` and `lint`
-//! are sibling author commands. `fmt` operates on YAML frontmatter
-//! only; markdown body content is dprint's job and is preserved
+//! are sibling author commands. `fmt` operates on YAML frontmatter and
+//! bundle files; markdown body content is dprint's job and is preserved
 //! byte-for-byte. Like `lint`, this command refuses to run inside a
 //! consumer project (`.upskill-lock.json` at the path's root).
 //!
 //! What gets canonicalised:
 //!
-//! - Key order — fixed by the [`crate::model`] struct field order
-//!   (`schema → name → description → audience → license → metadata →
-//!   kind-specific → passthroughs → extras`).
-//! - Indentation — `serde_yaml_ng`'s default emit (two-space).
-//! - Unknown top-level keys (the `extra` flatten map) come out
-//!   alphabetically — predictable, even if not the author's order.
+//! - **Key order** — fixed by priority tables derived from the
+//!   [`crate::model`] struct field order.
+//! - Unknown top-level keys (extras) sort alphabetically after all
+//!   known keys.
 //!
-//! Implementation: parse the frontmatter into the typed model, then
-//! serialise it back with `serde_yaml_ng::to_string`. The body slice
-//! is reattached unchanged.
+//! What is **preserved**:
+//!
+//! - YAML comments (both standalone and inline)
+//! - Author formatting (indentation, line wrapping)
+//! - Nested/indented content (travels with its parent key block)
+//!
+//! Implementation: line-level block reordering. The YAML is split into
+//! top-level key blocks (each key + preceding comments + indented
+//! children), reordered by canonical priority, and reassembled. Serde
+//! is used only for **validation** (parse the result, don't serialize).
 
 use anyhow::{Context, Result, anyhow};
-use serde::{Serialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::lint::{discover, is_consumer_project};
 use crate::model::{Agent, Bundle, Rule, Skill};
 use crate::parse::frontmatter;
+
+// ── Canonical key-order tables (mirror struct field declarations) ────
+
+const BUNDLE_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "license",
+    "items",
+    "requires",
+    "plugins",
+    "metadata",
+];
+
+const SKILL_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "audience",
+    "license",
+    "metadata",
+    "claude",
+    "copilot",
+    "opencode",
+];
+
+const RULE_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "audience",
+    "license",
+    "scope",
+    "metadata",
+    "claude",
+    "copilot",
+    "opencode",
+];
+
+const AGENT_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "audience",
+    "license",
+    "mode",
+    "model",
+    "tools",
+    "preload-skills",
+    "metadata",
+    "claude",
+    "copilot",
+    "opencode",
+];
+
+// ── Public API ──────────────────────────────────────────────────────
 
 /// Outcome of one `upskill fmt` run.
 #[derive(Debug, Default, Clone)]
@@ -38,12 +99,13 @@ pub struct FmtReport {
     pub files_checked: usize,
 }
 
-/// Canonicalise YAML frontmatter in every SSOT entrypoint discovered
+/// Canonicalise YAML key order in every SSOT entrypoint discovered
 /// under `paths`. With an empty `paths` slice, defaults to the current
 /// working directory.
 ///
-/// Files whose frontmatter was already canonical are left untouched
+/// Files whose content was already canonical are left untouched
 /// (no `mtime` thrash). Body content is preserved byte-for-byte.
+/// Comments and author formatting are preserved.
 pub fn fmt(paths: &[PathBuf]) -> Result<FmtReport> {
     let owned_cwd: Vec<PathBuf>;
     let roots: &[PathBuf] = if paths.is_empty() {
@@ -75,6 +137,8 @@ pub fn fmt(paths: &[PathBuf]) -> Result<FmtReport> {
     Ok(report)
 }
 
+// ── Internal ────────────────────────────────────────────────────────
+
 /// Format one entrypoint file in place. Returns `true` if the file
 /// changed on disk.
 fn format_file(path: &Path) -> Result<bool> {
@@ -97,33 +161,293 @@ fn canonicalise(raw: &str, path: &Path) -> Result<String> {
     let kind = file_kind(path)
         .ok_or_else(|| anyhow!("{}: unknown entrypoint filename", path.display()))?;
 
-    if let EntryKind::Bundle = kind {
-        let bundle: Bundle = serde_yaml_ng::from_str(raw)
-            .with_context(|| format!("parse bundle {}", path.display()))?;
-        return serde_yaml_ng::to_string(&bundle).context("serialise canonical bundle");
+    match kind {
+        EntryKind::Bundle => {
+            let reordered = reorder_yaml_keys(raw, BUNDLE_KEY_ORDER);
+            validate::<Bundle>(&reordered)
+                .with_context(|| format!("validate bundle {}", path.display()))?;
+            Ok(reordered)
+        }
+        EntryKind::Skill => canonicalise_item::<Skill>(raw, path, SKILL_KEY_ORDER),
+        EntryKind::Rule => canonicalise_item::<Rule>(raw, path, RULE_KEY_ORDER),
+        EntryKind::Agent => canonicalise_item::<Agent>(raw, path, AGENT_KEY_ORDER),
     }
-
-    let body = frontmatter::split(raw)
-        .map(|(_, body)| body)
-        .ok_or_else(|| anyhow!("{}: missing YAML frontmatter", path.display()))?;
-
-    let yaml = match kind {
-        EntryKind::Skill => roundtrip::<Skill>(raw)?,
-        EntryKind::Rule => roundtrip::<Rule>(raw)?,
-        EntryKind::Agent => roundtrip::<Agent>(raw)?,
-        EntryKind::Bundle => unreachable!("bundle handled above"),
-    };
-
-    Ok(format!("---\n{yaml}---\n{body}"))
 }
 
-/// Parse `raw`'s frontmatter into `T`, then serialise `T` back to
-/// YAML. `serde_yaml_ng::to_string` already terminates the output with
-/// a trailing newline — no extra padding needed.
-fn roundtrip<T: DeserializeOwned + Serialize>(raw: &str) -> Result<String> {
-    let (value, _body) =
-        frontmatter::parse::<T>(raw).with_context(|| "parsing frontmatter for fmt")?;
-    serde_yaml_ng::to_string(&value).context("serialise canonical frontmatter")
+/// Canonicalise an item file (frontmatter + body).
+fn canonicalise_item<T: DeserializeOwned>(
+    raw: &str,
+    path: &Path,
+    key_order: &[&str],
+) -> Result<String> {
+    let (yaml_str, body) = frontmatter::split(raw)
+        .ok_or_else(|| anyhow!("{}: missing YAML frontmatter", path.display()))?;
+
+    let reordered_yaml = reorder_yaml_keys(yaml_str, key_order);
+
+    // Validate the reordered YAML parses correctly.
+    serde_yaml_ng::from_str::<T>(&reordered_yaml)
+        .with_context(|| format!("validate frontmatter {}", path.display()))?;
+
+    Ok(format!("---\n{reordered_yaml}---\n{body}"))
+}
+
+/// Parse YAML string into `T` for validation only. Discards the result.
+fn validate<T: DeserializeOwned>(yaml: &str) -> Result<()> {
+    serde_yaml_ng::from_str::<T>(yaml).context("YAML validation failed")?;
+    Ok(())
+}
+
+// ── Line-level key reordering ───────────────────────────────────────
+
+/// A block of lines associated with one top-level YAML key (or a
+/// preamble/trailer with no key).
+#[derive(Debug)]
+struct KeyBlock {
+    /// The top-level key name, or `None` for preamble/trailer.
+    key: Option<String>,
+    /// The raw lines (including the key line, preceding comments, and
+    /// indented children). Includes trailing newlines.
+    lines: String,
+}
+
+/// Reorder top-level YAML keys according to `key_order`, preserving
+/// comments and formatting. Keys not in `key_order` sort
+/// alphabetically after all known keys.
+///
+/// Algorithm:
+/// 1. Split into top-level key blocks (key line + preceding comments +
+///    indented children)
+/// 2. Sort blocks by priority (known keys by position in `key_order`,
+///    unknown keys alphabetically after)
+/// 3. Reassemble
+pub fn reorder_yaml_keys(yaml: &str, key_order: &[&str]) -> String {
+    let blocks = parse_into_blocks(yaml);
+
+    if blocks.is_empty() {
+        return yaml.to_string();
+    }
+
+    // Separate preamble (comments before first key) from key blocks.
+    let mut preamble: Option<&KeyBlock> = None;
+    let mut key_blocks: Vec<&KeyBlock> = Vec::new();
+
+    for block in &blocks {
+        if block.key.is_none() && key_blocks.is_empty() {
+            preamble = Some(block);
+        } else {
+            key_blocks.push(block);
+        }
+    }
+
+    // Sort key blocks by canonical order.
+    key_blocks.sort_by(|a, b| {
+        let priority_a = block_sort_key(a, key_order);
+        let priority_b = block_sort_key(b, key_order);
+        priority_a.cmp(&priority_b)
+    });
+
+    // Reassemble.
+    let mut out = String::with_capacity(yaml.len());
+
+    if let Some(pre) = preamble {
+        out.push_str(&pre.lines);
+    }
+
+    for block in &key_blocks {
+        out.push_str(&block.lines);
+    }
+
+    // Ensure file ends with exactly one newline.
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+
+    out
+}
+
+/// Parse YAML text into blocks. Each block is either:
+/// - A preamble (comment/blank lines separated from the first key by a
+///   blank line)
+/// - A key block (comment lines preceding the key + the key line +
+///   indented continuation lines)
+///
+/// Heuristic for pre-first-key content: if there's a blank line between
+/// the accumulated comments and the first key, everything up to and
+/// including the last blank line is preamble; the rest attaches to the
+/// key. If there's no blank line, all comments attach to the key.
+fn parse_into_blocks(yaml: &str) -> Vec<KeyBlock> {
+    let mut blocks: Vec<KeyBlock> = Vec::new();
+    let mut current_comments = String::new();
+    let mut current_key: Option<String> = None;
+    let mut current_lines = String::new();
+    let mut seen_first_key = false;
+
+    for line in yaml.lines() {
+        let line_with_nl = format!("{line}\n");
+
+        if let Some(key) = extract_top_level_key(line) {
+            // We hit a new top-level key. Flush the previous block.
+            if let Some(prev_key) = current_key.take() {
+                blocks.push(KeyBlock {
+                    key: Some(prev_key),
+                    lines: current_lines,
+                });
+            } else if !seen_first_key {
+                // First key — split accumulated content into preamble
+                // vs key-attached comments.
+                let accumulated = format!("{current_lines}{current_comments}");
+                let (preamble, attached) = split_preamble(&accumulated);
+                if !preamble.is_empty() {
+                    blocks.push(KeyBlock {
+                        key: None,
+                        lines: preamble,
+                    });
+                }
+                current_comments = attached;
+            }
+
+            seen_first_key = true;
+
+            // Start new key block with any pending comments.
+            current_key = Some(key);
+            current_lines = format!("{current_comments}{line_with_nl}");
+            current_comments = String::new();
+        } else if current_key.is_some() {
+            // Inside a key block. Check if this is a comment/blank that
+            // might belong to the NEXT key, or indented content.
+            if is_comment_or_blank(line) && !is_indented(line) {
+                // Could be inter-block comment — buffer it.
+                current_comments.push_str(&line_with_nl);
+            } else if is_indented(line) {
+                // Indented content belongs to current key.
+                // Flush any buffered comments first (they were
+                // within this block after all).
+                current_lines.push_str(&current_comments);
+                current_comments = String::new();
+                current_lines.push_str(&line_with_nl);
+            } else {
+                // Non-indented, non-comment, non-key line — unusual
+                // but treat as continuation of current block.
+                current_lines.push_str(&current_comments);
+                current_comments = String::new();
+                current_lines.push_str(&line_with_nl);
+            }
+        } else {
+            // Before any key — accumulate.
+            current_lines.push_str(&line_with_nl);
+        }
+    }
+
+    // Flush final block.
+    if let Some(key) = current_key {
+        // Trailing comments after the last key stay with that key.
+        current_lines.push_str(&current_comments);
+        blocks.push(KeyBlock {
+            key: Some(key),
+            lines: current_lines,
+        });
+    } else if !current_lines.is_empty() || !current_comments.is_empty() {
+        blocks.push(KeyBlock {
+            key: None,
+            lines: format!("{current_lines}{current_comments}"),
+        });
+    }
+
+    blocks
+}
+
+/// Split pre-first-key content into (preamble, key-attached comments).
+///
+/// If the content contains a blank line, everything up to and including
+/// the last blank line is preamble. Comments after the last blank line
+/// attach to the first key. If no blank line exists, everything
+/// attaches to the first key (no preamble).
+fn split_preamble(content: &str) -> (String, String) {
+    if content.is_empty() {
+        return (String::new(), String::new());
+    }
+
+    // Find the last blank line position.
+    let lines: Vec<&str> = content.lines().collect();
+    let last_blank = lines.iter().rposition(|l| l.trim().is_empty());
+
+    match last_blank {
+        Some(pos) => {
+            let mut preamble = String::new();
+            let mut attached = String::new();
+            for (i, line) in lines.iter().enumerate() {
+                if i <= pos {
+                    preamble.push_str(line);
+                    preamble.push('\n');
+                } else {
+                    attached.push_str(line);
+                    attached.push('\n');
+                }
+            }
+            (preamble, attached)
+        }
+        None => {
+            // No blank line — everything attaches to the key.
+            (String::new(), content.to_string())
+        }
+    }
+}
+
+/// Extract a top-level key name from a line. A top-level key is an
+/// unindented line matching `^[a-zA-Z_][a-zA-Z0-9_-]*:`.
+fn extract_top_level_key(line: &str) -> Option<String> {
+    // Must start at column 0 with a letter or underscore.
+    let first = line.as_bytes().first()?;
+    if !first.is_ascii_alphabetic() && *first != b'_' {
+        return None;
+    }
+
+    // Find the colon.
+    let colon_pos = line.find(':')?;
+    let key = &line[..colon_pos];
+
+    // Validate key characters: [a-zA-Z0-9_-]
+    if key
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
+        Some(key.to_string())
+    } else {
+        None
+    }
+}
+
+/// True if the line is a comment (`# ...`) or blank/whitespace-only.
+fn is_comment_or_blank(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.is_empty() || trimmed.starts_with('#')
+}
+
+/// True if the line starts with whitespace (indented content).
+fn is_indented(line: &str) -> bool {
+    line.starts_with(' ') || line.starts_with('\t')
+}
+
+/// Compute a sort key for a block. Known keys get their index in
+/// `key_order`; unknown keys get `key_order.len()` plus their
+/// alphabetical position among unknowns.
+fn block_sort_key(block: &KeyBlock, key_order: &[&str]) -> (usize, String) {
+    match &block.key {
+        Some(key) => {
+            if let Some(pos) = key_order.iter().position(|k| *k == key.as_str()) {
+                (pos, String::new())
+            } else {
+                // Unknown key — sort alphabetically after known keys.
+                (key_order.len(), key.clone())
+            }
+        }
+        None => {
+            // Preamble/trailer — should not appear in sorted list,
+            // but if it does, put it first.
+            (0, String::new())
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -154,6 +478,156 @@ mod tests {
         }
         fs::write(path, contents).unwrap();
     }
+
+    // ── reorder_yaml_keys unit tests ────────────────────────────────
+
+    #[test]
+    fn reorder_preserves_comments() {
+        let input = concat!(
+            "# This is the name\n",
+            "name: example\n",
+            "schema: 1\n",
+            "description: a bundle.\n",
+            "items: {}\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        assert!(out.contains("# This is the name\nname: example\n"));
+        // schema should come before name
+        let schema_pos = out.find("schema:").unwrap();
+        let name_pos = out.find("name:").unwrap();
+        assert!(schema_pos < name_pos, "schema before name:\n{out}");
+    }
+
+    #[test]
+    fn reorder_preserves_inline_comments() {
+        let input = concat!(
+            "schema: 1\n",
+            "name: test # inline comment\n",
+            "description: foo.\n",
+            "items: {}\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        assert!(
+            out.contains("name: test # inline comment"),
+            "inline comment lost:\n{out}"
+        );
+    }
+
+    #[test]
+    fn reorder_moves_blocks_to_canonical_order() {
+        let input = concat!(
+            "metadata:\n",
+            "  version: 0.1.0\n",
+            "name: scrambled\n",
+            "schema: 1\n",
+            "description: test.\n",
+            "items: {}\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        let s = out.find("schema:").unwrap();
+        let n = out.find("name:").unwrap();
+        let d = out.find("description:").unwrap();
+        let i = out.find("items:").unwrap();
+        let m = out.find("metadata:").unwrap();
+        assert!(s < n && n < d && d < i && i < m, "wrong order:\n{out}");
+    }
+
+    #[test]
+    fn reorder_preserves_indented_children() {
+        let input = concat!(
+            "items:\n",
+            "  skills:\n",
+            "    - foo\n",
+            "    - bar\n",
+            "schema: 1\n",
+            "name: test\n",
+            "description: d.\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        assert!(
+            out.contains("items:\n  skills:\n    - foo\n    - bar\n"),
+            "indented children lost:\n{out}"
+        );
+    }
+
+    #[test]
+    fn reorder_unknown_keys_sort_alphabetically_at_end() {
+        let input = concat!(
+            "schema: 1\n",
+            "name: test\n",
+            "description: d.\n",
+            "items: {}\n",
+            "zebra: z\n",
+            "alpha: a\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        let alpha_pos = out.find("alpha:").unwrap();
+        let zebra_pos = out.find("zebra:").unwrap();
+        let items_pos = out.find("items:").unwrap();
+        assert!(items_pos < alpha_pos, "extras after known keys:\n{out}");
+        assert!(alpha_pos < zebra_pos, "extras alphabetical:\n{out}");
+    }
+
+    #[test]
+    fn reorder_is_idempotent() {
+        let input = concat!(
+            "# A comment\n",
+            "name: test\n",
+            "schema: 1\n",
+            "# Description comment\n",
+            "description: d.\n",
+            "items:\n",
+            "  skills:\n",
+            "    - foo\n",
+        );
+        let pass1 = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        let pass2 = reorder_yaml_keys(&pass1, BUNDLE_KEY_ORDER);
+        assert_eq!(pass1, pass2, "reorder must be idempotent");
+    }
+
+    #[test]
+    fn reorder_preamble_stays_at_top() {
+        let input = concat!(
+            "# File-level comment\n",
+            "# Another preamble line\n",
+            "\n",
+            "name: test\n",
+            "schema: 1\n",
+            "description: d.\n",
+            "items: {}\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        assert!(
+            out.starts_with("# File-level comment\n# Another preamble line\n\n"),
+            "preamble moved:\n{out}"
+        );
+    }
+
+    #[test]
+    fn reorder_with_multiline_values() {
+        let input = concat!(
+            "description: >\n",
+            "  A long description that spans\n",
+            "  multiple lines using folded style.\n",
+            "schema: 1\n",
+            "name: test\n",
+            "items: {}\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        // description block should stay together
+        assert!(
+            out.contains(
+                "description: >\n  A long description that spans\n  multiple lines using folded style.\n"
+            ),
+            "multiline value broken:\n{out}"
+        );
+        // schema should come before description
+        let s = out.find("schema:").unwrap();
+        let d = out.find("description:").unwrap();
+        assert!(s < d, "schema before description:\n{out}");
+    }
+
+    // ── canonicalise integration tests ──────────────────────────────
 
     #[test]
     fn canonicalise_reorders_keys() {
@@ -208,6 +682,70 @@ mod tests {
         let pass2 = canonicalise(&pass1, path).unwrap();
         assert_eq!(pass1, pass2, "fmt must be idempotent");
     }
+
+    #[test]
+    fn canonicalise_preserves_frontmatter_comments() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: test\n",
+            "# This explains the description\n",
+            "description: a skill with comments.\n",
+            "---\n",
+            "## body\n",
+        );
+        let out = canonicalise(raw, Path::new("test/SKILL.md")).unwrap();
+        assert!(
+            out.contains("# This explains the description"),
+            "comment stripped:\n{out}"
+        );
+    }
+
+    #[test]
+    fn canonicalise_preserves_bundle_comments() {
+        let raw = concat!(
+            "schema: 1\n",
+            "name: test\n",
+            "description: a bundle.\n",
+            "items:\n",
+            "  skills:\n",
+            "    - foo\n",
+            "# Plugin documentation\n",
+            "# explaining why this exists\n",
+            "plugins:\n",
+            "  superpowers:\n",
+            "    claude:\n",
+            "      source: marketplace\n",
+            "      plugin: superpowers\n",
+        );
+        let out = canonicalise(raw, Path::new("test.bundle.yaml")).unwrap();
+        assert!(
+            out.contains("# Plugin documentation\n# explaining why this exists\nplugins:"),
+            "bundle comments stripped:\n{out}"
+        );
+    }
+
+    #[test]
+    fn canonicalise_preserves_description_wrapping() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: test\n",
+            "description: Use when authoring or editing upskill .bundle.yaml\n",
+            "  manifests — declaring items, plugins, requires dependencies.\n",
+            "---\n",
+            "## body\n",
+        );
+        let out = canonicalise(raw, Path::new("test/SKILL.md")).unwrap();
+        assert!(
+            out.contains(
+                "description: Use when authoring or editing upskill .bundle.yaml\n  manifests"
+            ),
+            "wrapping destroyed:\n{out}"
+        );
+    }
+
+    // ── fmt end-to-end tests ────────────────────────────────────────
 
     #[test]
     fn fmt_skips_already_canonical_files() {
@@ -270,8 +808,6 @@ mod tests {
 
     #[test]
     fn fmt_handles_bundle() {
-        // Bundles are pure YAML (§2.2, ADR-0007). fmt reorders keys and
-        // strips the file down to canonical YAML — no `---` wrapping.
         let tmp = tempfile::tempdir().unwrap();
         let item = tmp.path().join("bundles/baseline.bundle.yaml");
         write(
@@ -281,7 +817,8 @@ mod tests {
                 "schema: 1\n",
                 "description: a bundle.\n",
                 "items:\n",
-                "  rules: [api]\n",
+                "  rules:\n",
+                "    - api\n",
             ),
         );
         let report = fmt(&[tmp.path().to_path_buf()]).unwrap();
@@ -293,5 +830,46 @@ mod tests {
             "bundle file must not be wrapped in `---`:\n{after}"
         );
         assert!(after.starts_with("schema:"), "key order:\n{after}");
+    }
+
+    #[test]
+    fn fmt_preserves_bundle_comments_end_to_end() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("bundles/commented.bundle.yaml");
+        write(
+            &item,
+            concat!(
+                "# upskill bundle manifest\n",
+                "\n",
+                "schema: 1\n",
+                "name: commented\n",
+                "description: has comments.\n",
+                "items:\n",
+                "  skills:\n",
+                "    - foo # the foo skill\n",
+                "# Metadata about this bundle\n",
+                "metadata:\n",
+                "  version: 0.1.0\n",
+            ),
+        );
+        let report = fmt(&[tmp.path().to_path_buf()]).unwrap();
+        // Already in canonical order — should not change.
+        assert!(
+            report.files_changed.is_empty(),
+            "should not change: {report:?}"
+        );
+        let after = fs::read_to_string(&item).unwrap();
+        assert!(
+            after.contains("# upskill bundle manifest"),
+            "preamble comment lost"
+        );
+        assert!(
+            after.contains("- foo # the foo skill"),
+            "inline comment lost"
+        );
+        assert!(
+            after.contains("# Metadata about this bundle"),
+            "block comment lost"
+        );
     }
 }

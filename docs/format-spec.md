@@ -589,6 +589,37 @@ Implementations:
 - MUST use warn-skip when the target client CLI is not found (`ErrorKind::NotFound`).
 - MUST NOT fail the entire bundle install when a single plugin install fails or is skipped.
 
+### 3.8 Frontmatter canonicalisation
+
+An implementation MAY provide a formatting command (e.g., `upskill fmt`) that canonicalises SSOT
+frontmatter. Canonicalisation produces a deterministic key order, making diffs predictable and
+reducing merge conflicts.
+
+**Canonical key order.** When canonicalising frontmatter, implementations MUST emit keys in the
+following order (unlisted keys appear at the end in their original relative order):
+
+| Kind   | Key order                                                                                                                                                 |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `claude`, `copilot`, `opencode`, `extras`                                    |
+| Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `claude`, `copilot`, `opencode`, `extras`                  |
+| Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `claude`, `copilot`, `opencode`, `extras` |
+| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `metadata`, `extras`                                                          |
+
+**Comment preservation.** Canonicalisation:
+
+- MUST preserve YAML comments (`#`). Comments immediately preceding a key (no blank-line
+  separation) travel with that key during reordering.
+- MUST preserve preamble comments. A block of comments at the top of the frontmatter, separated
+  from the first key by at least one blank line, remains pinned to the top.
+- MUST NOT round-trip through a YAML serialiser that discards comments; line-level block
+  reordering is the expected implementation strategy.
+
+**Validation.** After reordering, the canonicalised output MUST parse identically to the
+original (same keys, same values). Implementations SHOULD validate this by parsing both the
+input and the output and comparing the resulting data structures.
+
+**Idempotency.** Running canonicalisation twice on the same input MUST produce identical output.
+
 ---
 
 ## 4. Capability-level tool vocabulary
