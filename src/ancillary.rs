@@ -31,6 +31,8 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::Path;
 
+use crate::plugin::PluginOutcome;
+
 /// Filename written at the consumer-project root.
 const CLAUDE_MD: &str = "CLAUDE.md";
 
@@ -232,6 +234,107 @@ pub fn ensure_vscode_instructions_registered(
             Ok(action)
         }
     }
+}
+
+/// Write a plugin URI to the `plugin[]` array in `<target>/opencode.json`.
+///
+/// Idempotent: if the URI is already present, no change is made.
+/// Creates the file if absent. Returns `PluginOutcome::Failed` if the file
+/// exists but is not a JSON object or `plugin` is not an array.
+pub fn write_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> PluginOutcome {
+    let path = target.join(OPENCODE_JSON);
+    match std::fs::read_to_string(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let new_doc = json!({ "plugin": [plugin_uri] });
+            if let Err(e) = write_pretty_json(&path, &new_doc) {
+                return PluginOutcome::Failed {
+                    exit_code: None,
+                    stderr: e.to_string(),
+                };
+            }
+            PluginOutcome::Success
+        }
+        Err(e) => PluginOutcome::Failed {
+            exit_code: None,
+            stderr: format!("read {}: {e}", path.display()),
+        },
+        Ok(raw) => {
+            let mut doc: Value = match serde_json::from_str(&raw) {
+                Ok(v) => v,
+                Err(e) => {
+                    return PluginOutcome::Failed {
+                        exit_code: None,
+                        stderr: format!("parse {}: {e}", path.display()),
+                    };
+                }
+            };
+            if !doc.is_object() {
+                return PluginOutcome::Failed {
+                    exit_code: None,
+                    stderr: format!("{}: top-level value must be an object", path.display()),
+                };
+            }
+
+            let obj = doc.as_object_mut().expect("checked is_object");
+            match obj.get_mut("plugin") {
+                None => {
+                    obj.insert("plugin".to_string(), json!([plugin_uri]));
+                }
+                Some(existing) => {
+                    let Some(arr) = existing.as_array_mut() else {
+                        return PluginOutcome::Failed {
+                            exit_code: None,
+                            stderr: format!("{}: `plugin` must be an array", path.display()),
+                        };
+                    };
+                    if arr.iter().any(|v| v.as_str() == Some(plugin_uri)) {
+                        return PluginOutcome::Success;
+                    }
+                    arr.push(json!(plugin_uri));
+                }
+            }
+
+            if let Err(e) = write_pretty_json(&path, &doc) {
+                return PluginOutcome::Failed {
+                    exit_code: None,
+                    stderr: e.to_string(),
+                };
+            }
+            PluginOutcome::Success
+        }
+    }
+}
+
+/// Remove a plugin URI from the `plugin[]` array in `<target>/opencode.json`.
+///
+/// No-op if the file is absent or the URI is not in the array.
+pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> Result<()> {
+    let path = target.join(OPENCODE_JSON);
+    let raw = match std::fs::read_to_string(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
+        Ok(r) => r,
+    };
+
+    let mut doc: Value =
+        serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
+
+    let Some(obj) = doc.as_object_mut() else {
+        anyhow::bail!("{}: top-level value must be an object", path.display());
+    };
+
+    if let Some(existing) = obj.get_mut("plugin") {
+        let arr = existing
+            .as_array_mut()
+            .with_context(|| format!("{}: `plugin` must be an array", path.display()))?;
+        let before = arr.len();
+        arr.retain(|v| v.as_str() != Some(plugin_uri));
+        if arr.len() < before {
+            write_pretty_json(&path, &doc)?;
+        }
+    }
+
+    Ok(())
 }
 
 fn write_pretty_json(path: &Path, value: &Value) -> Result<()> {
@@ -496,5 +599,115 @@ mod tests {
         std::fs::write(tmp.path().join(VSCODE_SETTINGS), r#"["array", "top"]"#).unwrap();
         let err = ensure_vscode_instructions_registered(tmp.path(), true).expect_err("must reject");
         assert!(err.to_string().contains("object"));
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_creates_file_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        let plugins = content["plugin"].as_array().unwrap();
+        assert_eq!(plugins.len(), 1);
+        assert_eq!(plugins[0], "sp@git+https://example.com");
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_appends_to_existing() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"instructions": [".agents/rules/**/RULE.md"], "plugin": ["existing@foo"]}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        let plugins = content["plugin"].as_array().unwrap();
+        assert_eq!(plugins.len(), 2);
+        assert_eq!(plugins[0], "existing@foo");
+        assert_eq!(plugins[1], "sp@git+https://example.com");
+        assert!(content["instructions"].is_array());
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_is_idempotent() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp@git+https://example.com"]}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        let plugins = content["plugin"].as_array().unwrap();
+        assert_eq!(plugins.len(), 1);
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_fails_on_non_array_plugin_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": "not-an-array"}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        assert!(matches!(
+            outcome,
+            crate::plugin::PluginOutcome::Failed { .. }
+        ));
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_removes_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp@git+https://example.com", "other@foo"]}"#,
+        )
+        .unwrap();
+        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        let plugins = content["plugin"].as_array().unwrap();
+        assert_eq!(plugins.len(), 1);
+        assert_eq!(plugins[0], "other@foo");
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_noop_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["other@foo"]}"#,
+        )
+        .unwrap();
+        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        let plugins = content["plugin"].as_array().unwrap();
+        assert_eq!(plugins.len(), 1);
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_noop_when_no_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        assert!(!tmp.path().join("opencode.json").exists());
     }
 }
