@@ -5,6 +5,7 @@
 
 use std::path::Path;
 
+use upskill::model::bundle::{ClaudePluginDescriptor, VscodePluginDescriptor};
 use upskill::parse::bundle::discover;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/bundles");
@@ -65,16 +66,33 @@ fn with_plugins_declares_client_native_plugins() {
 
     let sp = &bundle.plugins["superpowers"];
     let claude = sp.claude.as_ref().expect("claude descriptor");
-    assert_eq!(claude.source, "anthropics/claude-plugins");
-    assert_eq!(claude.plugin, "superpowers");
-    assert_eq!(
-        claude.install_url.as_deref(),
-        Some("https://github.com/obra/superpowers#install")
-    );
+    match claude {
+        ClaudePluginDescriptor::Install {
+            source,
+            plugin,
+            install_url,
+        } => {
+            assert_eq!(source, "anthropics/claude-plugins");
+            assert_eq!(plugin, "superpowers");
+            assert_eq!(
+                install_url.as_deref(),
+                Some("https://github.com/obra/superpowers#install")
+            );
+        }
+        _ => panic!("expected Install variant"),
+    }
 
     let vscode = sp.vscode.as_ref().expect("vscode descriptor");
-    assert_eq!(vscode.extension, "anthropic.superpowers");
-    assert!(vscode.install_url.is_none());
+    match vscode {
+        VscodePluginDescriptor::Install {
+            extension,
+            install_url,
+        } => {
+            assert_eq!(extension, "anthropic.superpowers");
+            assert!(install_url.is_none());
+        }
+        _ => panic!("expected Install variant"),
+    }
 
     assert!(sp.opencode.is_none());
 }

@@ -10,10 +10,6 @@
 //! All functions return structured results (never write to stdout/stderr)
 //! and handle CLI-not-found gracefully per the warn-skip policy.
 
-use crate::model::bundle::{
-    ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
-    VscodePluginDescriptor,
-};
 use std::io::ErrorKind;
 use std::process::Command;
 
@@ -49,6 +45,8 @@ pub enum PluginOutcome {
         exit_code: Option<i32>,
         stderr: String,
     },
+    /// Plugin requires manual installation via instructions URL.
+    ManualInstructions,
 }
 
 impl PluginOutcome {
@@ -61,6 +59,11 @@ impl PluginOutcome {
     pub fn is_cli_not_found(&self) -> bool {
         matches!(self, Self::CliNotFound)
     }
+
+    /// True when the plugin has manual installation instructions.
+    pub fn is_manual_instructions(&self) -> bool {
+        matches!(self, Self::ManualInstructions)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -69,23 +72,18 @@ impl PluginOutcome {
 
 /// Install a Claude Code plugin via `claude plugin marketplace add` followed
 /// by `claude plugin install`. The marketplace-add step is idempotent.
-pub fn install_claude_plugin(
-    descriptor: &ClaudePluginDescriptor,
-    scope: PluginScope,
-) -> PluginOutcome {
+pub fn install_claude_plugin(source: &str, plugin: &str, scope: PluginScope) -> PluginOutcome {
     // Step 1: Add marketplace source (idempotent).
-    let result = run_command(
-        "claude",
-        &["plugin", "marketplace", "add", &descriptor.source],
-    );
+    let result = run_command("claude", &["plugin", "marketplace", "add", source]);
     match result {
         PluginOutcome::CliNotFound => return PluginOutcome::CliNotFound,
         PluginOutcome::Failed { .. } => return result,
         PluginOutcome::Success => {}
+        PluginOutcome::ManualInstructions => unreachable!(),
     }
 
     // Step 2: Install plugin with scope.
-    let install_ref = format!("{}@{}", descriptor.plugin, descriptor.source);
+    let install_ref = format!("{plugin}@{source}");
     run_command(
         "claude",
         &[
@@ -99,32 +97,30 @@ pub fn install_claude_plugin(
 }
 
 /// Install a VS Code extension via `code --install-extension`.
-pub fn install_vscode_extension(descriptor: &VscodePluginDescriptor) -> PluginOutcome {
-    run_command("code", &["--install-extension", &descriptor.extension])
+pub fn install_vscode_extension(extension: &str) -> PluginOutcome {
+    run_command("code", &["--install-extension", extension])
 }
 
 /// Install an opencode module via `opencode plugin`.
-pub fn install_opencode_plugin(descriptor: &OpencodePluginDescriptor) -> PluginOutcome {
-    run_command("opencode", &["plugin", &descriptor.module])
+pub fn install_opencode_plugin(module: &str) -> PluginOutcome {
+    run_command("opencode", &["plugin", module])
 }
 
 /// Install a GitHub Copilot CLI plugin via `copilot plugin marketplace add`
 /// followed by `copilot plugin install`. The marketplace-add step is
 /// idempotent. Unlike Claude, Copilot CLI does not support a `--scope` flag.
-pub fn install_copilot_plugin(descriptor: &CopilotPluginDescriptor) -> PluginOutcome {
+pub fn install_copilot_plugin(source: &str, plugin: &str) -> PluginOutcome {
     // Step 1: Add marketplace source (idempotent).
-    let result = run_command(
-        "copilot",
-        &["plugin", "marketplace", "add", &descriptor.source],
-    );
+    let result = run_command("copilot", &["plugin", "marketplace", "add", source]);
     match result {
         PluginOutcome::CliNotFound => return PluginOutcome::CliNotFound,
         PluginOutcome::Failed { .. } => return result,
         PluginOutcome::Success => {}
+        PluginOutcome::ManualInstructions => unreachable!(),
     }
 
     // Step 2: Install plugin from marketplace.
-    let install_ref = format!("{}@{}", descriptor.plugin, descriptor.source);
+    let install_ref = format!("{plugin}@{source}");
     run_command("copilot", &["plugin", "install", &install_ref])
 }
 
@@ -422,15 +418,11 @@ mod tests {
 
     #[test]
     fn install_vscode_returns_cli_not_found_when_binary_missing() {
-        let descriptor = VscodePluginDescriptor {
-            extension: "test.extension".to_string(),
-            install_url: None,
-        };
         // code is likely not on PATH in CI; if it is, this still works
         // because --install-extension with a fake extension just fails.
         let result = run_command(
             "nonexistent-code-xyz-42",
-            &["--install-extension", &descriptor.extension],
+            &["--install-extension", "test.extension"],
         );
         assert_eq!(result, PluginOutcome::CliNotFound);
     }
