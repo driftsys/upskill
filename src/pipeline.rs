@@ -760,6 +760,38 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
         });
     }
 
+    // Clean up plugins associated with removed bundles.
+    let bundles_to_remove: Vec<String> = match &filter {
+        RemoveFilter::ByNames(names) => lock
+            .bundles
+            .iter()
+            .filter(|b| b.items.iter().any(|item| names.contains(item)))
+            .map(|b| b.name.clone())
+            .collect(),
+        RemoveFilter::BySource(source) => lock
+            .bundles
+            .iter()
+            .filter(|b| &b.source == source)
+            .map(|b| b.name.clone())
+            .collect(),
+    };
+
+    for plugin in lock
+        .plugins
+        .iter()
+        .filter(|p| bundles_to_remove.contains(&p.bundle))
+    {
+        if plugin.client == "opencode"
+            && plugin.status == crate::lockfile::PluginInstallStatus::Installed
+        {
+            let _ = crate::ancillary::remove_opencode_plugin_uri(target, &plugin.identifier);
+        }
+    }
+    lock.plugins
+        .retain(|p| !bundles_to_remove.contains(&p.bundle));
+    lock.bundles
+        .retain(|b| !bundles_to_remove.contains(&b.name));
+
     lock.save(target)?;
     Ok(report)
 }
