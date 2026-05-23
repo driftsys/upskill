@@ -330,10 +330,19 @@ fn print_plugin_results(report: &InstallReport) {
         .iter()
         .filter(|r| r.outcome.is_cli_not_found())
         .collect();
+    let instructions: Vec<&PluginResult> = report
+        .plugin_results
+        .iter()
+        .filter(|r| r.outcome.is_manual_instructions())
+        .collect();
     let failures: Vec<&PluginResult> = report
         .plugin_results
         .iter()
-        .filter(|r| !r.outcome.is_success() && !r.outcome.is_cli_not_found())
+        .filter(|r| {
+            !r.outcome.is_success()
+                && !r.outcome.is_cli_not_found()
+                && !r.outcome.is_manual_instructions()
+        })
         .collect();
 
     if !successes.is_empty() {
@@ -350,6 +359,23 @@ fn print_plugin_results(report: &InstallReport) {
                 r.client
             );
         }
+    }
+
+    for r in &instructions {
+        let url = r.instructions_url.as_deref().unwrap_or(&r.identifier);
+        let summary_lines = r
+            .summary
+            .as_deref()
+            .map(|s| format!("\n        {}", s.trim().replace('\n', "\n        ")))
+            .unwrap_or_default();
+        eprintln!(
+            "{} plugin {} ({}) \u{2014} manual step required{}",
+            style::info("info:"),
+            style::name(&r.name),
+            r.client,
+            summary_lines
+        );
+        eprintln!("        Instructions: {url}");
     }
 
     for r in &skipped {

@@ -82,6 +82,10 @@ pub struct PluginResult {
     pub bundle: String,
     /// URL shown in warn-skip message (if available from the descriptor).
     pub install_url: Option<String>,
+    /// URL with manual installation instructions (Instructions variant).
+    pub instructions_url: Option<String>,
+    /// Human-readable summary for manual instructions.
+    pub summary: Option<String>,
 }
 
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
@@ -296,7 +300,7 @@ pub fn install_with_lockfile(
     // and shell out to each client CLI. Results are appended to the
     // report for main.rs to display; successful installs are recorded
     // in the lockfile for remove/update/doctor.
-    let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope);
+    let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
     report.plugin_results = plugin_results;
 
     let label = source.to_string();
@@ -337,6 +341,7 @@ pub fn install_with_lockfile(
         let status = match &pr.outcome {
             PluginOutcome::Success => PluginInstallStatus::Installed,
             PluginOutcome::CliNotFound => PluginInstallStatus::Skipped,
+            PluginOutcome::ManualInstructions => PluginInstallStatus::Instructions,
             PluginOutcome::Failed { .. } => continue,
         };
         lock.upsert_plugin(crate::lockfile::LockedPlugin {
@@ -476,63 +481,184 @@ fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str {
 fn install_plugins_from_bundles(
     bundles: &[crate::model::Bundle],
     scope: crate::plugin::PluginScope,
+    target: &Path,
 ) -> Vec<PluginResult> {
+    use crate::model::bundle::{
+        ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
+        VscodePluginDescriptor,
+    };
+
     let mut results = Vec::new();
 
     for bundle in bundles {
         for (plugin_name, entry) in &bundle.plugins {
             // Claude
             if let Some(claude) = &entry.claude {
-                let outcome = crate::plugin::install_claude_plugin(claude, scope);
-                let identifier = format!("{}@{}", claude.plugin, claude.source);
-                results.push(PluginResult {
-                    name: plugin_name.clone(),
-                    client: "claude".into(),
-                    outcome,
-                    identifier,
-                    bundle: bundle.name.clone(),
-                    install_url: claude.install_url.clone(),
-                });
+                match claude {
+                    ClaudePluginDescriptor::Install {
+                        source,
+                        plugin,
+                        install_url,
+                    } => {
+                        let outcome = crate::plugin::install_claude_plugin(source, plugin, scope);
+                        let identifier = format!("{plugin}@{source}");
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "claude".into(),
+                            outcome,
+                            identifier,
+                            bundle: bundle.name.clone(),
+                            install_url: install_url.clone(),
+                            instructions_url: None,
+                            summary: None,
+                        });
+                    }
+                    ClaudePluginDescriptor::Instructions {
+                        instructions_url,
+                        summary,
+                    } => {
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "claude".into(),
+                            outcome: crate::plugin::PluginOutcome::ManualInstructions,
+                            identifier: String::new(),
+                            bundle: bundle.name.clone(),
+                            install_url: None,
+                            instructions_url: Some(instructions_url.clone()),
+                            summary: summary.clone(),
+                        });
+                    }
+                }
             }
 
             // VS Code
             if let Some(vscode) = &entry.vscode {
-                let outcome = crate::plugin::install_vscode_extension(vscode);
-                results.push(PluginResult {
-                    name: plugin_name.clone(),
-                    client: "vscode".into(),
-                    outcome,
-                    identifier: vscode.extension.clone(),
-                    bundle: bundle.name.clone(),
-                    install_url: vscode.install_url.clone(),
-                });
+                match vscode {
+                    VscodePluginDescriptor::Install {
+                        extension,
+                        install_url,
+                    } => {
+                        let outcome = crate::plugin::install_vscode_extension(extension);
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "vscode".into(),
+                            outcome,
+                            identifier: extension.clone(),
+                            bundle: bundle.name.clone(),
+                            install_url: install_url.clone(),
+                            instructions_url: None,
+                            summary: None,
+                        });
+                    }
+                    VscodePluginDescriptor::Instructions {
+                        instructions_url,
+                        summary,
+                    } => {
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "vscode".into(),
+                            outcome: crate::plugin::PluginOutcome::ManualInstructions,
+                            identifier: String::new(),
+                            bundle: bundle.name.clone(),
+                            install_url: None,
+                            instructions_url: Some(instructions_url.clone()),
+                            summary: summary.clone(),
+                        });
+                    }
+                }
             }
 
             // opencode
             if let Some(opencode) = &entry.opencode {
-                let outcome = crate::plugin::install_opencode_plugin(opencode);
-                results.push(PluginResult {
-                    name: plugin_name.clone(),
-                    client: "opencode".into(),
-                    outcome,
-                    identifier: opencode.module.clone(),
-                    bundle: bundle.name.clone(),
-                    install_url: opencode.install_url.clone(),
-                });
+                match opencode {
+                    OpencodePluginDescriptor::Install {
+                        module,
+                        install_url,
+                    } => {
+                        let outcome = crate::plugin::install_opencode_plugin(module);
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "opencode".into(),
+                            outcome,
+                            identifier: module.clone(),
+                            bundle: bundle.name.clone(),
+                            install_url: install_url.clone(),
+                            instructions_url: None,
+                            summary: None,
+                        });
+                    }
+                    OpencodePluginDescriptor::Instructions {
+                        instructions_url,
+                        summary,
+                    } => {
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "opencode".into(),
+                            outcome: crate::plugin::PluginOutcome::ManualInstructions,
+                            identifier: String::new(),
+                            bundle: bundle.name.clone(),
+                            install_url: None,
+                            instructions_url: Some(instructions_url.clone()),
+                            summary: summary.clone(),
+                        });
+                    }
+                    OpencodePluginDescriptor::ConfigWrite {
+                        plugin_uri,
+                        install_url,
+                    } => {
+                        let outcome =
+                            crate::ancillary::write_opencode_plugin_uri(target, plugin_uri);
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "opencode".into(),
+                            outcome,
+                            identifier: plugin_uri.clone(),
+                            bundle: bundle.name.clone(),
+                            install_url: install_url.clone(),
+                            instructions_url: None,
+                            summary: None,
+                        });
+                    }
+                }
             }
 
             // Copilot CLI
             if let Some(copilot) = &entry.copilot {
-                let outcome = crate::plugin::install_copilot_plugin(copilot);
-                let identifier = format!("{}@{}", copilot.plugin, copilot.source);
-                results.push(PluginResult {
-                    name: plugin_name.clone(),
-                    client: "copilot".into(),
-                    outcome,
-                    identifier,
-                    bundle: bundle.name.clone(),
-                    install_url: copilot.install_url.clone(),
-                });
+                match copilot {
+                    CopilotPluginDescriptor::Install {
+                        source,
+                        plugin,
+                        install_url,
+                    } => {
+                        let outcome = crate::plugin::install_copilot_plugin(source, plugin);
+                        let identifier = format!("{plugin}@{source}");
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "copilot".into(),
+                            outcome,
+                            identifier,
+                            bundle: bundle.name.clone(),
+                            install_url: install_url.clone(),
+                            instructions_url: None,
+                            summary: None,
+                        });
+                    }
+                    CopilotPluginDescriptor::Instructions {
+                        instructions_url,
+                        summary,
+                    } => {
+                        results.push(PluginResult {
+                            name: plugin_name.clone(),
+                            client: "copilot".into(),
+                            outcome: crate::plugin::PluginOutcome::ManualInstructions,
+                            identifier: String::new(),
+                            bundle: bundle.name.clone(),
+                            install_url: None,
+                            instructions_url: Some(instructions_url.clone()),
+                            summary: summary.clone(),
+                        });
+                    }
+                }
             }
         }
     }
@@ -634,6 +760,38 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
             deleted_files,
         });
     }
+
+    // Clean up plugins associated with removed bundles.
+    let bundles_to_remove: Vec<String> = match &filter {
+        RemoveFilter::ByNames(names) => lock
+            .bundles
+            .iter()
+            .filter(|b| b.items.iter().any(|item| names.contains(item)))
+            .map(|b| b.name.clone())
+            .collect(),
+        RemoveFilter::BySource(source) => lock
+            .bundles
+            .iter()
+            .filter(|b| &b.source == source)
+            .map(|b| b.name.clone())
+            .collect(),
+    };
+
+    for plugin in lock
+        .plugins
+        .iter()
+        .filter(|p| bundles_to_remove.contains(&p.bundle))
+    {
+        if plugin.client == "opencode"
+            && plugin.status == crate::lockfile::PluginInstallStatus::Installed
+        {
+            let _ = crate::ancillary::remove_opencode_plugin_uri(target, &plugin.identifier);
+        }
+    }
+    lock.plugins
+        .retain(|p| !bundles_to_remove.contains(&p.bundle));
+    lock.bundles
+        .retain(|b| !bundles_to_remove.contains(&b.name));
 
     lock.save(target)?;
     Ok(report)
@@ -838,8 +996,9 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         };
 
         match &plugin.status {
-            PluginInstallStatus::Skipped => {
-                // Plugin was never installed because the CLI was missing.
+            PluginInstallStatus::Skipped | PluginInstallStatus::Instructions => {
+                // Plugin was never installed because the CLI was missing or
+                // requires manual instructions.
                 // Report it so it is not silently ignored.
                 report.skipped_plugins.push(SkippedPlugin {
                     name: plugin.name.clone(),

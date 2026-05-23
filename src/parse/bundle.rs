@@ -387,6 +387,11 @@ requires:
 
     #[test]
     fn load_parses_plugins_with_all_clients() {
+        use crate::model::bundle::{
+            ClaudePluginDescriptor, CopilotPluginDescriptor, OpencodePluginDescriptor,
+            VscodePluginDescriptor,
+        };
+
         let content = "schema: 1
 name: with-plugins
 description: Bundle with plugins declared
@@ -418,34 +423,70 @@ plugins:
 
         let sp = &bundle.plugins["superpowers"];
         let claude = sp.claude.as_ref().expect("claude block");
-        assert_eq!(claude.source, "anthropics/claude-plugins");
-        assert_eq!(claude.plugin, "superpowers");
-        assert_eq!(
-            claude.install_url.as_deref(),
-            Some("https://github.com/obra/superpowers#install")
-        );
+        match claude {
+            ClaudePluginDescriptor::Install {
+                source,
+                plugin,
+                install_url,
+            } => {
+                assert_eq!(source, "anthropics/claude-plugins");
+                assert_eq!(plugin, "superpowers");
+                assert_eq!(
+                    install_url.as_deref(),
+                    Some("https://github.com/obra/superpowers#install")
+                );
+            }
+            _ => panic!("expected Install variant"),
+        }
 
         let copilot = sp.copilot.as_ref().expect("copilot block");
-        assert_eq!(copilot.source, "obra/superpowers-marketplace");
-        assert_eq!(copilot.plugin, "superpowers");
-        assert_eq!(
-            copilot.install_url.as_deref(),
-            Some("https://github.com/obra/superpowers#install")
-        );
+        match copilot {
+            CopilotPluginDescriptor::Install {
+                source,
+                plugin,
+                install_url,
+            } => {
+                assert_eq!(source, "obra/superpowers-marketplace");
+                assert_eq!(plugin, "superpowers");
+                assert_eq!(
+                    install_url.as_deref(),
+                    Some("https://github.com/obra/superpowers#install")
+                );
+            }
+            _ => panic!("expected Install variant"),
+        }
 
         let vscode = sp.vscode.as_ref().expect("vscode block");
-        assert_eq!(vscode.extension, "anthropic.superpowers");
-        assert_eq!(
-            vscode.install_url.as_deref(),
-            Some("https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers")
-        );
+        match vscode {
+            VscodePluginDescriptor::Install {
+                extension,
+                install_url,
+            } => {
+                assert_eq!(extension, "anthropic.superpowers");
+                assert_eq!(
+                    install_url.as_deref(),
+                    Some(
+                        "https://marketplace.visualstudio.com/items?itemName=anthropic.superpowers"
+                    )
+                );
+            }
+            _ => panic!("expected Install variant"),
+        }
 
         let opencode = sp.opencode.as_ref().expect("opencode block");
-        assert_eq!(opencode.module, "superpowers-opencode");
-        assert_eq!(
-            opencode.install_url.as_deref(),
-            Some("https://opencode.ai/plugins/superpowers")
-        );
+        match opencode {
+            OpencodePluginDescriptor::Install {
+                module,
+                install_url,
+            } => {
+                assert_eq!(module, "superpowers-opencode");
+                assert_eq!(
+                    install_url.as_deref(),
+                    Some("https://opencode.ai/plugins/superpowers")
+                );
+            }
+            _ => panic!("expected Install variant"),
+        }
     }
 
     #[test]
@@ -503,5 +544,78 @@ plugins:
         let serialized = serde_yaml_ng::to_string(&bundle).expect("serialize");
         let reparsed: Bundle = serde_yaml_ng::from_str(&serialized).expect("reparse");
         assert_eq!(bundle.plugins, reparsed.plugins);
+    }
+
+    #[test]
+    fn load_parses_instructions_only_plugin() {
+        use crate::model::bundle::ClaudePluginDescriptor;
+
+        let content = "schema: 1
+name: instructions-only
+description: Plugin with instructions URL
+items:
+  rules: []
+plugins:
+  manual-plugin:
+    claude:
+      instructions_url: https://example.com/install-guide
+      summary: Follow the guide to install manually
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "instructions-only.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.plugins.len(), 1);
+
+        let plugin = &bundle.plugins["manual-plugin"];
+        let claude = plugin.claude.as_ref().expect("claude block");
+        match claude {
+            ClaudePluginDescriptor::Instructions {
+                instructions_url,
+                summary,
+            } => {
+                assert_eq!(instructions_url, "https://example.com/install-guide");
+                assert_eq!(
+                    summary.as_deref(),
+                    Some("Follow the guide to install manually")
+                );
+            }
+            _ => panic!("expected Instructions variant"),
+        }
+    }
+
+    #[test]
+    fn load_parses_config_write_plugin() {
+        use crate::model::bundle::OpencodePluginDescriptor;
+
+        let content = "schema: 1
+name: config-write
+description: Plugin with config write mode
+items:
+  rules: []
+plugins:
+  oc-plugin:
+    opencode:
+      plugin_uri: https://example.com/plugin.wasm
+      install_url: https://example.com/docs
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "config-write.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.plugins.len(), 1);
+
+        let plugin = &bundle.plugins["oc-plugin"];
+        let opencode = plugin.opencode.as_ref().expect("opencode block");
+        match opencode {
+            OpencodePluginDescriptor::ConfigWrite {
+                plugin_uri,
+                install_url,
+            } => {
+                assert_eq!(plugin_uri, "https://example.com/plugin.wasm");
+                assert_eq!(install_url.as_deref(), Some("https://example.com/docs"));
+            }
+            _ => panic!("expected ConfigWrite variant"),
+        }
     }
 }

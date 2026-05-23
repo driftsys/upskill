@@ -85,6 +85,11 @@ pub fn dim(text: &str) -> ColoredString {
     text.dimmed()
 }
 
+/// Cyan — informational notices (manual steps).
+pub fn info(text: &str) -> ColoredString {
+    text.cyan()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

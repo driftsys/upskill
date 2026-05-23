@@ -112,6 +112,8 @@ pub enum PluginInstallStatus {
     /// install time (warn-skip outcome).  `upskill doctor` surfaces these
     /// so the user can install the CLI and re-run `upskill update`.
     Skipped,
+    /// Plugin has manual installation instructions — user must follow a URL.
+    Instructions,
 }
 
 impl Default for Lockfile {

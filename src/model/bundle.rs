@@ -101,46 +101,102 @@ pub struct PluginEntry {
     pub opencode: Option<OpencodePluginDescriptor>,
 }
 
-/// Install descriptor for Claude Code plugins.
+/// Descriptor for Claude Code plugins.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClaudePluginDescriptor {
-    /// Marketplace source (passed to `claude plugin marketplace add`).
-    pub source: String,
-    /// Plugin identifier (passed to `claude plugin install`).
-    pub plugin: String,
-    /// URL shown in warn-skip message when CLI not found.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub install_url: Option<String>,
+#[serde(untagged)]
+pub enum ClaudePluginDescriptor {
+    /// Install via `claude plugin marketplace add` + `claude plugin install`.
+    Install {
+        /// Marketplace source (passed to `claude plugin marketplace add`).
+        source: String,
+        /// Plugin identifier (passed to `claude plugin install`).
+        plugin: String,
+        /// URL shown in warn-skip message when CLI not found.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_url: Option<String>,
+    },
+    /// Manual instructions — user must follow a URL to install.
+    Instructions {
+        /// URL with installation instructions.
+        instructions_url: String,
+        /// Optional human-readable summary shown to the user.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        summary: Option<String>,
+    },
 }
 
-/// Install descriptor for GitHub Copilot CLI plugins.
+/// Descriptor for GitHub Copilot CLI plugins.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CopilotPluginDescriptor {
-    /// Marketplace source (passed to `copilot plugin marketplace add`).
-    pub source: String,
-    /// Plugin identifier (passed to `copilot plugin install`).
-    pub plugin: String,
-    /// URL shown in warn-skip message when CLI not found.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub install_url: Option<String>,
+#[serde(untagged)]
+pub enum CopilotPluginDescriptor {
+    /// Install via `copilot plugin marketplace add` + `copilot plugin install`.
+    Install {
+        /// Marketplace source (passed to `copilot plugin marketplace add`).
+        source: String,
+        /// Plugin identifier (passed to `copilot plugin install`).
+        plugin: String,
+        /// URL shown in warn-skip message when CLI not found.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_url: Option<String>,
+    },
+    /// Manual instructions — user must follow a URL to install.
+    Instructions {
+        /// URL with installation instructions.
+        instructions_url: String,
+        /// Optional human-readable summary shown to the user.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        summary: Option<String>,
+    },
 }
 
-/// Install descriptor for VS Code extensions.
+/// Descriptor for VS Code extensions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VscodePluginDescriptor {
-    /// Extension ID (passed to `code --install-extension`).
-    pub extension: String,
-    /// URL shown in warn-skip message when CLI not found.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub install_url: Option<String>,
+#[serde(untagged)]
+pub enum VscodePluginDescriptor {
+    /// Install via `code --install-extension`.
+    Install {
+        /// Extension ID (passed to `code --install-extension`).
+        extension: String,
+        /// URL shown in warn-skip message when CLI not found.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_url: Option<String>,
+    },
+    /// Manual instructions — user must follow a URL to install.
+    Instructions {
+        /// URL with installation instructions.
+        instructions_url: String,
+        /// Optional human-readable summary shown to the user.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        summary: Option<String>,
+    },
 }
 
-/// Install descriptor for opencode modules.
+/// Descriptor for opencode modules.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OpencodePluginDescriptor {
-    /// Module name (passed to `opencode plugin`).
-    pub module: String,
-    /// URL shown in warn-skip message when CLI not found.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub install_url: Option<String>,
+#[serde(untagged)]
+pub enum OpencodePluginDescriptor {
+    /// Install via `opencode plugin`.
+    Install {
+        /// Module name (passed to `opencode plugin`).
+        module: String,
+        /// URL shown in warn-skip message when CLI not found.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_url: Option<String>,
+    },
+    /// Manual instructions — user must follow a URL to install.
+    Instructions {
+        /// URL with installation instructions.
+        instructions_url: String,
+        /// Optional human-readable summary shown to the user.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        summary: Option<String>,
+    },
+    /// Config-write mode — write a plugin URI into opencode config.
+    ConfigWrite {
+        /// Plugin URI to write into configuration.
+        plugin_uri: String,
+        /// URL shown in warn-skip message when CLI not found.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_url: Option<String>,
+    },
 }

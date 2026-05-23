@@ -19,6 +19,17 @@ items:
     - using-upskill # ops: add / update / audit
     - writing-skill-bundles # authoring: .bundle.yaml manifests + plugins
 
+# Client-native plugins required by this bundle's skills.
+plugins:
+  superpowers:
+    claude:
+      source: superpowers-dev
+      plugin: superpowers
+      install_url: https://github.com/obra/superpowers#install
+    opencode:
+      plugin_uri: "superpowers@git+https://github.com/obra/superpowers.git"
+      install_url: https://github.com/obra/superpowers
+
 # Free-form metadata. `version` should be quoted in strict registries
 # to avoid YAML float coercion, but bare floats round-trip here too.
 metadata:

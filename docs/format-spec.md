@@ -531,6 +531,54 @@ A plugin entry MAY declare any subset of client blocks. A plugin that only exist
 Code carries only a `claude:` block; clients without a matching block skip installation
 silently.
 
+**Additional descriptor forms:**
+
+A client block MAY use one of these alternative forms instead of the standard
+auto-install form. The mode is determined by which required field is present:
+
+| Mode              | Discriminating fields                      | Available for | Behavior                               |
+| ----------------- | ------------------------------------------ | ------------- | -------------------------------------- |
+| Auto-install      | `source`+`plugin` / `extension` / `module` | all clients   | Shell out to client CLI                |
+| Instructions-only | `instructions_url`                         | all clients   | Print info notice; no automated action |
+| Config-write      | `plugin_uri`                               | opencode only | Write URI to project `opencode.json`   |
+
+**Instructions-only form:**
+
+```yaml
+plugins:
+  example:
+    opencode:
+      instructions_url: https://example.com/install-docs
+      summary: |
+        Add "example@git+https://example.com/repo.git" to the
+        plugin[] array in opencode.json, then restart opencode.
+```
+
+| Field              | Type   | Required | Description                                    |
+| ------------------ | ------ | -------- | ---------------------------------------------- |
+| `instructions_url` | string | YES      | URL to manual install documentation.           |
+| `summary`          | string | no       | Short text (1-5 lines) printed during install. |
+
+**Config-write form (opencode only):**
+
+```yaml
+plugins:
+  example:
+    opencode:
+      plugin_uri: "example@git+https://example.com/repo.git"
+      install_url: https://example.com/install-docs
+```
+
+| Field         | Type   | Required | Description                                              |
+| ------------- | ------ | -------- | -------------------------------------------------------- |
+| `plugin_uri`  | string | YES      | Plugin URI appended to `opencode.json` `plugin[]` array. |
+| `install_url` | string | no       | URL shown in output for reference.                       |
+
+Disambiguation: serde attempts variants in declaration order (Install first).
+If both an auto-install field and an instructions-only field are present, the
+auto-install form takes priority. `upskill lint` SHOULD warn about ambiguous
+descriptors.
+
 **Install behavior:**
 
 | Client   | CLI commands                                                                                             |
@@ -556,10 +604,11 @@ agents portion of the bundle MUST install regardless of plugin installation succ
 with its client, identifier, scope, and install status so that `remove`, `update`, and `doctor`
 can reconcile state. The `status` field distinguishes outcomes:
 
-| `status`      | Meaning                                                 |
-| ------------- | ------------------------------------------------------- |
-| `"installed"` | Plugin successfully installed via the client CLI.       |
-| `"skipped"`   | Client CLI was not on PATH at install time (warn-skip). |
+| `status`         | Meaning                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `"installed"`    | Plugin successfully installed via the client CLI or config-write.            |
+| `"skipped"`      | Client CLI was not on PATH at install time (warn-skip).                      |
+| `"instructions"` | Instructions-only — no automated install; consumer must follow manual steps. |
 
 Plugins that fail for other reasons (non-zero exit from a present CLI) MUST NOT be recorded —
 these are transient errors and should not pollute the lockfile.
@@ -582,8 +631,9 @@ pre-v0.6.x lockfiles that lacked this field).
 
 Implementations:
 
-- MUST shell out to the native client CLI for plugin installation — MUST NOT manipulate client
-  config files directly.
+- MUST shell out to the native client CLI for auto-install plugin descriptors — MUST NOT
+  manipulate client config files directly, except for the opencode config-write mode which
+  writes to project-scope `opencode.json` per the documented plugin registration path.
 - MUST treat plugin install as idempotent (re-running on an already-installed plugin is a
   no-op).
 - MUST use warn-skip when the target client CLI is not found (`ErrorKind::NotFound`).
