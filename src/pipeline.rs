@@ -1062,6 +1062,12 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
+    /// `Apply` mode: item no longer exists in the source. Outputs deleted
+    /// and lockfile entry removed.
+    Removed,
+    /// `DryRun` mode: item no longer exists in the source; an `update`
+    /// (without `--dry-run`) would remove it.
+    WouldRemove,
 }
 
 #[derive(Debug, Clone)]

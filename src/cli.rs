@@ -119,6 +119,10 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
+        /// Skip the confirmation prompt. Already implicit when stdin is
+        /// not a terminal (CI / pipes) or when `--dry-run` is used.
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
     },
     /// List installed content recorded in `.upskill-lock.json`.
     ///

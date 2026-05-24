@@ -61,7 +61,8 @@ fn main() {
             dry_run,
             global,
             project,
-        } => run_update(&names, dry_run, global, project),
+            yes,
+        } => run_update(&names, dry_run, yes, global, project),
         Commands::List {
             global,
             project,
@@ -483,7 +484,7 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i32 {
+fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -544,6 +545,8 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             UpdateStatus::WouldChange { new_hash, .. } => {
                 style::warn(&format!("would change → {}", short(new_hash)))
             }
+            UpdateStatus::Removed => style::error_label("removed — no longer in source"),
+            UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
         };
         println!(
             "  {} {:<32} {}",
