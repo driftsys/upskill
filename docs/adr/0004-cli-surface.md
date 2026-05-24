@@ -24,8 +24,8 @@ This ADR is one of four child ADRs of [ADR-0001](./0001-multi-kind-compiler-arch
 upskill add <source> [items...]    Install content from any source.
 upskill remove [<name>]            Remove installed content.
 upskill update [<name>]            Pull latest, regenerate changed items.
-upskill list [--available]         Show installed (or available) content.
-upskill info <name>                Show item/bundle details.
+upskill list [--json]              Show installed content.
+upskill search <query>             Search the public registry.
 upskill new <kind> <name>          Scaffold a new rule/skill/agent.
 upskill doctor                     Verify installation consistency.
 upskill lint [paths...]            Validate SSOT files.
@@ -157,3 +157,9 @@ partial cases without TTY interaction (also: scriptable, CI-friendly).
 - Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
   [ADR-0003](./0003-generation-pipeline.md),
   [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
+
+## Amendments
+
+- **2026-05-24**: Replace `info <name>` with `search <query>` (implemented
+  as skills.sh API search). Change `list [--available]` to `list [--json]`;
+  `--available` is deferred to a future release.

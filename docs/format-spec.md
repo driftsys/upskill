@@ -1,6 +1,6 @@
 # Portable Format for AI-Assistance Content
 
-**Version**: 0.2.0-draft
+**Version**: 0.6.0
 **Status**: Draft
 **Date**: 2026-05-13
 
