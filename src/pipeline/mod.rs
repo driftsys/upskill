@@ -22,7 +22,6 @@
 
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -32,7 +31,11 @@ use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
 use crate::source::{GithubRepo, GitlabRepo, InstallSource};
 
+mod hash;
 mod report;
+
+pub(crate) use hash::hash_item_dir;
+use hash::hash_source_items;
 pub use report::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -1242,41 +1245,6 @@ pub fn update(
     Ok(report)
 }
 
-/// Hash every item directory under a SSOT root, keyed by `(kind, name)`.
-/// Used by `update --dry-run` to compute would-be hashes without
-/// installing. Mirrors the discovery of `install_from_local_path`: an
-/// item directory `<source_root>/<name>/` contributes one entry per
-/// kind for which it holds an entrypoint (so co-located multi-kind
-/// items contribute multiple entries, one per kind).
-fn hash_source_items(
-    source_root: &Path,
-) -> std::collections::BTreeMap<(ItemKind, String), Option<String>> {
-    let mut out = std::collections::BTreeMap::new();
-    let Ok(entries) = fs::read_dir(source_root) else {
-        return out;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        let hash = hash_item_dir(&path);
-        for (entrypoint, kind) in [
-            ("RULE.md", ItemKind::Rule),
-            ("SKILL.md", ItemKind::Skill),
-            ("AGENT.md", ItemKind::Agent),
-        ] {
-            if path.join(entrypoint).is_file() {
-                out.insert((kind, name.to_string()), hash.clone());
-            }
-        }
-    }
-    out
-}
-
 /// List installed content from `<target>/.upskill-lock.json`. No
 /// filesystem walk, no fetch — pure lockfile dump grouped by kind.
 /// Empty lockfile (or missing file) is not an error; the returned
@@ -1673,49 +1641,6 @@ fn write_output(target: &Path, rel: &Path, content: &str) -> Result<()> {
     }
     fs::write(&full, content).with_context(|| format!("write {}", full.display()))?;
     Ok(())
-}
-
-/// SHA-256 hash of every file under `dir`, with each file's path-relative
-/// name folded into the hash so renames register as drift. Recursive,
-/// deterministic (sorted file list), and `None` when `dir` is empty or
-/// unreadable. Used by the pipeline to populate `LockedItem.hash` and by
-/// `doctor` (Phase B3) to detect SSOT drift.
-pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
-    let mut files = Vec::new();
-    collect_files(dir, &mut files);
-    if files.is_empty() {
-        return None;
-    }
-    files.sort();
-    let mut hasher = Sha256::new();
-    for file in &files {
-        let relative = file.strip_prefix(dir).unwrap_or(file);
-        hasher.update(relative.to_string_lossy().as_bytes());
-        if let Ok(content) = fs::read(file) {
-            hasher.update(&content);
-        }
-    }
-    Some(
-        hasher
-            .finalize()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect(),
-    )
-}
-
-fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            collect_files(&path, files);
-        } else {
-            files.push(path);
-        }
-    }
 }
 
 /// Iterate `(name, dir)` for every immediate subdirectory of `kind_root`.
