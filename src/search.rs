@@ -2,6 +2,49 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
 
+use crate::index::RegistryIndex;
+
+/// Result from a local index search.
+pub struct IndexSearchResult {
+    pub name: String,
+    pub kind: String,
+    pub description: String,
+    pub path: String,
+    pub registry: String,
+    pub source: String,
+}
+
+/// Search a local index by substring match on name and description.
+/// Optionally filter by kind.
+pub fn search_index(
+    index: &RegistryIndex,
+    query: &str,
+    kind_filter: Option<&str>,
+) -> Vec<IndexSearchResult> {
+    let query_lower = query.to_lowercase();
+    index
+        .items
+        .iter()
+        .filter(|item| {
+            if let Some(kind) = kind_filter
+                && item.kind != kind
+            {
+                return false;
+            }
+            item.name.to_lowercase().contains(&query_lower)
+                || item.description.to_lowercase().contains(&query_lower)
+        })
+        .map(|item| IndexSearchResult {
+            name: item.name.clone(),
+            kind: item.kind.clone(),
+            description: item.description.clone(),
+            path: item.path.clone(),
+            registry: index.registry.clone(),
+            source: index.source.clone(),
+        })
+        .collect()
+}
+
 const DEFAULT_REGISTRY_URL: &str = "https://skills.sh";
 
 /// Hard cap on the registry round-trip. Defends against a hung server or
@@ -165,5 +208,41 @@ mod tests {
                 build_agent().expect("agent with proxy");
             },
         );
+    }
+
+    #[test]
+    fn search_index_matches_name_and_description() {
+        use crate::index::{IndexedItem, RegistryIndex};
+        let index = RegistryIndex {
+            schema: 1,
+            registry: "test".into(),
+            source: "owner/repo".into(),
+            head: Some("sha".into()),
+            indexed_at: "0".into(),
+            items: vec![
+                IndexedItem {
+                    name: "code-review".into(),
+                    kind: "skill".into(),
+                    description: "Structured code review workflow".into(),
+                    path: "skills/code-review".into(),
+                },
+                IndexedItem {
+                    name: "no-console".into(),
+                    kind: "rule".into(),
+                    description: "Ban console.log".into(),
+                    path: "skills/no-console".into(),
+                },
+            ],
+        };
+        let results = search_index(&index, "code", None);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "code-review");
+
+        let results = search_index(&index, "workflow", None);
+        assert_eq!(results.len(), 1);
+
+        let results = search_index(&index, "co", Some("rule"));
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "no-console");
     }
 }

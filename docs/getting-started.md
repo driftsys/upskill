@@ -65,6 +65,27 @@ upskill doctor    # any drift between lockfile and on-disk output?
 upskill update    # re-fetch sources and regenerate
 ```
 
+## Configuring registries
+
+To search content from corporate or custom registries, add them to your
+config:
+
+```yaml
+# ~/.config/upskill/config.yaml
+registries:
+  - name: corp
+    source: gitlab:mycompany/ai-skills
+  - name: team
+    source: myorg/team-skills
+```
+
+Then `upskill search` will include results from all configured registries.
+You can also search a specific registry:
+
+```bash
+upskill search auth --registry corp
+```
+
 ## Scaffold your first item (author)
 
 Inside a source-registry repo (where SSOT items live), the recommended

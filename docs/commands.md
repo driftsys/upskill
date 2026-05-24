@@ -12,6 +12,7 @@
 | `list`   | Consumer | Show installed content from the lock file.          |
 | `doctor` | Consumer | Verify installation consistency.                    |
 | `search` | Consumer | Look up skills via the public registry.             |
+| `index`  | Consumer | Build or manage the local registry index cache.     |
 | `new`    | Author   | Scaffold a new rule, skill, or agent.               |
 | `lint`   | Author   | Validate SSOT files against the format spec.        |
 | `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
@@ -173,12 +174,35 @@ arrays are always present, possibly empty.
 
 ### `upskill search <query>`
 
-Search the public skills registry.
+Search the public skills registry and any configured registries.
 
 ```bash
 upskill search code-review
 upskill search code-review --limit 20
+upskill search auth --registry corp
+upskill search auth --kind rule
 ```
+
+| Flag                | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `--registry <name>` | Search only a specific configured registry.             |
+| `--kind <kind>`     | Filter results by item kind (`skill`, `rule`, `agent`). |
+| `--limit <n>`       | Maximum number of results (default 10).                 |
+
+### `upskill index`
+
+Build or manage the local registry index cache.
+
+```text
+upskill index [--registry <name>] [--clear]
+```
+
+| Flag                | Description                       |
+| ------------------- | --------------------------------- |
+| `--registry <name>` | Rebuild only a specific registry. |
+| `--clear`           | Remove all cached indexes.        |
+
+Without flags, rebuilds the index for all configured registries.
 
 ## Author commands
 
