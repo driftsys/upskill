@@ -183,16 +183,24 @@ pub enum Commands {
         #[arg(long = "json")]
         json: bool,
     },
-    /// Search the public skills registry.
+    /// Search the public skills registry and configured registries.
     #[command(after_help = "EXAMPLES:\n  \
             upskill search code-review\n  \
-            upskill search api --limit 5")]
+            upskill search api --limit 5\n  \
+            upskill search auth --registry corp\n  \
+            upskill search auth --kind rule")]
     Search {
         /// Search query.
         query: String,
-        /// Maximum number of results.
+        /// Maximum number of results (skills.sh only).
         #[arg(short = 'l', long, default_value = "10")]
         limit: usize,
+        /// Search only a specific configured registry (skip skills.sh).
+        #[arg(short = 'r', long)]
+        registry: Option<String>,
+        /// Filter results by item kind (skill, rule, agent).
+        #[arg(short = 'k', long)]
+        kind: Option<String>,
     },
     /// Validate SSOT files against the format spec.
     ///
@@ -240,5 +248,18 @@ pub enum Commands {
         kind: String,
         /// Item name. Lowercase letters, digits, hyphens; max 64 chars.
         name: String,
+    },
+    /// Build or manage the local registry index cache.
+    #[command(after_help = "EXAMPLES:\n  \
+            upskill index\n  \
+            upskill index --registry corp\n  \
+            upskill index --clear")]
+    Index {
+        /// Rebuild only a specific registry.
+        #[arg(short = 'r', long)]
+        registry: Option<String>,
+        /// Remove all cached indexes.
+        #[arg(long, conflicts_with = "registry")]
+        clear: bool,
     },
 }

@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use upskill::cli::{Cli, Commands};
+use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
+use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
@@ -76,10 +78,16 @@ fn main() {
             project,
             json,
         } => run_doctor(global, project, json),
-        Commands::Search { query, limit } => run_search(&query, limit),
+        Commands::Search {
+            query,
+            limit,
+            registry,
+            kind,
+        } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
+        Commands::Index { registry, clear } => run_index(registry.as_deref(), clear),
     };
 
     if was_interrupted() {
@@ -1078,34 +1086,195 @@ fn print_scaffold_report(report: &ScaffoldReport) {
     println!("edit the file and replace the TODO body before publishing.");
 }
 
-fn run_search(query: &str, limit: usize) -> i32 {
-    match search::search(query, limit) {
+fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&str>) -> i32 {
+    let cfg = match config::load_config(home_dir().as_deref(), Some(std::path::Path::new("."))) {
+        Ok(c) => c,
         Err(err) => {
             print_error(&err);
-            EXIT_ERROR
+            return EXIT_ERROR;
         }
-        Ok(results) if results.is_empty() => {
-            if !style::is_quiet() {
-                println!("no skills found for '{}'", query);
+    };
+
+    let mut found_any = false;
+    let mut skills_sh_failed = false;
+
+    // If --registry is specified, search only that registry.
+    if let Some(reg_name) = registry {
+        let entry = match cfg.registries.iter().find(|r| r.name == reg_name) {
+            Some(e) => e,
+            None => {
+                eprintln!("error: registry '{}' not found in config", reg_name);
+                return EXIT_ERROR;
             }
-            EXIT_SUCCESS
+        };
+        let fresh = match index::ensure_fresh(entry) {
+            Ok(f) => f,
+            Err(err) => {
+                print_error(&err);
+                return EXIT_ERROR;
+            }
+        };
+        if let Some(w) = &fresh.warning
+            && !style::is_quiet()
+        {
+            eprintln!("{}", style::warn(w));
         }
-        Ok(results) => {
+        let results = search::search_index(&fresh.index, query, kind);
+        if !results.is_empty() {
+            found_any = true;
             if !style::is_quiet() {
-                for skill in &results {
-                    let repo = skill
-                        .source
-                        .trim_start_matches("github/")
-                        .trim_start_matches("gitlab/");
+                println!("{}", style::dim(&format!("── {} ──", reg_name)));
+                for r in &results {
                     println!(
-                        "{}\t{}\t{}",
-                        style::name(&skill.name),
-                        style::dim(&format!("{} installs", skill.installs)),
-                        style::dim(&format!("upskill add {repo} --skill {}", skill.name))
+                        "  {} [{}]\t{}",
+                        style::name(&r.name),
+                        r.kind,
+                        style::dim(&format!("upskill add {}:{}", r.source, r.path))
                     );
                 }
             }
-            EXIT_SUCCESS
+        }
+    } else {
+        // Query skills.sh unless --kind filters to something other than "skill".
+        let skip_skills_sh = kind.is_some() && kind != Some("skill");
+        if !skip_skills_sh {
+            match search::search(query, limit) {
+                Err(err) => {
+                    skills_sh_failed = true;
+                    print_error(&err);
+                }
+                Ok(results) if !results.is_empty() => {
+                    found_any = true;
+                    if !style::is_quiet() {
+                        println!("{}", style::dim("── skills.sh ──"));
+                        for skill in &results {
+                            let repo = skill
+                                .source
+                                .trim_start_matches("github/")
+                                .trim_start_matches("gitlab/");
+                            println!(
+                                "  {}\t{}\t{}",
+                                style::name(&skill.name),
+                                style::dim(&format!("{} installs", skill.installs)),
+                                style::dim(&format!("upskill add {repo} --skill {}", skill.name))
+                            );
+                        }
+                    }
+                }
+                Ok(_) => {}
+            }
+        }
+
+        // Search all configured registries.
+        for entry in &cfg.registries {
+            let fresh = match index::ensure_fresh(entry) {
+                Ok(f) => f,
+                Err(err) => {
+                    if !style::is_quiet() {
+                        eprintln!(
+                            "{}: {}",
+                            style::warn(&format!("registry '{}'", entry.name)),
+                            err
+                        );
+                    }
+                    continue;
+                }
+            };
+            if let Some(w) = &fresh.warning
+                && !style::is_quiet()
+            {
+                eprintln!("{}", style::warn(w));
+            }
+            let results = search::search_index(&fresh.index, query, kind);
+            if !results.is_empty() {
+                found_any = true;
+                if !style::is_quiet() {
+                    println!("{}", style::dim(&format!("── {} ──", entry.name)));
+                    for r in &results {
+                        println!(
+                            "  {} [{}]\t{}",
+                            style::name(&r.name),
+                            r.kind,
+                            style::dim(&format!("upskill add {}:{}", r.source, r.path))
+                        );
+                    }
+                }
+            }
         }
     }
+
+    if !found_any && !style::is_quiet() {
+        println!("no skills found for '{}'", query);
+    }
+    // If skills.sh failed and there are no configured registries to fall
+    // back on, propagate the error (backwards-compatible behavior).
+    if skills_sh_failed && cfg.registries.is_empty() {
+        return EXIT_ERROR;
+    }
+    EXIT_SUCCESS
+}
+
+fn run_index(registry: Option<&str>, clear: bool) -> i32 {
+    if clear {
+        let dir = index::cache_dir();
+        if dir.exists()
+            && let Err(err) = std::fs::remove_dir_all(&dir)
+        {
+            eprintln!("error: failed to clear index cache: {}", err);
+            return EXIT_ERROR;
+        }
+        if !style::is_quiet() {
+            println!("cleared index cache");
+        }
+        return EXIT_SUCCESS;
+    }
+
+    let cfg = match config::load_config(home_dir().as_deref(), Some(std::path::Path::new("."))) {
+        Ok(c) => c,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let entries: Vec<_> = if let Some(name) = registry {
+        match cfg.registries.iter().find(|r| r.name == name) {
+            Some(e) => vec![e.clone()],
+            None => {
+                eprintln!("error: registry '{}' not found in config", name);
+                return EXIT_ERROR;
+            }
+        }
+    } else {
+        cfg.registries.clone()
+    };
+
+    if entries.is_empty() {
+        if !style::is_quiet() {
+            println!("no registries configured");
+        }
+        return EXIT_SUCCESS;
+    }
+
+    for entry in &entries {
+        if !style::is_quiet() {
+            println!("indexing {}...", entry.name);
+        }
+        match index::build_index(entry) {
+            Ok(idx) => {
+                if let Err(err) = index::write_index(&idx) {
+                    eprintln!("error: failed to write index for '{}': {}", entry.name, err);
+                    return EXIT_ERROR;
+                }
+                if !style::is_quiet() {
+                    println!("  {} items indexed", idx.items.len());
+                }
+            }
+            Err(err) => {
+                eprintln!("error: failed to index '{}': {}", entry.name, err);
+                return EXIT_ERROR;
+            }
+        }
+    }
+    EXIT_SUCCESS
 }

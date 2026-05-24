@@ -56,6 +56,7 @@ No overlap between verbs.
 | `list`   | Consumer | Show installed content from the lock file.          |
 | `doctor` | Consumer | Verify installation consistency.                    |
 | `search` | Consumer | Look up skills via the public registry.             |
+| `index`  | Consumer | Build or manage the local registry index cache.     |
 | `new`    | Author   | Scaffold a new rule, skill, or agent.               |
 | `lint`   | Author   | Validate SSOT files against the format spec.        |
 | `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
@@ -287,14 +288,15 @@ Self-hosted GitLab is supported via full URL form
 
 ### 6.3 Environment variables
 
-| Variable       | Purpose                                       |
-| -------------- | --------------------------------------------- |
-| `NO_COLOR`     | Disable colored output.                       |
-| `GITHUB_TOKEN` | Authenticate GitHub requests (private repos). |
-| `GH_TOKEN`     | Fallback for `GITHUB_TOKEN`.                  |
-| `GITLAB_TOKEN` | Authenticate GitLab requests (private repos). |
-| `GL_TOKEN`     | Fallback for `GITLAB_TOKEN`.                  |
-| `HTTPS_PROXY`  | HTTP proxy for network requests.              |
+| Variable         | Purpose                                        |
+| ---------------- | ---------------------------------------------- |
+| `NO_COLOR`       | Disable colored output.                        |
+| `GITHUB_TOKEN`   | Authenticate GitHub requests (private repos).  |
+| `GH_TOKEN`       | Fallback for `GITHUB_TOKEN`.                   |
+| `GITLAB_TOKEN`   | Authenticate GitLab requests (private repos).  |
+| `GL_TOKEN`       | Fallback for `GITLAB_TOKEN`.                   |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.               |
+| `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
 
 ## 7. Out of scope
 
