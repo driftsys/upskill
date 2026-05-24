@@ -256,3 +256,9 @@ expert-classified correct distillations and placements, run them past
 an author subagent without the skill present, then with, and measure
 the delta. If authors already distill and place correctly without the
 skill, the skill itself is unjustified.
+
+## You Are Done When
+
+- The behavior is classified into exactly one layer (rule, skill, or subagent)
+- The rationale for placement is documented
+- You have handed off to the appropriate `writing-*` skill

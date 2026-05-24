@@ -197,7 +197,7 @@ fn list_global_reads_home_lockfile() {
         .success();
     let project_out = String::from_utf8(project_assert.get_output().stdout.clone()).unwrap();
     assert!(
-        project_out.contains("no items installed"),
+        project_out.contains("No items installed"),
         "project list empty: {project_out}"
     );
 

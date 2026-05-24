@@ -923,7 +923,10 @@ fn print_list_report(report: &ListReport) {
         return;
     }
     if report.is_empty() {
-        println!("no items installed");
+        println!("No items installed.");
+        println!();
+        println!("  Get started: upskill add owner/repo");
+        println!("  Browse:      upskill search <query>");
         return;
     }
 

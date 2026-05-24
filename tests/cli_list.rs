@@ -51,7 +51,7 @@ fn list_empty_lockfile_reports_no_items() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("no items installed"),
+        out.contains("No items installed"),
         "expected empty message: {out}"
     );
 }

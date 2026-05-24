@@ -29,7 +29,7 @@ fn list_data_goes_to_stdout_stderr_is_empty() {
     let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
 
     assert!(
-        stdout.contains("no items installed"),
+        stdout.contains("No items installed"),
         "expected data on stdout, got: {stdout:?}"
     );
     assert!(

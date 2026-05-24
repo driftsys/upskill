@@ -221,3 +221,9 @@ Common findings:
 This skill has not been through a RED-GREEN-REFACTOR evaluation cycle.
 It is reference documentation distilled from ADR-0007, ADR-0008, and
 the format-spec. Gaps may exist in edge-case coverage.
+
+## You Are Done When
+
+- The `.bundle.yaml` manifest exists with valid schema
+- All declared items resolve to existing SSOT files
+- `upskill lint` passes on the bundle

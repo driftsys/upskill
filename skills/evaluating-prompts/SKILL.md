@@ -148,8 +148,6 @@ scope creep.
 
 Evaluation requires a clean room: a fresh agent with only the prompt
 under test loaded, no carryover context, no memory of previous runs.
-In Claude Code, this means spawning a subagent. In other clients with
-no native subagent, this means a fresh session or a separate process.
 
 The harness must:
 
@@ -162,10 +160,16 @@ The harness must:
   LLMs are stochastic. A scenario that passes once and fails twice
   is failing.
 
-For meta-skills like the writing-* set, the harness can be informal:
-spawn a subagent with the prompt, paste in the scenario, read the
-output. For production rollouts to 100+ repos, a more formal harness
-is justified — but the methodology is the same.
+<!-- @client:claude -->
+
+In Claude Code, the clean room is a subagent: spawn a fresh subagent
+with only the prompt under test loaded. For meta-skills like the
+writing-* set, the harness can be informal: spawn a subagent with the
+prompt, paste in the scenario, read the output. For production rollouts
+to 100+ repos, a more formal harness is justified — but the methodology
+is the same.
+
+<!-- @endclient -->
 
 ## Pressure scenario construction
 
@@ -316,3 +320,10 @@ the existing meta-skills (`writing-rules`, `writing-subagents`,
 when applied to those four, this skill earns its slot. If authors
 end up evaluating prompts the same way regardless of whether this
 skill is present, the skill itself is unjustified.
+
+## You Are Done When
+
+- At least one scenario file exists in `eval/`
+- RED phase: the scenario fails without the content
+- GREEN phase: the scenario passes with the content
+- The rationalization table documents activation precision

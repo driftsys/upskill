@@ -52,6 +52,15 @@ observed without the subagent, the work probably belongs in a skill.
 
 ## RED phase — scenarios per interface
 
+<!-- @client:claude -->
+
+Run each scenario by spawning a fresh subagent with only the relevant
+prompt loaded. The parent's invocation tests run in the parent session
+with the subagent registered. The return tests run on the subagent
+directly in isolation.
+
+<!-- @endclient -->
+
 ### Invocation tests (run on the parent, subagent present)
 
 - **Should-delegate task** — does parent invoke?
@@ -167,3 +176,10 @@ Before declaring this skill ready, run it through its own
 RED-GREEN-REFACTOR cycle using real subagent designs from the
 framework's priority list (explorer, test-runner, git-assistant first;
 license-checker and classification-guard next).
+
+## You Are Done When
+
+- The subagent system prompt exists as an AGENT.md with valid frontmatter
+- The authority test passes (subagent stays in scope)
+- The return contract is explicit and the parent can consume the output
+- `upskill lint` passes

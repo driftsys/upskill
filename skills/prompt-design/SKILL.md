@@ -167,3 +167,8 @@ own skill later. This skill has not yet been through its own
 RED-GREEN-REFACTOR cycle; the bet is that an explicit entry point
 reduces the activation cost of the discipline enough to be worth its
 slot.
+
+## You Are Done When
+
+- The author's intent is classified (new content vs. debugging vs. cross-cutting)
+- You have routed to the correct downstream skill
