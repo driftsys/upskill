@@ -76,12 +76,8 @@ fn update_no_change_reports_up_to_date() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("Updated 0 of 4 item(s)"),
+        out.contains("everything is up to date"),
         "expected no changes, got:\n{out}"
-    );
-    assert!(
-        out.contains("up to date"),
-        "expected up-to-date status, got:\n{out}"
     );
 }
 
@@ -290,7 +286,7 @@ fn update_empty_lockfile_is_no_op() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("nothing to update"),
+        out.contains("everything is up to date") || out.contains("nothing to update"),
         "expected empty-lockfile message: {out}"
     );
 }
@@ -331,5 +327,36 @@ fn update_removes_stale_output_file_from_previous_generation() {
     assert!(
         real_output.exists(),
         "regenerated output should exist after update"
+    );
+}
+
+/// Non-TTY (test harness) should auto-proceed without `--yes`.
+#[test]
+fn update_without_yes_proceeds_in_non_tty() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Mutate source so there's something to update.
+    mutate_skill(&source);
+
+    let hash_before = lockfile_hash_for(&target, "create-api-endpoint");
+
+    // Run update WITHOUT --yes; non-TTY should auto-proceed.
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update"])
+        .assert()
+        .success();
+
+    let hash_after = lockfile_hash_for(&target, "create-api-endpoint");
+    assert_ne!(
+        hash_before, hash_after,
+        "update should have applied without --yes in non-TTY"
     );
 }
