@@ -12,11 +12,16 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(name = "upskill")]
 #[command(version)]
-#[command(about = "Author and distribute AI-assistance content across coding agents")]
 #[command(
-    after_help = "DOCUMENTATION:\n  https://driftsys.github.io/upskill/\n\n\
-        REPORT BUGS:\n  https://github.com/driftsys/upskill/issues"
+    about = "Install and manage AI-assistance content (rules, skills, agents) for Claude Code, Copilot, and opencode"
 )]
+#[command(after_help = "QUICK START:\n  \
+        upskill add owner/repo          Install from a GitHub repo\n  \
+        upskill list                    See what's installed\n  \
+        upskill update                  Pull latest versions\n  \
+        upskill search <query>          Find skills in the public registry\n\n\
+        DOCUMENTATION:\n  https://driftsys.github.io/upskill/\n\n\
+        REPORT BUGS:\n  https://github.com/driftsys/upskill/issues")]
 pub struct Cli {
     /// Disable colored output. Honored alongside `NO_COLOR`,
     /// `UPSKILL_NO_COLOR`, `TERM=dumb`, and TTY auto-detection.
@@ -33,20 +38,23 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Install rules / skills / agents from a source.
+    /// Install rules, skills, or agents from a GitHub/GitLab repo or local path.
     ///
     /// Parses each item from the source, renders per-client output, and
     /// records the install in `.upskill-lock.json`. Default scope is the
     /// current project; falls back to global (`$HOME`) when `cwd` is not
     /// inside a git repo.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 1,
+        after_help = "EXAMPLES:\n  \
             upskill add owner/repo\n  \
             upskill add owner/repo@v1.2\n  \
             upskill add owner/repo:skills/code-review\n  \
             upskill add owner/repo code-review secret-scanner\n  \
             upskill add gitlab:team/repo\n  \
             upskill add ./local-source\n  \
-            upskill add owner/repo --global")]
+            upskill add owner/repo --global"
+    )]
     Add {
         /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
         source: String,
@@ -80,11 +88,14 @@ pub enum Commands {
     /// `upskill remove` is rejected — be explicit. Ancillary files
     /// (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are not
     /// touched.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 4,
+        after_help = "EXAMPLES:\n  \
             upskill remove code-review\n  \
             upskill remove rule-a skill-b agent-c\n  \
             upskill remove --source github:owner/repo\n  \
-            upskill remove --global code-review")]
+            upskill remove --global code-review"
+    )]
     Remove {
         /// Item names to remove. Mutually exclusive with `--source`.
         names: Vec<String>,
@@ -112,11 +123,14 @@ pub enum Commands {
     /// entries and reinstalls those sources. With `--dry-run`, hashes
     /// the new SSOT and reports what would change without writing.
     /// `update` always fetches.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 3,
+        after_help = "EXAMPLES:\n  \
             upskill update\n  \
             upskill update code-review\n  \
             upskill update --dry-run\n  \
-            upskill update --global")]
+            upskill update --global"
+    )]
     Update {
         /// Item names to update (omit to update everything).
         names: Vec<String>,
@@ -141,9 +155,12 @@ pub enum Commands {
     /// present, are surfaced as a separate section. The command never
     /// fetches and never inspects per-client output files — for that, run
     /// `upskill doctor`.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 2,
+        after_help = "EXAMPLES:\n  \
             upskill list\n  \
-            upskill list --global")]
+            upskill list --global"
+    )]
     List {
         /// Read `$HOME/.upskill-lock.json` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
@@ -166,9 +183,12 @@ pub enum Commands {
     ///
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 5,
+        after_help = "EXAMPLES:\n  \
             upskill doctor\n  \
-            upskill doctor --global")]
+            upskill doctor --global"
+    )]
     Doctor {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
@@ -184,11 +204,14 @@ pub enum Commands {
         json: bool,
     },
     /// Search the public skills registry and configured registries.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 6,
+        after_help = "EXAMPLES:\n  \
             upskill search code-review\n  \
             upskill search api --limit 5\n  \
             upskill search auth --registry corp\n  \
-            upskill search auth --kind rule")]
+            upskill search auth --kind rule"
+    )]
     Search {
         /// Search query.
         query: String,
@@ -209,10 +232,13 @@ pub enum Commands {
     /// Default mode emits warnings and exits 0 unless an error rule
     /// fires; `--strict` promotes warnings to errors (CI mode). With no
     /// paths, lints the current directory.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 10,
+        after_help = "EXAMPLES:\n  \
             upskill lint\n  \
             upskill lint rules/\n  \
-            upskill lint --strict")]
+            upskill lint --strict"
+    )]
     Lint {
         /// Files or directories to lint. Empty = current directory.
         paths: Vec<PathBuf>,
@@ -226,9 +252,12 @@ pub enum Commands {
     /// markdown is left untouched (dprint's job). Refuses to run inside
     /// a consumer project (detected by `.upskill-lock.json`). With no
     /// paths, formats the current directory.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 12,
+        after_help = "EXAMPLES:\n  \
             upskill fmt\n  \
-            upskill fmt rules/")]
+            upskill fmt rules/"
+    )]
     Fmt {
         /// Files or directories to format. Empty = current directory.
         paths: Vec<PathBuf>,
@@ -239,10 +268,13 @@ pub enum Commands {
     /// defaults (e.g. `mode: subagent` / `model: sonnet` for agents)
     /// into `<cwd>/<kind>s/<name>/<KIND>.md`. Author command — refuses
     /// to run inside a consumer project.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 11,
+        after_help = "EXAMPLES:\n  \
             upskill new rule no-direct-database-access\n  \
             upskill new skill code-review\n  \
-            upskill new agent security-reviewer")]
+            upskill new agent security-reviewer"
+    )]
     New {
         /// One of `rule`, `skill`, `agent`.
         kind: String,
@@ -250,10 +282,13 @@ pub enum Commands {
         name: String,
     },
     /// Build or manage the local registry index cache.
-    #[command(after_help = "EXAMPLES:\n  \
+    #[command(
+        display_order = 7,
+        after_help = "EXAMPLES:\n  \
             upskill index\n  \
             upskill index --registry corp\n  \
-            upskill index --clear")]
+            upskill index --clear"
+    )]
     Index {
         /// Rebuild only a specific registry.
         #[arg(short = 'r', long)]

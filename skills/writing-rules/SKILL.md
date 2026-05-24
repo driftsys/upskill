@@ -133,3 +133,10 @@ yet been validated against an eval set the way superpowers' original
 methodology has. Before declaring this skill ready, run it against its
 own RED-GREEN-REFACTOR cycle using a battery of real rule-authoring
 requests from the org framework.
+
+## You Are Done When
+
+- A pressure scenario WITHOUT the rule produced a documented violation
+- The rule is written in the target instructions file
+- A pressure scenario WITH the rule produces correct behavior
+- The rule passes `upskill lint` (if in SSOT format)

@@ -271,3 +271,10 @@ scenarios (author a new skill, add a bundle, update from upstream,
 audit, hand-edit a generated file) past a subagent without the skill,
 then with, and measure whether the agent makes correct workflow
 decisions in both cases.
+
+## You Are Done When
+
+- The lifecycle operation completed successfully (`add`, `update`, `remove`, etc.)
+- `upskill doctor` reports clean state (exit 0)
+- Generated per-client files are committed alongside `.upskill-lock.json`
+- No hand-edited generated files remain
