@@ -271,3 +271,44 @@ impl ListReport {
             && self.bundles.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doctor_report_is_clean_when_all_buckets_empty() {
+        let report = DoctorReport::default();
+        assert!(report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_not_clean_with_any_drift() {
+        let mut report = DoctorReport::default();
+        report.missing_outputs.push(MissingOutput {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            missing_files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.stale_hashes.push(StaleHash {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            source: "local:/p".into(),
+            stored_hash: None,
+            current_hash: Some("abc".into()),
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.orphan_entries.push(OrphanEntry {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            source: "local:/p".into(),
+            reason: OrphanReason::LocalPathGone,
+        });
+        assert!(!report.is_clean());
+    }
+}
