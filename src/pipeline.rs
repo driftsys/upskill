@@ -1088,10 +1088,19 @@ fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
     for client in ALL_CLIENTS {
         let rel = output_path(kind, client, name);
         let full = target.join(&rel);
-        // Remove the entire item directory (e.g. `.claude/skills/<name>/`)
-        // so stale files from previous generations are cleaned up.
+        if full.exists() {
+            let _ = fs::remove_file(&full);
+        }
+        // If the item has its own directory (e.g. `.claude/skills/<name>/`),
+        // remove it entirely so stale sibling files are cleaned up.
+        // Only remove the parent if it's item-specific (contains the name).
         if let Some(parent) = full.parent() {
-            if parent.is_dir() {
+            if parent
+                .file_name()
+                .and_then(|f| f.to_str())
+                .is_some_and(|f| f == name)
+                && parent.is_dir()
+            {
                 let _ = fs::remove_dir_all(parent);
             }
         }
