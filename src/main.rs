@@ -132,9 +132,9 @@ fn run_add(
     items: &[String],
     global: bool,
     project: bool,
-    _force: bool,
-    _aliases: &[String],
-    _excludes: &[String],
+    force: bool,
+    aliases: &[String],
+    excludes: &[String],
 ) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
@@ -154,8 +154,14 @@ fn run_add(
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
+    let options = upskill::pipeline::AddOptions {
+        force,
+        aliases: parse_alias_args(aliases),
+        excludes: excludes.to_vec(),
+    };
+
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target, items, plugin_scope) {
+    match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
             print_plugin_results(&report);
@@ -166,6 +172,19 @@ fn run_add(
             EXIT_ERROR
         }
     }
+}
+
+/// Parse `--as` arguments. Direct: `"alt-name"`. Bundle: `"original=alias"`.
+fn parse_alias_args(args: &[String]) -> Vec<(String, String)> {
+    args.iter()
+        .map(|a| {
+            if let Some((from, to)) = a.split_once('=') {
+                (from.to_string(), to.to_string())
+            } else {
+                (String::new(), a.to_string())
+            }
+        })
+        .collect()
 }
 
 /// Interactive y/n prompt for bulk removal by source label. Returns

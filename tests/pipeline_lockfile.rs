@@ -46,6 +46,7 @@ fn install_writes_lockfile_at_target_root() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -100,6 +101,7 @@ fn re_install_upserts_existing_entries() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install 1");
     let lock1: Lockfile =
@@ -111,6 +113,7 @@ fn re_install_upserts_existing_entries() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install 2");
     let lock2: Lockfile =
@@ -149,6 +152,7 @@ fn install_preserves_unrelated_existing_entries() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -177,6 +181,7 @@ fn install_creates_claude_bridge_when_absent() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -200,6 +205,7 @@ fn install_registers_opencode_rules_glob_when_rules_present() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -229,6 +235,7 @@ fn install_registers_vscode_instructions_location_when_rules_present() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -261,6 +268,7 @@ fn install_preserves_existing_claude_bridge() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -300,6 +308,7 @@ fn bundle_with_plugins_produces_plugin_results() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -346,6 +355,7 @@ fn cli_not_found_plugins_recorded_as_skipped_in_lockfile() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -413,6 +423,7 @@ fn plugin_results_carry_correct_metadata() {
         &target,
         &[],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -476,6 +487,7 @@ fn install_by_name_discovers_bundle_when_no_item_matches() {
         &target,
         &["with-plugins".into()],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 
@@ -513,6 +525,7 @@ fn install_by_name_errors_on_ambiguity() {
         &target,
         &["with-plugins".into()],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect_err("should error on ambiguity");
 
@@ -537,6 +550,7 @@ fn install_by_name_prefers_items_when_only_items_match() {
         &target,
         &["license-awareness".into()],
         PluginScope::Project,
+        &Default::default(),
     )
     .expect("install");
 

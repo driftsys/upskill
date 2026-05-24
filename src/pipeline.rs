@@ -88,6 +88,18 @@ pub struct PluginResult {
     pub summary: Option<String>,
 }
 
+/// Options that control conflict resolution during install.
+#[derive(Debug, Clone, Default)]
+pub struct AddOptions {
+    /// When true, replace items from different sources without error.
+    pub force: bool,
+    /// Alias mappings. For direct `--as alt-name`: vec contains `("", "alt-name")`.
+    /// For bundle `--as original=alias`: vec contains `("original", "alias")`.
+    pub aliases: Vec<(String, String)>,
+    /// Item names to skip during install.
+    pub excludes: Vec<String>,
+}
+
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
 
 /// Install every item under `source` into `target`, generating per-client
@@ -286,6 +298,7 @@ pub fn install_with_lockfile(
     target: &Path,
     items: &[String],
     plugin_scope: crate::plugin::PluginScope,
+    options: &AddOptions,
 ) -> Result<InstallReport> {
     let mut report = if items.is_empty() {
         // No names → install everything (existing default).
@@ -303,7 +316,36 @@ pub fn install_with_lockfile(
     let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
     report.plugin_results = plugin_results;
 
+    // -- Conflict detection --
     let label = source.to_string();
+    let existing_lock = crate::lockfile::Lockfile::load(target)?;
+    let incoming: Vec<(ItemKind, String)> = {
+        let mut seen = std::collections::BTreeSet::new();
+        report
+            .items
+            .iter()
+            .filter(|i| !options.excludes.contains(&i.name))
+            .filter_map(|i| {
+                if seen.insert((i.kind, i.name.clone())) {
+                    Some((i.kind, i.name.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    };
+    let conflicts = crate::conflict::detect_conflicts(&incoming, &existing_lock, &label);
+    if !conflicts.is_empty() && !options.force {
+        anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
+    }
+
+    // -- Apply excludes --
+    if !options.excludes.is_empty() {
+        report
+            .items
+            .retain(|item| !options.excludes.contains(&item.name));
+    }
+
     let git_ref = match source {
         InstallSource::Github(r) => r.git_ref.as_deref(),
         InstallSource::Gitlab(r) => r.git_ref.as_deref(),
@@ -1164,7 +1206,13 @@ pub fn update(
 
         match mode {
             UpdateMode::Apply => {
-                let install_report = install_with_lockfile(&source, target, &[], plugin_scope)?;
+                let install_report = install_with_lockfile(
+                    &source,
+                    target,
+                    &[],
+                    plugin_scope,
+                    &AddOptions::default(),
+                )?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
