@@ -4,7 +4,8 @@
 //! "no items" messages, search results). Errors on stderr are unaffected,
 //! exit codes are unaffected.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -13,12 +14,13 @@ const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 #[test]
 fn lint_quiet_on_clean_corpus_emits_no_stdout() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let from = format!("{FIXTURES}/items");
     copy_dir_all(Path::new(&from), &source).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&source)
         .args(["lint", "--quiet"])
         .assert()
@@ -30,12 +32,13 @@ fn lint_quiet_on_clean_corpus_emits_no_stdout() {
 #[test]
 fn lint_short_q_on_clean_corpus_emits_no_stdout() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let from = format!("{FIXTURES}/items");
     copy_dir_all(Path::new(&from), &source).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&source)
         .args(["lint", "-q"])
         .assert()
@@ -49,8 +52,9 @@ fn quiet_does_not_silence_errors_on_stderr() {
     // Invalid source string: parser rejects it, error goes to stderr,
     // exit code is 2 (usage error). --quiet must not swallow that.
     let tmp = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "not a valid source", "--quiet"])
         .assert()
@@ -74,10 +78,11 @@ fn list_quiet_on_empty_lockfile_emits_no_stdout() {
     // list short-circuits to "no items installed" — that informational
     // message must be silenced under --quiet.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir(tmp.path().join(".git")).unwrap(); // pretend repo
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["list", "--project", "--quiet"])
         .assert()

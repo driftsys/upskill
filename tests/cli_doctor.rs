@@ -11,7 +11,8 @@
 //!
 //! Doctor never fetches; remote-source drift detection is `update --dry-run`.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -36,9 +37,8 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn install(target: &Path, source: &Path) {
-    Command::cargo_bin("upskill")
-        .unwrap()
+fn install(target: &Path, source: &Path, home: &Path) {
+    common::upskill_cmd(home)
         .current_dir(target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -48,15 +48,16 @@ fn install(target: &Path, source: &Path) {
 #[test]
 fn doctor_clean_install_exits_zero() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor"])
         .assert()
@@ -68,9 +69,10 @@ fn doctor_clean_install_exits_zero() {
 #[test]
 fn doctor_empty_lockfile_exits_zero() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["doctor"])
         .assert()
@@ -82,18 +84,19 @@ fn doctor_detects_missing_output_files() {
     // Install, then delete one rendered output behind upskill's back —
     // the bucket-1 path. Doctor must exit 1 and name the missing file.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let stolen = target.join(".claude/skills/create-api-endpoint/SKILL.md");
     fs::remove_file(&stolen).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor"])
         .assert()
@@ -115,19 +118,20 @@ fn doctor_detects_ssot_hash_drift() {
     // Install from a local source, mutate the SSOT in place — the
     // bucket-2 path. Doctor must exit 1 and surface the stale-hash bucket.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let skill_md = source.join("create-api-endpoint/SKILL.md");
     let original = fs::read_to_string(&skill_md).unwrap();
     fs::write(&skill_md, format!("{original}\n<!-- mutation -->\n")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor"])
         .assert()
@@ -149,17 +153,18 @@ fn doctor_detects_orphan_when_local_path_gone() {
     // Install from a local source, remove the source dir — the bucket-3
     // path. Doctor must exit 1 and surface every entry as orphan.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     fs::remove_dir_all(&source).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor"])
         .assert()
@@ -183,17 +188,18 @@ fn doctor_detects_orphan_when_item_removed_from_source() {
     // SSOT (leaving the source root). Doctor must report that one item
     // as orphan with "item not in source", and other items stay clean.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor"])
         .assert()
@@ -209,15 +215,16 @@ fn doctor_detects_orphan_when_item_removed_from_source() {
 #[test]
 fn doctor_json_clean_install_emits_empty_buckets() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor", "--json"])
         .assert()
@@ -236,17 +243,18 @@ fn doctor_json_clean_install_emits_empty_buckets() {
 #[test]
 fn doctor_json_orphan_entry_has_kebab_case_reason() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     fs::remove_dir_all(&source).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor", "--json"])
         .assert()
@@ -268,18 +276,19 @@ fn doctor_json_orphan_entry_has_kebab_case_reason() {
 #[test]
 fn doctor_json_missing_output_lists_files() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let stolen = target.join(".claude/skills/create-api-endpoint/SKILL.md");
     fs::remove_file(&stolen).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor", "--json"])
         .assert()
@@ -407,11 +416,12 @@ fn doctor_skipped_plugin_exits_zero_and_reports_it() {
     // A lockfile with a Skipped plugin should exit 0 (not drift) but still
     // surface the plugin in the output so it is not silently lost.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
     write_lockfile_with_skipped_plugin(tmp.path(), "superpowers", "claude");
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["doctor"])
         .assert()
@@ -433,7 +443,11 @@ fn doctor_installed_plugin_missing_from_client_exits_one() {
     // binary returns an empty extension list.  Doctor must exit 1 and report
     // the plugin as missing from the client.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let bin_dir = tempfile::tempdir().unwrap();
+    let home = bin_dir.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
     write_lockfile_with_installed_plugin(
         tmp.path(),
@@ -444,8 +458,7 @@ fn doctor_installed_plugin_missing_from_client_exits_one() {
     // Fake `code` that lists no extensions (empty stdout).
     write_fake_cli(bin_dir.path(), "code", "");
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .env("PATH", prepend_to_path(bin_dir.path()))
         .current_dir(tmp.path())
         .args(["doctor"])
@@ -468,7 +481,11 @@ fn doctor_installed_plugin_present_in_client_exits_zero() {
     // A lockfile records a vscode plugin as Installed. The fake `code` binary
     // returns a list that includes the extension.  Doctor must exit 0.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let bin_dir = tempfile::tempdir().unwrap();
+    let home = bin_dir.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
     write_lockfile_with_installed_plugin(
         tmp.path(),
@@ -483,8 +500,7 @@ fn doctor_installed_plugin_present_in_client_exits_zero() {
         "anthropic.superpowers\nms-python.python",
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .env("PATH", prepend_to_path(bin_dir.path()))
         .current_dir(tmp.path())
         .args(["doctor"])
@@ -496,15 +512,16 @@ fn doctor_installed_plugin_present_in_client_exits_zero() {
 fn doctor_json_includes_skipped_plugins_bucket() {
     // --json output must include a skipped_plugins array even when empty.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["doctor", "--json"])
         .assert()

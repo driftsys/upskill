@@ -6,7 +6,8 @@
 //! inside a consumer project (detects `.upskill-lock.json` at the path's
 //! root).
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -22,12 +23,13 @@ fn write(path: &Path, contents: &str) {
 #[test]
 fn lint_clean_fixture_corpus_exits_zero() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let from = format!("{FIXTURES}/items");
     copy_dir_all(Path::new(&from), &source).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&source)
         .args(["lint"])
         .assert()
@@ -39,6 +41,8 @@ fn lint_clean_fixture_corpus_exits_zero() {
 #[test]
 fn lint_flags_h1_in_body_as_warning() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("bad-h1/SKILL.md");
     write(
         &item,
@@ -57,8 +61,7 @@ fn lint_flags_h1_in_body_as_warning() {
         ),
     );
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint"])
         .assert()
@@ -71,6 +74,8 @@ fn lint_flags_h1_in_body_as_warning() {
 #[test]
 fn lint_flags_fence_without_language_as_warning() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("no-fence-lang/SKILL.md");
     write(
         &item,
@@ -89,8 +94,7 @@ fn lint_flags_fence_without_language_as_warning() {
         ),
     );
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint"])
         .assert()
@@ -105,6 +109,8 @@ fn lint_flags_fence_without_language_as_warning() {
 #[test]
 fn lint_strict_promotes_warnings_to_errors() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("strict-h1/SKILL.md");
     write(
         &item,
@@ -119,8 +125,7 @@ fn lint_strict_promotes_warnings_to_errors() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint", "--strict"])
         .assert()
@@ -131,6 +136,8 @@ fn lint_strict_promotes_warnings_to_errors() {
 #[test]
 fn lint_flags_name_directory_mismatch_as_error() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     // Directory named foo, frontmatter name is bar — error per §2.1.
     let item = tmp.path().join("foo/SKILL.md");
     write(
@@ -146,8 +153,7 @@ fn lint_flags_name_directory_mismatch_as_error() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint"])
         .assert()
@@ -158,6 +164,8 @@ fn lint_flags_name_directory_mismatch_as_error() {
 #[test]
 fn lint_flags_unbalanced_directive_as_error() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("unbalanced/SKILL.md");
     write(
         &item,
@@ -175,8 +183,7 @@ fn lint_flags_unbalanced_directive_as_error() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint"])
         .assert()
@@ -187,6 +194,8 @@ fn lint_flags_unbalanced_directive_as_error() {
 #[test]
 fn lint_refuses_to_run_inside_consumer_project() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     // Marker file says "this is a consumer project, not a source tree".
     fs::write(
         tmp.path().join(".upskill-lock.json"),
@@ -194,8 +203,7 @@ fn lint_refuses_to_run_inside_consumer_project() {
     )
     .unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint"])
         .assert()
@@ -211,6 +219,8 @@ fn lint_refuses_to_run_inside_consumer_project() {
 #[test]
 fn lint_flags_bundle_item_name_collision() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let root = tmp.path();
 
     // Create a skill named "baseline"
@@ -231,8 +241,7 @@ fn lint_flags_bundle_item_name_collision() {
     )
     .unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(root)
         .args(["lint"])
         .assert()

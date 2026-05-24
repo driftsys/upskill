@@ -5,7 +5,8 @@
 //! - bulk-remove confirmation (skipped under `--yes` / non-TTY)
 //! - "Cloning ..." progress line on git-backed installs
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -35,21 +36,21 @@ fn update_short_dry_run_flag_is_recognised() {
     // `-n` mirrors `make -n` / `rsync -n` — write nothing, report what
     // would change.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
         .success();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "-n"])
         .assert()
@@ -61,6 +62,8 @@ fn update_short_dry_run_flag_is_recognised() {
 #[test]
 fn lint_short_strict_flag_is_recognised() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("strict-h1/SKILL.md");
     fs::create_dir_all(item.parent().unwrap()).unwrap();
     fs::write(
@@ -77,8 +80,7 @@ fn lint_short_strict_flag_is_recognised() {
     )
     .unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint", "-s"])
         .assert()
@@ -91,8 +93,9 @@ fn search_short_limit_flag_is_recognised() {
     // Hit a closed loopback port so the request fails fast — we only
     // care that `-l` parses, not that the registry is reachable.
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .env("UPSKILL_REGISTRY_URL", "http://127.0.0.1:1")
         .args(["search", "anything", "-l", "3"])
@@ -103,22 +106,22 @@ fn search_short_limit_flag_is_recognised() {
 #[test]
 fn remove_short_source_flag_is_recognised() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
         .success();
 
     let label = format!("local:{}", source.display());
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "-s", &label, "-y"])
         .assert()
@@ -131,22 +134,22 @@ fn remove_by_source_under_yes_flag_skips_prompt_and_proceeds() {
     // the explicit -y is the user-visible contract: never prompt, always
     // proceed. Worth pinning down.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
         .success();
 
     let label = format!("local:{}", source.display());
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "--source", &label, "--yes"])
         .assert()
@@ -164,22 +167,22 @@ fn remove_by_source_in_non_tty_does_not_prompt_and_proceeds() {
     // proceed silently without prompting (the alternative would deadlock
     // CI on stdin read).
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
         .success();
 
     let label = format!("local:{}", source.display());
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "--source", &label])
         .assert()
@@ -192,10 +195,11 @@ fn add_against_unreachable_github_emits_progress_line_to_stderr() {
     // progress line is emitted to stderr before the failure. The clone
     // fails fast (DNS / port-1) and we just inspect captured stderr.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         // Bogus repo on a private TLD. git resolution fails instantly.
         .env("GIT_TERMINAL_PROMPT", "0")

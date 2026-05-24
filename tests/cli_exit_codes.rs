@@ -2,13 +2,18 @@
 //! 130 SIGINT. These tests pin the codes the CLI must produce for each
 //! bucket so the contract holds across implementation changes.
 
-use assert_cmd::Command;
+mod common;
+
+use std::fs;
+
 use tempfile::tempdir;
 
 #[test]
 fn version_long_flag_prints_to_stdout_and_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
 
     let expected = format!("upskill {}\n", env!("CARGO_PKG_VERSION"));
     cmd.current_dir(cwd.path())
@@ -21,7 +26,9 @@ fn version_long_flag_prints_to_stdout_and_exits_zero() {
 #[test]
 fn version_short_flag_prints_to_stdout_and_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
 
     let expected = format!("upskill {}\n", env!("CARGO_PKG_VERSION"));
     cmd.current_dir(cwd.path())
@@ -34,7 +41,9 @@ fn version_short_flag_prints_to_stdout_and_exits_zero() {
 #[test]
 fn help_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
 
     cmd.current_dir(cwd.path())
         .args(["--help"])
@@ -45,7 +54,9 @@ fn help_exits_zero() {
 #[test]
 fn usage_errors_exit_two() {
     let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
 
     cmd.current_dir(cwd.path())
         .args(["add", "invalid-source"])
@@ -59,7 +70,9 @@ fn general_errors_exit_one() {
     // (and USERPROFILE on Windows) unset, the target lookup fails — a
     // general error (exit 1), not a usage error.
     let cwd = tempdir().expect("must create temp dir");
-    let mut cmd = Command::cargo_bin("upskill").expect("binary exists");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
 
     cmd.current_dir(cwd.path())
         .env_remove("HOME")

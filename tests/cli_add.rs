@@ -7,7 +7,8 @@
 //! Local-path source only — no network. GitHub/GitLab-source coverage is
 //! in `tests/pipeline_source.rs` at the library level.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -35,6 +36,8 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
 #[test]
 fn add_installs_local_ssot_to_cwd() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
@@ -43,8 +46,7 @@ fn add_installs_local_ssot_to_cwd() {
     // project scope (cwd) instead of global ($HOME).
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -76,9 +78,10 @@ fn add_installs_local_ssot_to_cwd() {
 #[test]
 fn add_invalid_source_returns_usage_error() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "not a valid source"])
         .assert()
@@ -92,14 +95,15 @@ fn add_with_items_subset_installs_only_named_items() {
     // to a subset. Pick the skill (`create-api-endpoint`) and one rule
     // (`license-awareness`); leave the agent and the second rule out.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args([
             "add",
@@ -133,14 +137,15 @@ fn add_with_items_no_match_is_general_error() {
     // No name in the list matches anything in the source — the install
     // should refuse rather than silently emitting nothing.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args([
             "add",

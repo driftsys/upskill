@@ -6,7 +6,8 @@
 //! `.vscode/settings.json`) must remain — they are user-owned after
 //! creation per ADR-0003.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -31,9 +32,8 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn install(target: &Path, source: &Path) {
-    Command::cargo_bin("upskill")
-        .unwrap()
+fn install(target: &Path, source: &Path, home: &Path) {
+    common::upskill_cmd(home)
         .current_dir(target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -43,12 +43,14 @@ fn install(target: &Path, source: &Path) {
 #[test]
 fn remove_by_name_deletes_all_per_client_outputs_and_lockfile_entry() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     // Sanity check: install put the skill files in place.
     assert!(
@@ -67,8 +69,7 @@ fn remove_by_name_deletes_all_per_client_outputs_and_lockfile_entry() {
             .exists()
     );
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "create-api-endpoint"])
         .assert()
@@ -107,17 +108,18 @@ fn remove_by_name_deletes_all_per_client_outputs_and_lockfile_entry() {
 #[test]
 fn remove_by_source_drops_every_entry_from_that_source() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let source_label = format!("local:{}", source.display());
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "--source", &source_label])
         .assert()
@@ -140,17 +142,18 @@ fn remove_by_source_drops_every_entry_from_that_source() {
 #[test]
 fn remove_preserves_ancillary_files() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let source_label = format!("local:{}", source.display());
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "--source", &source_label])
         .assert()
@@ -175,8 +178,9 @@ fn remove_preserves_ancillary_files() {
 #[test]
 fn remove_bare_invocation_is_usage_error() {
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["remove"])
         .assert()
@@ -187,8 +191,9 @@ fn remove_bare_invocation_is_usage_error() {
 #[test]
 fn remove_names_and_source_together_is_usage_error() {
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["remove", "foo", "--source", "github:o/r"])
         .assert()
@@ -199,15 +204,16 @@ fn remove_names_and_source_together_is_usage_error() {
 #[test]
 fn remove_unknown_name_is_general_error() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["remove", "this-was-never-installed"])
         .assert()
