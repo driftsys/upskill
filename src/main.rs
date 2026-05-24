@@ -514,7 +514,7 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(names: &[String], dry_run: bool, _yes: bool, global: bool, project: bool) -> i32 {
+fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
