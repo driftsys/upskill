@@ -507,8 +507,20 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
                 EXIT_ERROR
             }
         }
+    } else if yes || !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+        // No confirmation needed — apply directly (single fetch).
+        match update(&target, names, UpdateMode::Apply, plugin_scope) {
+            Ok(report) => {
+                print_update_report(&report, false);
+                EXIT_SUCCESS
+            }
+            Err(err) => {
+                print_error_chain(&err);
+                EXIT_ERROR
+            }
+        }
     } else {
-        // Two-phase: dry-run first to compute the plan, then apply if confirmed.
+        // Interactive: dry-run first to show plan, then apply if confirmed.
         let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope) {
             Ok(r) => r,
             Err(err) => {
@@ -533,7 +545,7 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             print_update_plan(&plan);
         }
 
-        if !yes && !confirm_update() {
+        if !confirm_update() {
             eprintln!("aborted.");
             return EXIT_SUCCESS;
         }
@@ -615,16 +627,20 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         println!("nothing to update — lockfile is empty");
         return;
     }
-    let header: colored::ColoredString = if dry_run {
-        style::warn("Dry-run: would update")
-    } else {
-        style::success("Updated")
-    };
     let changes = report
         .items
         .iter()
         .filter(|i| !matches!(i.status, UpdateStatus::UpToDate))
         .count();
+    if changes == 0 && !dry_run {
+        println!("everything is up to date — nothing to do");
+        return;
+    }
+    let header: colored::ColoredString = if dry_run {
+        style::warn("Dry-run: would update")
+    } else {
+        style::success("Updated")
+    };
     println!("{header} {} of {} item(s)", changes, report.items.len());
     for item in &report.items {
         let kind_label = match item.kind {

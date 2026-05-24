@@ -1170,21 +1170,32 @@ pub fn update(
                 for it in &install_report.items {
                     new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
                 }
+                // Collect orphans first, then batch-remove from lockfile.
+                let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
                     if !new_hashes.contains_key(&(kind, entry.name.clone())) {
-                        // Orphan: item no longer in source — remove it.
-                        remove_item_outputs(target, kind, &entry.name);
-                        let mut lock = crate::lockfile::Lockfile::load(target)?;
+                        orphans.push((entry, kind));
+                    }
+                }
+                if !orphans.is_empty() {
+                    let mut lock = crate::lockfile::Lockfile::load(target)?;
+                    for (entry, kind) in &orphans {
+                        remove_item_outputs(target, *kind, &entry.name);
                         lock.remove(&entry.kind, &entry.name);
-                        lock.save(target)?;
                         report.items.push(UpdatedItem {
-                            kind,
+                            kind: *kind,
                             name: entry.name.clone(),
                             source: source_label.clone(),
                             status: UpdateStatus::Removed,
                         });
-                        continue;
+                    }
+                    lock.save(target)?;
+                }
+                for entry in &source_entries {
+                    let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        continue; // already handled as orphan
                     }
                     let new_hash = new_hashes
                         .get(&(kind, entry.name.clone()))
