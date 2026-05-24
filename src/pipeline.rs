@@ -1772,6 +1772,10 @@ fn install_skills(
         let audience = skill.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        // Clean existing output directories for this specific item before
+        // writing new outputs. This removes stale sibling files (e.g. renamed
+        // resources) while keeping other items' outputs intact if generation
+        // fails later.
         remove_item_outputs(target, ItemKind::Skill, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
@@ -1816,6 +1820,9 @@ fn install_rules(
         let audience = rule.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        // Clean existing output directories for this specific item before
+        // writing new outputs. This removes stale sibling files while keeping
+        // other items' outputs intact if generation fails later.
         remove_item_outputs(target, ItemKind::Rule, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
@@ -1860,6 +1867,9 @@ fn install_agents(
         let audience = agent.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        // Clean existing output directories for this specific item before
+        // writing new outputs. This removes stale sibling files while keeping
+        // other items' outputs intact if generation fails later.
         remove_item_outputs(target, ItemKind::Agent, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
@@ -1876,6 +1886,26 @@ fn install_agents(
                 output_path: rel,
                 source_hash: source_hash.clone(),
             });
+        }
+        // Clean up outputs for clients no longer targeted.
+        for client in ALL_CLIENTS {
+            if targets(client, audience) {
+                continue;
+            }
+            let rel = agent_output_path(client, &name);
+            let full = target.join(&rel);
+            if full.exists() {
+                let _ = fs::remove_file(&full);
+            }
+            if let Some(parent) = full.parent()
+                && parent
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .is_some_and(|f| f == name)
+                && parent.is_dir()
+            {
+                let _ = fs::remove_dir(parent);
+            }
         }
     }
     Ok(())

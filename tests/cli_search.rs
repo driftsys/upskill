@@ -1,5 +1,6 @@
 use assert_cmd::Command;
-use predicates::str::contains;
+use predicates::prelude::PredicateBooleanExt;
+use predicates::str::{contains, is_match};
 use std::io::{Read, Write};
 use tempfile::tempdir;
 
@@ -103,9 +104,10 @@ fn search_shows_install_command() {
         .args(["search", "rust"])
         .assert()
         .code(0)
-        .stdout(contains(
-            "upskill add awesome-copilot --skill rust-mcp-server-generator",
-        ));
+        // Positional syntax: `upskill add <source> <name>`
+        .stdout(is_match("upskill add \\S+ rust-mcp-server-generator").unwrap())
+        // Must NOT contain the old --skill flag
+        .stdout(predicates::str::contains("--skill").not());
 }
 
 #[test]

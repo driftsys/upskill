@@ -137,16 +137,38 @@ pub(crate) fn resolve_subfolder(
     name: &str,
 ) -> Result<PathBuf, String> {
     if let Some(sub) = subfolder {
-        let sub_path = clone_dir.join(sub);
-        // Subfolders are usually directories (item-root paths) but bundle
-        // sources point at a `<name>.bundle.yaml` file directly. Accept
-        // both — the install layer dispatches on file vs dir.
-        if !sub_path.exists() {
+        // Reject absolute paths and obvious traversal attempts before joining.
+        if sub.starts_with('/') || sub.starts_with('~') {
             return Err(format!(
-                "subfolder '{}' not found in {}/{}",
+                "subfolder '{}' in {}/{} must be a relative path (no leading '/' or '~')",
                 sub, owner, name
             ));
         }
+
+        let sub_path = clone_dir.join(sub);
+
+        // Canonicalize both paths and verify the subfolder stays within the
+        // clone directory. This catches `..` traversal and symlink escapes.
+        let canon_base = clone_dir.canonicalize().map_err(|e| {
+            format!(
+                "failed to canonicalize clone dir {}: {}",
+                clone_dir.display(),
+                e
+            )
+        })?;
+        let canon_sub = sub_path
+            .canonicalize()
+            .map_err(|_| format!("subfolder '{}' not found in {}/{}", sub, owner, name))?;
+        if !canon_sub.starts_with(&canon_base) {
+            return Err(format!(
+                "subfolder '{}' in {}/{} escapes the repository root",
+                sub, owner, name
+            ));
+        }
+
+        // Subfolders are usually directories (item-root paths) but bundle
+        // sources point at a `<name>.bundle.yaml` file directly. Accept
+        // both — the install layer dispatches on file vs dir.
         Ok(sub_path)
     } else {
         Ok(clone_dir.to_path_buf())
@@ -312,6 +334,54 @@ mod tests {
             .expect_err("must fail");
 
         assert!(err.contains("subfolder 'nonexistent' not found"));
+    }
+
+    #[test]
+    fn resolve_subfolder_rejects_absolute_path() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let clone_dir = tmp.path().join("cloned");
+        fs::create_dir_all(&clone_dir).unwrap();
+
+        let err = resolve_subfolder(&clone_dir, Some("/etc/passwd"), "test", "repo")
+            .expect_err("absolute path must fail");
+        assert!(err.contains("must be a relative path"));
+    }
+
+    #[test]
+    fn resolve_subfolder_rejects_tilde_path() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let clone_dir = tmp.path().join("cloned");
+        fs::create_dir_all(&clone_dir).unwrap();
+
+        let err = resolve_subfolder(&clone_dir, Some("~/something"), "test", "repo")
+            .expect_err("tilde path must fail");
+        assert!(err.contains("must be a relative path"));
+    }
+
+    #[test]
+    fn resolve_subfolder_rejects_dot_dot_escape() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let clone_dir = tmp.path().join("cloned");
+        fs::create_dir_all(&clone_dir).unwrap();
+        // Create a sibling directory that .. would reach
+        fs::create_dir_all(tmp.path().join("secret")).unwrap();
+
+        let err = resolve_subfolder(&clone_dir, Some("../../etc"), "test", "repo")
+            .expect_err("dot-dot escape must fail");
+        // Either "not found" (doesn't exist) or "escapes" (exists but outside)
+        assert!(err.contains("not found") || err.contains("escapes"));
+    }
+
+    #[test]
+    fn resolve_subfolder_allows_internal_dot_dot() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let clone_dir = tmp.path().join("cloned");
+        fs::create_dir_all(clone_dir.join("a/b")).unwrap();
+        fs::create_dir_all(clone_dir.join("c")).unwrap();
+
+        // a/../c resolves to c which is still inside clone_dir
+        let result = resolve_subfolder(&clone_dir, Some("a/../c"), "test", "repo");
+        assert!(result.is_ok());
     }
 
     #[test]
