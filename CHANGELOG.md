@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.6.4] (2026-05-24)
+
+### Documentation
+
+- **spec:** add design for comment-preserving fmt ([#169]) ([59c0e7a])
+
+### Features
+
+- multi-registry search with local index ([#175]) ([91a64d4]), closes [#63]
+- item conflict resolution and source locking ([#174]) ([499393c])
+- upgrade UX — orphan removal, clean-and-regenerate, interactive confirm
+  ([#172]) ([801cb95])
+- **model:** extend bundle plugins schema with instructions-only and
+  config-write modes ([#171]) ([a851308])
+
+### Bug Fixes
+
+- **fmt:** comment-preserving YAML key reordering ([#169]) ([1297202])
+
+[0.6.4]: https://github.com/driftsys/upskill/compare/v0.6.3...v0.6.4
+[59c0e7a]: https://github.com/driftsys/upskill/commit/59c0e7a
+[#169]: https://github.com/driftsys/upskill/issues/169
+[91a64d4]: https://github.com/driftsys/upskill/commit/91a64d4
+[#175]: https://github.com/driftsys/upskill/issues/175
+[#63]: https://github.com/driftsys/upskill/issues/63
+[499393c]: https://github.com/driftsys/upskill/commit/499393c
+[#174]: https://github.com/driftsys/upskill/issues/174
+[801cb95]: https://github.com/driftsys/upskill/commit/801cb95
+[#172]: https://github.com/driftsys/upskill/issues/172
+[a851308]: https://github.com/driftsys/upskill/commit/a851308
+[#171]: https://github.com/driftsys/upskill/issues/171
+[1297202]: https://github.com/driftsys/upskill/commit/1297202
+
 ## [0.6.3] (2026-05-22)
 
 ### Features
