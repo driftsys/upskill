@@ -155,3 +155,163 @@ fn add_with_exclude_skips_named_item() {
         "expected no skill-b: {lock_content}"
     );
 }
+
+#[test]
+fn add_with_alias_installs_under_alternate_name() {
+    let tmp = TempDir::new().unwrap();
+
+    // Existing lockfile with item from different source (creates conflict)
+    let lockfile = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "test-skill",
+            "source": "github:org-a/repo-a",
+            "hash": "sha256:aaa"
+        }],
+        "bundles": [],
+        "plugins": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&lockfile).unwrap(),
+    )
+    .unwrap();
+
+    // Local source with the conflicting skill
+    let skill_dir = tmp.path().join("source/test-skill");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        "---\nschema: 1\nname: test-skill\ndescription: A test skill\n---\nContent here.\n",
+    )
+    .unwrap();
+
+    Command::new("git")
+        .args(["init"])
+        .current_dir(tmp.path())
+        .assert()
+        .success();
+
+    // Install with alias to avoid conflict
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["add", "./source", "--as", "test-skill-v2"])
+        .assert()
+        .success();
+
+    // Verify lockfile has the alias with source_name
+    let lock_content = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(
+        lock_content.contains("test-skill-v2"),
+        "expected alias in lockfile: {lock_content}"
+    );
+    assert!(
+        lock_content.contains("source_name") && lock_content.contains("test-skill"),
+        "expected source_name tracking: {lock_content}"
+    );
+}
+
+#[test]
+fn update_handles_aliased_items() {
+    let tmp = TempDir::new().unwrap();
+
+    // Create source with a skill
+    let skill_dir = tmp.path().join("source/original-skill");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        "---\nschema: 1\nname: original-skill\ndescription: Original skill\n---\nUpdated content v2.\n",
+    )
+    .unwrap();
+
+    // Lockfile with an aliased item (as if previously installed with --as)
+    let lockfile = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "my-alias",
+            "source": "local:./source",
+            "source_name": "original-skill",
+            "hash": "sha256:oldoldold"
+        }],
+        "bundles": [],
+        "plugins": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&lockfile).unwrap(),
+    )
+    .unwrap();
+
+    Command::new("git")
+        .args(["init"])
+        .current_dir(tmp.path())
+        .assert()
+        .success();
+
+    // Update should succeed (finds original-skill in source, installs as my-alias)
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["update"])
+        .assert()
+        .success();
+
+    // Verify the alias is preserved in lockfile
+    let lock_content = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(
+        lock_content.contains("my-alias"),
+        "alias preserved: {lock_content}"
+    );
+    assert!(
+        lock_content.contains("source_name"),
+        "source_name preserved: {lock_content}"
+    );
+}
+
+#[test]
+fn update_dry_run_handles_aliased_items() {
+    let tmp = TempDir::new().unwrap();
+
+    let skill_dir = tmp.path().join("source/original-skill");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        "---\nschema: 1\nname: original-skill\ndescription: Changed\n---\nNew content.\n",
+    )
+    .unwrap();
+
+    let lockfile = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "my-alias",
+            "source": "local:./source",
+            "source_name": "original-skill",
+            "hash": "sha256:oldoldold"
+        }],
+        "bundles": [],
+        "plugins": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&lockfile).unwrap(),
+    )
+    .unwrap();
+
+    Command::new("git")
+        .args(["init"])
+        .current_dir(tmp.path())
+        .assert()
+        .success();
+
+    // Dry-run should detect changes (hash differs)
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run"])
+        .assert()
+        .success();
+}

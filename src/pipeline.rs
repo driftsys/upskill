@@ -283,6 +283,13 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
+/// Replace the item name component in an output path.
+/// E.g., `.claude/skills/foo/SKILL.md` → `.claude/skills/bar/SKILL.md`
+fn rename_output_path(path: &Path, old_name: &str, new_name: &str) -> PathBuf {
+    let path_str = path.to_string_lossy();
+    PathBuf::from(path_str.replacen(old_name, new_name, 1))
+}
+
 /// Install + write lockfile. Consumer-facing entry point.
 ///
 /// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
@@ -317,6 +324,7 @@ pub fn install_with_lockfile(
     report.plugin_results = plugin_results;
 
     // -- Conflict detection --
+    // When aliases are provided, check under the alias name instead.
     let label = source.to_string();
     let existing_lock = crate::lockfile::Lockfile::load(target)?;
     let incoming: Vec<(ItemKind, String)> = {
@@ -326,8 +334,14 @@ pub fn install_with_lockfile(
             .iter()
             .filter(|i| !options.excludes.contains(&i.name))
             .filter_map(|i| {
-                if seen.insert((i.kind, i.name.clone())) {
-                    Some((i.kind, i.name.clone()))
+                let effective_name = options
+                    .aliases
+                    .iter()
+                    .find(|(from, _)| from.is_empty() || *from == i.name)
+                    .map(|(_, to)| to.clone())
+                    .unwrap_or_else(|| i.name.clone());
+                if seen.insert((i.kind, effective_name.clone())) {
+                    Some((i.kind, effective_name))
                 } else {
                     None
                 }
@@ -346,6 +360,43 @@ pub fn install_with_lockfile(
             .retain(|item| !options.excludes.contains(&item.name));
     }
 
+    // -- Apply aliases --
+    let mut aliased_names: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    if !options.aliases.is_empty() {
+        // Rename output files on disk and update report items.
+        for item in &mut report.items {
+            let alias = options
+                .aliases
+                .iter()
+                .find(|(from, _)| from.is_empty() || *from == item.name);
+            if let Some((_, alias_name)) = alias {
+                let old_path = target.join(&item.output_path);
+                let new_output = rename_output_path(&item.output_path, &item.name, alias_name);
+                let new_path = target.join(&new_output);
+
+                if old_path.exists() {
+                    if let Some(parent) = new_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    fs::rename(&old_path, &new_path).with_context(|| {
+                        format!("rename {} to {}", old_path.display(), new_path.display())
+                    })?;
+                    // Clean up empty parent directory
+                    if let Some(parent) = old_path.parent() {
+                        let _ = fs::remove_dir(parent);
+                    }
+                }
+
+                aliased_names
+                    .entry(alias_name.clone())
+                    .or_insert_with(|| item.name.clone());
+                item.output_path = new_output;
+                item.name = alias_name.clone();
+            }
+        }
+    }
+
     let git_ref = match source {
         InstallSource::Github(r) => r.git_ref.as_deref(),
         InstallSource::Gitlab(r) => r.git_ref.as_deref(),
@@ -361,7 +412,10 @@ pub fn install_with_lockfile(
     });
 
     let mut lock = crate::lockfile::Lockfile::load(target)?;
-    for item in new_items {
+    for mut item in new_items {
+        if let Some(original) = aliased_names.get(&item.name) {
+            item.source_name = Some(original.clone());
+        }
         lock.upsert(item);
     }
     for bundle in &report.bundles {
@@ -1206,13 +1260,22 @@ pub fn update(
 
         match mode {
             UpdateMode::Apply => {
-                let install_report = install_with_lockfile(
-                    &source,
-                    target,
-                    &[],
-                    plugin_scope,
-                    &AddOptions::default(),
-                )?;
+                // Build aliases from lockfile entries that have source_name
+                let aliases: Vec<(String, String)> = source_entries
+                    .iter()
+                    .filter_map(|e| {
+                        e.source_name
+                            .as_ref()
+                            .map(|sn| (sn.clone(), e.name.clone()))
+                    })
+                    .collect();
+                let options = AddOptions {
+                    force: true,
+                    aliases,
+                    excludes: vec![],
+                };
+                let install_report =
+                    install_with_lockfile(&source, target, &[], plugin_scope, &options)?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
@@ -1270,7 +1333,8 @@ pub fn update(
                 let new_hashes = hash_source_items(&root);
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
-                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                    let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
+                    if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
                         report.items.push(UpdatedItem {
                             kind,
                             name: entry.name.clone(),
@@ -1280,7 +1344,7 @@ pub fn update(
                         continue;
                     }
                     let new_hash = new_hashes
-                        .get(&(kind, entry.name.clone()))
+                        .get(&(kind, lookup_name.to_string()))
                         .cloned()
                         .flatten();
                     let status = if new_hash == entry.hash {
