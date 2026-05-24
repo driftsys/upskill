@@ -5,7 +5,8 @@
 //! a consumer project (`.upskill-lock.json` at the path's root) per
 //! ADR-0004.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -19,6 +20,8 @@ fn write(path: &Path, contents: &str) {
 #[test]
 fn fmt_reorders_frontmatter_keys_canonically() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("scrambled/SKILL.md");
     // Canonical order is schema → name → description → audience → license →
     // metadata. Author wrote them in the wrong order.
@@ -40,8 +43,7 @@ fn fmt_reorders_frontmatter_keys_canonically() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()
@@ -67,6 +69,8 @@ fn fmt_reorders_frontmatter_keys_canonically() {
 #[test]
 fn fmt_is_idempotent() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("already-canonical/SKILL.md");
     write(
         &item,
@@ -84,16 +88,14 @@ fn fmt_is_idempotent() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()
         .success();
     let pass1 = fs::read_to_string(&item).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()
@@ -106,6 +108,8 @@ fn fmt_is_idempotent() {
 #[test]
 fn fmt_does_not_touch_body() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("preserve-body/SKILL.md");
     let body = concat!(
         "\n",
@@ -126,8 +130,7 @@ fn fmt_does_not_touch_body() {
         ),
     );
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()
@@ -143,14 +146,15 @@ fn fmt_does_not_touch_body() {
 #[test]
 fn fmt_refuses_to_run_inside_consumer_project() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::write(
         tmp.path().join(".upskill-lock.json"),
         r#"{"schema":2,"items":[]}"#,
     )
     .unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()
@@ -166,6 +170,8 @@ fn fmt_refuses_to_run_inside_consumer_project() {
 #[test]
 fn fmt_reports_files_changed_count() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     write(
         &tmp.path().join("needs-fmt/SKILL.md"),
         concat!(
@@ -189,8 +195,7 @@ fn fmt_reports_files_changed_count() {
         ),
     );
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()

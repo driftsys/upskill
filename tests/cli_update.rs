@@ -5,7 +5,8 @@
 //! `update` to exercise the change-detection branch (lockfile hash vs
 //! recomputed hash) without hitting the network.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -30,9 +31,8 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn install(target: &Path, source: &Path) {
-    Command::cargo_bin("upskill")
-        .unwrap()
+fn install(target: &Path, source: &Path, home: &Path) {
+    common::upskill_cmd(home)
         .current_dir(target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -61,15 +61,16 @@ fn lockfile_hash_for(target: &Path, name: &str) -> Option<String> {
 #[test]
 fn update_no_change_reports_up_to_date() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update"])
         .assert()
@@ -84,18 +85,19 @@ fn update_no_change_reports_up_to_date() {
 #[test]
 fn update_after_ssot_mutation_rewrites_outputs_and_lockfile_hash() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let original_hash = lockfile_hash_for(&target, "create-api-endpoint").unwrap();
     mutate_skill(&source);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "create-api-endpoint"])
         .assert()
@@ -124,18 +126,19 @@ fn update_after_ssot_mutation_rewrites_outputs_and_lockfile_hash() {
 #[test]
 fn update_dry_run_reports_change_without_writing() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     let original_hash = lockfile_hash_for(&target, "create-api-endpoint").unwrap();
     mutate_skill(&source);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--dry-run"])
         .assert()
@@ -166,15 +169,16 @@ fn update_dry_run_reports_change_without_writing() {
 #[test]
 fn update_unknown_name_is_general_error() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "this-was-never-installed"])
         .assert()
@@ -190,12 +194,14 @@ fn update_unknown_name_is_general_error() {
 #[test]
 fn update_removes_orphaned_item_when_source_no_longer_contains_it() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     // Verify the skill is installed.
     assert!(
@@ -209,8 +215,7 @@ fn update_removes_orphaned_item_when_source_no_longer_contains_it() {
     // Remove the item from the source so it becomes an orphan.
     fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--yes"])
         .assert()
@@ -238,18 +243,19 @@ fn update_removes_orphaned_item_when_source_no_longer_contains_it() {
 #[test]
 fn update_dry_run_reports_would_remove_without_deleting() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     // Remove the item from the source so it becomes an orphan.
     fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--dry-run"])
         .assert()
@@ -277,9 +283,10 @@ fn update_dry_run_reports_would_remove_without_deleting() {
 #[test]
 fn update_empty_lockfile_is_no_op() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update"])
         .assert()
@@ -294,12 +301,14 @@ fn update_empty_lockfile_is_no_op() {
 #[test]
 fn update_removes_stale_output_file_from_previous_generation() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     // Inject a stale file into the generated output directory.
     let stale_path = target.join(".claude/skills/create-api-endpoint/OLD_FILE.md");
@@ -309,8 +318,7 @@ fn update_removes_stale_output_file_from_previous_generation() {
     // Mutate the source so update will regenerate.
     mutate_skill(&source);
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--yes"])
         .assert()
@@ -334,12 +342,14 @@ fn update_removes_stale_output_file_from_previous_generation() {
 #[test]
 fn update_without_yes_proceeds_in_non_tty() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
     // Mutate source so there's something to update.
     mutate_skill(&source);
@@ -347,8 +357,7 @@ fn update_without_yes_proceeds_in_non_tty() {
     let hash_before = lockfile_hash_for(&target, "create-api-endpoint");
 
     // Run update WITHOUT --yes; non-TTY should auto-proceed.
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update"])
         .assert()

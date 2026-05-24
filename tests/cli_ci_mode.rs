@@ -5,7 +5,10 @@
 //! exhaustively. These integration tests pin the contract through the
 //! actual binary so a regression in `style::init` can't sneak past.
 
-use assert_cmd::Command;
+mod common;
+
+use std::fs;
+
 use tempfile::tempdir;
 
 const ANSI_ESC: char = '\x1b';
@@ -27,8 +30,9 @@ fn assert_has_ansi(output: &str) {
 #[test]
 fn no_color_env_strips_ansi() {
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("NO_COLOR", "1")
         .env_remove("FORCE_COLOR")
@@ -43,8 +47,9 @@ fn no_color_env_strips_ansi() {
 #[test]
 fn no_color_flag_strips_ansi() {
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env_remove("NO_COLOR")
         .env("FORCE_COLOR", "1") // would force color, but --no-color takes precedence
@@ -58,8 +63,9 @@ fn no_color_flag_strips_ansi() {
 #[test]
 fn upskill_no_color_strips_ansi() {
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env_remove("NO_COLOR")
         .env("UPSKILL_NO_COLOR", "1")
@@ -74,8 +80,9 @@ fn upskill_no_color_strips_ansi() {
 #[test]
 fn term_dumb_strips_ansi() {
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("TERM", "dumb")
         .env_remove("NO_COLOR")
@@ -92,8 +99,9 @@ fn piped_output_strips_ansi_by_default() {
     // assert_cmd runs the binary with stderr/stdout NOT a TTY. With no
     // FORCE_COLOR override, `colored` should auto-disable.
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env_remove("NO_COLOR")
         .env_remove("UPSKILL_NO_COLOR")
@@ -112,8 +120,9 @@ fn force_color_re_enables_when_piped() {
     // Even though stderr is piped (assert_cmd subprocess), FORCE_COLOR
     // tells `colored` to emit ANSI anyway. clig.dev §Environment Variables.
     let cwd = tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env_remove("NO_COLOR")
         .env_remove("UPSKILL_NO_COLOR")

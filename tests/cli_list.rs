@@ -5,7 +5,8 @@
 //! never touches per-client output files or fetches anything — it is a
 //! lockfile dump.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -30,9 +31,8 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn install(target: &Path, source: &Path) {
-    Command::cargo_bin("upskill")
-        .unwrap()
+fn install(target: &Path, source: &Path, home: &Path) {
+    common::upskill_cmd(home)
         .current_dir(target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -42,9 +42,10 @@ fn install(target: &Path, source: &Path) {
 #[test]
 fn list_empty_lockfile_reports_no_items() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["list"])
         .assert()
@@ -59,15 +60,16 @@ fn list_empty_lockfile_reports_no_items() {
 #[test]
 fn list_groups_installed_items_by_kind() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["list"])
         .assert()
@@ -106,6 +108,8 @@ fn list_bundle_install_surfaces_bundles_section() {
     // Use the bundle fixture corpus so the install records a LockedBundle
     // entry alongside the per-item entries.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     fs::create_dir_all(&source).unwrap();
@@ -121,8 +125,7 @@ fn list_bundle_install_surfaces_bundles_section() {
     )
     .unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args([
             "add",
@@ -134,8 +137,7 @@ fn list_bundle_install_surfaces_bundles_section() {
         .assert()
         .success();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["list"])
         .assert()
@@ -155,9 +157,10 @@ fn list_bundle_install_surfaces_bundles_section() {
 #[test]
 fn list_json_empty_lockfile_emits_empty_buckets() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["list", "--json"])
         .assert()
@@ -176,15 +179,16 @@ fn list_json_empty_lockfile_emits_empty_buckets() {
 #[test]
 fn list_json_groups_installed_items_by_kind() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
-    install(&target, &source);
+    install(&target, &source, &home);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["list", "--json"])
         .assert()

@@ -5,7 +5,8 @@
 //! CLI has no long-running command that's deterministic in CI without
 //! the network. Tracked in #112 as deferred.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 
 fn ansi_present(s: &str) -> bool {
@@ -17,10 +18,11 @@ fn list_data_goes_to_stdout_stderr_is_empty() {
     // Empty lockfile in a faux project (no .git is fine — list short-
     // circuits on missing lockfile to "no items installed").
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir(tmp.path().join(".git")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["list", "--project"])
         .assert()
@@ -41,8 +43,9 @@ fn list_data_goes_to_stdout_stderr_is_empty() {
 #[test]
 fn add_invalid_source_writes_error_to_stderr_not_stdout() {
     let tmp = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "not a valid source"])
         .assert()
@@ -68,10 +71,11 @@ fn list_stdout_has_no_ansi_when_piped() {
     // captured bytes must contain no `\x1b` escape sequences. This is the
     // user-facing guarantee behind spec §6.2 "no color in pipes/CI".
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir(tmp.path().join(".git")).unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["list", "--project"])
         .assert()
@@ -89,8 +93,9 @@ fn add_invalid_source_stderr_has_no_ansi_under_no_color_env() {
     // suppress ANSI. Belt-and-braces against a future regression where
     // styled `error:` slips through with a hard-coded escape.
     let tmp = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .env("NO_COLOR", "1")
         .args(["add", "not a valid source"])

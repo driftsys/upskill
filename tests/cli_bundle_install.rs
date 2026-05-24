@@ -6,7 +6,8 @@
 //! resolution names. The lockfile records the entry bundle and every
 //! transitive dependency.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -44,6 +45,8 @@ fn bundle_install_writes_only_referenced_items() {
     // `platform-baseline.bundle.yaml` references every fixture item, so a
     // bundle install renders the same files as a directory install.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
     stage_registry(&registry);
@@ -51,8 +54,7 @@ fn bundle_install_writes_only_referenced_items() {
     fs::create_dir_all(target.join(".git")).unwrap();
 
     let bundle = registry.join("bundles/platform-baseline.bundle.yaml");
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", bundle.to_str().unwrap()])
         .assert()
@@ -81,6 +83,8 @@ fn bundle_install_writes_only_referenced_items() {
 #[test]
 fn bundle_install_records_bundle_in_lockfile() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
     stage_registry(&registry);
@@ -88,8 +92,7 @@ fn bundle_install_records_bundle_in_lockfile() {
     fs::create_dir_all(target.join(".git")).unwrap();
 
     let bundle = registry.join("bundles/platform-baseline.bundle.yaml");
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", bundle.to_str().unwrap()])
         .assert()
@@ -123,6 +126,8 @@ fn bundle_install_resolves_transitive_requires() {
     // should record both bundles in the lockfile and install items from
     // both bundles' union.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
     stage_registry(&registry);
@@ -147,8 +152,7 @@ fn bundle_install_resolves_transitive_requires() {
     )
     .unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", extras_path.to_str().unwrap()])
         .assert()
@@ -181,6 +185,8 @@ fn bundle_install_errors_on_item_conflict() {
     // also lists — that's a (kind=rule, name=license-awareness) conflict
     // when extras requires baseline. Resolution must fail.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
     stage_registry(&registry);
@@ -188,8 +194,7 @@ fn bundle_install_errors_on_item_conflict() {
     fs::create_dir_all(target.join(".git")).unwrap();
 
     let extras = registry.join("bundles/platform-extras.bundle.yaml");
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", extras.to_str().unwrap()])
         .assert()
@@ -250,6 +255,8 @@ fn bundle_install_sibling_layout_discovers_items_in_peer_directories() {
     // under the registry root, `find_registry_root` must detect the
     // registry root and `install_*` must find items in subdirectories.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
     stage_sibling_layout_registry(&registry);
@@ -257,8 +264,7 @@ fn bundle_install_sibling_layout_discovers_items_in_peer_directories() {
     fs::create_dir_all(target.join(".git")).unwrap();
 
     let bundle = registry.join("bundles/sibling-test.bundle.yaml");
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", bundle.to_str().unwrap()])
         .assert()

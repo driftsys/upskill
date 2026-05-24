@@ -6,14 +6,16 @@
 //! agents). Author command — refuses to run inside a consumer project
 //! (`.upskill-lock.json`) per ADR-0004.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 
 #[test]
 fn new_skill_creates_skill_md_with_minimum_frontmatter() {
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "skill", "code-review"])
         .assert()
@@ -31,8 +33,9 @@ fn new_skill_creates_skill_md_with_minimum_frontmatter() {
 #[test]
 fn new_rule_creates_rule_md() {
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "rule", "license-awareness"])
         .assert()
@@ -46,8 +49,9 @@ fn new_rule_creates_rule_md() {
 #[test]
 fn new_agent_emits_default_mode_and_model() {
     let tmp = tempfile::tempdir().unwrap();
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "agent", "security-reviewer"])
         .assert()
@@ -60,11 +64,12 @@ fn new_agent_emits_default_mode_and_model() {
 #[test]
 fn new_refuses_existing_item_directory() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join("dup")).unwrap();
     fs::write(tmp.path().join("dup/SKILL.md"), "old").unwrap();
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "skill", "dup"])
         .assert()
@@ -82,8 +87,9 @@ fn new_refuses_existing_item_directory() {
 #[test]
 fn new_rejects_invalid_name() {
     let tmp = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "skill", "Invalid_Name"])
         .assert()
@@ -98,13 +104,14 @@ fn new_rejects_invalid_name() {
 #[test]
 fn new_refuses_to_run_inside_consumer_project() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     fs::write(
         tmp.path().join(".upskill-lock.json"),
         r#"{"schema":2,"items":[]}"#,
     )
     .unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["new", "skill", "anything"])
         .assert()
@@ -120,13 +127,14 @@ fn new_refuses_to_run_inside_consumer_project() {
 #[test]
 fn new_output_passes_lint_and_fmt() {
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     for (kind, name) in [
         ("skill", "starter-skill"),
         ("rule", "starter-rule"),
         ("agent", "starter-agent"),
     ] {
-        Command::cargo_bin("upskill")
-            .unwrap()
+        common::upskill_cmd(&home)
             .current_dir(tmp.path())
             .args(["new", kind, name])
             .assert()
@@ -134,16 +142,14 @@ fn new_output_passes_lint_and_fmt() {
     }
 
     // Lint must accept its own scaffolding.
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["lint", "--strict"])
         .assert()
         .success();
 
     // Fmt must report nothing changed (the scaffold is already canonical).
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["fmt"])
         .assert()

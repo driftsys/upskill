@@ -1,4 +1,7 @@
-use assert_cmd::Command;
+mod common;
+
+use std::fs;
+
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{contains, is_match};
 use std::io::{Read, Write};
@@ -56,8 +59,9 @@ const EMPTY_RESPONSE: &str = r#"{
 #[test]
 fn search_requires_query() {
     let cwd = tempdir().expect("must create temp dir");
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .args(["search"])
         .assert()
@@ -67,8 +71,9 @@ fn search_requires_query() {
 #[test]
 fn search_help_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
-    Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .args(["search", "--help"])
         .assert()
@@ -79,9 +84,10 @@ fn search_help_exits_zero() {
 fn search_returns_results() {
     let addr = mock_skills_server(MOCK_RESPONSE);
     let cwd = tempdir().expect("must create temp dir");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("UPSKILL_REGISTRY_URL", format!("http://{}", addr))
         .args(["search", "rust"])
@@ -96,9 +102,10 @@ fn search_returns_results() {
 fn search_shows_install_command() {
     let addr = mock_skills_server(MOCK_RESPONSE);
     let cwd = tempdir().expect("must create temp dir");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("UPSKILL_REGISTRY_URL", format!("http://{}", addr))
         .args(["search", "rust"])
@@ -114,9 +121,10 @@ fn search_shows_install_command() {
 fn search_empty_results() {
     let addr = mock_skills_server(EMPTY_RESPONSE);
     let cwd = tempdir().expect("must create temp dir");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("UPSKILL_REGISTRY_URL", format!("http://{}", addr))
         .args(["search", "zzznomatch"])
@@ -128,9 +136,10 @@ fn search_empty_results() {
 #[test]
 fn search_unreachable_registry_exits_one() {
     let cwd = tempdir().expect("must create temp dir");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .env("UPSKILL_REGISTRY_URL", "http://127.0.0.1:1")
         .args(["search", "rust"])

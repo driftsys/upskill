@@ -5,7 +5,8 @@
 //! - Spec §3.2: outputs are file copies, never symlinks.
 //! - Spec §3.4: `CLAUDE.md` bridge is `@AGENTS.md\n` literally.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::Path;
 
@@ -35,8 +36,9 @@ fn install_is_not_an_alias_for_add() {
     // Spec §2.6: `add` does NOT alias `install`. clap rejects unknown
     // subcommands at parse time → exit 2.
     let cwd = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .args(["install", "owner/repo"])
         .assert()
@@ -53,8 +55,9 @@ fn install_is_not_an_alias_for_add() {
 fn uninstall_is_not_an_alias_for_remove() {
     // Spec §2.6: `remove` does NOT alias `uninstall`.
     let cwd = tempfile::tempdir().unwrap();
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(cwd.path())
         .args(["uninstall", "code-review"])
         .assert()
@@ -73,14 +76,15 @@ fn outputs_are_file_copies_not_symlinks() {
     // Windows portability without Developer Mode requires this — symlinks
     // would silently degrade.
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
@@ -111,14 +115,15 @@ fn claude_md_bridge_content_is_at_agents_md() {
     // bridge content if absent. The single line is what makes Claude
     // Code load `AGENTS.md` (which it does not read natively).
     let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     let target = tmp.path().join("target");
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap()])
         .assert()
