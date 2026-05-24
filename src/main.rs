@@ -103,10 +103,8 @@ fn install_signal_handlers() -> anyhow::Result<()> {
         // ensures the `was_interrupted()` check in main() sees true even
         // if the eprintln races with process teardown.
         INTERRUPTED.store(true, Ordering::SeqCst);
-        // clig.dev §"Responsiveness": say something before cleanup so
-        // the user knows their Ctrl-C registered. Stderr only — never
-        // touches stdout-as-data.
         eprintln!("\n{} cleaning up", style::warn("interrupted:"));
+        eprintln!("  hint: run 'upskill doctor' to check for partial installs");
     })
     .context("failed to install signal handler")
 }
@@ -168,6 +166,12 @@ fn run_add(
         excludes: excludes.to_vec(),
     };
 
+    let is_global = global || (!project && !is_inside_git_repo());
+    let scope_label = if is_global { "global" } else { "project" };
+    if !style::is_quiet() {
+        eprintln!("scope: {} ({})", scope_label, target.display());
+    }
+
     print_install_progress(&parsed);
     match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
@@ -177,6 +181,8 @@ fn run_add(
         }
         Err(err) => {
             print_error_chain(&err);
+            eprintln!();
+            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
             EXIT_ERROR
         }
     }
@@ -489,6 +495,8 @@ fn run_remove(
         }
         Err(err) => {
             print_error_chain(&err);
+            eprintln!();
+            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
             EXIT_ERROR
         }
     }
@@ -542,6 +550,8 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             }
             Err(err) => {
                 print_error_chain(&err);
+                eprintln!();
+                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
                 EXIT_ERROR
             }
         }
@@ -554,6 +564,8 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             }
             Err(err) => {
                 print_error_chain(&err);
+                eprintln!();
+                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
                 EXIT_ERROR
             }
         }
@@ -563,6 +575,8 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             Ok(r) => r,
             Err(err) => {
                 print_error_chain(&err);
+                eprintln!();
+                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
                 return EXIT_ERROR;
             }
         };
@@ -595,6 +609,8 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             }
             Err(err) => {
                 print_error_chain(&err);
+                eprintln!();
+                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
                 EXIT_ERROR
             }
         }

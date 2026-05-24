@@ -152,9 +152,9 @@ pub fn install_from_local_path(
         return install_bundle_file(source, target);
     }
     let mut report = InstallReport::default();
-    install_skills(source, target, &mut report, filter)?;
-    install_rules(source, target, &mut report, filter)?;
-    install_agents(source, target, &mut report, filter)?;
+    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
+        install_items_of_kind(kind, source, target, &mut report, filter)?;
+    }
     Ok(report)
 }
 
@@ -187,9 +187,15 @@ fn install_bundle_file(bundle_path: &Path, target: &Path) -> Result<InstallRepor
         bundles: resolved.bundles.clone(),
         ..InstallReport::default()
     };
-    install_skills(&registry_root, target, &mut report, Some(&resolved.items))?;
-    install_rules(&registry_root, target, &mut report, Some(&resolved.items))?;
-    install_agents(&registry_root, target, &mut report, Some(&resolved.items))?;
+    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
+        install_items_of_kind(
+            kind,
+            &registry_root,
+            target,
+            &mut report,
+            Some(&resolved.items),
+        )?;
+    }
     Ok(report)
 }
 
@@ -1761,150 +1767,102 @@ pub fn install_from_git_url(
     install_from_local_path(&source, target, filter)
 }
 
-fn install_skills(
+fn install_items_of_kind(
+    kind: ItemKind,
     source: &Path,
     target: &Path,
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<()> {
+    let entrypoint = kind.entrypoint_filename();
     for (name, dir) in iter_item_dirs(source)? {
         if let Some(items) = filter
-            && !items.contains(ItemKind::Skill, &name)
+            && !items.contains(kind, &name)
         {
             continue;
         }
-        let entry_path = dir.join("SKILL.md");
+        let entry_path = dir.join(entrypoint);
         if !entry_path.exists() {
             continue;
         }
         let raw = fs::read_to_string(&entry_path)
             .with_context(|| format!("read {}", entry_path.display()))?;
-        let (skill, body) = frontmatter::parse::<Skill>(&raw)
-            .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = skill.audience.as_deref();
-        let source_hash = hash_item_dir(&dir);
 
-        // Clean existing output directories for this specific item before
-        // writing new outputs. This removes stale sibling files (e.g. renamed
-        // resources) while keeping other items' outputs intact if generation
-        // fails later.
-        remove_item_outputs(target, ItemKind::Skill, &name);
-        for client in ALL_CLIENTS {
-            if !targets(client, audience) {
-                continue;
+        // Parse frontmatter, extract audience, and define a render helper.
+        // Each kind has its own model type, so we dispatch here.
+        let (audience, renders): (Option<Vec<Audience>>, Vec<(Client, String)>) = match kind {
+            ItemKind::Skill => {
+                let (skill, body) = frontmatter::parse::<Skill>(&raw)
+                    .with_context(|| format!("parse {}", entry_path.display()))?;
+                let aud = skill.audience.clone();
+                let mut out = Vec::new();
+                for client in ALL_CLIENTS {
+                    if !targets(client, aud.as_deref()) {
+                        continue;
+                    }
+                    let rendered = generate::render_skill(&skill, body, client)
+                        .with_context(|| format!("render skill {} for {:?}", name, client))?;
+                    out.push((client, rendered));
+                }
+                (aud, out)
             }
-            let rendered = generate::render_skill(&skill, body, client)
-                .with_context(|| format!("render skill {} for {:?}", name, client))?;
-            let rel = skill_output_path(client, &name);
-            write_output(target, &rel, &rendered)?;
-            report.items.push(InstalledItem {
-                kind: ItemKind::Skill,
-                name: name.clone(),
-                client,
-                output_path: rel,
-                source_hash: source_hash.clone(),
-            });
-        }
-    }
-    Ok(())
-}
-
-fn install_rules(
-    source: &Path,
-    target: &Path,
-    report: &mut InstallReport,
-    filter: Option<&crate::bundle::ResolvedItems>,
-) -> Result<()> {
-    for (name, dir) in iter_item_dirs(source)? {
-        if let Some(items) = filter
-            && !items.contains(ItemKind::Rule, &name)
-        {
-            continue;
-        }
-        let entry_path = dir.join("RULE.md");
-        if !entry_path.exists() {
-            continue;
-        }
-        let raw = fs::read_to_string(&entry_path)
-            .with_context(|| format!("read {}", entry_path.display()))?;
-        let (rule, body) = frontmatter::parse::<Rule>(&raw)
-            .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = rule.audience.as_deref();
-        let source_hash = hash_item_dir(&dir);
-
-        // Clean existing output directories for this specific item before
-        // writing new outputs. This removes stale sibling files while keeping
-        // other items' outputs intact if generation fails later.
-        remove_item_outputs(target, ItemKind::Rule, &name);
-        for client in ALL_CLIENTS {
-            if !targets(client, audience) {
-                continue;
+            ItemKind::Rule => {
+                let (rule, body) = frontmatter::parse::<Rule>(&raw)
+                    .with_context(|| format!("parse {}", entry_path.display()))?;
+                let aud = rule.audience.clone();
+                let mut out = Vec::new();
+                for client in ALL_CLIENTS {
+                    if !targets(client, aud.as_deref()) {
+                        continue;
+                    }
+                    let rendered = generate::render_rule(&rule, body, client)
+                        .with_context(|| format!("render rule {} for {:?}", name, client))?;
+                    out.push((client, rendered));
+                }
+                (aud, out)
             }
-            let rendered = generate::render_rule(&rule, body, client)
-                .with_context(|| format!("render rule {} for {:?}", name, client))?;
-            let rel = rule_output_path(client, &name);
-            write_output(target, &rel, &rendered)?;
-            report.items.push(InstalledItem {
-                kind: ItemKind::Rule,
-                name: name.clone(),
-                client,
-                output_path: rel,
-                source_hash: source_hash.clone(),
-            });
-        }
-    }
-    Ok(())
-}
+            ItemKind::Agent => {
+                let (agent, body) = frontmatter::parse::<Agent>(&raw)
+                    .with_context(|| format!("parse {}", entry_path.display()))?;
+                let aud = agent.audience.clone();
+                let mut out = Vec::new();
+                for client in ALL_CLIENTS {
+                    if !targets(client, aud.as_deref()) {
+                        continue;
+                    }
+                    let rendered = generate::render_agent(&agent, body, client)
+                        .with_context(|| format!("render agent {} for {:?}", name, client))?;
+                    out.push((client, rendered));
+                }
+                (aud, out)
+            }
+        };
 
-fn install_agents(
-    source: &Path,
-    target: &Path,
-    report: &mut InstallReport,
-    filter: Option<&crate::bundle::ResolvedItems>,
-) -> Result<()> {
-    for (name, dir) in iter_item_dirs(source)? {
-        if let Some(items) = filter
-            && !items.contains(ItemKind::Agent, &name)
-        {
-            continue;
-        }
-        let entry_path = dir.join("AGENT.md");
-        if !entry_path.exists() {
-            continue;
-        }
-        let raw = fs::read_to_string(&entry_path)
-            .with_context(|| format!("read {}", entry_path.display()))?;
-        let (agent, body) = frontmatter::parse::<Agent>(&raw)
-            .with_context(|| format!("parse {}", entry_path.display()))?;
-        let audience = agent.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
         // Clean existing output directories for this specific item before
         // writing new outputs. This removes stale sibling files while keeping
         // other items' outputs intact if generation fails later.
-        remove_item_outputs(target, ItemKind::Agent, &name);
-        for client in ALL_CLIENTS {
-            if !targets(client, audience) {
-                continue;
-            }
-            let rendered = generate::render_agent(&agent, body, client)
-                .with_context(|| format!("render agent {} for {:?}", name, client))?;
-            let rel = agent_output_path(client, &name);
-            write_output(target, &rel, &rendered)?;
+        remove_item_outputs(target, kind, &name);
+
+        for (client, rendered) in &renders {
+            let rel = output_path(kind, *client, &name);
+            write_output(target, &rel, rendered)?;
             report.items.push(InstalledItem {
-                kind: ItemKind::Agent,
+                kind,
                 name: name.clone(),
-                client,
+                client: *client,
                 output_path: rel,
                 source_hash: source_hash.clone(),
             });
         }
+
         // Clean up outputs for clients no longer targeted.
         for client in ALL_CLIENTS {
-            if targets(client, audience) {
+            if targets(client, audience.as_deref()) {
                 continue;
             }
-            let rel = agent_output_path(client, &name);
+            let rel = output_path(kind, client, &name);
             let full = target.join(&rel);
             if full.exists() {
                 let _ = fs::remove_file(&full);

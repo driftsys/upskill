@@ -21,12 +21,12 @@
 
 These work on every subcommand:
 
-| Flag              | Effect                                                              |
-| ----------------- | ------------------------------------------------------------------- |
-| `--no-color`      | Disable colored output. Honored alongside `NO_COLOR`, `TERM=dumb`.  |
-| `-q`, `--quiet`   | Suppress informational stdout. Errors and exit codes are unchanged. |
-| `-h`, `--help`    | Show help.                                                          |
-| `-V`, `--version` | Show version.                                                       |
+| Flag              | Effect                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `--no-color`      | Disable colored output. Honored alongside `NO_COLOR`, `UPSKILL_NO_COLOR`, `TERM=dumb`. |
+| `-q`, `--quiet`   | Suppress informational stdout. Errors and exit codes are unchanged.                    |
+| `-h`, `--help`    | Show help.                                                                             |
+| `-V`, `--version` | Show version.                                                                          |
 
 ## Consumer commands
 

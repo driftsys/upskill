@@ -248,7 +248,8 @@ and across-repo continuity for global scope.
       "ref": "v0.4.0",
       "items": ["code-review", "secret-scanner"]
     }
-  ]
+  ],
+  "plugins": []
 }
 ```
 
