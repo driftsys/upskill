@@ -26,9 +26,8 @@ pub fn detect_conflicts(
 ) -> Vec<ItemConflict> {
     let mut conflicts = Vec::new();
     for (kind, name) in incoming {
-        let kind_str = kind_to_str(*kind);
         for locked in &lockfile.items {
-            if locked.kind == kind_str && locked.name == *name && locked.source != incoming_source {
+            if locked.kind == *kind && locked.name == *name && locked.source != incoming_source {
                 conflicts.push(ItemConflict {
                     kind: *kind,
                     name: name.clone(),
@@ -51,9 +50,7 @@ pub fn format_conflict_error(conflicts: &[ItemConflict]) -> String {
             format!(
                 "{} `{}` is already installed from `{}`.\n\
                  Use --force to replace, or --as <alt-name> to keep both.",
-                kind_to_str(c.kind),
-                c.name,
-                c.existing_source,
+                c.kind, c.name, c.existing_source,
             )
         }
         _ => {
@@ -62,9 +59,7 @@ pub fn format_conflict_error(conflicts: &[ItemConflict]) -> String {
             for c in conflicts {
                 msg.push_str(&format!(
                     "  - {} `{}` (installed from `{}`)\n",
-                    kind_to_str(c.kind),
-                    c.name,
-                    c.existing_source,
+                    c.kind, c.name, c.existing_source,
                 ));
             }
             msg.push_str(
@@ -75,27 +70,19 @@ pub fn format_conflict_error(conflicts: &[ItemConflict]) -> String {
     }
 }
 
-fn kind_to_str(kind: ItemKind) -> &'static str {
-    match kind {
-        ItemKind::Rule => "rule",
-        ItemKind::Skill => "skill",
-        ItemKind::Agent => "agent",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::lockfile::Lockfile;
 
-    fn make_lockfile(items: Vec<(&str, &str, &str)>) -> Lockfile {
+    fn make_lockfile(items: Vec<(ItemKind, &str, &str)>) -> Lockfile {
         use crate::lockfile::LockedItem;
         Lockfile {
             schema: 1,
             items: items
                 .into_iter()
                 .map(|(kind, name, source)| LockedItem {
-                    kind: kind.to_owned(),
+                    kind,
                     name: name.to_owned(),
                     source: source.to_owned(),
                     git_ref: None,
@@ -110,7 +97,11 @@ mod tests {
 
     #[test]
     fn no_conflict_same_source() {
-        let lf = make_lockfile(vec![("skill", "brainstorming", "driftsys/superpowers")]);
+        let lf = make_lockfile(vec![(
+            ItemKind::Skill,
+            "brainstorming",
+            "driftsys/superpowers",
+        )]);
         let incoming = vec![(ItemKind::Skill, "brainstorming".to_owned())];
         let conflicts = detect_conflicts(&incoming, &lf, "driftsys/superpowers");
         assert!(conflicts.is_empty());
@@ -118,7 +109,11 @@ mod tests {
 
     #[test]
     fn conflict_different_source() {
-        let lf = make_lockfile(vec![("skill", "brainstorming", "driftsys/superpowers")]);
+        let lf = make_lockfile(vec![(
+            ItemKind::Skill,
+            "brainstorming",
+            "driftsys/superpowers",
+        )]);
         let incoming = vec![(ItemKind::Skill, "brainstorming".to_owned())];
         let conflicts = detect_conflicts(&incoming, &lf, "other/repo");
         assert_eq!(conflicts.len(), 1);
@@ -128,7 +123,7 @@ mod tests {
 
     #[test]
     fn no_conflict_item_not_in_lockfile() {
-        let lf = make_lockfile(vec![("skill", "debugging", "driftsys/superpowers")]);
+        let lf = make_lockfile(vec![(ItemKind::Skill, "debugging", "driftsys/superpowers")]);
         let incoming = vec![(ItemKind::Skill, "brainstorming".to_owned())];
         let conflicts = detect_conflicts(&incoming, &lf, "other/repo");
         assert!(conflicts.is_empty());
@@ -136,7 +131,11 @@ mod tests {
 
     #[test]
     fn same_name_different_kind_no_conflict() {
-        let lf = make_lockfile(vec![("rule", "brainstorming", "driftsys/superpowers")]);
+        let lf = make_lockfile(vec![(
+            ItemKind::Rule,
+            "brainstorming",
+            "driftsys/superpowers",
+        )]);
         let incoming = vec![(ItemKind::Skill, "brainstorming".to_owned())];
         let conflicts = detect_conflicts(&incoming, &lf, "other/repo");
         assert!(conflicts.is_empty());

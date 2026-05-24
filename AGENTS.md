@@ -174,6 +174,49 @@ Token resolution order:
   - When adding behavior, prefer extending the matching file or creating
     a new `cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<area>.rs`.
 
+### Available skills
+
+Skills provide specialized instructions and workflows for specific tasks.
+Use the skill tool to load a skill when a task matches its description.
+
+<available_skills>
+<skill>
+<name>evaluating-prompts</name>
+<description>Use when setting up the RED-GREEN-REFACTOR cycle for a rule, skill, or subagent — i.e., when the `writing-*` skills tell you to "run a failing test first." Trigger when authoring meta-skills, when validating that an existing rule/skill/subagent actually shapes behavior, or when auditing whether a skill activates correctly. Do NOT trigger for content authoring itself — see writing-rules, writing-skills, writing-subagents.</description>
+<location>skills/evaluating-prompts/SKILL.md</location>
+</skill>
+<skill>
+<name>prompt-design</name>
+<description>Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to prompt-distilling, writing-rules, writing-skills, writing-subagents, or using-upskill.</description>
+<location>skills/prompt-design/SKILL.md</location>
+</skill>
+<skill>
+<name>prompt-distilling</name>
+<description>Use BEFORE authoring any rule, skill, or subagent. Trigger when someone says "we should encode X", "the agent keeps forgetting Y", "let's add a rule for Z", or any variant where new behavior needs to live somewhere in the framework. Also trigger when reviewing existing content that is misbehaving — wrong-layer placement is a common silent root cause. Do NOT trigger for refining content already correctly placed; hand off to writing-rules, writing-skills, or writing-subagents.</description>
+<location>skills/prompt-distilling/SKILL.md</location>
+</skill>
+<skill>
+<name>using-upskill</name>
+<description>Use when working in an upskill-consumer repo and needing to add, modify, vendor, audit, or remove installed content (rules, skills, agents, bundles). Trigger when `upskill lint` or `upskill doctor` reports issues. Trigger when adding a third-party bundle or updating one from upstream. Trigger when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale or wrong. Do NOT trigger for actual authoring decisions — hand off to prompt-distilling, writing-rules, writing-skills, or writing-subagents. Do NOT trigger for cosmetic typo fixes in skill bodies; raw edits to source registry files plus `upskill lint` are sufficient.</description>
+<location>skills/using-upskill/SKILL.md</location>
+</skill>
+<skill>
+<name>writing-rules</name>
+<description>Use when adding or editing rules in CLAUDE.md, AGENTS.md, or any always-loaded instructions file. Trigger when authoring repo conventions, invariants, or behavioral guardrails. Also trigger when an existing rule is being violated despite being present — that means the rule needs refactoring, not the agent. Do NOT trigger for skill or subagent authoring; see writing-skills and writing-subagents.</description>
+<location>skills/writing-rules/SKILL.md</location>
+</skill>
+<skill>
+<name>writing-skill-bundles</name>
+<description>Use when authoring or editing upskill .bundle.yaml manifests — declaring items, plugins, requires dependencies, naming conventions, or troubleshooting bundle resolution errors. Also use when adding plugin install declarations for client CLIs (Claude Code, Copilot, VS Code, opencode).</description>
+<location>skills/writing-skill-bundles/SKILL.md</location>
+</skill>
+<skill>
+<name>writing-subagents</name>
+<description>Use when designing a new subagent or modifying an existing one's system prompt, tool surface, or return contract. Trigger when the parent is observed doing work inline that should be delegated, OR when a subagent is observed dumping raw output, OR when subagent scope is drifting. Also trigger when designing managed/project-scoped/user-global subagent tiers with different permission models. Do NOT trigger for skill or rule authoring; see writing-skills and writing-rules.</description>
+<location>skills/writing-subagents/SKILL.md</location>
+</skill>
+</available_skills>
+
 ## Workflow
 
 Workflow model:

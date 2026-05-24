@@ -21,7 +21,7 @@
 //! restricts emission to listed clients; absence means all clients.
 
 use anyhow::{Context, Result, anyhow};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -32,12 +32,44 @@ use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
 use crate::source::{GithubRepo, GitlabRepo, InstallSource};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ItemKind {
     Rule,
     Skill,
     Agent,
+}
+
+impl std::fmt::Display for ItemKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rule => write!(f, "rule"),
+            Self::Skill => write!(f, "skill"),
+            Self::Agent => write!(f, "agent"),
+        }
+    }
+}
+
+impl std::str::FromStr for ItemKind {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "rule" => Ok(Self::Rule),
+            "skill" => Ok(Self::Skill),
+            "agent" => Ok(Self::Agent),
+            other => anyhow::bail!("unknown item kind: {other}"),
+        }
+    }
+}
+
+impl ItemKind {
+    pub fn entrypoint_filename(self) -> &'static str {
+        match self {
+            Self::Rule => "RULE.md",
+            Self::Skill => "SKILL.md",
+            Self::Agent => "AGENT.md",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -901,8 +933,7 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
 
     let mut report = RemoveReport::default();
     for entry in &to_remove {
-        let kind = parse_kind(&entry.kind)
-            .with_context(|| format!("lockfile entry {}: unknown kind", entry.name))?;
+        let kind = entry.kind;
         let mut deleted_files = Vec::new();
         for client in ALL_CLIENTS {
             let rel = output_path(kind, client, &entry.name);
@@ -915,7 +946,7 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
                 }
             }
         }
-        lock.remove(&entry.kind, &entry.name);
+        lock.remove(entry.kind, &entry.name);
         report.items.push(RemovedItem {
             kind,
             name: entry.name.clone(),
@@ -957,15 +988,6 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
 
     lock.save(target)?;
     Ok(report)
-}
-
-fn parse_kind(s: &str) -> Result<ItemKind> {
-    match s {
-        "skill" => Ok(ItemKind::Skill),
-        "rule" => Ok(ItemKind::Rule),
-        "agent" => Ok(ItemKind::Agent),
-        other => anyhow::bail!("unknown kind `{other}`"),
-    }
 }
 
 /// One per-client output file the lockfile said should exist but doesn't.
@@ -1082,12 +1104,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
     let mut report = DoctorReport::default();
 
     for entry in &lock.items {
-        let kind = parse_kind(&entry.kind).with_context(|| {
-            format!(
-                "lockfile entry {}: unknown kind `{}`",
-                entry.name, entry.kind
-            )
-        })?;
+        let kind = entry.kind;
 
         let mut missing = Vec::new();
         for client in ALL_CLIENTS {
@@ -1350,7 +1367,7 @@ pub fn update(
                 // Collect orphans first, then batch-remove from lockfile.
                 let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
                 for entry in &source_entries {
-                    let kind = parse_kind(&entry.kind)?;
+                    let kind = entry.kind;
                     if !new_hashes.contains_key(&(kind, entry.name.clone())) {
                         orphans.push((entry, kind));
                     }
@@ -1359,7 +1376,7 @@ pub fn update(
                     let mut lock = crate::lockfile::Lockfile::load(target)?;
                     for (entry, kind) in &orphans {
                         remove_item_outputs(target, *kind, &entry.name);
-                        lock.remove(&entry.kind, &entry.name);
+                        lock.remove(entry.kind, &entry.name);
                         report.items.push(UpdatedItem {
                             kind: *kind,
                             name: entry.name.clone(),
@@ -1370,7 +1387,7 @@ pub fn update(
                     lock.save(target)?;
                 }
                 for entry in &source_entries {
-                    let kind = parse_kind(&entry.kind)?;
+                    let kind = entry.kind;
                     if !new_hashes.contains_key(&(kind, entry.name.clone())) {
                         continue; // already handled as orphan
                     }
@@ -1398,7 +1415,7 @@ pub fn update(
                 let (root, _guard) = fetch_ssot(&source)?;
                 let new_hashes = hash_source_items(&root);
                 for entry in &source_entries {
-                    let kind = parse_kind(&entry.kind)?;
+                    let kind = entry.kind;
                     let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
                     if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
                         report.items.push(UpdatedItem {
@@ -1519,12 +1536,7 @@ pub fn list(target: &Path) -> Result<ListReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
     let mut report = ListReport::default();
     for entry in &lock.items {
-        let kind = parse_kind(&entry.kind).with_context(|| {
-            format!(
-                "lockfile entry {}: unknown kind `{}`",
-                entry.name, entry.kind
-            )
-        })?;
+        let kind = entry.kind;
         let listed = ListedItem {
             kind,
             name: entry.name.clone(),
@@ -2239,26 +2251,6 @@ mod tests {
         assert_eq!(percent_encode_userinfo("@"), "%40");
         assert_eq!(percent_encode_userinfo("/"), "%2F");
         assert_eq!(percent_encode_userinfo("%"), "%25");
-    }
-
-    #[test]
-    fn parse_kind_round_trips_lockfile_strings() {
-        // The labels written by `lockfile::items_from_report` MUST round-
-        // trip through `parse_kind` so `remove` can dispatch on them.
-        for k in [ItemKind::Rule, ItemKind::Skill, ItemKind::Agent] {
-            let label = match k {
-                ItemKind::Rule => "rule",
-                ItemKind::Skill => "skill",
-                ItemKind::Agent => "agent",
-            };
-            assert_eq!(parse_kind(label).unwrap(), k);
-        }
-    }
-
-    #[test]
-    fn parse_kind_rejects_unknown_string() {
-        let err = parse_kind("bundle").expect_err("must reject");
-        assert!(err.to_string().contains("bundle"));
     }
 
     #[test]
