@@ -81,7 +81,7 @@ fn install_writes_lockfile_at_target_root() {
     let keys: Vec<_> = parsed
         .items
         .iter()
-        .map(|i| (i.kind.as_str(), i.name.as_str()))
+        .map(|i| (i.kind, i.name.as_str()))
         .collect();
     let mut sorted = keys.clone();
     sorted.sort();
@@ -138,7 +138,7 @@ fn install_preserves_unrelated_existing_entries() {
     // Pre-seed the lockfile with an entry from a different source.
     let mut seed = Lockfile::new();
     seed.upsert(LockedItem {
-        kind: "skill".into(),
+        kind: upskill::pipeline::ItemKind::Skill,
         name: "from-other-source".into(),
         source: "github:other/repo@v1.0".into(),
         git_ref: Some("v1.0".into()),

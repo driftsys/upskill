@@ -37,7 +37,7 @@ pub struct Lockfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LockedItem {
     /// `rule` | `skill` | `agent`.
-    pub kind: String,
+    pub kind: ItemKind,
     pub name: String,
     /// Canonical source label (see [`crate::source::InstallSource`]'s
     /// `Display` impl).
@@ -185,7 +185,7 @@ impl Lockfile {
     }
 
     /// Remove by `(kind, name)`.
-    pub fn remove(&mut self, kind: &str, name: &str) {
+    pub fn remove(&mut self, kind: ItemKind, name: &str) {
         self.items
             .retain(|existing| !(existing.kind == kind && existing.name == name));
     }
@@ -252,7 +252,7 @@ pub fn items_from_report(
             continue;
         }
         out.push(LockedItem {
-            kind: kind_label(entry.kind).to_string(),
+            kind: entry.kind,
             name: entry.name.clone(),
             source: source_label.to_string(),
             git_ref: git_ref.map(str::to_string),
@@ -263,14 +263,6 @@ pub fn items_from_report(
     out
 }
 
-fn kind_label(kind: ItemKind) -> &'static str {
-    match kind {
-        ItemKind::Rule => "rule",
-        ItemKind::Skill => "skill",
-        ItemKind::Agent => "agent",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,9 +270,9 @@ mod tests {
     use crate::pipeline::InstalledItem;
     use std::path::PathBuf;
 
-    fn item(kind: &str, name: &str) -> LockedItem {
+    fn item(kind: ItemKind, name: &str) -> LockedItem {
         LockedItem {
-            kind: kind.to_string(),
+            kind,
             name: name.to_string(),
             source: "github:driftsys/skills".to_string(),
             git_ref: Some("v1.0.0".to_string()),
@@ -300,8 +292,8 @@ mod tests {
     #[test]
     fn upsert_replaces_existing_item_with_same_kind_and_name() {
         let mut lock = Lockfile::new();
-        lock.upsert(item("skill", "code-review"));
-        let mut updated = item("skill", "code-review");
+        lock.upsert(item(ItemKind::Skill, "code-review"));
+        let mut updated = item(ItemKind::Skill, "code-review");
         updated.git_ref = Some("v2.0.0".to_string());
         lock.upsert(updated);
         assert_eq!(lock.items.len(), 1);
@@ -312,16 +304,16 @@ mod tests {
     fn upsert_keeps_distinct_kinds_separate() {
         // A rule and a skill with the same name MUST coexist.
         let mut lock = Lockfile::new();
-        lock.upsert(item("rule", "shared-name"));
-        lock.upsert(item("skill", "shared-name"));
+        lock.upsert(item(ItemKind::Rule, "shared-name"));
+        lock.upsert(item(ItemKind::Skill, "shared-name"));
         assert_eq!(lock.items.len(), 2);
     }
 
     #[test]
     fn items_are_sorted_for_deterministic_output() {
         let mut lock = Lockfile::new();
-        lock.upsert(item("skill", "z"));
-        lock.upsert(item("skill", "a"));
+        lock.upsert(item(ItemKind::Skill, "z"));
+        lock.upsert(item(ItemKind::Skill, "a"));
         let names: Vec<_> = lock.items.iter().map(|i| i.name.as_str()).collect();
         assert_eq!(names, vec!["a", "z"]);
     }
@@ -329,18 +321,18 @@ mod tests {
     #[test]
     fn remove_filters_by_kind_and_name() {
         let mut lock = Lockfile::new();
-        lock.upsert(item("rule", "shared-name"));
-        lock.upsert(item("skill", "shared-name"));
-        lock.remove("rule", "shared-name");
+        lock.upsert(item(ItemKind::Rule, "shared-name"));
+        lock.upsert(item(ItemKind::Skill, "shared-name"));
+        lock.remove(ItemKind::Rule, "shared-name");
         assert_eq!(lock.items.len(), 1);
-        assert_eq!(lock.items[0].kind, "skill");
+        assert_eq!(lock.items[0].kind, ItemKind::Skill);
     }
 
     #[test]
     fn save_and_load_roundtrip() {
         let tmp = tempfile::tempdir().unwrap();
         let mut lock = Lockfile::new();
-        lock.upsert(item("skill", "code-review"));
+        lock.upsert(item(ItemKind::Skill, "code-review"));
         lock.save(tmp.path()).expect("save");
 
         let loaded = Lockfile::load(tmp.path()).expect("load");
@@ -351,7 +343,7 @@ mod tests {
     fn save_is_atomic_no_tmp_file_remains() {
         let tmp = tempfile::tempdir().unwrap();
         let mut lock = Lockfile::new();
-        lock.upsert(item("skill", "test-atomic"));
+        lock.upsert(item(ItemKind::Skill, "test-atomic"));
         lock.save(tmp.path()).expect("save");
 
         // The .tmp file must not persist after a successful save.
@@ -426,7 +418,7 @@ mod tests {
             Some("sha256:abc".into())
         });
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].kind, "skill");
+        assert_eq!(items[0].kind, ItemKind::Skill);
         assert_eq!(items[0].name, "code-review");
         assert_eq!(items[0].source, "local:./src");
         assert_eq!(items[0].hash, Some("sha256:abc".into()));
@@ -565,7 +557,7 @@ mod tests {
     #[test]
     fn locked_item_serializes_source_name_when_present() {
         let item = LockedItem {
-            kind: "skill".to_string(),
+            kind: ItemKind::Skill,
             name: "brainstorming-v2".to_string(),
             source: "github:other-org/repo".to_string(),
             git_ref: None,
@@ -579,7 +571,7 @@ mod tests {
     #[test]
     fn locked_item_omits_source_name_when_none() {
         let item = LockedItem {
-            kind: "skill".to_string(),
+            kind: ItemKind::Skill,
             name: "brainstorming".to_string(),
             source: "github:driftsys/superpowers".to_string(),
             git_ref: None,
