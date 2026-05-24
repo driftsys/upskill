@@ -51,6 +51,11 @@ pub struct LockedItem {
     /// `update` / `doctor` for drift detection.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hash: Option<String>,
+    /// Original item name in the source registry. Only present when the
+    /// consumer installed with `--as <alias>` so `name` differs from the
+    /// SSOT name. Used by `update` to locate the correct source file.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_name: Option<String>,
 }
 
 /// Bundle entry recorded when an install resolves a `.bundle.yaml` file
@@ -249,6 +254,7 @@ pub fn items_from_report(
             source: source_label.to_string(),
             git_ref: git_ref.map(str::to_string),
             hash: hash_for(entry.kind, &entry.name),
+            source_name: None,
         });
     }
     out
@@ -276,6 +282,7 @@ mod tests {
             source: "github:driftsys/skills".to_string(),
             git_ref: Some("v1.0.0".to_string()),
             hash: Some("sha256:deadbeef".to_string()),
+            source_name: None,
         }
     }
 
@@ -533,6 +540,34 @@ mod tests {
         .unwrap();
         let lock = Lockfile::load(tmp.path()).expect("must parse");
         assert_eq!(lock.plugins[0].status, PluginInstallStatus::Installed);
+    }
+
+    #[test]
+    fn locked_item_serializes_source_name_when_present() {
+        let item = LockedItem {
+            kind: "skill".to_string(),
+            name: "brainstorming-v2".to_string(),
+            source: "github:other-org/repo".to_string(),
+            git_ref: None,
+            hash: None,
+            source_name: Some("brainstorming".to_string()),
+        };
+        let json = serde_json::to_string(&item).unwrap();
+        assert!(json.contains("\"source_name\":\"brainstorming\""), "{json}");
+    }
+
+    #[test]
+    fn locked_item_omits_source_name_when_none() {
+        let item = LockedItem {
+            kind: "skill".to_string(),
+            name: "brainstorming".to_string(),
+            source: "github:driftsys/superpowers".to_string(),
+            git_ref: None,
+            hash: None,
+            source_name: None,
+        };
+        let json = serde_json::to_string(&item).unwrap();
+        assert!(!json.contains("source_name"), "{json}");
     }
 
     #[test]

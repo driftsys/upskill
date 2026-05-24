@@ -140,6 +140,7 @@ fn install_preserves_unrelated_existing_entries() {
         source: "github:other/repo@v1.0".into(),
         git_ref: Some("v1.0".into()),
         hash: Some("a".repeat(64)),
+        source_name: None,
     });
     seed.save(&target).unwrap();
 
