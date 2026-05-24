@@ -294,3 +294,42 @@ fn update_empty_lockfile_is_no_op() {
         "expected empty-lockfile message: {out}"
     );
 }
+
+#[test]
+fn update_removes_stale_output_file_from_previous_generation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Inject a stale file into the generated output directory.
+    let stale_path = target.join(".claude/skills/create-api-endpoint/OLD_FILE.md");
+    fs::write(&stale_path, "# stale content").unwrap();
+    assert!(stale_path.exists());
+
+    // Mutate the source so update will regenerate.
+    mutate_skill(&source);
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    // Stale file should be removed.
+    assert!(
+        !stale_path.exists(),
+        "stale file should have been removed during regeneration"
+    );
+
+    // Real output should still exist.
+    let real_output = target.join(".claude/skills/create-api-endpoint/SKILL.md");
+    assert!(
+        real_output.exists(),
+        "regenerated output should exist after update"
+    );
+}

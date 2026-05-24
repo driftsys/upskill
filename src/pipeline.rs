@@ -1088,10 +1088,11 @@ fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
     for client in ALL_CLIENTS {
         let rel = output_path(kind, client, name);
         let full = target.join(&rel);
-        if full.exists() {
-            let _ = fs::remove_file(&full);
-            if let Some(parent) = full.parent() {
-                let _ = fs::remove_dir(parent);
+        // Remove the entire item directory (e.g. `.claude/skills/<name>/`)
+        // so stale files from previous generations are cleaned up.
+        if let Some(parent) = full.parent() {
+            if parent.is_dir() {
+                let _ = fs::remove_dir_all(parent);
             }
         }
     }
@@ -1574,6 +1575,7 @@ fn install_skills(
         let audience = skill.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Skill, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
@@ -1617,6 +1619,7 @@ fn install_rules(
         let audience = rule.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Rule, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
@@ -1660,6 +1663,7 @@ fn install_agents(
         let audience = agent.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Agent, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
