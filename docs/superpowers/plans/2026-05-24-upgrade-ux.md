@@ -10,6 +10,8 @@
 
 ---
 
+## Tasks
+
 ### Task 1: Add `Removed` / `WouldRemove` variants to `UpdateStatus`
 
 **Files:**

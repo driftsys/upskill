@@ -48,7 +48,10 @@ fn main() {
             items,
             global,
             project,
-        } => run_add(&source, &items, global, project),
+            force,
+            alias,
+            exclude,
+        } => run_add(&source, &items, global, project, force, &alias, &exclude),
         Commands::Remove {
             names,
             source,
@@ -124,7 +127,15 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
+fn run_add(
+    source: &str,
+    items: &[String],
+    global: bool,
+    project: bool,
+    force: bool,
+    aliases: &[String],
+    excludes: &[String],
+) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -143,8 +154,14 @@ fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
+    let options = upskill::pipeline::AddOptions {
+        force,
+        aliases: parse_alias_args(aliases),
+        excludes: excludes.to_vec(),
+    };
+
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target, items, plugin_scope) {
+    match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
             print_plugin_results(&report);
@@ -155,6 +172,19 @@ fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+/// Parse `--as` arguments. Direct: `"alt-name"`. Bundle: `"original=alias"`.
+fn parse_alias_args(args: &[String]) -> Vec<(String, String)> {
+    args.iter()
+        .map(|a| {
+            if let Some((from, to)) = a.split_once('=') {
+                (from.to_string(), to.to_string())
+            } else {
+                (String::new(), a.to_string())
+            }
+        })
+        .collect()
 }
 
 /// Interactive y/n prompt for bulk removal by source label. Returns

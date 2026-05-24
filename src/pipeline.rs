@@ -88,6 +88,18 @@ pub struct PluginResult {
     pub summary: Option<String>,
 }
 
+/// Options that control conflict resolution during install.
+#[derive(Debug, Clone, Default)]
+pub struct AddOptions {
+    /// When true, replace items from different sources without error.
+    pub force: bool,
+    /// Alias mappings. For direct `--as alt-name`: vec contains `("", "alt-name")`.
+    /// For bundle `--as original=alias`: vec contains `("original", "alias")`.
+    pub aliases: Vec<(String, String)>,
+    /// Item names to skip during install.
+    pub excludes: Vec<String>,
+}
+
 const ALL_CLIENTS: [Client; 3] = [Client::Claude, Client::Copilot, Client::OpenCode];
 
 /// Install every item under `source` into `target`, generating per-client
@@ -198,6 +210,63 @@ fn has_matching_items(source: &Path, name: &str) -> bool {
         || item_dir.join("AGENT.md").is_file()
 }
 
+/// Scan a source directory for item (kind, name) pairs without generating output.
+fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
+    let mut items = Vec::new();
+    let Ok(entries) = fs::read_dir(source) else {
+        return items;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if name.starts_with('.') {
+            continue;
+        }
+        if is_item_dir(&path) {
+            if path.join("SKILL.md").is_file() {
+                items.push((ItemKind::Skill, name.to_string()));
+            }
+            if path.join("RULE.md").is_file() {
+                items.push((ItemKind::Rule, name.to_string()));
+            }
+            if path.join("AGENT.md").is_file() {
+                items.push((ItemKind::Agent, name.to_string()));
+            }
+        } else {
+            // Category subdir: source/<category>/<item>/ENTRY.md
+            if let Ok(sub_entries) = fs::read_dir(&path) {
+                for sub_entry in sub_entries.flatten() {
+                    let sub_path = sub_entry.path();
+                    if !sub_path.is_dir() {
+                        continue;
+                    }
+                    let Some(sub_name) = sub_path.file_name().and_then(|n| n.to_str()) else {
+                        continue;
+                    };
+                    if sub_name.starts_with('.') {
+                        continue;
+                    }
+                    if sub_path.join("SKILL.md").is_file() {
+                        items.push((ItemKind::Skill, sub_name.to_string()));
+                    }
+                    if sub_path.join("RULE.md").is_file() {
+                        items.push((ItemKind::Rule, sub_name.to_string()));
+                    }
+                    if sub_path.join("AGENT.md").is_file() {
+                        items.push((ItemKind::Agent, sub_name.to_string()));
+                    }
+                }
+            }
+        }
+    }
+    items
+}
+
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
 /// at least one item directory (containing `RULE.md`, `SKILL.md`, or
@@ -271,6 +340,20 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
+/// Replace the item name component in an output path.
+/// E.g., `.claude/skills/foo/SKILL.md` → `.claude/skills/bar/SKILL.md`
+fn rename_output_path(path: &Path, old_name: &str, new_name: &str) -> PathBuf {
+    path.iter()
+        .map(|component| {
+            if component == old_name {
+                std::ffi::OsStr::new(new_name)
+            } else {
+                component
+            }
+        })
+        .collect()
+}
+
 /// Install + write lockfile. Consumer-facing entry point.
 ///
 /// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
@@ -286,24 +369,113 @@ pub fn install_with_lockfile(
     target: &Path,
     items: &[String],
     plugin_scope: crate::plugin::PluginScope,
+    options: &AddOptions,
 ) -> Result<InstallReport> {
+    let label = source.to_string();
+
+    // -- Pre-flight: fetch SSOT and scan for items before writing anything --
+    let (local_source, _tmp_guard) = fetch_ssot(source)?;
+    let scanned_items = scan_source_items(&local_source);
+
+    // -- Validate bare --as with multi-item source --
+    if options.aliases.iter().any(|(from, _)| from.is_empty()) {
+        let unique_names: std::collections::BTreeSet<&str> = scanned_items
+            .iter()
+            .filter(|(_, n)| !options.excludes.contains(n))
+            .map(|(_, n)| n.as_str())
+            .collect();
+        if unique_names.len() > 1 {
+            anyhow::bail!(
+                "--as <alias> cannot be used with a source containing multiple items ({} found). \
+                 Use --as <original>=<alias> syntax to alias specific items.",
+                unique_names.len()
+            );
+        }
+    }
+
+    // -- Conflict detection (before any files are written) --
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let incoming: Vec<(ItemKind, String)> = {
+        let mut seen = std::collections::BTreeSet::new();
+        scanned_items
+            .iter()
+            .filter(|(_, n)| !options.excludes.contains(n))
+            .filter(|(_, n)| items.is_empty() || items.contains(n))
+            .filter_map(|(kind, name)| {
+                let effective_name = options
+                    .aliases
+                    .iter()
+                    .find(|(from, _)| from.is_empty() || *from == *name)
+                    .map(|(_, to)| to.clone())
+                    .unwrap_or_else(|| name.clone());
+                if seen.insert((*kind, effective_name.clone())) {
+                    Some((*kind, effective_name))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    };
+    let conflicts = crate::conflict::detect_conflicts(&incoming, &lock, &label);
+    if !conflicts.is_empty() && !options.force {
+        anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
+    }
+
+    // -- Now proceed with generation (files are written here) --
     let mut report = if items.is_empty() {
-        // No names → install everything (existing default).
-        install_from_source(source, target, None)?
+        install_from_local_path(&local_source, target, None)?
     } else {
-        // Names provided → try item-filter first, then bundle-by-name.
-        install_with_name_resolution(source, target, items)?
+        install_with_name_resolution_from_local(&local_source, target, items)?
     };
 
     // -- Plugin installation (ADR-0008) --
-    // After items are generated, iterate the resolved bundles' plugins
-    // and shell out to each client CLI. Results are appended to the
-    // report for main.rs to display; successful installs are recorded
-    // in the lockfile for remove/update/doctor.
     let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
     report.plugin_results = plugin_results;
 
-    let label = source.to_string();
+    // -- Apply excludes --
+    if !options.excludes.is_empty() {
+        report
+            .items
+            .retain(|item| !options.excludes.contains(&item.name));
+    }
+
+    // -- Apply aliases --
+    let mut aliased_names: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    if !options.aliases.is_empty() {
+        // Rename output files on disk and update report items.
+        for item in &mut report.items {
+            let alias = options
+                .aliases
+                .iter()
+                .find(|(from, _)| from.is_empty() || *from == item.name);
+            if let Some((_, alias_name)) = alias {
+                let old_path = target.join(&item.output_path);
+                let new_output = rename_output_path(&item.output_path, &item.name, alias_name);
+                let new_path = target.join(&new_output);
+
+                if old_path.exists() {
+                    if let Some(parent) = new_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    fs::rename(&old_path, &new_path).with_context(|| {
+                        format!("rename {} to {}", old_path.display(), new_path.display())
+                    })?;
+                    // Clean up empty parent directory
+                    if let Some(parent) = old_path.parent() {
+                        let _ = fs::remove_dir(parent);
+                    }
+                }
+
+                aliased_names
+                    .entry(alias_name.clone())
+                    .or_insert_with(|| item.name.clone());
+                item.output_path = new_output;
+                item.name = alias_name.clone();
+            }
+        }
+    }
+
     let git_ref = match source {
         InstallSource::Github(r) => r.git_ref.as_deref(),
         InstallSource::Gitlab(r) => r.git_ref.as_deref(),
@@ -318,8 +490,10 @@ pub fn install_with_lockfile(
         hashes.get(&(k, n.to_string())).cloned().flatten()
     });
 
-    let mut lock = crate::lockfile::Lockfile::load(target)?;
-    for item in new_items {
+    for mut item in new_items {
+        if let Some(original) = aliased_names.get(&item.name) {
+            item.source_name = Some(original.clone());
+        }
         lock.upsert(item);
     }
     for bundle in &report.bundles {
@@ -379,35 +553,25 @@ pub fn install_with_lockfile(
     Ok(report)
 }
 
-/// Resolve positional names against both items and bundles.
-///
-/// For each name:
-/// - If it matches items AND a bundle → error (ambiguity).
-/// - If it matches only a bundle → install via bundle dispatch.
-/// - If it matches only items → install via item filter.
-/// - If it matches neither → error.
-///
-/// When the list contains a mix (some names are bundles, some are items),
-/// all bundle installs run first, then item installs run with the
-/// remaining names as a filter.
-fn install_with_name_resolution(
-    source: &InstallSource,
+/// Like [`install_with_name_resolution_from_local`] but operates on an already-fetched
+/// local source path (avoids double-fetch when `install_with_lockfile` has
+/// already called `fetch_ssot`).
+fn install_with_name_resolution_from_local(
+    local_source: &Path,
     target: &Path,
     names: &[String],
 ) -> Result<InstallReport> {
-    let (local_source, _tmp) = fetch_ssot(source)?;
-
     let mut bundle_paths: Vec<PathBuf> = Vec::new();
     let mut item_names: Vec<String> = Vec::new();
 
     for name in names {
-        let has_items = has_matching_items(&local_source, name);
-        let bundle_path = find_bundle_by_name(&local_source, name);
+        let has_items = has_matching_items(local_source, name);
+        let bundle_path = find_bundle_by_name(local_source, name);
 
         match (has_items, bundle_path) {
             (true, Some(bp)) => {
                 let rel = bp
-                    .strip_prefix(&local_source)
+                    .strip_prefix(local_source)
                     .unwrap_or(&bp)
                     .display()
                     .to_string();
@@ -419,7 +583,7 @@ fn install_with_name_resolution(
                      upskill add <source>:{}",
                     name,
                     name,
-                    detect_item_entrypoint(&local_source, name),
+                    detect_item_entrypoint(local_source, name),
                     rel,
                     rel,
                 );
@@ -434,21 +598,19 @@ fn install_with_name_resolution(
 
     let mut report = InstallReport::default();
 
-    // Install bundles first.
     for bp in &bundle_paths {
         let bundle_report = install_bundle_file(bp, target)?;
         report.items.extend(bundle_report.items);
         report.bundles.extend(bundle_report.bundles);
     }
 
-    // Install remaining items via the standard filter path.
     if !item_names.is_empty() {
         let filter = crate::bundle::ResolvedItems {
             rules: item_names.clone(),
             skills: item_names.clone(),
             agents: item_names.clone(),
         };
-        let item_report = install_from_local_path(&local_source, target, Some(&filter))?;
+        let item_report = install_from_local_path(local_source, target, Some(&filter))?;
         report.items.extend(item_report.items);
     }
 
@@ -1164,7 +1326,22 @@ pub fn update(
 
         match mode {
             UpdateMode::Apply => {
-                let install_report = install_with_lockfile(&source, target, &[], plugin_scope)?;
+                // Build aliases from lockfile entries that have source_name
+                let aliases: Vec<(String, String)> = source_entries
+                    .iter()
+                    .filter_map(|e| {
+                        e.source_name
+                            .as_ref()
+                            .map(|sn| (sn.clone(), e.name.clone()))
+                    })
+                    .collect();
+                let options = AddOptions {
+                    force: true,
+                    aliases,
+                    excludes: vec![],
+                };
+                let install_report =
+                    install_with_lockfile(&source, target, &[], plugin_scope, &options)?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
@@ -1222,7 +1399,8 @@ pub fn update(
                 let new_hashes = hash_source_items(&root);
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
-                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                    let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
+                    if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
                         report.items.push(UpdatedItem {
                             kind,
                             name: entry.name.clone(),
@@ -1232,7 +1410,7 @@ pub fn update(
                         continue;
                     }
                     let new_hash = new_hashes
-                        .get(&(kind, entry.name.clone()))
+                        .get(&(kind, lookup_name.to_string()))
                         .cloned()
                         .flatten();
                     let status = if new_hash == entry.hash {

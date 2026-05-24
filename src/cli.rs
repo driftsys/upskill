@@ -61,6 +61,17 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
+        /// Replace existing items from a different source without error.
+        #[arg(long = "force")]
+        force: bool,
+        /// Install under an alternate name to avoid conflicts.
+        /// For direct installs: `--as alt-name`.
+        /// For bundle installs: `--as original=alias` (repeatable).
+        #[arg(long = "as", value_name = "ALIAS")]
+        alias: Vec<String>,
+        /// Skip specific items during install (repeatable).
+        #[arg(long = "exclude", value_name = "NAME")]
+        exclude: Vec<String>,
     },
     /// Remove installed content.
     ///
