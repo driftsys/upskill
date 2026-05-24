@@ -217,8 +217,11 @@ impl Lockfile {
     pub fn save(&self, project_root: &Path) -> Result<()> {
         let path = lockfile_path(project_root);
         let json = serde_json::to_string_pretty(self).context("serialize lockfile")?;
-        std::fs::write(&path, format!("{json}\n"))
-            .with_context(|| format!("write {}", path.display()))
+        let tmp_path = path.with_extension("json.tmp");
+        std::fs::write(&tmp_path, format!("{json}\n"))
+            .with_context(|| format!("write {}", tmp_path.display()))?;
+        std::fs::rename(&tmp_path, &path)
+            .with_context(|| format!("rename {} to {}", tmp_path.display(), path.display()))
     }
 }
 
@@ -342,6 +345,23 @@ mod tests {
 
         let loaded = Lockfile::load(tmp.path()).expect("load");
         assert_eq!(loaded, lock);
+    }
+
+    #[test]
+    fn save_is_atomic_no_tmp_file_remains() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        lock.upsert(item("skill", "test-atomic"));
+        lock.save(tmp.path()).expect("save");
+
+        // The .tmp file must not persist after a successful save.
+        let tmp_path = tmp.path().join(".upskill-lock.json.tmp");
+        assert!(
+            !tmp_path.exists(),
+            ".tmp file should not persist after save"
+        );
+        // The actual lockfile must exist.
+        assert!(tmp.path().join(LOCKFILE_NAME).exists());
     }
 
     #[test]

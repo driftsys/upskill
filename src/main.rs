@@ -1156,7 +1156,7 @@ fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&s
                                 "  {}\t{}\t{}",
                                 style::name(&skill.name),
                                 style::dim(&format!("{} installs", skill.installs)),
-                                style::dim(&format!("upskill add {repo} --skill {}", skill.name))
+                                style::dim(&format!("upskill add {repo} {}", skill.name))
                             );
                         }
                     }
