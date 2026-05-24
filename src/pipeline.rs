@@ -1083,6 +1083,20 @@ pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
 }
 
+/// Delete all per-client output files for an item (best-effort).
+fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
+    for client in ALL_CLIENTS {
+        let rel = output_path(kind, client, name);
+        let full = target.join(&rel);
+        if full.exists() {
+            let _ = fs::remove_file(&full);
+            if let Some(parent) = full.parent() {
+                let _ = fs::remove_dir(parent);
+            }
+        }
+    }
+}
+
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
 /// either reinstall (`Apply`) or report what would change (`DryRun`).
 ///
@@ -1149,6 +1163,20 @@ pub fn update(
                 }
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        // Orphan: item no longer in source — remove it.
+                        remove_item_outputs(target, kind, &entry.name);
+                        let mut lock = crate::lockfile::Lockfile::load(target)?;
+                        lock.remove(&entry.kind, &entry.name);
+                        lock.save(target)?;
+                        report.items.push(UpdatedItem {
+                            kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::Removed,
+                        });
+                        continue;
+                    }
                     let new_hash = new_hashes
                         .get(&(kind, entry.name.clone()))
                         .cloned()
@@ -1174,6 +1202,15 @@ pub fn update(
                 let new_hashes = hash_source_items(&root);
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        report.items.push(UpdatedItem {
+                            kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::WouldRemove,
+                        });
+                        continue;
+                    }
                     let new_hash = new_hashes
                         .get(&(kind, entry.name.clone()))
                         .cloned()

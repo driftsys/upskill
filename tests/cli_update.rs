@@ -192,6 +192,93 @@ fn update_unknown_name_is_general_error() {
 }
 
 #[test]
+fn update_removes_orphaned_item_when_source_no_longer_contains_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Verify the skill is installed.
+    assert!(
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "skill should be installed before removal"
+    );
+    assert!(lockfile_hash_for(&target, "create-api-endpoint").is_some());
+
+    // Remove the item from the source so it becomes an orphan.
+    fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("removed") || out.contains("Removed"),
+        "expected removed status, got:\n{out}"
+    );
+
+    // Output files should be gone.
+    assert!(
+        !target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "skill output should be deleted after orphan removal"
+    );
+    // Lockfile entry should be gone.
+    assert!(
+        lockfile_hash_for(&target, "create-api-endpoint").is_none(),
+        "lockfile entry should be removed for orphaned item"
+    );
+}
+
+#[test]
+fn update_dry_run_reports_would_remove_without_deleting() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Remove the item from the source so it becomes an orphan.
+    fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--dry-run"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("would remove"),
+        "expected `would remove` status, got:\n{out}"
+    );
+
+    // Output files should still exist.
+    assert!(
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "dry-run must not delete output files"
+    );
+    // Lockfile entry should still exist.
+    assert!(
+        lockfile_hash_for(&target, "create-api-endpoint").is_some(),
+        "dry-run must not remove lockfile entry"
+    );
+}
+
+#[test]
 fn update_empty_lockfile_is_no_op() {
     let tmp = tempfile::tempdir().unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
