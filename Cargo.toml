@@ -1,6 +1,6 @@
 [package]
 name = "upskill"
-version = "0.6.4"
+version = "0.7.0"
 edition = "2024"
 description = "Author and distribute AI-assistance content across coding agents"
 license = "MIT"

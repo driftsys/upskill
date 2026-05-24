@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.7.0] (2026-05-24)
+
+### Bug Fixes
+
+- isolate HOME in all integration tests to prevent writes to real $HOME
+  ([c195555]), closes [#193]
+- P0 baseline bugs — path traversal, atomic writes, search hint ([#189])
+  ([71104b2]), closes [#177], closes #178, closes #179
+
+### Refactoring
+
+- extract pipeline/install.rs ([fa111e4]), refs [#180]
+- extract pipeline/lifecycle.rs ([23c81b2]), refs [#180]
+- extract pipeline/output.rs ([2d28326]), refs [#180]
+- extract pipeline/git.rs ([62249df]), refs [#180]
+- extract pipeline/discovery.rs ([42dcca4]), refs [#180]
+- extract pipeline/hash.rs ([274749b]), refs [#180]
+- extract pipeline/report.rs ([d657a92]), refs [#180]
+- scaffold pipeline/ module directory ([de0018b]), refs [#180]
+- P1 batch 2 — unify install, docs fixes, UX hints ([b97d7d7]), closes [#181],
+  closes #187, closes #188
+
+### Features
+
+- P1 batch 3 — CLI discoverability, skill output contracts ([67e8eef]), closes
+  [#184], closes #186
+
+[0.7.0]: https://github.com/driftsys/upskill/compare/v0.6.4...v0.7.0
+[c195555]: https://github.com/driftsys/upskill/commit/c195555
+[#193]: https://github.com/driftsys/upskill/issues/193
+[71104b2]: https://github.com/driftsys/upskill/commit/71104b2
+[#189]: https://github.com/driftsys/upskill/issues/189
+[#177]: https://github.com/driftsys/upskill/issues/177
+[fa111e4]: https://github.com/driftsys/upskill/commit/fa111e4
+[#180]: https://github.com/driftsys/upskill/issues/180
+[23c81b2]: https://github.com/driftsys/upskill/commit/23c81b2
+[2d28326]: https://github.com/driftsys/upskill/commit/2d28326
+[62249df]: https://github.com/driftsys/upskill/commit/62249df
+[42dcca4]: https://github.com/driftsys/upskill/commit/42dcca4
+[274749b]: https://github.com/driftsys/upskill/commit/274749b
+[d657a92]: https://github.com/driftsys/upskill/commit/d657a92
+[de0018b]: https://github.com/driftsys/upskill/commit/de0018b
+[b97d7d7]: https://github.com/driftsys/upskill/commit/b97d7d7
+[#181]: https://github.com/driftsys/upskill/issues/181
+[67e8eef]: https://github.com/driftsys/upskill/commit/67e8eef
+[#184]: https://github.com/driftsys/upskill/issues/184
+
 ## [0.6.4] (2026-05-24)
 
 ### Documentation
