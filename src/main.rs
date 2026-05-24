@@ -48,7 +48,10 @@ fn main() {
             items,
             global,
             project,
-        } => run_add(&source, &items, global, project),
+            force,
+            alias,
+            exclude,
+        } => run_add(&source, &items, global, project, force, &alias, &exclude),
         Commands::Remove {
             names,
             source,
@@ -124,7 +127,15 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn run_add(source: &str, items: &[String], global: bool, project: bool) -> i32 {
+fn run_add(
+    source: &str,
+    items: &[String],
+    global: bool,
+    project: bool,
+    _force: bool,
+    _aliases: &[String],
+    _excludes: &[String],
+) -> i32 {
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
