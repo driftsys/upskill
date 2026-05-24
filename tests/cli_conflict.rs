@@ -34,12 +34,8 @@ fn setup_conflict(tmp: &std::path::Path) {
     )
     .unwrap();
 
-    // Init git repo so upskill uses project scope
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp)
-        .assert()
-        .success();
+    // Fake git repo so upskill uses project scope
+    fs::create_dir_all(tmp.join(".git")).unwrap();
 }
 
 #[test]
@@ -99,11 +95,7 @@ fn add_from_same_source_succeeds_without_force() {
     )
     .unwrap();
 
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp.path())
-        .assert()
-        .success();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     Command::cargo_bin("upskill")
         .unwrap()
@@ -132,11 +124,7 @@ fn add_with_exclude_skips_named_item() {
     )
     .unwrap();
 
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp.path())
-        .assert()
-        .success();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     Command::cargo_bin("upskill")
         .unwrap()
@@ -187,11 +175,7 @@ fn add_with_alias_installs_under_alternate_name() {
     )
     .unwrap();
 
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp.path())
-        .assert()
-        .success();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Install with alias to avoid conflict
     Command::cargo_bin("upskill")
@@ -245,11 +229,7 @@ fn update_handles_aliased_items() {
     )
     .unwrap();
 
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp.path())
-        .assert()
-        .success();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Update should succeed (finds original-skill in source, installs as my-alias)
     Command::cargo_bin("upskill")
@@ -301,11 +281,7 @@ fn update_dry_run_handles_aliased_items() {
     )
     .unwrap();
 
-    Command::new("git")
-        .args(["init"])
-        .current_dir(tmp.path())
-        .assert()
-        .success();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Dry-run should detect changes (hash differs)
     Command::cargo_bin("upskill")
