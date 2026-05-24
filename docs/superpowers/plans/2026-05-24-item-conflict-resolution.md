@@ -13,6 +13,7 @@
 ### Task 1: Add `source_name` field to `LockedItem`
 
 **Files:**
+
 - Modify: `src/lockfile.rs:37-54`
 - Test: `src/lockfile.rs` (inline tests)
 
@@ -58,16 +59,17 @@ Expected: FAIL — `source_name` field doesn't exist
 In `src/lockfile.rs`, add to the `LockedItem` struct after the `hash` field:
 
 ```rust
-    /// Original item name in the source registry. Only present when the
-    /// consumer installed with `--as <alias>` so `name` differs from the
-    /// SSOT name. Used by `update` to locate the correct source file.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_name: Option<String>,
+/// Original item name in the source registry. Only present when the
+/// consumer installed with `--as <alias>` so `name` differs from the
+/// SSOT name. Used by `update` to locate the correct source file.
+#[serde(skip_serializing_if = "Option::is_none")]
+pub source_name: Option<String>,
 ```
 
 - [ ] **Step 4: Fix all struct literals that construct `LockedItem`**
 
 Add `source_name: None` to:
+
 - `items_from_report` (line ~246)
 - All test helper `item()` functions in `src/lockfile.rs` and `tests/`
 
@@ -88,37 +90,38 @@ git commit -m "feat(lockfile): add source_name field for alias tracking"
 ### Task 2: Add `--force` and `--as` flags to `Add` command
 
 **Files:**
+
 - Modify: `src/cli.rs:50-64`
 
 - [ ] **Step 1: Add flags to the `Add` variant in `cli.rs`**
 
 ```rust
-    Add {
-        /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
-        source: String,
-        /// Optional subset filter — only items whose name matches one of
-        /// these is installed. Empty means install everything in the
-        /// source (the default).
-        items: Vec<String>,
-        /// Install into `$HOME` instead of the current directory.
-        #[arg(short = 'g', long = "global", conflicts_with = "project")]
-        global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
-        #[arg(short = 'p', long = "project")]
-        project: bool,
-        /// Replace existing items from a different source without error.
-        #[arg(long = "force")]
-        force: bool,
-        /// Install under an alternate name to avoid conflicts.
-        /// For direct installs: `--as alt-name`.
-        /// For bundle installs: `--as original=alias` (repeatable).
-        #[arg(long = "as", value_name = "ALIAS")]
-        alias: Vec<String>,
-        /// Skip specific items during bundle install (repeatable).
-        #[arg(long = "exclude", value_name = "NAME")]
-        exclude: Vec<String>,
-    },
+Add {
+    /// Source: `owner/repo[@ref][:subfolder]`, full https URL, or local path.
+    source: String,
+    /// Optional subset filter — only items whose name matches one of
+    /// these is installed. Empty means install everything in the
+    /// source (the default).
+    items: Vec<String>,
+    /// Install into `$HOME` instead of the current directory.
+    #[arg(short = 'g', long = "global", conflicts_with = "project")]
+    global: bool,
+    /// Force project scope (current directory). Overrides the auto-detect
+    /// fallback to global when `cwd` is not inside a git repo.
+    #[arg(short = 'p', long = "project")]
+    project: bool,
+    /// Replace existing items from a different source without error.
+    #[arg(long = "force")]
+    force: bool,
+    /// Install under an alternate name to avoid conflicts.
+    /// For direct installs: `--as alt-name`.
+    /// For bundle installs: `--as original=alias` (repeatable).
+    #[arg(long = "as", value_name = "ALIAS")]
+    alias: Vec<String>,
+    /// Skip specific items during bundle install (repeatable).
+    #[arg(long = "exclude", value_name = "NAME")]
+    exclude: Vec<String>,
+},
 ```
 
 - [ ] **Step 2: Update the `Commands::Add` match in `main.rs`**
@@ -126,15 +129,15 @@ git commit -m "feat(lockfile): add source_name field for alias tracking"
 Update the destructuring at line ~46:
 
 ```rust
-        Commands::Add {
-            source,
-            items,
-            global,
-            project,
-            force,
-            alias,
-            exclude,
-        } => run_add(&source, &items, global, project, force, &alias, &exclude),
+Commands::Add {
+    source,
+    items,
+    global,
+    project,
+    force,
+    alias,
+    exclude,
+} => run_add(&source, &items, global, project, force, &alias, &exclude),
 ```
 
 And update `run_add` signature:
@@ -160,6 +163,7 @@ git commit -m "feat(cli): add --force, --as, --exclude flags to add command"
 ### Task 3: Implement conflict detection
 
 **Files:**
+
 - Modify: `src/pipeline.rs`
 - Create: `src/conflict.rs`
 - Modify: `src/lib.rs`
@@ -315,6 +319,7 @@ git commit -m "feat(conflict): add item conflict detection module"
 ### Task 4: Wire conflict detection into `install_with_lockfile`
 
 **Files:**
+
 - Modify: `src/pipeline.rs:284-380`
 - Modify: `src/main.rs:127-158`
 
@@ -564,6 +569,7 @@ git commit -m "feat(pipeline): wire conflict detection into install_with_lockfil
 ### Task 5: Implement `--as` alias installation
 
 **Files:**
+
 - Modify: `src/pipeline.rs`
 - Modify: `src/lockfile.rs`
 
@@ -608,21 +614,21 @@ Expected: FAIL
 In `install_with_lockfile`, after conflict detection and before lockfile write, rename items that match aliases:
 
 ```rust
-    // -- Apply aliases --
-    // For direct --as (empty key): rename all items from this source
-    // For bundle --as (key=value): rename specific items
-    for item in &mut report.items {
-        let alias = options.aliases.iter().find(|(from, _)| {
-            from.is_empty() || *from == item.name
-        });
-        if let Some((original_name, alias_name)) = alias {
-            // Rename the item in the report
-            let source_name = item.name.clone();
-            item.name = alias_name.clone();
-            // Also rename the output path
-            // (regeneration with new name handled below)
-        }
+// -- Apply aliases --
+// For direct --as (empty key): rename all items from this source
+// For bundle --as (key=value): rename specific items
+for item in &mut report.items {
+    let alias = options.aliases.iter().find(|(from, _)| {
+        from.is_empty() || *from == item.name
+    });
+    if let Some((original_name, alias_name)) = alias {
+        // Rename the item in the report
+        let source_name = item.name.clone();
+        item.name = alias_name.clone();
+        // Also rename the output path
+        // (regeneration with new name handled below)
     }
+}
 ```
 
 And in the lockfile write section, set `source_name` when aliased:
@@ -667,6 +673,7 @@ git commit -m "feat(pipeline): implement --as alias installation with source_nam
 ### Task 6: Implement `--exclude` for bundle installs
 
 **Files:**
+
 - Modify: `src/pipeline.rs`
 
 - [ ] **Step 1: Write integration test**
@@ -715,14 +722,14 @@ Expected: FAIL (skill-b is installed)
 In `install_with_lockfile`, after the install but before lockfile write, filter out excluded items:
 
 ```rust
-    // -- Apply excludes --
-    if !options.excludes.is_empty() {
-        report.items.retain(|item| !options.excludes.contains(&item.name));
-        // Also remove generated output files for excluded items
-        for exclude in &options.excludes {
-            remove_generated_outputs(target, exclude);
-        }
+// -- Apply excludes --
+if !options.excludes.is_empty() {
+    report.items.retain(|item| !options.excludes.contains(&item.name));
+    // Also remove generated output files for excluded items
+    for exclude in &options.excludes {
+        remove_generated_outputs(target, exclude);
     }
+}
 ```
 
 The `remove_generated_outputs` helper deletes per-client files that were just written for excluded items. Alternatively, filter BEFORE generation by passing excludes into `install_from_source`.
@@ -749,6 +756,7 @@ git commit -m "feat(pipeline): implement --exclude flag to skip items during ins
 ### Task 7: Update `upskill update` to use `source_name`
 
 **Files:**
+
 - Modify: `src/pipeline.rs` (the `update` function)
 
 - [ ] **Step 1: Write the failing test**
@@ -809,8 +817,8 @@ Expected: FAIL — update looks for `my-alias` in source, doesn't find it
 In the `update` function in `src/pipeline.rs`, when fetching SSOT for a locked item, use `source_name` if present:
 
 ```rust
-    let ssot_name = item.source_name.as_deref().unwrap_or(&item.name);
-    // Use ssot_name to locate the item directory in the fetched source
+let ssot_name = item.source_name.as_deref().unwrap_or(&item.name);
+// Use ssot_name to locate the item directory in the fetched source
 ```
 
 And when regenerating, use `item.name` (the alias) as the output name.
@@ -837,6 +845,7 @@ git commit -m "feat(update): use source_name to fetch aliased items correctly"
 ### Task 8: Final verification and lint
 
 **Files:**
+
 - All modified files
 
 - [ ] **Step 1: Run full test suite**
