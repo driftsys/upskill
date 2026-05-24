@@ -76,12 +76,8 @@ fn update_no_change_reports_up_to_date() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("Updated 0 of 4 item(s)"),
+        out.contains("everything is up to date"),
         "expected no changes, got:\n{out}"
-    );
-    assert!(
-        out.contains("up to date"),
-        "expected up-to-date status, got:\n{out}"
     );
 }
 
@@ -192,6 +188,93 @@ fn update_unknown_name_is_general_error() {
 }
 
 #[test]
+fn update_removes_orphaned_item_when_source_no_longer_contains_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Verify the skill is installed.
+    assert!(
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "skill should be installed before removal"
+    );
+    assert!(lockfile_hash_for(&target, "create-api-endpoint").is_some());
+
+    // Remove the item from the source so it becomes an orphan.
+    fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("removed") || out.contains("Removed"),
+        "expected removed status, got:\n{out}"
+    );
+
+    // Output files should be gone.
+    assert!(
+        !target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "skill output should be deleted after orphan removal"
+    );
+    // Lockfile entry should be gone.
+    assert!(
+        lockfile_hash_for(&target, "create-api-endpoint").is_none(),
+        "lockfile entry should be removed for orphaned item"
+    );
+}
+
+#[test]
+fn update_dry_run_reports_would_remove_without_deleting() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Remove the item from the source so it becomes an orphan.
+    fs::remove_dir_all(source.join("create-api-endpoint")).unwrap();
+
+    let assert = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--dry-run"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("would remove"),
+        "expected `would remove` status, got:\n{out}"
+    );
+
+    // Output files should still exist.
+    assert!(
+        target
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists(),
+        "dry-run must not delete output files"
+    );
+    // Lockfile entry should still exist.
+    assert!(
+        lockfile_hash_for(&target, "create-api-endpoint").is_some(),
+        "dry-run must not remove lockfile entry"
+    );
+}
+
+#[test]
 fn update_empty_lockfile_is_no_op() {
     let tmp = tempfile::tempdir().unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
@@ -203,7 +286,77 @@ fn update_empty_lockfile_is_no_op() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("nothing to update"),
+        out.contains("everything is up to date") || out.contains("nothing to update"),
         "expected empty-lockfile message: {out}"
+    );
+}
+
+#[test]
+fn update_removes_stale_output_file_from_previous_generation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Inject a stale file into the generated output directory.
+    let stale_path = target.join(".claude/skills/create-api-endpoint/OLD_FILE.md");
+    fs::write(&stale_path, "# stale content").unwrap();
+    assert!(stale_path.exists());
+
+    // Mutate the source so update will regenerate.
+    mutate_skill(&source);
+
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    // Stale file should be removed.
+    assert!(
+        !stale_path.exists(),
+        "stale file should have been removed during regeneration"
+    );
+
+    // Real output should still exist.
+    let real_output = target.join(".claude/skills/create-api-endpoint/SKILL.md");
+    assert!(
+        real_output.exists(),
+        "regenerated output should exist after update"
+    );
+}
+
+/// Non-TTY (test harness) should auto-proceed without `--yes`.
+#[test]
+fn update_without_yes_proceeds_in_non_tty() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source);
+
+    // Mutate source so there's something to update.
+    mutate_skill(&source);
+
+    let hash_before = lockfile_hash_for(&target, "create-api-endpoint");
+
+    // Run update WITHOUT --yes; non-TTY should auto-proceed.
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&target)
+        .args(["update"])
+        .assert()
+        .success();
+
+    let hash_after = lockfile_hash_for(&target, "create-api-endpoint");
+    assert_ne!(
+        hash_before, hash_after,
+        "update should have applied without --yes in non-TTY"
     );
 }

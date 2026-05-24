@@ -61,7 +61,8 @@ fn main() {
             dry_run,
             global,
             project,
-        } => run_update(&names, dry_run, global, project),
+            yes,
+        } => run_update(&names, dry_run, yes, global, project),
         Commands::List {
             global,
             project,
@@ -483,7 +484,7 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i32 {
+fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -491,24 +492,131 @@ fn run_update(names: &[String], dry_run: bool, global: bool, project: bool) -> i
             return EXIT_ERROR;
         }
     };
-    let mode = if dry_run {
-        UpdateMode::DryRun
-    } else {
-        UpdateMode::Apply
-    };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
-    match update(&target, names, mode, plugin_scope) {
-        Ok(report) => {
-            print_update_report(&report, dry_run);
-            EXIT_SUCCESS
+    if dry_run {
+        // Explicit --dry-run: compute and report without applying.
+        match update(&target, names, UpdateMode::DryRun, plugin_scope) {
+            Ok(report) => {
+                print_update_report(&report, true);
+                EXIT_SUCCESS
+            }
+            Err(err) => {
+                print_error_chain(&err);
+                EXIT_ERROR
+            }
         }
-        Err(err) => {
-            print_error_chain(&err);
-            EXIT_ERROR
+    } else if yes || !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+        // No confirmation needed — apply directly (single fetch).
+        match update(&target, names, UpdateMode::Apply, plugin_scope) {
+            Ok(report) => {
+                print_update_report(&report, false);
+                EXIT_SUCCESS
+            }
+            Err(err) => {
+                print_error_chain(&err);
+                EXIT_ERROR
+            }
+        }
+    } else {
+        // Interactive: dry-run first to show plan, then apply if confirmed.
+        let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope) {
+            Ok(r) => r,
+            Err(err) => {
+                print_error_chain(&err);
+                return EXIT_ERROR;
+            }
+        };
+
+        let has_changes = plan
+            .items
+            .iter()
+            .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
+
+        if !has_changes {
+            if !style::is_quiet() {
+                println!("everything is up to date — nothing to do");
+            }
+            return EXIT_SUCCESS;
+        }
+
+        if !style::is_quiet() {
+            print_update_plan(&plan);
+        }
+
+        if !confirm_update() {
+            eprintln!("aborted.");
+            return EXIT_SUCCESS;
+        }
+
+        match update(&target, names, UpdateMode::Apply, plugin_scope) {
+            Ok(report) => {
+                print_update_report(&report, false);
+                EXIT_SUCCESS
+            }
+            Err(err) => {
+                print_error_chain(&err);
+                EXIT_ERROR
+            }
         }
     }
+}
+
+/// Show a summary plan of what an update would do.
+fn print_update_plan(report: &UpdateReport) {
+    let update_count = report
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, UpdateStatus::WouldChange { .. }))
+        .count();
+    let remove_count = report
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, UpdateStatus::WouldRemove))
+        .count();
+    let unchanged_count = report
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, UpdateStatus::UpToDate))
+        .count();
+
+    if update_count > 0 {
+        println!("  {}  {} item(s)", style::success("update:"), update_count);
+    }
+    if remove_count > 0 {
+        println!(
+            "  {}  {} item(s) (no longer in source)",
+            style::error_label("remove:"),
+            remove_count
+        );
+    }
+    if unchanged_count > 0 {
+        println!(
+            "  {}  {} item(s)",
+            style::dim("unchanged:"),
+            unchanged_count
+        );
+    }
+}
+
+/// Interactive confirmation for update. Auto-proceeds in non-TTY (CI/pipes).
+fn confirm_update() -> bool {
+    use std::io::{BufRead, IsTerminal, Write};
+
+    if !std::io::stdin().is_terminal() {
+        return true;
+    }
+
+    eprint!("Apply? [y/N] ");
+    let _ = std::io::stderr().flush();
+
+    let stdin = std::io::stdin();
+    let mut line = String::new();
+    if stdin.lock().read_line(&mut line).is_err() {
+        return false;
+    }
+    matches!(line.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 fn print_update_report(report: &UpdateReport, dry_run: bool) {
@@ -519,16 +627,20 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         println!("nothing to update — lockfile is empty");
         return;
     }
-    let header: colored::ColoredString = if dry_run {
-        style::warn("Dry-run: would update")
-    } else {
-        style::success("Updated")
-    };
     let changes = report
         .items
         .iter()
         .filter(|i| !matches!(i.status, UpdateStatus::UpToDate))
         .count();
+    if changes == 0 && !dry_run {
+        println!("everything is up to date — nothing to do");
+        return;
+    }
+    let header: colored::ColoredString = if dry_run {
+        style::warn("Dry-run: would update")
+    } else {
+        style::success("Updated")
+    };
     println!("{header} {} of {} item(s)", changes, report.items.len());
     for item in &report.items {
         let kind_label = match item.kind {
@@ -544,6 +656,8 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             UpdateStatus::WouldChange { new_hash, .. } => {
                 style::warn(&format!("would change → {}", short(new_hash)))
             }
+            UpdateStatus::Removed => style::error_label("removed — no longer in source"),
+            UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
         };
         println!(
             "  {} {:<32} {}",

@@ -1062,6 +1062,12 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
+    /// `Apply` mode: item no longer exists in the source. Outputs deleted
+    /// and lockfile entry removed.
+    Removed,
+    /// `DryRun` mode: item no longer exists in the source; an `update`
+    /// (without `--dry-run`) would remove it.
+    WouldRemove,
 }
 
 #[derive(Debug, Clone)]
@@ -1075,6 +1081,29 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+}
+
+/// Delete all per-client output files for an item (best-effort).
+fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
+    for client in ALL_CLIENTS {
+        let rel = output_path(kind, client, name);
+        let full = target.join(&rel);
+        if full.exists() {
+            let _ = fs::remove_file(&full);
+        }
+        // If the item has its own directory (e.g. `.claude/skills/<name>/`),
+        // remove it entirely so stale sibling files are cleaned up.
+        // Only remove the parent if it's item-specific (contains the name).
+        if let Some(parent) = full.parent()
+            && parent
+                .file_name()
+                .and_then(|f| f.to_str())
+                .is_some_and(|f| f == name)
+            && parent.is_dir()
+        {
+            let _ = fs::remove_dir_all(parent);
+        }
+    }
 }
 
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
@@ -1141,8 +1170,33 @@ pub fn update(
                 for it in &install_report.items {
                     new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
                 }
+                // Collect orphans first, then batch-remove from lockfile.
+                let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        orphans.push((entry, kind));
+                    }
+                }
+                if !orphans.is_empty() {
+                    let mut lock = crate::lockfile::Lockfile::load(target)?;
+                    for (entry, kind) in &orphans {
+                        remove_item_outputs(target, *kind, &entry.name);
+                        lock.remove(&entry.kind, &entry.name);
+                        report.items.push(UpdatedItem {
+                            kind: *kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::Removed,
+                        });
+                    }
+                    lock.save(target)?;
+                }
+                for entry in &source_entries {
+                    let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        continue; // already handled as orphan
+                    }
                     let new_hash = new_hashes
                         .get(&(kind, entry.name.clone()))
                         .cloned()
@@ -1168,6 +1222,15 @@ pub fn update(
                 let new_hashes = hash_source_items(&root);
                 for entry in &source_entries {
                     let kind = parse_kind(&entry.kind)?;
+                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                        report.items.push(UpdatedItem {
+                            kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::WouldRemove,
+                        });
+                        continue;
+                    }
                     let new_hash = new_hashes
                         .get(&(kind, entry.name.clone()))
                         .cloned()
@@ -1531,6 +1594,7 @@ fn install_skills(
         let audience = skill.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Skill, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
@@ -1574,6 +1638,7 @@ fn install_rules(
         let audience = rule.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Rule, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
@@ -1617,6 +1682,7 @@ fn install_agents(
         let audience = agent.audience.as_deref();
         let source_hash = hash_item_dir(&dir);
 
+        remove_item_outputs(target, ItemKind::Agent, &name);
         for client in ALL_CLIENTS {
             if !targets(client, audience) {
                 continue;
