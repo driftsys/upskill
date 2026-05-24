@@ -570,11 +570,7 @@ fn print_update_plan(report: &UpdateReport) {
         .count();
 
     if update_count > 0 {
-        println!(
-            "  {}  {} item(s)",
-            style::success("update:"),
-            update_count
-        );
+        println!("  {}  {} item(s)", style::success("update:"), update_count);
     }
     if remove_count > 0 {
         println!(

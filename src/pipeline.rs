@@ -1094,15 +1094,14 @@ fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
         // If the item has its own directory (e.g. `.claude/skills/<name>/`),
         // remove it entirely so stale sibling files are cleaned up.
         // Only remove the parent if it's item-specific (contains the name).
-        if let Some(parent) = full.parent() {
-            if parent
+        if let Some(parent) = full.parent()
+            && parent
                 .file_name()
                 .and_then(|f| f.to_str())
                 .is_some_and(|f| f == name)
-                && parent.is_dir()
-            {
-                let _ = fs::remove_dir_all(parent);
-            }
+            && parent.is_dir()
+        {
+            let _ = fs::remove_dir_all(parent);
         }
     }
 }
