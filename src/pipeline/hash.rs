@@ -10,7 +10,10 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::{Context, Result};
+
 use super::ItemKind;
+use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs};
 
 /// SHA-256 hash of every file under `dir`, with each file's path-relative
 /// name folded into the hash so renames register as drift. Recursive,
@@ -55,35 +58,71 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-/// Hash every item directory under a SSOT root, keyed by `(kind, name)`.
-/// Used by `update --dry-run` to compute would-be hashes without
-/// installing. Mirrors the discovery of `install_from_local_path`: an
-/// item directory `<source_root>/<name>/` contributes one entry per
-/// kind for which it holds an entrypoint (so co-located multi-kind
-/// items contribute multiple entries, one per kind).
-pub(super) fn hash_source_items(
+/// Compute the `(kind, name) -> hash` map a source would install,
+/// mirroring `install::install_from_local_path`'s dispatch (bundle-aware)
+/// but without writing any output. Backs `update --dry-run` so its plan
+/// matches what an `Apply` run — which reinstalls through the real
+/// pipeline — produces.
+///
+/// `root` is the resolved SSOT root from `git::fetch_ssot`: a directory
+/// for item-root and whole-repo sources, or a `*.bundle.yaml` file for
+/// bundle sources. For a bundle file the items are resolved through the
+/// same registry walk + dependency resolution the installer uses (issue
+/// #196); for a directory every discovered item is hashed.
+pub(super) fn planned_source_hashes(
+    root: &Path,
+) -> Result<BTreeMap<(ItemKind, String), Option<String>>> {
+    if is_bundle_file(root) {
+        let registry_root = find_registry_root(root).with_context(|| {
+            format!(
+                "find SSOT registry root containing skills/, rules/, agents/, or bundles/ \
+                 above {}",
+                root.display()
+            )
+        })?;
+        let entry = crate::parse::bundle::load(root)
+            .with_context(|| format!("load entry bundle {}", root.display()))?;
+        let available: Vec<crate::model::Bundle> = crate::parse::bundle::discover(&registry_root)
+            .with_context(|| {
+                format!(
+                    "discover sibling bundles under registry root {}",
+                    registry_root.display()
+                )
+            })?
+            .into_iter()
+            .map(|(_, b)| b)
+            .collect();
+        let resolved = crate::bundle::resolve(&entry, &available)?;
+        Ok(hash_items(&registry_root, Some(&resolved.items)))
+    } else {
+        Ok(hash_items(root, None))
+    }
+}
+
+/// Hash every item directory under `source_root`, keyed by `(kind, name)`,
+/// mirroring the discovery in `install::install_skills` / `install_rules`
+/// / `install_agents`: items are found via [`iter_item_dirs`] (which
+/// handles both the flat `<root>/<item>/` and the category
+/// `<root>/<category>/<item>/` layouts) and, when `filter` is `Some`,
+/// restricted to the resolved bundle set. A co-located multi-kind item
+/// contributes one entry per kind for which it holds an entrypoint.
+fn hash_items(
     source_root: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
 ) -> BTreeMap<(ItemKind, String), Option<String>> {
     let mut out = BTreeMap::new();
-    let Ok(entries) = fs::read_dir(source_root) else {
+    let Ok(dirs) = iter_item_dirs(source_root) else {
         return out;
     };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        let hash = hash_item_dir(&path);
+    for (name, dir) in dirs {
+        let hash = hash_item_dir(&dir);
         for (entrypoint, kind) in [
             ("RULE.md", ItemKind::Rule),
             ("SKILL.md", ItemKind::Skill),
             ("AGENT.md", ItemKind::Agent),
         ] {
-            if path.join(entrypoint).is_file() {
-                out.insert((kind, name.to_string()), hash.clone());
+            if dir.join(entrypoint).is_file() && filter.is_none_or(|f| f.contains(kind, &name)) {
+                out.insert((kind, name.clone()), hash.clone());
             }
         }
     }
