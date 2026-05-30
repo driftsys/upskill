@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.1] (2026-05-30)
+
+### Bug Fixes
+
+- **update:** re-resolve bundle sources in dry-run; guard empty sources ([#196])
+  ([24a8965])
+
+[0.7.1]: https://github.com/driftsys/upskill/compare/v0.7.0...v0.7.1
+[24a8965]: https://github.com/driftsys/upskill/commit/24a8965
+[#196]: https://github.com/driftsys/upskill/issues/196
+
 ## [0.7.0] (2026-05-24)
 
 ### Bug Fixes
