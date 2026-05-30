@@ -12,7 +12,7 @@ use std::fs;
 use std::path::Path;
 
 use super::git::fetch_ssot;
-use super::hash::hash_source_items;
+use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
 use super::{
     ALL_CLIENTS, AddOptions, DoctorReport, ItemKind, ListReport, ListedBundle, ListedItem,
@@ -331,6 +331,7 @@ pub fn update(
                 for it in &install_report.items {
                     new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
                 }
+                guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
                 // Collect orphans first, then batch-remove from lockfile.
                 let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
                 for entry in &source_entries {
@@ -380,7 +381,9 @@ pub fn update(
             }
             UpdateMode::DryRun => {
                 let (root, _guard) = fetch_ssot(&source)?;
-                let new_hashes = hash_source_items(&root);
+                let new_hashes = planned_source_hashes(&root)
+                    .with_context(|| format!("resolve items for source `{source_label}`"))?;
+                guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
                 for entry in &source_entries {
                     let kind = entry.kind;
                     let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
@@ -417,6 +420,32 @@ pub fn update(
     }
 
     Ok(report)
+}
+
+/// Guard against the data-loss footgun in issue #196: when re-resolving a
+/// source yields **no** items but the lockfile still records entries for
+/// it, treat that as a fetch/resolution anomaly and abort rather than
+/// scheduling every entry for removal. A source whose items were all
+/// genuinely deleted upstream is indistinguishable from a transient
+/// failure here, so erring toward "do not delete" is the safe default —
+/// the user can `upskill remove --source <label>` to clear such entries
+/// deliberately.
+fn guard_against_empty_source(
+    new_hashes: &std::collections::BTreeMap<(ItemKind, String), Option<String>>,
+    source_entries: &[crate::lockfile::LockedItem],
+    source_label: &str,
+) -> Result<()> {
+    if new_hashes.is_empty() && !source_entries.is_empty() {
+        let count = source_entries.len();
+        let noun = if count == 1 { "item" } else { "items" };
+        anyhow::bail!(
+            "source `{source_label}` resolved to no items, but the lockfile records \
+             {count} {noun} from it — refusing to remove them (the source may be \
+             unreachable or its layout changed). Re-check the source, or run \
+             `upskill remove --source {source_label}` to clear these entries deliberately."
+        );
+    }
+    Ok(())
 }
 
 /// List installed content from `<target>/.upskill-lock.json`. No
