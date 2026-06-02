@@ -309,3 +309,67 @@ fn alias_on_resource_item_is_rejected() {
     assert!(!e.proj.join(".claude/skills/renamed").exists());
     assert!(!e.proj.join(".claude/skills/demo-skill").exists());
 }
+
+#[test]
+fn colocated_kinds_share_resources() {
+    // One directory holding SKILL.md + AGENT.md (same name), sharing
+    // references/. Each emitted entrypoint must get the resource.
+    let e = env();
+    let dir = e.src.join("paired");
+    fs::create_dir_all(dir.join("references")).unwrap();
+    for entry in ["SKILL.md", "AGENT.md"] {
+        fs::write(
+            dir.join(entry),
+            "---\nschema: 1\nname: paired\ndescription: d\n---\n\n## P\n\n[n](./references/notes.md)\n",
+        )
+        .unwrap();
+    }
+    fs::write(dir.join("references/notes.md"), "# n\n").unwrap();
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Skill (dir-backed) gets it beside SKILL.md.
+    assert!(
+        e.proj
+            .join(".claude/skills/paired/references/notes.md")
+            .is_file()
+    );
+    // Agent (flat) gets it in the namespace dir.
+    assert!(
+        e.proj
+            .join(".claude/agents/paired/references/notes.md")
+            .is_file()
+    );
+}
+
+#[test]
+fn bundle_install_copies_resources() {
+    // Registry with one resource-bearing skill and a bundle that names it.
+    let e = env();
+    write_item(
+        &e.src,
+        "demo-skill",
+        "SKILL.md",
+        "## X\n\n[g](./scripts/gate.sh)\n",
+    );
+    fs::write(
+        e.src.join("demo.bundle.yaml"),
+        "schema: 1\nname: demo\ndescription: d\nitems:\n  skills:\n    - demo-skill\n",
+    )
+    .unwrap();
+
+    e.cmd()
+        .args(["add", e.src.join("demo.bundle.yaml").to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert!(
+        e.proj
+            .join(".claude/skills/demo-skill/scripts/gate.sh")
+            .is_file(),
+        "bundle-installed item must carry its resources"
+    );
+}
