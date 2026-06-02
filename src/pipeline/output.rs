@@ -24,6 +24,62 @@ pub(super) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf
     }
 }
 
+/// True when an item's entrypoint for `client` lives inside its own
+/// `<name>/` directory (all skills; opencode rules). Such items hold
+/// resources beside the entrypoint and need no link rewrite. Flat kinds
+/// (Claude/Copilot rules, all agents) return false.
+pub(super) fn is_dir_backed(kind: ItemKind, client: Client) -> bool {
+    matches!(
+        (kind, client),
+        (ItemKind::Skill, _) | (ItemKind::Rule, Client::OpenCode)
+    )
+}
+
+/// Directory (relative to the install target) under which an item's
+/// supporting resources are copied for `client`. Directory-backed items
+/// use the entrypoint's own `<name>/` directory; flat items use a sibling
+/// `<name>/` namespace directory next to the flat entrypoint file.
+pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
+    let entry = output_path(kind, client, name);
+    let parent = entry
+        .parent()
+        .expect("output path always has a parent directory");
+    if is_dir_backed(kind, client) {
+        parent.to_path_buf()
+    } else {
+        parent.join(name)
+    }
+}
+
+/// Copy each resource (a path relative to the SSOT item directory
+/// `source_dir`) into the client's [`resource_base_path`], preserving
+/// sub-structure. `fs::copy` preserves the file mode on Unix, so an
+/// executable script stays executable.
+pub(super) fn copy_item_resources(
+    target: &Path,
+    source_dir: &Path,
+    kind: ItemKind,
+    client: Client,
+    name: &str,
+    resources: &[PathBuf],
+) -> Result<()> {
+    if resources.is_empty() {
+        return Ok(());
+    }
+    let base = resource_base_path(kind, client, name);
+    for rel in resources {
+        let from = source_dir.join(rel);
+        let to = target.join(&base).join(rel);
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("create dir {}", parent.display()))?;
+        }
+        fs::copy(&from, &to)
+            .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
+    }
+    Ok(())
+}
+
 /// Per format-spec §7 / ADR-0003. opencode `.agents/skills/<n>/SKILL.md`
 /// is the canonical-store path; opencode walks it natively.
 fn skill_output_path(client: Client, name: &str) -> PathBuf {
@@ -138,5 +194,75 @@ mod tests {
                 agent_output_path(client, "x")
             );
         }
+    }
+
+    #[test]
+    fn is_dir_backed_matches_layout() {
+        // Skills are directory-backed on every client.
+        for c in ALL_CLIENTS {
+            assert!(is_dir_backed(ItemKind::Skill, c));
+        }
+        // Rules: only opencode is directory-backed.
+        assert!(is_dir_backed(ItemKind::Rule, Client::OpenCode));
+        assert!(!is_dir_backed(ItemKind::Rule, Client::Claude));
+        assert!(!is_dir_backed(ItemKind::Rule, Client::Copilot));
+        // Agents are flat on every client.
+        for c in ALL_CLIENTS {
+            assert!(!is_dir_backed(ItemKind::Agent, c));
+        }
+    }
+
+    #[test]
+    fn resource_base_dir_backed_is_entrypoint_dir() {
+        assert_eq!(
+            resource_base_path(ItemKind::Skill, Client::Claude, "x"),
+            PathBuf::from(".claude/skills/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::OpenCode, "x"),
+            PathBuf::from(".agents/rules/x")
+        );
+    }
+
+    #[test]
+    fn resource_base_flat_is_sibling_namespace_dir() {
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Claude, "x"),
+            PathBuf::from(".claude/rules/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Copilot, "x"),
+            PathBuf::from(".github/instructions/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Agent, Client::Claude, "x"),
+            PathBuf::from(".claude/agents/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Agent, Client::OpenCode, "x"),
+            PathBuf::from(".opencode/agents/x")
+        );
+    }
+
+    #[test]
+    fn copy_item_resources_preserves_tree() {
+        let src = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(src.path().join("scripts")).unwrap();
+        std::fs::write(src.path().join("scripts/gate.sh"), b"#!/bin/sh\n").unwrap();
+        let target = tempfile::tempdir().unwrap();
+
+        copy_item_resources(
+            target.path(),
+            src.path(),
+            ItemKind::Rule,
+            Client::Claude,
+            "demo",
+            &[PathBuf::from("scripts/gate.sh")],
+        )
+        .unwrap();
+
+        let dest = target.path().join(".claude/rules/demo/scripts/gate.sh");
+        assert!(dest.is_file());
+        assert_eq!(std::fs::read(&dest).unwrap(), b"#!/bin/sh\n");
     }
 }
