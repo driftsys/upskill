@@ -127,9 +127,9 @@ pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
         if full.exists() {
             let _ = fs::remove_file(&full);
         }
-        // If the item has its own directory (e.g. `.claude/skills/<name>/`),
-        // remove it entirely so stale sibling files are cleaned up.
-        // Only remove the parent if it's item-specific (contains the name).
+        // Directory-backed items have their own `<name>/` directory (e.g.
+        // `.claude/skills/<name>/`) holding both the entrypoint and its
+        // resources — remove it entirely so stale sibling files are cleaned.
         if let Some(parent) = full.parent()
             && parent
                 .file_name()
@@ -138,6 +138,14 @@ pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
             && parent.is_dir()
         {
             let _ = fs::remove_dir_all(parent);
+        }
+        // Flat kinds keep resources in a sibling `<name>/` namespace dir
+        // next to the flat entrypoint file; remove that too.
+        if !is_dir_backed(kind, client) {
+            let res = target.join(resource_base_path(kind, client, name));
+            if res.is_dir() {
+                let _ = fs::remove_dir_all(&res);
+            }
         }
     }
 }
@@ -264,5 +272,26 @@ mod tests {
         let dest = target.path().join(".claude/rules/demo/scripts/gate.sh");
         assert!(dest.is_file());
         assert_eq!(std::fs::read(&dest).unwrap(), b"#!/bin/sh\n");
+    }
+
+    #[test]
+    fn remove_item_outputs_deletes_flat_kind_resource_dir() {
+        let target = tempfile::tempdir().unwrap();
+        // Flat-kind (Claude rule) entrypoint + sibling resource namespace dir.
+        std::fs::create_dir_all(target.path().join(".claude/rules/demo/scripts")).unwrap();
+        std::fs::write(target.path().join(".claude/rules/demo.md"), "x").unwrap();
+        std::fs::write(
+            target.path().join(".claude/rules/demo/scripts/gate.sh"),
+            "x",
+        )
+        .unwrap();
+
+        remove_item_outputs(target.path(), ItemKind::Rule, "demo");
+
+        assert!(!target.path().join(".claude/rules/demo.md").exists());
+        assert!(
+            !target.path().join(".claude/rules/demo").exists(),
+            "the sibling resource namespace dir must be removed too"
+        );
     }
 }
