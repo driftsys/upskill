@@ -126,31 +126,50 @@ delivered without its execute bit is as broken as one not delivered at all.
 
 ### Removal & drift safety
 
-- The lockfile records each copied resource's **output path**, per item, alongside
-  the entrypoint output paths it already tracks. `upskill remove` then deletes
-  exactly that item's resource tree — no orphans, no over-deletion.
+- **No lockfile change.** Resource output locations are **recomputed** from
+  `(kind, client, name)` via the same `pipeline/output.rs` path module that
+  `install` uses — the codebase's established "install and remove stay in lockstep
+  through one path-mapping function" pattern. `remove` (and `update`'s orphan path)
+  delete the item's resource base directory (`remove_dir_all`) in addition to the
+  entrypoint file, then prune now-empty parents. Deterministic, no per-item
+  resource list to persist.
 - `hash_item_dir` already hashes the entire source item directory (all files), so
-  `update` / `doctor` drift detection already accounts for resource changes; no
-  change needed there.
+  `update` / `doctor` SSOT-drift detection already accounts for resource changes;
+  no change needed there.
+- **Known limitation (out of scope):** `doctor` checks only entrypoint outputs for
+  presence, so a manually-deleted **output** resource file is not flagged. SSOT
+  drift (the common case) is still caught by the hash. Tracked as debt.
+
+### Aliasing (`--as`) — deferred
+
+`upskill add --as <alias>` renames an item's entrypoint output. With resources now
+in a per-item namespace, a correct alias must also relocate the `<name>/` resource
+directory and re-prefix the rewritten links — a non-trivial extension the #199
+motivating case does not need. This PR adds a **pre-flight guard**: when `--as`
+targets an item that ships resources, `add` aborts before writing with a clear
+message, and the relocation work is tracked as a separate debt issue. Non-aliased
+installs (the overwhelming majority, including all bundle installs) are unaffected.
 
 ## Components touched
 
-- `pipeline.rs` — `install_skills` / `install_rules` / `install_agents` (or their
-  unified successor): after writing the entrypoint, enumerate item-directory
-  resources, compute per-client output paths, copy them, and record paths in the
-  install report → lockfile.
-- `generate/` — a new resource-link-rewrite step in the body-generation path for
-  flat-kind items, gated on the item having ≥1 resource.
-- `lockfile.rs` — extend the per-item entry to carry resource output paths
-  (`schema: 1`; additive field, no version bump — see below).
-- `pipeline.rs` removal path — delete recorded resource paths on `remove`.
+- `src/pipeline/discovery.rs` — new `iter_item_resources(dir)` enumerating
+  non-entrypoint, non-override files under an item directory (relative paths,
+  recursive).
+- `src/pipeline/output.rs` — new `is_dir_backed(kind, client)`,
+  `resource_base_path(kind, client, name)`, and a `copy_item_resources(...)` helper;
+  extend `remove_item_outputs` to delete the resource base directory.
+- `src/generate/link_rewrite.rs` — new module: `rewrite_resource_links(rendered,
+  name, copied_set)` using `pulldown-cmark` offset scanning. Pure transform.
+- `src/pipeline/install.rs` — `install_items_of_kind`: enumerate resources once per
+  item, apply the rewrite for flat kinds, write entrypoint, copy resources per
+  client.
+- `src/pipeline/mod.rs` — `install_with_lockfile` pre-flight: guard `--as` against
+  resource-bearing items.
+- `src/pipeline/lifecycle.rs` — `remove` deletes resource base dirs (route through
+  the extended `remove_item_outputs`).
 
-## Lockfile shape
-
-Add an optional `resources: [<output-path>, ...]` array to each installed item's
-entry. Absent ⇒ no resources (backward-compatible with existing `schema: 1`
-lockfiles; no schema bump). Pre-1.0 we do not add migration shims — old lockfiles
-simply have no `resources` key and read as empty.
+No `lockfile.rs` change — resource locations are recomputed from
+`(kind, client, name)`.
 
 ## Testing (ATDD → TDD)
 
@@ -199,15 +218,10 @@ _Properties_:
 - includes nested trees (`scripts/`, `references/sub/`), preserving structure
 - empty set when the directory holds only an entrypoint
 
-**Per-client resource output-path computation** — directory-backed (skill,
-opencode-rule) vs flat (Claude/Copilot rule, all agents); asserts the namespace
-segment and the rewrite-needed flag per (kind, client).
-
-**Lockfile** (`lockfile.rs`):
-
-- round-trip of an item entry with a `resources` array
-- reads a pre-existing entry **without** the key as empty resources (no schema
-  bump)
+**Per-client resource output-path computation** (`output.rs`) — `is_dir_backed`
+and `resource_base_path` for every (kind, client): directory-backed (skill,
+opencode-rule) returns the entrypoint's own `<name>/` dir; flat (Claude/Copilot
+rule, all agents) returns the sibling `<name>/` namespace dir.
 
 ### Integration (ATDD, `tests/`) — observable CLI behavior
 
@@ -237,6 +251,9 @@ shipping `scripts/<x>.sh` + `references/notes.md`, plus a body that links them.
 9. **`update` reconciliation** — adding a resource file in source then `update`
    copies it; deleting a resource in source then `update` removes the stale output
    file (guarding the #196-class "stale output" failure mode).
+10. **`--as` guard** — `add ./src --as alt` on a resource-bearing item aborts with
+    the documented message and writes nothing; the same item without `--as`
+    installs normally.
 
 ### Formatting guarantee (§7.4)
 
