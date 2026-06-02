@@ -61,7 +61,7 @@ pub fn rewrite_resource_links(
     }
 
     // Apply right-to-left so earlier ranges stay valid.
-    edits.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+    edits.sort_by_key(|e| std::cmp::Reverse(e.0.start));
     let mut out = rendered.to_string();
     for (range, replacement) in edits {
         out.replace_range(range, &replacement);
