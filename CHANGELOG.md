@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.7.2] (2026-06-02)
+
+### Documentation
+
+- **commands:** document supporting-resource copying ([#199]) ([22722a4])
+- **plan:** implementation plan for supporting-resource copy ([#199])
+  ([ab60837])
+- **spec:** design for copying item supporting resources ([#199]) ([494c2bb])
+
+### Bug Fixes
+
+- **pipeline:** skip symlinks in dir walkers to prevent recursion on cycles
+  ([#199]) ([28a02d0])
+- **pipeline:** address code-review findings ([#199]) ([7df4064])
+- **pipeline:** delete resource trees on remove and update-orphan ([#199])
+  ([fb555ea])
+
+### Features
+
+- **pipeline:** guard --as against resource-bearing items ([#199]) ([8ff8540])
+- **pipeline:** copy item resources and rewrite flat-kind links on install
+  ([#199]) ([f65d97f])
+- **generate:** rewrite relative resource links for flat kinds ([#199])
+  ([103c620])
+- **pipeline:** resource base paths and copy helper ([#199]) ([3baf08f])
+- **pipeline:** enumerate item supporting resources ([#199]) ([d5a8377])
+
+[0.7.2]: https://github.com/driftsys/upskill/compare/v0.7.1...v0.7.2
+[22722a4]: https://github.com/driftsys/upskill/commit/22722a4
+[#199]: https://github.com/driftsys/upskill/issues/199
+[ab60837]: https://github.com/driftsys/upskill/commit/ab60837
+[494c2bb]: https://github.com/driftsys/upskill/commit/494c2bb
+[28a02d0]: https://github.com/driftsys/upskill/commit/28a02d0
+[7df4064]: https://github.com/driftsys/upskill/commit/7df4064
+[fb555ea]: https://github.com/driftsys/upskill/commit/fb555ea
+[8ff8540]: https://github.com/driftsys/upskill/commit/8ff8540
+[f65d97f]: https://github.com/driftsys/upskill/commit/f65d97f
+[103c620]: https://github.com/driftsys/upskill/commit/103c620
+[3baf08f]: https://github.com/driftsys/upskill/commit/3baf08f
+[d5a8377]: https://github.com/driftsys/upskill/commit/d5a8377
+
 ## [0.7.1] (2026-05-30)
 
 ### Bug Fixes
