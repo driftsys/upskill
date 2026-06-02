@@ -169,7 +169,10 @@ pub fn install_with_lockfile(
     // supported (the resource namespace dir and rewritten `<name>/` link
     // prefix would not be relocated to the alias). Tracked as debt; abort
     // before writing rather than emit broken output.
-    if !options.aliases.is_empty() {
+    // Skip for bundle-file sources: `local_source` is then a file, not a
+    // directory, so `iter_item_dirs` would error. Bundle-sourced aliasing of
+    // resource-bearing items is covered by the same debt follow-up (#200).
+    if !options.aliases.is_empty() && !discovery::is_bundle_file(&local_source) {
         for (name, dir) in discovery::iter_item_dirs(&local_source)? {
             let aliased = options
                 .aliases

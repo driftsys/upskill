@@ -37,7 +37,7 @@ pub fn rewrite_resource_links(
     let ref_parser = Parser::new_ext(rendered, Options::empty());
     for (_label, def) in ref_parser.reference_definitions().iter() {
         if let Some(new_dest) = rewritten_dest(&def.dest, name, copied)
-            && let Some(off) = rendered[def.span.clone()].rfind(def.dest.as_ref())
+            && let Some(off) = locate_dest(&rendered[def.span.clone()], &def.dest, true)
         {
             let abs = def.span.start + off;
             edits.push((abs..abs + def.dest.len(), new_dest));
@@ -53,7 +53,7 @@ pub fn rewrite_resource_links(
             _ => continue,
         };
         if let Some(new_dest) = rewritten_dest(&dest, name, copied)
-            && let Some(off) = rendered[range.clone()].rfind(&dest)
+            && let Some(off) = locate_dest(&rendered[range.clone()], &dest, false)
         {
             let abs = range.start + off;
             edits.push((abs..abs + dest.len(), new_dest));
@@ -67,6 +67,28 @@ pub fn rewrite_resource_links(
         out.replace_range(range, &replacement);
     }
     Ok(out)
+}
+
+/// Byte offset of the destination within a link or reference-definition
+/// source `span`. Anchors on the structural marker that precedes the
+/// destination — `](` for inline links/images, `]:` for reference
+/// definitions — so a link title or link text that happens to repeat the
+/// destination string cannot cause a mis-splice. Returns `None` when the
+/// anchor isn't found or the destination isn't where expected (the caller
+/// then leaves the link unchanged rather than risk corrupting it).
+fn locate_dest(span: &str, dest: &str, is_refdef: bool) -> Option<usize> {
+    let mut pos = if is_refdef {
+        span.find("]:")? + 2
+    } else {
+        span.rfind("](")? + 2
+    };
+    // Skip optional whitespace after the marker, then an optional opening
+    // angle bracket (`[t](<dest>)` / `[id]: <dest>`).
+    pos += span[pos..].len() - span[pos..].trim_start().len();
+    if span[pos..].starts_with('<') {
+        pos += 1;
+    }
+    span[pos..].starts_with(dest).then_some(pos)
 }
 
 /// Returns `Some(new_dest)` when `dest` is a relative path (optionally
@@ -225,5 +247,38 @@ mod tests {
         let once = run("[g](./scripts/gate.sh)", &["scripts/gate.sh"]);
         let twice = run(&once, &["scripts/gate.sh"]);
         assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn rewrites_url_not_title_when_title_repeats_dest() {
+        // The title string is byte-identical to the destination: only the
+        // URL must be rewritten, the title left intact.
+        assert_eq!(
+            run(
+                "[g](scripts/gate.sh \"scripts/gate.sh\")",
+                &["scripts/gate.sh"]
+            ),
+            "[g](demo/scripts/gate.sh \"scripts/gate.sh\")"
+        );
+    }
+
+    #[test]
+    fn rewrites_url_not_text_when_link_text_repeats_dest() {
+        // The link text is byte-identical to the destination.
+        assert_eq!(
+            run("[scripts/gate.sh](scripts/gate.sh)", &["scripts/gate.sh"]),
+            "[scripts/gate.sh](demo/scripts/gate.sh)"
+        );
+    }
+
+    #[test]
+    fn rewrites_refdef_url_not_title_when_title_repeats_dest() {
+        assert_eq!(
+            run(
+                "[g]: scripts/gate.sh \"scripts/gate.sh\"\n",
+                &["scripts/gate.sh"]
+            ),
+            "[g]: demo/scripts/gate.sh \"scripts/gate.sh\"\n"
+        );
     }
 }

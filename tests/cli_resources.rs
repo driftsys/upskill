@@ -346,6 +346,38 @@ fn colocated_kinds_share_resources() {
 }
 
 #[test]
+fn alias_on_bundle_source_does_not_crash_guard() {
+    // The --as resource guard must skip bundle-file sources (local_source is
+    // a file, not a directory) instead of erroring on iter_item_dirs. Bundle
+    // item has no resources, so aliasing it succeeds.
+    let e = env();
+    let dir = e.src.join("demo-skill");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: demo-skill\ndescription: d\n---\n\n## X\n\nbody\n",
+    )
+    .unwrap();
+    fs::write(
+        e.src.join("demo.bundle.yaml"),
+        "schema: 1\nname: demo\ndescription: d\nitems:\n  skills:\n    - demo-skill\n",
+    )
+    .unwrap();
+
+    e.cmd()
+        .args([
+            "add",
+            e.src.join("demo.bundle.yaml").to_str().unwrap(),
+            "--as",
+            "demo-skill=renamed",
+        ])
+        .assert()
+        .success();
+
+    assert!(e.proj.join(".claude/skills/renamed/SKILL.md").is_file());
+}
+
+#[test]
 fn bundle_install_copies_resources() {
     // Registry with one resource-bearing skill and a bundle that names it.
     let e = env();

@@ -122,30 +122,19 @@ pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<(
 /// Delete all per-client output files for an item (best-effort).
 pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
     for client in ALL_CLIENTS {
-        let rel = output_path(kind, client, name);
-        let full = target.join(&rel);
-        if full.exists() {
-            let _ = fs::remove_file(&full);
-        }
-        // Directory-backed items have their own `<name>/` directory (e.g.
-        // `.claude/skills/<name>/`) holding both the entrypoint and its
-        // resources — remove it entirely so stale sibling files are cleaned.
-        if let Some(parent) = full.parent()
-            && parent
-                .file_name()
-                .and_then(|f| f.to_str())
-                .is_some_and(|f| f == name)
-            && parent.is_dir()
-        {
-            let _ = fs::remove_dir_all(parent);
-        }
-        // Flat kinds keep resources in a sibling `<name>/` namespace dir
-        // next to the flat entrypoint file; remove that too.
-        if !is_dir_backed(kind, client) {
-            let res = target.join(resource_base_path(kind, client, name));
-            if res.is_dir() {
-                let _ = fs::remove_dir_all(&res);
-            }
+        // Remove the entrypoint file. For directory-backed kinds this also
+        // gets swept by the resource-base removal below; doing it first is
+        // harmless (the second remove is a no-op).
+        let _ = fs::remove_file(target.join(output_path(kind, client, name)));
+        // Remove the item's resource base directory. For directory-backed
+        // kinds this is the item's own `<name>/` dir (entrypoint + resources);
+        // for flat kinds it is the sibling `<name>/` namespace dir. Both are
+        // item-specific — `resource_base_path` never returns the shared kind
+        // directory — so removing an item named like its kind dir (e.g. a
+        // rule named `rules`) cannot wipe sibling items.
+        let base = target.join(resource_base_path(kind, client, name));
+        if base.is_dir() {
+            let _ = fs::remove_dir_all(&base);
         }
     }
 }
@@ -292,6 +281,27 @@ mod tests {
         assert!(
             !target.path().join(".claude/rules/demo").exists(),
             "the sibling resource namespace dir must be removed too"
+        );
+    }
+
+    #[test]
+    fn remove_item_outputs_never_wipes_sibling_items_in_shared_dir() {
+        let target = tempfile::tempdir().unwrap();
+        // Two flat-kind (Claude) rules share `.claude/rules/`. One is named
+        // `rules`, matching the shared kind-directory name — the case that
+        // previously caused `remove_dir_all(.claude/rules)` to wipe everything.
+        fs::create_dir_all(target.path().join(".claude/rules/rules")).unwrap();
+        fs::write(target.path().join(".claude/rules/other.md"), "keep").unwrap();
+        fs::write(target.path().join(".claude/rules/rules.md"), "x").unwrap();
+        fs::write(target.path().join(".claude/rules/rules/g.sh"), "x").unwrap();
+
+        remove_item_outputs(target.path(), ItemKind::Rule, "rules");
+
+        assert!(!target.path().join(".claude/rules/rules.md").exists());
+        assert!(!target.path().join(".claude/rules/rules").exists());
+        assert!(
+            target.path().join(".claude/rules/other.md").exists(),
+            "removing the 'rules'-named item must not wipe sibling rules"
         );
     }
 }
