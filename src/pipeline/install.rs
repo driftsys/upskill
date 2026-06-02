@@ -15,10 +15,12 @@ use std::path::Path;
 
 use super::discovery::{
     detect_item_entrypoint, find_bundle_by_name, find_registry_root, has_matching_items,
-    is_bundle_file, iter_item_dirs,
+    is_bundle_file, iter_item_dirs, iter_item_resources,
 };
 use super::hash::hash_item_dir;
-use super::output::{output_path, remove_item_outputs, write_output};
+use super::output::{
+    copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
+};
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, Rule, Skill};
@@ -421,6 +423,9 @@ fn install_items_of_kind(
         };
 
         let source_hash = hash_item_dir(&dir);
+        let resources = iter_item_resources(&dir);
+        let copied: std::collections::HashSet<std::path::PathBuf> =
+            resources.iter().cloned().collect();
 
         // Clean existing output directories for this specific item before
         // writing new outputs. This removes stale sibling files while keeping
@@ -428,8 +433,19 @@ fn install_items_of_kind(
         remove_item_outputs(target, kind, &name);
 
         for (client, rendered) in &renders {
+            // Flat-kind entrypoints (Claude/Copilot rules, all agents) live
+            // beside a `<name>/` resource directory; rewrite their relative
+            // resource links to point into it. Directory-backed kinds need
+            // no rewrite (entrypoint and resources share the directory).
+            let body = if !copied.is_empty() && !is_dir_backed(kind, *client) {
+                crate::generate::link_rewrite::rewrite_resource_links(rendered, &name, &copied)
+                    .with_context(|| format!("rewrite resource links for {name} ({client:?})"))?
+            } else {
+                rendered.clone()
+            };
             let rel = output_path(kind, *client, &name);
-            write_output(target, &rel, rendered)?;
+            write_output(target, &rel, &body)?;
+            copy_item_resources(target, &dir, kind, *client, &name, &resources)?;
             report.items.push(InstalledItem {
                 kind,
                 name: name.clone(),

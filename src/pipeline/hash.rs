@@ -49,8 +49,17 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
         return;
     };
     for entry in entries.flatten() {
+        // `file_type()` does not follow symlinks; skip them so a directory
+        // symlink cycle cannot drive unbounded recursion (consistent with
+        // `discovery::collect_resource_files`).
+        let Ok(ft) = entry.file_type() else {
+            continue;
+        };
+        if ft.is_symlink() {
+            continue;
+        }
         let path = entry.path();
-        if path.is_dir() {
+        if ft.is_dir() {
             collect_files(&path, files);
         } else {
             files.push(path);

@@ -24,6 +24,62 @@ pub(super) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf
     }
 }
 
+/// True when an item's entrypoint for `client` lives inside its own
+/// `<name>/` directory (all skills; opencode rules). Such items hold
+/// resources beside the entrypoint and need no link rewrite. Flat kinds
+/// (Claude/Copilot rules, all agents) return false.
+pub(super) fn is_dir_backed(kind: ItemKind, client: Client) -> bool {
+    matches!(
+        (kind, client),
+        (ItemKind::Skill, _) | (ItemKind::Rule, Client::OpenCode)
+    )
+}
+
+/// Directory (relative to the install target) under which an item's
+/// supporting resources are copied for `client`. Directory-backed items
+/// use the entrypoint's own `<name>/` directory; flat items use a sibling
+/// `<name>/` namespace directory next to the flat entrypoint file.
+pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
+    let entry = output_path(kind, client, name);
+    let parent = entry
+        .parent()
+        .expect("output path always has a parent directory");
+    if is_dir_backed(kind, client) {
+        parent.to_path_buf()
+    } else {
+        parent.join(name)
+    }
+}
+
+/// Copy each resource (a path relative to the SSOT item directory
+/// `source_dir`) into the client's [`resource_base_path`], preserving
+/// sub-structure. `fs::copy` preserves the file mode on Unix, so an
+/// executable script stays executable.
+pub(super) fn copy_item_resources(
+    target: &Path,
+    source_dir: &Path,
+    kind: ItemKind,
+    client: Client,
+    name: &str,
+    resources: &[PathBuf],
+) -> Result<()> {
+    if resources.is_empty() {
+        return Ok(());
+    }
+    let base = resource_base_path(kind, client, name);
+    for rel in resources {
+        let from = source_dir.join(rel);
+        let to = target.join(&base).join(rel);
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("create dir {}", parent.display()))?;
+        }
+        fs::copy(&from, &to)
+            .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
+    }
+    Ok(())
+}
+
 /// Per format-spec §7 / ADR-0003. opencode `.agents/skills/<n>/SKILL.md`
 /// is the canonical-store path; opencode walks it natively.
 fn skill_output_path(client: Client, name: &str) -> PathBuf {
@@ -66,22 +122,19 @@ pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<(
 /// Delete all per-client output files for an item (best-effort).
 pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
     for client in ALL_CLIENTS {
-        let rel = output_path(kind, client, name);
-        let full = target.join(&rel);
-        if full.exists() {
-            let _ = fs::remove_file(&full);
-        }
-        // If the item has its own directory (e.g. `.claude/skills/<name>/`),
-        // remove it entirely so stale sibling files are cleaned up.
-        // Only remove the parent if it's item-specific (contains the name).
-        if let Some(parent) = full.parent()
-            && parent
-                .file_name()
-                .and_then(|f| f.to_str())
-                .is_some_and(|f| f == name)
-            && parent.is_dir()
-        {
-            let _ = fs::remove_dir_all(parent);
+        // Remove the entrypoint file. For directory-backed kinds this also
+        // gets swept by the resource-base removal below; doing it first is
+        // harmless (the second remove is a no-op).
+        let _ = fs::remove_file(target.join(output_path(kind, client, name)));
+        // Remove the item's resource base directory. For directory-backed
+        // kinds this is the item's own `<name>/` dir (entrypoint + resources);
+        // for flat kinds it is the sibling `<name>/` namespace dir. Both are
+        // item-specific — `resource_base_path` never returns the shared kind
+        // directory — so removing an item named like its kind dir (e.g. a
+        // rule named `rules`) cannot wipe sibling items.
+        let base = target.join(resource_base_path(kind, client, name));
+        if base.is_dir() {
+            let _ = fs::remove_dir_all(&base);
         }
     }
 }
@@ -138,5 +191,117 @@ mod tests {
                 agent_output_path(client, "x")
             );
         }
+    }
+
+    #[test]
+    fn is_dir_backed_matches_layout() {
+        // Skills are directory-backed on every client.
+        for c in ALL_CLIENTS {
+            assert!(is_dir_backed(ItemKind::Skill, c));
+        }
+        // Rules: only opencode is directory-backed.
+        assert!(is_dir_backed(ItemKind::Rule, Client::OpenCode));
+        assert!(!is_dir_backed(ItemKind::Rule, Client::Claude));
+        assert!(!is_dir_backed(ItemKind::Rule, Client::Copilot));
+        // Agents are flat on every client.
+        for c in ALL_CLIENTS {
+            assert!(!is_dir_backed(ItemKind::Agent, c));
+        }
+    }
+
+    #[test]
+    fn resource_base_dir_backed_is_entrypoint_dir() {
+        assert_eq!(
+            resource_base_path(ItemKind::Skill, Client::Claude, "x"),
+            PathBuf::from(".claude/skills/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::OpenCode, "x"),
+            PathBuf::from(".agents/rules/x")
+        );
+    }
+
+    #[test]
+    fn resource_base_flat_is_sibling_namespace_dir() {
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Claude, "x"),
+            PathBuf::from(".claude/rules/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Copilot, "x"),
+            PathBuf::from(".github/instructions/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Agent, Client::Claude, "x"),
+            PathBuf::from(".claude/agents/x")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Agent, Client::OpenCode, "x"),
+            PathBuf::from(".opencode/agents/x")
+        );
+    }
+
+    #[test]
+    fn copy_item_resources_preserves_tree() {
+        let src = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(src.path().join("scripts")).unwrap();
+        std::fs::write(src.path().join("scripts/gate.sh"), b"#!/bin/sh\n").unwrap();
+        let target = tempfile::tempdir().unwrap();
+
+        copy_item_resources(
+            target.path(),
+            src.path(),
+            ItemKind::Rule,
+            Client::Claude,
+            "demo",
+            &[PathBuf::from("scripts/gate.sh")],
+        )
+        .unwrap();
+
+        let dest = target.path().join(".claude/rules/demo/scripts/gate.sh");
+        assert!(dest.is_file());
+        assert_eq!(std::fs::read(&dest).unwrap(), b"#!/bin/sh\n");
+    }
+
+    #[test]
+    fn remove_item_outputs_deletes_flat_kind_resource_dir() {
+        let target = tempfile::tempdir().unwrap();
+        // Flat-kind (Claude rule) entrypoint + sibling resource namespace dir.
+        std::fs::create_dir_all(target.path().join(".claude/rules/demo/scripts")).unwrap();
+        std::fs::write(target.path().join(".claude/rules/demo.md"), "x").unwrap();
+        std::fs::write(
+            target.path().join(".claude/rules/demo/scripts/gate.sh"),
+            "x",
+        )
+        .unwrap();
+
+        remove_item_outputs(target.path(), ItemKind::Rule, "demo");
+
+        assert!(!target.path().join(".claude/rules/demo.md").exists());
+        assert!(
+            !target.path().join(".claude/rules/demo").exists(),
+            "the sibling resource namespace dir must be removed too"
+        );
+    }
+
+    #[test]
+    fn remove_item_outputs_never_wipes_sibling_items_in_shared_dir() {
+        let target = tempfile::tempdir().unwrap();
+        // Two flat-kind (Claude) rules share `.claude/rules/`. One is named
+        // `rules`, matching the shared kind-directory name — the case that
+        // previously caused `remove_dir_all(.claude/rules)` to wipe everything.
+        fs::create_dir_all(target.path().join(".claude/rules/rules")).unwrap();
+        fs::write(target.path().join(".claude/rules/other.md"), "keep").unwrap();
+        fs::write(target.path().join(".claude/rules/rules.md"), "x").unwrap();
+        fs::write(target.path().join(".claude/rules/rules/g.sh"), "x").unwrap();
+
+        remove_item_outputs(target.path(), ItemKind::Rule, "rules");
+
+        assert!(!target.path().join(".claude/rules/rules.md").exists());
+        assert!(!target.path().join(".claude/rules/rules").exists());
+        assert!(
+            target.path().join(".claude/rules/other.md").exists(),
+            "removing the 'rules'-named item must not wipe sibling rules"
+        );
     }
 }

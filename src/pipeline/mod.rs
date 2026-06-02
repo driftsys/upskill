@@ -165,6 +165,29 @@ pub fn install_with_lockfile(
         }
     }
 
+    // -- Guard: aliasing an item that ships supporting resources is not yet
+    // supported (the resource namespace dir and rewritten `<name>/` link
+    // prefix would not be relocated to the alias). Tracked as debt; abort
+    // before writing rather than emit broken output.
+    // Skip for bundle-file sources: `local_source` is then a file, not a
+    // directory, so `iter_item_dirs` would error. Bundle-sourced aliasing of
+    // resource-bearing items is covered by the same debt follow-up (#200).
+    if !options.aliases.is_empty() && !discovery::is_bundle_file(&local_source) {
+        for (name, dir) in discovery::iter_item_dirs(&local_source)? {
+            let aliased = options
+                .aliases
+                .iter()
+                .any(|(from, _)| from.is_empty() || *from == name);
+            if aliased && !discovery::iter_item_resources(&dir).is_empty() {
+                anyhow::bail!(
+                    "aliasing items with supporting resources is not yet supported \
+                     ('{name}' ships resource files). Install it without --as. \
+                     (See format-spec §2.4; tracked in #200.)"
+                );
+            }
+        }
+    }
+
     // -- Conflict detection (before any files are written) --
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     let incoming: Vec<(ItemKind, String)> = {

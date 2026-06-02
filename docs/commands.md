@@ -58,6 +58,13 @@ Default scope is `--project` (writes into `.agents/...` of the current
 repo), falling back to `--global` (`$HOME/.agents/...`) if you're not
 inside a git repo. Pass either flag explicitly to override.
 
+Supporting files in an item directory — anything besides the entrypoint and
+per-client override files, e.g. `scripts/`, `references/`, `assets/` — are
+copied into each client's output alongside the rendered item. For rules and
+agents that render to a flat file (Claude Code, GitHub Copilot), resources go
+into a sibling `<name>/` directory and the body's relative links are rewritten
+to match. See [format-spec §2.4](./format-spec.md).
+
 ### `upskill update [name...]`
 
 Pull latest sources and regenerate changed items.

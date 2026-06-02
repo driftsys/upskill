@@ -8,7 +8,6 @@
 //! logic themselves.
 
 use anyhow::{Context, Result};
-use std::fs;
 use std::path::Path;
 
 use super::git::fetch_ssot;
@@ -64,18 +63,18 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
     let mut report = RemoveReport::default();
     for entry in &to_remove {
         let kind = entry.kind;
+        // Record which entrypoint outputs existed (for the user-facing
+        // report) before deleting everything for this item.
         let mut deleted_files = Vec::new();
         for client in ALL_CLIENTS {
             let rel = output_path(kind, client, &entry.name);
-            let full = target.join(&rel);
-            if full.exists() {
-                fs::remove_file(&full).with_context(|| format!("delete {}", full.display()))?;
+            if target.join(&rel).exists() {
                 deleted_files.push(rel);
-                if let Some(parent) = full.parent() {
-                    let _ = fs::remove_dir(parent);
-                }
             }
         }
+        // Deletes the entrypoint files, directory-backed item dirs, and
+        // flat-kind sibling resource namespace dirs in lockstep with install.
+        remove_item_outputs(target, kind, &entry.name);
         lock.remove(entry.kind, &entry.name);
         report.items.push(RemovedItem {
             kind,

@@ -239,6 +239,71 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
     Ok(out)
 }
 
+/// Relative paths (from `dir`) of every file under an item directory that
+/// is neither an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`) nor a
+/// per-client override file (`<KIND>.<client>.md`, format-spec §2.3).
+/// Recursive; sub-directory structure is preserved in the returned
+/// relative paths. Sorted for deterministic output.
+pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    collect_resource_files(dir, dir, &mut out);
+    out.sort();
+    out
+}
+
+fn collect_resource_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        // `file_type()` does not follow symlinks. Skip symlinks entirely so a
+        // directory-symlink cycle cannot cause unbounded recursion, and a
+        // symlinked file cannot smuggle a resource from outside the item dir.
+        let Ok(ft) = entry.file_type() else {
+            continue;
+        };
+        if ft.is_symlink() {
+            continue;
+        }
+        let path = entry.path();
+        if ft.is_dir() {
+            collect_resource_files(root, &path, out);
+            continue;
+        }
+        // Entrypoints and override files only ever sit at the top level of
+        // an item directory; a nested file with the same name is content.
+        let top_level = path.parent() == Some(root);
+        let fname = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
+        if top_level && is_entrypoint_or_override(fname) {
+            continue;
+        }
+        if let Ok(rel) = path.strip_prefix(root) {
+            out.push(rel.to_path_buf());
+        }
+    }
+}
+
+fn is_entrypoint_or_override(fname: &str) -> bool {
+    matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md") || is_override_file(fname)
+}
+
+/// `<KIND>.<client>.md` where KIND ∈ {SKILL,RULE,AGENT} and client ∈
+/// {claude,copilot,opencode}. Anchored to entrypoint stems so an
+/// unrelated file like `notes.claude.md` is NOT treated as an override.
+fn is_override_file(fname: &str) -> bool {
+    let Some(stem) = fname.strip_suffix(".md") else {
+        return false;
+    };
+    let mut parts = stem.split('.');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(kind), Some(client), None) => {
+            matches!(kind, "SKILL" | "RULE" | "AGENT")
+                && matches!(client, "claude" | "copilot" | "opencode")
+        }
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -399,6 +464,57 @@ mod tests {
         assert!(
             names.contains(&"my-rule"),
             "iter_item_dirs must still find direct item children: {names:?}"
+        );
+    }
+
+    #[test]
+    fn iter_item_resources_excludes_entrypoint_and_overrides() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::write(dir.join("RULE.md"), "x").unwrap();
+        std::fs::write(dir.join("RULE.claude.md"), "x").unwrap(); // override
+        std::fs::write(dir.join("SKILL.md"), "x").unwrap(); // co-located entrypoint
+        std::fs::write(dir.join("notes.claude.md"), "x").unwrap(); // NOT an override
+        std::fs::create_dir_all(dir.join("scripts")).unwrap();
+        std::fs::write(dir.join("scripts/gate.sh"), "x").unwrap();
+
+        let res = iter_item_resources(dir);
+        assert_eq!(
+            res,
+            vec![
+                std::path::PathBuf::from("notes.claude.md"),
+                std::path::PathBuf::from("scripts/gate.sh"),
+            ],
+            "entrypoints and <KIND>.<client>.md overrides are excluded; \
+             nested files and same-suffix non-overrides are kept"
+        );
+    }
+
+    #[test]
+    fn iter_item_resources_empty_when_only_entrypoint() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("SKILL.md"), "x").unwrap();
+        assert!(iter_item_resources(tmp.path()).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn iter_item_resources_does_not_loop_on_symlink_cycle() {
+        // A directory symlink pointing back at the item root forms a cycle;
+        // walking it with a symlink-following `is_dir()` would recurse until
+        // the stack overflows. The walk must terminate and skip the symlink.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::write(dir.join("SKILL.md"), "x").unwrap();
+        std::fs::create_dir_all(dir.join("scripts")).unwrap();
+        std::fs::write(dir.join("scripts/gate.sh"), "x").unwrap();
+        std::os::unix::fs::symlink(dir, dir.join("scripts/loop")).unwrap();
+
+        let res = iter_item_resources(dir); // must terminate
+        assert!(res.contains(&std::path::PathBuf::from("scripts/gate.sh")));
+        assert!(
+            !res.iter().any(|p| p.to_string_lossy().contains("loop")),
+            "the symlinked directory must be skipped, not traversed: {res:?}"
         );
     }
 }

@@ -10,6 +10,7 @@ pub mod claude;
 pub mod copilot;
 pub mod directives;
 pub mod format;
+pub mod link_rewrite;
 pub mod opencode;
 
 /// Target AI coding client.
