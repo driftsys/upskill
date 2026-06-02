@@ -179,7 +179,7 @@ pub fn install_with_lockfile(
                 anyhow::bail!(
                     "aliasing items with supporting resources is not yet supported \
                      ('{name}' ships resource files). Install it without --as. \
-                     (See format-spec §2.4.)"
+                     (See format-spec §2.4; tracked in #200.)"
                 );
             }
         }
