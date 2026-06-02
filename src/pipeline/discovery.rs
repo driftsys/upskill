@@ -256,8 +256,17 @@ fn collect_resource_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
         return;
     };
     for entry in entries.flatten() {
+        // `file_type()` does not follow symlinks. Skip symlinks entirely so a
+        // directory-symlink cycle cannot cause unbounded recursion, and a
+        // symlinked file cannot smuggle a resource from outside the item dir.
+        let Ok(ft) = entry.file_type() else {
+            continue;
+        };
+        if ft.is_symlink() {
+            continue;
+        }
         let path = entry.path();
-        if path.is_dir() {
+        if ft.is_dir() {
             collect_resource_files(root, &path, out);
             continue;
         }
@@ -486,5 +495,26 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join("SKILL.md"), "x").unwrap();
         assert!(iter_item_resources(tmp.path()).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn iter_item_resources_does_not_loop_on_symlink_cycle() {
+        // A directory symlink pointing back at the item root forms a cycle;
+        // walking it with a symlink-following `is_dir()` would recurse until
+        // the stack overflows. The walk must terminate and skip the symlink.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::write(dir.join("SKILL.md"), "x").unwrap();
+        std::fs::create_dir_all(dir.join("scripts")).unwrap();
+        std::fs::write(dir.join("scripts/gate.sh"), "x").unwrap();
+        std::os::unix::fs::symlink(dir, dir.join("scripts/loop")).unwrap();
+
+        let res = iter_item_resources(dir); // must terminate
+        assert!(res.contains(&std::path::PathBuf::from("scripts/gate.sh")));
+        assert!(
+            !res.iter().any(|p| p.to_string_lossy().contains("loop")),
+            "the symlinked directory must be skipped, not traversed: {res:?}"
+        );
     }
 }
