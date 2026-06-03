@@ -15,9 +15,9 @@ use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
 use super::{
     ALL_CLIENTS, AddOptions, DoctorReport, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, RemoveFilter, RemoveReport,
-    RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem,
-    hash_item_dir, install_with_lockfile,
+    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, OrphanedDependency, RemoveFilter,
+    RemoveReport, RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus,
+    UpdatedItem, hash_item_dir, install_with_lockfile,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -32,7 +32,7 @@ use super::{
 pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
 
-    let to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
+    let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
         RemoveFilter::ByNames(names) => lock
             .items
             .iter()
@@ -57,6 +57,27 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
             .collect();
         if !unknown.is_empty() {
             anyhow::bail!("not in lockfile: {}", unknown.join(", "));
+        }
+    }
+
+    // Co-location coupling (§2.1, Task 6): removing any named member of a
+    // `(source, group)` unit removes every other member, even when their
+    // effective names diverge. Expand AFTER the unknown-name check so a
+    // name absent from the lockfile still errors rather than being masked.
+    if let RemoveFilter::ByNames(_) = &filter {
+        let groups: std::collections::BTreeSet<(String, String)> = to_remove
+            .iter()
+            .filter_map(|i| i.group.clone().map(|g| (i.source.clone(), g)))
+            .collect();
+        for it in &lock.items {
+            if let Some(g) = &it.group
+                && groups.contains(&(it.source.clone(), g.clone()))
+                && !to_remove
+                    .iter()
+                    .any(|r| r.kind == it.kind && r.name == it.name)
+            {
+                to_remove.push(it.clone());
+            }
         }
     }
 
@@ -165,7 +186,19 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 });
                 continue;
             }
-            let item_dir = ssot_root.join(&entry.name);
+            // On the SOURCE side an item lives in its FOLDER directory, which
+            // can differ from the consumer-side effective `name` (via `--as`
+            // aliasing, or relaxed rule/agent naming where the folder name and
+            // the `name:` field diverge). Resolve the source dir from the
+            // recorded folder key: `group` (the canonical source folder) ->
+            // `source_name` (the original effective name, set when aliased) ->
+            // `name`. See #208.
+            let folder = entry
+                .group
+                .as_deref()
+                .or(entry.source_name.as_deref())
+                .unwrap_or(&entry.name);
+            let item_dir = ssot_root.join(folder);
             if !item_dir.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -189,6 +222,28 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --dry-run`.
+    }
+
+    // -- Orphaned dependencies (advisory, issue #196) --
+    // An item pulled in only as a dependency (`required_by` non-empty) whose
+    // every recorded requirer is no longer installed. Surfaced as advisory
+    // only — upskill never auto-removes; the user decides.
+    let installed: std::collections::BTreeSet<String> = lock
+        .items
+        .iter()
+        .map(|i| format!("{}:{}", i.kind, i.name))
+        .collect();
+    for entry in &lock.items {
+        if entry.required_by.is_empty() {
+            continue;
+        }
+        if entry.required_by.iter().all(|r| !installed.contains(r)) {
+            report.orphaned_dependencies.push(OrphanedDependency {
+                kind: entry.kind,
+                name: entry.name.clone(),
+                former_requirers: entry.required_by.clone(),
+            });
+        }
     }
 
     // -- Plugin reconciliation (ADR-0008 / issue #151) --
@@ -350,8 +405,31 @@ pub fn update(
                     aliases,
                     excludes: vec![],
                 };
+                // Scope the reinstall to exactly the items this source already
+                // contributes to the lockfile (by their in-source name), rather
+                // than reinstalling every item the source vends. Without this, a
+                // source that only contributed a single cross-source dependency
+                // would pull in all of its unrelated siblings on `update`
+                // (issue #211). An item's cross-source `requires` are still
+                // resolved and refreshed because `install_with_lockfile`
+                // re-expands the closure for each requested item.
+                //
+                // Bundle sources are exempt: a bundle is its own unit and must
+                // be reinstalled as a whole (an empty filter routes it through
+                // the bundle-resolution path), so scoping to item names there
+                // would mis-route a `.bundle.yaml` source into name resolution.
+                let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
+                    || lock.bundles.iter().any(|b| b.source == source_label);
+                let item_filter: Vec<String> = if is_bundle_source {
+                    Vec::new()
+                } else {
+                    source_entries
+                        .iter()
+                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                        .collect()
+                };
                 let install_report =
-                    install_with_lockfile(&source, target, &[], plugin_scope, &options)?;
+                    install_with_lockfile(&source, target, &item_filter, plugin_scope, &options)?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
@@ -412,7 +490,17 @@ pub fn update(
                 guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
                 for entry in &source_entries {
                     let kind = entry.kind;
-                    let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
+                    // The source-side hash map is keyed by the item's FOLDER
+                    // (see `hash_items` / `iter_item_dirs`), which is the
+                    // co-location group. A rule/agent whose frontmatter name
+                    // diverges from its folder must be looked up by that folder,
+                    // not its effective name, or it is falsely reported as
+                    // `WouldRemove` (issue #214; mirrors the #208 doctor fix).
+                    let lookup_name = entry
+                        .group
+                        .as_deref()
+                        .or(entry.source_name.as_deref())
+                        .unwrap_or(&entry.name);
                     if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
                         report.items.push(UpdatedItem {
                             kind,

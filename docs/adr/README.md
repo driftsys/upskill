@@ -11,5 +11,5 @@ Numbered sequentially. Status one of: Proposed | Accepted | Superseded.
 - [0006 — Flat item layout — drop kind subdirectories](0006-flat-item-layout.md)
 - [0007 — Bundle file format — YAML, not Markdown-with-frontmatter](0007-bundle-yaml-format.md)
 - [0008 — Plugin installation — extend Bundle, shell out to client CLIs](0008-plugin-install-shellout.md)
-- 0009 — reserved (coupling tiers and dependency edges — in flight on a separate branch)
+- [0009 — Coupling tiers and directed dependencies](0009-coupling-tiers-and-dependencies.md)
 - [0010 — MCP server configuration — bundle `mcps:`, CLI-first config-write](0010-mcp-config-write.md)

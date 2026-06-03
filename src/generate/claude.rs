@@ -6,15 +6,15 @@ use serde_yaml_ng::{Mapping, Value};
 
 /// Skill frontmatter per §7.1: `name`, `description`, Agent Skills
 /// extended fields pass through.
-pub fn skill_frontmatter(skill: &Skill) -> Result<String> {
-    super::build_skill_frontmatter(skill, skill.claude.as_ref())
+pub fn skill_frontmatter(skill: &Skill, name: &str) -> Result<String> {
+    super::build_skill_frontmatter(skill, name, skill.claude.as_ref())
 }
 
 /// Rule frontmatter per §7.1: `name`, `description`, `paths:` (array)
 /// from `scope.paths` when present.
-pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
+pub fn rule_frontmatter(rule: &Rule, name: &str) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(rule.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(rule.description.clone()),
@@ -40,9 +40,9 @@ pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
 /// `model:` (literal alias), `tools:` (capitalized), `skills:` (from
 /// `preload-skills`). `mode` is implicit by file location and not
 /// emitted.
-pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
+pub fn agent_frontmatter(agent: &Agent, name: &str) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(agent.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(agent.description.clone()),

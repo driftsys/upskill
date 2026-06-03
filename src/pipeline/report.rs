@@ -23,6 +23,13 @@ pub struct InstalledItem {
     /// lockfile for drift detection. Repeated across the per-
     /// client entries for the same item — they share one SSOT input.
     pub source_hash: Option<String>,
+    /// Source folder this item was discovered in — the co-location
+    /// grouping key (§2.1). Threaded into the lockfile so `remove <name>`
+    /// can act on the whole `(source, group)` unit. This is the folder
+    /// LEAF name (not a source-root-relative path), so two items with the
+    /// same leaf folder name under different category directories within
+    /// one source would share a group.
+    pub group: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -195,11 +202,24 @@ pub enum McpDoctorStatus {
     QueryFailed { stderr: String },
 }
 
+/// A dependency-pulled item whose every requirer is no longer installed.
+/// Advisory only — upskill never auto-removes (#196); the user decides.
+#[derive(Debug, Clone, Serialize)]
+pub struct OrphanedDependency {
+    pub kind: ItemKind,
+    pub name: String,
+    /// The now-absent requirers (`"kind:name"`) recorded at install time.
+    pub former_requirers: Vec<String>,
+}
+
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
     pub stale_hashes: Vec<StaleHash>,
     pub orphan_entries: Vec<OrphanEntry>,
+    /// Items present only as a dependency of an item that is no longer
+    /// installed. Advisory — does NOT affect `is_clean()`.
+    pub orphaned_dependencies: Vec<OrphanedDependency>,
     /// Plugins recorded in the lockfile as `installed` but absent from the
     /// client's installed list (uninstalled out-of-band).  Non-empty →
     /// `is_clean()` returns false → exit 1.

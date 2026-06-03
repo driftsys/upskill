@@ -53,6 +53,8 @@ const SKILL_KEY_ORDER: &[&str] = &[
     "audience",
     "license",
     "metadata",
+    "requires",
+    "ignore",
     "claude",
     "copilot",
     "opencode",
@@ -66,6 +68,8 @@ const RULE_KEY_ORDER: &[&str] = &[
     "license",
     "scope",
     "metadata",
+    "requires",
+    "ignore",
     "claude",
     "copilot",
     "opencode",
@@ -82,6 +86,8 @@ const AGENT_KEY_ORDER: &[&str] = &[
     "tools",
     "preload-skills",
     "metadata",
+    "requires",
+    "ignore",
     "claude",
     "copilot",
     "opencode",
@@ -566,6 +572,41 @@ mod tests {
         let items_pos = out.find("items:").unwrap();
         assert!(items_pos < alpha_pos, "extras after known keys:\n{out}");
         assert!(alpha_pos < zebra_pos, "extras alphabetical:\n{out}");
+    }
+
+    #[test]
+    fn reorder_requires_ignore_after_metadata_before_claude() {
+        // requires/ignore deliberately scrambled: ignore before metadata,
+        // requires after a claude passthrough block.
+        let input = concat!(
+            "schema: 1\n",
+            "name: test\n",
+            "description: d.\n",
+            "ignore:\n",
+            "  - \"*.tmp\"\n",
+            "metadata:\n",
+            "  version: 0.1.0\n",
+            "claude:\n",
+            "  body: hi\n",
+            "requires:\n",
+            "  skills:\n",
+            "    - foo\n",
+        );
+        for key_order in [RULE_KEY_ORDER, SKILL_KEY_ORDER, AGENT_KEY_ORDER] {
+            let out = reorder_yaml_keys(input, key_order);
+            let metadata = out.find("metadata:").unwrap();
+            let requires = out.find("requires:").unwrap();
+            let ignore = out.find("ignore:").unwrap();
+            let claude = out.find("claude:").unwrap();
+            assert!(
+                metadata < requires && metadata < ignore,
+                "requires/ignore must come after metadata:\n{out}"
+            );
+            assert!(
+                requires < claude && ignore < claude,
+                "requires/ignore must come before claude:\n{out}"
+            );
+        }
     }
 
     #[test]

@@ -369,3 +369,39 @@ fn update_without_yes_proceeds_in_non_tty() {
         "update should have applied without --yes in non-TTY"
     );
 }
+
+#[test]
+fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
+    // Regression for #214: a rule whose frontmatter name diverges from its
+    // folder must not be falsely reported as `would remove` by dry-run (the
+    // source-side hash map is keyed by folder, the lookup must match).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    // Folder `stuff/` holds a rule named `security-baseline` (name diverges).
+    let rule_dir = source.join("stuff");
+    fs::create_dir_all(&rule_dir).unwrap();
+    fs::write(
+        rule_dir.join("RULE.md"),
+        "---\nschema: 1\nname: security-baseline\ndescription: divergent rule\n---\n# body\n",
+    )
+    .unwrap();
+
+    install(&target, &source, &home);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--dry-run"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        !out.contains("would remove"),
+        "divergent-named rule must not be reported as would-remove:\n{out}"
+    );
+}
