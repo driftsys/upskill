@@ -208,7 +208,7 @@ pub enum OpencodePluginDescriptor {
 }
 
 /// One entry in the bundle `mcps:` map. Exactly one transport (`remote`
-/// or `local`) is present; `validate_mcps` (Task 2) enforces this.
+/// or `local`) is present; `validate_mcps` enforces this at parse time.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpEntry {
     /// Transport descriptor — flattened so YAML carries either a
