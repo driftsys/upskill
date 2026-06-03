@@ -62,7 +62,7 @@ fn fmt_reorders_frontmatter_keys_canonically() {
         "keys not in canonical order:\n{yaml}"
     );
 
-    // Body must be byte-for-byte preserved.
+    // This body is already dprint-canonical, so it must survive unchanged.
     assert!(after.contains("\n\n## Body\n\nUntouched.\n"), "{after}");
 }
 
