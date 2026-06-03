@@ -46,6 +46,10 @@ pub fn load(path: &Path) -> Result<Bundle> {
         );
     }
 
+    bundle
+        .validate_mcps()
+        .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
+
     Ok(bundle)
 }
 
@@ -100,6 +104,11 @@ fn load_if_bundle(path: &Path) -> Result<Option<Bundle>> {
             bundle.name
         );
     }
+
+    bundle
+        .validate_mcps()
+        .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
+
     Ok(Some(bundle))
 }
 
@@ -630,6 +639,51 @@ mcps:
             McpTransport::Remote(_) => panic!("expected local"),
         }
         assert_eq!(local.requires_env, vec!["DRAWIO_TOKEN"]);
+    }
+
+    #[test]
+    fn load_rejects_mcp_remote_with_bad_type() {
+        let content = "schema: 1
+name: bad-type
+description: bad transport type
+items:
+  skills: []
+mcps:
+  x:
+    remote:
+      type: websocket
+      url: https://example.com
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "bad-type.bundle.yaml", content);
+        let err = load(&path).expect_err("must reject unknown transport type");
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("transport type") && msg.contains("websocket"),
+            "got: {msg}"
+        );
+    }
+
+    #[test]
+    fn load_rejects_mcp_local_empty_command() {
+        let content = "schema: 1
+name: empty-cmd
+description: empty command
+items:
+  skills: []
+mcps:
+  x:
+    local:
+      command: \"\"
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "empty-cmd.bundle.yaml", content);
+        let err = load(&path).expect_err("must reject empty command");
+        let msg = format!("{:#}", err);
+        assert!(
+            msg.contains("command") && msg.contains("empty"),
+            "got: {msg}"
+        );
     }
 
     #[test]

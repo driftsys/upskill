@@ -251,6 +251,34 @@ pub struct McpRemote {
     pub headers: BTreeMap<String, String>,
 }
 
+impl Bundle {
+    /// Validate the `mcps:` map beyond what serde enforces. Returns the
+    /// first offending `(server-name, reason)` as an error.
+    pub fn validate_mcps(&self) -> Result<(), String> {
+        for (name, entry) in &self.mcps {
+            match &entry.transport {
+                McpTransport::Remote(r) => {
+                    if r.transport_type != "http" && r.transport_type != "sse" {
+                        return Err(format!(
+                            "mcp `{name}`: transport type `{}` is not one of http, sse",
+                            r.transport_type
+                        ));
+                    }
+                    if r.url.trim().is_empty() {
+                        return Err(format!("mcp `{name}`: remote url must not be empty"));
+                    }
+                }
+                McpTransport::Local(l) => {
+                    if l.command.trim().is_empty() {
+                        return Err(format!("mcp `{name}`: local command must not be empty"));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Local (stdio) MCP server descriptor.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpLocal {
