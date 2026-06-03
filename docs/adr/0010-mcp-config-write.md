@@ -104,8 +104,8 @@ upskill never owns a secret value. The rule:
 - upskill MUST NOT persist a literal secret — not into a client config
   file, not into the lockfile, not into SSOT.
 - `requires-env: [VAR, …]` is a **declaration** (not a value). It lets
-  `upskill doctor` warn that an MCP server needs a variable that is not set
-  in the current environment, without ever reading the value.
+  `upskill add` warn at install time that an MCP server needs a variable that
+  is not set in the current environment, without ever reading the value.
 
 This is the same posture upskill already takes for git auth (tokens come
 from env / `gh` / `glab`, never persisted).
@@ -185,9 +185,14 @@ entries silently ignore the unknown array (serde `default`).
 - **`upskill doctor`**: checks each `claude`-client MCP entry in the
   lockfile via `claude mcp list` (substring match on the server name). A
   server present in the lockfile but absent from the client makes doctor
-  report `NotRegistered` and exit non-clean (exit 1). Doctor also warns on
-  unset `requires-env` variables. Reconciliation never auto-removes entries
-  — consistent with the project's "never auto-delete" ethos.
+  report `NotRegistered` and exit non-clean (exit 1). Doctor also reports
+  `CliNotFound` when the `claude` CLI is absent and `QueryFailed` when the
+  list query fails; it does **not** check `requires-env` variables.
+  Reconciliation never auto-removes entries — consistent with the project's
+  "never auto-delete" ethos.
+- **`upskill add` (install time)**: warns for each variable listed in
+  `requires-env` that is not set in the current environment, immediately
+  after configuring the server.
 
 ### Implementation shape
 
@@ -237,8 +242,8 @@ entries silently ignore the unknown array (serde `default`).
   tests that exercise config-write must clear PATH or point to an absent
   binary.
 - The warn-skip policy can mask a real misconfiguration. Mitigated by
-  `doctor`, which surfaces every `NotRegistered` server and every unset
-  `requires-env` variable.
+  `doctor`, which surfaces every `NotRegistered` server, and by `upskill add`
+  which warns at install time for every unset `requires-env` variable.
 - Config-write fallback (`.mcp.json`) is a project-scope file; it does not
   cover the global scope as cleanly as the CLI. The global config location
   is client-version-specific and not yet handled by the fallback path.

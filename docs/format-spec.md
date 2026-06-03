@@ -690,8 +690,9 @@ be empty.
 use `${VAR}` syntax only. Implementations MUST pass these values through verbatim to the client
 config — they MUST NOT expand `${VAR}` references, read the underlying values, or store literal
 secret values anywhere (not in config files, not in the lockfile, not in SSOT). The
-`requires-env` list declares which variable names are needed; `upskill doctor` uses this list
-to warn when a declared variable is unset in the current environment, without reading its value.
+`requires-env` list declares which variable names are needed; implementations SHOULD warn at
+install time (e.g., during `upskill add`) when a declared variable is unset in the current
+environment, without reading its value.
 
 **Per-client install behavior (v1):** v1 targets Claude Code only. Other clients produce a
 warn-skip.
@@ -743,8 +744,10 @@ when the CLI is absent) and drops the `LockedMcp` entry from the lockfile.
 
 **Reconciliation:** `upskill doctor` checks each Claude-client MCP entry in the lockfile
 against `claude mcp list`. A server present in the lockfile but absent from the client is
-reported as not registered and causes doctor to exit non-clean (exit 1). Doctor also warns when
-any variable listed in `requires-env` is unset in the current environment.
+reported as `NotRegistered` and causes doctor to exit non-clean (exit 1). Doctor also reports
+`CliNotFound` when the `claude` CLI is absent and `QueryFailed` when the list query fails;
+it does not check `requires-env` variables. The unset-env warning for `requires-env` variables
+is emitted by `upskill add` at install time.
 
 Implementations:
 

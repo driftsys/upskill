@@ -37,7 +37,7 @@ pub struct Bundle {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub plugins: BTreeMap<String, PluginEntry>,
 
-    /// MCP servers configured into each targeted client (ADR-0010, §3.8).
+    /// MCP servers configured into each targeted client (ADR-0010, §3.7).
     /// Map key is the upskill-level MCP name; value carries the transport
     /// descriptor and declared required env vars.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
