@@ -62,7 +62,11 @@ fn doctor_flags_orphaned_dependency_after_requirer_removed() {
         .args(["doctor"])
         .assert()
         .success()
-        .stdout(predicates::str::contains("orphaned").and(predicates::str::contains("sarif")));
+        .stdout(
+            predicates::str::contains("orphaned")
+                .and(predicates::str::contains("sarif"))
+                .and(predicates::str::contains("upskill remove sarif")),
+        );
 }
 
 #[test]
