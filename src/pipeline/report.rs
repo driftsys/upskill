@@ -230,6 +230,10 @@ impl DoctorReport {
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
+            && !self
+                .mcp_entries
+                .iter()
+                .any(|e| matches!(e.status, McpDoctorStatus::NotRegistered))
     }
 }
 
@@ -356,5 +360,40 @@ mod tests {
             reason: OrphanReason::LocalPathGone,
         });
         assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_not_clean_with_not_registered_mcp() {
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::NotRegistered,
+        });
+        assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_clean_with_mcp_cli_not_found_or_query_failed() {
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::CliNotFound,
+        });
+        assert!(report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::QueryFailed {
+                stderr: "some error".into(),
+            },
+        });
+        assert!(report.is_clean());
     }
 }

@@ -481,17 +481,18 @@ fn print_mcp_results(report: &InstallReport) {
             PluginOutcome::CliNotFound => {
                 eprintln!(
                     "{} {} CLI not found and no config target; skipped MCP '{}'.",
-                    style::warn("warn:"),
+                    style::warn("warning:"),
                     mr.client,
                     mr.name
                 );
             }
-            PluginOutcome::Failed { stderr, .. } => {
+            PluginOutcome::Failed { stderr, exit_code } => {
                 eprintln!(
-                    "{} failed to configure MCP '{}' for {}: {}",
-                    style::warn("warn:"),
+                    "{} failed to configure MCP '{}' for {} (exit {:?}): {}",
+                    style::warn("warning:"),
                     mr.name,
                     mr.client,
+                    exit_code,
                     stderr.trim()
                 );
             }
@@ -501,7 +502,7 @@ fn print_mcp_results(report: &InstallReport) {
             if std::env::var_os(var).is_none() {
                 eprintln!(
                     "{} MCP '{}' needs env var '{}'; it is not set in your environment.",
-                    style::warn("warn:"),
+                    style::warn("warning:"),
                     mr.name,
                     var
                 );
@@ -937,7 +938,23 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
 fn print_doctor_mcps(report: &DoctorReport) {
     use upskill::pipeline::McpDoctorStatus;
 
-    for entry in &report.mcp_entries {
+    let non_ok: Vec<&upskill::pipeline::McpDoctorEntry> = report
+        .mcp_entries
+        .iter()
+        .filter(|e| !matches!(e.status, McpDoctorStatus::Ok))
+        .collect();
+
+    if non_ok.is_empty() {
+        return;
+    }
+
+    println!(
+        "{} {} MCP server(s) need attention",
+        style::warn("doctor:"),
+        non_ok.len()
+    );
+
+    for entry in &non_ok {
         match &entry.status {
             McpDoctorStatus::Ok => {}
             McpDoctorStatus::NotRegistered => {
@@ -1354,11 +1371,23 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
     for mcp in &matching_mcps {
         if mcp.client == "claude" {
             let outcome = upskill::mcp::uninstall_claude(&mcp.name, mcp_scope);
-            if outcome.is_cli_not_found()
-                && let Err(err) = upskill::ancillary::remove_claude_mcp(&target, &mcp.name)
-            {
-                print_error_chain(&err);
-                return EXIT_ERROR;
+            match outcome {
+                upskill::plugin::PluginOutcome::CliNotFound => {
+                    if let Err(err) = upskill::ancillary::remove_claude_mcp(&target, &mcp.name) {
+                        print_error_chain(&err);
+                        return EXIT_ERROR;
+                    }
+                }
+                upskill::plugin::PluginOutcome::Failed { stderr, exit_code } => {
+                    eprintln!(
+                        "{} failed to remove MCP '{}' from claude (exit {:?}): {}",
+                        style::warn("warning:"),
+                        mcp.name,
+                        exit_code,
+                        stderr.trim()
+                    );
+                }
+                _ => {}
             }
         }
     }
