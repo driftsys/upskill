@@ -463,7 +463,17 @@ pub fn update(
                 guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
                 for entry in &source_entries {
                     let kind = entry.kind;
-                    let lookup_name = entry.source_name.as_deref().unwrap_or(&entry.name);
+                    // The source-side hash map is keyed by the item's FOLDER
+                    // (see `hash_items` / `iter_item_dirs`), which is the
+                    // co-location group. A rule/agent whose frontmatter name
+                    // diverges from its folder must be looked up by that folder,
+                    // not its effective name, or it is falsely reported as
+                    // `WouldRemove` (issue #214; mirrors the #208 doctor fix).
+                    let lookup_name = entry
+                        .group
+                        .as_deref()
+                        .or(entry.source_name.as_deref())
+                        .unwrap_or(&entry.name);
                     if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
                         report.items.push(UpdatedItem {
                             kind,
