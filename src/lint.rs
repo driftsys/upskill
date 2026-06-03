@@ -664,9 +664,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             &tmp.path().join("my-rule/RULE.md"),
-            &format!(
-                "---\nschema: 1\nname: my-rule\ndescription: a test rule.\n---\n\n## Body\n\nText.\n"
-            ),
+            "---\nschema: 1\nname: my-rule\ndescription: a test rule.\n---\n\n## Body\n\nText.\n",
         );
         // Lint the item directory directly (not the parent registry root).
         let item_dir = tmp.path().join("my-rule");
@@ -685,9 +683,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             &tmp.path().join("bad-rule/RULE.md"),
-            &format!(
-                "---\nschema: 1\nname: bad-rule\ndescription: has lint issues.\n---\n\n# Forbidden H1\n"
-            ),
+            "---\nschema: 1\nname: bad-rule\ndescription: has lint issues.\n---\n\n# Forbidden H1\n",
         );
         let item_dir = tmp.path().join("bad-rule");
         let report = lint(&[item_dir], false).unwrap();
@@ -711,7 +707,7 @@ mod tests {
         );
         write(
             &tmp.path().join("multi/AGENT.md"),
-            &format!("---\nschema: 1\nname: multi\ndescription: co-located agent.\n---\n\n## ok\n"),
+            "---\nschema: 1\nname: multi\ndescription: co-located agent.\n---\n\n## ok\n",
         );
         let item_dir = tmp.path().join("multi");
         let report = lint(&[item_dir], false).unwrap();

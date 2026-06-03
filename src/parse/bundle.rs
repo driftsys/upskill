@@ -585,6 +585,54 @@ plugins:
     }
 
     #[test]
+    fn load_parses_mcp_remote_and_local() {
+        use crate::model::bundle::McpTransport;
+
+        let content = "schema: 1
+name: with-mcp
+description: Bundle with MCP servers
+items:
+  skills: []
+mcps:
+  drawio:
+    remote:
+      type: http
+      url: https://mcp.draw.io/mcp
+  local-server:
+    local:
+      command: npx
+      args: [\"-y\", \"drawio-mcp-server\"]
+      env:
+        DRAWIO_TOKEN: \"${DRAWIO_TOKEN}\"
+    requires-env: [DRAWIO_TOKEN]
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "with-mcp.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.mcps.len(), 2);
+
+        match &bundle.mcps["drawio"].transport {
+            McpTransport::Remote(r) => {
+                assert_eq!(r.transport_type, "http");
+                assert_eq!(r.url, "https://mcp.draw.io/mcp");
+            }
+            McpTransport::Local(_) => panic!("expected remote"),
+        }
+
+        let local = &bundle.mcps["local-server"];
+        match &local.transport {
+            McpTransport::Local(l) => {
+                assert_eq!(l.command, "npx");
+                assert_eq!(l.args, vec!["-y", "drawio-mcp-server"]);
+                assert_eq!(l.env["DRAWIO_TOKEN"], "${DRAWIO_TOKEN}");
+            }
+            McpTransport::Remote(_) => panic!("expected local"),
+        }
+        assert_eq!(local.requires_env, vec!["DRAWIO_TOKEN"]);
+    }
+
+    #[test]
     fn load_parses_config_write_plugin() {
         use crate::model::bundle::OpencodePluginDescriptor;
 

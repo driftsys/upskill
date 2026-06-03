@@ -193,6 +193,7 @@ mod tests {
                 })
                 .collect(),
             plugins: Default::default(),
+            mcps: Default::default(),
             metadata: None,
             extra: Default::default(),
         }
