@@ -106,6 +106,80 @@ fn remove_named_member_removes_the_whole_colocated_unit() {
 }
 
 #[test]
+fn remove_by_divergent_rule_name_removes_whole_unit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    // One folder, two co-located items with DIFFERENT effective names:
+    //   skill effective name -> folder = "markspec-trace"
+    //   rule effective name  -> frontmatter "markspec-trace-syntax"
+    write(
+        &source.join("markspec-trace/SKILL.md"),
+        "---\nschema: 1\nname: markspec-trace\ndescription: trace skill for markspec.\n---\n\n## Body\n\nText.\n",
+    );
+    write(
+        &source.join("markspec-trace/RULE.md"),
+        "---\nschema: 1\nname: markspec-trace-syntax\ndescription: trace syntax rule for markspec.\n---\n\n## Body\n\nText.\n",
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Both items installed.
+    assert!(
+        target
+            .join(".claude/skills/markspec-trace/SKILL.md")
+            .exists(),
+        "skill should be installed"
+    );
+    assert!(
+        target
+            .join(".claude/rules/markspec-trace-syntax.md")
+            .exists(),
+        "co-located rule should be installed"
+    );
+    assert_eq!(
+        lockfile_item_count(&target),
+        2,
+        "lockfile should record both items"
+    );
+
+    // Removing by the RULE's divergent name (NOT the folder/skill name)
+    // must also remove the co-located SKILL: removal-by-unit is symmetric.
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["remove", "markspec-trace-syntax"])
+        .assert()
+        .success();
+
+    assert!(
+        !target
+            .join(".claude/skills/markspec-trace/SKILL.md")
+            .exists(),
+        "co-located skill must be gone too (the whole unit travels together)"
+    );
+    assert!(
+        !target
+            .join(".claude/rules/markspec-trace-syntax.md")
+            .exists(),
+        "named rule must be gone"
+    );
+    assert_eq!(
+        lockfile_item_count(&target),
+        0,
+        "lockfile must have zero items after removing the unit"
+    );
+}
+
+#[test]
 fn remove_solo_item_leaves_independent_items_in_other_folders() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");

@@ -25,7 +25,10 @@ pub struct InstalledItem {
     pub source_hash: Option<String>,
     /// Source folder this item was discovered in — the co-location
     /// grouping key (§2.1). Threaded into the lockfile so `remove <name>`
-    /// can act on the whole `(source, group)` unit.
+    /// can act on the whole `(source, group)` unit. This is the folder
+    /// LEAF name (not a source-root-relative path), so two items with the
+    /// same leaf folder name under different category directories within
+    /// one source would share a group.
     pub group: Option<String>,
 }
 
