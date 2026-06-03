@@ -209,8 +209,9 @@ fn canonicalise_item<T: DeserializeOwned>(
 /// preserved byte-for-byte and only the body is formatted, with the seam
 /// normalised to a single blank line. Returns the region after the
 /// closing `---`, including that leading blank-line separator. Empty when
-/// the body is blank. Used by both `fmt` (to write) and `lint::check_body_format`
-/// (to detect drift) so checker and fixer never disagree.
+/// the body is blank. Used by both `fmt` (to write) and
+/// `lint::check_body_format` (to detect drift) so checker and fixer
+/// never disagree.
 pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
     if body.trim().is_empty() {
         return Ok(String::new());
@@ -219,6 +220,9 @@ pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
     let combined = format!("{prefix}{body}");
     let formatted =
         crate::generate::format::format_markdown(&combined).context("format item body")?;
+    // dprint preserves the `---\n{frontmatter}---\n` prefix byte-for-byte
+    // because it treats the frontmatter delimiters as opaque. If this ever
+    // fires, a dprint version or config change violated that contract.
     formatted
         .strip_prefix(&prefix)
         .map(|region| region.to_string())
@@ -808,6 +812,32 @@ mod tests {
     }
 
     #[test]
+    fn canonicalise_preserves_html_comment_and_code_fence() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: fences\n",
+            "description: code fences and html comments survive.\n",
+            "---\n",
+            "\n",
+            "```rust\n",
+            "fn x() {}\n",
+            "```\n",
+            "\n",
+            "<!-- a comment -->\n",
+        );
+        let out = canonicalise(raw, Path::new("fences/SKILL.md")).unwrap();
+        assert!(
+            out.contains("```rust\nfn x() {}\n```"),
+            "code fence altered:\n{out}"
+        );
+        assert!(
+            out.contains("<!-- a comment -->"),
+            "html comment stripped:\n{out}"
+        );
+    }
+
+    #[test]
     fn canonicalise_is_idempotent() {
         let raw = concat!(
             "---\n",
@@ -818,6 +848,8 @@ mod tests {
             "## body\n",
         );
         let path = Path::new("out/SKILL.md");
+        // The first pass normalises the body seam, so pass1 differs from
+        // raw; idempotency means pass2 == pass1.
         let pass1 = canonicalise(raw, path).unwrap();
         let pass2 = canonicalise(&pass1, path).unwrap();
         assert_eq!(pass1, pass2, "fmt must be idempotent");
