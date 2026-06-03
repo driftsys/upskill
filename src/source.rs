@@ -89,11 +89,14 @@ pub fn home_dir() -> Option<PathBuf> {
 }
 
 pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseError> {
-    if source.starts_with("./")
-        || source.starts_with("../")
-        || source.starts_with('/')
-        || is_windows_absolute(source)
-    {
+    // Relative local path: make it absolute (lexically) so two spellings of the
+    // same directory (`./reg` and `/abs/reg`) collapse to one canonical
+    // `local:` label and resolve identically as a dependency source (issue
+    // #212).
+    if source.starts_with("./") || source.starts_with("../") {
+        return Ok(InstallSource::LocalPath(absolutize_local(source)));
+    }
+    if source.starts_with('/') || is_windows_absolute(source) {
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
@@ -124,6 +127,15 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     }
 
     parse_github_source(source).map(InstallSource::Github)
+}
+
+/// Make a relative local path absolute lexically — joining the current
+/// directory without touching the filesystem or resolving symlinks — so that
+/// the same directory always yields one canonical `local:` label regardless of
+/// how it was spelled (issue #212). Falls back to the path verbatim if the
+/// current directory cannot be determined.
+fn absolutize_local(path: &str) -> PathBuf {
+    std::path::absolute(path).unwrap_or_else(|_| PathBuf::from(path))
 }
 
 /// Returns `true` if `s` looks like a Windows absolute path (e.g. `C:\foo`
@@ -320,19 +332,27 @@ mod tests {
     #[test]
     fn parse_local_path_dot_slash() {
         let source = parse_install_source("./my-skills").expect("must parse");
-        assert_eq!(
-            source,
-            InstallSource::LocalPath(PathBuf::from("./my-skills"))
-        );
+        let expected = std::path::absolute("./my-skills").unwrap();
+        assert_eq!(source, InstallSource::LocalPath(expected));
     }
 
     #[test]
     fn parse_local_path_dot_dot_slash() {
         let source = parse_install_source("../shared/skills").expect("must parse");
-        assert_eq!(
-            source,
-            InstallSource::LocalPath(PathBuf::from("../shared/skills"))
-        );
+        let expected = std::path::absolute("../shared/skills").unwrap();
+        assert_eq!(source, InstallSource::LocalPath(expected));
+    }
+
+    #[test]
+    fn relative_local_path_canonicalizes_to_absolute_label() {
+        // Two spellings of the same directory must collapse to one canonical
+        // `local:` label so cross-source resolution and conflict detection
+        // treat them as the same source (issue #212).
+        let cwd = std::env::current_dir().unwrap();
+        let rel = parse_install_source("./some-reg").expect("relative");
+        let abs = parse_install_source(cwd.join("some-reg").to_str().unwrap()).expect("absolute");
+        assert_eq!(rel.to_string(), abs.to_string(), "spellings must unify");
+        assert_eq!(rel, InstallSource::LocalPath(cwd.join("some-reg")));
     }
 
     #[test]
