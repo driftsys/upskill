@@ -19,6 +19,7 @@ pub mod generate;
 pub mod index;
 pub mod lint;
 pub mod lockfile;
+pub mod mcp;
 pub mod model;
 pub mod parse;
 pub mod pipeline;

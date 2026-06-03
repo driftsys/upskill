@@ -22,7 +22,7 @@ use super::hash::hash_item_dir;
 use super::output::{
     copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
 };
-use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, PluginResult};
+use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
 use crate::parse::frontmatter;
@@ -630,6 +630,61 @@ pub(super) fn install_plugins_from_bundles(
         }
     }
 
+    results
+}
+
+// ---------------------------------------------------------------------------
+// MCP server configuration orchestration (ADR-0010)
+// ---------------------------------------------------------------------------
+
+/// Iterate all resolved bundles and configure each declared MCP server for
+/// Claude Code (v1's only target client). CLI-first: `claude mcp add`; on
+/// CliNotFound, fall back to writing `.mcp.json`. Warn-skip preserved: a
+/// failure never aborts the overall install.
+///
+/// Covered by the `tests/pipeline_mcp.rs` integration test, which clears
+/// PATH so the config-write fallback runs deterministically into a tempdir
+/// (an in-process unit test cannot safely force the `claude` CLI off PATH).
+pub(super) fn install_mcps_from_bundles(
+    bundles: &[crate::model::Bundle],
+    scope: crate::plugin::PluginScope,
+    target: &Path,
+) -> Vec<McpResult> {
+    use crate::model::bundle::McpTransport;
+    use crate::plugin::PluginOutcome;
+
+    let mut results = Vec::new();
+    for bundle in bundles {
+        for (name, entry) in &bundle.mcps {
+            let cli_outcome = match &entry.transport {
+                McpTransport::Local(local) => crate::mcp::install_claude_local(name, local, scope),
+                McpTransport::Remote(remote) => {
+                    crate::mcp::install_claude_remote(name, remote, scope)
+                }
+            };
+
+            // CLI absent → config-write fallback into .mcp.json.
+            let outcome = match cli_outcome {
+                PluginOutcome::CliNotFound => match &entry.transport {
+                    McpTransport::Local(local) => {
+                        crate::ancillary::write_claude_mcp_local(target, name, local)
+                    }
+                    McpTransport::Remote(remote) => {
+                        crate::ancillary::write_claude_mcp_remote(target, name, remote)
+                    }
+                },
+                other => other,
+            };
+
+            results.push(McpResult {
+                name: name.clone(),
+                client: "claude".into(),
+                outcome,
+                bundle: bundle.name.clone(),
+                requires_env: entry.requires_env.clone(),
+            });
+        }
+    }
     results
 }
 

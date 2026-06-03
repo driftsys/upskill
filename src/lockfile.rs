@@ -32,6 +32,8 @@ pub struct Lockfile {
     pub bundles: Vec<LockedBundle>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub plugins: Vec<LockedPlugin>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mcps: Vec<LockedMcp>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -131,6 +133,37 @@ pub enum PluginInstallStatus {
     Instructions,
 }
 
+/// MCP server entry recorded when a bundle's `mcps:` map is configured
+/// into a client (ADR-0010). One entry per (mcp-name, client) pair so
+/// `remove`/`doctor` can invoke the inverse CLI command.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LockedMcp {
+    /// Upskill-level MCP name (key in the bundle's `mcps:` map).
+    pub name: String,
+    /// Client identifier: `"claude"`, `"opencode"`, etc.
+    pub client: String,
+    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
+    /// Bundle that declared this MCP server.
+    pub bundle: String,
+    /// Configuration outcome recorded at `upskill add` time.
+    #[serde(default)]
+    pub status: McpInstallStatus,
+}
+
+/// Configuration status of an MCP entry in the lockfile (ADR-0010).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum McpInstallStatus {
+    /// Configured successfully (CLI shellout or config-write).
+    #[default]
+    Installed,
+    /// Skipped — the client CLI was not on PATH and no config-write target
+    /// applied (warn-skip outcome). `doctor` surfaces these.
+    Skipped,
+}
+
 impl Default for Lockfile {
     fn default() -> Self {
         Self::new()
@@ -144,6 +177,7 @@ impl Lockfile {
             items: Vec::new(),
             bundles: Vec::new(),
             plugins: Vec::new(),
+            mcps: Vec::new(),
         }
     }
 
@@ -220,6 +254,20 @@ impl Lockfile {
     /// Remove all plugin entries matching `name` (across all clients).
     pub fn remove_plugins_by_name(&mut self, name: &str) {
         self.plugins.retain(|existing| existing.name != name);
+    }
+
+    /// Add or replace an MCP entry by `(name, client)`. Sorted for
+    /// deterministic on-disk output.
+    pub fn upsert_mcp(&mut self, mcp: LockedMcp) {
+        self.mcps
+            .retain(|existing| !(existing.name == mcp.name && existing.client == mcp.client));
+        self.mcps.push(mcp);
+        self.mcps.sort();
+    }
+
+    /// Remove all MCP entries matching `name` (across all clients).
+    pub fn remove_mcps_by_name(&mut self, name: &str) {
+        self.mcps.retain(|existing| existing.name != name);
     }
 
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
@@ -408,6 +456,7 @@ mod tests {
         let report = InstallReport {
             bundles: Vec::new(),
             plugin_results: Vec::new(),
+            mcp_results: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -611,6 +660,43 @@ mod tests {
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(!json.contains("source_name"), "{json}");
+    }
+
+    #[test]
+    fn upsert_mcp_replaces_by_name_and_client() {
+        let mut lock = Lockfile::new();
+        lock.upsert_mcp(LockedMcp {
+            name: "drawio".into(),
+            client: "claude".into(),
+            scope: Some("project".into()),
+            bundle: "with-mcp".into(),
+            status: McpInstallStatus::Installed,
+        });
+        lock.upsert_mcp(LockedMcp {
+            name: "drawio".into(),
+            client: "claude".into(),
+            scope: Some("project".into()),
+            bundle: "with-mcp".into(),
+            status: McpInstallStatus::Skipped,
+        });
+        assert_eq!(lock.mcps.len(), 1);
+        assert_eq!(lock.mcps[0].status, McpInstallStatus::Skipped);
+    }
+
+    #[test]
+    fn remove_mcps_by_name_drops_all_clients() {
+        let mut lock = Lockfile::new();
+        for client in ["claude", "opencode"] {
+            lock.upsert_mcp(LockedMcp {
+                name: "drawio".into(),
+                client: client.into(),
+                scope: None,
+                bundle: "with-mcp".into(),
+                status: McpInstallStatus::Installed,
+            });
+        }
+        lock.remove_mcps_by_name("drawio");
+        assert!(lock.mcps.is_empty());
     }
 
     #[test]

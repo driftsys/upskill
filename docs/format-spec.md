@@ -494,6 +494,7 @@ documentation; the parser ignores it (§2.2).
 | `items.agents` | string[] | no       | Agent names.                         |
 | `requires`     | array    | no       | Bundle dependencies. See below.      |
 | `plugins`      | map      | no       | Client-native plugins. See below.    |
+| `mcps`         | map      | no       | MCP server descriptors. See below.   |
 | `metadata`     | map      | no       | Same as §3.6.                        |
 
 `requires` entries are maps. Each entry references another bundle by `name`, optionally pinned
@@ -674,6 +675,124 @@ Implementations:
 - MUST use warn-skip when the target client CLI is not found (`ErrorKind::NotFound`).
 - MUST NOT fail the entire bundle install when a single plugin install fails or is skipped.
 
+#### `mcps` map
+
+The optional `mcps` map declares MCP (Model Context Protocol) servers that accompany this
+bundle. Configuring an MCP server requires no content generation — instead, upskill writes the
+server into each targeted client's MCP configuration at install time. See
+[ADR-0010](adr/0010-mcp-config-write.md) for design rationale.
+
+Each entry in the `mcps` map is keyed by an upskill-level MCP name (used in the lockfile, CLI
+output, and `upskill remove-mcp`). The value carries a transport descriptor and an optional list
+of declared environment variables:
+
+```yaml
+mcps:
+  drawio: # remote server over HTTP
+    remote:
+      type: http # http | sse
+      url: https://mcp.draw.io/mcp
+      headers: # optional; values MUST use ${VAR} references for secrets
+        Authorization: "Bearer ${DRAWIO_TOKEN}"
+    requires-env: [DRAWIO_TOKEN]
+
+  my-tool: # local server spawned over stdio
+    local:
+      command: npx
+      args: ["-y", "my-tool-mcp"]
+      env: # optional; values MUST use ${VAR} references for secrets
+        API_KEY: "${MY_TOOL_API_KEY}"
+    requires-env: [MY_TOOL_API_KEY]
+```
+
+Exactly one of `remote:` or `local:` MUST be present per entry; both or neither is a validation
+error. `remote.type` MUST be one of `http` or `sse`. `remote.url` and `local.command` MUST NOT
+be empty.
+
+**Transport descriptor fields:**
+
+| Transport | Field          | Type     | Required | Description                                                  |
+| --------- | -------------- | -------- | -------- | ------------------------------------------------------------ |
+| `remote`  | `type`         | string   | YES      | Protocol: `http` or `sse`.                                   |
+| `remote`  | `url`          | string   | YES      | Endpoint URL the client connects to.                         |
+| `remote`  | `headers`      | map      | no       | HTTP headers. Values pass through verbatim (use `${VAR}`).   |
+| `local`   | `command`      | string   | YES      | Launcher command (e.g. `npx`, `uvx`, `docker`, bare binary). |
+| `local`   | `args`         | string[] | no       | Arguments passed to the command.                             |
+| `local`   | `env`          | map      | no       | Environment variables. Values pass through verbatim.         |
+| (either)  | `requires-env` | string[] | no       | Env var names the server requires (declared, not valued).    |
+
+**Secrets and `${VAR}` indirection.** Values in `headers` and `env` that reference secrets MUST
+use `${VAR}` syntax only. Implementations MUST pass these values through verbatim to the client
+config — they MUST NOT expand `${VAR}` references, read the underlying values, or store literal
+secret values anywhere (not in config files, not in the lockfile, not in SSOT). The
+`requires-env` list declares which variable names are needed; implementations SHOULD warn at
+install time (e.g., during `upskill add`) when a declared variable is unset in the current
+environment, without reading its value.
+
+**Per-client install behavior (v1):** v1 targets Claude Code only. Other clients produce a
+warn-skip.
+
+| Client      | Primary (CLI)                                                                         | Fallback (config-write, CLI absent)                          |
+| ----------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Claude Code | `claude mcp add <name> --scope <scope> [-e K=${V}] -- <cmd> [args]` (local)           | Write `{ "mcpServers": { "<name>": { … } } }` to `.mcp.json` |
+| Claude Code | `claude mcp add --transport <http\|sse> <name> <url> --scope <scope> [-H …]` (remote) | Same `.mcp.json` fallback                                    |
+| other       | not supported in v1 — warn-skip                                                       | —                                                            |
+
+Claude's `--scope` derives from upskill's project/global context:
+
+| upskill scope | `claude --scope` |
+| ------------- | ---------------- |
+| project       | `project`        |
+| global        | `user`           |
+
+**CLI-missing policy (warn-skip):** If the target client CLI is not on PATH, the implementation
+MUST fall back to writing the client config file. If the config-write also fails, it MUST print
+a warning and continue installing the rest of the bundle. The rules, skills, and agents portion
+of the bundle MUST install regardless of MCP configuration success.
+
+**Lockfile recording:** Each configured or warn-skipped MCP server MUST be recorded in the
+lockfile with its client, scope, bundle, and status:
+
+| `status`      | Meaning                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| `"installed"` | Configured successfully via CLI shellout or config-write.                  |
+| `"skipped"`   | Client CLI was not on PATH and no config-write target applied (warn-skip). |
+
+Lockfile MCP entry shape:
+
+```json
+{
+  "name": "drawio",
+  "client": "claude",
+  "scope": "project",
+  "bundle": "drawio-diagrams",
+  "status": "installed"
+}
+```
+
+The `mcps` array is additive. Implementations that do not support this field MUST ignore it
+(serde `default`). The lockfile `schema` field stays at `1` — no version bump.
+
+**Removal:** `upskill remove-mcp <name>` unregisters the named server from the client (via
+`claude mcp remove <name> --scope <scope>`, falling back to removing the entry from `.mcp.json`
+when the CLI is absent) and drops the `LockedMcp` entry from the lockfile.
+
+**Reconciliation:** `upskill doctor` checks each Claude-client MCP entry in the lockfile
+against `claude mcp list`. A server present in the lockfile but absent from the client is
+reported as `NotRegistered` and causes doctor to exit non-clean (exit 1). Doctor also reports
+`CliNotFound` when the `claude` CLI is absent and `QueryFailed` when the list query fails;
+it does not check `requires-env` variables. The unset-env warning for `requires-env` variables
+is emitted by `upskill add` at install time.
+
+Implementations:
+
+- MUST prefer the client's native MCP CLI verb over direct config-file writes.
+- MUST fall back to writing the client config file when the CLI is not found.
+- MUST treat MCP configuration as idempotent (re-configuring an existing server is a no-op or
+  safe overwrite).
+- MUST NOT fail the entire bundle install when a single MCP configuration fails or is skipped.
+- MUST NOT expand `${VAR}` references in header or env values.
+
 #### Item `requires` resolution
 
 Items (rules, skills, agents) MAY declare directed dependencies in their `requires` field
@@ -715,7 +834,7 @@ following order (unlisted keys appear at the end in their original relative orde
 | Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
 | Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
-| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `metadata`, `extras`                                                                                |
+| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `metadata`, `extras`                                                                        |
 
 **Comment preservation.** Canonicalisation:
 

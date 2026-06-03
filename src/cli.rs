@@ -184,7 +184,7 @@ pub enum Commands {
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
     #[command(
-        display_order = 5,
+        display_order = 6,
         after_help = "EXAMPLES:\n  \
             upskill doctor\n  \
             upskill doctor --global"
@@ -205,7 +205,7 @@ pub enum Commands {
     },
     /// Search the public skills registry and configured registries.
     #[command(
-        display_order = 6,
+        display_order = 7,
         after_help = "EXAMPLES:\n  \
             upskill search code-review\n  \
             upskill search api --limit 5\n  \
@@ -281,9 +281,32 @@ pub enum Commands {
         /// Item name. Lowercase letters, digits, hyphens; max 64 chars.
         name: String,
     },
+    /// Remove an MCP server configured by a bundle install.
+    ///
+    /// Unregisters the named MCP server from the client (via `claude mcp
+    /// remove` or the config file fallback) and drops the entry from the
+    /// lockfile.
+    #[command(
+        name = "remove-mcp",
+        display_order = 5,
+        after_help = "EXAMPLES:\n  \
+            upskill remove-mcp drawio\n  \
+            upskill remove-mcp drawio --global"
+    )]
+    RemoveMcp {
+        /// MCP server name to remove (as recorded in the lockfile).
+        name: String,
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
+        global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
+    },
     /// Build or manage the local registry index cache.
     #[command(
-        display_order = 7,
+        display_order = 8,
         after_help = "EXAMPLES:\n  \
             upskill index\n  \
             upskill index --registry corp\n  \

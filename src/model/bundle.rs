@@ -37,6 +37,12 @@ pub struct Bundle {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub plugins: BTreeMap<String, PluginEntry>,
 
+    /// MCP servers configured into each targeted client (ADR-0010, §3.7).
+    /// Map key is the upskill-level MCP name; value carries the transport
+    /// descriptor and declared required env vars.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub mcps: BTreeMap<String, McpEntry>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
@@ -199,4 +205,89 @@ pub enum OpencodePluginDescriptor {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         install_url: Option<String>,
     },
+}
+
+/// One entry in the bundle `mcps:` map. Exactly one transport (`remote`
+/// or `local`) is present; `validate_mcps` enforces this at parse time.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpEntry {
+    /// Transport descriptor — flattened so YAML carries either a
+    /// `remote:` or a `local:` key directly under the server name.
+    #[serde(flatten)]
+    pub transport: McpTransport,
+
+    /// Environment variables the server requires. Declared (not valued) so
+    /// `upskill doctor` can warn when one is unset. upskill never reads the
+    /// values — secret custody stays with the user's environment.
+    #[serde(
+        default,
+        rename = "requires-env",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub requires_env: Vec<String>,
+}
+
+/// MCP transport: a hosted server reached by URL, or a local process the
+/// client spawns and speaks to over stdio.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum McpTransport {
+    #[serde(rename = "remote")]
+    Remote(McpRemote),
+    #[serde(rename = "local")]
+    Local(McpLocal),
+}
+
+/// Remote (hosted) MCP server descriptor.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpRemote {
+    /// `http` or `sse`.
+    #[serde(rename = "type")]
+    pub transport_type: String,
+    /// Endpoint URL the client connects to.
+    pub url: String,
+    /// Optional headers. Values pass through verbatim (use `${VAR}`
+    /// references for secrets — upskill never expands them).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub headers: BTreeMap<String, String>,
+}
+
+impl Bundle {
+    /// Validate the `mcps:` map beyond what serde enforces. Returns the
+    /// first offending `(server-name, reason)` as an error.
+    pub fn validate_mcps(&self) -> Result<(), String> {
+        for (name, entry) in &self.mcps {
+            match &entry.transport {
+                McpTransport::Remote(r) => {
+                    if r.transport_type != "http" && r.transport_type != "sse" {
+                        return Err(format!(
+                            "mcp `{name}`: transport type `{}` is not one of http, sse",
+                            r.transport_type
+                        ));
+                    }
+                    if r.url.trim().is_empty() {
+                        return Err(format!("mcp `{name}`: remote url must not be empty"));
+                    }
+                }
+                McpTransport::Local(l) => {
+                    if l.command.trim().is_empty() {
+                        return Err(format!("mcp `{name}`: local command must not be empty"));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Local (stdio) MCP server descriptor.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpLocal {
+    /// Launcher command (e.g. `npx`, `uvx`, `docker`, or a bare binary).
+    pub command: String,
+    /// Arguments passed to the command.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    /// Environment variables. Values pass through verbatim (use `${VAR}`).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub env: BTreeMap<String, String>,
 }

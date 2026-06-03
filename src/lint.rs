@@ -323,6 +323,9 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
         }
         FileKind::Bundle => {
             let bundle: crate::model::Bundle = serde_yaml_ng::from_str(raw)?;
+            bundle
+                .validate_mcps()
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
             Ok((Some(bundle.name), ""))
         }
     }
@@ -679,9 +682,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             &tmp.path().join("my-rule/RULE.md"),
-            &format!(
-                "---\nschema: 1\nname: my-rule\ndescription: a test rule.\n---\n\n## Body\n\nText.\n"
-            ),
+            "---\nschema: 1\nname: my-rule\ndescription: a test rule.\n---\n\n## Body\n\nText.\n",
         );
         // Lint the item directory directly (not the parent registry root).
         let item_dir = tmp.path().join("my-rule");
@@ -700,9 +701,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             &tmp.path().join("bad-rule/RULE.md"),
-            &format!(
-                "---\nschema: 1\nname: bad-rule\ndescription: has lint issues.\n---\n\n# Forbidden H1\n"
-            ),
+            "---\nschema: 1\nname: bad-rule\ndescription: has lint issues.\n---\n\n# Forbidden H1\n",
         );
         let item_dir = tmp.path().join("bad-rule");
         let report = lint(&[item_dir], false).unwrap();
@@ -726,7 +725,7 @@ mod tests {
         );
         write(
             &tmp.path().join("multi/AGENT.md"),
-            &format!("---\nschema: 1\nname: multi\ndescription: co-located agent.\n---\n\n## ok\n"),
+            "---\nschema: 1\nname: multi\ndescription: co-located agent.\n---\n\n## ok\n",
         );
         let item_dir = tmp.path().join("multi");
         let report = lint(&[item_dir], false).unwrap();
@@ -829,6 +828,39 @@ mod tests {
         assert!(
             f.is_some(),
             "missing name-matches-dir finding for bundle: {:?}",
+            report.findings
+        );
+    }
+
+    #[test]
+    fn lint_flags_invalid_mcps_transport_in_bundle() {
+        // Regression: lint's bundle path must call validate_mcps so an
+        // unsupported transport type is surfaced as a frontmatter error,
+        // not silently accepted.
+        let tmp = tempfile::tempdir().unwrap();
+        let body = concat!(
+            "schema: 1\n",
+            "name: bad-mcp\n",
+            "description: bundle with an invalid MCP transport type.\n",
+            "items:\n",
+            "  skills: []\n",
+            "mcps:\n",
+            "  my-server:\n",
+            "    remote:\n",
+            "      type: ftp\n",
+            "      url: https://example.com/mcp\n",
+        );
+        write(&tmp.path().join("bad-mcp.bundle.yaml"), body);
+        let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
+        let f = report.findings.iter().find(|f| f.rule_id == "frontmatter");
+        assert!(
+            f.is_some(),
+            "expected frontmatter error for invalid mcps transport; got: {:?}",
+            report.findings
+        );
+        assert!(
+            f.unwrap().message.contains("ftp"),
+            "error message should mention the bad transport type; got: {:?}",
             report.findings
         );
     }

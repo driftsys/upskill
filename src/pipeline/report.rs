@@ -44,6 +44,9 @@ pub struct InstallReport {
     /// (plugin-name, client) pair attempted. Empty when no bundles with
     /// plugins were resolved.
     pub plugin_results: Vec<PluginResult>,
+    /// Results of MCP server configuration (ADR-0010). Empty when no
+    /// bundles with `mcps:` were resolved.
+    pub mcp_results: Vec<McpResult>,
 }
 
 /// Result of a single plugin install attempt, for reporting to the user.
@@ -65,6 +68,21 @@ pub struct PluginResult {
     pub instructions_url: Option<String>,
     /// Human-readable summary for manual instructions.
     pub summary: Option<String>,
+}
+
+/// Result of a single MCP server configuration attempt, for reporting.
+#[derive(Debug, Clone)]
+pub struct McpResult {
+    /// Upskill-level MCP name.
+    pub name: String,
+    /// Client identifier.
+    pub client: String,
+    /// Configuration outcome.
+    pub outcome: crate::plugin::PluginOutcome,
+    /// Bundle that declared this MCP server.
+    pub bundle: String,
+    /// Env vars declared as required (for the doctor/warn surface).
+    pub requires_env: Vec<String>,
 }
 
 /// What to remove. Per ADR-0004 the user must be explicit — bare
@@ -161,6 +179,29 @@ pub struct SkippedPlugin {
     pub bundle: String,
 }
 
+/// Reconciliation outcome for a single MCP server during `doctor`.
+#[derive(Debug, Clone, Serialize)]
+pub struct McpDoctorEntry {
+    pub name: String,
+    pub client: String,
+    pub bundle: String,
+    pub status: McpDoctorStatus,
+}
+
+/// The specific condition detected during doctor MCP reconciliation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum McpDoctorStatus {
+    /// Registered in the client — no action needed.
+    Ok,
+    /// In the lockfile but absent from the client's registered list.
+    NotRegistered,
+    /// Client CLI was not found; cannot verify.
+    CliNotFound,
+    /// CLI returned non-zero when listing MCP servers.
+    QueryFailed { stderr: String },
+}
+
 /// A dependency-pulled item whose every requirer is no longer installed.
 /// Advisory only — upskill never auto-removes (#196); the user decides.
 #[derive(Debug, Clone, Serialize)]
@@ -188,6 +229,11 @@ pub struct DoctorReport {
     /// false or trigger exit 1. Run `upskill update` after installing the
     /// missing CLI to install them.
     pub skipped_plugins: Vec<SkippedPlugin>,
+    /// MCP server reconciliation results. Entries are present for every MCP
+    /// recorded in the lockfile. `McpDoctorStatus::Ok` entries are included
+    /// so callers can distinguish "checked and fine" from "not checked".
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mcp_entries: Vec<McpDoctorEntry>,
 }
 
 impl DoctorReport {
@@ -204,6 +250,10 @@ impl DoctorReport {
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
+            && !self
+                .mcp_entries
+                .iter()
+                .any(|e| matches!(e.status, McpDoctorStatus::NotRegistered))
     }
 }
 
@@ -330,5 +380,40 @@ mod tests {
             reason: OrphanReason::LocalPathGone,
         });
         assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_not_clean_with_not_registered_mcp() {
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::NotRegistered,
+        });
+        assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_clean_with_mcp_cli_not_found_or_query_failed() {
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::CliNotFound,
+        });
+        assert!(report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::QueryFailed {
+                stderr: "some error".into(),
+            },
+        });
+        assert!(report.is_clean());
     }
 }

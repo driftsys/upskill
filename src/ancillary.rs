@@ -31,6 +31,7 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::Path;
 
+use crate::model::bundle::{McpLocal, McpRemote};
 use crate::plugin::PluginOutcome;
 
 /// Filename written at the consumer-project root.
@@ -335,6 +336,112 @@ pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> Result<()>
     }
 
     Ok(())
+}
+
+/// Filename Claude Code reads for project-scoped MCP servers.
+const CLAUDE_MCP_JSON: &str = ".mcp.json";
+
+/// Write a local (stdio) MCP server into `<target>/.mcp.json` under
+/// `mcpServers.<name>`. Merge-preserving; creates the file if absent.
+/// Used as the fallback when the `claude` CLI is not on PATH.
+pub fn write_claude_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+    let mut server = serde_json::Map::new();
+    server.insert("command".into(), json!(local.command));
+    if !local.args.is_empty() {
+        server.insert("args".into(), json!(local.args));
+    }
+    if !local.env.is_empty() {
+        let env: serde_json::Map<String, Value> = local
+            .env
+            .iter()
+            .map(|(k, v)| (k.clone(), json!(v)))
+            .collect();
+        server.insert("env".into(), Value::Object(env));
+    }
+    upsert_mcp_server(target, name, Value::Object(server))
+}
+
+/// Write a remote MCP server into `<target>/.mcp.json` under
+/// `mcpServers.<name>`. Merge-preserving; creates the file if absent.
+pub fn write_claude_mcp_remote(target: &Path, name: &str, remote: &McpRemote) -> PluginOutcome {
+    let mut server = serde_json::Map::new();
+    server.insert("type".into(), json!(remote.transport_type));
+    server.insert("url".into(), json!(remote.url));
+    if !remote.headers.is_empty() {
+        let headers: serde_json::Map<String, Value> = remote
+            .headers
+            .iter()
+            .map(|(k, v)| (k.clone(), json!(v)))
+            .collect();
+        server.insert("headers".into(), Value::Object(headers));
+    }
+    upsert_mcp_server(target, name, Value::Object(server))
+}
+
+/// Shared merge: insert `server` at `mcpServers.<name>` in `.mcp.json`,
+/// preserving any other top-level keys and other servers.
+fn upsert_mcp_server(target: &Path, name: &str, server: Value) -> PluginOutcome {
+    let path = target.join(CLAUDE_MCP_JSON);
+    let mut doc: Value = match std::fs::read_to_string(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => json!({}),
+        Err(e) => {
+            return PluginOutcome::Failed {
+                exit_code: None,
+                stderr: format!("read {}: {e}", path.display()),
+            };
+        }
+        Ok(raw) => match serde_json::from_str(&raw) {
+            Ok(v) => v,
+            Err(e) => {
+                return PluginOutcome::Failed {
+                    exit_code: None,
+                    stderr: format!("parse {}: {e}", path.display()),
+                };
+            }
+        },
+    };
+
+    if !doc.is_object() {
+        return PluginOutcome::Failed {
+            exit_code: None,
+            stderr: format!("{}: top-level value must be an object", path.display()),
+        };
+    }
+    let obj = doc.as_object_mut().expect("checked is_object");
+    let servers = obj
+        .entry("mcpServers")
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    let Some(servers) = servers.as_object_mut() else {
+        return PluginOutcome::Failed {
+            exit_code: None,
+            stderr: format!("{}: `mcpServers` must be an object", path.display()),
+        };
+    };
+    servers.insert(name.to_string(), server);
+
+    if let Err(e) = write_pretty_json(&path, &doc) {
+        return PluginOutcome::Failed {
+            exit_code: None,
+            stderr: e.to_string(),
+        };
+    }
+    PluginOutcome::Success
+}
+
+/// Remove an MCP server from `<target>/.mcp.json`. No-op if absent.
+pub fn remove_claude_mcp(target: &Path, name: &str) -> Result<()> {
+    let path = target.join(CLAUDE_MCP_JSON);
+    let raw = match std::fs::read_to_string(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
+        Ok(r) => r,
+    };
+    let mut doc: Value =
+        serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
+    if let Some(servers) = doc.get_mut("mcpServers").and_then(Value::as_object_mut) {
+        servers.remove(name);
+    }
+    write_pretty_json(&path, &doc)
 }
 
 fn write_pretty_json(path: &Path, value: &Value) -> Result<()> {
@@ -709,5 +816,113 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
         assert!(!tmp.path().join("opencode.json").exists());
+    }
+
+    #[test]
+    fn write_claude_mcp_json_adds_local_server() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let mut env = BTreeMap::new();
+        env.insert("TOK".to_string(), "${TOK}".to_string());
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec!["-y".into(), "srv".into()],
+            env,
+        };
+
+        let outcome = write_claude_mcp_local(tmp.path(), "drawio", &local);
+        assert!(outcome.is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join(".mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["mcpServers"]["drawio"]["command"], "npx");
+        assert_eq!(doc["mcpServers"]["drawio"]["args"][1], "srv");
+        assert_eq!(doc["mcpServers"]["drawio"]["env"]["TOK"], "${TOK}");
+    }
+
+    #[test]
+    fn write_claude_mcp_json_preserves_existing_servers() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(".mcp.json"),
+            r#"{"mcpServers":{"existing":{"command":"foo"}}}"#,
+        )
+        .unwrap();
+
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec![],
+            env: BTreeMap::new(),
+        };
+        write_claude_mcp_local(tmp.path(), "drawio", &local);
+
+        let raw = std::fs::read_to_string(tmp.path().join(".mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["mcpServers"]["existing"]["command"], "foo");
+        assert_eq!(doc["mcpServers"]["drawio"]["command"], "npx");
+    }
+
+    #[test]
+    fn write_claude_mcp_json_adds_remote_server() {
+        use crate::model::bundle::McpRemote;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let mut headers = BTreeMap::new();
+        headers.insert("Authorization".to_string(), "Bearer ${TOKEN}".to_string());
+        let remote = McpRemote {
+            transport_type: "http".into(),
+            url: "https://example.com/mcp".into(),
+            headers,
+        };
+
+        let outcome = write_claude_mcp_remote(tmp.path(), "example", &remote);
+        assert!(outcome.is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join(".mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["mcpServers"]["example"]["type"], "http");
+        assert_eq!(
+            doc["mcpServers"]["example"]["url"],
+            "https://example.com/mcp"
+        );
+        assert_eq!(
+            doc["mcpServers"]["example"]["headers"]["Authorization"],
+            "Bearer ${TOKEN}"
+        );
+    }
+
+    #[test]
+    fn remove_claude_mcp_removes_server() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec![],
+            env: BTreeMap::new(),
+        };
+        write_claude_mcp_local(tmp.path(), "drawio", &local);
+        write_claude_mcp_local(tmp.path(), "other", &local);
+
+        remove_claude_mcp(tmp.path(), "drawio").unwrap();
+
+        let raw = std::fs::read_to_string(tmp.path().join(".mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert!(doc["mcpServers"]["drawio"].is_null());
+        assert_eq!(doc["mcpServers"]["other"]["command"], "npx");
+    }
+
+    #[test]
+    fn remove_claude_mcp_noop_when_no_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        remove_claude_mcp(tmp.path(), "drawio").unwrap();
+        assert!(!tmp.path().join(".mcp.json").exists());
     }
 }

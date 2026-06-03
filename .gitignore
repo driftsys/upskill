@@ -1,3 +1,5 @@
 /target
 /.claude
 /book
+# MCP config written by `claude mcp add` / config-write fallback during tests
+.mcp.json

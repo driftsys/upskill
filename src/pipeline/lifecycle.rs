@@ -303,6 +303,33 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         }
     }
 
+    // -- MCP server reconciliation (ADR-0010) --
+    // Walk the lockfile's MCP entries and check whether each is still
+    // registered in the client. Only `claude` client is supported for
+    // query; others are skipped (no list command available).
+    for mcp in &lock.mcps {
+        if mcp.client != "claude" {
+            continue;
+        }
+        use crate::pipeline::report::{McpDoctorEntry, McpDoctorStatus};
+        use crate::plugin::PluginCheckResult;
+
+        let status = match crate::mcp::check_claude_installed(&mcp.name) {
+            PluginCheckResult::Installed => McpDoctorStatus::Ok,
+            PluginCheckResult::NotInstalled => McpDoctorStatus::NotRegistered,
+            PluginCheckResult::CliNotFound => McpDoctorStatus::CliNotFound,
+            PluginCheckResult::QueryFailed { stderr, .. } => {
+                McpDoctorStatus::QueryFailed { stderr }
+            }
+        };
+        report.mcp_entries.push(McpDoctorEntry {
+            name: mcp.name.clone(),
+            client: mcp.client.clone(),
+            bundle: mcp.bundle.clone(),
+            status,
+        });
+    }
+
     Ok(report)
 }
 
