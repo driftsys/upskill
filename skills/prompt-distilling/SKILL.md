@@ -126,6 +126,16 @@ A quick reference for recurring multi-layer authoring intents:
   Vault").
 - **Skill + MCP tool** — procedure that calls live tools ("how to
   triage a Jira incident" plus `jira_search`).
+- **MCP + installer Subagent + Skill** — an MCP server whose local
+  binary must be installed on the consumer machine (no `npx`/`uvx`
+  launcher). Configure the server in a bundle's `mcps:`; put the
+  install recipe — detect OS, version-check, install the binary — in a
+  per-MCP `<name>-mcp-installer` subagent (the HOW); put the trigger in
+  the skill that uses the MCP, as one authored line ("if the `<name>`
+  MCP is not responding, run the `<name>-mcp-installer` subagent
+  first"). upskill never runs the installer — the client's agent does,
+  under its own permission prompts. See the recipe "Shipping an MCP
+  that needs a local install".
 - **Subagent + Skill** — subagent loads skills inside its own context
   (test-runner subagent plus a "how to interpret cargo-nextest
   failures" skill).
