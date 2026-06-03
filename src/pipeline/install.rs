@@ -21,7 +21,7 @@ use super::hash::hash_item_dir;
 use super::output::{
     copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
 };
-use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, PluginResult};
+use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, Rule, Skill};
 use crate::parse::frontmatter;
@@ -351,6 +351,57 @@ pub(super) fn install_plugins_from_bundles(
     results
 }
 
+// ---------------------------------------------------------------------------
+// MCP server configuration orchestration (ADR-0010)
+// ---------------------------------------------------------------------------
+
+/// Iterate all resolved bundles and configure each declared MCP server for
+/// Claude Code (v1's only target client). CLI-first: `claude mcp add`; on
+/// CliNotFound, fall back to writing `.mcp.json`. Warn-skip preserved: a
+/// failure never aborts the overall install.
+pub(super) fn install_mcps_from_bundles(
+    bundles: &[crate::model::Bundle],
+    scope: crate::plugin::PluginScope,
+    target: &Path,
+) -> Vec<McpResult> {
+    use crate::model::bundle::McpTransport;
+    use crate::plugin::PluginOutcome;
+
+    let mut results = Vec::new();
+    for bundle in bundles {
+        for (name, entry) in &bundle.mcps {
+            let cli_outcome = match &entry.transport {
+                McpTransport::Local(local) => crate::mcp::install_claude_local(name, local, scope),
+                McpTransport::Remote(remote) => {
+                    crate::mcp::install_claude_remote(name, remote, scope)
+                }
+            };
+
+            // CLI absent → config-write fallback into .mcp.json.
+            let outcome = match cli_outcome {
+                PluginOutcome::CliNotFound => match &entry.transport {
+                    McpTransport::Local(local) => {
+                        crate::ancillary::write_claude_mcp_local(target, name, local)
+                    }
+                    McpTransport::Remote(remote) => {
+                        crate::ancillary::write_claude_mcp_remote(target, name, remote)
+                    }
+                },
+                other => other,
+            };
+
+            results.push(McpResult {
+                name: name.clone(),
+                client: "claude".into(),
+                outcome,
+                bundle: bundle.name.clone(),
+                requires_env: entry.requires_env.clone(),
+            });
+        }
+    }
+    results
+}
+
 fn install_items_of_kind(
     kind: ItemKind,
     source: &Path,
@@ -512,5 +563,32 @@ mod tests {
         assert!(targets(Client::Claude, Some(&only_claude)));
         assert!(!targets(Client::Copilot, Some(&only_claude)));
         assert!(!targets(Client::OpenCode, Some(&only_claude)));
+    }
+}
+
+#[cfg(test)]
+mod mcp_tests {
+    use crate::plugin::PluginScope;
+
+    #[test]
+    fn install_mcps_records_result_per_server() {
+        let tmp = tempfile::tempdir().unwrap();
+        let yaml = "schema: 1
+name: with-mcp
+description: test
+items:
+  skills: []
+mcps:
+  drawio:
+    remote:
+      type: http
+      url: https://example.com/mcp
+";
+        let bundle: crate::model::Bundle = serde_yaml_ng::from_str(yaml).unwrap();
+        let bundles = vec![bundle];
+        let results = super::install_mcps_from_bundles(&bundles, PluginScope::Project, tmp.path());
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "drawio");
+        assert_eq!(results[0].client, "claude");
     }
 }

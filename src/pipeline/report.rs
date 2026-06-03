@@ -37,6 +37,9 @@ pub struct InstallReport {
     /// (plugin-name, client) pair attempted. Empty when no bundles with
     /// plugins were resolved.
     pub plugin_results: Vec<PluginResult>,
+    /// Results of MCP server configuration (ADR-0010). Empty when no
+    /// bundles with `mcps:` were resolved.
+    pub mcp_results: Vec<McpResult>,
 }
 
 /// Result of a single plugin install attempt, for reporting to the user.
@@ -58,6 +61,21 @@ pub struct PluginResult {
     pub instructions_url: Option<String>,
     /// Human-readable summary for manual instructions.
     pub summary: Option<String>,
+}
+
+/// Result of a single MCP server configuration attempt, for reporting.
+#[derive(Debug, Clone)]
+pub struct McpResult {
+    /// Upskill-level MCP name.
+    pub name: String,
+    /// Client identifier.
+    pub client: String,
+    /// Configuration outcome.
+    pub outcome: crate::plugin::PluginOutcome,
+    /// Bundle that declared this MCP server.
+    pub bundle: String,
+    /// Env vars declared as required (for the doctor/warn surface).
+    pub requires_env: Vec<String>,
 }
 
 /// What to remove. Per ADR-0004 the user must be explicit — bare

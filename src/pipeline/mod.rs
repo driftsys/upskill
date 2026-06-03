@@ -40,7 +40,10 @@ use discovery::scan_source_items;
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
-use install::{install_plugins_from_bundles, install_with_name_resolution_from_local};
+use install::{
+    install_mcps_from_bundles, install_plugins_from_bundles,
+    install_with_name_resolution_from_local,
+};
 pub use lifecycle::{doctor, list, remove, update};
 pub use report::*;
 
@@ -227,6 +230,10 @@ pub fn install_with_lockfile(
     let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
     report.plugin_results = plugin_results;
 
+    // -- MCP server configuration (ADR-0010) --
+    let mcp_results = install_mcps_from_bundles(&report.bundles, plugin_scope, target);
+    report.mcp_results = mcp_results;
+
     // -- Apply excludes --
     if !options.excludes.is_empty() {
         report
@@ -322,6 +329,28 @@ pub fn install_with_lockfile(
                 crate::plugin::PluginScope::User => Some("user".into()),
             },
             bundle: pr.bundle.clone(),
+            status,
+        });
+    }
+    // Record configured and warn-skipped MCP servers in the lockfile.
+    for mr in &report.mcp_results {
+        use crate::lockfile::McpInstallStatus;
+        use crate::plugin::PluginOutcome;
+
+        let status = match &mr.outcome {
+            PluginOutcome::Success => McpInstallStatus::Installed,
+            PluginOutcome::CliNotFound => McpInstallStatus::Skipped,
+            // ManualInstructions is unused for MCP; Failed is transient.
+            PluginOutcome::ManualInstructions | PluginOutcome::Failed { .. } => continue,
+        };
+        lock.upsert_mcp(crate::lockfile::LockedMcp {
+            name: mr.name.clone(),
+            client: mr.client.clone(),
+            scope: match plugin_scope {
+                crate::plugin::PluginScope::Project => Some("project".into()),
+                crate::plugin::PluginScope::User => Some("user".into()),
+            },
+            bundle: mr.bundle.clone(),
             status,
         });
     }

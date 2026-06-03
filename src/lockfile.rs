@@ -437,6 +437,7 @@ mod tests {
         let report = InstallReport {
             bundles: Vec::new(),
             plugin_results: Vec::new(),
+            mcp_results: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
