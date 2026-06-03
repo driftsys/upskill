@@ -196,7 +196,33 @@ fn canonicalise_item<T: DeserializeOwned>(
     serde_yaml_ng::from_str::<T>(&reordered_yaml)
         .with_context(|| format!("validate frontmatter {}", path.display()))?;
 
-    Ok(format!("---\n{reordered_yaml}---\n{body}"))
+    let body_region = canonical_body(&reordered_yaml, body)
+        .with_context(|| format!("format body {}", path.display()))?;
+
+    Ok(format!("---\n{reordered_yaml}---\n{body_region}"))
+}
+
+/// Canonical body region for an item file, given its on-disk
+/// frontmatter string and body. Formats via dprint the same way the
+/// generation pipeline does: dprint treats `---…---` as opaque
+/// frontmatter, so the YAML (content, comments, key order, wrapping) is
+/// preserved byte-for-byte and only the body is formatted, with the seam
+/// normalised to a single blank line. Returns the region after the
+/// closing `---`, including that leading blank-line separator. Empty when
+/// the body is blank. Used by both `fmt` (to write) and `lint::check_body_format`
+/// (to detect drift) so checker and fixer never disagree.
+pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
+    if body.trim().is_empty() {
+        return Ok(String::new());
+    }
+    let prefix = format!("---\n{frontmatter}---\n");
+    let combined = format!("{prefix}{body}");
+    let formatted =
+        crate::generate::format::format_markdown(&combined).context("format item body")?;
+    formatted
+        .strip_prefix(&prefix)
+        .map(|region| region.to_string())
+        .ok_or_else(|| anyhow!("dprint altered the frontmatter region while formatting the body"))
 }
 
 /// Parse YAML string into `T` for validation only. Discards the result.
@@ -692,21 +718,27 @@ mod tests {
     }
 
     #[test]
-    fn canonicalise_preserves_body_byte_for_byte() {
-        let body = concat!(
+    fn canonicalise_formats_body() {
+        // `*` bullets become `-`, extra blank lines collapse, and the
+        // single blank-line separator after the frontmatter is kept.
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: dirty\n",
+            "description: body needs formatting.\n",
+            "---\n",
             "\n",
-            "## A heading\n",
+            "## Body\n",
             "\n",
-            "```rust\n",
-            "fn x() {}\n",
-            "```\n",
             "\n",
-            "<!-- a comment -->\n",
+            "* one\n",
+            "* two\n",
         );
-        let raw =
-            format!("---\nschema: 1\nname: preserve\ndescription: do not touch body.\n---\n{body}");
-        let out = canonicalise(&raw, Path::new("preserve/SKILL.md")).unwrap();
-        assert!(out.ends_with(body), "body changed:\n{out}");
+        let out = canonicalise(raw, Path::new("dirty/SKILL.md")).unwrap();
+        assert!(
+            out.ends_with("---\n\n## Body\n\n- one\n- two\n"),
+            "body not formatted canonically:\n{out}"
+        );
     }
 
     #[test]
@@ -799,6 +831,7 @@ mod tests {
             "name: clean\n",
             "description: already canonical.\n",
             "---\n",
+            "\n",
             "## body\n",
         );
         write(&item, canonical);
