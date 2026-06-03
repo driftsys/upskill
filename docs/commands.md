@@ -1,21 +1,22 @@
 # Commands
 
-`upskill` ships nine commands. They split cleanly into **consumer**
+`upskill` ships ten commands. They split cleanly into **consumer**
 (run inside a project that consumes AI-assistance content) and
 **author** (run inside a source-registry repo).
 
-| Command  | Role     | Purpose                                             |
-| -------- | -------- | --------------------------------------------------- |
-| `add`    | Consumer | Install content from any source.                    |
-| `remove` | Consumer | Remove installed content.                           |
-| `update` | Consumer | Pull latest, regenerate changed items.              |
-| `list`   | Consumer | Show installed content from the lock file.          |
-| `doctor` | Consumer | Verify installation consistency.                    |
-| `search` | Consumer | Look up skills via the public registry.             |
-| `index`  | Consumer | Build or manage the local registry index cache.     |
-| `new`    | Author   | Scaffold a new rule, skill, or agent.               |
-| `lint`   | Author   | Validate SSOT files against the format spec.        |
-| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| Command      | Role     | Purpose                                             |
+| ------------ | -------- | --------------------------------------------------- |
+| `add`        | Consumer | Install content from any source.                    |
+| `remove`     | Consumer | Remove installed content.                           |
+| `remove-mcp` | Consumer | Unregister an MCP server configured by a bundle.    |
+| `update`     | Consumer | Pull latest, regenerate changed items.              |
+| `list`       | Consumer | Show installed content from the lock file.          |
+| `doctor`     | Consumer | Verify installation consistency.                    |
+| `search`     | Consumer | Look up skills via the public registry.             |
+| `index`      | Consumer | Build or manage the local registry index cache.     |
+| `new`        | Author   | Scaffold a new rule, skill, or agent.               |
+| `lint`       | Author   | Validate SSOT files against the format spec.        |
+| `fmt`        | Author   | Canonicalise YAML frontmatter (key order, quoting). |
 
 ## Global flags
 
@@ -75,6 +76,17 @@ plugin is skipped (not an error) and recorded as `skipped` in the
 lockfile; `upskill doctor` reports skipped and missing plugins. Removing
 the bundle cleans up its plugins.
 
+**Bundle MCP servers.** When a bundle declares an `mcps:` map
+([format-spec §3.7](./format-spec.md#37-bundle-schema)), `add` configures
+those Model Context Protocol servers into each targeted client's MCP
+configuration — CLI-first (`claude mcp add ...`), falling back to writing
+the client config file (e.g. `.mcp.json`) when the CLI is absent. MCP
+configuration is idempotent, and a single MCP failure or skip never fails
+the rest of the bundle install. Configured and warn-skipped servers are
+recorded in the lockfile; remove one with
+[`upskill remove-mcp`](#upskill-remove-mcp-name). If an MCP server needs
+an environment variable that is unset, `add` warns so you can export it.
+
 ### `upskill update [name...]`
 
 Pull latest sources and regenerate changed items.
@@ -109,6 +121,23 @@ touched.
 every item from that label at once). Pass `-y` / `--yes` to skip.
 Non-interactive contexts (CI, pipes) skip the prompt automatically.
 
+### `upskill remove-mcp <name>`
+
+Unregister an MCP server that a bundle install configured (see the
+`mcps:` note under [`upskill add`](#upskill-add-source-items)).
+
+```bash
+upskill remove-mcp drawio            # remove from the current project
+upskill remove-mcp drawio --global   # remove from the $HOME scope
+```
+
+`<name>` is the upskill-level MCP name recorded in the lockfile.
+`remove-mcp` unregisters the server from the client (`claude mcp remove
+<name>`, falling back to deleting the entry from the client config file
+when the CLI is absent) and drops the `LockedMcp` entry from the
+lockfile. Scope follows the same `--project` / `--global` rules as
+`add`, auto-detecting global when `cwd` is not inside a git repo.
+
 ### `upskill list`
 
 Show installed content from `.upskill-lock.json`, grouped by kind.
@@ -136,7 +165,7 @@ matches the lockfile label (`local:/path` or `github:owner/repo` etc.).
 ### `upskill doctor`
 
 Verify on-disk state matches `.upskill-lock.json`. Reports drift in
-five independent buckets:
+six independent buckets:
 
 - **Missing per-client output files** — reinstall fixes (`upskill add
   <source>`).
@@ -150,12 +179,17 @@ five independent buckets:
 - **Skipped plugins** (informational) — recorded as `skipped` because
   the client CLI was not on PATH at install time. Install the CLI then
   run `upskill update` to install them. Does **not** cause exit 1.
+- **MCP servers** — each Claude-client MCP entry in the lockfile is
+  checked against `claude mcp list`. A server in the lockfile but **not
+  registered** in the client causes exit 1 (`upskill update`
+  reconfigures it). A missing `claude` CLI or a failed query is advisory
+  and does **not** cause exit 1.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing
-outputs, stale hashes, orphan entries, or missing plugins). Skipped
-plugins are informational warnings and do not affect the exit code.
-`doctor` never fetches; remote-source drift detection is `update
---dry-run`.
+outputs, stale hashes, orphan entries, missing plugins, or unregistered
+MCP servers). Skipped plugins and unverifiable MCP entries are
+informational warnings and do not affect the exit code. `doctor` never
+fetches; remote-source drift detection is `update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is
 unchanged.
@@ -181,13 +215,20 @@ unchanged.
     { "name": "superpowers", "client": "claude",
       "identifier": "superpowers@anthropics/claude-plugins",
       "bundle": "baseline" }
+  ],
+  "mcp_entries": [
+    { "name": "drawio", "client": "claude", "bundle": "baseline",
+      "status": "not-registered" }
   ]
 }
 ```
 
 `reason` is `"local-path-gone"` or `"item-missing-in-source"`. Hashes
-may be `null` when the SSOT can't be hashed (e.g. unreadable). All five
-arrays are always present, possibly empty.
+may be `null` when the SSOT can't be hashed (e.g. unreadable). MCP
+`status` is one of `"ok"`, `"not-registered"`, `"cli-not-found"`, or
+`{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays
+are always present (possibly empty); `mcp_entries` is omitted when no
+MCP servers are recorded.
 
 ### `upskill search <query>`
 

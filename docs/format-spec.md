@@ -680,7 +680,7 @@ Implementations:
 The optional `mcps` map declares MCP (Model Context Protocol) servers that accompany this
 bundle. Configuring an MCP server requires no content generation — instead, upskill writes the
 server into each targeted client's MCP configuration at install time. See
-[ADR-0010](adr/0010-mcp-config-write.md) for design rationale.
+[ADR-0010](https://github.com/driftsys/upskill/blob/main/docs/adr/0010-mcp-config-write.md) for design rationale.
 
 Each entry in the `mcps` map is keyed by an upskill-level MCP name (used in the lockfile, CLI
 output, and `upskill remove-mcp`). The value carries a transport descriptor and an optional list
