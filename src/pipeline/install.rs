@@ -359,6 +359,10 @@ pub(super) fn install_plugins_from_bundles(
 /// Claude Code (v1's only target client). CLI-first: `claude mcp add`; on
 /// CliNotFound, fall back to writing `.mcp.json`. Warn-skip preserved: a
 /// failure never aborts the overall install.
+///
+/// Covered by the `tests/pipeline_mcp.rs` integration test, which clears
+/// PATH so the config-write fallback runs deterministically into a tempdir
+/// (an in-process unit test cannot safely force the `claude` CLI off PATH).
 pub(super) fn install_mcps_from_bundles(
     bundles: &[crate::model::Bundle],
     scope: crate::plugin::PluginScope,
@@ -563,32 +567,5 @@ mod tests {
         assert!(targets(Client::Claude, Some(&only_claude)));
         assert!(!targets(Client::Copilot, Some(&only_claude)));
         assert!(!targets(Client::OpenCode, Some(&only_claude)));
-    }
-}
-
-#[cfg(test)]
-mod mcp_tests {
-    use crate::plugin::PluginScope;
-
-    #[test]
-    fn install_mcps_records_result_per_server() {
-        let tmp = tempfile::tempdir().unwrap();
-        let yaml = "schema: 1
-name: with-mcp
-description: test
-items:
-  skills: []
-mcps:
-  drawio:
-    remote:
-      type: http
-      url: https://example.com/mcp
-";
-        let bundle: crate::model::Bundle = serde_yaml_ng::from_str(yaml).unwrap();
-        let bundles = vec![bundle];
-        let results = super::install_mcps_from_bundles(&bundles, PluginScope::Project, tmp.path());
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "drawio");
-        assert_eq!(results[0].client, "claude");
     }
 }
