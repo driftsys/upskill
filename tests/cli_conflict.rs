@@ -69,24 +69,6 @@ fn add_from_different_source_succeeds_with_force() {
 fn add_from_same_source_succeeds_without_force() {
     let tmp = TempDir::new().unwrap();
 
-    // Lockfile with source matching what we'll install from (local:source)
-    let lockfile = serde_json::json!({
-        "schema": 1,
-        "items": [{
-            "kind": "skill",
-            "name": "test-skill",
-            "source": "local:./source",
-            "hash": "sha256:aaa"
-        }],
-        "bundles": [],
-        "plugins": []
-    });
-    fs::write(
-        tmp.path().join(".upskill-lock.json"),
-        serde_json::to_string_pretty(&lockfile).unwrap(),
-    )
-    .unwrap();
-
     let skill_dir = tmp.path().join("source/test-skill");
     fs::create_dir_all(&skill_dir).unwrap();
     fs::write(
@@ -97,6 +79,17 @@ fn add_from_same_source_succeeds_without_force() {
 
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
+    // First install records the canonical (absolutized) `local:` source label.
+    Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(tmp.path())
+        .args(["add", "./source"])
+        .assert()
+        .success();
+
+    // Re-adding from the SAME source must succeed without --force: the
+    // recomputed source label matches the recorded one (issue #212 ensures
+    // both spellings canonicalize identically).
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(tmp.path())

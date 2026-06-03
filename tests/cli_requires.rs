@@ -371,3 +371,75 @@ fn removing_requirer_leaves_cross_source_dep_as_doctor_orphan() {
         String::from_utf8_lossy(&out)
     );
 }
+
+#[test]
+fn update_does_not_pull_unrelated_siblings_of_a_cross_source_dependency() {
+    // Regression for #211: a source that only contributes a cross-source
+    // dependency must not have its unrelated siblings installed by `update`.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+
+    // reg-b vends the required `sarif` skill AND an unrelated sibling.
+    let reg_b = tmp.path().join("reg-b");
+    write_item(&reg_b, "SKILL.md", "sarif", "");
+    write_item(&reg_b, "SKILL.md", "unrelated-sibling", "");
+
+    // reg-a's agent requires only `sarif` from reg-b.
+    let reg_a = tmp.path().join("reg-a");
+    write_item(
+        &reg_a,
+        "AGENT.md",
+        "code-review",
+        &format!(
+            "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+            reg_b.display()
+        ),
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+
+    let sibling_out = tmp.path().join(".claude/skills/unrelated-sibling/SKILL.md");
+    assert!(
+        !sibling_out.exists(),
+        "add must not install the unrelated sibling"
+    );
+
+    // The regression is in `update`: it groups by source and previously
+    // reinstalled the WHOLE dependency source, pulling the sibling in.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    assert!(
+        !sibling_out.exists(),
+        "update must not pull the unrelated sibling of a cross-source dependency"
+    );
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap())
+            .unwrap();
+    assert!(
+        !lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["name"] == "unrelated-sibling"),
+        "unrelated sibling must not be recorded after update: {lock}"
+    );
+    // The genuine dependency is still present.
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["name"] == "sarif"),
+        "the cross-source dependency must survive update: {lock}"
+    );
+}

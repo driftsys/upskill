@@ -378,8 +378,31 @@ pub fn update(
                     aliases,
                     excludes: vec![],
                 };
+                // Scope the reinstall to exactly the items this source already
+                // contributes to the lockfile (by their in-source name), rather
+                // than reinstalling every item the source vends. Without this, a
+                // source that only contributed a single cross-source dependency
+                // would pull in all of its unrelated siblings on `update`
+                // (issue #211). An item's cross-source `requires` are still
+                // resolved and refreshed because `install_with_lockfile`
+                // re-expands the closure for each requested item.
+                //
+                // Bundle sources are exempt: a bundle is its own unit and must
+                // be reinstalled as a whole (an empty filter routes it through
+                // the bundle-resolution path), so scoping to item names there
+                // would mis-route a `.bundle.yaml` source into name resolution.
+                let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
+                    || lock.bundles.iter().any(|b| b.source == source_label);
+                let item_filter: Vec<String> = if is_bundle_source {
+                    Vec::new()
+                } else {
+                    source_entries
+                        .iter()
+                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                        .collect()
+                };
                 let install_report =
-                    install_with_lockfile(&source, target, &[], plugin_scope, &options)?;
+                    install_with_lockfile(&source, target, &item_filter, plugin_scope, &options)?;
                 let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
                     std::collections::BTreeMap::new();
                 for it in &install_report.items {
