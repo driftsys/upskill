@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: writing-rules
-description: Use when adding or editing rules in CLAUDE.md, AGENTS.md, or any always-loaded instructions file. Trigger when authoring repo conventions, invariants, or behavioral guardrails. Also trigger when an existing rule is being violated despite being present — that means the rule needs refactoring, not the agent. Do NOT trigger for skill or subagent authoring; see writing-skills and writing-subagents.
+name: upskill-writing-rules
+description: Use when adding or editing rules in CLAUDE.md, AGENTS.md, or any always-loaded instructions file. Trigger when authoring repo conventions, invariants, or behavioral guardrails. Also trigger when an existing rule is being violated despite being present — that means the rule needs refactoring, not the agent. Do NOT trigger for skill or subagent authoring; see writing-skills and upskill-writing-subagents.
 metadata:
   version: 0.1.0
   author: driftsys
@@ -10,7 +10,7 @@ metadata:
 A rule is a line that costs tokens on every turn in exchange for shaping
 behavior across the whole scope. If you cannot justify the per-turn cost,
 it is a skill, not a rule. Confirm the routing decision via
-`prompt-distilling` before continuing here.
+`upskill-prompt-distilling` before continuing here.
 
 ## The Iron Law
 
@@ -51,7 +51,7 @@ Rules need three test scenarios, not one. Run each with a subagent.
    team merges without this check"). Does the agent rationalize?
 
 Document every rationalization verbatim. Those become your counters in
-the GREEN phase. `evaluating-prompts` covers harness construction,
+the GREEN phase. `upskill-evaluating-prompts` covers harness construction,
 pressure typology, and rationalization tracking — activate it before
 running the scenarios.
 
@@ -116,7 +116,7 @@ rule layer.
 ## Composition with other layers
 
 - A rule states an invariant. The skill explaining the procedure that
-  respects that invariant goes alongside it. Pair `writing-rules` work
+  respects that invariant goes alongside it. Pair `upskill-writing-rules` work
   with `superpowers:writing-skills` when both apply.
 - A rule cannot describe live state. If the invariant references "today's
   classification policy" or "the current owner of repo X", the live part

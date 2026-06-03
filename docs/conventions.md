@@ -83,6 +83,19 @@ than scanning it for a bundle.
 ([format-spec §2.2](./format-spec.md#22-bundle-files)) and is indifferent
 to which of these two sub-layouts the registry uses.
 
+## Item naming
+
+Item names are **namespace-prefixed** so they stay globally unique within
+each per-client flat directory (`.claude/skills/<name>/`, `.claude/rules/<name>.md`,
+etc.). Two items with the same `(kind, name)` would otherwise collide on disk
+when co-installed from different sources.
+
+Default to **repo/org scope** (`<org>-<descriptor>`); switch to **bundle
+scope** (`<bundle>-<descriptor>`) when one org ships multiple bundles that
+could reuse generic descriptors. This repo uses the `upskill-` prefix — e.g.
+`upskill-writing-rules`, `upskill-prompt-design`. See the
+`upskill-writing-bundles` skill for the full decision rule.
+
 ## Scaffolding under the convention
 
 ```bash

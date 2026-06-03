@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: writing-subagents
-description: Use when designing a new subagent or modifying an existing one's system prompt, tool surface, or return contract. Trigger when the parent is observed doing work inline that should be delegated, OR when a subagent is observed dumping raw output, OR when subagent scope is drifting. Also trigger when designing managed/project-scoped/user-global subagent tiers with different permission models. Do NOT trigger for skill or rule authoring; see writing-skills and writing-rules.
+name: upskill-writing-subagents
+description: Use when designing a new subagent or modifying an existing one's system prompt, tool surface, or return contract. Trigger when the parent is observed doing work inline that should be delegated, OR when a subagent is observed dumping raw output, OR when subagent scope is drifting. Also trigger when designing managed/project-scoped/user-global subagent tiers with different permission models. Do NOT trigger for skill or rule authoring; see writing-skills and upskill-writing-rules.
 metadata:
   version: 0.1.0
   author: driftsys
@@ -11,7 +11,7 @@ A subagent earns its overhead only if it (a) does bounded work and
 (b) returns a digest small enough that the parent's context is cleaner
 than if the parent had done the work inline. If either fails, you have
 a tool call dressed up as a subagent. Confirm the routing decision via
-`prompt-distilling` before continuing here.
+`upskill-prompt-distilling` before continuing here.
 
 ## The two interfaces
 
@@ -20,7 +20,9 @@ must be tested.
 
 1. **Invocation interface** — the name, description, and tool
    advertisement that the parent sees. This determines whether the
-   parent decides to call the subagent.
+   parent decides to call the subagent. Namespace-prefix the name so it
+   does not collide in the flat per-client agents directory (see
+   `upskill-writing-bundles` → "Choosing the namespace prefix").
 2. **Return interface** — what the subagent emits when it finishes.
    This determines whether the parent's context stays clean after
    invocation.
@@ -158,7 +160,7 @@ The three tiers each carry additional design requirements:
 ## Composition with other layers
 
 - A subagent often loads skills inside its own context. Pair
-  `writing-subagents` work with `superpowers:writing-skills` when the
+  `upskill-writing-subagents` work with `superpowers:writing-skills` when the
   subagent has a non-trivial procedure.
 - A subagent that needs live data uses MCP tools — those go through
   the MCP server authoring process, not here.

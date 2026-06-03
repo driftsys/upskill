@@ -1,6 +1,6 @@
 ---
 schema: 1
-name: writing-skill-bundles
+name: upskill-writing-bundles
 description: Use when authoring or editing upskill .bundle.yaml manifests — declaring items, plugins, requires dependencies, naming conventions, or troubleshooting bundle resolution errors. Also use when adding plugin install declarations for client CLIs (Claude Code, Copilot, VS Code, opencode).
 metadata:
   version: 0.1.0
@@ -23,9 +23,9 @@ dependencies.
 ## When NOT to Use
 
 - Authoring individual skill content → `writing-skills`
-- Authoring rules → `writing-rules`
-- Authoring subagents → `writing-subagents`
-- Lifecycle operations (add/update/remove) → `using-upskill`
+- Authoring rules → `upskill-writing-rules`
+- Authoring subagents → `upskill-writing-subagents`
+- Lifecycle operations (add/update/remove) → `upskill-using`
 
 ## Bundle YAML Schema
 
@@ -82,7 +82,32 @@ metadata: # optional — freeform
 
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
 don't have a skill directory also called `prompt-engineering/`. Use a
-distinct name for one of them (e.g., rename the skill to `prompt-design`).
+distinct name for one of them (e.g., rename the skill to `upskill-prompt-design`).
+
+### Choosing the namespace prefix
+
+Every item name (skill, rule, agent) shares one flat per-client directory
+per kind, so two items with the same `(kind, name)` collide on disk when
+co-installed from different sources. Prefix every item name with a
+**namespace** to keep it globally unique. Pick the scope by how the content
+is distributed:
+
+| Scope        | Prefix form             | Use when                                                                                                                                                      |
+| ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Repo/org** | `<org>-<descriptor>`    | The repo ships one cohesive suite of first-party content. Shortest; reads as provenance.                                                                      |
+| **Bundle**   | `<bundle>-<descriptor>` | One repo/org ships **multiple** bundles that could reuse generic descriptors (`using`, `evaluating`). The bundle is the collision unit — strongest guarantee. |
+
+Rules of thumb:
+
+- **Default to repo/org scope** — it is shorter and signals who ships the
+  content. This repo uses the `upskill-` prefix (e.g. `upskill-writing-rules`).
+- The namespace token SHOULD be short (≤ 10 characters) and stable. Prefer the
+  project name over a long topic name (`upskill-`, not `prompt-engineering-`).
+- Co-located entrypoints keep one prefixed base name and differ only by kind
+  (`upskill-writing-rules` skill + rule) — the resolver allows same `name`
+  across different kinds.
+- Pre-1.0, if a second bundle later collides on a descriptor, just rename one.
+  No migration path needed.
 
 ## Plugin Declarations
 
