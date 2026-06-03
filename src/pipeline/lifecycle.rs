@@ -15,9 +15,9 @@ use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
 use super::{
     ALL_CLIENTS, AddOptions, DoctorReport, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, RemoveFilter, RemoveReport,
-    RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem,
-    hash_item_dir, install_with_lockfile,
+    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, OrphanedDependency, RemoveFilter,
+    RemoveReport, RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus,
+    UpdatedItem, hash_item_dir, install_with_lockfile,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -32,7 +32,7 @@ use super::{
 pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
 
-    let to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
+    let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
         RemoveFilter::ByNames(names) => lock
             .items
             .iter()
@@ -57,6 +57,27 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
             .collect();
         if !unknown.is_empty() {
             anyhow::bail!("not in lockfile: {}", unknown.join(", "));
+        }
+    }
+
+    // Co-location coupling (§2.1, Task 6): removing any named member of a
+    // `(source, group)` unit removes every other member, even when their
+    // effective names diverge. Expand AFTER the unknown-name check so a
+    // name absent from the lockfile still errors rather than being masked.
+    if let RemoveFilter::ByNames(_) = &filter {
+        let groups: std::collections::BTreeSet<(String, String)> = to_remove
+            .iter()
+            .filter_map(|i| i.group.clone().map(|g| (i.source.clone(), g)))
+            .collect();
+        for it in &lock.items {
+            if let Some(g) = &it.group
+                && groups.contains(&(it.source.clone(), g.clone()))
+                && !to_remove
+                    .iter()
+                    .any(|r| r.kind == it.kind && r.name == it.name)
+            {
+                to_remove.push(it.clone());
+            }
         }
     }
 
@@ -189,6 +210,28 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --dry-run`.
+    }
+
+    // -- Orphaned dependencies (advisory, issue #196) --
+    // An item pulled in only as a dependency (`required_by` non-empty) whose
+    // every recorded requirer is no longer installed. Surfaced as advisory
+    // only — upskill never auto-removes; the user decides.
+    let installed: std::collections::BTreeSet<String> = lock
+        .items
+        .iter()
+        .map(|i| format!("{}:{}", i.kind, i.name))
+        .collect();
+    for entry in &lock.items {
+        if entry.required_by.is_empty() {
+            continue;
+        }
+        if entry.required_by.iter().all(|r| !installed.contains(r)) {
+            report.orphaned_dependencies.push(OrphanedDependency {
+                kind: entry.kind,
+                name: entry.name.clone(),
+                former_requirers: entry.required_by.clone(),
+            });
+        }
     }
 
     // -- Plugin reconciliation (ADR-0008 / issue #151) --

@@ -34,7 +34,8 @@ fn assert_byte_equal(actual: &str, expected: &str, label: &str) {
 #[test]
 fn create_api_endpoint_claude() {
     let (skill, body) = load_skill("create-api-endpoint");
-    let actual = render_skill(&skill, &body, Client::Claude).expect("render");
+    let actual =
+        render_skill(&skill, "create-api-endpoint", &body, Client::Claude).expect("render");
     let expected = load_expected("claude", "create-api-endpoint");
     assert_byte_equal(&actual, &expected, "claude/create-api-endpoint");
 }
@@ -42,7 +43,8 @@ fn create_api_endpoint_claude() {
 #[test]
 fn create_api_endpoint_copilot() {
     let (skill, body) = load_skill("create-api-endpoint");
-    let actual = render_skill(&skill, &body, Client::Copilot).expect("render");
+    let actual =
+        render_skill(&skill, "create-api-endpoint", &body, Client::Copilot).expect("render");
     let expected = load_expected("copilot", "create-api-endpoint");
     assert_byte_equal(&actual, &expected, "copilot/create-api-endpoint");
 }
@@ -50,7 +52,8 @@ fn create_api_endpoint_copilot() {
 #[test]
 fn create_api_endpoint_opencode() {
     let (skill, body) = load_skill("create-api-endpoint");
-    let actual = render_skill(&skill, &body, Client::OpenCode).expect("render");
+    let actual =
+        render_skill(&skill, "create-api-endpoint", &body, Client::OpenCode).expect("render");
     let expected = load_expected("opencode", "create-api-endpoint");
     assert_byte_equal(&actual, &expected, "opencode/create-api-endpoint");
 }

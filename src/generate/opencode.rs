@@ -7,8 +7,8 @@ use serde_yaml_ng::{Mapping, Value};
 /// Skill frontmatter per §7.3. opencode walks `.agents/skills/` natively;
 /// for the rendering layer we still produce the canonical content with
 /// the `opencode.*` passthrough merged.
-pub fn skill_frontmatter(skill: &Skill) -> Result<String> {
-    super::build_skill_frontmatter(skill, skill.opencode.as_ref())
+pub fn skill_frontmatter(skill: &Skill, name: &str) -> Result<String> {
+    super::build_skill_frontmatter(skill, name, skill.opencode.as_ref())
 }
 
 /// Rule frontmatter per §7.3 / ADR-0003. opencode rules are referenced
@@ -19,9 +19,9 @@ pub fn skill_frontmatter(skill: &Skill) -> Result<String> {
 /// a string. The install layer (Phase 3) decides whether to write it or
 /// just register the SSOT path. `scope.paths` is silently dropped per
 /// spec §3.2 (opencode does not support per-rule path-scoping).
-pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
+pub fn rule_frontmatter(rule: &Rule, name: &str) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(rule.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(rule.description.clone()),
@@ -43,9 +43,9 @@ pub fn rule_frontmatter(rule: &Rule) -> Result<String> {
 /// originally suggested filename-only; opencode tolerates the redundant
 /// field. `preload-skills` has no opencode equivalent and is dropped.
 /// `mode` defaults to `subagent` per spec §3.4 when absent.
-pub fn agent_frontmatter(agent: &Agent) -> Result<String> {
+pub fn agent_frontmatter(agent: &Agent, name: &str) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(agent.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(agent.description.clone()),

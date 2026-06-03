@@ -31,6 +31,7 @@ use crate::source::InstallSource;
 mod discovery;
 mod git;
 mod hash;
+mod ignore;
 mod install;
 mod lifecycle;
 mod output;
@@ -40,7 +41,9 @@ use discovery::scan_source_items;
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
-use install::{install_plugins_from_bundles, install_with_name_resolution_from_local};
+use install::{
+    install_plugins_from_bundles, install_with_name_resolution_from_local, resolve_requires_closure,
+};
 pub use lifecycle::{doctor, list, remove, update};
 pub use report::*;
 
@@ -188,9 +191,69 @@ pub fn install_with_lockfile(
         }
     }
 
+    // -- Same-source `requires` closure --
+    // The directly-requested item set, keyed on effective names from
+    // `scan_source_items` and respecting the `items` filter and excludes.
+    // Bundle-file sources resolve their own items, so the item-level
+    // closure is skipped for them.
+    let requested: Vec<(ItemKind, String)> = {
+        let mut seen = std::collections::BTreeSet::new();
+        scanned_items
+            .iter()
+            .filter(|(_, n)| !options.excludes.contains(n))
+            .filter(|(_, n)| items.is_empty() || items.contains(n))
+            .filter(|(kind, name)| seen.insert((*kind, name.clone())))
+            .map(|(kind, name)| (*kind, name.clone()))
+            .collect()
+    };
+    // Defer to `install_with_name_resolution_from_local` (closure skipped)
+    // when positional names are given that the item closure cannot serve:
+    // a name referencing a bundle by name inside a directory source (the
+    // name-resolution branch detects item/bundle ambiguity and resolves
+    // bundles), or a name matching nothing (so that branch emits its
+    // "no matching items or bundles" error rather than silently installing
+    // zero items). Bundle-file sources own their own resolution too.
+    let defer_to_name_resolution = !items.is_empty()
+        && !discovery::is_bundle_file(&local_source)
+        && (requested.is_empty()
+            || items
+                .iter()
+                .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
+    let closure = if discovery::is_bundle_file(&local_source) || defer_to_name_resolution {
+        None
+    } else {
+        Some(resolve_requires_closure(&local_source, &requested)?)
+    };
+
     // -- Conflict detection (before any files are written) --
+    // When a closure is present, conflict detection runs over the closure's
+    // full item set so a pulled dependency that collides with an existing
+    // different-source install is caught. Directly-named items still honor
+    // `--as` aliasing; pulled dependencies are never aliased.
     let mut lock = crate::lockfile::Lockfile::load(target)?;
-    let incoming: Vec<(ItemKind, String)> = {
+    let incoming: Vec<(ItemKind, String)> = if let Some(closure) = &closure {
+        let mut seen = std::collections::BTreeSet::new();
+        let mut out = Vec::new();
+        for kind in [ItemKind::Rule, ItemKind::Skill, ItemKind::Agent] {
+            let names = match kind {
+                ItemKind::Rule => &closure.items.rules,
+                ItemKind::Skill => &closure.items.skills,
+                ItemKind::Agent => &closure.items.agents,
+            };
+            for name in names {
+                let effective_name = options
+                    .aliases
+                    .iter()
+                    .find(|(from, _)| from.is_empty() || *from == *name)
+                    .map(|(_, to)| to.clone())
+                    .unwrap_or_else(|| name.clone());
+                if seen.insert((kind, effective_name.clone())) {
+                    out.push((kind, effective_name));
+                }
+            }
+        }
+        out
+    } else {
         let mut seen = std::collections::BTreeSet::new();
         scanned_items
             .iter()
@@ -217,7 +280,12 @@ pub fn install_with_lockfile(
     }
 
     // -- Now proceed with generation (files are written here) --
-    let mut report = if items.is_empty() {
+    // With a closure, install exactly its resolved item set (requested
+    // items plus same-source dependencies). Without one (bundle file),
+    // keep the existing dispatch so the bundle branch runs.
+    let mut report = if let Some(closure) = &closure {
+        install_from_local_path(&local_source, target, Some(&closure.items))?
+    } else if items.is_empty() {
         install_from_local_path(&local_source, target, None)?
     } else {
         install_with_name_resolution_from_local(&local_source, target, items)?
@@ -281,9 +349,22 @@ pub fn install_with_lockfile(
         .iter()
         .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
         .collect();
-    let new_items = crate::lockfile::items_from_report(&report, &label, git_ref, |k, n| {
-        hashes.get(&(k, n.to_string())).cloned().flatten()
-    });
+    let provenance: std::collections::BTreeMap<(ItemKind, String), Vec<String>> =
+        if let Some(closure) = &closure {
+            closure
+                .required_by
+                .iter()
+                .map(|(key, requirers)| {
+                    (key.clone(), requirers.iter().cloned().collect::<Vec<_>>())
+                })
+                .collect()
+        } else {
+            std::collections::BTreeMap::new()
+        };
+    let new_items =
+        crate::lockfile::items_from_report(&report, &label, git_ref, &provenance, |k, n| {
+            hashes.get(&(k, n.to_string())).cloned().flatten()
+        });
 
     for mut item in new_items {
         if let Some(original) = aliased_names.get(&item.name) {

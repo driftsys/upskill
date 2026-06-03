@@ -849,7 +849,34 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
+    print_doctor_orphaned_dependencies(report);
     print_doctor_skipped_plugins(report);
+}
+
+fn print_doctor_orphaned_dependencies(report: &DoctorReport) {
+    if report.orphaned_dependencies.is_empty() {
+        return;
+    }
+    println!(
+        "{} {} orphaned dependency(ies) — every item that required them is no longer installed",
+        style::warn("doctor:"),
+        report.orphaned_dependencies.len()
+    );
+    for d in &report.orphaned_dependencies {
+        println!(
+            "  orphaned dependency: {} {} (was required by {}, now absent)",
+            style::dim(kind_label(d.kind)),
+            style::name(&d.name),
+            d.former_requirers.join(", "),
+        );
+        println!(
+            "    {}",
+            style::dim(&format!(
+                "remove with `upskill remove {}` if no longer needed",
+                d.name
+            ))
+        );
+    }
 }
 
 fn print_doctor_skipped_plugins(report: &DoctorReport) {

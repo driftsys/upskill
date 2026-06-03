@@ -7,7 +7,10 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Skill {
     pub schema: SchemaVersion,
-    pub name: String,
+    /// Effective name resolution is layout-dependent (§2.1): absent means
+    /// the directory name is used. Resolved by the pipeline/lint layer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     pub description: String,
 
     /// §3.1: top-level audience targeting. When present, generation only
@@ -18,6 +21,13 @@ pub struct Skill {
     pub license: Option<License>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
+
+    /// §3.7 directed dependencies. SSOT-only — stripped from output.
+    #[serde(default, skip_serializing_if = "crate::model::ItemRequires::is_empty")]
+    pub requires: crate::model::ItemRequires,
+    /// §2.4 subtractive copy-scope patterns. SSOT-only — stripped from output.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ignore: Vec<String>,
 
     /// §3.5 client-specific passthrough block.
     #[serde(default, skip_serializing_if = "Option::is_none")]

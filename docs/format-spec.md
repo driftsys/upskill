@@ -93,23 +93,34 @@ entrypoint filename:
 ├── <name-c>/
 │   └── AGENT.md
 └── <name-d>/                # optional co-location: multiple kinds in one item directory
-    ├── SKILL.md             # name: <name-d>
-    └── AGENT.md             # name: <name-d>
+    ├── SKILL.md             # name omitted or name: <name-d> (skill must match the directory)
+    └── RULE.md              # name: <name-d> or a divergent name (rule/agent name MAY differ)
 ```
 
 Constraints:
 
 - An item directory MUST contain at least one entrypoint file (`RULE.md`, `SKILL.md`, or
   `AGENT.md`).
-- An item directory MAY contain more than one entrypoint when the entrypoints share a name and
-  represent a tightly-coupled set of kinds for one capability (for example, a skill paired
-  with its enforcing rule, or an agent paired with a skill it preloads). When multiple
-  entrypoints are present, every entrypoint's `name:` field MUST equal the directory name.
-  Co-location is optional; solo-kind item directories are the common case.
-- `<name>` MUST match the `name` field in every entrypoint within the directory.
-- `<name>` MUST consist of lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`).
-- `<name>` MUST NOT start or end with a hyphen.
-- `<name>` MUST be at most 64 characters.
+- An item directory MAY contain more than one entrypoint when the kinds represent a
+  tightly-coupled set for one capability (for example, a skill paired with its enforcing rule,
+  or an agent paired with a skill it preloads). Co-location is optional; solo-kind item
+  directories are the common case. Co-location expresses a _symmetric, inseparable_ unit; a
+  _directed_ "A needs B" relationship is expressed with `requires` (§3.7) instead. See
+  [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
+- **Effective name and relaxed naming.** Each entrypoint resolves to an **effective name**:
+  - A **skill** `name:` is optional. When present it MUST equal the directory name (the Agent
+    Skills standard mandate). When absent, the skill's effective name is the directory name.
+  - A **rule** or **agent** `name:` comes from frontmatter and MAY differ from the directory
+    name. When absent, the effective name is the directory name. A divergent rule/agent name is
+    legal and is not a diagnostic.
+- **Identity is `(kind, effective-name)`** — layout-independent, never a path. A directory MAY
+  hold independently-named kinds (for example, a skill named after the directory alongside a
+  rule whose name diverges). The directory name is the **co-location grouping key** and the
+  fallback default for any entrypoint that omits `name:`.
+- The **effective name** MUST consist of lowercase letters (`a-z`), digits (`0-9`), and hyphens
+  (`-`).
+- The **effective name** MUST NOT start or end with a hyphen.
+- The **effective name** MUST be at most 64 characters.
 - Kind is determined by the entrypoint filename: `RULE.md` for a rule, `SKILL.md` for a skill,
   `AGENT.md` for an agent. Implementations MUST NOT infer kind from any other source (parent
   directory name, frontmatter field, etc.).
@@ -206,6 +217,10 @@ Items MAY contain supporting files in their directory:
 - Supporting files are referenced from the entrypoint body using standard markdown relative links.
 - Implementations MUST preserve supporting files and their directory structure during generation
   (copy them alongside the generated entrypoint into the client-expected location).
+- An item MAY declare an `ignore` list (§3.1) to scope which supporting files are copied. The
+  list is `.gitignore`-style and **subtractive only** — there is no `include`/allowlist form. A
+  file matching any `ignore` pattern is not copied into the client-expected location. `ignore`
+  is author-declared and is stripped from generated output.
 - When an item directory holds multiple kinds (§2.1), supporting resources are shared: any
   entrypoint in the directory MAY reference them via relative links, and implementations MUST
   copy them alongside each generated entrypoint that references them.
@@ -224,11 +239,13 @@ Item entrypoint files (RULE.md, SKILL.md, AGENT.md) begin with YAML frontmatter 
 | Field         | Type     | Required | Description                                                                                                                                                          |
 | ------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                |
-| `name`        | string   | YES      | Stable identifier. See §2.1 for format constraints.                                                                                                                  |
+| `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                               |
 | `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                      |
 | `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                           |
 | `audience`    | string[] | no       | Target clients (`claude`, `copilot`, `opencode`). When present, implementations MUST generate output only for listed clients. When absent, all clients are targeted. |
 | `metadata`    | map      | no       | Free-form governance block. See §3.6.                                                                                                                                |
+| `requires`    | map      | no       | Directed item dependencies (rules/skills/agents). See §3.7. Stripped from output.                                                                                    |
+| `ignore`      | string[] | no       | `.gitignore`-style subtractive copy-scope (§2.4). Stripped from output.                                                                                              |
 
 Example:
 
@@ -248,8 +265,9 @@ Field semantics:
 
 - `schema`: implementations MUST reject files with `schema` greater than the highest version they
   support and SHOULD report a clear upgrade message. See §8 for evolution rules.
-- `name`: used as the `/slash-command` name in clients that support it, as the directory name, and
-  as the identifier in bundle manifests.
+- `name`: the effective name (§2.1) is used as the `/slash-command` name in clients that support it
+  and as the identifier in bundle manifests. When `name` is omitted on an item, the directory name
+  is the effective name; a rule or agent `name` MAY differ from its directory.
 - `description`: for skills, this is the activation hint — the model reads it during discovery and
   decides whether to load the full body. For rules and agents, it serves as documentation. Front-load
   the key use case. Convention: start with "Use when…" for skills and agents.
@@ -261,6 +279,13 @@ Field semantics:
   to scope body content within an emitted item, and passthrough blocks to add client-specific
   frontmatter to an emitted item.
 - `metadata`: see §3.6. Implementations MUST preserve unknown keys within `metadata`.
+- `requires`: directed prerequisite items. Each `requires.<kind>` entry is either a bare name
+  (same source, resolved by `(kind, name)`) or a `{ name, source }` map for a cross-source
+  dependency, where `source` reuses the `upskill add` source DSL. See §3.7 for resolution,
+  cycle, and conflict rules.
+- `ignore`: `.gitignore`-style subtractive copy-scope (§2.4). Both `requires` and `ignore` are
+  SSOT-only authoring fields and are stripped from every client output (the same treatment as
+  `schema`, `metadata`, and `license`).
 
 ### 3.2 Rule-specific fields
 
@@ -334,8 +359,16 @@ intent explicit.
 
 **`preload-skills` is Claude-Code-primary.** Claude Code emits this list as `skills:` in agent
 frontmatter so the named skills are loaded at agent startup. GitHub Copilot and opencode have no
-equivalent and ignore the field. Implementations MUST emit `skills:` for Claude Code; they MUST
-NOT emit a corresponding field for clients without an equivalent.
+equivalent frontmatter field. Implementations MUST emit `skills:` for Claude Code; for GitHub
+Copilot and opencode, implementations SHOULD render the preloaded skills as a prose `## Skills`
+section appended to the agent body (no frontmatter field), so the agent is informed which skills it
+relies on.
+
+**`preload-skills` implies `requires.skills` (soft).** Listing a skill in `preload-skills` implies
+`requires.skills` for skills **present in the same source**: those skills are auto-installed
+alongside the agent. A preloaded skill absent from the same source is treated as a runtime hint
+and is neither auto-installed nor an error (this differs from an explicit `requires` entry, which
+errors when missing).
 
 **`model` aliases.** This specification guarantees the following short aliases:
 
@@ -358,11 +391,13 @@ generation rules (capability dropped with a warning when the target client has n
 Implementations map these fields to each client's agent definition format:
 
 - Claude Code: `.claude/agents/<name>.md` with `tools:` as capitalized names, `model:` as literal,
-  `skills:` from `preload-skills`.
+  `skills:` from `preload-skills`. `mode` is implicit by file location and not emitted.
 - GitHub Copilot: `.github/agents/<name>.agent.md` with `tools:` filtered per §4 mapping; `mode`
-  and `preload-skills` omitted.
+  omitted; `preload-skills` rendered as a prose `## Skills` section in the body (no frontmatter
+  field).
 - opencode: `.opencode/agents/<name>.md` with `mode:`, `permission:` map (per §7.3), and
-  passthrough fields. `preload-skills` omitted.
+  passthrough fields; `preload-skills` rendered as a prose `## Skills` section in the body (no
+  frontmatter field).
 
 ### 3.5 Client-specific passthrough blocks
 
@@ -639,6 +674,27 @@ Implementations:
 - MUST use warn-skip when the target client CLI is not found (`ErrorKind::NotFound`).
 - MUST NOT fail the entire bundle install when a single plugin install fails or is skipped.
 
+#### Item `requires` resolution
+
+Items (rules, skills, agents) MAY declare directed dependencies in their `requires` field
+(§3.1). This is distinct from bundle `requires`, which links bundles: item `requires` links
+individual items. See [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
+
+Implementations:
+
+- MUST install an item's transitive `requires` closure: installing an item implies installing
+  every item reachable through `requires`.
+- MUST resolve each `requires.<kind>` entry by `(kind, name)`.
+- MUST reject circular item `requires` chains as errors.
+- MUST report the same `(kind, name)` resolving to a different source or ref as an error (the
+  same rule already stated above for bundle item-level conflicts).
+
+Each `requires.<kind>` entry is a bare name (same source) or a `{ name, source }` map
+(cross-source), where `source` reuses the `upskill add` source DSL. Same-source resolution
+(bare-name entries against the entry item's own already-fetched source) is implemented in the
+initial release; cross-source resolution (`{ name, source }` entries) is specified here but
+lands in a later release.
+
 ### 3.8 Frontmatter canonicalisation
 
 An implementation MAY provide a formatting command (e.g., `upskill fmt`) that canonicalises SSOT
@@ -648,12 +704,12 @@ reducing merge conflicts.
 **Canonical key order.** When canonicalising frontmatter, implementations MUST emit keys in the
 following order (unlisted keys appear at the end in their original relative order):
 
-| Kind   | Key order                                                                                                                                                 |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `claude`, `copilot`, `opencode`, `extras`                                    |
-| Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `claude`, `copilot`, `opencode`, `extras`                  |
-| Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `claude`, `copilot`, `opencode`, `extras` |
-| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `metadata`, `extras`                                                          |
+| Kind   | Key order                                                                                                                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
+| Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
+| Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
+| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `metadata`, `extras`                                                                                |
 
 **Comment preservation.** Canonicalisation:
 
@@ -985,8 +1041,12 @@ The following topics are explicitly deferred and tracked for future specificatio
    (replacing only a specific heading's content) rather than full-body replacement.
 6. **Skill activation control**: whether `disable-model-invocation` and `user-invocable` from
    the Agent Skills standard should be surfaced as neutral fields or remain client passthroughs.
-7. **Multi-repo item sources**: whether the specification should define a source-resolution
-   protocol or leave it entirely to implementations.
+7. **Multi-repo item sources** (RESOLVED): the item `requires` field with a `{ name, source }`
+   locator (§3.7) defines the cross-source resolution contract — `source` reuses the `upskill
+   add` source DSL, conflicts reuse the same-name-different-source rule, and cycles are keyed by
+   `(canonical-source-label, kind, name)`. Same-source resolution is implemented; cross-source
+   resolution is staged to a later release. See
+   [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
 8. **Content hashing**: whether items should carry a content hash for integrity verification
    during distribution, independent of `metadata.version`.
 

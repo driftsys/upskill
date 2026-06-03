@@ -56,6 +56,16 @@ pub struct LockedItem {
     /// SSOT name. Used by `update` to locate the correct source file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_name: Option<String>,
+    /// `"kind:name"` of every installed item that pulled this one in as a
+    /// dependency. Empty for directly-requested items. Drives `doctor`'s
+    /// orphaned-dependency check; never triggers auto-removal (#196).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_by: Vec<String>,
+    /// Source folder this item was discovered in — the co-location
+    /// grouping key (§2.1). `remove <name>` removes every item sharing the
+    /// same `(source, group)` so a co-located unit travels as one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 /// Bundle entry recorded when an install resolves a `.bundle.yaml` file
@@ -242,6 +252,7 @@ pub fn items_from_report(
     report: &InstallReport,
     source_label: &str,
     git_ref: Option<&str>,
+    required_by: &std::collections::BTreeMap<(ItemKind, String), Vec<String>>,
     mut hash_for: impl FnMut(ItemKind, &str) -> Option<String>,
 ) -> Vec<LockedItem> {
     use std::collections::BTreeSet;
@@ -258,6 +269,11 @@ pub fn items_from_report(
             git_ref: git_ref.map(str::to_string),
             hash: hash_for(entry.kind, &entry.name),
             source_name: None,
+            required_by: required_by
+                .get(&(entry.kind, entry.name.clone()))
+                .cloned()
+                .unwrap_or_default(),
+            group: entry.group.clone(),
         });
     }
     out
@@ -278,6 +294,8 @@ mod tests {
             git_ref: Some("v1.0.0".to_string()),
             hash: Some("sha256:deadbeef".to_string()),
             source_name: None,
+            required_by: vec![],
+            group: None,
         }
     }
 
@@ -396,6 +414,7 @@ mod tests {
                     client: Client::Claude,
                     output_path: PathBuf::from(".claude/skills/code-review/SKILL.md"),
                     source_hash: Some("sha256:abc".into()),
+                    group: Some("code-review".into()),
                 },
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -403,6 +422,7 @@ mod tests {
                     client: Client::Copilot,
                     output_path: PathBuf::from(".github/skills/code-review/SKILL.md"),
                     source_hash: Some("sha256:abc".into()),
+                    group: Some("code-review".into()),
                 },
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -410,18 +430,25 @@ mod tests {
                     client: Client::OpenCode,
                     output_path: PathBuf::from(".agents/skills/code-review/SKILL.md"),
                     source_hash: Some("sha256:abc".into()),
+                    group: Some("code-review".into()),
                 },
             ],
         };
 
-        let items = items_from_report(&report, "local:./src", None, |_, _| {
-            Some("sha256:abc".into())
-        });
+        let items = items_from_report(
+            &report,
+            "local:./src",
+            None,
+            &std::collections::BTreeMap::new(),
+            |_, _| Some("sha256:abc".into()),
+        );
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].kind, ItemKind::Skill);
         assert_eq!(items[0].name, "code-review");
         assert_eq!(items[0].source, "local:./src");
         assert_eq!(items[0].hash, Some("sha256:abc".into()));
+        // The co-location group flows through from the report entry.
+        assert_eq!(items[0].group, Some("code-review".into()));
     }
 
     #[test]
@@ -563,6 +590,8 @@ mod tests {
             git_ref: None,
             hash: None,
             source_name: Some("brainstorming".to_string()),
+            required_by: vec![],
+            group: None,
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(json.contains("\"source_name\":\"brainstorming\""), "{json}");
@@ -577,6 +606,8 @@ mod tests {
             git_ref: None,
             hash: None,
             source_name: None,
+            required_by: vec![],
+            group: None,
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(!json.contains("source_name"), "{json}");

@@ -129,7 +129,7 @@ mod tests {
         );
         let (skill, body) = parse::<Skill>(input).unwrap();
         assert_eq!(skill.schema.get(), 1);
-        assert_eq!(skill.name, "create-api-endpoint");
+        assert_eq!(skill.name.as_deref(), Some("create-api-endpoint"));
         assert_eq!(skill.license, Some(License("proprietary".into())));
         assert_eq!(body, "body\n");
         let metadata = skill.metadata.as_ref().unwrap();
@@ -159,7 +159,7 @@ mod tests {
             "body\n",
         );
         let (rule, _body) = parse::<Rule>(input).unwrap();
-        assert_eq!(rule.name, "api-conventions");
+        assert_eq!(rule.name.as_deref(), Some("api-conventions"));
         let scope = rule.scope.as_ref().unwrap();
         assert_eq!(scope.paths, vec!["src/api/**/*.ts", "src/handlers/**/*.ts"]);
         assert!(rule.copilot.is_some(), "copilot passthrough must be parsed");
@@ -197,7 +197,7 @@ mod tests {
             "body\n",
         );
         let (agent, _body) = parse::<Agent>(input).unwrap();
-        assert_eq!(agent.name, "security-reviewer");
+        assert_eq!(agent.name.as_deref(), Some("security-reviewer"));
         assert_eq!(agent.mode, Some(Mode::Subagent));
         assert_eq!(agent.model.as_deref(), Some("sonnet"));
         assert_eq!(
@@ -233,6 +233,31 @@ mod tests {
         assert_eq!(metadata.version.as_deref(), Some("1.0.0"));
         assert!(metadata.extra.contains_key("custom-key"));
         assert!(metadata.extra.contains_key("team"));
+        round_trip(&skill);
+    }
+
+    #[test]
+    fn requires_and_ignore_parse_into_typed_fields_not_extra() {
+        let input = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: code-review\n",
+            "description: Use when reviewing changes\n",
+            "requires:\n",
+            "  skills:\n",
+            "    - sarif-formatting\n",
+            "ignore:\n",
+            "  - \"scripts/**\"\n",
+            "---\n",
+            "body\n",
+        );
+        let (skill, _) = parse::<Skill>(input).unwrap();
+        assert_eq!(skill.requires.skills[0].name(), "sarif-formatting");
+        assert_eq!(skill.ignore, vec!["scripts/**".to_string()]);
+        // Typed fields must NOT leak into the pass-through map (which
+        // skills emit verbatim into output).
+        assert!(!skill.extra.contains_key("requires"));
+        assert!(!skill.extra.contains_key("ignore"));
         round_trip(&skill);
     }
 

@@ -48,12 +48,12 @@ impl std::str::FromStr for Client {
 /// Process directives in `body` for `client`, generate client-specific
 /// frontmatter from `skill`, concatenate, and run the result through the
 /// dprint formatter for §7.5 idempotence.
-pub fn render_skill(skill: &Skill, body: &str, client: Client) -> Result<String> {
+pub fn render_skill(skill: &Skill, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
     let frontmatter = match client {
-        Client::Claude => claude::skill_frontmatter(skill)?,
-        Client::Copilot => copilot::skill_frontmatter(skill)?,
-        Client::OpenCode => opencode::skill_frontmatter(skill)?,
+        Client::Claude => claude::skill_frontmatter(skill, name)?,
+        Client::Copilot => copilot::skill_frontmatter(skill, name)?,
+        Client::OpenCode => opencode::skill_frontmatter(skill, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
@@ -68,12 +68,12 @@ pub fn render_skill(skill: &Skill, body: &str, client: Client) -> Result<String>
 ///   path-scoping per spec §3.2). The renderer still produces a string
 ///   for API symmetry; the install layer (Phase 3) decides whether to
 ///   write it or just register the SSOT path in `opencode.json`.
-pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
+pub fn render_rule(rule: &Rule, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
     let frontmatter = match client {
-        Client::Claude => claude::rule_frontmatter(rule)?,
-        Client::Copilot => copilot::rule_frontmatter(rule)?,
-        Client::OpenCode => opencode::rule_frontmatter(rule)?,
+        Client::Claude => claude::rule_frontmatter(rule, name)?,
+        Client::Copilot => copilot::rule_frontmatter(rule, name)?,
+        Client::OpenCode => opencode::rule_frontmatter(rule, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
@@ -87,19 +87,47 @@ pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
 ///   file location and not emitted.
 /// - Copilot: `name`, `description`, `model`, `tools` (per §4 mapping
 ///   where defined, else passthrough). `mode` not emitted.
-///   `preload-skills` dropped (no equivalent).
+///   `preload-skills` rendered as a prose `## Skills` section in the body.
 /// - opencode: `description`, `mode` (defaults to `subagent`), `model`,
 ///   `tools` (lowercase). `name` is in filename per Appendix B and not
-///   emitted. `preload-skills` dropped (no equivalent).
-pub fn render_agent(agent: &Agent, body: &str, client: Client) -> Result<String> {
+///   emitted. `preload-skills` rendered as a prose `## Skills` section in
+///   the body.
+pub fn render_agent(agent: &Agent, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
+    let processed_body = match client {
+        Client::Claude => processed_body,
+        Client::Copilot | Client::OpenCode => {
+            append_preload_skills_section(&processed_body, &agent.preload_skills)
+        }
+    };
     let frontmatter = match client {
-        Client::Claude => claude::agent_frontmatter(agent)?,
-        Client::Copilot => copilot::agent_frontmatter(agent)?,
-        Client::OpenCode => opencode::agent_frontmatter(agent)?,
+        Client::Claude => claude::agent_frontmatter(agent, name)?,
+        Client::Copilot => copilot::agent_frontmatter(agent, name)?,
+        Client::OpenCode => opencode::agent_frontmatter(agent, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
+}
+
+/// For clients without a native skill-preload mechanism (Copilot,
+/// opencode), surface an agent's `preload-skills` as a prose section in
+/// the body so the agent is told which skills it relies on. Claude Code
+/// emits the native `skills:` frontmatter field instead (see
+/// `claude::agent_frontmatter`) and does not get this section. Returns the
+/// body unchanged when there are no preload skills.
+fn append_preload_skills_section(body: &str, preload_skills: &[String]) -> String {
+    if preload_skills.is_empty() {
+        return body.to_string();
+    }
+    let mut out = body.trim_end().to_string();
+    if !out.is_empty() {
+        out.push_str("\n\n");
+    }
+    out.push_str("## Skills\n\nThis agent relies on the following skills, installed alongside it. Use them when relevant:\n\n");
+    for s in preload_skills {
+        out.push_str(&format!("- {s}\n"));
+    }
+    out
 }
 
 /// Combine YAML frontmatter and body into a single markdown string.
@@ -123,10 +151,11 @@ fn assemble(frontmatter: &str, body: &str) -> String {
 /// Skills extended fields, and the matching passthrough survive.
 pub(crate) fn build_skill_frontmatter(
     skill: &Skill,
+    name: &str,
     passthrough: Option<&Value>,
 ) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(skill.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(skill.description.clone()),
@@ -143,4 +172,103 @@ pub(crate) fn build_skill_frontmatter(
     }
 
     serde_yaml_ng::to_string(&map).context("serializing skill frontmatter")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::Agent;
+    use crate::model::common::SchemaVersion;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn render_rule_uses_passed_name_not_frontmatter() {
+        let rule = Rule {
+            schema: SchemaVersion::new(1).unwrap(),
+            name: None,
+            description: "A baseline security ruleset.".to_string(),
+            audience: None,
+            license: None,
+            scope: None,
+            metadata: None,
+            requires: Default::default(),
+            ignore: vec![],
+            claude: None,
+            copilot: None,
+            opencode: None,
+            extra: BTreeMap::new(),
+        };
+        let out = render_rule(&rule, "security-baseline", "## Body\n", Client::Claude).unwrap();
+        assert!(
+            out.contains("name: security-baseline"),
+            "expected passed name in output, got:\n{out}"
+        );
+    }
+
+    fn make_agent_with_preload(preload_skills: Vec<String>) -> Agent {
+        Agent {
+            schema: SchemaVersion::new(1).unwrap(),
+            name: Some("test-agent".to_string()),
+            description: "Test agent.".to_string(),
+            audience: None,
+            license: None,
+            mode: None,
+            model: None,
+            tools: vec![],
+            preload_skills,
+            metadata: None,
+            requires: Default::default(),
+            ignore: vec![],
+            claude: None,
+            copilot: None,
+            opencode: None,
+            extra: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn preload_skills_rendered_as_prose_for_copilot_and_opencode() {
+        let agent = make_agent_with_preload(vec!["a-skill".to_string()]);
+        let body = "## Instructions\n\nDo stuff.\n";
+
+        for client in [Client::Copilot, Client::OpenCode] {
+            let out = render_agent(&agent, "test-agent", body, client).unwrap();
+            assert!(
+                out.contains("## Skills"),
+                "{client:?}: expected '## Skills' section, got:\n{out}"
+            );
+            assert!(
+                out.contains("- a-skill"),
+                "{client:?}: expected '- a-skill' in output, got:\n{out}"
+            );
+        }
+    }
+
+    #[test]
+    fn preload_skills_not_in_body_for_claude() {
+        let agent = make_agent_with_preload(vec!["a-skill".to_string()]);
+        let body = "## Instructions\n\nDo stuff.\n";
+        let out = render_agent(&agent, "test-agent", body, Client::Claude).unwrap();
+        assert!(
+            !out.contains("## Skills"),
+            "Claude: expected NO '## Skills' body section (uses native skills: field), got:\n{out}"
+        );
+        assert!(
+            out.contains("skills:"),
+            "Claude: expected native 'skills:' frontmatter field, got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn empty_preload_skills_produces_no_skills_section() {
+        let agent = make_agent_with_preload(vec![]);
+        let body = "## Instructions\n\nDo stuff.\n";
+        for client in [Client::Claude, Client::Copilot, Client::OpenCode] {
+            let out = render_agent(&agent, "test-agent", body, client).unwrap();
+            assert!(
+                !out.contains("## Skills"),
+                "{client:?}: expected NO '## Skills' section for empty preload, got:\n{out}"
+            );
+        }
+    }
 }
