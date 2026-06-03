@@ -3,6 +3,7 @@
 pub mod agent;
 pub mod bundle;
 pub mod common;
+pub mod requires;
 pub mod rule;
 pub mod skill;
 
@@ -12,5 +13,6 @@ pub use bundle::{
     PluginEntry, Requires, VscodePluginDescriptor,
 };
 pub use common::{Audience, CURRENT_SCHEMA, License, Metadata, SchemaVersion};
+pub use requires::{ItemRequires, RequireRef};
 pub use rule::{Rule, Scope};
 pub use skill::Skill;

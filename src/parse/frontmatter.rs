@@ -236,6 +236,31 @@ mod tests {
         round_trip(&skill);
     }
 
+    #[test]
+    fn requires_and_ignore_parse_into_typed_fields_not_extra() {
+        let input = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: code-review\n",
+            "description: Use when reviewing changes\n",
+            "requires:\n",
+            "  skills:\n",
+            "    - sarif-formatting\n",
+            "ignore:\n",
+            "  - \"scripts/**\"\n",
+            "---\n",
+            "body\n",
+        );
+        let (skill, _) = parse::<Skill>(input).unwrap();
+        assert_eq!(skill.requires.skills[0].name(), "sarif-formatting");
+        assert_eq!(skill.ignore, vec!["scripts/**".to_string()]);
+        // Typed fields must NOT leak into the pass-through map (which
+        // skills emit verbatim into output).
+        assert!(!skill.extra.contains_key("requires"));
+        assert!(!skill.extra.contains_key("ignore"));
+        round_trip(&skill);
+    }
+
     fn round_trip<T>(value: &T)
     where
         T: serde::Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,

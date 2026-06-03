@@ -27,6 +27,13 @@ pub struct Rule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
+    /// §3.7 directed dependencies. SSOT-only — stripped from output.
+    #[serde(default, skip_serializing_if = "crate::model::ItemRequires::is_empty")]
+    pub requires: crate::model::ItemRequires,
+    /// §2.4 subtractive copy-scope patterns. SSOT-only — stripped from output.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ignore: Vec<String>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub claude: Option<serde_yaml_ng::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
