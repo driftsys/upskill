@@ -281,6 +281,29 @@ pub enum Commands {
         /// Item name. Lowercase letters, digits, hyphens; max 64 chars.
         name: String,
     },
+    /// Remove an MCP server configured by a bundle install.
+    ///
+    /// Unregisters the named MCP server from the client (via `claude mcp
+    /// remove` or the config file fallback) and drops the entry from the
+    /// lockfile.
+    #[command(
+        name = "remove-mcp",
+        display_order = 4,
+        after_help = "EXAMPLES:\n  \
+            upskill remove-mcp drawio\n  \
+            upskill remove-mcp drawio --global"
+    )]
+    RemoveMcp {
+        /// MCP server name to remove (as recorded in the lockfile).
+        name: String,
+        /// Operate on `$HOME` instead of the current directory.
+        #[arg(short = 'g', long = "global", conflicts_with = "project")]
+        global: bool,
+        /// Force project scope (current directory). Overrides the auto-detect
+        /// fallback to global when `cwd` is not inside a git repo.
+        #[arg(short = 'p', long = "project")]
+        project: bool,
+    },
     /// Build or manage the local registry index cache.
     #[command(
         display_order = 7,

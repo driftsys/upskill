@@ -172,6 +172,29 @@ pub struct SkippedPlugin {
     pub bundle: String,
 }
 
+/// Reconciliation outcome for a single MCP server during `doctor`.
+#[derive(Debug, Clone, Serialize)]
+pub struct McpDoctorEntry {
+    pub name: String,
+    pub client: String,
+    pub bundle: String,
+    pub status: McpDoctorStatus,
+}
+
+/// The specific condition detected during doctor MCP reconciliation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum McpDoctorStatus {
+    /// Registered in the client — no action needed.
+    Ok,
+    /// In the lockfile but absent from the client's registered list.
+    NotRegistered,
+    /// Client CLI was not found; cannot verify.
+    CliNotFound,
+    /// CLI returned non-zero when listing MCP servers.
+    QueryFailed { stderr: String },
+}
+
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
@@ -186,6 +209,11 @@ pub struct DoctorReport {
     /// false or trigger exit 1. Run `upskill update` after installing the
     /// missing CLI to install them.
     pub skipped_plugins: Vec<SkippedPlugin>,
+    /// MCP server reconciliation results. Entries are present for every MCP
+    /// recorded in the lockfile. `McpDoctorStatus::Ok` entries are included
+    /// so callers can distinguish "checked and fine" from "not checked".
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mcp_entries: Vec<McpDoctorEntry>,
 }
 
 impl DoctorReport {

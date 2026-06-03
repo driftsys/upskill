@@ -88,6 +88,11 @@ fn main() {
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
         Commands::Index { registry, clear } => run_index(registry.as_deref(), clear),
+        Commands::RemoveMcp {
+            name,
+            global,
+            project,
+        } => run_remove_mcp(&name, global, project),
     };
 
     if was_interrupted() {
@@ -177,6 +182,7 @@ fn run_add(
         Ok(report) => {
             print_install_report(&report, source);
             print_plugin_results(&report);
+            print_mcp_results(&report);
             EXIT_SUCCESS
         }
         Err(err) => {
@@ -448,6 +454,58 @@ fn print_plugin_results(report: &InstallReport) {
                 exit_code,
                 stderr.trim()
             );
+        }
+    }
+}
+
+/// Print MCP server configuration results after an install.
+/// Success entries go to stdout; warnings (CLI-not-found, failure) go to stderr.
+/// Env-var warnings are emitted for any required vars not set in the environment.
+fn print_mcp_results(report: &InstallReport) {
+    if style::is_quiet() || report.mcp_results.is_empty() {
+        return;
+    }
+
+    use upskill::plugin::PluginOutcome;
+
+    for mr in &report.mcp_results {
+        match &mr.outcome {
+            PluginOutcome::Success => {
+                println!(
+                    "  {} MCP server '{}' for {}",
+                    style::success("configured"),
+                    mr.name,
+                    mr.client
+                );
+            }
+            PluginOutcome::CliNotFound => {
+                eprintln!(
+                    "{} {} CLI not found and no config target; skipped MCP '{}'.",
+                    style::warn("warn:"),
+                    mr.client,
+                    mr.name
+                );
+            }
+            PluginOutcome::Failed { stderr, .. } => {
+                eprintln!(
+                    "{} failed to configure MCP '{}' for {}: {}",
+                    style::warn("warn:"),
+                    mr.name,
+                    mr.client,
+                    stderr.trim()
+                );
+            }
+            PluginOutcome::ManualInstructions => {}
+        }
+        for var in &mr.requires_env {
+            if std::env::var_os(var).is_none() {
+                eprintln!(
+                    "{} MCP '{}' needs env var '{}'; it is not set in your environment.",
+                    style::warn("warn:"),
+                    mr.name,
+                    var
+                );
+            }
         }
     }
 }
@@ -850,6 +908,7 @@ fn print_doctor_report(report: &DoctorReport) {
     }
 
     print_doctor_skipped_plugins(report);
+    print_doctor_mcps(report);
 }
 
 fn print_doctor_skipped_plugins(report: &DoctorReport) {
@@ -873,6 +932,34 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
         "  {}",
         style::dim("install the missing CLI then run `upskill update` to install them")
     );
+}
+
+fn print_doctor_mcps(report: &DoctorReport) {
+    use upskill::pipeline::McpDoctorStatus;
+
+    for entry in &report.mcp_entries {
+        match &entry.status {
+            McpDoctorStatus::Ok => {}
+            McpDoctorStatus::NotRegistered => {
+                println!(
+                    "  MCP '{}' is in the lockfile but not registered in claude; re-run `upskill update`.",
+                    entry.name
+                );
+            }
+            McpDoctorStatus::CliNotFound => {
+                println!(
+                    "  claude CLI not found; cannot verify MCP '{}'.",
+                    entry.name
+                );
+            }
+            McpDoctorStatus::QueryFailed { stderr } => {
+                println!(
+                    "  could not query claude MCP list for '{}': {}",
+                    entry.name, stderr
+                );
+            }
+        }
+    }
 }
 
 fn kind_label(kind: ItemKind) -> &'static str {
@@ -1230,6 +1317,66 @@ fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&s
     if skills_sh_failed && cfg.registries.is_empty() {
         return EXIT_ERROR;
     }
+    EXIT_SUCCESS
+}
+
+fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
+    let target = match install_target(global, project) {
+        Ok(t) => t,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let mcp_scope = scope_to_plugin_scope(global, project);
+
+    let mut lock = match upskill::lockfile::Lockfile::load(&target) {
+        Ok(l) => l,
+        Err(err) => {
+            print_error_chain(&err);
+            return EXIT_ERROR;
+        }
+    };
+
+    let matching_mcps: Vec<upskill::lockfile::LockedMcp> = lock
+        .mcps
+        .iter()
+        .filter(|m| m.name == name)
+        .cloned()
+        .collect();
+
+    if matching_mcps.is_empty() {
+        print_error(format!("MCP '{}' not found in lockfile", name));
+        return EXIT_ERROR;
+    }
+
+    for mcp in &matching_mcps {
+        if mcp.client == "claude" {
+            let outcome = upskill::mcp::uninstall_claude(&mcp.name, mcp_scope);
+            if outcome.is_cli_not_found()
+                && let Err(err) = upskill::ancillary::remove_claude_mcp(&target, &mcp.name)
+            {
+                print_error_chain(&err);
+                return EXIT_ERROR;
+            }
+        }
+    }
+
+    lock.remove_mcps_by_name(name);
+    if let Err(err) = lock.save(&target) {
+        print_error_chain(&err);
+        return EXIT_ERROR;
+    }
+
+    if !style::is_quiet() {
+        println!(
+            "{} MCP server '{}'",
+            style::success("Removed"),
+            style::name(name)
+        );
+    }
+
     EXIT_SUCCESS
 }
 
