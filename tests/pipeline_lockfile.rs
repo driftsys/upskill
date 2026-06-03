@@ -144,6 +144,7 @@ fn install_preserves_unrelated_existing_entries() {
         git_ref: Some("v1.0".into()),
         hash: Some("a".repeat(64)),
         source_name: None,
+        required_by: vec![],
     });
     seed.save(&target).unwrap();
 

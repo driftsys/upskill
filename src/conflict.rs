@@ -88,6 +88,7 @@ mod tests {
                     git_ref: None,
                     hash: None,
                     source_name: None,
+                    required_by: vec![],
                 })
                 .collect(),
             bundles: vec![],
