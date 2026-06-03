@@ -136,8 +136,11 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
         saw_entrypoint = true;
         let raw =
             std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
-        let existing_name = read_name_field(&raw, &path)?;
-        if existing_name != name {
+        // An absent `name:` falls back to the directory name (§2.1), so it
+        // can never conflict — only an explicit divergent name does.
+        if let Some(existing_name) = read_name_field(&raw, &path)?
+            && existing_name != name
+        {
             bail!(
                 "{}: existing entrypoint declares `name: {existing_name}` — co-located \
                  entrypoints must share the directory's name `{name}` (format-spec §2.1)",
@@ -157,7 +160,7 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
 
 /// Pull the `name:` field out of an existing entrypoint's frontmatter
 /// — kind-agnostic, since all kinds share the field.
-fn read_name_field(raw: &str, path: &Path) -> Result<String> {
+fn read_name_field(raw: &str, path: &Path) -> Result<Option<String>> {
     let (skill, _) = crate::parse::frontmatter::parse::<crate::model::Skill>(raw)
         .with_context(|| format!("parse frontmatter of {}", path.display()))?;
     Ok(skill.name)
@@ -241,7 +244,7 @@ mod tests {
         // scaffold is shape-correct for a brand-new author.
         let (skill, _body) =
             crate::parse::frontmatter::parse::<crate::model::Skill>(&content).unwrap();
-        assert_eq!(skill.name, "code-review");
+        assert_eq!(skill.name.as_deref(), Some("code-review"));
     }
 
     #[test]

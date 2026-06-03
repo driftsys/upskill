@@ -12,6 +12,42 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::ItemKind;
+use crate::parse::frontmatter;
+
+/// Effective identity name for an item (§2.1). Skills always take the
+/// folder name (Agent Skills standard mandates name == dir); rules/agents
+/// take their frontmatter name when present, else the folder name.
+pub(super) fn effective_name(
+    kind: ItemKind,
+    frontmatter_name: Option<&str>,
+    folder: &str,
+) -> String {
+    match kind {
+        ItemKind::Skill => folder.to_string(),
+        ItemKind::Rule | ItemKind::Agent => frontmatter_name.unwrap_or(folder).to_string(),
+    }
+}
+
+/// Probe an entrypoint's frontmatter `name` cheaply, falling back to the
+/// folder name on any read/parse failure (validation belongs to lint, not
+/// discovery). Keeps `(kind, name)` identity consistent everywhere.
+pub(super) fn probe_effective_name(entry_path: &Path, kind: ItemKind, folder: &str) -> String {
+    if kind == ItemKind::Skill {
+        return folder.to_string();
+    }
+    #[derive(serde::Deserialize)]
+    struct NameProbe {
+        #[serde(default)]
+        name: Option<String>,
+    }
+    match fs::read_to_string(entry_path) {
+        Ok(raw) => match frontmatter::parse::<NameProbe>(&raw) {
+            Ok((p, _)) => p.name.unwrap_or_else(|| folder.to_string()),
+            Err(_) => folder.to_string(),
+        },
+        Err(_) => folder.to_string(),
+    }
+}
 
 /// Returns true when the directory contains at least one SSOT entrypoint
 /// file (`RULE.md`, `SKILL.md`, or `AGENT.md`).
@@ -92,10 +128,16 @@ pub(super) fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
                 items.push((ItemKind::Skill, name.to_string()));
             }
             if path.join("RULE.md").is_file() {
-                items.push((ItemKind::Rule, name.to_string()));
+                items.push((
+                    ItemKind::Rule,
+                    probe_effective_name(&path.join("RULE.md"), ItemKind::Rule, name),
+                ));
             }
             if path.join("AGENT.md").is_file() {
-                items.push((ItemKind::Agent, name.to_string()));
+                items.push((
+                    ItemKind::Agent,
+                    probe_effective_name(&path.join("AGENT.md"), ItemKind::Agent, name),
+                ));
             }
         } else {
             // Category subdir: source/<category>/<item>/ENTRY.md
@@ -115,10 +157,24 @@ pub(super) fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
                         items.push((ItemKind::Skill, sub_name.to_string()));
                     }
                     if sub_path.join("RULE.md").is_file() {
-                        items.push((ItemKind::Rule, sub_name.to_string()));
+                        items.push((
+                            ItemKind::Rule,
+                            probe_effective_name(
+                                &sub_path.join("RULE.md"),
+                                ItemKind::Rule,
+                                sub_name,
+                            ),
+                        ));
                     }
                     if sub_path.join("AGENT.md").is_file() {
-                        items.push((ItemKind::Agent, sub_name.to_string()));
+                        items.push((
+                            ItemKind::Agent,
+                            probe_effective_name(
+                                &sub_path.join("AGENT.md"),
+                                ItemKind::Agent,
+                                sub_name,
+                            ),
+                        ));
                     }
                 }
             }

@@ -10,11 +10,12 @@ use upskill::parse::frontmatter;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
-fn load_rule(name: &str) -> (Rule, String) {
+fn load_rule(name: &str) -> (Rule, String, String) {
     let path = format!("{FIXTURES}/items/{name}/RULE.md");
     let raw = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let (rule, body) = frontmatter::parse::<Rule>(&raw).expect("parse fixture");
-    (rule, body.to_string())
+    let effective = rule.name.clone().unwrap_or_else(|| name.to_string());
+    (rule, effective, body.to_string())
 }
 
 fn load_expected(client: &str, name: &str) -> String {
@@ -35,24 +36,24 @@ fn assert_byte_equal(actual: &str, expected: &str, label: &str) {
 
 #[test]
 fn license_awareness_claude() {
-    let (rule, body) = load_rule("license-awareness");
-    let actual = render_rule(&rule, &body, Client::Claude).expect("render");
+    let (rule, name, body) = load_rule("license-awareness");
+    let actual = render_rule(&rule, &name, &body, Client::Claude).expect("render");
     let expected = load_expected("claude", "license-awareness");
     assert_byte_equal(&actual, &expected, "claude/license-awareness");
 }
 
 #[test]
 fn license_awareness_copilot() {
-    let (rule, body) = load_rule("license-awareness");
-    let actual = render_rule(&rule, &body, Client::Copilot).expect("render");
+    let (rule, name, body) = load_rule("license-awareness");
+    let actual = render_rule(&rule, &name, &body, Client::Copilot).expect("render");
     let expected = load_expected("copilot", "license-awareness");
     assert_byte_equal(&actual, &expected, "copilot/license-awareness");
 }
 
 #[test]
 fn license_awareness_opencode() {
-    let (rule, body) = load_rule("license-awareness");
-    let actual = render_rule(&rule, &body, Client::OpenCode).expect("render");
+    let (rule, name, body) = load_rule("license-awareness");
+    let actual = render_rule(&rule, &name, &body, Client::OpenCode).expect("render");
     let expected = load_expected("opencode", "license-awareness");
     assert_byte_equal(&actual, &expected, "opencode/license-awareness");
 }
@@ -61,24 +62,24 @@ fn license_awareness_opencode() {
 
 #[test]
 fn api_conventions_claude() {
-    let (rule, body) = load_rule("api-conventions");
-    let actual = render_rule(&rule, &body, Client::Claude).expect("render");
+    let (rule, name, body) = load_rule("api-conventions");
+    let actual = render_rule(&rule, &name, &body, Client::Claude).expect("render");
     let expected = load_expected("claude", "api-conventions");
     assert_byte_equal(&actual, &expected, "claude/api-conventions");
 }
 
 #[test]
 fn api_conventions_copilot() {
-    let (rule, body) = load_rule("api-conventions");
-    let actual = render_rule(&rule, &body, Client::Copilot).expect("render");
+    let (rule, name, body) = load_rule("api-conventions");
+    let actual = render_rule(&rule, &name, &body, Client::Copilot).expect("render");
     let expected = load_expected("copilot", "api-conventions");
     assert_byte_equal(&actual, &expected, "copilot/api-conventions");
 }
 
 #[test]
 fn api_conventions_opencode() {
-    let (rule, body) = load_rule("api-conventions");
-    let actual = render_rule(&rule, &body, Client::OpenCode).expect("render");
+    let (rule, name, body) = load_rule("api-conventions");
+    let actual = render_rule(&rule, &name, &body, Client::OpenCode).expect("render");
     let expected = load_expected("opencode", "api-conventions");
     assert_byte_equal(&actual, &expected, "opencode/api-conventions");
 }

@@ -129,7 +129,7 @@ mod tests {
         );
         let (skill, body) = parse::<Skill>(input).unwrap();
         assert_eq!(skill.schema.get(), 1);
-        assert_eq!(skill.name, "create-api-endpoint");
+        assert_eq!(skill.name.as_deref(), Some("create-api-endpoint"));
         assert_eq!(skill.license, Some(License("proprietary".into())));
         assert_eq!(body, "body\n");
         let metadata = skill.metadata.as_ref().unwrap();
@@ -159,7 +159,7 @@ mod tests {
             "body\n",
         );
         let (rule, _body) = parse::<Rule>(input).unwrap();
-        assert_eq!(rule.name, "api-conventions");
+        assert_eq!(rule.name.as_deref(), Some("api-conventions"));
         let scope = rule.scope.as_ref().unwrap();
         assert_eq!(scope.paths, vec!["src/api/**/*.ts", "src/handlers/**/*.ts"]);
         assert!(rule.copilot.is_some(), "copilot passthrough must be parsed");
@@ -197,7 +197,7 @@ mod tests {
             "body\n",
         );
         let (agent, _body) = parse::<Agent>(input).unwrap();
-        assert_eq!(agent.name, "security-reviewer");
+        assert_eq!(agent.name.as_deref(), Some("security-reviewer"));
         assert_eq!(agent.mode, Some(Mode::Subagent));
         assert_eq!(agent.model.as_deref(), Some("sonnet"));
         assert_eq!(

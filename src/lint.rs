@@ -280,7 +280,7 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
 
     let body = match parse_kind(&raw, kind) {
         Ok((parsed_name, body)) => {
-            check_name_matches_dir(file, &parsed_name, kind, out);
+            check_name_matches_dir(file, parsed_name.as_deref(), kind, out);
             body
         }
         Err(err) => {
@@ -307,7 +307,7 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
 /// are frontmatter+body; bundles are pure YAML with no body (§2.2,
 /// ADR-0007), so the bundle arm returns an empty body so the
 /// body-rules become no-ops.
-fn parse_kind(raw: &str, kind: FileKind) -> Result<(String, &str)> {
+fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
     match kind {
         FileKind::Skill => {
             let (item, body) = frontmatter::parse::<Skill>(raw)?;
@@ -323,16 +323,25 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(String, &str)> {
         }
         FileKind::Bundle => {
             let bundle: crate::model::Bundle = serde_yaml_ng::from_str(raw)?;
-            Ok((bundle.name, ""))
+            Ok((Some(bundle.name), ""))
         }
     }
 }
 
-fn check_name_matches_dir(file: &Path, name: &str, kind: FileKind, out: &mut Vec<Finding>) {
-    // Bundles match the filename stem (`<name>.bundle.yaml`); items
-    // match the parent directory name.
+/// Identity-name validation (§2.1, ADR-0006).
+///
+/// - Bundle: when `name` is present, the filename stem MUST equal it.
+/// - Skill: the Agent Skills standard mandates `name == dir`. When a
+///   `name` is present it MUST equal the directory; when absent the
+///   directory name is used and there is nothing to check.
+/// - Rule / Agent: identity is layout-independent — the frontmatter
+///   `name` may diverge from the folder, so no check is performed.
+fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: &mut Vec<Finding>) {
     match kind {
         FileKind::Bundle => {
+            let Some(name) = name else {
+                return;
+            };
             let Some(stem) = file
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -352,7 +361,10 @@ fn check_name_matches_dir(file: &Path, name: &str, kind: FileKind, out: &mut Vec
                 });
             }
         }
-        _ => {
+        FileKind::Skill => {
+            let Some(name) = name else {
+                return;
+            };
             let Some(dir) = file
                 .parent()
                 .and_then(|p| p.file_name())
@@ -366,10 +378,13 @@ fn check_name_matches_dir(file: &Path, name: &str, kind: FileKind, out: &mut Vec
                     severity: Severity::Error,
                     path: file.to_path_buf(),
                     line: None,
-                    message: format!("frontmatter `name: {name}` does not match directory `{dir}`"),
+                    message: format!(
+                        "skill `name: {name}` must equal directory `{dir}` (Agent Skills standard)"
+                    ),
                 });
             }
         }
+        FileKind::Rule | FileKind::Agent => {}
     }
 }
 
@@ -735,53 +750,60 @@ mod tests {
     }
 
     #[test]
-    fn lint_flags_colocated_entrypoint_with_mismatched_name() {
-        // Format-spec §2.1, ADR-0006: when an item directory holds
-        // multiple entrypoints, every entrypoint's `name:` MUST equal
-        // the directory name. A solo per-file `name-matches-dir`
-        // check is sufficient — each mismatching entrypoint is
-        // flagged independently.
+    fn lint_skill_name_mismatch_is_flagged_but_rule_divergence_is_silent() {
+        // §2.1, ADR-0006: a skill's `name:` MUST equal its directory
+        // (Agent Skills standard). Rules and agents have
+        // layout-independent identity — their `name:` may diverge from
+        // the folder, which is legal and silent.
         let tmp = tempfile::tempdir().unwrap();
         write(
             &tmp.path().join("security/SKILL.md"),
             concat!(
                 "---\n",
                 "schema: 1\n",
-                "name: security\n",
-                "description: matches the directory.\n",
+                "name: wrong-name\n",
+                "description: skill name diverges from the directory.\n",
                 "---\n",
                 "\n## ok\n",
             ),
         );
         write(
-            &tmp.path().join("security/AGENT.md"),
+            &tmp.path().join("stuff/RULE.md"),
             concat!(
                 "---\n",
                 "schema: 1\n",
-                "name: wrong-name\n",
-                "description: does not match the directory.\n",
+                "name: security-baseline\n",
+                "description: rule name diverges from the directory.\n",
                 "---\n",
                 "\n## ok\n",
             ),
         );
         let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
-        // The skill (matches) produces no finding; the agent (mismatch) does.
-        let agent_finding = report.findings.iter().find(|f| {
-            f.rule_id == "name-matches-dir"
-                && f.path.file_name().and_then(|n| n.to_str()) == Some("AGENT.md")
-        });
-        assert!(
-            agent_finding.is_some(),
-            "expected co-located AGENT.md name mismatch to be flagged: {:?}",
-            report.findings
-        );
+        // The skill (mismatch) is flagged; the rule (mismatch) is not.
         let skill_finding = report.findings.iter().find(|f| {
             f.rule_id == "name-matches-dir"
                 && f.path.file_name().and_then(|n| n.to_str()) == Some("SKILL.md")
         });
         assert!(
-            skill_finding.is_none(),
-            "matching co-located SKILL.md must not be flagged: {:?}",
+            skill_finding.is_some(),
+            "expected skill name mismatch to be flagged: {:?}",
+            report.findings
+        );
+        assert!(
+            skill_finding
+                .unwrap()
+                .message
+                .contains("Agent Skills standard"),
+            "skill mismatch message should reference the standard: {:?}",
+            skill_finding
+        );
+        let rule_finding = report.findings.iter().find(|f| {
+            f.rule_id == "name-matches-dir"
+                && f.path.file_name().and_then(|n| n.to_str()) == Some("RULE.md")
+        });
+        assert!(
+            rule_finding.is_none(),
+            "rule name divergence must be silent: {:?}",
             report.findings
         );
     }

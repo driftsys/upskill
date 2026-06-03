@@ -355,6 +355,10 @@ pub(super) fn install_plugins_from_bundles(
 /// plus the rendered per-client output. Groups what would otherwise be a
 /// `clippy::type_complexity`-flagged tuple out of the `match kind` arms.
 struct ParsedItem {
+    /// Effective identity name (§2.1): the folder for skills, the
+    /// frontmatter `name` (else folder) for rules/agents. Drives output
+    /// paths, link-rewrite namespace, and lockfile identity.
+    name: String,
     audience: Option<Vec<Audience>>,
     ignore: Vec<String>,
     renders: Vec<(Client, String)>,
@@ -368,12 +372,7 @@ fn install_items_of_kind(
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<()> {
     let entrypoint = kind.entrypoint_filename();
-    for (name, dir) in iter_item_dirs(source)? {
-        if let Some(items) = filter
-            && !items.contains(kind, &name)
-        {
-            continue;
-        }
+    for (folder, dir) in iter_item_dirs(source)? {
         let entry_path = dir.join(entrypoint);
         if !entry_path.exists() {
             continue;
@@ -381,9 +380,11 @@ fn install_items_of_kind(
         let raw = fs::read_to_string(&entry_path)
             .with_context(|| format!("read {}", entry_path.display()))?;
 
-        // Parse frontmatter, extract audience + ignore, and render per
-        // client. Each kind has its own model type, so we dispatch here.
+        // Parse frontmatter, resolve the effective identity name, extract
+        // audience + ignore, and render per client. Each kind has its own
+        // model type, so we dispatch here.
         let ParsedItem {
+            name,
             audience,
             ignore,
             renders,
@@ -391,6 +392,7 @@ fn install_items_of_kind(
             ItemKind::Skill => {
                 let (skill, body) = frontmatter::parse::<Skill>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
+                let name = super::discovery::effective_name(kind, skill.name.as_deref(), &folder);
                 let aud = skill.audience.clone();
                 let ignore = skill.ignore.clone();
                 let mut out = Vec::new();
@@ -398,11 +400,12 @@ fn install_items_of_kind(
                     if !targets(client, aud.as_deref()) {
                         continue;
                     }
-                    let rendered = generate::render_skill(&skill, body, client)
+                    let rendered = generate::render_skill(&skill, &name, body, client)
                         .with_context(|| format!("render skill {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
                 ParsedItem {
+                    name,
                     audience: aud,
                     ignore,
                     renders: out,
@@ -411,6 +414,7 @@ fn install_items_of_kind(
             ItemKind::Rule => {
                 let (rule, body) = frontmatter::parse::<Rule>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
+                let name = super::discovery::effective_name(kind, rule.name.as_deref(), &folder);
                 let aud = rule.audience.clone();
                 let ignore = rule.ignore.clone();
                 let mut out = Vec::new();
@@ -418,11 +422,12 @@ fn install_items_of_kind(
                     if !targets(client, aud.as_deref()) {
                         continue;
                     }
-                    let rendered = generate::render_rule(&rule, body, client)
+                    let rendered = generate::render_rule(&rule, &name, body, client)
                         .with_context(|| format!("render rule {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
                 ParsedItem {
+                    name,
                     audience: aud,
                     ignore,
                     renders: out,
@@ -431,6 +436,7 @@ fn install_items_of_kind(
             ItemKind::Agent => {
                 let (agent, body) = frontmatter::parse::<Agent>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
+                let name = super::discovery::effective_name(kind, agent.name.as_deref(), &folder);
                 let aud = agent.audience.clone();
                 let ignore = agent.ignore.clone();
                 let mut out = Vec::new();
@@ -438,17 +444,27 @@ fn install_items_of_kind(
                     if !targets(client, aud.as_deref()) {
                         continue;
                     }
-                    let rendered = generate::render_agent(&agent, body, client)
+                    let rendered = generate::render_agent(&agent, &name, body, client)
                         .with_context(|| format!("render agent {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
                 ParsedItem {
+                    name,
                     audience: aud,
                     ignore,
                     renders: out,
                 }
             }
         };
+
+        // Audience/identity filtering keys on the effective name, not the
+        // folder, so a filter referencing a divergent rule/agent name
+        // resolves correctly.
+        if let Some(items) = filter
+            && !items.contains(kind, &name)
+        {
+            continue;
+        }
 
         let source_hash = hash_item_dir(&dir);
         let resources = super::ignore::filter_ignored(iter_item_resources(&dir), &ignore);

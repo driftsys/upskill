@@ -48,12 +48,12 @@ impl std::str::FromStr for Client {
 /// Process directives in `body` for `client`, generate client-specific
 /// frontmatter from `skill`, concatenate, and run the result through the
 /// dprint formatter for §7.5 idempotence.
-pub fn render_skill(skill: &Skill, body: &str, client: Client) -> Result<String> {
+pub fn render_skill(skill: &Skill, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
     let frontmatter = match client {
-        Client::Claude => claude::skill_frontmatter(skill)?,
-        Client::Copilot => copilot::skill_frontmatter(skill)?,
-        Client::OpenCode => opencode::skill_frontmatter(skill)?,
+        Client::Claude => claude::skill_frontmatter(skill, name)?,
+        Client::Copilot => copilot::skill_frontmatter(skill, name)?,
+        Client::OpenCode => opencode::skill_frontmatter(skill, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
@@ -68,12 +68,12 @@ pub fn render_skill(skill: &Skill, body: &str, client: Client) -> Result<String>
 ///   path-scoping per spec §3.2). The renderer still produces a string
 ///   for API symmetry; the install layer (Phase 3) decides whether to
 ///   write it or just register the SSOT path in `opencode.json`.
-pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
+pub fn render_rule(rule: &Rule, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
     let frontmatter = match client {
-        Client::Claude => claude::rule_frontmatter(rule)?,
-        Client::Copilot => copilot::rule_frontmatter(rule)?,
-        Client::OpenCode => opencode::rule_frontmatter(rule)?,
+        Client::Claude => claude::rule_frontmatter(rule, name)?,
+        Client::Copilot => copilot::rule_frontmatter(rule, name)?,
+        Client::OpenCode => opencode::rule_frontmatter(rule, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
@@ -91,12 +91,12 @@ pub fn render_rule(rule: &Rule, body: &str, client: Client) -> Result<String> {
 /// - opencode: `description`, `mode` (defaults to `subagent`), `model`,
 ///   `tools` (lowercase). `name` is in filename per Appendix B and not
 ///   emitted. `preload-skills` dropped (no equivalent).
-pub fn render_agent(agent: &Agent, body: &str, client: Client) -> Result<String> {
+pub fn render_agent(agent: &Agent, name: &str, body: &str, client: Client) -> Result<String> {
     let processed_body = directives::process(body, client)?;
     let frontmatter = match client {
-        Client::Claude => claude::agent_frontmatter(agent)?,
-        Client::Copilot => copilot::agent_frontmatter(agent)?,
-        Client::OpenCode => opencode::agent_frontmatter(agent)?,
+        Client::Claude => claude::agent_frontmatter(agent, name)?,
+        Client::Copilot => copilot::agent_frontmatter(agent, name)?,
+        Client::OpenCode => opencode::agent_frontmatter(agent, name)?,
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
@@ -123,10 +123,11 @@ fn assemble(frontmatter: &str, body: &str) -> String {
 /// Skills extended fields, and the matching passthrough survive.
 pub(crate) fn build_skill_frontmatter(
     skill: &Skill,
+    name: &str,
     passthrough: Option<&Value>,
 ) -> Result<String> {
     let mut map = Mapping::new();
-    map.insert(Value::from("name"), Value::from(skill.name.clone()));
+    map.insert(Value::from("name"), Value::from(name.to_string()));
     map.insert(
         Value::from("description"),
         Value::from(skill.description.clone()),
@@ -143,4 +144,35 @@ pub(crate) fn build_skill_frontmatter(
     }
 
     serde_yaml_ng::to_string(&map).context("serializing skill frontmatter")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::common::SchemaVersion;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn render_rule_uses_passed_name_not_frontmatter() {
+        let rule = Rule {
+            schema: SchemaVersion::new(1).unwrap(),
+            name: None,
+            description: "A baseline security ruleset.".to_string(),
+            audience: None,
+            license: None,
+            scope: None,
+            metadata: None,
+            requires: Default::default(),
+            ignore: vec![],
+            claude: None,
+            copilot: None,
+            opencode: None,
+            extra: BTreeMap::new(),
+        };
+        let out = render_rule(&rule, "security-baseline", "## Body\n", Client::Claude).unwrap();
+        assert!(
+            out.contains("name: security-baseline"),
+            "expected passed name in output, got:\n{out}"
+        );
+    }
 }
