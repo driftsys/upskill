@@ -1,5 +1,70 @@
 # Changelog
 
+## [0.7.4] (2026-06-03)
+
+### Documentation
+
+- cover MCP server support ([#218]) ([99c70a6])
+- cover plugins + co-location, drop ADRs from book nav ([f1e0e5c])
+- **recipes:** MCP local-install convention recipe + distilling pattern
+  ([4588087])
+- **spec:** MCP local-install convention design (v2, docs-only) ([1673d82])
+- **mcp:** correct requires-env warning timing and adr index gap ([2d4b651])
+- **mcp:** ADR-0010 and format-spec mcps: sub-shape ([fc8d26d])
+- **plan:** MCP server support v1 implementation plan ([28e7177])
+- **spec:** add MCP server support design ([dcdd8c7])
+
+### Bug Fixes
+
+- **fmt:** canonicalise bundle mcps: key after plugins ([5b71288])
+- **cli:** surface failed MCP uninstall, doctor drift exit code, help ordering
+  ([f2f7fdd])
+- **pipeline:** drop side-effecting MCP unit test; gitignore .mcp.json
+  ([621eb92])
+
+### Features
+
+- **lint:** surface mcps validation errors ([a6d9a1a])
+- **cli:** report, remove, and doctor-reconcile MCP servers ([5ec551e])
+- **pipeline:** configure MCP servers from bundles + record in lockfile
+  ([f76bfc0])
+- **lockfile:** record MCP servers (LockedMcp + lifecycle) ([1d90c09])
+- **ancillary:** .mcp.json config-write fallback for MCP servers ([da6d88e])
+- **mcp:** claude mcp add/remove/list shellout ([b5f3e01])
+- **model:** validate mcps transport fields ([1ddf52c])
+- **model:** add mcps: descriptor types to Bundle ([8e1ce16])
+
+### Refactoring
+
+- **skills:** namespace-prefix item names with upskill- ([f4d723d])
+- **plugin:** expose command helpers as pub(crate) ([628c5f8])
+- **model:** re-export MCP types from model module ([eded6f5])
+
+[0.7.4]: https://github.com/driftsys/upskill/compare/v0.7.3...v0.7.4
+[99c70a6]: https://github.com/driftsys/upskill/commit/99c70a6
+[#218]: https://github.com/driftsys/upskill/issues/218
+[f1e0e5c]: https://github.com/driftsys/upskill/commit/f1e0e5c
+[4588087]: https://github.com/driftsys/upskill/commit/4588087
+[1673d82]: https://github.com/driftsys/upskill/commit/1673d82
+[2d4b651]: https://github.com/driftsys/upskill/commit/2d4b651
+[fc8d26d]: https://github.com/driftsys/upskill/commit/fc8d26d
+[28e7177]: https://github.com/driftsys/upskill/commit/28e7177
+[dcdd8c7]: https://github.com/driftsys/upskill/commit/dcdd8c7
+[5b71288]: https://github.com/driftsys/upskill/commit/5b71288
+[f2f7fdd]: https://github.com/driftsys/upskill/commit/f2f7fdd
+[621eb92]: https://github.com/driftsys/upskill/commit/621eb92
+[a6d9a1a]: https://github.com/driftsys/upskill/commit/a6d9a1a
+[5ec551e]: https://github.com/driftsys/upskill/commit/5ec551e
+[f76bfc0]: https://github.com/driftsys/upskill/commit/f76bfc0
+[1d90c09]: https://github.com/driftsys/upskill/commit/1d90c09
+[da6d88e]: https://github.com/driftsys/upskill/commit/da6d88e
+[b5f3e01]: https://github.com/driftsys/upskill/commit/b5f3e01
+[1ddf52c]: https://github.com/driftsys/upskill/commit/1ddf52c
+[8e1ce16]: https://github.com/driftsys/upskill/commit/8e1ce16
+[f4d723d]: https://github.com/driftsys/upskill/commit/f4d723d
+[628c5f8]: https://github.com/driftsys/upskill/commit/628c5f8
+[eded6f5]: https://github.com/driftsys/upskill/commit/eded6f5
+
 ## [0.7.2] (2026-06-02)
 
 ### Documentation
