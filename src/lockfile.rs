@@ -243,15 +243,15 @@ fn lockfile_path(project_root: &Path) -> PathBuf {
 /// name)` (the report has one entry per kind × name × client; the lockfile
 /// records each item once).
 ///
-/// `source_label` is taken verbatim from the caller — typically the
-/// `Display` form of the [`InstallSource`] or the original CLI string.
-/// `git_ref` and `hash` are looked up by the caller (the pipeline) per
-/// item; threading them through here keeps the lockfile module free of
-/// filesystem and source concerns.
+/// `source_for` is a per-item `(label, ref)` lookup: it maps each `(kind,
+/// name)` to the `Display` form of the [`InstallSource`] it came from and
+/// that source's pinned ref. This lets cross-source dependency-pulled items
+/// record their own source rather than the entry source's. `hash` is looked
+/// up by the caller (the pipeline) per item; threading these through here
+/// keeps the lockfile module free of filesystem and source concerns.
 pub fn items_from_report(
     report: &InstallReport,
-    source_label: &str,
-    git_ref: Option<&str>,
+    source_for: impl Fn(ItemKind, &str) -> (String, Option<String>),
     required_by: &std::collections::BTreeMap<(ItemKind, String), Vec<String>>,
     mut hash_for: impl FnMut(ItemKind, &str) -> Option<String>,
 ) -> Vec<LockedItem> {
@@ -262,11 +262,12 @@ pub fn items_from_report(
         if !seen.insert((entry.kind, entry.name.clone())) {
             continue;
         }
+        let (source, git_ref) = source_for(entry.kind, &entry.name);
         out.push(LockedItem {
             kind: entry.kind,
             name: entry.name.clone(),
-            source: source_label.to_string(),
-            git_ref: git_ref.map(str::to_string),
+            source,
+            git_ref,
             hash: hash_for(entry.kind, &entry.name),
             source_name: None,
             required_by: required_by
@@ -437,8 +438,7 @@ mod tests {
 
         let items = items_from_report(
             &report,
-            "local:./src",
-            None,
+            |_, _| ("local:./src".to_string(), None),
             &std::collections::BTreeMap::new(),
             |_, _| Some("sha256:abc".into()),
         );

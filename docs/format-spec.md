@@ -691,9 +691,15 @@ Implementations:
 
 Each `requires.<kind>` entry is a bare name (same source) or a `{ name, source }` map
 (cross-source), where `source` reuses the `upskill add` source DSL. Same-source resolution
-(bare-name entries against the entry item's own already-fetched source) is implemented in the
-initial release; cross-source resolution (`{ name, source }` entries) is specified here but
-lands in a later release.
+(bare-name entries against the entry item's own already-fetched source) and cross-source
+resolution (`{ name, source }` entries) are both implemented: a cross-source entry is fetched
+via the same machinery as `upskill add` (a distinct source is fetched once and cached for the
+duration of the resolution), the transitive closure MAY span sources, and each
+dependency-pulled item is recorded in the lockfile with its **own** `source` (and `ref`) plus
+a `required_by` provenance list. Cycle detection is keyed by `(canonical-source-label, kind,
+name)`; the same `(kind, name)` resolving to two different sources within one closure — or
+conflicting with an existing different-source install — is an error. There is no version-range
+solving.
 
 ### 3.8 Frontmatter canonicalisation
 
@@ -1044,8 +1050,8 @@ The following topics are explicitly deferred and tracked for future specificatio
 7. **Multi-repo item sources** (RESOLVED): the item `requires` field with a `{ name, source }`
    locator (§3.7) defines the cross-source resolution contract — `source` reuses the `upskill
    add` source DSL, conflicts reuse the same-name-different-source rule, and cycles are keyed by
-   `(canonical-source-label, kind, name)`. Same-source resolution is implemented; cross-source
-   resolution is staged to a later release. See
+   `(canonical-source-label, kind, name)`. Both same-source and cross-source resolution are
+   implemented. See
    [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
 8. **Content hashing**: whether items should carry a content hash for integrity verification
    during distribution, independent of `metadata.version`.

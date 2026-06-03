@@ -191,7 +191,7 @@ pub fn install_with_lockfile(
         }
     }
 
-    // -- Same-source `requires` closure --
+    // -- `requires` dependency closure (same- and cross-source) --
     // The directly-requested item set, keyed on effective names from
     // `scan_source_items` and respecting the `items` filter and excludes.
     // Bundle-file sources resolve their own items, so the item-level
@@ -219,43 +219,53 @@ pub fn install_with_lockfile(
             || items
                 .iter()
                 .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
+    let git_ref = match source {
+        InstallSource::Github(r) => r.git_ref.as_deref(),
+        InstallSource::Gitlab(r) => r.git_ref.as_deref(),
+        InstallSource::LocalPath(_) => None,
+    };
     let closure = if discovery::is_bundle_file(&local_source) || defer_to_name_resolution {
         None
     } else {
-        Some(resolve_requires_closure(&local_source, &requested)?)
+        Some(resolve_requires_closure(
+            &label,
+            &local_source,
+            git_ref,
+            &requested,
+        )?)
     };
 
     // -- Conflict detection (before any files are written) --
-    // When a closure is present, conflict detection runs over the closure's
-    // full item set so a pulled dependency that collides with an existing
-    // different-source install is caught. Directly-named items still honor
-    // `--as` aliasing; pulled dependencies are never aliased.
     let mut lock = crate::lockfile::Lockfile::load(target)?;
-    let incoming: Vec<(ItemKind, String)> = if let Some(closure) = &closure {
-        let mut seen = std::collections::BTreeSet::new();
-        let mut out = Vec::new();
-        for kind in [ItemKind::Rule, ItemKind::Skill, ItemKind::Agent] {
-            let names = match kind {
-                ItemKind::Rule => &closure.items.rules,
-                ItemKind::Skill => &closure.items.skills,
-                ItemKind::Agent => &closure.items.agents,
-            };
-            for name in names {
-                let effective_name = options
+    let mut conflicts = Vec::new();
+    if let Some(closure) = &closure {
+        // Group incoming items by their canonical source label; conflicts
+        // are per (kind, name, source). Aliases apply only to entry-source
+        // items — dependency-pulled items are never aliased.
+        let mut grouped: std::collections::BTreeMap<String, Vec<(ItemKind, String)>> =
+            std::collections::BTreeMap::new();
+        for ((kind, name), src_label) in &closure.item_source {
+            let effective = if *src_label == label {
+                options
                     .aliases
                     .iter()
                     .find(|(from, _)| from.is_empty() || *from == *name)
                     .map(|(_, to)| to.clone())
-                    .unwrap_or_else(|| name.clone());
-                if seen.insert((kind, effective_name.clone())) {
-                    out.push((kind, effective_name));
-                }
-            }
+                    .unwrap_or_else(|| name.clone())
+            } else {
+                name.clone()
+            };
+            grouped
+                .entry(src_label.clone())
+                .or_default()
+                .push((*kind, effective));
         }
-        out
+        for (src_label, items) in &grouped {
+            conflicts.extend(crate::conflict::detect_conflicts(items, &lock, src_label));
+        }
     } else {
         let mut seen = std::collections::BTreeSet::new();
-        scanned_items
+        let incoming: Vec<(ItemKind, String)> = scanned_items
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
@@ -272,19 +282,28 @@ pub fn install_with_lockfile(
                     None
                 }
             })
-            .collect()
-    };
-    let conflicts = crate::conflict::detect_conflicts(&incoming, &lock, &label);
+            .collect();
+        conflicts.extend(crate::conflict::detect_conflicts(&incoming, &lock, &label));
+    }
     if !conflicts.is_empty() && !options.force {
         anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
     }
 
     // -- Now proceed with generation (files are written here) --
-    // With a closure, install exactly its resolved item set (requested
-    // items plus same-source dependencies). Without one (bundle file),
-    // keep the existing dispatch so the bundle branch runs.
+    // With a closure, install each source's resolved items from that
+    // source's own fetched root. Without one (bundle file / name
+    // resolution), keep the existing dispatch.
     let mut report = if let Some(closure) = &closure {
-        install_from_local_path(&local_source, target, Some(&closure.items))?
+        // The cross-source clone guards in `closure.guards` are held alive by
+        // the owned `closure` until after every source's items are installed;
+        // dropping them early would delete the fetched roots.
+        let mut r = InstallReport::default();
+        for si in closure.by_source.values() {
+            let part = install_from_local_path(&si.root, target, Some(&si.items))?;
+            r.items.extend(part.items);
+            r.bundles.extend(part.bundles);
+        }
+        r
     } else if items.is_empty() {
         install_from_local_path(&local_source, target, None)?
     } else {
@@ -308,10 +327,22 @@ pub fn install_with_lockfile(
     if !options.aliases.is_empty() {
         // Rename output files on disk and update report items.
         for item in &mut report.items {
-            let alias = options
-                .aliases
-                .iter()
-                .find(|(from, _)| from.is_empty() || *from == item.name);
+            // Only entry-source items are aliasable; dependency-pulled
+            // (cross-source) items are never renamed. When there is no
+            // closure (bundle / name-resolution paths), every item is
+            // treated as entry-source, preserving prior behavior.
+            let is_entry_source = closure
+                .as_ref()
+                .and_then(|c| c.item_source.get(&(item.kind, item.name.clone())))
+                .is_none_or(|l| *l == label);
+            let alias = if is_entry_source {
+                options
+                    .aliases
+                    .iter()
+                    .find(|(from, _)| from.is_empty() || *from == item.name)
+            } else {
+                None
+            };
             if let Some((_, alias_name)) = alias {
                 let old_path = target.join(&item.output_path);
                 let new_output = rename_output_path(&item.output_path, &item.name, alias_name);
@@ -339,11 +370,6 @@ pub fn install_with_lockfile(
         }
     }
 
-    let git_ref = match source {
-        InstallSource::Github(r) => r.git_ref.as_deref(),
-        InstallSource::Gitlab(r) => r.git_ref.as_deref(),
-        InstallSource::LocalPath(_) => None,
-    };
     let hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> = report
         .items
         .iter()
@@ -387,8 +413,20 @@ pub fn install_with_lockfile(
         } else {
             std::collections::BTreeMap::new()
         };
+    let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
+        if let Some(closure) = &closure
+            && let Some(src_label) = closure.item_source.get(&(kind, name.to_string()))
+        {
+            let gr = closure
+                .by_source
+                .get(src_label)
+                .and_then(|si| si.git_ref.clone());
+            return (src_label.clone(), gr);
+        }
+        (label.clone(), git_ref.map(str::to_string))
+    };
     let new_items =
-        crate::lockfile::items_from_report(&report, &label, git_ref, &provenance, |k, n| {
+        crate::lockfile::items_from_report(&report, item_source_lookup, &provenance, |k, n| {
             hashes.get(&(k, n.to_string())).cloned().flatten()
         });
 
