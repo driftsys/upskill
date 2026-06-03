@@ -742,6 +742,72 @@ mod tests {
     }
 
     #[test]
+    fn canonicalise_preserves_clean_body_seam() {
+        // An already-clean body with one blank line after `---` is left
+        // exactly as-is — the separator is preserved, not stripped.
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: clean\n",
+            "description: already canonical body.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "- one\n",
+            "- two\n",
+        );
+        let out = canonicalise(raw, Path::new("clean/SKILL.md")).unwrap();
+        assert_eq!(out, raw, "clean body must round-trip unchanged:\n{out}");
+    }
+
+    #[test]
+    fn canonicalise_body_is_idempotent() {
+        let raw = concat!(
+            "---\n",
+            "name: dirty\n",
+            "schema: 1\n",
+            "description: scrambled keys and bullets.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "* one\n",
+            "* two\n",
+        );
+        let path = Path::new("dirty/SKILL.md");
+        let pass1 = canonicalise(raw, path).unwrap();
+        let pass2 = canonicalise(&pass1, path).unwrap();
+        assert_eq!(pass1, pass2, "fmt must be idempotent over the body too");
+    }
+
+    #[test]
+    fn canonicalise_preserves_directives() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: cond\n",
+            "description: body has client directives.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "<!-- @client:claude -->\n",
+            "Claude-only line.\n",
+            "<!-- @endclient -->\n",
+        );
+        let out = canonicalise(raw, Path::new("cond/SKILL.md")).unwrap();
+        assert!(
+            out.contains("<!-- @client:claude -->"),
+            "open directive lost:\n{out}"
+        );
+        assert!(
+            out.contains("<!-- @endclient -->"),
+            "close directive lost:\n{out}"
+        );
+    }
+
+    #[test]
     fn canonicalise_is_idempotent() {
         let raw = concat!(
             "---\n",
