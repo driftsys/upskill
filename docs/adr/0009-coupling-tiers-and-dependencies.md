@@ -80,8 +80,12 @@ requires:
   name) or a `{ name, source }` **map** (cross-source; `source` reuses the
   `upskill add` source DSL — `owner/repo@ref`, https, `gitlab:`, local).
 - Resolution is by `(kind, name)`.
-- **`preload-skills`** (agent) implies `requires.skills` for each listed skill:
-  the skill is required for install AND preloaded at agent startup.
+- **`preload-skills`** (agent) is a soft implies of `requires.skills` for skills
+  **present in the same source**: those skills are auto-installed alongside the agent AND preloaded
+  at startup. A preloaded skill absent from the same source is a runtime hint — neither
+  auto-installed nor an error (unlike an explicit `requires` entry, which errors when missing).
+  For GitHub Copilot and opencode (no native preload mechanism), the implementation renders
+  the preload list as a prose `## Skills` section in the agent body.
 
 ### `ignore` — copy scoping
 

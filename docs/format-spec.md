@@ -359,12 +359,16 @@ intent explicit.
 
 **`preload-skills` is Claude-Code-primary.** Claude Code emits this list as `skills:` in agent
 frontmatter so the named skills are loaded at agent startup. GitHub Copilot and opencode have no
-equivalent and ignore the field. Implementations MUST emit `skills:` for Claude Code; they MUST
-NOT emit a corresponding field for clients without an equivalent.
+equivalent frontmatter field. Implementations MUST emit `skills:` for Claude Code; for GitHub
+Copilot and opencode, implementations SHOULD render the preloaded skills as a prose `## Skills`
+section appended to the agent body (no frontmatter field), so the agent is informed which skills it
+relies on.
 
-**`preload-skills` implies `requires.skills`.** Listing a skill in `preload-skills` also implies
-`requires.skills` for that skill (§3.7): the skill is required for install AND preloaded at agent
-startup.
+**`preload-skills` implies `requires.skills` (soft).** Listing a skill in `preload-skills` implies
+`requires.skills` for skills **present in the same source**: those skills are auto-installed
+alongside the agent. A preloaded skill absent from the same source is treated as a runtime hint
+and is neither auto-installed nor an error (this differs from an explicit `requires` entry, which
+errors when missing).
 
 **`model` aliases.** This specification guarantees the following short aliases:
 
@@ -387,11 +391,13 @@ generation rules (capability dropped with a warning when the target client has n
 Implementations map these fields to each client's agent definition format:
 
 - Claude Code: `.claude/agents/<name>.md` with `tools:` as capitalized names, `model:` as literal,
-  `skills:` from `preload-skills`.
+  `skills:` from `preload-skills`. `mode` is implicit by file location and not emitted.
 - GitHub Copilot: `.github/agents/<name>.agent.md` with `tools:` filtered per §4 mapping; `mode`
-  and `preload-skills` omitted.
+  omitted; `preload-skills` rendered as a prose `## Skills` section in the body (no frontmatter
+  field).
 - opencode: `.opencode/agents/<name>.md` with `mode:`, `permission:` map (per §7.3), and
-  passthrough fields. `preload-skills` omitted.
+  passthrough fields; `preload-skills` rendered as a prose `## Skills` section in the body (no
+  frontmatter field).
 
 ### 3.5 Client-specific passthrough blocks
 
