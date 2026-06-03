@@ -301,10 +301,16 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
     check_body_h1(file, body, out);
     check_fence_lang(file, body, out);
     check_directives(file, body, out);
-    // Bodyless entrypoints (bundles) have nothing to format; skip the
-    // redundant frontmatter split for them.
-    if !body.is_empty() {
-        let frontmatter = frontmatter::split(&raw).map(|(fm, _)| fm).unwrap_or("");
+    // Bodyless entrypoints (bundles) have nothing to format. A non-empty
+    // body implies `parse_kind` already split the frontmatter, so `split`
+    // returns `Some` here — if it ever did not, skip rather than fabricate
+    // an empty frontmatter (which would change the dprint prefix).
+    let item_frontmatter = if body.is_empty() {
+        None
+    } else {
+        frontmatter::split(&raw).map(|(fm, _)| fm)
+    };
+    if let Some(frontmatter) = item_frontmatter {
         check_body_format(file, frontmatter, body, out);
     }
     Ok(())
