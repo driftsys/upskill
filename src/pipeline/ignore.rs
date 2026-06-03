@@ -52,10 +52,11 @@ fn matches_pattern(path: &str, pattern: &str) -> bool {
 fn glob_match(text: &str, pat: &str) -> bool {
     let t: Vec<char> = text.chars().collect();
     let p: Vec<char> = pat.chars().collect();
-    m(&t, 0, &p, 0)
+    match_at(&t, 0, &p, 0)
 }
 
-fn m(t: &[char], ti: usize, p: &[char], pi: usize) -> bool {
+/// Match `t[ti..]` against pattern `p[pi..]`. `*`/`?` stay within a path segment; `**` spans `/`.
+fn match_at(t: &[char], ti: usize, p: &[char], pi: usize) -> bool {
     if pi == p.len() {
         return ti == t.len();
     }
@@ -64,7 +65,7 @@ fn m(t: &[char], ti: usize, p: &[char], pi: usize) -> bool {
             // `**` — consume any chars including `/`.
             let mut k = ti;
             loop {
-                if m(t, k, p, pi + 2) {
+                if match_at(t, k, p, pi + 2) {
                     return true;
                 }
                 if k == t.len() {
@@ -76,7 +77,7 @@ fn m(t: &[char], ti: usize, p: &[char], pi: usize) -> bool {
         '*' => {
             let mut k = ti;
             loop {
-                if m(t, k, p, pi + 1) {
+                if match_at(t, k, p, pi + 1) {
                     return true;
                 }
                 if k == t.len() || t[k] == '/' {
@@ -85,8 +86,8 @@ fn m(t: &[char], ti: usize, p: &[char], pi: usize) -> bool {
                 k += 1;
             }
         }
-        '?' => ti < t.len() && t[ti] != '/' && m(t, ti + 1, p, pi + 1),
-        c => ti < t.len() && t[ti] == c && m(t, ti + 1, p, pi + 1),
+        '?' => ti < t.len() && t[ti] != '/' && match_at(t, ti + 1, p, pi + 1),
+        c => ti < t.len() && t[ti] == c && match_at(t, ti + 1, p, pi + 1),
     }
 }
 
@@ -133,5 +134,21 @@ mod tests {
             &["fixtures".to_string()],
         );
         assert_eq!(kept, paths(&["main.md"]));
+    }
+
+    #[test]
+    fn question_mark_matches_single_char() {
+        assert_eq!(
+            filter_ignored(paths(&["a.md", "ab.md"]), &["?.md".to_string()]),
+            paths(&["ab.md"])
+        );
+    }
+
+    #[test]
+    fn non_matching_pattern_keeps_file() {
+        assert_eq!(
+            filter_ignored(paths(&["keep.md"]), &["*.log".to_string()]),
+            paths(&["keep.md"])
+        );
     }
 }
