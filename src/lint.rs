@@ -301,8 +301,12 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
     check_body_h1(file, body, out);
     check_fence_lang(file, body, out);
     check_directives(file, body, out);
-    let frontmatter = frontmatter::split(&raw).map(|(fm, _)| fm).unwrap_or("");
-    check_body_format(file, frontmatter, body, out);
+    // Bodyless entrypoints (bundles) have nothing to format; skip the
+    // redundant frontmatter split for them.
+    if !body.is_empty() {
+        let frontmatter = frontmatter::split(&raw).map(|(fm, _)| fm).unwrap_or("");
+        check_body_format(file, frontmatter, body, out);
+    }
     Ok(())
 }
 

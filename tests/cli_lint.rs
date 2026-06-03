@@ -13,6 +13,19 @@ use std::path::Path;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
+const UNFORMATTED_SKILL_MD: &str = concat!(
+    "---\n",
+    "schema: 1\n",
+    "name: dirty\n",
+    "description: Body uses asterisk bullets that dprint rewrites.\n",
+    "---\n",
+    "\n",
+    "## Body\n",
+    "\n",
+    "* one\n",
+    "* two\n",
+);
+
 fn write(path: &Path, contents: &str) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).unwrap();
@@ -77,21 +90,7 @@ fn lint_flags_unformatted_body_as_warning() {
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("dirty/SKILL.md");
-    write(
-        &item,
-        concat!(
-            "---\n",
-            "schema: 1\n",
-            "name: dirty\n",
-            "description: Body uses asterisk bullets that dprint rewrites.\n",
-            "---\n",
-            "\n",
-            "## Body\n",
-            "\n",
-            "* one\n",
-            "* two\n",
-        ),
-    );
+    write(&item, UNFORMATTED_SKILL_MD);
 
     let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -112,21 +111,7 @@ fn lint_strict_fails_on_unformatted_body() {
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("dirty/SKILL.md");
-    write(
-        &item,
-        concat!(
-            "---\n",
-            "schema: 1\n",
-            "name: dirty\n",
-            "description: Body uses asterisk bullets that dprint rewrites.\n",
-            "---\n",
-            "\n",
-            "## Body\n",
-            "\n",
-            "* one\n",
-            "* two\n",
-        ),
-    );
+    write(&item, UNFORMATTED_SKILL_MD);
 
     common::upskill_cmd(&home)
         .current_dir(tmp.path())
