@@ -253,7 +253,7 @@ pub fn check_opencode_plugin_installed(module_name: &str) -> PluginCheckResult {
 // ---------------------------------------------------------------------------
 
 /// Captured result of a CLI invocation.
-enum CommandOutput {
+pub(crate) enum CommandOutput {
     Success {
         stdout: String,
     },
@@ -264,7 +264,7 @@ enum CommandOutput {
     },
 }
 
-fn run_command_output(program: &str, args: &[&str]) -> CommandOutput {
+pub(crate) fn run_command_output(program: &str, args: &[&str]) -> CommandOutput {
     let result = spawn_command(program, args);
     match result {
         Ok(out) if out.status.success() => CommandOutput::Success {
@@ -316,7 +316,7 @@ fn is_command_not_found(output: &std::process::Output) -> bool {
 
 /// Map `CommandOutput` to `PluginCheckResult` by searching for `needle` as
 /// a substring of any stdout line.
-fn check_output_for_substring(output: CommandOutput, needle: &str) -> PluginCheckResult {
+pub(crate) fn check_output_for_substring(output: CommandOutput, needle: &str) -> PluginCheckResult {
     match output {
         CommandOutput::CliNotFound => PluginCheckResult::CliNotFound,
         CommandOutput::Failed { exit_code, stderr } => {
@@ -354,7 +354,7 @@ fn check_output_for_exact_line(output: CommandOutput, needle: &str) -> PluginChe
 }
 
 /// Execute a CLI command and map the result to a `PluginOutcome`.
-fn run_command(program: &str, args: &[&str]) -> PluginOutcome {
+pub(crate) fn run_command(program: &str, args: &[&str]) -> PluginOutcome {
     let output = match spawn_command(program, args) {
         Ok(output) if is_command_not_found(&output) => {
             return PluginOutcome::CliNotFound;
