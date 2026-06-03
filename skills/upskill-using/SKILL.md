@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: using-upskill
-description: Use when working in an upskill-consumer repo and needing to add, modify, vendor, audit, or remove installed content (rules, skills, agents, bundles). Trigger when `upskill lint` or `upskill doctor` reports issues. Trigger when adding a third-party bundle or updating one from upstream. Trigger when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale or wrong. Do NOT trigger for actual authoring decisions — hand off to prompt-distilling, writing-rules, writing-skills, or writing-subagents. Do NOT trigger for cosmetic typo fixes in skill bodies; raw edits to source registry files plus `upskill lint` are sufficient.
+name: upskill-using
+description: Use when working in an upskill-consumer repo and needing to add, modify, vendor, audit, or remove installed content (rules, skills, agents, bundles). Trigger when `upskill lint` or `upskill doctor` reports issues. Trigger when adding a third-party bundle or updating one from upstream. Trigger when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale or wrong. Do NOT trigger for actual authoring decisions — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, or upskill-writing-subagents. Do NOT trigger for cosmetic typo fixes in skill bodies; raw edits to source registry files plus `upskill lint` are sufficient.
 metadata:
   version: 0.2.0
   author: driftsys
@@ -10,7 +10,7 @@ metadata:
 upskill manages the lifecycle of installable agent content. It does not make
 authoring decisions for you. This skill covers operations: add, update,
 remove, list, doctor, lint, fmt, new. For authoring decisions (where does
-this go, how do I write it), hand off to `prompt-distilling` and the
+this go, how do I write it), hand off to `upskill-prompt-distilling` and the
 writing-* skills.
 
 ## Two sides of the workflow
@@ -41,13 +41,13 @@ SKILLS FOR AUTHORING DECISIONS.
 
 This Iron Law is a routing law, not a discipline law (no "NO X
 WITHOUT Y FIRST" shape like the other meta-skills), because
-`using-upskill` governs which tool to reach for, not whether to
+`upskill-using` governs which tool to reach for, not whether to
 pressure-test content before shipping it.
 
 The boundary is sharp. upskill handles fetching, frontmatter
 canonicalization, per-client generation, validation, and lockfile tracking.
 It does not decide whether a piece of content should be a rule, skill, or
-agent — that is `prompt-distilling`'s job. Mixing these concerns is the most
+agent — that is `upskill-prompt-distilling`'s job. Mixing these concerns is the most
 common usage error.
 
 ## When to use upskill vs raw edits
@@ -70,7 +70,7 @@ on content you authored and understand, and always lint after.
 
 ### Authoring a new skill in a source registry
 
-1. Run `prompt-distilling` first to confirm the content belongs in a skill
+1. Run `upskill-prompt-distilling` first to confirm the content belongs in a skill
    (not a rule, agent, or MCP tool).
 2. Hand off to `superpowers:writing-skills` to draft the SKILL.md.
 3. From inside the registry's `skills/` directory, run
@@ -144,7 +144,7 @@ alongside the install.
    `upskill update`).
 3. If `doctor` surfaces a content-shape concern (vague description,
    oversized rule), the fix lives in the source registry — hand off to
-   `prompt-distilling`'s audit section there.
+   `upskill-prompt-distilling`'s audit section there.
 
 ## Interpreting upskill output
 
@@ -226,15 +226,15 @@ this skill does not assume one exists.
 
 | Situation                                              | Hand off to                                              |
 | ------------------------------------------------------ | -------------------------------------------------------- |
-| Newcomer to the framework needing orientation          | `prompt-design`                                          |
-| Deciding where new content belongs                     | `prompt-distilling`                                      |
-| Authoring a new rule                                   | `writing-rules`                                          |
+| Newcomer to the framework needing orientation          | `upskill-prompt-design`                                  |
+| Deciding where new content belongs                     | `upskill-prompt-distilling`                              |
+| Authoring a new rule                                   | `upskill-writing-rules`                                  |
 | Authoring a new skill                                  | `superpowers:writing-skills`                             |
-| Authoring a new subagent / agent                       | `writing-subagents`                                      |
-| Setting up RED-GREEN-REFACTOR for any authored content | `evaluating-prompts`                                     |
+| Authoring a new subagent / agent                       | `upskill-writing-subagents`                              |
+| Setting up RED-GREEN-REFACTOR for any authored content | `upskill-evaluating-prompts`                             |
 | Authoring a new MCP server                             | the MCP server repo's authoring process (out of scope)   |
 | Adding to a RAG corpus                                 | the corpus's MCP tool's authoring process (out of scope) |
-| Routing decision on existing content showing drift     | `prompt-distilling` audit section                        |
+| Routing decision on existing content showing drift     | `upskill-prompt-distilling` audit section                |
 
 ## Red flags — STOP
 

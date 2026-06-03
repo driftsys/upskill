@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: prompt-design
-description: Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to prompt-distilling, writing-rules, writing-skills, writing-subagents, or using-upskill.
+name: upskill-prompt-design
+description: Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, upskill-writing-subagents, or upskill-using.
 metadata:
   version: 0.1.0
   author: driftsys
@@ -22,9 +22,9 @@ Five layers carry durable agent behavior. Three are managed by upskill:
 
 | Layer          | What it is                                                                | Authored via                               |
 | -------------- | ------------------------------------------------------------------------- | ------------------------------------------ |
-| **Rule**       | A line in CLAUDE.md / AGENTS.md, loaded every turn                        | `writing-rules`                            |
+| **Rule**       | A line in CLAUDE.md / AGENTS.md, loaded every turn                        | `upskill-writing-rules`                    |
 | **Skill**      | A markdown procedure activated on demand by description matching          | `superpowers:writing-skills`               |
-| **Subagent**   | A bounded sub-task with its own system prompt, tools, and return contract | `writing-subagents`                        |
+| **Subagent**   | A bounded sub-task with its own system prompt, tools, and return contract | `upskill-writing-subagents`                |
 | **MCP tool**   | Live capability exposed by an on-prem server                              | Separate MCP server repo authoring process |
 | **RAG corpus** | Searchable static content fronted by an MCP search tool                   | The corpus's MCP tool authoring process    |
 
@@ -36,12 +36,12 @@ processes.
 
 | Situation                                                                  | Activate                                                 |
 | -------------------------------------------------------------------------- | -------------------------------------------------------- |
-| "I want to add a convention / encode behavior / shape what the agent does" | `prompt-distilling`                                      |
-| "I know it's a rule, how do I write it well"                               | `writing-rules`                                          |
+| "I want to add a convention / encode behavior / shape what the agent does" | `upskill-prompt-distilling`                              |
+| "I know it's a rule, how do I write it well"                               | `upskill-writing-rules`                                  |
 | "I know it's a skill, how do I write it well"                              | `superpowers:writing-skills`                             |
-| "I know it's a subagent, how do I write it well"                           | `writing-subagents`                                      |
-| "I need to run upskill commands / vendor a bundle / audit content"         | `using-upskill`                                          |
-| "I need to set up the RED-GREEN-REFACTOR cycle for something I authored"   | `evaluating-prompts`                                     |
+| "I know it's a subagent, how do I write it well"                           | `upskill-writing-subagents`                              |
+| "I need to run upskill commands / vendor a bundle / audit content"         | `upskill-using`                                          |
+| "I need to set up the RED-GREEN-REFACTOR cycle for something I authored"   | `upskill-evaluating-prompts`                             |
 | "I want to write an MCP server"                                            | `mcp-builder` (vendored) — out of upskill's direct scope |
 | "I want to write good one-shot prompts to send to Claude Code"             | Not this framework — see onboarding doc                  |
 
@@ -95,12 +95,12 @@ invocation overhead plus return payload. MCP tool definitions are paid
 every turn (the schemas, not the responses). Description quality is the
 dominant cost variable for skills, not body length — a vague
 description silently fails to activate, which is worse than no skill
-at all. `writing-rules` carries the full token-budget discipline.
+at all. `upskill-writing-rules` carries the full token-budget discipline.
 
 ### Composition patterns
 
 Most authoring intents span multiple layers (rule + skill, skill +
-MCP tool, subagent + skill, and so on). `prompt-distilling`
+MCP tool, subagent + skill, and so on). `upskill-prompt-distilling`
 enumerates the recurring patterns and handles the decomposition. If
 your intent fits one, route to every relevant writing-\* skill, not
 just one.
@@ -115,7 +115,7 @@ prompt survives realistic pressure). Prompts that have not been
 pressure-tested look identical on the page to ones that have, and
 fail silently in production. The evaluation discipline is what
 distinguishes durable agent content from wishful thinking;
-`evaluating-prompts` covers the methodology in detail.
+`upskill-evaluating-prompts` covers the methodology in detail.
 
 ## The lifecycle in one paragraph
 
@@ -126,7 +126,7 @@ per-client files in the consumer project at install time.
 registries; `upskill doctor` verifies installed state against
 `.upskill-lock.json`. Generated per-client files are never hand-edited
 — drift is silent. Vendored bundles (like `superpowers`) carry NOTICE
-files and attribution. `using-upskill` covers the workflows.
+files and attribution. `upskill-using` covers the workflows.
 
 ## Symptoms that suggest framework-level problems
 
@@ -135,19 +135,19 @@ diagnosis:
 
 - "The agent keeps doing X even though we have a rule against it" →
   rule under-firing or being rationalized. Activate
-  `evaluating-prompts` for diagnosis, then `writing-rules` for
+  `upskill-evaluating-prompts` for diagnosis, then `upskill-writing-rules` for
   revision.
 - "We have a skill for that but nobody uses it" → description not
   activating. Activate `superpowers:writing-skills` or hand off via
-  `prompt-distilling` (the skill may be in the wrong layer).
+  `upskill-prompt-distilling` (the skill may be in the wrong layer).
 - "The subagent's output is bigger than what the parent would have
-  done inline" → return-contract failure. Activate `writing-subagents`.
+  done inline" → return-contract failure. Activate `upskill-writing-subagents`.
 - "We added a rule and now every interaction feels slower" → token
-  budget exceeded. Activate `using-upskill` (`doctor`) and
-  `prompt-distilling` (the content may not deserve to be a rule).
+  budget exceeded. Activate `upskill-using` (`doctor`) and
+  `upskill-prompt-distilling` (the content may not deserve to be a rule).
 - "Different teams handle the same situation differently" →
   cross-cutting convention without a home. Route via
-  `prompt-distilling`.
+  `upskill-prompt-distilling`.
 
 ## Composition with onboarding
 

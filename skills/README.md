@@ -12,29 +12,29 @@ The directory follows the upskill conventional source-registry layout
 
 ```text
 skills/
-├── README.md                            (this file)
-├── NOTICE                               attribution for vendored methodology
-├── prompt-engineering.bundle.yaml       one-shot install of the discipline
-├── prompt-design/                      umbrella / orientation
+├── README.md                       (this file)
+├── NOTICE                          attribution for vendored methodology
+├── prompt-engineering.bundle.yaml  one-shot install of the discipline
+├── upskill-prompt-design/          umbrella / orientation
 │   └── SKILL.md
-├── prompt-distilling/                   decompose authoring intent + place across layers
+├── upskill-prompt-distilling/      decompose authoring intent + place across layers
 │   └── SKILL.md
-├── writing-rules/                       per-layer authoring methodology
+├── upskill-writing-rules/          per-layer authoring methodology
 │   └── SKILL.md
-├── writing-subagents/                   per-layer authoring methodology
+├── upskill-writing-subagents/      per-layer authoring methodology
 │   └── SKILL.md
-├── evaluating-prompts/                  RED-GREEN-REFACTOR cycle + scenario batteries
+├── upskill-evaluating-prompts/     RED-GREEN-REFACTOR cycle + scenario batteries
 │   └── SKILL.md
-├── writing-skill-bundles/               .bundle.yaml authoring + plugin declarations
+├── upskill-writing-bundles/        .bundle.yaml authoring + plugin declarations
 │   └── SKILL.md
-└── using-upskill/                       lifecycle operations
+└── upskill-using/                  lifecycle operations
     └── SKILL.md
 ```
 
 ## Status
 
-All skills are v0.1.0 except `prompt-distilling` (v0.3.0, renamed from
-`picking-the-layer`) and `using-upskill` (v0.2.0, rewritten against the
+All skills are v0.1.0 except `upskill-prompt-distilling` (v0.3.0, renamed from
+`picking-the-layer`) and `upskill-using` (v0.2.0, rewritten against the
 real CLI surface). None have yet been through their own
 RED-GREEN-REFACTOR cycle. Each carries an "Honest caveats" section
 flagging this.
@@ -93,15 +93,15 @@ To install one item without the rest of the bundle, point at the
 registry directory and pass the item name as a filter:
 
 ```bash
-upskill add ./skills prompt-design   # just the umbrella skill
+upskill add ./skills upskill-prompt-design   # just the umbrella skill
 ```
 
-See `using-upskill/SKILL.md` for the full lifecycle.
+See `upskill-using/SKILL.md` for the full lifecycle.
 
 ## Recommended adoption sequence
 
 1. Vendor `writing-skills` from superpowers.
-2. Run `evaluating-prompts`' methodology against `prompt-distilling`
+2. Run `upskill-evaluating-prompts`' methodology against `upskill-prompt-distilling`
    (most-activated skill) to validate the meta-skill methodology.
 3. Iterate based on findings.
 4. Roll out to pilot team(s).

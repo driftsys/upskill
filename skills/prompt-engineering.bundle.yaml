@@ -11,13 +11,13 @@ license: MIT
 # registry the bundle lives in.
 items:
   skills:
-    - prompt-design # umbrella entry point
-    - prompt-distilling # placement: intent → layer
-    - writing-rules # authoring: always-loaded invariants
-    - writing-subagents # authoring: bounded sub-task delegation
-    - evaluating-prompts # eval: RED-GREEN-REFACTOR
-    - using-upskill # ops: add / update / audit
-    - writing-skill-bundles # authoring: .bundle.yaml manifests + plugins
+    - upskill-prompt-design # umbrella entry point
+    - upskill-prompt-distilling # placement: intent → layer
+    - upskill-writing-rules # authoring: always-loaded invariants
+    - upskill-writing-subagents # authoring: bounded sub-task delegation
+    - upskill-evaluating-prompts # eval: RED-GREEN-REFACTOR
+    - upskill-using # ops: add / update / audit
+    - upskill-writing-bundles # authoring: .bundle.yaml manifests + plugins
 
 # Client-native plugins required by this bundle's skills.
 plugins:

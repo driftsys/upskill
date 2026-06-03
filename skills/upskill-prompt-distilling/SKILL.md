@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: prompt-distilling
-description: Use BEFORE authoring any rule, skill, or subagent. Trigger when someone says "we should encode X", "the agent keeps forgetting Y", "let's add a rule for Z", or any variant where new behavior needs to live somewhere in the framework. Also trigger when reviewing existing content that is misbehaving — wrong-layer placement is a common silent root cause. Do NOT trigger for refining content already correctly placed; hand off to writing-rules, writing-skills, or writing-subagents.
+name: upskill-prompt-distilling
+description: Use BEFORE authoring any rule, skill, or subagent. Trigger when someone says "we should encode X", "the agent keeps forgetting Y", "let's add a rule for Z", or any variant where new behavior needs to live somewhere in the framework. Also trigger when reviewing existing content that is misbehaving — wrong-layer placement is a common silent root cause. Do NOT trigger for refining content already correctly placed; hand off to upskill-writing-rules, writing-skills, or upskill-writing-subagents.
 metadata:
   version: 0.3.0
   author: driftsys
@@ -237,9 +237,9 @@ re-distillation, not content editing.
 
 Once distilled and placed, hand off:
 
-- Rule → `writing-rules`
+- Rule → `upskill-writing-rules`
 - Skill → `superpowers:writing-skills`
-- Subagent → `writing-subagents`
+- Subagent → `upskill-writing-subagents`
 - MCP tool → the MCP server repo's authoring process (out of scope here)
 - RAG corpus → the corpus that the relevant `search_*` MCP tool fronts
   (out of scope here)

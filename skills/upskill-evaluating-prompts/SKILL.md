@@ -1,7 +1,7 @@
 ---
 schema: 1
-name: evaluating-prompts
-description: Use when setting up the RED-GREEN-REFACTOR cycle for a rule, skill, or subagent — i.e., when the `writing-*` skills tell you to "run a failing test first." Trigger when authoring meta-skills, when validating that an existing rule/skill/subagent actually shapes behavior, or when auditing whether a skill activates correctly. Do NOT trigger for content authoring itself — see writing-rules, writing-skills, writing-subagents.
+name: upskill-evaluating-prompts
+description: Use when setting up the RED-GREEN-REFACTOR cycle for a rule, skill, or subagent — i.e., when the `writing-*` skills tell you to "run a failing test first." Trigger when authoring meta-skills, when validating that an existing rule/skill/subagent actually shapes behavior, or when auditing whether a skill activates correctly. Do NOT trigger for content authoring itself — see upskill-writing-rules, writing-skills, upskill-writing-subagents.
 metadata:
   version: 0.1.0
   author: driftsys
@@ -9,7 +9,7 @@ metadata:
 
 The `writing-*` skills tell you to run a failing test before authoring.
 This skill explains how. It is the eval methodology underneath the
-Iron Laws of writing-rules, writing-skills, and writing-subagents.
+Iron Laws of upskill-writing-rules, writing-skills, and upskill-writing-subagents.
 
 If you are about to author content and the writing-* skill says "RED
 phase: run pressure scenarios" — this is where you find out how to
@@ -95,7 +95,7 @@ The scenario battery shape depends on which layer you are evaluating.
 
 ### Rules — three scenario types
 
-Per `writing-rules`:
+Per `upskill-writing-rules`:
 
 1. **In-scope compliance** — a prompt where the rule should govern.
    RED: does the agent violate without the rule? GREEN: does it
@@ -126,7 +126,7 @@ one that does not activate. Both halves matter.
 
 ### Subagents — two interfaces, separately
 
-Per `writing-subagents`, subagents have two failure surfaces. Test
+Per `upskill-writing-subagents`, subagents have two failure surfaces. Test
 each independently.
 
 1. **Invocation tests** (run on the parent, subagent registered)
@@ -250,7 +250,7 @@ layer. Symptoms:
   skill the parent should load inline.
 
 When this pattern emerges, stop iterating on the prompt and hand off
-to `prompt-distilling` for a fresh layer placement.
+to `upskill-prompt-distilling` for a fresh layer placement.
 
 ## Scenario batteries as artifacts
 
@@ -258,7 +258,7 @@ The scenario battery is reusable. Keep it as a file alongside the
 prompt:
 
 ```text
-skills/writing-rules/
+skills/upskill-writing-rules/
 ├── SKILL.md
 ├── eval/
 │   ├── scenarios.md           # battery (curated, versioned)
@@ -296,7 +296,7 @@ skill.
 
 Each writing-* skill specifies the scenario shape for its layer
 (three scenarios for rules, activation+behavior for skills, two
-interfaces for subagents). `evaluating-prompts` provides the methodology
+interfaces for subagents). `upskill-evaluating-prompts` provides the methodology
 underneath those shapes — harness construction, pressure types,
 rationalization tracking, pass/fail discipline.
 
@@ -315,8 +315,8 @@ methodology has.
 
 This skill has not yet been put through its own RED-GREEN-REFACTOR
 cycle. The most natural way to evaluate it is to use it to evaluate
-the existing meta-skills (`writing-rules`, `writing-subagents`,
-`using-upskill`) — if the methodology produces actionable results
+the existing meta-skills (`upskill-writing-rules`, `upskill-writing-subagents`,
+`upskill-using`) — if the methodology produces actionable results
 when applied to those four, this skill earns its slot. If authors
 end up evaluating prompts the same way regardless of whether this
 skill is present, the skill itself is unjustified.
