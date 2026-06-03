@@ -15,6 +15,7 @@
 //! | `name-matches-dir`| error    | §2.1               |
 //! | `body-h1`         | warning  | §5.1               |
 //! | `fence-lang`      | warning  | §5.2               |
+//! | `body-format`     | warning  | §3.8 (dprint canonical body) |
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
 //! | `name-collision`  | error    | cross-file (bundle vs item name) |
 //!
@@ -300,6 +301,8 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
     check_body_h1(file, body, out);
     check_fence_lang(file, body, out);
     check_directives(file, body, out);
+    let frontmatter = frontmatter::split(&raw).map(|(fm, _)| fm).unwrap_or("");
+    check_body_format(file, frontmatter, body, out);
     Ok(())
 }
 
@@ -458,6 +461,29 @@ fn check_directives(file: &Path, body: &str, out: &mut Vec<Finding>) {
             path: file.to_path_buf(),
             line: None,
             message: format!("{:#}", err),
+        });
+    }
+}
+
+/// Compare the body against its canonical dprint-formatted form. A
+/// mismatch means the author has not run `upskill fmt`. Uses the same
+/// `fmt::canonical_body` helper that `fmt` writes with, so checker and
+/// fixer never disagree. The on-disk frontmatter is passed through dprint
+/// as an opaque prefix, so this is independent of frontmatter key order
+/// (which `lint` does not check — only `fmt` reorders).
+fn check_body_format(file: &Path, frontmatter: &str, body: &str, out: &mut Vec<Finding>) {
+    let Ok(canonical) = crate::fmt::canonical_body(frontmatter, body) else {
+        // A dprint failure is rare and surfaced by `fmt` itself; don't
+        // double-report it here.
+        return;
+    };
+    if canonical != body {
+        out.push(Finding {
+            rule_id: "body-format",
+            severity: Severity::Warning,
+            path: file.to_path_buf(),
+            line: None,
+            message: "body is not formatted — run `upskill fmt`".into(),
         });
     }
 }
@@ -830,6 +856,47 @@ mod tests {
             "missing name-matches-dir finding for bundle: {:?}",
             report.findings
         );
+    }
+
+    #[test]
+    fn lint_flags_unformatted_body() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("dirty/SKILL.md");
+        write(&item, &skill("dirty", "\n## Body\n\n* one\n* two\n"));
+        let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
+        let f = report
+            .findings
+            .iter()
+            .find(|f| f.rule_id == "body-format")
+            .expect("expected a body-format finding");
+        assert_eq!(f.severity, Severity::Warning);
+    }
+
+    #[test]
+    fn lint_clean_body_has_no_body_format_finding() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("clean/SKILL.md");
+        write(&item, &skill("clean", "\n## Body\n\n- one\n- two\n"));
+        let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
+        assert!(
+            report.findings.iter().all(|f| f.rule_id != "body-format"),
+            "unexpected body-format finding: {:?}",
+            report.findings
+        );
+    }
+
+    #[test]
+    fn lint_strict_promotes_body_format_to_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item = tmp.path().join("dirty/SKILL.md");
+        write(&item, &skill("dirty", "\n## Body\n\n* one\n* two\n"));
+        let report = lint(&[tmp.path().to_path_buf()], true).unwrap();
+        let f = report
+            .findings
+            .iter()
+            .find(|f| f.rule_id == "body-format")
+            .expect("expected a body-format finding");
+        assert_eq!(f.severity, Severity::Error);
     }
 
     #[test]
