@@ -8,9 +8,11 @@
 //!
 //! When `<cwd>/<name>/` already exists with a different kind's
 //! entrypoint, the command adds the requested kind as a co-located
-//! sibling (format-spec §2.1) provided every existing entrypoint's
-//! `name:` already matches `<name>`. The user keeps a single item
-//! directory expressing one capability across multiple kinds.
+//! sibling (format-spec §2.1) provided every existing **skill**
+//! entrypoint's `name:` matches `<name>` (Agent Skills standard).
+//! Rule and agent co-locatees may carry a divergent `name:` and do
+//! not block co-location. The user keeps a single item directory
+//! expressing one capability across multiple kinds.
 //!
 //! Refuses if:
 //!
@@ -18,8 +20,8 @@
 //!   registry).
 //! - The target entrypoint file (`<name>/<KIND>.md`) already exists.
 //! - `<cwd>/<name>/` exists but is not an item directory (no
-//!   recognised entrypoints), or its existing entrypoints' `name:`
-//!   fields do not match `<name>`.
+//!   recognised entrypoints), or an existing **skill** entrypoint's
+//!   `name:` field does not match `<name>`.
 //! - `<name>` does not satisfy format-spec §2.1
 //!   (`[a-z0-9-]{1,64}`, no leading/trailing hyphen).
 
@@ -56,9 +58,6 @@ impl NewKind {
     }
 }
 
-/// Every entrypoint filename a co-located item directory may hold.
-const ALL_ENTRYPOINTS: &[&str] = &["RULE.md", "SKILL.md", "AGENT.md"];
-
 /// Outcome of one scaffold call — the path written, for the CLI to
 /// echo back.
 #[derive(Debug, Clone)]
@@ -73,11 +72,12 @@ pub struct ScaffoldReport {
 /// boundary.
 ///
 /// Writes `<root>/<name>/<KIND>.md` (format-spec §2.1, ADR-0006). If
-/// `<root>/<name>/` already exists as a co-locatable item directory
-/// (its existing entrypoints' `name:` fields all equal `<name>`), the
-/// new entrypoint is added as a sibling. If the directory exists but
-/// holds entrypoints with a different `name:`, or no entrypoints at
-/// all, the command refuses.
+/// `<root>/<name>/` already exists as a co-locatable item directory,
+/// the new entrypoint is added as a sibling provided no existing
+/// **skill** entrypoint has a `name:` that diverges from `<name>`.
+/// Rule and agent co-locatees may carry divergent names without
+/// blocking the operation. Refuses if the directory has no recognised
+/// entrypoints at all.
 pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport> {
     if is_consumer_project(root) {
         return Err(anyhow!(
@@ -121,19 +121,35 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
     })
 }
 
+/// Every entrypoint filename paired with whether its kind requires
+/// `name == dir` (the Agent Skills standard constraint).
+///
+/// Skill: MUST match the directory name (§2.1, Agent Skills standard).
+/// Rule / Agent: MAY diverge — no check performed, mirroring
+/// `lint.rs::check_name_matches_dir`.
+const ENTRYPOINT_SKILL_MATCH: &[(&str, bool)] =
+    &[("RULE.md", false), ("SKILL.md", true), ("AGENT.md", false)];
+
 /// Verify that `dir` is a co-locatable item directory for `name`: it
-/// contains at least one recognised entrypoint, and every entrypoint
-/// it does contain declares `name:` equal to `name`. Mirrors the spec
-/// §2.1 invariant — co-located entrypoints in one item directory share
-/// the directory's name.
+/// contains at least one recognised entrypoint, and every skill
+/// entrypoint it does contain declares `name:` equal to `name`.
+///
+/// Rule and agent entrypoints are exempt from the name-equality check
+/// because format-spec §2.1 (Slice 1) allows rule/agent `name` to
+/// diverge from the folder. This mirrors the identity rule in
+/// `lint.rs::check_name_matches_dir`.
 fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
     let mut saw_entrypoint = false;
-    for entrypoint in ALL_ENTRYPOINTS {
+    for &(entrypoint, must_match_dir) in ENTRYPOINT_SKILL_MATCH {
         let path = dir.join(entrypoint);
         if !path.is_file() {
             continue;
         }
         saw_entrypoint = true;
+        if !must_match_dir {
+            // Rule / Agent: name may diverge from the folder — no check.
+            continue;
+        }
         let raw =
             std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
         // An absent `name:` falls back to the directory name (§2.1), so it
@@ -142,8 +158,9 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
             && existing_name != name
         {
             bail!(
-                "{}: existing entrypoint declares `name: {existing_name}` — co-located \
-                 entrypoints must share the directory's name `{name}` (format-spec §2.1)",
+                "{}: existing skill entrypoint declares `name: {existing_name}` — a skill \
+                 must share the directory's name `{name}` (format-spec §2.1, Agent Skills \
+                 standard)",
                 path.display()
             );
         }
@@ -289,6 +306,68 @@ mod tests {
         )
         .unwrap();
         let err = scaffold(tmp.path(), NewKind::Rule, "foo").expect_err("must refuse");
+        let msg = format!("{err:#}");
+        assert!(msg.contains("name: bar"), "got: {msg}");
+        assert!(msg.contains("must share"), "got: {msg}");
+    }
+
+    // --- §2.1 Slice 1: rule/agent names may diverge from folder ---------------
+
+    /// A folder already containing a RULE.md whose `name:` diverges from the
+    /// directory name (valid after Slice 1) must not block co-locating a new
+    /// skill. Before the fix this errored: "co-located entrypoints must share
+    /// the directory's name".
+    #[test]
+    fn scaffold_coloc_succeeds_when_existing_rule_has_divergent_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item_dir = tmp.path().join("markspec-trace");
+        std::fs::create_dir_all(&item_dir).unwrap();
+        // Existing rule whose name diverges from the folder — valid per §2.1.
+        std::fs::write(
+            item_dir.join("RULE.md"),
+            "---\nschema: 1\nname: markspec-trace-syntax\ndescription: x\n---\n\n## x\n",
+        )
+        .unwrap();
+        // Co-locating a skill with the folder name must succeed.
+        let report =
+            scaffold(tmp.path(), NewKind::Skill, "markspec-trace").expect("should succeed");
+        assert_eq!(report.written, tmp.path().join("markspec-trace/SKILL.md"));
+        assert!(tmp.path().join("markspec-trace/RULE.md").is_file());
+        assert!(tmp.path().join("markspec-trace/SKILL.md").is_file());
+    }
+
+    /// Same relaxation for an existing AGENT.md with a divergent name.
+    #[test]
+    fn scaffold_coloc_succeeds_when_existing_agent_has_divergent_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item_dir = tmp.path().join("my-feature");
+        std::fs::create_dir_all(&item_dir).unwrap();
+        std::fs::write(
+            item_dir.join("AGENT.md"),
+            "---\nschema: 1\nname: my-feature-reviewer\ndescription: x\nmode: subagent\nmodel: sonnet\n---\n\n## x\n",
+        )
+        .unwrap();
+        // Co-locating a rule must succeed even though the agent name diverges.
+        let report = scaffold(tmp.path(), NewKind::Rule, "my-feature").expect("should succeed");
+        assert_eq!(report.written, tmp.path().join("my-feature/RULE.md"));
+    }
+
+    /// A skill's name MUST still match the directory even after the rule/agent
+    /// relaxation. Scaffolding anything into a folder where an existing skill
+    /// has a divergent name must be refused.
+    #[test]
+    fn scaffold_refuses_coloc_when_existing_skill_has_divergent_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let item_dir = tmp.path().join("foo");
+        std::fs::create_dir_all(&item_dir).unwrap();
+        std::fs::write(
+            item_dir.join("SKILL.md"),
+            "---\nschema: 1\nname: bar\ndescription: x\n---\n\n## x\n",
+        )
+        .unwrap();
+        // The existing skill has name `bar` but the directory is `foo` —
+        // skills must match the directory (Agent Skills standard).
+        let err = scaffold(tmp.path(), NewKind::Agent, "foo").expect_err("must refuse");
         let msg = format!("{err:#}");
         assert!(msg.contains("name: bar"), "got: {msg}");
         assert!(msg.contains("must share"), "got: {msg}");
