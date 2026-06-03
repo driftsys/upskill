@@ -349,13 +349,39 @@ pub fn install_with_lockfile(
         .iter()
         .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
         .collect();
+    // Translate `requires` provenance through any applied `--as` aliases so
+    // the recorded `required_by` is consistent with the post-alias names that
+    // `doctor` matches against (#205). The closure keys dependencies and labels
+    // requirers by ORIGINAL effective name; the rename loop above already moved
+    // the installed items to their alias. `aliased_names` maps `alias ->
+    // original`; invert it to `original -> alias` and rewrite (a) each
+    // dependency key's name and (b) each `"{kind}:{name}"` requirer label.
+    let original_to_alias: std::collections::HashMap<&str, &str> = aliased_names
+        .iter()
+        .map(|(alias, original)| (original.as_str(), alias.as_str()))
+        .collect();
+    let alias_label = |label: &str| -> String {
+        match label.split_once(':') {
+            Some((kind, name)) => match original_to_alias.get(name) {
+                Some(alias) => format!("{kind}:{alias}"),
+                None => label.to_string(),
+            },
+            None => label.to_string(),
+        }
+    };
     let provenance: std::collections::BTreeMap<(ItemKind, String), Vec<String>> =
         if let Some(closure) = &closure {
             closure
                 .required_by
                 .iter()
-                .map(|(key, requirers)| {
-                    (key.clone(), requirers.iter().cloned().collect::<Vec<_>>())
+                .map(|((kind, name), requirers)| {
+                    let aliased_name = original_to_alias
+                        .get(name.as_str())
+                        .map(|a| a.to_string())
+                        .unwrap_or_else(|| name.clone());
+                    let aliased_requirers =
+                        requirers.iter().map(|r| alias_label(r)).collect::<Vec<_>>();
+                    ((*kind, aliased_name), aliased_requirers)
                 })
                 .collect()
         } else {
