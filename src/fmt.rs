@@ -43,6 +43,7 @@ const BUNDLE_KEY_ORDER: &[&str] = &[
     "items",
     "requires",
     "plugins",
+    "mcps",
     "metadata",
 ];
 
@@ -845,6 +846,35 @@ mod tests {
         let after = fs::read_to_string(&item).unwrap();
         // scope must survive the round-trip.
         assert!(after.contains("src/**/*.ts"), "scope.paths lost:\n{after}");
+    }
+
+    #[test]
+    fn reorder_bundle_mcps_after_plugins_before_metadata() {
+        // mcps deliberately placed out of canonical order (before plugins).
+        let input = concat!(
+            "schema: 1\n",
+            "name: test\n",
+            "description: d.\n",
+            "mcps:\n",
+            "  drawio:\n",
+            "    remote:\n",
+            "      type: http\n",
+            "      url: https://example.com/mcp\n",
+            "metadata:\n",
+            "  version: 0.1.0\n",
+            "plugins:\n",
+            "  sp:\n",
+            "    vscode:\n",
+            "      extension: pub.ext\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        let plugins = out.find("plugins:").unwrap();
+        let mcps = out.find("mcps:").unwrap();
+        let metadata = out.find("metadata:").unwrap();
+        assert!(
+            plugins < mcps && mcps < metadata,
+            "bundle key order must be plugins < mcps < metadata:\n{out}"
+        );
     }
 
     #[test]
