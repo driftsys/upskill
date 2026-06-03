@@ -4,19 +4,19 @@
 (run inside a project that consumes AI-assistance content) and
 **author** (run inside a source-registry repo).
 
-| Command      | Role     | Purpose                                             |
-| ------------ | -------- | --------------------------------------------------- |
-| `add`        | Consumer | Install content from any source.                    |
-| `remove`     | Consumer | Remove installed content.                           |
-| `remove-mcp` | Consumer | Unregister an MCP server configured by a bundle.    |
-| `update`     | Consumer | Pull latest, regenerate changed items.              |
-| `list`       | Consumer | Show installed content from the lock file.          |
-| `doctor`     | Consumer | Verify installation consistency.                    |
-| `search`     | Consumer | Look up skills via the public registry.             |
-| `index`      | Consumer | Build or manage the local registry index cache.     |
-| `new`        | Author   | Scaffold a new rule, skill, or agent.               |
-| `lint`       | Author   | Validate SSOT files against the format spec.        |
-| `fmt`        | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| Command      | Role     | Purpose                                                     |
+| ------------ | -------- | ----------------------------------------------------------- |
+| `add`        | Consumer | Install content from any source.                            |
+| `remove`     | Consumer | Remove installed content.                                   |
+| `remove-mcp` | Consumer | Unregister an MCP server configured by a bundle.            |
+| `update`     | Consumer | Pull latest, regenerate changed items.                      |
+| `list`       | Consumer | Show installed content from the lock file.                  |
+| `doctor`     | Consumer | Verify installation consistency.                            |
+| `search`     | Consumer | Look up skills via the public registry.                     |
+| `index`      | Consumer | Build or manage the local registry index cache.             |
+| `new`        | Author   | Scaffold a new rule, skill, or agent.                       |
+| `lint`       | Author   | Validate SSOT files against the format spec.                |
+| `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
 ## Global flags
 
@@ -319,6 +319,7 @@ rules ship out of the box:
 | `name-matches-dir` | error    | format-spec §2.1 |
 | `body-h1`          | warning  | format-spec §5.1 |
 | `fence-lang`       | warning  | format-spec §5.2 |
+| `body-format`      | warning  | format-spec §3.8 |
 | `directive`        | error    | format-spec §6.3 |
 
 ```bash
@@ -330,16 +331,17 @@ upskill lint --strict       # CI mode: warnings become errors
 ### `upskill fmt [paths...]`
 
 Canonicalise YAML frontmatter (key order, indentation, alphabetised
-unknown keys). Markdown body formatting is left to dprint — the two
-tools don't overlap.
+unknown keys) and format the markdown body via dprint (the same formatter
+the generation pipeline uses). The frontmatter↔body seam is normalised to
+a single blank line; YAML comments and prose wrapping are preserved.
 
 ```bash
 upskill fmt                  # format everything in the working tree
 upskill fmt my-skill/        # format a single item directory
 ```
 
-Files whose frontmatter is already canonical are left untouched (no
-`mtime` thrash).
+Files whose frontmatter and body are already canonical are left untouched
+(no `mtime` thrash).
 
 ## State files
 

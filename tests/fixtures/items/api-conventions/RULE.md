@@ -7,11 +7,11 @@ scope:
   paths:
     - "src/api/**/*.ts"
     - "src/handlers/**/*.ts"
-copilot:
-  excludeAgent: code-review
 metadata:
   version: "2.1.0"
   author: platform-api
+copilot:
+  excludeAgent: code-review
 ---
 
 ## API handler conventions
