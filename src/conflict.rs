@@ -92,6 +92,7 @@ mod tests {
                 .collect(),
             bundles: vec![],
             plugins: vec![],
+            mcps: vec![],
         }
     }
 
