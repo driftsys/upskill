@@ -1,9 +1,9 @@
 //! ATDD tests for `upskill fmt`.
 //!
-//! Canonicalises YAML frontmatter in place. Body content is dprint's job;
-//! this command does not touch it. Author command — refuses to run inside
-//! a consumer project (`.upskill-lock.json` at the path's root) per
-//! ADR-0004.
+//! Canonicalises YAML frontmatter in place and formats the markdown body
+//! via the shared dprint pass (same formatter the generation pipeline
+//! uses). Author command — refuses to run inside a consumer project
+//! (`.upskill-lock.json` at the path's root) per ADR-0004.
 
 mod common;
 
@@ -67,6 +67,42 @@ fn fmt_reorders_frontmatter_keys_canonically() {
 }
 
 #[test]
+fn fmt_formats_markdown_body() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let item = tmp.path().join("dirty/SKILL.md");
+    write(
+        &item,
+        concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: dirty\n",
+            "description: A skill whose body needs formatting.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "\n",
+            "* one\n",
+            "* two\n",
+        ),
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt"])
+        .assert()
+        .success();
+
+    let after = fs::read_to_string(&item).unwrap();
+    assert!(
+        after.ends_with("---\n\n## Body\n\n- one\n- two\n"),
+        "body not formatted:\n{after}"
+    );
+}
+
+#[test]
 fn fmt_is_idempotent() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -106,16 +142,20 @@ fn fmt_is_idempotent() {
 }
 
 #[test]
-fn fmt_does_not_touch_body() {
+fn fmt_preserves_already_canonical_body_structure() {
+    // dprint normalises `*italic*` → `_italic_`; code fences and HTML
+    // comments are preserved. The test uses already-canonical dprint output
+    // so the body should survive the round-trip unchanged.
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let item = tmp.path().join("preserve-body/SKILL.md");
+    // Body already in dprint canonical form (underscores, not asterisks).
     let body = concat!(
         "\n",
         "## A heading\n",
         "\n",
-        "Some prose with *italic* and **bold**.\n",
+        "Some prose with _italic_ and **bold**.\n",
         "\n",
         "```rust\n",
         "fn main() {}\n",
@@ -172,6 +212,7 @@ fn fmt_reports_files_changed_count() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
+    // needs-fmt: frontmatter out of order — will be changed.
     write(
         &tmp.path().join("needs-fmt/SKILL.md"),
         concat!(
@@ -180,9 +221,12 @@ fn fmt_reports_files_changed_count() {
             "schema: 1\n",
             "description: Out-of-order frontmatter.\n",
             "---\n",
+            "\n",
             "## body\n",
         ),
     );
+    // clean: already in fully canonical form (correct key order + blank-line
+    // seam) — must not be changed.
     write(
         &tmp.path().join("clean/SKILL.md"),
         concat!(
@@ -191,6 +235,7 @@ fn fmt_reports_files_changed_count() {
             "name: clean\n",
             "description: Already canonical.\n",
             "---\n",
+            "\n",
             "## body\n",
         ),
     );

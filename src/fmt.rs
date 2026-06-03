@@ -1,10 +1,12 @@
-//! `upskill fmt` — canonicalise YAML key order in SSOT files.
+//! `upskill fmt` — canonicalise YAML key order and markdown body in SSOT files.
 //!
 //! Per [ADR-0004](../../docs/adr/0004-cli-surface.md), `fmt` and `lint`
-//! are sibling author commands. `fmt` operates on YAML frontmatter and
-//! bundle files; markdown body content is dprint's job and is preserved
-//! byte-for-byte. Like `lint`, this command refuses to run inside a
-//! consumer project (`.upskill-lock.json` at the path's root).
+//! are sibling author commands. `fmt` reorders YAML frontmatter keys and
+//! formats the markdown body through the same dprint pass the generation
+//! pipeline uses (see [`canonical_body`]); `lint` reports a `body-format`
+//! finding when a body is not canonical. Like `lint`, this command
+//! refuses to run inside a consumer project (`.upskill-lock.json` at the
+//! path's root).
 //!
 //! What gets canonicalised:
 //!
@@ -12,12 +14,16 @@
 //!   [`crate::model`] struct field order.
 //! - Unknown top-level keys (extras) sort alphabetically after all
 //!   known keys.
+//! - **Markdown body** — formatted via dprint; the frontmatter↔body seam
+//!   is normalised to a single blank line.
 //!
 //! What is **preserved**:
 //!
 //! - YAML comments (both standalone and inline)
-//! - Author formatting (indentation, line wrapping)
-//! - Nested/indented content (travels with its parent key block)
+//! - Author frontmatter formatting (indentation, line wrapping)
+//! - Nested/indented YAML content (travels with its parent key block)
+//! - Prose wrapping inside the body (dprint `text_wrap: Maintain`)
+//! - HTML-comment directives (`<!-- @client:X -->`)
 //!
 //! Implementation: line-level block reordering. The YAML is split into
 //! top-level key blocks (each key + preceding comments + indented
@@ -111,8 +117,8 @@ pub struct FmtReport {
 /// working directory.
 ///
 /// Files whose content was already canonical are left untouched
-/// (no `mtime` thrash). Body content is preserved byte-for-byte.
-/// Comments and author formatting are preserved.
+/// (no `mtime` thrash). The body is formatted via dprint; YAML comments
+/// and author frontmatter formatting are preserved.
 pub fn fmt(paths: &[PathBuf]) -> Result<FmtReport> {
     let owned_cwd: Vec<PathBuf>;
     let roots: &[PathBuf] = if paths.is_empty() {
