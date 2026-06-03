@@ -239,7 +239,7 @@ Item entrypoint files (RULE.md, SKILL.md, AGENT.md) begin with YAML frontmatter 
 | Field         | Type     | Required | Description                                                                                                                                                          |
 | ------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                |
-| `name`        | string   | YES      | Stable identifier. See §2.1 for format constraints.                                                                                                                  |
+| `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                               |
 | `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                      |
 | `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                           |
 | `audience`    | string[] | no       | Target clients (`claude`, `copilot`, `opencode`). When present, implementations MUST generate output only for listed clients. When absent, all clients are targeted. |
@@ -265,8 +265,9 @@ Field semantics:
 
 - `schema`: implementations MUST reject files with `schema` greater than the highest version they
   support and SHOULD report a clear upgrade message. See §8 for evolution rules.
-- `name`: used as the `/slash-command` name in clients that support it, as the directory name, and
-  as the identifier in bundle manifests.
+- `name`: the effective name (§2.1) is used as the `/slash-command` name in clients that support it
+  and as the identifier in bundle manifests. When `name` is omitted on an item, the directory name
+  is the effective name; a rule or agent `name` MAY differ from its directory.
 - `description`: for skills, this is the activation hint — the model reads it during discovery and
   decides whether to load the full body. For rules and agents, it serves as documentation. Front-load
   the key use case. Convention: start with "Use when…" for skills and agents.
