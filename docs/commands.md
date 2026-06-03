@@ -65,6 +65,16 @@ agents that render to a flat file (Claude Code, GitHub Copilot), resources go
 into a sibling `<name>/` directory and the body's relative links are rewritten
 to match. See [format-spec §2.4](./format-spec.md).
 
+**Bundle plugins.** When a bundle declares a `plugins:` map
+([format-spec §3.7](./format-spec.md#37-bundle-schema)), `add` installs
+those client-native plugins by shelling out to each client's own CLI
+(`claude plugin install`, `copilot plugin install`, `code
+--install-extension`, `opencode plugin`) — they are **not** rendered
+through the generation pipeline. If a client's CLI is not on `PATH`, the
+plugin is skipped (not an error) and recorded as `skipped` in the
+lockfile; `upskill doctor` reports skipped and missing plugins. Removing
+the bundle cleans up its plugins.
+
 ### `upskill update [name...]`
 
 Pull latest sources and regenerate changed items.
@@ -220,7 +230,9 @@ scaffold into the wrong tree.
 
 ### `upskill new <kind> <name>`
 
-Scaffold a new SSOT item directory.
+Scaffold a new SSOT item directory. `<kind>` is one of `rule`, `skill`,
+or `agent`; `<name>` is both the item name and the directory name
+(lowercase letters, digits, hyphens; max 64 chars).
 
 ```bash
 upskill new rule  no-direct-database-access
@@ -228,10 +240,32 @@ upskill new skill code-review
 upskill new agent security-reviewer
 ```
 
-Creates `<kind>s/<name>/<KIND>.md` with the minimum frontmatter the
-format spec requires. Agents get `mode: subagent` and `model: sonnet`
-so the file is generation-ready out of the box. The scaffold round-trips
-through `upskill fmt` as a no-op and passes `upskill lint --strict`.
+Creates `<name>/<KIND>.md` **relative to the current directory** with the
+minimum frontmatter the format spec requires — there is no `<kind>`
+parent folder and no separate "destination" argument. The folder is the
+`<name>` you pass, so to place an item under `skills/` you run the
+command from inside `skills/` (see
+[Conventions](./conventions.md#scaffolding-under-the-convention)). Agents
+get `mode: subagent` and `model: sonnet` so the file is generation-ready
+out of the box. The scaffold round-trips through `upskill fmt` as a no-op
+and passes `upskill lint --strict`.
+
+**Co-location.** Run `new` again with a different kind and the same
+`<name>` to add that kind as a sibling entrypoint inside the existing
+item directory ([format-spec §2.1](./format-spec.md#21-item-directory-structure)):
+
+```bash
+upskill new skill api-handler   # → api-handler/SKILL.md
+upskill new rule  api-handler   # → api-handler/RULE.md (added alongside)
+```
+
+This expresses one capability across multiple kinds (for example a skill
+paired with its enforcing rule). Co-location is refused only when an
+existing **skill** entrypoint's `name:` diverges from `<name>`; rule and
+agent siblings MAY carry a divergent name.
+
+`upskill new` is an author command — it refuses to run inside a consumer
+project (one with a `.upskill-lock.json`).
 
 ### `upskill lint [paths...]`
 

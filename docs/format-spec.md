@@ -106,7 +106,7 @@ Constraints:
   or an agent paired with a skill it preloads). Co-location is optional; solo-kind item
   directories are the common case. Co-location expresses a _symmetric, inseparable_ unit; a
   _directed_ "A needs B" relationship is expressed with `requires` (§3.7) instead. See
-  [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
+  [ADR-0009](https://github.com/driftsys/upskill/blob/main/docs/adr/0009-coupling-tiers-and-dependencies.md).
 - **Effective name and relaxed naming.** Each entrypoint resolves to an **effective name**:
   - A **skill** `name:` is optional. When present it MUST equal the directory name (the Agent
     Skills standard mandate). When absent, the skill's effective name is the directory name.
@@ -163,7 +163,7 @@ Bundles are flat YAML manifest files, not directories:
 - A bundle MAY have an optional sibling Markdown file `<name>.bundle.md` carrying
   human-readable documentation (install examples, adoption path, caveats). Implementations
   ignore `<name>.bundle.md`; it exists for humans browsing the registry. See
-  [ADR-0007](./adr/0007-bundle-yaml-format.md).
+  [ADR-0007](https://github.com/driftsys/upskill/blob/main/docs/adr/0007-bundle-yaml-format.md).
 
 ### 2.3 Per-client override files
 
@@ -524,7 +524,7 @@ Implementations:
 The optional `plugins` map declares client-native plugins that accompany this bundle. Unlike
 rules, skills, and agents (which are SSOT content rendered per-client by the generation
 pipeline), plugins are installed via each client's native CLI. See
-[ADR-0008](adr/0008-plugin-install-shellout.md) for design rationale.
+[ADR-0008](https://github.com/driftsys/upskill/blob/main/docs/adr/0008-plugin-install-shellout.md) for design rationale.
 
 Each entry in the `plugins` map is keyed by an upskill-level plugin name (used in the lockfile,
 CLI output, and `upskill remove`). The value is a map of per-client install descriptors:
@@ -797,7 +797,7 @@ Implementations:
 
 Items (rules, skills, agents) MAY declare directed dependencies in their `requires` field
 (§3.1). This is distinct from bundle `requires`, which links bundles: item `requires` links
-individual items. See [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
+individual items. See [ADR-0009](https://github.com/driftsys/upskill/blob/main/docs/adr/0009-coupling-tiers-and-dependencies.md).
 
 Implementations:
 
@@ -1171,7 +1171,7 @@ The following topics are explicitly deferred and tracked for future specificatio
    add` source DSL, conflicts reuse the same-name-different-source rule, and cycles are keyed by
    `(canonical-source-label, kind, name)`. Both same-source and cross-source resolution are
    implemented. See
-   [ADR-0009](./adr/0009-coupling-tiers-and-dependencies.md).
+   [ADR-0009](https://github.com/driftsys/upskill/blob/main/docs/adr/0009-coupling-tiers-and-dependencies.md).
 8. **Content hashing**: whether items should carry a content hash for integrity verification
    during distribution, independent of `metadata.version`.
 
