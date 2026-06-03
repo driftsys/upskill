@@ -46,28 +46,75 @@ markers. Directive processing happens at generation time on the
 generation pipeline's own format pass is a no-op on already-formatted
 bodies.
 
+## Correctness note: the frontmatter↔body seam
+
+The body returned by `frontmatter::split` includes the blank-line
+separator that follows the closing `---` (e.g. `"\n## Body\n…"`). dprint
+**strips** a leading blank line when a body is formatted in isolation, so
+naively reassembling `format_markdown(body)` would delete the
+conventional separator and churn nearly every file.
+
+Generation already solved this. `generate::assemble` does
+`body.trim_start_matches('\n')` and re-inserts **exactly one** blank
+line: `---\n{frontmatter}---\n\n{body}`. When the whole string is fed to
+`format_markdown`, dprint treats `---…---` as **opaque frontmatter** (YAML
+content, comments, wrapping, and key order are all preserved
+byte-for-byte) and only formats the body, normalizing the seam to a
+single blank line.
+
+The canonical form of an item file is therefore
+`---\n{yaml}---\n\n{formatted_body}`. `fmt` must reproduce exactly this,
+and `lint` must compare against exactly this — so both go through one
+shared helper.
+
 ## Implementation
+
+### `src/fmt.rs` — shared `canonical_body` helper
+
+A single, drift-proof helper produces the canonical body region for an
+item. It formats the combined `frontmatter + body` string exactly as the
+generation pipeline does (frontmatter opaque to dprint), then strips the
+frontmatter prefix back off, returning the canonical body region
+**including** its leading blank-line separator. Both `fmt` (to write) and
+`lint` (to detect drift) call it, so they can never disagree.
+
+```rust
+/// Canonical body region for an item file, given its on-disk
+/// frontmatter string and body. Formats via dprint the same way the
+/// generation pipeline does — frontmatter is opaque to dprint, so the
+/// body region is independent of frontmatter key order. Returns the
+/// region after the closing `---`, including the single blank-line
+/// separator (empty when the body is blank).
+pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
+    let prefix = format!("---\n{frontmatter}---\n");
+    let combined = format!("{prefix}{body}");
+    let formatted = crate::generate::format::format_markdown(&combined)
+        .context("format item body")?;
+    Ok(formatted
+        .strip_prefix(&prefix)
+        .unwrap_or(&formatted)
+        .to_string())
+}
+```
+
+`format_markdown` is already `pub` under `pub mod generate` /
+`pub mod format` — no visibility changes needed.
 
 ### `src/fmt.rs` — `canonicalise_item`
 
-After splitting frontmatter/body and reordering the YAML keys, run the
-body through the shared formatter before reassembling. Only the body is
-formatted; the custom-reordered YAML frontmatter is left exactly as the
-reorder produced it (dprint never touches frontmatter).
+After reordering and validating the YAML, build the body region with the
+helper and reassemble:
 
 ```rust
 let reordered_yaml = reorder_yaml_keys(yaml_str, key_order);
 serde_yaml_ng::from_str::<T>(&reordered_yaml)
     .with_context(|| format!("validate frontmatter {}", path.display()))?;
 
-let formatted_body = crate::generate::format::format_markdown(body)
+let body_region = canonical_body(&reordered_yaml, body)
     .with_context(|| format!("format body {}", path.display()))?;
 
-Ok(format!("---\n{reordered_yaml}---\n{formatted_body}"))
+Ok(format!("---\n{reordered_yaml}---\n{body_region}"))
 ```
-
-`format_markdown` is already `pub` under `pub mod generate` /
-`pub mod format` — no visibility changes needed.
 
 The existing `format_file` already skips files whose canonical form
 equals the on-disk content, so already-formatted files cause no `mtime`
@@ -75,25 +122,33 @@ thrash.
 
 ### `src/lint.rs` — `check_body_format`
 
-A new body check slotted beside the existing ones in `check_file`:
+`check_file` already has the raw file content; it splits the frontmatter
+once and passes it alongside the body to the new check, slotted beside
+the existing body checks:
 
 ```rust
 check_body_h1(file, body, out);
 check_fence_lang(file, body, out);
 check_directives(file, body, out);
-check_body_format(file, body, out);   // new
+check_body_format(file, frontmatter, body, out);   // new
 ```
 
-`check_body_format` compares `body` to `format_markdown(body)`; on
-mismatch it pushes a `Finding`:
+`check_body_format` compares `body` to
+`crate::fmt::canonical_body(frontmatter, body)`; on mismatch it pushes a
+`Finding`:
 
 - `rule_id: "body-format"`
 - `severity: Severity::Warning` — matches the cosmetic `body-h1` /
   `fence-lang` checks; `--strict` promotes it to error in CI.
-- `message`: `"body is not formatted — run`upskill fmt`"`
+- message: "body is not formatted — run `upskill fmt`"
 
-Bundles already return an empty body from `parse_kind`, so the check is a
-natural no-op for them.
+Bundles already return an empty body from `parse_kind` (and pass an empty
+frontmatter), so the check is a natural no-op for them.
+
+Because the helper passes the on-disk frontmatter through dprint as an
+opaque prefix and strips it back, the body comparison is independent of
+whether the author also got the key order right — key order stays
+unchecked by `lint` (only `fmt` reorders), exactly as today.
 
 ## Docs to update
 
@@ -115,12 +170,23 @@ natural no-op for them.
   with `canonicalise_formats_body`: an unformatted body (e.g. `*` bullets
   that should become `-`, collapsed extra blank lines) comes out
   dprint-clean.
-- **Add** an `fmt` body idempotence test (format twice → identical).
+- **Add** a seam-preservation test: an item whose body is already clean
+  with a single blank line after `---` is left **unchanged** (the
+  separator is preserved, not stripped), and `report.files_changed` is
+  empty.
+- **Add** an `fmt` body idempotence test (format twice → identical),
+  covering both a dirty and an already-clean body.
 - **Add** a directive-survival test: a body containing
   `<!-- @client:claude -->` … `<!-- @endclient -->` keeps the markers
   after a format pass.
-- **Add** lint tests: a dirty body yields a `body-format` warning; a
-  clean body yields none; `--strict` promotes the warning to error.
+- **Add** lint tests: a dirty body yields exactly one `body-format`
+  warning; a clean body yields none; a bundle yields none; `--strict`
+  promotes the warning to error.
+- **Guard the fixture corpus:** the existing
+  `lint_clean_fixture_corpus_exits_zero` test asserts "0 findings", so
+  `tests/fixtures/items` bodies must be dprint-clean. Run `upskill fmt`
+  over the fixtures (or hand-fix) and confirm the generation golden tests
+  (`generate_*`) still pass before relying on that assertion.
 
 ## Out of scope
 
