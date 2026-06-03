@@ -112,8 +112,9 @@ ignore: ["scripts/**", "fixtures/**"]
 - **Removal never cascades** (the #196 "never auto-delete" ethos). `doctor`
   flags an item that is now present only as a removed item's dependency as an
   "orphaned dependency."
-- **Staging.** Cross-source resolution ships in a follow-up release (Slice 2);
-  same-source resolution ships now (Slice 1).
+- **Status.** Both same-source (Slice 1) and cross-source (Slice 2) resolution
+  are implemented. A cross-source `source` is fetched once and cached for the
+  duration of one resolution; the transitive closure may span sources.
 
 ### Inherent limit
 
@@ -143,8 +144,9 @@ not a defect to engineer around.
 
 - The inherent-limit note stands: cross-kind coupling is an upskill-only
   guarantee and does not survive a round-trip through standard-only tooling.
-- Cross-source resolution is staged to a later release, so the full transitive
-  closure across sources is not available in Slice 1.
+- A cross-source closure fetches each distinct source once per resolution
+  (no shared on-disk cache across separate `upskill add` invocations); a large
+  multi-source dependency graph therefore re-fetches its sources on each install.
 
 ## Alternatives considered (Rejected — do not revisit)
 
