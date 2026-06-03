@@ -284,14 +284,13 @@ fn visit_requires(
 
     // Record provenance when reached via a requirer (even if already
     // resolved — multiple installed items may require the same dependency).
+    // Directly-requested items (no requirer) get no entry here; they appear
+    // in the map only if also pulled in elsewhere.
     if let Some((rk, rn)) = requirer {
         required_by
             .entry(node.clone())
             .or_default()
             .insert(format!("{rk}:{rn}"));
-    } else {
-        // Ensure directly-requested items appear in the map only if also
-        // pulled in elsewhere; do not create an empty entry here.
     }
 
     if resolved.contains(node) {
@@ -822,5 +821,28 @@ mod tests {
             .get(&(ItemKind::Skill, "sarif".to_string()))
             .expect("sarif provenance");
         assert!(prov.contains("agent:code-review"), "{prov:?}");
+    }
+
+    #[test]
+    fn closure_skips_absent_preload_skill() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path();
+        write_item(
+            src,
+            ItemKind::Agent,
+            "reviewer",
+            "preload-skills: [missing-skill]\n",
+        );
+
+        let closure = resolve_requires_closure(src, &[(ItemKind::Agent, "reviewer".to_string())])
+            .expect("closure");
+
+        assert!(closure.items.contains(ItemKind::Agent, "reviewer"));
+        assert!(!closure.items.contains(ItemKind::Skill, "missing-skill"));
+        assert!(
+            !closure
+                .required_by
+                .contains_key(&(ItemKind::Skill, "missing-skill".to_string()))
+        );
     }
 }
