@@ -186,7 +186,19 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 });
                 continue;
             }
-            let item_dir = ssot_root.join(&entry.name);
+            // On the SOURCE side an item lives in its FOLDER directory, which
+            // can differ from the consumer-side effective `name` (via `--as`
+            // aliasing, or relaxed rule/agent naming where the folder name and
+            // the `name:` field diverge). Resolve the source dir from the
+            // recorded folder key: `group` (the canonical source folder) ->
+            // `source_name` (the original effective name, set when aliased) ->
+            // `name`. See #208.
+            let folder = entry
+                .group
+                .as_deref()
+                .or(entry.source_name.as_deref())
+                .unwrap_or(&entry.name);
+            let item_dir = ssot_root.join(folder);
             if !item_dir.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
