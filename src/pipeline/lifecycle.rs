@@ -15,9 +15,9 @@ use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
 use super::{
     ALL_CLIENTS, AddOptions, DoctorReport, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, RemoveFilter, RemoveReport,
-    RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem,
-    hash_item_dir, install_with_lockfile,
+    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, OrphanedDependency, RemoveFilter,
+    RemoveReport, RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus,
+    UpdatedItem, hash_item_dir, install_with_lockfile,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -210,6 +210,28 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --dry-run`.
+    }
+
+    // -- Orphaned dependencies (advisory, issue #196) --
+    // An item pulled in only as a dependency (`required_by` non-empty) whose
+    // every recorded requirer is no longer installed. Surfaced as advisory
+    // only — upskill never auto-removes; the user decides.
+    let installed: std::collections::BTreeSet<String> = lock
+        .items
+        .iter()
+        .map(|i| format!("{}:{}", i.kind, i.name))
+        .collect();
+    for entry in &lock.items {
+        if entry.required_by.is_empty() {
+            continue;
+        }
+        if entry.required_by.iter().all(|r| !installed.contains(r)) {
+            report.orphaned_dependencies.push(OrphanedDependency {
+                kind: entry.kind,
+                name: entry.name.clone(),
+                former_requirers: entry.required_by.clone(),
+            });
+        }
     }
 
     // -- Plugin reconciliation (ADR-0008 / issue #151) --
