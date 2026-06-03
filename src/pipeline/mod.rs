@@ -31,6 +31,7 @@ use crate::source::InstallSource;
 mod discovery;
 mod git;
 mod hash;
+mod ignore;
 mod install;
 mod lifecycle;
 mod output;

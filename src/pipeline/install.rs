@@ -351,6 +351,15 @@ pub(super) fn install_plugins_from_bundles(
     results
 }
 
+/// The per-kind frontmatter fields the install loop needs after parsing,
+/// plus the rendered per-client output. Groups what would otherwise be a
+/// `clippy::type_complexity`-flagged tuple out of the `match kind` arms.
+struct ParsedItem {
+    audience: Option<Vec<Audience>>,
+    ignore: Vec<String>,
+    renders: Vec<(Client, String)>,
+}
+
 fn install_items_of_kind(
     kind: ItemKind,
     source: &Path,
@@ -372,13 +381,18 @@ fn install_items_of_kind(
         let raw = fs::read_to_string(&entry_path)
             .with_context(|| format!("read {}", entry_path.display()))?;
 
-        // Parse frontmatter, extract audience, and define a render helper.
-        // Each kind has its own model type, so we dispatch here.
-        let (audience, renders): (Option<Vec<Audience>>, Vec<(Client, String)>) = match kind {
+        // Parse frontmatter, extract audience + ignore, and render per
+        // client. Each kind has its own model type, so we dispatch here.
+        let ParsedItem {
+            audience,
+            ignore,
+            renders,
+        } = match kind {
             ItemKind::Skill => {
                 let (skill, body) = frontmatter::parse::<Skill>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
                 let aud = skill.audience.clone();
+                let ignore = skill.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
                     if !targets(client, aud.as_deref()) {
@@ -388,12 +402,17 @@ fn install_items_of_kind(
                         .with_context(|| format!("render skill {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
-                (aud, out)
+                ParsedItem {
+                    audience: aud,
+                    ignore,
+                    renders: out,
+                }
             }
             ItemKind::Rule => {
                 let (rule, body) = frontmatter::parse::<Rule>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
                 let aud = rule.audience.clone();
+                let ignore = rule.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
                     if !targets(client, aud.as_deref()) {
@@ -403,12 +422,17 @@ fn install_items_of_kind(
                         .with_context(|| format!("render rule {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
-                (aud, out)
+                ParsedItem {
+                    audience: aud,
+                    ignore,
+                    renders: out,
+                }
             }
             ItemKind::Agent => {
                 let (agent, body) = frontmatter::parse::<Agent>(&raw)
                     .with_context(|| format!("parse {}", entry_path.display()))?;
                 let aud = agent.audience.clone();
+                let ignore = agent.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
                     if !targets(client, aud.as_deref()) {
@@ -418,12 +442,16 @@ fn install_items_of_kind(
                         .with_context(|| format!("render agent {} for {:?}", name, client))?;
                     out.push((client, rendered));
                 }
-                (aud, out)
+                ParsedItem {
+                    audience: aud,
+                    ignore,
+                    renders: out,
+                }
             }
         };
 
         let source_hash = hash_item_dir(&dir);
-        let resources = iter_item_resources(&dir);
+        let resources = super::ignore::filter_ignored(iter_item_resources(&dir), &ignore);
         let copied: std::collections::HashSet<std::path::PathBuf> =
             resources.iter().cloned().collect();
 
