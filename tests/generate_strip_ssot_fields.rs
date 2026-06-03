@@ -74,12 +74,40 @@ fn generated_skill_output_omits_requires_and_ignore() {
         generated.display()
     );
     let contents = fs::read_to_string(&generated).unwrap();
+
+    // Assert on parsed frontmatter keys, not whole-file substrings: the words
+    // "requires"/"ignore" are ordinary English and may legitimately appear in
+    // body or description prose. Only a leaked *key* is a defect.
+    let frontmatter = extract_frontmatter(&contents);
+    let map: serde_yaml_ng::Mapping = serde_yaml_ng::from_str(&frontmatter)
+        .unwrap_or_else(|e| panic!("frontmatter is not valid YAML mapping: {e}\n{frontmatter}"));
     assert!(
-        !contents.contains("requires"),
-        "SSOT-only `requires` leaked into generated output:\n{contents}"
+        !map.contains_key(serde_yaml_ng::Value::from("requires")),
+        "SSOT-only `requires` key leaked into generated frontmatter:\n{frontmatter}"
     );
     assert!(
-        !contents.contains("ignore"),
-        "SSOT-only `ignore` leaked into generated output:\n{contents}"
+        !map.contains_key(serde_yaml_ng::Value::from("ignore")),
+        "SSOT-only `ignore` key leaked into generated frontmatter:\n{frontmatter}"
     );
+}
+
+/// Extract the YAML frontmatter block — the text between the first `---` fence
+/// line and the next `---` line. Generated output always opens with a `---`
+/// fence.
+fn extract_frontmatter(contents: &str) -> String {
+    let mut lines = contents.lines();
+    assert_eq!(
+        lines.next().map(str::trim_end),
+        Some("---"),
+        "generated output does not open with a `---` frontmatter fence:\n{contents}"
+    );
+    let mut block = String::new();
+    for line in lines {
+        if line.trim_end() == "---" {
+            return block;
+        }
+        block.push_str(line);
+        block.push('\n');
+    }
+    panic!("no closing `---` fence found in generated output:\n{contents}")
 }
