@@ -675,6 +675,7 @@ fn install_items_of_kind(
                 client: *client,
                 output_path: rel,
                 source_hash: source_hash.clone(),
+                group: Some(folder.clone()),
             });
         }
 

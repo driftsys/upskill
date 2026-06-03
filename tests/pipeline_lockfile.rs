@@ -145,6 +145,7 @@ fn install_preserves_unrelated_existing_entries() {
         hash: Some("a".repeat(64)),
         source_name: None,
         required_by: vec![],
+        group: None,
     });
     seed.save(&target).unwrap();
 

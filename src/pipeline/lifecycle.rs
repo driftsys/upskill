@@ -32,7 +32,7 @@ use super::{
 pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
 
-    let to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
+    let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
         RemoveFilter::ByNames(names) => lock
             .items
             .iter()
@@ -57,6 +57,27 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
             .collect();
         if !unknown.is_empty() {
             anyhow::bail!("not in lockfile: {}", unknown.join(", "));
+        }
+    }
+
+    // Co-location coupling (§2.1, Task 6): removing any named member of a
+    // `(source, group)` unit removes every other member, even when their
+    // effective names diverge. Expand AFTER the unknown-name check so a
+    // name absent from the lockfile still errors rather than being masked.
+    if let RemoveFilter::ByNames(_) = &filter {
+        let groups: std::collections::BTreeSet<(String, String)> = to_remove
+            .iter()
+            .filter_map(|i| i.group.clone().map(|g| (i.source.clone(), g)))
+            .collect();
+        for it in &lock.items {
+            if let Some(g) = &it.group
+                && groups.contains(&(it.source.clone(), g.clone()))
+                && !to_remove
+                    .iter()
+                    .any(|r| r.kind == it.kind && r.name == it.name)
+            {
+                to_remove.push(it.clone());
+            }
         }
     }
 

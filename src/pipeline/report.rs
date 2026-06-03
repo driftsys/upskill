@@ -23,6 +23,10 @@ pub struct InstalledItem {
     /// lockfile for drift detection. Repeated across the per-
     /// client entries for the same item — they share one SSOT input.
     pub source_hash: Option<String>,
+    /// Source folder this item was discovered in — the co-location
+    /// grouping key (§2.1). Threaded into the lockfile so `remove <name>`
+    /// can act on the whole `(source, group)` unit.
+    pub group: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
