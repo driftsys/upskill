@@ -26,6 +26,7 @@ use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
 use crate::parse::frontmatter;
+use crate::source::{InstallSource, parse_install_source};
 
 /// Install every item under `source` into `target`, generating per-client
 /// output for each client unless filtered by the item's `audience` field.
@@ -160,22 +161,42 @@ pub(super) fn install_with_name_resolution_from_local(
 // Same-source `requires` transitive closure
 // ---------------------------------------------------------------------------
 
-/// The set of items reached by expanding a requested item set along
-/// same-source `requires` edges, plus per-item provenance recording which
-/// installed item(s) pulled each dependency in.
-#[derive(Debug)]
+/// The transitive closure of items reached by expanding a requested set
+/// along `requires` edges — possibly spanning multiple sources.
+#[derive(Debug, Default)]
 pub(super) struct DependencyClosure {
-    /// Every item to install: the requested set plus its transitive
-    /// same-source dependencies, deduplicated by `(kind, name)`.
-    pub items: crate::bundle::ResolvedItems,
+    /// Per canonical source label: the fetched root, its pinned ref, and
+    /// the items to install from it (in dependency order).
+    pub by_source: BTreeMap<String, SourceInstall>,
+    /// Canonical source label each resolved `(kind, name)` came from.
+    /// `(kind, name)` is globally unique within a valid closure (a clash
+    /// across sources is a conflict error), so this maps cleanly.
+    pub item_source: BTreeMap<(ItemKind, String), String>,
     /// `(kind, name) -> { "<requirer-kind>:<requirer-name>", .. }`. Empty
-    /// for directly-requested items; populated for items pulled in as a
-    /// dependency. Drives the lockfile's `required_by` provenance.
+    /// for directly-requested items. Drives the lockfile's `required_by`.
     pub required_by: BTreeMap<(ItemKind, String), BTreeSet<String>>,
+    /// Tempdir guards for cross-source fetches. Held here so the clones
+    /// outlive the per-source install calls in `install_with_lockfile`.
+    #[allow(dead_code)]
+    pub guards: Vec<tempfile::TempDir>,
 }
 
-/// Index every item in `source` by its effective `(kind, name)` identity,
-/// mapping to the item directory that holds its entrypoint.
+/// One source's contribution to a [`DependencyClosure`].
+#[derive(Debug)]
+pub(super) struct SourceInstall {
+    pub root: PathBuf,
+    pub git_ref: Option<String>,
+    pub items: crate::bundle::ResolvedItems,
+}
+
+/// A fetched-and-indexed source, cached by canonical label during DFS.
+struct FetchedSource {
+    root: PathBuf,
+    git_ref: Option<String>,
+    index: BTreeMap<(ItemKind, String), PathBuf>,
+}
+
+/// Index every item in `source` by its effective `(kind, name)` identity.
 fn index_source(source: &Path) -> Result<BTreeMap<(ItemKind, String), PathBuf>> {
     let mut idx = BTreeMap::new();
     for (folder, dir) in iter_item_dirs(source)? {
@@ -191,13 +212,8 @@ fn index_source(source: &Path) -> Result<BTreeMap<(ItemKind, String), PathBuf>> 
 }
 
 /// Parse an item's `requires` block. For agents, fold `preload_skills` into
-/// `requires.skills` (a preloaded skill is implicitly required).
-///
-/// A preloaded skill that is absent from the source index is treated as a
-/// runtime hint, not a hard SSOT dependency, and is NOT folded in: agents
-/// may preload built-in or separately-installed skills that this registry
-/// does not vend. Explicit `requires` entries remain strict and are never
-/// dropped — a missing one bails later in `visit_requires`.
+/// `requires.skills` softly (a preloaded skill present in the SAME source is
+/// implicitly required; an absent one is a runtime hint, skipped).
 fn read_item_requires(
     dir: &Path,
     kind: ItemKind,
@@ -223,115 +239,202 @@ fn read_item_requires(
     Ok(req)
 }
 
-/// Expand `initial` along same-source `requires` edges into the full set of
-/// items to install, recording dependency provenance.
-///
-/// Resolution identity is the effective `(kind, name)`. Cross-source
-/// `{ name, source }` requires entries are NOT resolved in this release —
-/// they bail with a clear error. Dependency cycles bail with a "circular"
-/// error. A required item missing from the source bails with a "not found"
-/// error.
-pub(super) fn resolve_requires_closure(
-    source: &Path,
-    initial: &[(ItemKind, String)],
-) -> Result<DependencyClosure> {
-    let index = index_source(source)?;
-
-    let mut required_by: BTreeMap<(ItemKind, String), BTreeSet<String>> = BTreeMap::new();
-    let mut resolved: BTreeSet<(ItemKind, String)> = BTreeSet::new();
-    let mut order: Vec<(ItemKind, String)> = Vec::new();
-    let mut on_path: BTreeSet<(ItemKind, String)> = BTreeSet::new();
-
-    for node in initial {
-        visit_requires(
-            &index,
-            node,
-            None,
-            &mut required_by,
-            &mut resolved,
-            &mut order,
-            &mut on_path,
-        )?;
-    }
-
-    let mut items = crate::bundle::ResolvedItems::default();
-    for (kind, name) in order {
-        match kind {
-            ItemKind::Rule => items.rules.push(name),
-            ItemKind::Skill => items.skills.push(name),
-            ItemKind::Agent => items.agents.push(name),
-        }
-    }
-
-    Ok(DependencyClosure { items, required_by })
+/// DFS state for [`resolve_requires_closure`]. Carries the fetch cache so a
+/// source pulled by two edges is fetched once, and the visited/on-path sets
+/// keyed for cross-source cycle and conflict detection.
+struct Resolver {
+    /// Canonical label -> fetched-and-indexed source.
+    sources: BTreeMap<String, FetchedSource>,
+    /// Tempdir guards for cross-source clones (drained into the closure).
+    guards: Vec<tempfile::TempDir>,
+    /// Fully-resolved identities (dedup).
+    resolved: BTreeSet<(ItemKind, String)>,
+    /// The label each identity resolved under — second visit under a
+    /// different label is a cross-source conflict.
+    item_label: BTreeMap<(ItemKind, String), String>,
+    /// Dependency-order accumulation.
+    order: Vec<(ItemKind, String)>,
+    /// On-path set keyed by `(label, kind, name)` for cycle detection (§2.5).
+    on_path: BTreeSet<(String, ItemKind, String)>,
+    /// Dependency provenance keyed by identity.
+    required_by: BTreeMap<(ItemKind, String), BTreeSet<String>>,
 }
 
-#[allow(clippy::too_many_arguments)]
-fn visit_requires(
-    index: &BTreeMap<(ItemKind, String), PathBuf>,
-    node: &(ItemKind, String),
-    requirer: Option<&(ItemKind, String)>,
-    required_by: &mut BTreeMap<(ItemKind, String), BTreeSet<String>>,
-    resolved: &mut BTreeSet<(ItemKind, String)>,
-    order: &mut Vec<(ItemKind, String)>,
-    on_path: &mut BTreeSet<(ItemKind, String)>,
-) -> Result<()> {
-    let (kind, name) = node;
-
-    let dir = index.get(node).ok_or_else(|| {
-        anyhow::anyhow!("{kind} `{name}` is required but not found in the source")
-    })?;
-
-    // Record provenance when reached via a requirer (even if already
-    // resolved — multiple installed items may require the same dependency).
-    // Directly-requested items (no requirer) get no entry here; they appear
-    // in the map only if also pulled in elsewhere.
-    if let Some((rk, rn)) = requirer {
-        required_by
-            .entry(node.clone())
-            .or_default()
-            .insert(format!("{rk}:{rn}"));
-    }
-
-    if resolved.contains(node) {
-        return Ok(());
-    }
-    if on_path.contains(node) {
-        anyhow::bail!("circular dependency detected including {kind} `{name}`");
-    }
-    on_path.insert(node.clone());
-
-    let requires = read_item_requires(dir, *kind, index)?;
-    for (dep_kind, refs) in [
-        (ItemKind::Rule, &requires.rules),
-        (ItemKind::Skill, &requires.skills),
-        (ItemKind::Agent, &requires.agents),
-    ] {
-        for r in refs {
-            if let Some(src) = r.source() {
-                let rname = r.name();
-                anyhow::bail!(
-                    "{kind} `{name}` requires {dep_kind} `{rname}` from cross-source `{src}`: \
-                     cross-source dependency resolution is not yet available in this release"
-                );
+impl Resolver {
+    /// Ensure `src_dsl` (an `add`-DSL locator) is fetched and indexed;
+    /// return its canonical label.
+    fn ensure_source(&mut self, src_dsl: &str) -> Result<String> {
+        let install_source = parse_install_source(src_dsl)
+            .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
+        let label = install_source.to_string();
+        if !self.sources.contains_key(&label) {
+            let (root, guard) = super::git::fetch_ssot(&install_source)
+                .with_context(|| format!("fetch requires source `{label}`"))?;
+            let index = index_source(&root)?;
+            if let Some(g) = guard {
+                self.guards.push(g);
             }
-            let dep = (dep_kind, r.name().to_string());
-            visit_requires(
-                index,
-                &dep,
-                Some(node),
-                required_by,
-                resolved,
-                order,
-                on_path,
-            )?;
+            self.sources.insert(
+                label.clone(),
+                FetchedSource {
+                    root,
+                    git_ref: source_git_ref(&install_source),
+                    index,
+                },
+            );
         }
+        Ok(label)
     }
 
-    on_path.remove(node);
-    resolved.insert(node.clone());
-    order.push(node.clone());
-    Ok(())
+    fn visit(
+        &mut self,
+        label: &str,
+        node: (ItemKind, String),
+        requirer: Option<&(ItemKind, String)>,
+    ) -> Result<()> {
+        let (kind, name) = node.clone();
+
+        // Cross-source identity conflict: the same (kind, name) reached from
+        // two different sources (format-spec §3.7).
+        if let Some(prev) = self.item_label.get(&node)
+            && prev != label
+        {
+            anyhow::bail!(
+                "{kind} `{name}` is required from two different sources: `{prev}` and `{label}`"
+            );
+        }
+
+        let dir = self
+            .sources
+            .get(label)
+            .expect("source fetched before visit")
+            .index
+            .get(&node)
+            .cloned()
+            .ok_or_else(|| {
+                anyhow::anyhow!("{kind} `{name}` is required but not found in source `{label}`")
+            })?;
+
+        if let Some((rk, rn)) = requirer {
+            self.required_by
+                .entry(node.clone())
+                .or_default()
+                .insert(format!("{rk}:{rn}"));
+        }
+
+        if self.resolved.contains(&node) {
+            return Ok(());
+        }
+        let path_key = (label.to_string(), kind, name.clone());
+        if self.on_path.contains(&path_key) {
+            anyhow::bail!("circular dependency detected including {kind} `{name}`");
+        }
+        self.on_path.insert(path_key.clone());
+        self.item_label.insert(node.clone(), label.to_string());
+
+        let requires = {
+            let index = &self.sources.get(label).expect("source present").index;
+            read_item_requires(&dir, kind, index)?
+        };
+        for (dep_kind, refs) in [
+            (ItemKind::Rule, &requires.rules),
+            (ItemKind::Skill, &requires.skills),
+            (ItemKind::Agent, &requires.agents),
+        ] {
+            for r in refs {
+                let dep = (dep_kind, r.name().to_string());
+                match r.source() {
+                    None => self.visit(label, dep, Some(&node))?,
+                    Some(src_dsl) => {
+                        let dep_label = self.ensure_source(src_dsl)?;
+                        self.visit(&dep_label, dep, Some(&node))?;
+                    }
+                }
+            }
+        }
+
+        self.on_path.remove(&path_key);
+        self.resolved.insert(node.clone());
+        self.order.push(node);
+        Ok(())
+    }
+}
+
+fn source_git_ref(s: &InstallSource) -> Option<String> {
+    match s {
+        InstallSource::Github(r) => r.git_ref.clone(),
+        InstallSource::Gitlab(r) => r.git_ref.clone(),
+        InstallSource::LocalPath(_) => None,
+    }
+}
+
+/// Expand `initial` (identities in the already-fetched entry source) along
+/// `requires` edges into the full cross-source closure.
+///
+/// `entry_label` is the entry source's canonical label, `entry_root` its
+/// already-fetched root (seeded into the fetch cache so it is not re-fetched),
+/// `entry_git_ref` its pinned ref. Cross-source `{ name, source }` entries
+/// are fetched via [`fetch_ssot`], cached by canonical label. Cycles
+/// (keyed `(label, kind, name)`) and same-`(kind,name)`-different-source
+/// clashes are errors; a required item missing from its source is an error.
+pub(super) fn resolve_requires_closure(
+    entry_label: &str,
+    entry_root: &Path,
+    entry_git_ref: Option<&str>,
+    initial: &[(ItemKind, String)],
+) -> Result<DependencyClosure> {
+    let mut resolver = Resolver {
+        sources: BTreeMap::new(),
+        guards: Vec::new(),
+        resolved: BTreeSet::new(),
+        item_label: BTreeMap::new(),
+        order: Vec::new(),
+        on_path: BTreeSet::new(),
+        required_by: BTreeMap::new(),
+    };
+    resolver.sources.insert(
+        entry_label.to_string(),
+        FetchedSource {
+            root: entry_root.to_path_buf(),
+            git_ref: entry_git_ref.map(str::to_string),
+            index: index_source(entry_root)?,
+        },
+    );
+
+    for node in initial {
+        resolver.visit(entry_label, node.clone(), None)?;
+    }
+
+    let mut by_source: BTreeMap<String, SourceInstall> = BTreeMap::new();
+    let mut item_source: BTreeMap<(ItemKind, String), String> = BTreeMap::new();
+    for node in &resolver.order {
+        let label = resolver
+            .item_label
+            .get(node)
+            .cloned()
+            .expect("resolved item has a source");
+        let group = by_source.entry(label.clone()).or_insert_with(|| {
+            let fs = resolver.sources.get(&label).expect("source present");
+            SourceInstall {
+                root: fs.root.clone(),
+                git_ref: fs.git_ref.clone(),
+                items: crate::bundle::ResolvedItems::default(),
+            }
+        });
+        match node.0 {
+            ItemKind::Rule => group.items.rules.push(node.1.clone()),
+            ItemKind::Skill => group.items.skills.push(node.1.clone()),
+            ItemKind::Agent => group.items.agents.push(node.1.clone()),
+        }
+        item_source.insert(node.clone(), label);
+    }
+
+    Ok(DependencyClosure {
+        by_source,
+        item_source,
+        required_by: resolver.required_by,
+        guards: resolver.guards,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -759,12 +862,77 @@ mod tests {
         );
         write_item(src, ItemKind::Skill, "sarif", "");
 
-        let closure =
-            resolve_requires_closure(src, &[(ItemKind::Agent, "code-review".to_string())])
-                .expect("closure");
+        let closure = resolve_requires_closure(
+            "local:test",
+            src,
+            None,
+            &[(ItemKind::Agent, "code-review".to_string())],
+        )
+        .expect("closure");
 
-        assert!(closure.items.contains(ItemKind::Agent, "code-review"));
-        assert!(closure.items.contains(ItemKind::Skill, "sarif"));
+        assert!(
+            closure
+                .item_source
+                .contains_key(&(ItemKind::Agent, "code-review".to_string()))
+        );
+        assert!(
+            closure
+                .item_source
+                .contains_key(&(ItemKind::Skill, "sarif".to_string()))
+        );
+        let prov = closure
+            .required_by
+            .get(&(ItemKind::Skill, "sarif".to_string()))
+            .expect("sarif provenance");
+        assert!(prov.contains("agent:code-review"), "{prov:?}");
+    }
+
+    #[test]
+    fn closure_pulls_cross_source_dependency() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src_a = tmp.path().join("a");
+        let src_b = tmp.path().join("b");
+        std::fs::create_dir_all(&src_a).unwrap();
+        std::fs::create_dir_all(&src_b).unwrap();
+        write_item(&src_b, ItemKind::Skill, "sarif", "");
+        write_item(
+            &src_a,
+            ItemKind::Agent,
+            "code-review",
+            &format!(
+                "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+                src_b.display()
+            ),
+        );
+
+        let a_label = format!("local:{}", src_a.display());
+        let b_label = format!("local:{}", src_b.display());
+        let closure = resolve_requires_closure(
+            &a_label,
+            &src_a,
+            None,
+            &[(ItemKind::Agent, "code-review".to_string())],
+        )
+        .expect("closure");
+
+        assert_eq!(
+            closure
+                .item_source
+                .get(&(ItemKind::Agent, "code-review".to_string())),
+            Some(&a_label)
+        );
+        assert_eq!(
+            closure
+                .item_source
+                .get(&(ItemKind::Skill, "sarif".to_string())),
+            Some(&b_label)
+        );
+        assert!(
+            closure.by_source[&b_label]
+                .items
+                .skills
+                .contains(&"sarif".to_string())
+        );
         let prov = closure
             .required_by
             .get(&(ItemKind::Skill, "sarif".to_string()))
@@ -779,25 +947,120 @@ mod tests {
         write_item(src, ItemKind::Rule, "a", "requires:\n  rules: [b]\n");
         write_item(src, ItemKind::Rule, "b", "requires:\n  rules: [a]\n");
 
-        let err =
-            resolve_requires_closure(src, &[(ItemKind::Rule, "a".to_string())]).expect_err("cycle");
+        let err = resolve_requires_closure(
+            "local:test",
+            src,
+            None,
+            &[(ItemKind::Rule, "a".to_string())],
+        )
+        .expect_err("cycle");
         assert!(err.to_string().contains("circular"), "{err}");
     }
 
     #[test]
-    fn closure_errors_on_cross_source_entry() {
+    fn closure_errors_on_missing_cross_source_item() {
         let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path();
+        let src_a = tmp.path().join("a");
+        let src_b = tmp.path().join("b");
+        std::fs::create_dir_all(&src_a).unwrap();
+        std::fs::create_dir_all(&src_b).unwrap(); // exists but holds no `x`
         write_item(
-            src,
+            &src_a,
             ItemKind::Rule,
             "a",
-            "requires:\n  skills: [{ name: x, source: org/repo }]\n",
+            &format!(
+                "requires:\n  skills: [{{ name: x, source: {} }}]\n",
+                src_b.display()
+            ),
         );
 
-        let err = resolve_requires_closure(src, &[(ItemKind::Rule, "a".to_string())])
-            .expect_err("cross-source");
-        assert!(err.to_string().contains("cross-source"), "{err}");
+        let err = resolve_requires_closure(
+            &format!("local:{}", src_a.display()),
+            &src_a,
+            None,
+            &[(ItemKind::Rule, "a".to_string())],
+        )
+        .expect_err("missing cross-source item");
+        assert!(err.to_string().contains("not found in source"), "{err}");
+    }
+
+    #[test]
+    fn closure_rejects_cross_source_cycle() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src_a = tmp.path().join("a");
+        let src_b = tmp.path().join("b");
+        std::fs::create_dir_all(&src_a).unwrap();
+        std::fs::create_dir_all(&src_b).unwrap();
+        write_item(
+            &src_a,
+            ItemKind::Rule,
+            "alpha",
+            &format!(
+                "requires:\n  rules: [{{ name: beta, source: {} }}]\n",
+                src_b.display()
+            ),
+        );
+        write_item(
+            &src_b,
+            ItemKind::Rule,
+            "beta",
+            &format!(
+                "requires:\n  rules: [{{ name: alpha, source: {} }}]\n",
+                src_a.display()
+            ),
+        );
+
+        let err = resolve_requires_closure(
+            &format!("local:{}", src_a.display()),
+            &src_a,
+            None,
+            &[(ItemKind::Rule, "alpha".to_string())],
+        )
+        .expect_err("cross-source cycle");
+        assert!(err.to_string().contains("circular"), "{err}");
+    }
+
+    #[test]
+    fn closure_rejects_same_item_from_two_sources() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = tmp.path().join("entry");
+        let src_b = tmp.path().join("b");
+        let src_c = tmp.path().join("c");
+        std::fs::create_dir_all(&entry).unwrap();
+        std::fs::create_dir_all(&src_b).unwrap();
+        std::fs::create_dir_all(&src_c).unwrap();
+        write_item(&src_b, ItemKind::Skill, "sarif", "");
+        write_item(&src_c, ItemKind::Skill, "sarif", "");
+        write_item(
+            &entry,
+            ItemKind::Rule,
+            "wants-b",
+            &format!(
+                "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+                src_b.display()
+            ),
+        );
+        write_item(
+            &entry,
+            ItemKind::Rule,
+            "wants-c",
+            &format!(
+                "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+                src_c.display()
+            ),
+        );
+
+        let err = resolve_requires_closure(
+            &format!("local:{}", entry.display()),
+            &entry,
+            None,
+            &[
+                (ItemKind::Rule, "wants-b".to_string()),
+                (ItemKind::Rule, "wants-c".to_string()),
+            ],
+        )
+        .expect_err("conflict");
+        assert!(err.to_string().contains("two different sources"), "{err}");
     }
 
     #[test]
@@ -812,11 +1075,19 @@ mod tests {
         );
         write_item(src, ItemKind::Skill, "sarif", "");
 
-        let closure =
-            resolve_requires_closure(src, &[(ItemKind::Agent, "code-review".to_string())])
-                .expect("closure");
+        let closure = resolve_requires_closure(
+            "local:test",
+            src,
+            None,
+            &[(ItemKind::Agent, "code-review".to_string())],
+        )
+        .expect("closure");
 
-        assert!(closure.items.contains(ItemKind::Skill, "sarif"));
+        assert!(
+            closure
+                .item_source
+                .contains_key(&(ItemKind::Skill, "sarif".to_string()))
+        );
         let prov = closure
             .required_by
             .get(&(ItemKind::Skill, "sarif".to_string()))
@@ -835,11 +1106,24 @@ mod tests {
             "preload-skills: [missing-skill]\n",
         );
 
-        let closure = resolve_requires_closure(src, &[(ItemKind::Agent, "reviewer".to_string())])
-            .expect("closure");
+        let closure = resolve_requires_closure(
+            "local:test",
+            src,
+            None,
+            &[(ItemKind::Agent, "reviewer".to_string())],
+        )
+        .expect("closure");
 
-        assert!(closure.items.contains(ItemKind::Agent, "reviewer"));
-        assert!(!closure.items.contains(ItemKind::Skill, "missing-skill"));
+        assert!(
+            closure
+                .item_source
+                .contains_key(&(ItemKind::Agent, "reviewer".to_string()))
+        );
+        assert!(
+            !closure
+                .item_source
+                .contains_key(&(ItemKind::Skill, "missing-skill".to_string()))
+        );
         assert!(
             !closure
                 .required_by

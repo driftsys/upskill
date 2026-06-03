@@ -1,9 +1,9 @@
-//! ATDD tests for the same-source `requires` transitive closure.
+//! ATDD tests for the `requires` transitive closure.
 //!
-//! Installing an item pulls in the items it requires from the SAME source.
-//! The lockfile records `required_by` provenance for each pulled-in
-//! dependency. Cross-source `{ name, source }` requires entries are not yet
-//! resolved and must error clearly.
+//! Installing an item pulls in the items it requires from the same source
+//! and from cross-source `{ name, source }` entries. The lockfile records
+//! `required_by` provenance for each pulled-in dependency and the dependency
+//! records its own source.
 
 mod common;
 
@@ -97,24 +97,54 @@ fn add_pulls_preload_skills_as_requires() {
 }
 
 #[test]
-fn add_errors_on_cross_source_requires() {
+fn add_pulls_cross_source_requires_from_local_sibling() {
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
-    let reg = tmp.path().join("reg");
+    // Second source holding the required skill.
+    let reg_b = tmp.path().join("reg-b");
+    write_item(&reg_b, "SKILL.md", "sarif", "");
+
+    // Entry source requires `sarif` from `reg-b` by absolute path.
+    let reg_a = tmp.path().join("reg-a");
     write_item(
-        &reg,
+        &reg_a,
         "AGENT.md",
         "code-review",
-        "requires:\n  skills: [{ name: sarif, source: org/repo }]\n",
+        &format!(
+            "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+            reg_b.display()
+        ),
     );
 
     common::upskill_cmd(&home)
         .current_dir(tmp.path())
-        .args(["add", "./reg", "code-review"])
+        .args(["add", "./reg-a", "code-review"])
         .assert()
-        .failure()
-        .stderr(predicates::str::contains("cross-source"));
+        .success();
+
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap())
+            .unwrap();
+    let items = lock["items"].as_array().unwrap();
+
+    let sarif = items
+        .iter()
+        .find(|i| i["kind"] == "skill" && i["name"] == "sarif")
+        .unwrap_or_else(|| panic!("cross-source sarif must be installed: {lock}"));
+
+    // The dependency records its OWN source (reg-b), not the entry source.
+    let expected_source = format!("local:{}", reg_b.display());
+    assert_eq!(
+        sarif["source"], expected_source,
+        "sarif must record its own cross-source: {sarif}"
+    );
+
+    let required_by = sarif["required_by"].as_array().unwrap();
+    assert!(
+        required_by.iter().any(|r| r == "agent:code-review"),
+        "cross-source sarif required_by must contain agent:code-review: {lock}"
+    );
 }
