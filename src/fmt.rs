@@ -1,10 +1,12 @@
-//! `upskill fmt` — canonicalise YAML key order in SSOT files.
+//! `upskill fmt` — canonicalise YAML key order and markdown body in SSOT files.
 //!
 //! Per [ADR-0004](../../docs/adr/0004-cli-surface.md), `fmt` and `lint`
-//! are sibling author commands. `fmt` operates on YAML frontmatter and
-//! bundle files; markdown body content is dprint's job and is preserved
-//! byte-for-byte. Like `lint`, this command refuses to run inside a
-//! consumer project (`.upskill-lock.json` at the path's root).
+//! are sibling author commands. `fmt` reorders YAML frontmatter keys and
+//! formats the markdown body through the same dprint pass the generation
+//! pipeline uses (see [`canonical_body`]); `lint` reports a `body-format`
+//! finding when a body is not canonical. Like `lint`, this command
+//! refuses to run inside a consumer project (`.upskill-lock.json` at the
+//! path's root).
 //!
 //! What gets canonicalised:
 //!
@@ -12,12 +14,16 @@
 //!   [`crate::model`] struct field order.
 //! - Unknown top-level keys (extras) sort alphabetically after all
 //!   known keys.
+//! - **Markdown body** — formatted via dprint; the frontmatter↔body seam
+//!   is normalised to a single blank line.
 //!
 //! What is **preserved**:
 //!
 //! - YAML comments (both standalone and inline)
-//! - Author formatting (indentation, line wrapping)
-//! - Nested/indented content (travels with its parent key block)
+//! - Author frontmatter formatting (indentation, line wrapping)
+//! - Nested/indented YAML content (travels with its parent key block)
+//! - Prose wrapping inside the body (dprint `text_wrap: Maintain`)
+//! - HTML-comment directives (`<!-- @client:X -->`)
 //!
 //! Implementation: line-level block reordering. The YAML is split into
 //! top-level key blocks (each key + preceding comments + indented
@@ -111,8 +117,8 @@ pub struct FmtReport {
 /// working directory.
 ///
 /// Files whose content was already canonical are left untouched
-/// (no `mtime` thrash). Body content is preserved byte-for-byte.
-/// Comments and author formatting are preserved.
+/// (no `mtime` thrash). The body is formatted via dprint; YAML comments
+/// and author frontmatter formatting are preserved.
 pub fn fmt(paths: &[PathBuf]) -> Result<FmtReport> {
     let owned_cwd: Vec<PathBuf>;
     let roots: &[PathBuf] = if paths.is_empty() {
@@ -196,7 +202,37 @@ fn canonicalise_item<T: DeserializeOwned>(
     serde_yaml_ng::from_str::<T>(&reordered_yaml)
         .with_context(|| format!("validate frontmatter {}", path.display()))?;
 
-    Ok(format!("---\n{reordered_yaml}---\n{body}"))
+    let body_region = canonical_body(&reordered_yaml, body)
+        .with_context(|| format!("format body {}", path.display()))?;
+
+    Ok(format!("---\n{reordered_yaml}---\n{body_region}"))
+}
+
+/// Canonical body region for an item file, given its on-disk
+/// frontmatter string and body. Formats via dprint the same way the
+/// generation pipeline does: dprint treats `---…---` as opaque
+/// frontmatter, so the YAML (content, comments, key order, wrapping) is
+/// preserved byte-for-byte and only the body is formatted, with the seam
+/// normalised to a single blank line. Returns the region after the
+/// closing `---`, including that leading blank-line separator. Empty when
+/// the body is blank. Used by both `fmt` (to write) and
+/// `lint::check_body_format` (to detect drift) so checker and fixer
+/// never disagree.
+pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
+    if body.trim().is_empty() {
+        return Ok(String::new());
+    }
+    let prefix = format!("---\n{frontmatter}---\n");
+    let combined = format!("{prefix}{body}");
+    let formatted =
+        crate::generate::format::format_markdown(&combined).context("format item body")?;
+    // dprint preserves the `---\n{frontmatter}---\n` prefix byte-for-byte
+    // because it treats the frontmatter delimiters as opaque. If this ever
+    // fires, a dprint version or config change violated that contract.
+    formatted
+        .strip_prefix(&prefix)
+        .map(|region| region.to_string())
+        .ok_or_else(|| anyhow!("dprint altered the frontmatter region while formatting the body"))
 }
 
 /// Parse YAML string into `T` for validation only. Discards the result.
@@ -692,10 +728,103 @@ mod tests {
     }
 
     #[test]
-    fn canonicalise_preserves_body_byte_for_byte() {
-        let body = concat!(
+    fn canonicalise_formats_body() {
+        // `*` bullets become `-`, extra blank lines collapse, and the
+        // single blank-line separator after the frontmatter is kept.
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: dirty\n",
+            "description: body needs formatting.\n",
+            "---\n",
             "\n",
-            "## A heading\n",
+            "## Body\n",
+            "\n",
+            "\n",
+            "* one\n",
+            "* two\n",
+        );
+        let out = canonicalise(raw, Path::new("dirty/SKILL.md")).unwrap();
+        assert!(
+            out.ends_with("---\n\n## Body\n\n- one\n- two\n"),
+            "body not formatted canonically:\n{out}"
+        );
+    }
+
+    #[test]
+    fn canonicalise_preserves_clean_body_seam() {
+        // An already-clean body with one blank line after `---` is left
+        // exactly as-is — the separator is preserved, not stripped.
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: clean\n",
+            "description: already canonical body.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "- one\n",
+            "- two\n",
+        );
+        let out = canonicalise(raw, Path::new("clean/SKILL.md")).unwrap();
+        assert_eq!(out, raw, "clean body must round-trip unchanged:\n{out}");
+    }
+
+    #[test]
+    fn canonicalise_body_is_idempotent() {
+        let raw = concat!(
+            "---\n",
+            "name: dirty\n",
+            "schema: 1\n",
+            "description: scrambled keys and bullets.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "* one\n",
+            "* two\n",
+        );
+        let path = Path::new("dirty/SKILL.md");
+        let pass1 = canonicalise(raw, path).unwrap();
+        let pass2 = canonicalise(&pass1, path).unwrap();
+        assert_eq!(pass1, pass2, "fmt must be idempotent over the body too");
+    }
+
+    #[test]
+    fn canonicalise_preserves_directives() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: cond\n",
+            "description: body has client directives.\n",
+            "---\n",
+            "\n",
+            "## Body\n",
+            "\n",
+            "<!-- @client:claude -->\n",
+            "Claude-only line.\n",
+            "<!-- @endclient -->\n",
+        );
+        let out = canonicalise(raw, Path::new("cond/SKILL.md")).unwrap();
+        assert!(
+            out.contains("<!-- @client:claude -->"),
+            "open directive lost:\n{out}"
+        );
+        assert!(
+            out.contains("<!-- @endclient -->"),
+            "close directive lost:\n{out}"
+        );
+    }
+
+    #[test]
+    fn canonicalise_preserves_html_comment_and_code_fence() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: fences\n",
+            "description: code fences and html comments survive.\n",
+            "---\n",
             "\n",
             "```rust\n",
             "fn x() {}\n",
@@ -703,10 +832,15 @@ mod tests {
             "\n",
             "<!-- a comment -->\n",
         );
-        let raw =
-            format!("---\nschema: 1\nname: preserve\ndescription: do not touch body.\n---\n{body}");
-        let out = canonicalise(&raw, Path::new("preserve/SKILL.md")).unwrap();
-        assert!(out.ends_with(body), "body changed:\n{out}");
+        let out = canonicalise(raw, Path::new("fences/SKILL.md")).unwrap();
+        assert!(
+            out.contains("```rust\nfn x() {}\n```"),
+            "code fence altered:\n{out}"
+        );
+        assert!(
+            out.contains("<!-- a comment -->"),
+            "html comment stripped:\n{out}"
+        );
     }
 
     #[test]
@@ -720,6 +854,8 @@ mod tests {
             "## body\n",
         );
         let path = Path::new("out/SKILL.md");
+        // The first pass normalises the body seam, so pass1 differs from
+        // raw; idempotency means pass2 == pass1.
         let pass1 = canonicalise(raw, path).unwrap();
         let pass2 = canonicalise(&pass1, path).unwrap();
         assert_eq!(pass1, pass2, "fmt must be idempotent");
@@ -799,6 +935,7 @@ mod tests {
             "name: clean\n",
             "description: already canonical.\n",
             "---\n",
+            "\n",
             "## body\n",
         );
         write(&item, canonical);

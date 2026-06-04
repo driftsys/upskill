@@ -79,11 +79,15 @@ separate `validate` command. Lint scope is deliberately small (schema +
 structural markdown checks; cross-file consistency); content-quality
 review is delegated to AI workflows outside upskill.
 
-### `fmt` is frontmatter only
+### `fmt` canonicalises frontmatter and body
 
 `upskill fmt` canonicalises YAML frontmatter (key ordering, version
-quoting, indentation). Markdown body formatting is dprint's job. The two
-tools don't overlap.
+quoting, indentation) and formats the markdown body through the same
+dprint pass the generation pipeline uses. `upskill lint` reports a
+`body-format` warning when a body is not canonical, so the check/fix pair
+stays symmetric and CI (`lint --strict`) fails on unformatted source.
+(This supersedes the original "frontmatter only" decision: leaving bodies
+unchecked let authored source drift out of canonical form.)
 
 ### Default scope: `--project`, fall back to `--global`
 

@@ -12,8 +12,6 @@ tools:
   - bash
 preload-skills:
   - security-baseline
-opencode:
-  temperature: 0.2
 metadata:
   version: "1.0.0"
   author: platform-security
@@ -21,6 +19,8 @@ metadata:
     - claude
     - copilot
     - opencode
+opencode:
+  temperature: 0.2
 ---
 
 ## Security reviewer

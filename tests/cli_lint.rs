@@ -13,6 +13,19 @@ use std::path::Path;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
+const UNFORMATTED_SKILL_MD: &str = concat!(
+    "---\n",
+    "schema: 1\n",
+    "name: dirty\n",
+    "description: Body uses asterisk bullets that dprint rewrites.\n",
+    "---\n",
+    "\n",
+    "## Body\n",
+    "\n",
+    "* one\n",
+    "* two\n",
+);
+
 fn write(path: &Path, contents: &str) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).unwrap();
@@ -69,6 +82,42 @@ fn lint_flags_h1_in_body_as_warning() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(out.contains("body-h1"), "expected body-h1 finding: {out}");
     assert!(out.contains("warning"), "expected warning level: {out}");
+}
+
+#[test]
+fn lint_flags_unformatted_body_as_warning() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let item = tmp.path().join("dirty/SKILL.md");
+    write(&item, UNFORMATTED_SKILL_MD);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint"])
+        .assert()
+        .success(); // warnings only, exit 0 by default
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("body-format"),
+        "expected body-format finding: {out}"
+    );
+    assert!(out.contains("warning"), "expected warning level: {out}");
+}
+
+#[test]
+fn lint_strict_fails_on_unformatted_body() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let item = tmp.path().join("dirty/SKILL.md");
+    write(&item, UNFORMATTED_SKILL_MD);
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .assert()
+        .failure(); // --strict promotes the warning to an error → non-zero exit
 }
 
 #[test]

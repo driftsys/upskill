@@ -823,8 +823,11 @@ solving.
 ### 3.8 Frontmatter canonicalisation
 
 An implementation MAY provide a formatting command (e.g., `upskill fmt`) that canonicalises SSOT
-frontmatter. Canonicalisation produces a deterministic key order, making diffs predictable and
-reducing merge conflicts.
+frontmatter and the markdown body. Frontmatter canonicalisation produces a deterministic key
+order, making diffs predictable and reducing merge conflicts. Body canonicalisation applies the
+same markdown formatter used for generated output (§7.4) and normalises the frontmatter↔body seam
+to a single blank line, so authored source matches generated output. A linter MAY report a
+`body-format` finding when a body is not canonical.
 
 **Canonical key order.** When canonicalising frontmatter, implementations MUST emit keys in the
 following order (unlisted keys appear at the end in their original relative order):
