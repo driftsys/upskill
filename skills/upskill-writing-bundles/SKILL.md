@@ -25,7 +25,7 @@ dependencies.
 - Authoring individual skill content → `writing-skills`
 - Authoring rules → `upskill-writing-rules`
 - Authoring subagents → `upskill-writing-subagents`
-- Lifecycle operations (add/update/remove) → `upskill-using`
+- Lifecycle operations (add/update/remove) → `upskill-cli`
 
 ## Bundle YAML Schema
 
