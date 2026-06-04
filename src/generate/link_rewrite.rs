@@ -31,11 +31,15 @@ pub fn rewrite_resource_links(
     // (absolute byte range of the destination token, replacement string).
     let mut edits: Vec<(Range<usize>, String)> = Vec::new();
 
+    // A single parse serves both passes: `OffsetIter` exposes the reference
+    // definitions gathered during construction, and yields the inline link
+    // and image events when iterated.
+    let parser = Parser::new_ext(rendered, Options::empty()).into_offset_iter();
+
     // Reference definitions (`[id]: dest "title"`) are consumed during the
     // initial scan and are not emitted as link events, so collect them
     // separately. `RefDef.span` covers the whole definition line.
-    let ref_parser = Parser::new_ext(rendered, Options::empty());
-    for (_label, def) in ref_parser.reference_definitions().iter() {
+    for (_label, def) in parser.reference_definitions().iter() {
         if let Some(new_dest) = rewritten_dest(&def.dest, name, copied)
             && let Some(off) = locate_dest(&rendered[def.span.clone()], &def.dest, true)
         {
@@ -45,8 +49,7 @@ pub fn rewrite_resource_links(
     }
 
     // Inline links and images.
-    let parser = Parser::new_ext(rendered, Options::empty());
-    for (event, range) in parser.into_offset_iter() {
+    for (event, range) in parser {
         let dest = match &event {
             Event::Start(Tag::Link { dest_url, .. })
             | Event::Start(Tag::Image { dest_url, .. }) => dest_url.to_string(),
@@ -102,13 +105,19 @@ fn rewritten_dest(dest: &str, name: &str, copied: &HashSet<PathBuf>) -> Option<S
         return None;
     }
     let normalized = path_part.strip_prefix("./").unwrap_or(path_part);
-    if Path::new(normalized)
+    // pulldown-cmark does not percent-decode `dest_url`, so a link like
+    // `[n](my%20notes.md)` arrives literally. Decode for the path-semantic
+    // checks below (parent-escape guard and `copied` membership, which holds
+    // real decoded filenames) while keeping the original encoded text for
+    // the rewritten output so the on-disk link stays valid.
+    let decoded = percent_decode(normalized);
+    if Path::new(&decoded)
         .components()
         .any(|c| matches!(c, Component::ParentDir))
     {
         return None;
     }
-    if !copied.contains(&PathBuf::from(normalized)) {
+    if !copied.contains(&PathBuf::from(&decoded)) {
         return None;
     }
     let prefixed = if path_part.starts_with("./") {
@@ -120,6 +129,33 @@ fn rewritten_dest(dest: &str, name: &str, copied: &HashSet<PathBuf>) -> Option<S
         Some(f) => format!("{prefixed}#{f}"),
         None => prefixed,
     })
+}
+
+/// Best-effort percent-decoding of a link-destination path. Each valid
+/// `%XX` escape becomes its byte; a malformed escape or a decoded byte
+/// sequence that is not UTF-8 is left verbatim. Used only to compare a
+/// destination against `copied` (which stores real, decoded filenames) —
+/// never to build output.
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let (Some(hi), Some(lo)) = (
+                (bytes[i + 1] as char).to_digit(16),
+                (bytes[i + 2] as char).to_digit(16),
+            )
+        {
+            out.push((hi * 16 + lo) as u8);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).unwrap_or_else(|_| s.to_string())
 }
 
 /// True for `scheme:` URLs (`https:`, `mailto:`, …). A relative file path
@@ -210,6 +246,43 @@ mod tests {
     #[test]
     fn leaves_parent_escape_untouched() {
         let body = "[x](../other/gate.sh)";
+        assert_eq!(run(body, &["other/gate.sh"]), body);
+    }
+
+    #[test]
+    fn rewrites_percent_encoded_link() {
+        // pulldown does not percent-decode `dest_url`, so `my%20notes.md`
+        // must be decoded to match the copied resource `my notes.md`. The
+        // rewritten destination keeps the original encoding.
+        assert_eq!(
+            run("See [n](my%20notes.md).", &["my notes.md"]),
+            "See [n](demo/my%20notes.md)."
+        );
+    }
+
+    #[test]
+    fn rewrites_percent_encoded_link_with_dot_slash() {
+        assert_eq!(
+            run("![d](./a%20b/c.png)", &["a b/c.png"]),
+            "![d](./demo/a%20b/c.png)"
+        );
+    }
+
+    #[test]
+    fn rewrites_percent_encoded_reference_definition() {
+        let body = "Use [n][r].\n\n[r]: my%20notes.md\n";
+        assert_eq!(
+            run(body, &["my notes.md"]),
+            "Use [n][r].\n\n[r]: demo/my%20notes.md\n"
+        );
+    }
+
+    #[test]
+    fn leaves_percent_encoded_parent_escape_untouched() {
+        // `..%2Fgate.sh` decodes to `../gate.sh`: the parent-escape guard
+        // must reject it rather than rewrite a path that climbs out of the
+        // item directory.
+        let body = "[x](..%2Fother%2Fgate.sh)";
         assert_eq!(run(body, &["other/gate.sh"]), body);
     }
 

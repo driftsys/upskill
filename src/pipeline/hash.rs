@@ -8,12 +8,12 @@
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 
 use super::ItemKind;
-use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs};
+use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs, walk_files};
 
 /// SHA-256 hash of every file under `dir`, with each file's path-relative
 /// name folded into the hash so renames register as drift. Recursive,
@@ -21,8 +21,7 @@ use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs};
 /// unreadable. Used by the pipeline to populate `LockedItem.hash` and by
 /// `doctor` (Phase B3) to detect SSOT drift.
 pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
-    let mut files = Vec::new();
-    collect_files(dir, &mut files);
+    let mut files = walk_files(dir);
     if files.is_empty() {
         return None;
     }
@@ -42,29 +41,6 @@ pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
             .map(|b| format!("{b:02x}"))
             .collect(),
     )
-}
-
-fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        // `file_type()` does not follow symlinks; skip them so a directory
-        // symlink cycle cannot drive unbounded recursion (consistent with
-        // `discovery::collect_resource_files`).
-        let Ok(ft) = entry.file_type() else {
-            continue;
-        };
-        if ft.is_symlink() {
-            continue;
-        }
-        let path = entry.path();
-        if ft.is_dir() {
-            collect_files(&path, files);
-        } else {
-            files.push(path);
-        }
-    }
 }
 
 /// Compute the `(kind, name) -> hash` map a source would install,

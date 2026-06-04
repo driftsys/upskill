@@ -12,6 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::ItemKind;
+use crate::generate::Client;
 use crate::parse::frontmatter;
 
 /// Effective identity name for an item (§2.1). Skills always take the
@@ -301,20 +302,40 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
 /// Recursive; sub-directory structure is preserved in the returned
 /// relative paths. Sorted for deterministic output.
 pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    collect_resource_files(dir, dir, &mut out);
+    let mut out: Vec<PathBuf> = walk_files(dir)
+        .into_iter()
+        .filter(|path| {
+            // Entrypoints and override files only ever sit at the top level
+            // of an item directory; a nested file with the same name is
+            // content.
+            let top_level = path.parent() == Some(dir);
+            let fname = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
+            !(top_level && is_entrypoint_or_override(fname))
+        })
+        .filter_map(|path| path.strip_prefix(dir).ok().map(Path::to_path_buf))
+        .collect();
     out.sort();
     out
 }
 
-fn collect_resource_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
+/// Every non-symlink regular file under `dir`, recursively. Symlinks (file
+/// and directory) are skipped so a directory-symlink cycle cannot drive
+/// unbounded recursion and a symlinked file cannot smuggle content from
+/// outside `dir`. Order is filesystem-dependent; callers that need
+/// determinism sort the result. Shared by [`iter_item_resources`] and
+/// `hash::hash_item_dir`.
+pub(super) fn walk_files(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    walk_files_into(dir, &mut out);
+    out
+}
+
+fn walk_files_into(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
-        // `file_type()` does not follow symlinks. Skip symlinks entirely so a
-        // directory-symlink cycle cannot cause unbounded recursion, and a
-        // symlinked file cannot smuggle a resource from outside the item dir.
+        // `file_type()` does not follow symlinks.
         let Ok(ft) = entry.file_type() else {
             continue;
         };
@@ -323,18 +344,9 @@ fn collect_resource_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
         }
         let path = entry.path();
         if ft.is_dir() {
-            collect_resource_files(root, &path, out);
-            continue;
-        }
-        // Entrypoints and override files only ever sit at the top level of
-        // an item directory; a nested file with the same name is content.
-        let top_level = path.parent() == Some(root);
-        let fname = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
-        if top_level && is_entrypoint_or_override(fname) {
-            continue;
-        }
-        if let Ok(rel) = path.strip_prefix(root) {
-            out.push(rel.to_path_buf());
+            walk_files_into(&path, out);
+        } else {
+            out.push(path);
         }
     }
 }
@@ -343,9 +355,12 @@ fn is_entrypoint_or_override(fname: &str) -> bool {
     matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md") || is_override_file(fname)
 }
 
-/// `<KIND>.<client>.md` where KIND ∈ {SKILL,RULE,AGENT} and client ∈
-/// {claude,copilot,opencode}. Anchored to entrypoint stems so an
-/// unrelated file like `notes.claude.md` is NOT treated as an override.
+/// `<KIND>.<client>.md` where KIND is an entrypoint stem (`SKILL`, `RULE`,
+/// `AGENT`) and client is a [`Client`] token (`claude`, `copilot`,
+/// `opencode`). Both lists are derived from the [`ItemKind`] and [`Client`]
+/// enums so a new kind or client is recognised without editing this
+/// function. Anchored to entrypoint stems so an unrelated file like
+/// `notes.claude.md` is NOT treated as an override.
 fn is_override_file(fname: &str) -> bool {
     let Some(stem) = fname.strip_suffix(".md") else {
         return false;
@@ -353,8 +368,10 @@ fn is_override_file(fname: &str) -> bool {
     let mut parts = stem.split('.');
     match (parts.next(), parts.next(), parts.next()) {
         (Some(kind), Some(client), None) => {
-            matches!(kind, "SKILL" | "RULE" | "AGENT")
-                && matches!(client, "claude" | "copilot" | "opencode")
+            ItemKind::ALL
+                .iter()
+                .any(|k| k.entrypoint_filename().strip_suffix(".md") == Some(kind))
+                && Client::ALL.iter().any(|c| c.name() == client)
         }
         _ => false,
     }
@@ -572,5 +589,35 @@ mod tests {
             !res.iter().any(|p| p.to_string_lossy().contains("loop")),
             "the symlinked directory must be skipped, not traversed: {res:?}"
         );
+    }
+
+    #[test]
+    fn is_override_file_matches_every_kind_and_client() {
+        // Derived from `ItemKind::ALL` × `Client::ALL`: every combination of
+        // entrypoint stem and client token is an override file.
+        for kind in ItemKind::ALL {
+            let stem = kind.entrypoint_filename().strip_suffix(".md").unwrap();
+            for client in Client::ALL {
+                let fname = format!("{stem}.{}.md", client.name());
+                assert!(is_override_file(&fname), "{fname} should be an override");
+            }
+        }
+    }
+
+    #[test]
+    fn is_override_file_rejects_non_overrides() {
+        for fname in [
+            "notes.claude.md",   // unknown stem
+            "SKILL.cursor.md",   // unknown client
+            "SKILL.md",          // entrypoint, not an override
+            "RULE.claude.txt",   // wrong extension
+            "SKILL.claude",      // missing extension
+            "a.SKILL.claude.md", // too many segments
+        ] {
+            assert!(
+                !is_override_file(fname),
+                "{fname} should not be an override"
+            );
+        }
     }
 }
