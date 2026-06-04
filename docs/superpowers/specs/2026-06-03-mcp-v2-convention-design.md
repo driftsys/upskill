@@ -107,7 +107,7 @@ Add a recipe section _"Shipping an MCP that needs a local install."_ Structure:
   need no installer; only a launcher-less bare binary does.
 - The 4 steps above, with the bundle YAML example.
 - The runtime-flow + trust paragraphs.
-- A pointer to [ADR-0010](../adr/0010-mcp-config-write.md) and the v1 `mcps:`
+- A pointer to [ADR-0010](../../adr/0010-mcp-config-write.md) and the v1 `mcps:`
   format-spec section.
 
 Match the existing recipe style in `docs/recipes.md` (read a sibling recipe for
