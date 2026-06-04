@@ -10,7 +10,8 @@
 //! network is involved, and pin every command to `--project` scope so the
 //! consumer tempdir is the only lockfile touched (never the real `$HOME`).
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -41,9 +42,17 @@ fn setup_registry(registry: &Path) -> PathBuf {
     bundle
 }
 
+/// Fake `$HOME` for a consumer: a `home/` subdir inside the consumer tempdir.
+/// Commands are `--project`-scoped, so this is purely the belt-and-suspenders
+/// safety net that keeps any stray global write out of the real `$HOME`.
+fn fake_home(consumer: &Path) -> PathBuf {
+    let home = consumer.join("home");
+    fs::create_dir_all(&home).unwrap();
+    home
+}
+
 fn add_bundle(consumer: &Path, bundle: &Path) {
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&fake_home(consumer))
         .current_dir(consumer)
         .args(["add", bundle.to_str().unwrap(), "--project"])
         .assert()
@@ -58,8 +67,7 @@ fn update_dry_run_does_not_report_bundle_items_as_removed() {
 
     add_bundle(consumer.path(), &bundle);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
         .args(["update", "--dry-run", "--project"])
         .assert()
@@ -84,8 +92,7 @@ fn update_dry_run_named_bundle_item_is_not_removed() {
 
     add_bundle(consumer.path(), &bundle);
 
-    let assert = Command::cargo_bin("upskill")
-        .unwrap()
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
         .args(["update", "--dry-run", "--project", "alpha"])
         .assert()
@@ -107,8 +114,7 @@ fn update_apply_does_not_delete_bundle_items() {
     add_bundle(consumer.path(), &bundle);
 
     // A real (apply) update must reinstall the bundle, not delete its items.
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
