@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.7] (2026-06-04)
+
+### Bug Fixes
+
+- **plugin:** use marketplace name for claude/copilot install ref ([#227])
+  ([d7dc394])
+
+[0.7.7]: https://github.com/driftsys/upskill/compare/v0.7.6...v0.7.7
+[d7dc394]: https://github.com/driftsys/upskill/commit/d7dc394
+[#227]: https://github.com/driftsys/upskill/issues/227
+
 ## [0.7.6] (2026-06-04)
 
 ### Bug Fixes
