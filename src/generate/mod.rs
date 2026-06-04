@@ -22,6 +22,10 @@ pub enum Client {
 }
 
 impl Client {
+    /// Every client, in declaration order. Single source of truth for code
+    /// that must enumerate clients (e.g. `ALL_CLIENTS`, override detection).
+    pub const ALL: [Client; 3] = [Self::Claude, Self::Copilot, Self::OpenCode];
+
     pub fn name(self) -> &'static str {
         match self {
             Client::Claude => "claude",
