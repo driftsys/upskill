@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.5] (2026-06-04)
+
+### Refactoring
+
+- **lint:** avoid fabricating empty frontmatter in body-format check ([46efa72])
+- **lint:** guard bodyless files; dedupe body-format ATDD fixture ([c17912e])
+
+### Features
+
+- **lint:** add body-format rule using shared canonical_body helper ([6315814])
+- **fmt:** format item markdown body via shared canonical_body helper
+  ([90af065])
+
+### Documentation
+
+- fmt formats the body; add body-format lint rule ([d83eda6])
+- **plan:** implementation plan for fmt formatting the source body ([6b250ee])
+- **spec:** correct fmt body-format design for the frontmatter seam ([2d0d41b])
+- **spec:** design for fmt formatting the source body ([625c422])
+
+[0.7.5]: https://github.com/driftsys/upskill/compare/v0.7.4...v0.7.5
+[46efa72]: https://github.com/driftsys/upskill/commit/46efa72
+[c17912e]: https://github.com/driftsys/upskill/commit/c17912e
+[6315814]: https://github.com/driftsys/upskill/commit/6315814
+[90af065]: https://github.com/driftsys/upskill/commit/90af065
+[d83eda6]: https://github.com/driftsys/upskill/commit/d83eda6
+[6b250ee]: https://github.com/driftsys/upskill/commit/6b250ee
+[2d0d41b]: https://github.com/driftsys/upskill/commit/2d0d41b
+[625c422]: https://github.com/driftsys/upskill/commit/625c422
+
 ## [0.7.4] (2026-06-03)
 
 ### Documentation
