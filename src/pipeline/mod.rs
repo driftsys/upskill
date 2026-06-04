@@ -120,18 +120,79 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
-/// Replace the item name component in an output path.
-/// E.g., `.claude/skills/foo/SKILL.md` → `.claude/skills/bar/SKILL.md`
-fn rename_output_path(path: &Path, old_name: &str, new_name: &str) -> PathBuf {
-    path.iter()
-        .map(|component| {
-            if component == old_name {
-                std::ffi::OsStr::new(new_name)
-            } else {
-                component
-            }
-        })
-        .collect()
+/// Move a file or directory from `from` to `to`, creating `to`'s parent
+/// directory first and replacing any stale destination. A no-op when `from`
+/// does not exist, or when `from` and `to` are the same path.
+///
+/// Replacing the destination matters on `update` / re-add: the fresh install
+/// writes under the item's original name and then relocates to the alias, so
+/// a prior aliased install can still be sitting at `to`. A plain `fs::rename`
+/// of a directory onto a non-empty directory fails ("Directory not empty"),
+/// so the stale destination is removed first.
+fn relocate(from: &Path, to: &Path) -> Result<()> {
+    if !from.exists() || from == to {
+        return Ok(());
+    }
+    if let Some(parent) = to.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("create dir {}", parent.display()))?;
+    }
+    if to.is_dir() {
+        let _ = fs::remove_dir_all(to);
+    } else if to.exists() {
+        let _ = fs::remove_file(to);
+    }
+    fs::rename(from, to).with_context(|| format!("rename {} to {}", from.display(), to.display()))
+}
+
+/// Relocate one already-installed per-client output from its original name to
+/// `alias`, including any supporting resources (format-spec §2.4).
+///
+/// - **Directory-backed** kinds (all skills, opencode rules) keep the
+///   entrypoint and resources together in `resource_base_path`, so the whole
+///   directory is moved. Their links are not namespaced — no rewrite.
+/// - **Flat** kinds (Claude/Copilot rules, all agents) keep the entrypoint
+///   file beside a sibling `<name>/` resource namespace dir. The entrypoint
+///   file and the namespace dir are moved, then the entrypoint's namespaced
+///   links are re-prefixed from `<orig>/` to `<alias>/`.
+///
+/// Returns the new output path (relative to `target`) for the entrypoint.
+fn relocate_aliased_output(
+    target: &Path,
+    item: &report::InstalledItem,
+    alias: &str,
+) -> Result<PathBuf> {
+    let (kind, client, orig) = (item.kind, item.client, item.name.as_str());
+    let new_output = output::output_path(kind, client, alias);
+
+    if output::is_dir_backed(kind, client) {
+        // Entrypoint + resources share one directory; move it wholesale.
+        let old_base = target.join(output::resource_base_path(kind, client, orig));
+        let new_base = target.join(output::resource_base_path(kind, client, alias));
+        relocate(&old_base, &new_base)?;
+        return Ok(new_output);
+    }
+
+    // Flat kind: move the entrypoint file, then its resource namespace dir.
+    relocate(&target.join(&item.output_path), &target.join(&new_output))?;
+    let old_base = target.join(output::resource_base_path(kind, client, orig));
+    if old_base.is_dir() {
+        let new_base = target.join(output::resource_base_path(kind, client, alias));
+        relocate(&old_base, &new_base)?;
+        // Re-prefix the entrypoint's namespaced links to the moved dir.
+        let copied: std::collections::HashSet<PathBuf> = discovery::iter_item_resources(&new_base)
+            .into_iter()
+            .collect();
+        let entry = target.join(&new_output);
+        let body =
+            fs::read_to_string(&entry).with_context(|| format!("read {}", entry.display()))?;
+        let rewritten =
+            crate::generate::link_rewrite::reprefix_resource_links(&body, orig, alias, &copied)
+                .with_context(|| format!("re-prefix resource links for {alias} ({client:?})"))?;
+        if rewritten != body {
+            fs::write(&entry, rewritten).with_context(|| format!("write {}", entry.display()))?;
+        }
+    }
+    Ok(new_output)
 }
 
 /// Install + write lockfile. Consumer-facing entry point.
@@ -170,29 +231,6 @@ pub fn install_with_lockfile(
                  Use --as <original>=<alias> syntax to alias specific items.",
                 unique_names.len()
             );
-        }
-    }
-
-    // -- Guard: aliasing an item that ships supporting resources is not yet
-    // supported (the resource namespace dir and rewritten `<name>/` link
-    // prefix would not be relocated to the alias). Tracked as debt; abort
-    // before writing rather than emit broken output.
-    // Skip for bundle-file sources: `local_source` is then a file, not a
-    // directory, so `iter_item_dirs` would error. Bundle-sourced aliasing of
-    // resource-bearing items is covered by the same debt follow-up (#200).
-    if !options.aliases.is_empty() && !discovery::is_bundle_file(&local_source) {
-        for (name, dir) in discovery::iter_item_dirs(&local_source)? {
-            let aliased = options
-                .aliases
-                .iter()
-                .any(|(from, _)| from.is_empty() || *from == name);
-            if aliased && !discovery::iter_item_resources(&dir).is_empty() {
-                anyhow::bail!(
-                    "aliasing items with supporting resources is not yet supported \
-                     ('{name}' ships resource files). Install it without --as. \
-                     (See format-spec §2.4; tracked in #200.)"
-                );
-            }
         }
     }
 
@@ -334,7 +372,8 @@ pub fn install_with_lockfile(
     let mut aliased_names: std::collections::HashMap<String, String> =
         std::collections::HashMap::new();
     if !options.aliases.is_empty() {
-        // Rename output files on disk and update report items.
+        // Relocate output files (and any supporting resources) on disk and
+        // update report items.
         for item in &mut report.items {
             // Only entry-source items are aliasable; dependency-pulled
             // (cross-source) items are never renamed. When there is no
@@ -353,23 +392,7 @@ pub fn install_with_lockfile(
                 None
             };
             if let Some((_, alias_name)) = alias {
-                let old_path = target.join(&item.output_path);
-                let new_output = rename_output_path(&item.output_path, &item.name, alias_name);
-                let new_path = target.join(&new_output);
-
-                if old_path.exists() {
-                    if let Some(parent) = new_path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-                    fs::rename(&old_path, &new_path).with_context(|| {
-                        format!("rename {} to {}", old_path.display(), new_path.display())
-                    })?;
-                    // Clean up empty parent directory
-                    if let Some(parent) = old_path.parent() {
-                        let _ = fs::remove_dir(parent);
-                    }
-                }
-
+                let new_output = relocate_aliased_output(target, item, alias_name)?;
                 aliased_names
                     .entry(alias_name.clone())
                     .or_insert_with(|| item.name.clone());
