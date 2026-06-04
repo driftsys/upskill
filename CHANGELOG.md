@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.6] (2026-06-04)
+
+### Bug Fixes
+
+- **generate:** match percent-encoded resource links; harden walkers ([#203])
+  ([90b2fc2])
+
+### Refactoring
+
+- **skills:** rename upskill-using skill to upskill-cli ([2c672c4])
+
+### Documentation
+
+- **spec:** fix broken ADR-0010 relative link in MCP v2 spec ([897cfca])
+
+### Features
+
+- **pipeline:** relocate resources and links when aliasing with --as ([#200])
+  ([383e701])
+
+[0.7.6]: https://github.com/driftsys/upskill/compare/v0.7.5...v0.7.6
+[90b2fc2]: https://github.com/driftsys/upskill/commit/90b2fc2
+[#203]: https://github.com/driftsys/upskill/issues/203
+[2c672c4]: https://github.com/driftsys/upskill/commit/2c672c4
+[897cfca]: https://github.com/driftsys/upskill/commit/897cfca
+[383e701]: https://github.com/driftsys/upskill/commit/383e701
+[#200]: https://github.com/driftsys/upskill/issues/200
+
 ## [0.7.5] (2026-06-04)
 
 ### Refactoring
