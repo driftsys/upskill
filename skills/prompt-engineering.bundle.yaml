@@ -16,7 +16,7 @@ items:
     - upskill-writing-rules # authoring: always-loaded invariants
     - upskill-writing-subagents # authoring: bounded sub-task delegation
     - upskill-evaluating-prompts # eval: RED-GREEN-REFACTOR
-    - upskill-using # ops: add / update / audit
+    - upskill-cli # ops: add / update / audit
     - upskill-writing-bundles # authoring: .bundle.yaml manifests + plugins
 
 # Client-native plugins required by this bundle's skills.

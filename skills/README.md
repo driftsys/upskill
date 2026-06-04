@@ -27,14 +27,14 @@ skills/
 │   └── SKILL.md
 ├── upskill-writing-bundles/        .bundle.yaml authoring + plugin declarations
 │   └── SKILL.md
-└── upskill-using/                  lifecycle operations
+└── upskill-cli/                  lifecycle operations
     └── SKILL.md
 ```
 
 ## Status
 
 All skills are v0.1.0 except `upskill-prompt-distilling` (v0.3.0, renamed from
-`picking-the-layer`) and `upskill-using` (v0.2.0, rewritten against the
+`picking-the-layer`) and `upskill-cli` (v0.2.0, rewritten against the
 real CLI surface). None have yet been through their own
 RED-GREEN-REFACTOR cycle. Each carries an "Honest caveats" section
 flagging this.
@@ -96,7 +96,7 @@ registry directory and pass the item name as a filter:
 upskill add ./skills upskill-prompt-design   # just the umbrella skill
 ```
 
-See `upskill-using/SKILL.md` for the full lifecycle.
+See `upskill-cli/SKILL.md` for the full lifecycle.
 
 ## Recommended adoption sequence
 
