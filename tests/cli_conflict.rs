@@ -1,6 +1,7 @@
 //! Integration tests for item conflict detection and resolution flags.
 
-use assert_cmd::Command;
+mod common;
+
 use std::fs;
 use tempfile::TempDir;
 
@@ -41,10 +42,11 @@ fn setup_conflict(tmp: &std::path::Path) {
 #[test]
 fn add_from_different_source_errors_without_force() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     setup_conflict(tmp.path());
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source"])
         .assert()
@@ -55,10 +57,11 @@ fn add_from_different_source_errors_without_force() {
 #[test]
 fn add_from_different_source_succeeds_with_force() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     setup_conflict(tmp.path());
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source", "--force"])
         .assert()
@@ -68,6 +71,8 @@ fn add_from_different_source_succeeds_with_force() {
 #[test]
 fn add_from_same_source_succeeds_without_force() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
     let skill_dir = tmp.path().join("source/test-skill");
     fs::create_dir_all(&skill_dir).unwrap();
@@ -80,8 +85,7 @@ fn add_from_same_source_succeeds_without_force() {
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // First install records the canonical (absolutized) `local:` source label.
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source"])
         .assert()
@@ -90,8 +94,7 @@ fn add_from_same_source_succeeds_without_force() {
     // Re-adding from the SAME source must succeed without --force: the
     // recomputed source label matches the recorded one (issue #212 ensures
     // both spellings canonicalize identically).
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source"])
         .assert()
@@ -101,6 +104,8 @@ fn add_from_same_source_succeeds_without_force() {
 #[test]
 fn add_with_exclude_skips_named_item() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
     let skill_a = tmp.path().join("source/skill-a");
     let skill_b = tmp.path().join("source/skill-b");
@@ -119,8 +124,7 @@ fn add_with_exclude_skips_named_item() {
 
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source", "--exclude", "skill-b"])
         .assert()
@@ -140,6 +144,8 @@ fn add_with_exclude_skips_named_item() {
 #[test]
 fn add_with_alias_installs_under_alternate_name() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
     // Existing lockfile with item from different source (creates conflict)
     let lockfile = serde_json::json!({
@@ -171,8 +177,7 @@ fn add_with_alias_installs_under_alternate_name() {
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Install with alias to avoid conflict
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source", "--as", "test-skill-v2"])
         .assert()
@@ -193,6 +198,8 @@ fn add_with_alias_installs_under_alternate_name() {
 #[test]
 fn update_handles_aliased_items() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
     // Create source with a skill
     let skill_dir = tmp.path().join("source/original-skill");
@@ -225,8 +232,7 @@ fn update_handles_aliased_items() {
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Update should succeed (finds original-skill in source, installs as my-alias)
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update"])
         .assert()
@@ -247,6 +253,8 @@ fn update_handles_aliased_items() {
 #[test]
 fn update_dry_run_handles_aliased_items() {
     let tmp = TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
 
     let skill_dir = tmp.path().join("source/original-skill");
     fs::create_dir_all(&skill_dir).unwrap();
@@ -277,8 +285,7 @@ fn update_dry_run_handles_aliased_items() {
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
 
     // Dry-run should detect changes (hash differs)
-    Command::cargo_bin("upskill")
-        .unwrap()
+    common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "--dry-run"])
         .assert()

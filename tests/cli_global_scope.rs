@@ -4,6 +4,12 @@
 //! kicks in when `-g/--global` is passed OR when `cwd` is not inside a git
 //! repo. `-p/--project` forces project regardless. `-g` and `-p` are
 //! mutually exclusive at the clap layer.
+//!
+//! upskill-allow-raw-cargo-bin: this suite tests global scope itself — each
+//! test sets `HOME`/`USERPROFILE` to a tempdir (or deliberately removes them to
+//! exercise the fallback/error paths), so it cannot route through
+//! `common::upskill_cmd`, which always sets both. The exemption is enforced by
+//! `tests/cli_test_harness_guard.rs`.
 
 use assert_cmd::Command;
 use std::fs;

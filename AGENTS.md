@@ -155,12 +155,22 @@ Token resolution order:
   exhaustively. Other unit tests cover flag resolution, lockfile read/write,
   hash computation, env-var precedence, fetch with subfolder, etc.
 - **Integration tests** live in `tests/` as `cli_*.rs` files and use
-  `assert_cmd` + `tempfile`. Pattern:
+  `assert_cmd` + `tempfile`. Construct the binary through
+  `common::upskill_cmd(&fake_home)` — never a raw `Command::cargo_bin("upskill")`.
+  The harness points `HOME`/`USERPROFILE` at a tempdir so a stray global-scope
+  write can't land in the developer's real `$HOME` (`add` defaults to global
+  outside a git repo). `tests/cli_test_harness_guard.rs` enforces this; a file
+  that must control `HOME` itself opts out with an
+  `upskill-allow-raw-cargo-bin: <reason>` comment. Pattern:
 
   ```rust
-  Command::cargo_bin("upskill")
-      .unwrap()
-      .current_dir(&tmp)
+  mod common;
+
+  let tmp = tempfile::tempdir().unwrap();
+  let home = tmp.path().join("home");
+  std::fs::create_dir_all(&home).unwrap();
+  common::upskill_cmd(&home)
+      .current_dir(tmp.path())
       .args(["add", "owner/repo", "--claude"])
       .assert()
       .success();
@@ -171,6 +181,8 @@ Token resolution order:
   - **Pipeline:** `pipeline_local`, `pipeline_source`, `pipeline_lockfile`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
     `generate_agents`. Golden fixtures in `tests/fixtures/`.
+  - **Harness:** `tests/common/mod.rs` (`upskill_cmd`) and
+    `cli_test_harness_guard` (enforces the fake-`$HOME` convention).
   - When adding behavior, prefer extending the matching file or creating
     a new `cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<area>.rs`.
 
