@@ -72,7 +72,17 @@ impl PluginOutcome {
 
 /// Install a Claude Code plugin via `claude plugin marketplace add` followed
 /// by `claude plugin install`. The marketplace-add step is idempotent.
-pub fn install_claude_plugin(source: &str, plugin: &str, scope: PluginScope) -> PluginOutcome {
+///
+/// `source` is the `owner/repo`/URL/path passed to `marketplace add`;
+/// `marketplace` is the marketplace **name** the CLI requires in the install
+/// ref `<plugin>@<marketplace>` (the CLI derives the name from the marketplace
+/// manifest, so it differs from `source`).
+pub fn install_claude_plugin(
+    source: &str,
+    marketplace: &str,
+    plugin: &str,
+    scope: PluginScope,
+) -> PluginOutcome {
     // Step 1: Add marketplace source (idempotent).
     let result = run_command("claude", &["plugin", "marketplace", "add", source]);
     match result {
@@ -82,8 +92,9 @@ pub fn install_claude_plugin(source: &str, plugin: &str, scope: PluginScope) -> 
         PluginOutcome::ManualInstructions => unreachable!(),
     }
 
-    // Step 2: Install plugin with scope.
-    let install_ref = format!("{plugin}@{source}");
+    // Step 2: Install plugin with scope. The install ref uses the marketplace
+    // NAME, not the source — `claude plugin install` resolves `<plugin>@<name>`.
+    let install_ref = format!("{plugin}@{marketplace}");
     run_command(
         "claude",
         &[
@@ -109,7 +120,7 @@ pub fn install_opencode_plugin(module: &str) -> PluginOutcome {
 /// Install a GitHub Copilot CLI plugin via `copilot plugin marketplace add`
 /// followed by `copilot plugin install`. The marketplace-add step is
 /// idempotent. Unlike Claude, Copilot CLI does not support a `--scope` flag.
-pub fn install_copilot_plugin(source: &str, plugin: &str) -> PluginOutcome {
+pub fn install_copilot_plugin(source: &str, marketplace: &str, plugin: &str) -> PluginOutcome {
     // Step 1: Add marketplace source (idempotent).
     let result = run_command("copilot", &["plugin", "marketplace", "add", source]);
     match result {
@@ -119,8 +130,9 @@ pub fn install_copilot_plugin(source: &str, plugin: &str) -> PluginOutcome {
         PluginOutcome::ManualInstructions => unreachable!(),
     }
 
-    // Step 2: Install plugin from marketplace.
-    let install_ref = format!("{plugin}@{source}");
+    // Step 2: Install plugin from marketplace. The install ref uses the
+    // marketplace NAME, not the source.
+    let install_ref = format!("{plugin}@{marketplace}");
     run_command("copilot", &["plugin", "install", &install_ref])
 }
 
@@ -128,9 +140,14 @@ pub fn install_copilot_plugin(source: &str, plugin: &str) -> PluginOutcome {
 // Uninstall functions
 // ---------------------------------------------------------------------------
 
-/// Uninstall a Claude Code plugin.
-pub fn uninstall_claude_plugin(plugin: &str, source: &str, scope: PluginScope) -> PluginOutcome {
-    let install_ref = format!("{plugin}@{source}");
+/// Uninstall a Claude Code plugin. `marketplace` is the marketplace name used
+/// in the install ref `<plugin>@<marketplace>` (see [`install_claude_plugin`]).
+pub fn uninstall_claude_plugin(
+    plugin: &str,
+    marketplace: &str,
+    scope: PluginScope,
+) -> PluginOutcome {
+    let install_ref = format!("{plugin}@{marketplace}");
     run_command(
         "claude",
         &[
@@ -153,9 +170,10 @@ pub fn uninstall_opencode_plugin(module: &str) -> PluginOutcome {
     run_command("opencode", &["plugin", "remove", module])
 }
 
-/// Uninstall a GitHub Copilot CLI plugin.
-pub fn uninstall_copilot_plugin(plugin: &str, source: &str) -> PluginOutcome {
-    let install_ref = format!("{plugin}@{source}");
+/// Uninstall a GitHub Copilot CLI plugin. `marketplace` is the marketplace
+/// name used in the install ref `<plugin>@<marketplace>`.
+pub fn uninstall_copilot_plugin(plugin: &str, marketplace: &str) -> PluginOutcome {
+    let install_ref = format!("{plugin}@{marketplace}");
     run_command("copilot", &["plugin", "uninstall", &install_ref])
 }
 

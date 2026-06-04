@@ -113,8 +113,14 @@ pub struct PluginEntry {
 pub enum ClaudePluginDescriptor {
     /// Install via `claude plugin marketplace add` + `claude plugin install`.
     Install {
-        /// Marketplace source (passed to `claude plugin marketplace add`).
+        /// Marketplace source (passed to `claude plugin marketplace add`):
+        /// `owner/repo`, a URL, or a path.
         source: String,
+        /// Marketplace name used in the install ref `<plugin>@<marketplace>`.
+        /// `claude` derives this name from the marketplace manifest, so it is
+        /// distinct from `source` (e.g. source `anthropics/claude-plugins`,
+        /// marketplace `claude-plugins`).
+        marketplace: String,
         /// Plugin identifier (passed to `claude plugin install`).
         plugin: String,
         /// URL shown in warn-skip message when CLI not found.
@@ -137,8 +143,13 @@ pub enum ClaudePluginDescriptor {
 pub enum CopilotPluginDescriptor {
     /// Install via `copilot plugin marketplace add` + `copilot plugin install`.
     Install {
-        /// Marketplace source (passed to `copilot plugin marketplace add`).
+        /// Marketplace source (passed to `copilot plugin marketplace add`):
+        /// `owner/repo`, a URL, or a path.
         source: String,
+        /// Marketplace name used in the install ref `<plugin>@<marketplace>`,
+        /// distinct from `source` (the CLI derives the name from the
+        /// marketplace manifest).
+        marketplace: String,
         /// Plugin identifier (passed to `copilot plugin install`).
         plugin: String,
         /// URL shown in warn-skip message when CLI not found.

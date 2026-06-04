@@ -69,10 +69,12 @@ fn with_plugins_declares_client_native_plugins() {
     match claude {
         ClaudePluginDescriptor::Install {
             source,
+            marketplace,
             plugin,
             install_url,
         } => {
             assert_eq!(source, "anthropics/claude-plugins");
+            assert_eq!(marketplace, "claude-plugins");
             assert_eq!(plugin, "superpowers");
             assert_eq!(
                 install_url.as_deref(),
