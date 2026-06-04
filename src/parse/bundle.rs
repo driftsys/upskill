@@ -411,10 +411,12 @@ plugins:
   superpowers:
     claude:
       source: anthropics/claude-plugins
+      marketplace: claude-plugins
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
     copilot:
       source: obra/superpowers-marketplace
+      marketplace: superpowers-marketplace
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
     vscode:
@@ -435,10 +437,12 @@ plugins:
         match claude {
             ClaudePluginDescriptor::Install {
                 source,
+                marketplace,
                 plugin,
                 install_url,
             } => {
                 assert_eq!(source, "anthropics/claude-plugins");
+                assert_eq!(marketplace, "claude-plugins");
                 assert_eq!(plugin, "superpowers");
                 assert_eq!(
                     install_url.as_deref(),
@@ -452,10 +456,12 @@ plugins:
         match copilot {
             CopilotPluginDescriptor::Install {
                 source,
+                marketplace,
                 plugin,
                 install_url,
             } => {
                 assert_eq!(source, "obra/superpowers-marketplace");
+                assert_eq!(marketplace, "superpowers-marketplace");
                 assert_eq!(plugin, "superpowers");
                 assert_eq!(
                     install_url.as_deref(),
@@ -510,6 +516,7 @@ plugins:
   my-plugin:
     claude:
       source: my-org/marketplace
+      marketplace: marketplace
       plugin: my-plugin
 ";
         let tmp = tempfile::tempdir().unwrap();
@@ -522,6 +529,31 @@ plugins:
         assert!(plugin.claude.is_some());
         assert!(plugin.vscode.is_none());
         assert!(plugin.opencode.is_none());
+    }
+
+    #[test]
+    fn load_rejects_claude_plugin_without_marketplace() {
+        // A claude auto-install descriptor with `source`+`plugin` but no
+        // `marketplace` is invalid: the CLI's install ref needs the
+        // marketplace NAME, which is distinct from the source (#227).
+        let content = "schema: 1
+name: missing-marketplace
+description: Claude plugin missing the marketplace name
+items:
+  rules: []
+plugins:
+  superpowers:
+    claude:
+      source: anthropics/claude-plugins
+      plugin: superpowers
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "missing-marketplace.bundle.yaml", content);
+
+        assert!(
+            load(&path).is_err(),
+            "claude Install descriptor without `marketplace` must be rejected"
+        );
     }
 
     #[test]

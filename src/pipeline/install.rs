@@ -464,11 +464,17 @@ pub(super) fn install_plugins_from_bundles(
                 match claude {
                     ClaudePluginDescriptor::Install {
                         source,
+                        marketplace,
                         plugin,
                         install_url,
                     } => {
-                        let outcome = crate::plugin::install_claude_plugin(source, plugin, scope);
-                        let identifier = format!("{plugin}@{source}");
+                        let outcome = crate::plugin::install_claude_plugin(
+                            source,
+                            marketplace,
+                            plugin,
+                            scope,
+                        );
+                        let identifier = format!("{plugin}@{marketplace}");
                         results.push(PluginResult {
                             name: plugin_name.clone(),
                             client: "claude".into(),
@@ -594,11 +600,13 @@ pub(super) fn install_plugins_from_bundles(
                 match copilot {
                     CopilotPluginDescriptor::Install {
                         source,
+                        marketplace,
                         plugin,
                         install_url,
                     } => {
-                        let outcome = crate::plugin::install_copilot_plugin(source, plugin);
-                        let identifier = format!("{plugin}@{source}");
+                        let outcome =
+                            crate::plugin::install_copilot_plugin(source, marketplace, plugin);
+                        let identifier = format!("{plugin}@{marketplace}");
                         results.push(PluginResult {
                             name: plugin_name.clone(),
                             client: "copilot".into(),

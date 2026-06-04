@@ -435,10 +435,10 @@ fn plugin_results_carry_correct_metadata() {
         .find(|r| r.client == "claude")
         .expect("claude result");
     assert_eq!(claude_result.name, "superpowers");
-    assert_eq!(
-        claude_result.identifier,
-        "superpowers@anthropics/claude-plugins"
-    );
+    // Identifier uses the marketplace NAME (`claude-plugins`), not the source
+    // (`anthropics/claude-plugins`) — `claude plugin install` requires
+    // `<plugin>@<marketplace>` (#227).
+    assert_eq!(claude_result.identifier, "superpowers@claude-plugins");
     assert_eq!(claude_result.bundle, "with-plugins");
     assert_eq!(
         claude_result.install_url.as_deref(),
@@ -460,9 +460,10 @@ fn plugin_results_carry_correct_metadata() {
         .find(|r| r.client == "copilot")
         .expect("copilot result");
     assert_eq!(copilot_result.name, "superpowers");
+    // Marketplace name (`superpowers-marketplace`), not source.
     assert_eq!(
         copilot_result.identifier,
-        "superpowers@obra/superpowers-marketplace"
+        "superpowers@superpowers-marketplace"
     );
     assert_eq!(copilot_result.bundle, "with-plugins");
     assert_eq!(

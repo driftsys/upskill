@@ -23,7 +23,8 @@ items:
 plugins:
   superpowers:
     claude:
-      source: superpowers-dev
+      source: anthropics/claude-plugins-official
+      marketplace: claude-plugins-official
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
     opencode:

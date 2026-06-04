@@ -893,7 +893,8 @@ mod tests {
             "plugins:\n",
             "  superpowers:\n",
             "    claude:\n",
-            "      source: marketplace\n",
+            "      source: anthropics/claude-plugins\n",
+            "      marketplace: claude-plugins\n",
             "      plugin: superpowers\n",
         );
         let out = canonicalise(raw, Path::new("test.bundle.yaml")).unwrap();

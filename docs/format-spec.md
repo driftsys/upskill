@@ -472,6 +472,7 @@ plugins:
   superpowers:
     claude:
       source: anthropics/claude-plugins
+      marketplace: claude-plugins
       plugin: superpowers
 
 metadata:
@@ -534,10 +535,12 @@ plugins:
   superpowers:
     claude:
       source: anthropics/claude-plugins
+      marketplace: claude-plugins
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
     copilot:
       source: obra/superpowers-marketplace
+      marketplace: superpowers-marketplace
       plugin: superpowers
       install_url: https://github.com/obra/superpowers#install
     vscode:
@@ -550,18 +553,29 @@ plugins:
 
 **Per-client descriptor fields:**
 
-| Client     | Field         | Type   | Required | Description                                                      |
-| ---------- | ------------- | ------ | -------- | ---------------------------------------------------------------- |
-| `claude`   | `source`      | string | YES      | Marketplace source (passed to `claude plugin marketplace add`).  |
-| `claude`   | `plugin`      | string | YES      | Plugin identifier (passed to `claude plugin install`).           |
-| `claude`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
-| `copilot`  | `source`      | string | YES      | Marketplace source (passed to `copilot plugin marketplace add`). |
-| `copilot`  | `plugin`      | string | YES      | Plugin identifier (passed to `copilot plugin install`).          |
-| `copilot`  | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
-| `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).             |
-| `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
-| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                       |
-| `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.               |
+| Client     | Field         | Type   | Required | Description                                                                                            |
+| ---------- | ------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------ |
+| `claude`   | `source`      | string | YES      | Marketplace source (passed to `claude plugin marketplace add`): `owner/repo`, URL, or path.            |
+| `claude`   | `marketplace` | string | YES      | Marketplace **name** for the install ref `<plugin>@<marketplace>`. Distinct from `source` (see below). |
+| `claude`   | `plugin`      | string | YES      | Plugin identifier (passed to `claude plugin install`).                                                 |
+| `claude`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
+| `copilot`  | `source`      | string | YES      | Marketplace source (passed to `copilot plugin marketplace add`).                                       |
+| `copilot`  | `marketplace` | string | YES      | Marketplace **name** for the install ref `<plugin>@<marketplace>`. Distinct from `source`.             |
+| `copilot`  | `plugin`      | string | YES      | Plugin identifier (passed to `copilot plugin install`).                                                |
+| `copilot`  | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
+| `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).                                                   |
+| `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
+| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                                                             |
+| `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
+
+`source` and `marketplace` are **distinct** and both required for the `claude`/`copilot`
+auto-install form. `source` is what `marketplace add` consumes (`owner/repo`, a URL, or a
+path); `marketplace` is the registered marketplace **name** the CLI requires in the install
+ref `<plugin>@<marketplace>`. The CLI derives the name from the marketplace's manifest, so it
+generally differs from `source` — e.g. source `anthropics/claude-plugins` registers a
+marketplace named `claude-plugins`, and the plugin installs as `superpowers@claude-plugins`.
+Installing with `<plugin>@<source>` fails (`Plugin not found in marketplace <source>`), so the
+name MUST be supplied explicitly rather than inferred from `source`.
 
 A plugin entry MAY declare any subset of client blocks. A plugin that only exists for Claude
 Code carries only a `claude:` block; clients without a matching block skip installation
@@ -572,11 +586,11 @@ silently.
 A client block MAY use one of these alternative forms instead of the standard
 auto-install form. The mode is determined by which required field is present:
 
-| Mode              | Discriminating fields                      | Available for | Behavior                               |
-| ----------------- | ------------------------------------------ | ------------- | -------------------------------------- |
-| Auto-install      | `source`+`plugin` / `extension` / `module` | all clients   | Shell out to client CLI                |
-| Instructions-only | `instructions_url`                         | all clients   | Print info notice; no automated action |
-| Config-write      | `plugin_uri`                               | opencode only | Write URI to project `opencode.json`   |
+| Mode              | Discriminating fields                                    | Available for | Behavior                               |
+| ----------------- | -------------------------------------------------------- | ------------- | -------------------------------------- |
+| Auto-install      | `source`+`marketplace`+`plugin` / `extension` / `module` | all clients   | Shell out to client CLI                |
+| Instructions-only | `instructions_url`                                       | all clients   | Print info notice; no automated action |
+| Config-write      | `plugin_uri`                                             | opencode only | Write URI to project `opencode.json`   |
 
 **Instructions-only form:**
 
@@ -617,12 +631,12 @@ descriptors.
 
 **Install behavior:**
 
-| Client   | CLI commands                                                                                             |
-| -------- | -------------------------------------------------------------------------------------------------------- |
-| claude   | `claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<source> --scope <scope>` |
-| copilot  | `copilot plugin marketplace add <source>`, then `copilot plugin install <plugin>@<source>`               |
-| vscode   | `code --install-extension <extension>`                                                                   |
-| opencode | `opencode plugin <module>`                                                                               |
+| Client   | CLI commands                                                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------- |
+| claude   | `claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<marketplace> --scope <scope>` |
+| copilot  | `copilot plugin marketplace add <source>`, then `copilot plugin install <plugin>@<marketplace>`               |
+| vscode   | `code --install-extension <extension>`                                                                        |
+| opencode | `opencode plugin <module>`                                                                                    |
 
 Claude's `--scope` derives from upskill's project/global context:
 
