@@ -1,6 +1,7 @@
 //! Integration coverage for format-spec §2.4 supporting-resource copying
 //! (#199): resources travel with each rendered entrypoint; flat-kind
-//! bodies are link-rewritten; remove/update reconcile; `--as` is guarded.
+//! bodies are link-rewritten; remove/update reconcile; `--as` relocates the
+//! resource directory and re-prefixes namespaced links (#200).
 
 mod common;
 
@@ -288,26 +289,186 @@ fn update_removes_stale_resource_after_source_deletes_it() {
 }
 
 #[test]
-fn alias_on_resource_item_is_rejected() {
+fn alias_relocates_dir_backed_skill_resources() {
+    // Dir-backed kinds (all skills, opencode rules): the resource directory
+    // IS the entrypoint's own `<name>/` dir, so `--as` must move the whole
+    // directory to `<alias>/`. Links are not namespaced, so they are intact.
     let e = env();
     write_item(
         &e.src,
         "demo-skill",
         "SKILL.md",
-        "## X\n\n[g](./scripts/gate.sh)\n",
+        "## X\n\nRun [gate](./scripts/gate.sh). See [notes](./references/notes.md).\n",
     );
 
     e.cmd()
         .args(["add", e.src.to_str().unwrap(), "--as", "renamed"])
         .assert()
-        .failure()
-        .stderr(predicates::str::contains(
-            "aliasing items with supporting resources is not yet supported",
-        ));
+        .success();
 
-    // Nothing written.
-    assert!(!e.proj.join(".claude/skills/renamed").exists());
-    assert!(!e.proj.join(".claude/skills/demo-skill").exists());
+    for base in [".claude/skills", ".github/skills", ".agents/skills"] {
+        let aliased = e.proj.join(base).join("renamed");
+        assert!(
+            aliased.join("SKILL.md").is_file(),
+            "{base}: entrypoint moved"
+        );
+        assert!(
+            aliased.join("scripts/gate.sh").is_file(),
+            "{base}: script relocated"
+        );
+        assert!(
+            aliased.join("references/notes.md").is_file(),
+            "{base}: ref relocated"
+        );
+        assert!(
+            read(&aliased.join("SKILL.md")).contains("(./scripts/gate.sh)"),
+            "{base}: dir-backed link must NOT be rewritten"
+        );
+        assert!(
+            !e.proj.join(base).join("demo-skill").exists(),
+            "{base}: original directory must be gone"
+        );
+    }
+}
+
+#[test]
+fn alias_relocates_and_reprefixes_flat_rule_resources() {
+    // Flat kinds (Claude/Copilot rules) keep resources in a sibling
+    // `<name>/` namespace dir and namespace their links into it. `--as` must
+    // move the entrypoint file, move the namespace dir, and re-prefix the
+    // links from `<orig>/` to `<alias>/`. opencode rules are dir-backed.
+    let e = env();
+    write_item(
+        &e.src,
+        "demo-rule",
+        "RULE.md",
+        "## Gate\n\nRun [the gate](./scripts/gate.sh) in CI.\n",
+    );
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap(), "--as", "renamed"])
+        .assert()
+        .success();
+
+    // Claude: flat entrypoint moved, namespace dir moved, link re-prefixed.
+    let claude_md = e.proj.join(".claude/rules/renamed.md");
+    assert!(claude_md.is_file(), "claude entrypoint renamed");
+    assert!(
+        e.proj
+            .join(".claude/rules/renamed/scripts/gate.sh")
+            .is_file(),
+        "claude resource relocated to aliased namespace dir"
+    );
+    assert!(
+        read(&claude_md).contains("(./renamed/scripts/gate.sh)"),
+        "claude rule link must be re-prefixed to the aliased namespace dir"
+    );
+    assert!(!e.proj.join(".claude/rules/demo-rule.md").exists());
+    assert!(!e.proj.join(".claude/rules/demo-rule").exists());
+
+    // Copilot: same flat shape under .github/instructions/.
+    let copilot_md = e.proj.join(".github/instructions/renamed.instructions.md");
+    assert!(copilot_md.is_file());
+    assert!(
+        e.proj
+            .join(".github/instructions/renamed/scripts/gate.sh")
+            .is_file()
+    );
+    assert!(read(&copilot_md).contains("(./renamed/scripts/gate.sh)"));
+    assert!(
+        !e.proj
+            .join(".github/instructions/demo-rule.instructions.md")
+            .exists()
+    );
+
+    // opencode: directory-backed — whole dir moved, link unchanged.
+    let oc = e.proj.join(".agents/rules/renamed");
+    assert!(oc.join("scripts/gate.sh").is_file());
+    assert!(read(&oc.join("RULE.md")).contains("(./scripts/gate.sh)"));
+    assert!(!e.proj.join(".agents/rules/demo-rule").exists());
+}
+
+#[test]
+fn alias_relocates_and_reprefixes_flat_agent_resources() {
+    // Agents are flat on every client.
+    let e = env();
+    write_item(
+        &e.src,
+        "demo-agent",
+        "AGENT.md",
+        "## Agent\n\nUses [gate](./scripts/gate.sh).\n",
+    );
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap(), "--as", "renamed"])
+        .assert()
+        .success();
+
+    for (entry, dir, orig_entry) in [
+        (
+            ".claude/agents/renamed.md",
+            ".claude/agents/renamed",
+            ".claude/agents/demo-agent.md",
+        ),
+        (
+            ".github/agents/renamed.agent.md",
+            ".github/agents/renamed",
+            ".github/agents/demo-agent.agent.md",
+        ),
+        (
+            ".opencode/agents/renamed.md",
+            ".opencode/agents/renamed",
+            ".opencode/agents/demo-agent.md",
+        ),
+    ] {
+        assert!(
+            e.proj.join(dir).join("scripts/gate.sh").is_file(),
+            "{dir}: resource relocated"
+        );
+        assert!(
+            read(&e.proj.join(entry)).contains("(./renamed/scripts/gate.sh)"),
+            "{entry}: agent link re-prefixed"
+        );
+        assert!(!e.proj.join(orig_entry).exists(), "{orig_entry}: gone");
+    }
+}
+
+#[test]
+fn update_relocates_aliased_resource_item() {
+    // Regression for the `update` deadlock noted on #200: `update` rebuilds
+    // the alias from the lockfile and re-runs the install. A resource-bearing
+    // aliased item must update cleanly, staying at its alias.
+    let e = env();
+    write_item(
+        &e.src,
+        "demo-rule",
+        "RULE.md",
+        "## Gate\n\nRun [the gate](./scripts/gate.sh) in CI.\n",
+    );
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap(), "--as", "renamed"])
+        .assert()
+        .success();
+
+    e.cmd().args(["update"]).assert().success();
+
+    let claude_md = e.proj.join(".claude/rules/renamed.md");
+    assert!(
+        claude_md.is_file(),
+        "still installed at the alias after update"
+    );
+    assert!(
+        e.proj
+            .join(".claude/rules/renamed/scripts/gate.sh")
+            .is_file(),
+        "resource still relocated after update"
+    );
+    assert!(
+        read(&claude_md).contains("(./renamed/scripts/gate.sh)"),
+        "link still re-prefixed after update"
+    );
+    assert!(!e.proj.join(".claude/rules/demo-rule.md").exists());
 }
 
 #[test]
