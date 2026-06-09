@@ -220,16 +220,18 @@ fn parse_gitlab_source(source: &str, host: &str) -> Result<GitlabRepo, SourcePar
         (before_subfolder, None)
     };
 
+    // GitLab nests projects under arbitrarily deep subgroups. Everything
+    // before the last segment is the namespace (`owner`), the last segment is
+    // the project (`name`); cloning joins them back into the full path, so the
+    // split point only matters for the canonical label. At least one namespace
+    // segment is required — a bare project (`project`) has no `/` and is
+    // rejected.
     let (owner, name) = repo_source
-        .split_once('/')
+        .rsplit_once('/')
         .ok_or(SourceParseError::InvalidFormat)?;
 
     if owner.trim().is_empty() || name.trim().is_empty() {
         return Err(SourceParseError::EmptySegment);
-    }
-
-    if repo_source.matches('/').count() != 1 {
-        return Err(SourceParseError::InvalidFormat);
     }
 
     Ok(GitlabRepo {
@@ -578,6 +580,58 @@ mod tests {
         assert_eq!(repo.name, "skills");
     }
 
+    #[test]
+    fn parse_selfhosted_gitlab_subgroup() {
+        // Self-hosted GitLab nests projects under arbitrarily deep
+        // subgroups; the full path before the project is the namespace.
+        let source = parse_install_source(
+            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed",
+        )
+        .expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "gitlabee.dt.renault.com");
+        assert_eq!(repo.owner, "partners/alliance-car/devex/process");
+        assert_eq!(repo.name, "seed");
+        assert_eq!(repo.git_ref, None);
+        assert_eq!(repo.subfolder, None);
+    }
+
+    #[test]
+    fn parse_selfhosted_gitlab_subgroup_with_ref_and_subfolder() {
+        let source = parse_install_source(
+            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed@v0.2.0:skills/seed.bundle.yaml",
+        )
+        .expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.owner, "partners/alliance-car/devex/process");
+        assert_eq!(repo.name, "seed");
+        assert_eq!(repo.git_ref.as_deref(), Some("v0.2.0"));
+        assert_eq!(repo.subfolder.as_deref(), Some("skills/seed.bundle.yaml"));
+    }
+
+    #[test]
+    fn parse_gitlab_prefix_subgroup() {
+        let source = parse_install_source("gitlab:group/sub/project").expect("must parse");
+        let InstallSource::Gitlab(repo) = source else {
+            panic!("expected Gitlab");
+        };
+        assert_eq!(repo.host, "gitlab.com");
+        assert_eq!(repo.owner, "group/sub");
+        assert_eq!(repo.name, "project");
+    }
+
+    #[test]
+    fn reject_gitlab_bare_project_without_namespace() {
+        // A GitLab source still needs at least one namespace segment before
+        // the project — `project` alone has nowhere to live.
+        let err = parse_install_source("gitlab:project").expect_err("must fail");
+        assert_eq!(err, SourceParseError::InvalidFormat);
+    }
+
     // Lockfile source label round-trip — every shape Display can produce
     // must round-trip through parse_install_source_label so `update` can
     // reconstruct the source from a lockfile entry.
@@ -636,6 +690,17 @@ mod tests {
             name: "rules".into(),
             git_ref: None,
             subfolder: Some("a/b".into()),
+        }));
+    }
+
+    #[test]
+    fn label_roundtrip_gitlab_self_hosted_subgroup() {
+        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
+            host: "gitlabee.dt.renault.com".into(),
+            owner: "partners/alliance-car/devex/process".into(),
+            name: "seed".into(),
+            git_ref: Some("v0.2.0".into()),
+            subfolder: Some("skills/seed.bundle.yaml".into()),
         }));
     }
 

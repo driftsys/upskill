@@ -259,6 +259,23 @@ mod tests {
     }
 
     #[test]
+    fn gitlab_clone_url_with_subgroups() {
+        // Subgroup namespaces carry slashes in `owner`; the clone URL is the
+        // full path joined to the project name (GitLab clones the whole path).
+        let repo = GitlabRepo {
+            host: "gitlabee.dt.renault.com".into(),
+            owner: "partners/alliance-car/devex/process".into(),
+            name: "seed".into(),
+            git_ref: None,
+            subfolder: None,
+        };
+        assert_eq!(
+            gitlab_clone_url(&repo),
+            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed.git"
+        );
+    }
+
+    #[test]
     fn inject_basic_auth_github_oauth_user() {
         // Mirrors the call install_from_github makes when GITHUB_TOKEN is set.
         let url = inject_basic_auth(

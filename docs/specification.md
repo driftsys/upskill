@@ -76,6 +76,8 @@ upskill add <source> [items...] [--global|--project]
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full HTTPS URL
 - `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
+- `gitlab:group/subgroup[/…]/project[...]` — GitLab subgroups (any nesting
+  depth); the segment before the project is the full namespace path
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 `upskill add <source>` installs everything the source contains. Optional
@@ -265,7 +267,9 @@ Token resolution order:
 | GitLab | `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → unauthenticated |
 
 Self-hosted GitLab is supported via full URL form
-(`https://gitlab.mycompany.com/team/repo`).
+(`https://gitlab.mycompany.com/team/repo`), including projects nested under
+subgroups to any depth
+(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
 
 ## 6. CLI compliance
 
