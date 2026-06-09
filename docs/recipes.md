@@ -33,7 +33,9 @@ Resolution order:
 | GitLab | `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → unauthenticated |
 
 Self-hosted GitLab is supported via the full URL form
-(`https://gitlab.mycompany.com/team/repo`).
+(`https://gitlab.mycompany.com/team/repo`), including projects nested under
+subgroups to any depth
+(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
 
 ## Pin a source to a specific version
 
