@@ -116,6 +116,47 @@ ignore: ["scripts/**", "fixtures/**"]
   are implemented. A cross-source `source` is fetched once and cached for the
   duration of one resolution; the transitive closure may span sources.
 
+### Bundle-level cross-source `requires`
+
+The item-level `requires` above carries directed dependencies between
+**items**. Bundles carry their own `requires` (bundle → bundle composition,
+[format-spec §3.7](../format-spec.md)), and a meta-bundle frequently composes
+bundles that live in **other** sources (e.g. a methodology bundle that pulls a
+generic-literacy bundle and a working-memory bundle from separate repos).
+
+Bundle `requires` entries therefore gain the **same** optional `source` field:
+
+- A bare `{ name }` entry resolves against the requiring bundle's own source.
+- A `{ name, source }` entry resolves cross-source, `source` reusing the
+  `upskill add` DSL verbatim.
+
+The contract mirrors the item-level one, one layer up:
+
+- **Fetch + cache.** Each distinct `source` is fetched once per resolution; the
+  transitive closure may span sources.
+- **Conflict.** The same bundle `name` reached under two different source
+  labels in one closure is an **error**; an item provided by two different
+  bundles is an **error** (the same-source `union_items` rule, extended across
+  sources).
+- **Cycle detection** is keyed by `(canonical-source-label, bundle-name)`.
+- **Provenance.** Each resolved bundle, and each item it contributes, is
+  recorded in the lockfile under its **own** source and ref.
+- **Reuse.** Bundle resolution emits the same per-source item closure the
+  item-level path produces, so install and item-lockfile recording are shared;
+  only per-bundle source recording is bundle-specific.
+
+**Status.** Implemented. Bundle-level cross-source resolution lands with this
+ADR revision and is exercised by `tests/cli_bundle_cross_source.rs`.
+
+**Known narrow limit.** A bundle reached as a `*.bundle.yaml`-**file** entry
+carries the file-path source label, whereas a cross-source edge references the
+same source by its **directory/repo** label; if that exact bundle is also a
+transitive cross-source dependency of itself, the resolver reports a
+"two different sources" error instead of a "cycle" error. Both are correct
+rejections of an illegal graph; only the message differs. Adding a bundle by
+**name** (the common path) uses the directory label throughout and is
+unaffected.
+
 ### Inherent limit
 
 Co-located rules/agents are invisible to standard-only tooling: the Agent
