@@ -155,10 +155,12 @@ Implementation behaviour:
   resolved against the same source repository and installed. Unresolved
   names error out before any write.
 - **Transitive `requires:`.** When the bundle declares `requires:`, every
-  bundle in the transitive closure is resolved against the same source.
-  Cross-source bundle resolution is not supported; bundles and their
-  dependencies must live in one source repository. Circular `requires:`
-  is rejected.
+  bundle in the transitive closure is installed. A bare `{ name }` entry is
+  resolved against the same source; a `{ name, source }` entry is resolved
+  cross-source (`source` reuses the `upskill add` DSL), and the closure MAY
+  span sources. Each bundle and item is recorded in the lockfile under its own
+  source. Circular `requires:` is rejected; the same bundle name resolving to
+  two different sources within one closure is an error.
 - **Lockfile.** Each installed bundle is recorded as a top-level `bundles[]`
   entry in `.upskill-lock.json` alongside its resolved items. The same item
   may appear in multiple bundle `items[]` lists; it is installed once.

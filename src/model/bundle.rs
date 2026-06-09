@@ -83,6 +83,12 @@ pub struct Requires {
     /// the resolver to interpret in C2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    /// Cross-source locator (the `upskill add` source DSL — `owner/repo@ref`,
+    /// https, `gitlab:`, local). Absent means the required bundle is resolved
+    /// in the same source registry as the requiring bundle. Mirrors the
+    /// item-level `RequireRef::Detailed.source` (ADR-0009).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 /// Per-plugin entry in the `plugins:` map. Contains optional descriptors

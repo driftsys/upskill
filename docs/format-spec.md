@@ -499,16 +499,20 @@ documentation; the parser ignores it (§2.2).
 | `metadata`     | map      | no       | Same as §3.6.                        |
 
 `requires` entries are maps. Each entry references another bundle by `name`, optionally pinned
-with a semver `version` constraint:
+with a semver `version` constraint, and optionally located in another source with `source` (the
+`upskill add` source DSL — `owner/repo@ref`, https, `gitlab:`, local). Absent `source` resolves
+the required bundle in the **same** source registry as the requiring bundle:
 
 ```yaml
 requires:
-  - { name: "platform-baseline", version: "^1.0.0" }
-  - { name: "rust-baseline" } # any version
+  - { name: "platform-baseline", version: "^1.0.0" } # same source
+  - { name: "rust-baseline" } # same source, any version
+  - { name: "markspec-core", source: "driftsys/markspec@v0.8.0" } # cross-source
 ```
 
 The single-form (map-only) shape avoids the polymorphic-string-or-map alternative until that
-flexibility has a documented author need.
+flexibility has a documented author need. `source` mirrors the item-level `requires.<kind>`
+cross-source locator (§3.7, ADR-0009).
 
 Implementations:
 
@@ -518,7 +522,11 @@ Implementations:
   its transitive `requires` closure, then unioning the items contributed by all reached
   bundles. Item-level conflicts (the same item name resolving to different sources or versions)
   MUST be reported as errors.
-- MUST reject circular `requires` chains as errors.
+- MUST resolve a `{ name, source }` entry by fetching that source (each distinct source fetched
+  once per resolution) and locating the named bundle in it; the closure MAY span sources. Each
+  bundle and each item is recorded in the lockfile under its **own** source. The same bundle
+  name resolving to two different sources within one closure MUST be reported as an error.
+- MUST reject circular `requires` chains as errors (cycle detection keyed by source and name).
 
 #### `plugins` map
 

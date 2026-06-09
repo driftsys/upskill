@@ -190,6 +190,7 @@ mod tests {
                 .map(|n| Requires {
                     name: n.to_string(),
                     version: None,
+                    source: None,
                 })
                 .collect(),
             plugins: Default::default(),

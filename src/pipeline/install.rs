@@ -438,6 +438,284 @@ pub(super) fn resolve_requires_closure(
 }
 
 // ---------------------------------------------------------------------------
+// Bundle-level `requires` transitive closure (cross-source) — ADR-0009
+// ---------------------------------------------------------------------------
+
+/// One resolved bundle tagged with the source it was reached from. Drives the
+/// per-bundle lockfile `bundles[]` recording and plugin/MCP installation.
+#[derive(Debug, Clone)]
+pub(super) struct ResolvedBundle {
+    pub bundle: crate::model::Bundle,
+    pub source_label: String,
+    pub git_ref: Option<String>,
+}
+
+/// A fetched-and-discovered source, cached by canonical label during the
+/// bundle DFS.
+struct FetchedBundleSource {
+    root: PathBuf,
+    git_ref: Option<String>,
+    bundles: BTreeMap<String, crate::model::Bundle>,
+}
+
+/// The `(kind, name)` items a single bundle directly declares.
+fn bundle_item_identities(bundle: &crate::model::Bundle) -> Vec<(ItemKind, String)> {
+    let mut out = Vec::new();
+    out.extend(
+        bundle
+            .items
+            .rules
+            .iter()
+            .map(|n| (ItemKind::Rule, n.clone())),
+    );
+    out.extend(
+        bundle
+            .items
+            .skills
+            .iter()
+            .map(|n| (ItemKind::Skill, n.clone())),
+    );
+    out.extend(
+        bundle
+            .items
+            .agents
+            .iter()
+            .map(|n| (ItemKind::Agent, n.clone())),
+    );
+    out
+}
+
+/// Discover every bundle in `root`, keyed by name. A later bundle with a
+/// duplicate name wins (malformed registry; not expected in practice).
+fn discover_bundles(root: &Path) -> Result<BTreeMap<String, crate::model::Bundle>> {
+    Ok(crate::parse::bundle::discover(root)?
+        .into_iter()
+        .map(|(_, b)| (b.name.clone(), b))
+        .collect())
+}
+
+/// DFS state for the bundle closure. Mirrors [`Resolver`] (item-level) but
+/// walks bundle `requires` edges and accumulates per-source item sets.
+struct BundleResolver {
+    sources: BTreeMap<String, FetchedBundleSource>,
+    guards: Vec<tempfile::TempDir>,
+    /// Bundles fully resolved (dedup), keyed `(label, bundle-name)`.
+    resolved: BTreeSet<(String, String)>,
+    /// The label each bundle name resolved under; a second visit under a
+    /// different label is a cross-source bundle conflict.
+    bundle_label: BTreeMap<String, String>,
+    /// On-path set keyed `(label, bundle-name)` for cycle detection.
+    on_path: BTreeSet<(String, String)>,
+    /// Post-order accumulation (dependencies before dependents).
+    order: Vec<ResolvedBundle>,
+    /// Per source: union of items across reached bundles, in dependency order.
+    items_by_source: BTreeMap<String, crate::bundle::ResolvedItems>,
+    /// Owning `(label, bundle)` of each item identity — a second owner is an
+    /// item conflict (the same-source `union_items` rule, extended across
+    /// sources).
+    item_owner: BTreeMap<(ItemKind, String), (String, String)>,
+    /// Canonical source label each resolved item identity came from.
+    item_source: BTreeMap<(ItemKind, String), String>,
+}
+
+impl BundleResolver {
+    /// Ensure `src_dsl` is fetched and its bundles discovered; return its label.
+    fn ensure_source(&mut self, src_dsl: &str) -> Result<String> {
+        let install_source = parse_install_source(src_dsl)
+            .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
+        let label = install_source.to_string();
+        if !self.sources.contains_key(&label) {
+            let (root, guard) = super::git::fetch_ssot(&install_source)
+                .with_context(|| format!("fetch requires source `{label}`"))?;
+            if let Some(g) = guard {
+                self.guards.push(g);
+            }
+            let bundles = discover_bundles(&root)?;
+            self.sources.insert(
+                label.clone(),
+                FetchedBundleSource {
+                    root,
+                    git_ref: source_git_ref(&install_source),
+                    bundles,
+                },
+            );
+        }
+        Ok(label)
+    }
+
+    fn visit(&mut self, label: &str, name: &str) -> Result<()> {
+        // Cross-source bundle conflict: same bundle name from two sources.
+        if let Some(prev) = self.bundle_label.get(name)
+            && prev != label
+        {
+            anyhow::bail!(
+                "bundle `{name}` is required from two different sources: `{prev}` and `{label}`"
+            );
+        }
+
+        let bundle = self
+            .sources
+            .get(label)
+            .expect("source fetched before visit")
+            .bundles
+            .get(name)
+            .cloned()
+            .ok_or_else(|| {
+                anyhow::anyhow!("bundle `{name}` is required but not found in source `{label}`")
+            })?;
+
+        let path_key = (label.to_string(), name.to_string());
+        if self.resolved.contains(&path_key) {
+            return Ok(());
+        }
+        if self.on_path.contains(&path_key) {
+            anyhow::bail!("bundle dependency cycle detected including `{name}`");
+        }
+        self.on_path.insert(path_key.clone());
+        self.bundle_label
+            .insert(name.to_string(), label.to_string());
+
+        // Accumulate this bundle's items into its source, detecting conflicts.
+        for (kind, item_name) in bundle_item_identities(&bundle) {
+            let id = (kind, item_name.clone());
+            match self.item_owner.get(&id) {
+                Some((ol, ob)) if (ol.as_str(), ob.as_str()) != (label, name) => {
+                    anyhow::bail!(
+                        "item conflict: {kind} `{item_name}` is provided by bundles `{ob}` (`{ol}`) and `{name}` (`{label}`)"
+                    );
+                }
+                Some(_) => {}
+                None => {
+                    self.item_owner
+                        .insert(id.clone(), (label.to_string(), name.to_string()));
+                    self.item_source.insert(id.clone(), label.to_string());
+                    let items = self.items_by_source.entry(label.to_string()).or_default();
+                    match kind {
+                        ItemKind::Rule => items.rules.push(item_name),
+                        ItemKind::Skill => items.skills.push(item_name),
+                        ItemKind::Agent => items.agents.push(item_name),
+                    }
+                }
+            }
+        }
+
+        // Walk requires: bare → same source; `{ name, source }` → cross-source.
+        for req in &bundle.requires {
+            match &req.source {
+                None => self.visit(label, &req.name)?,
+                Some(src_dsl) => {
+                    let dep_label = self.ensure_source(src_dsl)?;
+                    self.visit(&dep_label, &req.name)?;
+                }
+            }
+        }
+
+        self.on_path.remove(&path_key);
+        self.resolved.insert(path_key);
+        let git_ref = self.sources.get(label).and_then(|s| s.git_ref.clone());
+        self.order.push(ResolvedBundle {
+            bundle,
+            source_label: label.to_string(),
+            git_ref,
+        });
+        Ok(())
+    }
+}
+
+/// Resolve the cross-source bundle closure for `entry_bundles` (names present
+/// in the already-fetched entry source). Returns the item-level
+/// [`DependencyClosure`] — so the existing per-source install and item lockfile
+/// machinery is reused verbatim — plus the ordered resolved bundles for
+/// plugin/MCP install and per-bundle lockfile recording.
+pub(super) fn resolve_bundle_closure(
+    entry_label: &str,
+    entry_root: &Path,
+    entry_git_ref: Option<&str>,
+    entry_bundles: &[String],
+) -> Result<(DependencyClosure, Vec<ResolvedBundle>)> {
+    let mut resolver = BundleResolver {
+        sources: BTreeMap::new(),
+        guards: Vec::new(),
+        resolved: BTreeSet::new(),
+        bundle_label: BTreeMap::new(),
+        on_path: BTreeSet::new(),
+        order: Vec::new(),
+        items_by_source: BTreeMap::new(),
+        item_owner: BTreeMap::new(),
+        item_source: BTreeMap::new(),
+    };
+    resolver.sources.insert(
+        entry_label.to_string(),
+        FetchedBundleSource {
+            root: entry_root.to_path_buf(),
+            git_ref: entry_git_ref.map(str::to_string),
+            bundles: discover_bundles(entry_root)?,
+        },
+    );
+
+    for name in entry_bundles {
+        resolver.visit(entry_label, name)?;
+    }
+
+    let mut by_source: BTreeMap<String, SourceInstall> = BTreeMap::new();
+    for (lbl, items) in &resolver.items_by_source {
+        let fs = resolver.sources.get(lbl).expect("source present");
+        by_source.insert(
+            lbl.clone(),
+            SourceInstall {
+                root: fs.root.clone(),
+                git_ref: fs.git_ref.clone(),
+                items: items.clone(),
+            },
+        );
+    }
+    let closure = DependencyClosure {
+        by_source,
+        item_source: resolver.item_source,
+        // Bundle items carry no item-level `required_by`; each bundle's own
+        // lockfile entry records which items it provides.
+        required_by: BTreeMap::new(),
+        guards: resolver.guards,
+    };
+    Ok((closure, resolver.order))
+}
+
+/// Detect a bundle-shaped `add` — a `*.bundle.yaml` source, or positional
+/// `names` that all resolve to bundles — and resolve its cross-source closure.
+/// Returns `None` when the request is not bundle-shaped (the caller keeps the
+/// item-closure / direct-install path), including ambiguous names that match
+/// both an item and a bundle (left to the name-resolution path to report).
+pub(super) fn resolve_bundle_request(
+    label: &str,
+    local_source: &Path,
+    git_ref: Option<&str>,
+    names: &[String],
+) -> Result<Option<(DependencyClosure, Vec<ResolvedBundle>)>> {
+    if is_bundle_file(local_source) {
+        let registry_root = find_registry_root(local_source)?;
+        let entry = crate::parse::bundle::load(local_source)?;
+        return resolve_bundle_closure(
+            label,
+            &registry_root,
+            git_ref,
+            std::slice::from_ref(&entry.name),
+        )
+        .map(Some);
+    }
+    if names.is_empty() {
+        return Ok(None);
+    }
+    let all_bundles = names
+        .iter()
+        .all(|n| find_bundle_by_name(local_source, n).is_some());
+    let any_item = names.iter().any(|n| has_matching_items(local_source, n));
+    if !all_bundles || any_item {
+        return Ok(None);
+    }
+    resolve_bundle_closure(label, local_source, git_ref, names).map(Some)
+}
+
+// ---------------------------------------------------------------------------
 // Plugin installation orchestration (ADR-0008)
 // ---------------------------------------------------------------------------
 

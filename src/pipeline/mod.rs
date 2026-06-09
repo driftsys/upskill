@@ -42,8 +42,8 @@ pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
 use install::{
-    install_mcps_from_bundles, install_plugins_from_bundles,
-    install_with_name_resolution_from_local, resolve_requires_closure,
+    ResolvedBundle, install_mcps_from_bundles, install_plugins_from_bundles,
+    install_with_name_resolution_from_local, resolve_bundle_request, resolve_requires_closure,
 };
 pub use lifecycle::{doctor, list, remove, update};
 pub use report::*;
@@ -267,16 +267,29 @@ pub fn install_with_lockfile(
         InstallSource::Gitlab(r) => r.git_ref.as_deref(),
         InstallSource::LocalPath(_) => None,
     };
-    let closure = if discovery::is_bundle_file(&local_source) || defer_to_name_resolution {
-        None
-    } else {
-        Some(resolve_requires_closure(
-            &label,
-            &local_source,
-            git_ref,
-            &requested,
-        )?)
-    };
+    // A bundle-shaped request (`*.bundle.yaml` source or positional names that
+    // all resolve to bundles) resolves its own — possibly cross-source — bundle
+    // closure (ADR-0009). It produces the same `DependencyClosure` the
+    // item-level path uses, so the install + item-lockfile machinery is shared;
+    // `resolved_bundles` carries each bundle's own source for the bundle
+    // lockfile recording and plugin/MCP install.
+    let bundle_resolution = resolve_bundle_request(&label, &local_source, git_ref, items)?;
+    let (closure, resolved_bundles): (Option<install::DependencyClosure>, Vec<ResolvedBundle>) =
+        if let Some((c, bundles)) = bundle_resolution {
+            (Some(c), bundles)
+        } else if discovery::is_bundle_file(&local_source) || defer_to_name_resolution {
+            (None, Vec::new())
+        } else {
+            (
+                Some(resolve_requires_closure(
+                    &label,
+                    &local_source,
+                    git_ref,
+                    &requested,
+                )?),
+                Vec::new(),
+            )
+        };
 
     // -- Conflict detection (before any files are written) --
     let mut lock = crate::lockfile::Lockfile::load(target)?;
@@ -352,6 +365,16 @@ pub fn install_with_lockfile(
     } else {
         install_with_name_resolution_from_local(&local_source, target, items)?
     };
+
+    // A bundle-shaped install resolves its items per source above (no bundles
+    // in the per-source reports); attach the resolved bundles so plugin/MCP
+    // install and the lockfile see them with their own sources.
+    if !resolved_bundles.is_empty() {
+        report.bundles = resolved_bundles
+            .iter()
+            .map(|rb| rb.bundle.clone())
+            .collect();
+    }
 
     // -- Plugin installation (ADR-0008) --
     let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
@@ -468,13 +491,27 @@ pub fn install_with_lockfile(
         }
         lock.upsert(item);
     }
-    for bundle in &report.bundles {
-        lock.upsert_bundle(crate::lockfile::LockedBundle {
-            name: bundle.name.clone(),
-            source: label.clone(),
-            git_ref: git_ref.map(str::to_string),
-            items: bundle_item_names(bundle),
-        });
+    if resolved_bundles.is_empty() {
+        // Same-source bundle install (no cross-source provenance): every bundle
+        // came from the entry source.
+        for bundle in &report.bundles {
+            lock.upsert_bundle(crate::lockfile::LockedBundle {
+                name: bundle.name.clone(),
+                source: label.clone(),
+                git_ref: git_ref.map(str::to_string),
+                items: bundle_item_names(bundle),
+            });
+        }
+    } else {
+        // Bundle closure: record each bundle under its OWN source and ref.
+        for rb in &resolved_bundles {
+            lock.upsert_bundle(crate::lockfile::LockedBundle {
+                name: rb.bundle.name.clone(),
+                source: rb.source_label.clone(),
+                git_ref: rb.git_ref.clone(),
+                items: bundle_item_names(&rb.bundle),
+            });
+        }
     }
     // Record installed and warn-skipped plugins in the lockfile so that
     // `doctor` can surface skipped ones and verify installed ones.

@@ -230,6 +230,34 @@ requires:
     }
 
     #[test]
+    fn load_parses_requires_with_cross_source() {
+        // A bundle MAY depend on a bundle living in another source via the
+        // `source` field (the `upskill add` DSL). Bare and same-source entries
+        // keep `source: None`.
+        let content = "schema: 1
+name: meta
+description: Meta-bundle composing bundles across sources
+items:
+  rules: []
+requires:
+  - { name: markspec-core, source: \"driftsys/markspec@v0.8.0\" }
+  - { name: local-baseline }
+";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "meta.bundle.yaml", content);
+
+        let bundle = load(&path).expect("load");
+        assert_eq!(bundle.requires.len(), 2);
+        assert_eq!(bundle.requires[0].name, "markspec-core");
+        assert_eq!(
+            bundle.requires[0].source.as_deref(),
+            Some("driftsys/markspec@v0.8.0")
+        );
+        assert_eq!(bundle.requires[1].name, "local-baseline");
+        assert_eq!(bundle.requires[1].source, None);
+    }
+
+    #[test]
     fn load_rejects_string_form_requires() {
         // Per §3.7 (post-PR #76): map-only `requires`. Bare strings must
         // fail to deserialize so a future polymorphic shape stays a
