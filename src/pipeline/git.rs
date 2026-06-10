@@ -145,7 +145,7 @@ fn clone_to_tempdir(
 /// removed on return regardless of outcome (RAII via `tempfile::TempDir`).
 ///
 /// Public so callers can install from arbitrary git URLs (mirrors, local
-/// `file://` clones, future GitLab self-hosted) without going through
+/// `file://` clones) without going through
 /// [`InstallSource`]. The high-level [`install_from_source`] is preferred
 /// when an `InstallSource` already exists.
 pub fn install_from_git_url(

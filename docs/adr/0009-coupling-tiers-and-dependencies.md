@@ -78,7 +78,7 @@ requires:
   error).
 - Each `requires.<kind>` entry is a **bare string** (same-source, resolved by
   name) or a `{ name, source }` **map** (cross-source; `source` reuses the
-  `upskill add` source DSL — `owner/repo@ref`, https, `gitlab:`, local).
+  `upskill add` source DSL — `owner/repo@ref`, https URLs, local paths).
 - Resolution is by `(kind, name)`.
 - **`preload-skills`** (agent) is a soft implies of `requires.skills` for skills
   **present in the same source**: those skills are auto-installed alongside the agent AND preloaded
