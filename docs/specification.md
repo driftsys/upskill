@@ -261,12 +261,11 @@ and across-repo continuity for global scope.
 
 Source format: see [§2.1](#21-add).
 
-Token resolution order:
-
-| Host   | Order                                                             |
-| ------ | ----------------------------------------------------------------- |
-| GitHub | `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` → unauthenticated   |
-| GitLab | `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → unauthenticated |
+upskill never injects credentials into clone URLs. Clones use the bare
+`https://<host>/...` URL and rely entirely on git's own configuration —
+credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
+repository works whenever a manual `git clone <url>` would; configure git
+the same way. upskill resolves no tokens and reads no token env vars.
 
 Self-hosted GitLab is supported via full URL form
 (`https://gitlab.mycompany.com/team/repo`), including projects nested under
@@ -298,10 +297,6 @@ subgroups to any depth
 | Variable         | Purpose                                        |
 | ---------------- | ---------------------------------------------- |
 | `NO_COLOR`       | Disable colored output.                        |
-| `GITHUB_TOKEN`   | Authenticate GitHub requests (private repos).  |
-| `GH_TOKEN`       | Fallback for `GITHUB_TOKEN`.                   |
-| `GITLAB_TOKEN`   | Authenticate GitLab requests (private repos).  |
-| `GL_TOKEN`       | Fallback for `GITLAB_TOKEN`.                   |
 | `HTTPS_PROXY`    | HTTP proxy for network requests.               |
 | `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
 

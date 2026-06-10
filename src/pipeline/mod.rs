@@ -13,9 +13,9 @@
 //!   [`install_from_git_url`] — library-only variants without lockfile or
 //!   ancillary handling.
 //!
-//! Authentication: when a token is resolved via [`crate::auth`], it is
-//! URL-injected into the clone URL. With no token, clones fall back to
-//! git's own credential helpers.
+//! Authentication: clones use the bare URL and rely on git's own
+//! configuration (credential helpers, `insteadOf` rewrites, SSH);
+//! upskill never injects credentials.
 //!
 //! Audience filter: the top-level `audience` field (per format-spec §3.1)
 //! restricts emission to listed clients; absence means all clients.
