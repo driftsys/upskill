@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.8] (2026-06-10)
+
+### Features
+
+- **bundle:** resolve cross-source bundle requires ([f335d36])
+- **source:** support GitLab subgroup paths in install sources ([2ee7780])
+
+[0.7.8]: https://github.com/driftsys/upskill/compare/v0.7.7...v0.7.8
+[f335d36]: https://github.com/driftsys/upskill/commit/f335d36
+[2ee7780]: https://github.com/driftsys/upskill/commit/2ee7780
+
 ## [0.7.7] (2026-06-04)
 
 ### Bug Fixes
