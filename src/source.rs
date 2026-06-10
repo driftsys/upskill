@@ -12,10 +12,11 @@ pub struct GithubRepo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GitlabRepo {
-    pub host: String,
-    pub owner: String,
-    pub name: String,
+pub struct GitRepo {
+    /// Bare https remote without a trailing `.git`, e.g.
+    /// `https://gitlab.example.com/group/sub/repo`. The host and path are
+    /// opaque — any git host works; auth is git's job (config/helpers).
+    pub url: String,
     pub git_ref: Option<String>,
     pub subfolder: Option<String>,
 }
@@ -23,7 +24,7 @@ pub struct GitlabRepo {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstallSource {
     Github(GithubRepo),
-    Gitlab(GitlabRepo),
+    Git(GitRepo),
     LocalPath(PathBuf),
 }
 
@@ -31,8 +32,8 @@ pub enum InstallSource {
 /// and CLI output. Format mirrors what `parse_install_source` accepts:
 ///
 /// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
-/// - `gitlab:<owner>/<name>[@<ref>][:<subfolder>]` (host omitted when
-///   `gitlab.com`; otherwise `gitlab+<host>:...`)
+/// - `<url>[@<ref>][:<subfolder>]` — generic git source; the bare https
+///   URL is its own label
 /// - `local:<path>` (absolute when known, otherwise as-given)
 impl fmt::Display for InstallSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -46,12 +47,8 @@ impl fmt::Display for InstallSource {
                     Some(s) => write!(f, ":{}", s),
                     None => Ok(()),
                 }),
-            InstallSource::Gitlab(r) => {
-                if r.host == "gitlab.com" {
-                    write!(f, "gitlab:{}/{}", r.owner, r.name)?;
-                } else {
-                    write!(f, "gitlab+{}:{}/{}", r.host, r.owner, r.name)?;
-                }
+            InstallSource::Git(r) => {
+                write!(f, "{}", r.url)?;
                 if let Some(g) = &r.git_ref {
                     write!(f, "@{}", g)?;
                 }
@@ -75,6 +72,11 @@ pub enum SourceParseError {
     EmptySubfolder,
     #[error("ref must be non-empty")]
     EmptyRef,
+    #[error(
+        "the `gitlab:` shorthand was removed; use the full https URL instead, \
+         e.g. https://gitlab.com/owner/repo"
+    )]
+    GitlabShorthandRemoved,
 }
 
 /// Resolve the running user's home directory.
@@ -116,9 +118,12 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
         return Ok(InstallSource::LocalPath(PathBuf::from(source)));
     }
 
-    // gitlab: prefix
-    if let Some(rest) = source.strip_prefix("gitlab:") {
-        return parse_gitlab_source(rest, "gitlab.com").map(InstallSource::Gitlab);
+    // The `gitlab:` / `gitlab+<host>:` shorthands were removed in favor of
+    // full https URLs. Catch them explicitly so the error names the
+    // replacement instead of falling through to a confusing
+    // owner/repo parse error.
+    if source.starts_with("gitlab:") || source.starts_with("gitlab+") {
+        return Err(SourceParseError::GitlabShorthandRemoved);
     }
 
     // HTTPS URLs
@@ -156,8 +161,7 @@ fn is_windows_absolute(s: &str) -> bool {
 ///
 /// Recognised labels:
 /// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
-/// - `gitlab:<owner>/<name>[@<ref>][:<subfolder>]` — host is `gitlab.com`
-/// - `gitlab+<host>:<owner>/<name>[@<ref>][:<subfolder>]` — self-hosted
+/// - `https://<host>/<path>[@<ref>][:<subfolder>]` — generic git source
 /// - `local:<path>` — absolute on round-trip; passed through verbatim
 pub fn parse_install_source_label(label: &str) -> Result<InstallSource, SourceParseError> {
     if let Some(rest) = label.strip_prefix("local:") {
@@ -166,17 +170,11 @@ pub fn parse_install_source_label(label: &str) -> Result<InstallSource, SourcePa
     if let Some(rest) = label.strip_prefix("github:") {
         return parse_github_source(rest).map(InstallSource::Github);
     }
-    if let Some(rest) = label.strip_prefix("gitlab+") {
-        let (host, after) = rest
-            .split_once(':')
-            .ok_or(SourceParseError::InvalidFormat)?;
-        if host.is_empty() {
-            return Err(SourceParseError::EmptySegment);
-        }
-        return parse_gitlab_source(after, host).map(InstallSource::Gitlab);
+    if let Some(rest) = label.strip_prefix("https://") {
+        return parse_url_source(rest);
     }
-    if let Some(rest) = label.strip_prefix("gitlab:") {
-        return parse_gitlab_source(rest, "gitlab.com").map(InstallSource::Gitlab);
+    if label.starts_with("gitlab:") || label.starts_with("gitlab+") {
+        return Err(SourceParseError::GitlabShorthandRemoved);
     }
     Err(SourceParseError::InvalidFormat)
 }
@@ -194,24 +192,29 @@ fn parse_url_source(url_without_scheme: &str) -> Result<InstallSource, SourcePar
         return parse_github_source(path_part).map(InstallSource::Github);
     }
 
-    // Everything else (gitlab.com, self-hosted) treated as GitLab-compatible
-    parse_gitlab_source(path_part, host_part).map(InstallSource::Gitlab)
+    // Any other https host is an opaque git remote.
+    parse_git_url(host_part, path_part).map(InstallSource::Git)
 }
 
-fn parse_gitlab_source(source: &str, host: &str) -> Result<GitlabRepo, SourceParseError> {
-    // Split off :subfolder first
-    let (before_subfolder, subfolder) = if let Some((before, sub)) = source.split_once(':') {
-        // Avoid confusing port numbers with subfolders — port is on the host, not here
+/// Parse the path portion of a generic git URL:
+/// `<path>[@<ref>][:<subfolder>]`. The host is opaque (and may carry a
+/// port); the path may nest arbitrarily deep (GitLab subgroups). A
+/// trailing `/` or `.git` on the repo path is stripped so browser-pasted
+/// and clone URLs normalise to one canonical label.
+fn parse_git_url(host: &str, path: &str) -> Result<GitRepo, SourceParseError> {
+    // Split off :subfolder first. The port is on the host part, already
+    // split away, so a ':' here is always a subfolder separator.
+    let (before_subfolder, subfolder) = if let Some((before, sub)) = path.split_once(':') {
         if sub.trim().is_empty() {
             return Err(SourceParseError::EmptySubfolder);
         }
         (before, Some(sub.to_string()))
     } else {
-        (source, None)
+        (path, None)
     };
 
     // Split off @ref
-    let (repo_source, git_ref) = if let Some((before, r)) = before_subfolder.split_once('@') {
+    let (repo_path, git_ref) = if let Some((before, r)) = before_subfolder.split_once('@') {
         if r.trim().is_empty() {
             return Err(SourceParseError::EmptyRef);
         }
@@ -220,24 +223,14 @@ fn parse_gitlab_source(source: &str, host: &str) -> Result<GitlabRepo, SourcePar
         (before_subfolder, None)
     };
 
-    // GitLab nests projects under arbitrarily deep subgroups. Everything
-    // before the last segment is the namespace (`owner`), the last segment is
-    // the project (`name`); cloning joins them back into the full path, so the
-    // split point only matters for the canonical label. At least one namespace
-    // segment is required — a bare project (`project`) has no `/` and is
-    // rejected.
-    let (owner, name) = repo_source
-        .rsplit_once('/')
-        .ok_or(SourceParseError::InvalidFormat)?;
-
-    if owner.trim().is_empty() || name.trim().is_empty() {
+    let repo_path = repo_path.trim_end_matches('/');
+    let repo_path = repo_path.strip_suffix(".git").unwrap_or(repo_path);
+    if repo_path.trim().is_empty() {
         return Err(SourceParseError::EmptySegment);
     }
 
-    Ok(GitlabRepo {
-        host: host.to_string(),
-        owner: owner.to_string(),
-        name: name.to_string(),
+    Ok(GitRepo {
+        url: format!("https://{host}/{repo_path}"),
         git_ref,
         subfolder,
     })
@@ -501,50 +494,6 @@ mod tests {
         assert_eq!(err, SourceParseError::EmptyRef);
     }
 
-    // GitLab source tests
-
-    #[test]
-    fn parse_gitlab_prefix() {
-        let source = parse_install_source("gitlab:team/skills").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.host, "gitlab.com");
-        assert_eq!(repo.owner, "team");
-        assert_eq!(repo.name, "skills");
-    }
-
-    #[test]
-    fn parse_gitlab_prefix_with_ref() {
-        let source = parse_install_source("gitlab:team/skills@v2.0").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.git_ref.as_deref(), Some("v2.0"));
-    }
-
-    #[test]
-    fn parse_gitlab_prefix_with_subfolder() {
-        let source =
-            parse_install_source("gitlab:team/skills@v1.0:tools/lint").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.git_ref.as_deref(), Some("v1.0"));
-        assert_eq!(repo.subfolder.as_deref(), Some("tools/lint"));
-    }
-
-    #[test]
-    fn parse_gitlab_url() {
-        let source = parse_install_source("https://gitlab.com/team/skills").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.host, "gitlab.com");
-        assert_eq!(repo.owner, "team");
-        assert_eq!(repo.name, "skills");
-    }
-
     #[test]
     fn parse_github_url() {
         let source =
@@ -556,80 +505,121 @@ mod tests {
         assert_eq!(repo.name, "skills");
     }
 
-    #[test]
-    fn parse_selfhosted_gitlab_url() {
-        let source =
-            parse_install_source("https://git.company.com/team/skills").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.host, "git.company.com");
-        assert_eq!(repo.owner, "team");
-        assert_eq!(repo.name, "skills");
-    }
+    // Generic git-URL source tests — any https host that is not github.com
+    // is an opaque git remote (GitLab, Bitbucket, Gitea, corporate git).
 
     #[test]
-    fn parse_selfhosted_gitlab_with_port() {
-        let source =
-            parse_install_source("https://git.company.com:8443/team/skills").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
+    fn parse_git_url_gitlab_com() {
+        let source = parse_install_source("https://gitlab.com/team/skills").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
         };
-        assert_eq!(repo.host, "git.company.com:8443");
-        assert_eq!(repo.owner, "team");
-        assert_eq!(repo.name, "skills");
-    }
-
-    #[test]
-    fn parse_selfhosted_gitlab_subgroup() {
-        // Self-hosted GitLab nests projects under arbitrarily deep
-        // subgroups; the full path before the project is the namespace.
-        let source = parse_install_source(
-            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed",
-        )
-        .expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
-        };
-        assert_eq!(repo.host, "gitlabee.dt.renault.com");
-        assert_eq!(repo.owner, "partners/alliance-car/devex/process");
-        assert_eq!(repo.name, "seed");
+        assert_eq!(repo.url, "https://gitlab.com/team/skills");
         assert_eq!(repo.git_ref, None);
         assert_eq!(repo.subfolder, None);
     }
 
     #[test]
-    fn parse_selfhosted_gitlab_subgroup_with_ref_and_subfolder() {
+    fn parse_git_url_bitbucket() {
+        let source = parse_install_source("https://bitbucket.org/team/repo").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://bitbucket.org/team/repo");
+    }
+
+    #[test]
+    fn parse_git_url_self_hosted_with_port() {
+        let source =
+            parse_install_source("https://git.company.com:8443/team/skills").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://git.company.com:8443/team/skills");
+    }
+
+    #[test]
+    fn parse_git_url_subgroups_any_depth() {
         let source = parse_install_source(
-            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed@v0.2.0:skills/seed.bundle.yaml",
+            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed",
         )
         .expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
         };
-        assert_eq!(repo.owner, "partners/alliance-car/devex/process");
-        assert_eq!(repo.name, "seed");
+        assert_eq!(
+            repo.url,
+            "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed"
+        );
+    }
+
+    #[test]
+    fn parse_git_url_with_ref_and_subfolder() {
+        let source = parse_install_source(
+            "https://gitlabee.dt.renault.com/partners/seed@v0.2.0:skills/seed.bundle.yaml",
+        )
+        .expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://gitlabee.dt.renault.com/partners/seed");
         assert_eq!(repo.git_ref.as_deref(), Some("v0.2.0"));
         assert_eq!(repo.subfolder.as_deref(), Some("skills/seed.bundle.yaml"));
     }
 
     #[test]
-    fn parse_gitlab_prefix_subgroup() {
-        let source = parse_install_source("gitlab:group/sub/project").expect("must parse");
-        let InstallSource::Gitlab(repo) = source else {
-            panic!("expected Gitlab");
+    fn parse_git_url_single_path_segment() {
+        // Plain git servers can host a repo directly under the root —
+        // unlike GitLab there is no namespace requirement.
+        let source = parse_install_source("https://git.example.com/repo").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
         };
-        assert_eq!(repo.host, "gitlab.com");
-        assert_eq!(repo.owner, "group/sub");
-        assert_eq!(repo.name, "project");
+        assert_eq!(repo.url, "https://git.example.com/repo");
     }
 
     #[test]
-    fn reject_gitlab_bare_project_without_namespace() {
-        // A GitLab source still needs at least one namespace segment before
-        // the project — `project` alone has nowhere to live.
-        let err = parse_install_source("gitlab:project").expect_err("must fail");
+    fn parse_git_url_strips_trailing_dot_git() {
+        let source =
+            parse_install_source("https://gitlab.com/team/skills.git").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://gitlab.com/team/skills");
+    }
+
+    #[test]
+    fn parse_git_url_strips_trailing_slash() {
+        let source = parse_install_source("https://gitlab.com/team/skills/").expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://gitlab.com/team/skills");
+    }
+
+    #[test]
+    fn reject_git_url_without_path() {
+        let err = parse_install_source("https://gitlab.com").expect_err("must fail");
         assert_eq!(err, SourceParseError::InvalidFormat);
+    }
+
+    #[test]
+    fn reject_git_url_with_empty_path() {
+        let err = parse_install_source("https://gitlab.com/").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptySegment);
+    }
+
+    #[test]
+    fn reject_removed_gitlab_shorthand() {
+        let err = parse_install_source("gitlab:team/skills").expect_err("must fail");
+        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
+    }
+
+    #[test]
+    fn reject_removed_gitlab_plus_shorthand() {
+        let err =
+            parse_install_source("gitlab+git.company.com:team/skills").expect_err("must fail");
+        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
     }
 
     // Lockfile source label round-trip — every shape Display can produce
@@ -672,48 +662,38 @@ mod tests {
     }
 
     #[test]
-    fn label_roundtrip_gitlab_dot_com() {
-        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
-            host: "gitlab.com".into(),
-            owner: "team".into(),
-            name: "skills".into(),
-            git_ref: Some("main".into()),
+    fn label_roundtrip_git_minimal() {
+        assert_label_roundtrip(&InstallSource::Git(GitRepo {
+            url: "https://gitlab.com/team/skills".into(),
+            git_ref: None,
             subfolder: None,
         }));
     }
 
     #[test]
-    fn label_roundtrip_gitlab_self_hosted() {
-        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
-            host: "gitlab.example.com".into(),
-            owner: "team".into(),
-            name: "rules".into(),
-            git_ref: None,
-            subfolder: Some("a/b".into()),
-        }));
-    }
-
-    #[test]
-    fn label_roundtrip_gitlab_self_hosted_subgroup() {
-        assert_label_roundtrip(&InstallSource::Gitlab(GitlabRepo {
-            host: "gitlabee.dt.renault.com".into(),
-            owner: "partners/alliance-car/devex/process".into(),
-            name: "seed".into(),
+    fn label_roundtrip_git_full() {
+        assert_label_roundtrip(&InstallSource::Git(GitRepo {
+            url: "https://gitlabee.dt.renault.com/partners/alliance-car/devex/process/seed".into(),
             git_ref: Some("v0.2.0".into()),
             subfolder: Some("skills/seed.bundle.yaml".into()),
         }));
     }
 
     #[test]
-    fn label_rejects_bare_string() {
-        let err = parse_install_source_label("driftsys/skills").expect_err("must reject");
-        assert_eq!(err, SourceParseError::InvalidFormat);
+    fn label_rejects_removed_gitlab_shorthand() {
+        // Old lockfiles may still carry `gitlab:` labels — they hard-fail
+        // with the same self-serve error as the CLI input form (pre-1.0,
+        // no migration).
+        let err = parse_install_source_label("gitlab:team/x@main").expect_err("must reject");
+        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
+        let err = parse_install_source_label("gitlab+h.com:team/x").expect_err("must reject");
+        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
     }
 
     #[test]
-    fn label_rejects_gitlab_plus_without_host() {
-        let err = parse_install_source_label("gitlab+:team/x").expect_err("must reject");
-        assert_eq!(err, SourceParseError::EmptySegment);
+    fn label_rejects_bare_string() {
+        let err = parse_install_source_label("driftsys/skills").expect_err("must reject");
+        assert_eq!(err, SourceParseError::InvalidFormat);
     }
 
     #[test]

@@ -355,10 +355,7 @@ fn clone_url_for(source: &InstallSource) -> Result<String> {
             "https://github.com/{}/{}.git",
             repo.owner, repo.name
         )),
-        InstallSource::Gitlab(repo) => Ok(format!(
-            "https://{}/{}/{}.git",
-            repo.host, repo.owner, repo.name
-        )),
+        InstallSource::Git(repo) => Ok(format!("{}.git", repo.url)),
         InstallSource::LocalPath(_) => bail!("local paths do not have clone URLs"),
     }
 }

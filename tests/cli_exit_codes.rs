@@ -8,6 +8,8 @@ use std::fs;
 
 use tempfile::tempdir;
 
+use predicates::prelude::*;
+
 #[test]
 fn version_long_flag_prints_to_stdout_and_exits_zero() {
     let cwd = tempdir().expect("must create temp dir");
@@ -81,4 +83,20 @@ fn general_errors_exit_one() {
         .assert()
         .code(1)
         .stderr("error: HOME (or USERPROFILE on Windows) is not set\n");
+}
+
+#[test]
+fn removed_gitlab_shorthand_exits_two_with_url_hint() {
+    // The `gitlab:` shorthand was deleted in favor of full https URLs.
+    // The error must name the replacement so users can self-serve.
+    let cwd = tempdir().expect("must create temp dir");
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let mut cmd = common::upskill_cmd(&home);
+
+    cmd.current_dir(cwd.path())
+        .args(["add", "gitlab:team/skills"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("https://gitlab.com"));
 }

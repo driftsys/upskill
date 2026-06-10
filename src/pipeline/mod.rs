@@ -203,7 +203,7 @@ fn relocate_aliased_output(
 /// installed from a different source are left in place.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
-/// is pinned (Github/Gitlab `git_ref`); local-path sources record `None`.
+/// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
 pub fn install_with_lockfile(
     source: &InstallSource,
@@ -264,7 +264,7 @@ pub fn install_with_lockfile(
                 .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
     let git_ref = match source {
         InstallSource::Github(r) => r.git_ref.as_deref(),
-        InstallSource::Gitlab(r) => r.git_ref.as_deref(),
+        InstallSource::Git(r) => r.git_ref.as_deref(),
         InstallSource::LocalPath(_) => None,
     };
     // A bundle-shaped request (`*.bundle.yaml` source or positional names that
