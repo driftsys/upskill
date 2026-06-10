@@ -126,8 +126,9 @@ alongside the install.
 
 ### Removing installed content
 
-1. Run `upskill remove <item-name>` (or `--bundle <name>` for a whole
-   bundle, see `upskill remove --help`).
+1. Run `upskill remove <item-name>` (or `upskill remove --source <label>`
+   to remove every item installed from one source — use the label shown in
+   `upskill list` or the lockfile).
 2. Verify with `upskill list` that the item is gone and `upskill doctor`
    that nothing else depended on it.
 3. Commit the changed lockfile and the deletion of the now-removed
@@ -258,8 +259,9 @@ this skill does not assume one exists.
 ## Honest caveats
 
 This skill is v0.2.0 and tracks upskill's current command surface
-(`add`, `remove`, `update`, `list`, `doctor`, `search`, `lint`, `fmt`,
-`new`). As upskill evolves, this skill needs maintenance —
+(`add`, `remove`, `remove-mcp`, `update`, `list`, `doctor`, `search`,
+`index`, `lint`, `fmt`, `new`). As upskill evolves, this skill needs
+maintenance —
 specifically, it should NOT enumerate every CLI flag (that's
 `upskill --help`'s job). It should remain at the workflow and
 decision-boundary level, which is more stable.
