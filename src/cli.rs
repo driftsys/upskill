@@ -38,7 +38,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Install rules, skills, or agents from a GitHub/GitLab repo or local path.
+    /// Install rules, skills, or agents from a git repo or local path.
     ///
     /// Parses each item from the source, renders per-client output, and
     /// records the install in `.upskill-lock.json`. Default scope is the
@@ -51,7 +51,7 @@ pub enum Commands {
             upskill add owner/repo@v1.2\n  \
             upskill add owner/repo:skills/code-review\n  \
             upskill add owner/repo code-review secret-scanner\n  \
-            upskill add gitlab:team/repo\n  \
+            upskill add https://gitlab.com/team/repo\n  \
             upskill add ./local-source\n  \
             upskill add owner/repo --global"
     )]

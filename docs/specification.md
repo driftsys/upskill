@@ -75,9 +75,9 @@ upskill add <source> [items...] [--global|--project]
 - `owner/repo:path/to/name.bundle.yaml` — bundle file (resolves transitively, see §2.6)
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full HTTPS URL
-- `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
-- `gitlab:group/subgroup[/…]/project[...]` — GitLab subgroups (any nesting
-  depth); the segment before the project is the full namespace path
+- `https://<host>/<path>[...]` — any other https git host: GitLab
+  (including self-hosted instances and subgroups at any nesting depth),
+  Bitbucket, Gitea, or a plain git server
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 `upskill add <source>` installs everything the source contains. Optional
@@ -261,17 +261,16 @@ and across-repo continuity for global scope.
 
 Source format: see [§2.1](#21-add).
 
-Token resolution order:
+upskill never injects credentials into clone URLs. Clones use the bare
+`https://<host>/...` URL and rely entirely on git's own configuration —
+credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
+repository works whenever a manual `git clone <url>` would; configure git
+the same way. upskill resolves no tokens and reads no token env vars.
 
-| Host   | Order                                                             |
-| ------ | ----------------------------------------------------------------- |
-| GitHub | `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` → unauthenticated   |
-| GitLab | `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → unauthenticated |
-
-Self-hosted GitLab is supported via full URL form
-(`https://gitlab.mycompany.com/team/repo`), including projects nested under
-subgroups to any depth
-(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
+Any https host is treated as an opaque git remote
+(`https://git.mycompany.com/team/repo`), including projects
+nested under groups to any depth
+(`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ## 6. CLI compliance
 
@@ -298,10 +297,6 @@ subgroups to any depth
 | Variable         | Purpose                                        |
 | ---------------- | ---------------------------------------------- |
 | `NO_COLOR`       | Disable colored output.                        |
-| `GITHUB_TOKEN`   | Authenticate GitHub requests (private repos).  |
-| `GH_TOKEN`       | Fallback for `GITHUB_TOKEN`.                   |
-| `GITLAB_TOKEN`   | Authenticate GitLab requests (private repos).  |
-| `GL_TOKEN`       | Fallback for `GITLAB_TOKEN`.                   |
 | `HTTPS_PROXY`    | HTTP proxy for network requests.               |
 | `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
 

@@ -252,12 +252,8 @@ fn print_install_progress(source: &InstallSource) {
                 style::name(&format!("github:{}/{}", repo.owner, repo.name))
             );
         }
-        InstallSource::Gitlab(repo) => {
-            eprintln!(
-                "{} {}",
-                style::dim("Cloning"),
-                style::name(&format!("{}:{}/{}", repo.host, repo.owner, repo.name))
-            );
+        InstallSource::Git(repo) => {
+            eprintln!("{} {}", style::dim("Cloning"), style::name(&repo.url));
         }
     }
 }

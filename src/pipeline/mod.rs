@@ -13,9 +13,9 @@
 //!   [`install_from_git_url`] — library-only variants without lockfile or
 //!   ancillary handling.
 //!
-//! Authentication: when a token is resolved via [`crate::auth`], it is
-//! URL-injected into the clone URL. With no token, clones fall back to
-//! git's own credential helpers.
+//! Authentication: clones use the bare URL and rely on git's own
+//! configuration (credential helpers, `insteadOf` rewrites, SSH);
+//! upskill never injects credentials.
 //!
 //! Audience filter: the top-level `audience` field (per format-spec §3.1)
 //! restricts emission to listed clients; absence means all clients.
@@ -203,7 +203,7 @@ fn relocate_aliased_output(
 /// installed from a different source are left in place.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
-/// is pinned (Github/Gitlab `git_ref`); local-path sources record `None`.
+/// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
 pub fn install_with_lockfile(
     source: &InstallSource,
@@ -264,7 +264,7 @@ pub fn install_with_lockfile(
                 .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
     let git_ref = match source {
         InstallSource::Github(r) => r.git_ref.as_deref(),
-        InstallSource::Gitlab(r) => r.git_ref.as_deref(),
+        InstallSource::Git(r) => r.git_ref.as_deref(),
         InstallSource::LocalPath(_) => None,
     };
     // A bundle-shaped request (`*.bundle.yaml` source or positional names that

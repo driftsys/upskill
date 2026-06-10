@@ -7,7 +7,8 @@
 //!   the crate-internal `install_from_git_url` helper, which is the same
 //!   code path the GitHub branch uses (the only difference is URL
 //!   construction).
-//! - `Gitlab` — currently returns an error (out of scope for this slice).
+//! - `Git` — generic git-URL clone; exercised through the same
+//!   `install_from_git_url` code path.
 //!
 //! Network is not used.
 
@@ -68,10 +69,10 @@ fn install_from_source_local_path() {
     );
 }
 
-// GitLab dispatch is covered by unit tests in src/pipeline.rs
-// (gitlab_clone_url_uses_repo_host) plus the existing file:// tests against
+// Generic git-URL dispatch is covered by unit tests in src/pipeline/git.rs
+// (git_clone_url_appends_dot_git) plus the existing file:// tests against
 // install_from_git_url, which is the shared code path. An end-to-end network
-// test would depend on a live GitLab instance and is intentionally omitted.
+// test would depend on a live git host and is intentionally omitted.
 
 /// Build a local bare repo containing the fixture SSOT corpus, return its
 /// path. The pipeline can then clone it via a `file://` URL — exercises the
@@ -228,7 +229,7 @@ fn re_install_after_upstream_push_picks_up_new_content() {
     // install and update.
     //
     // CLI `update` reads source labels from the lockfile and only knows
-    // `github:` / `gitlab:` / `gitlab+host:` / `local:` prefixes — none of
+    // `github:` / `local:` prefixes and bare https URLs — none of
     // which round-trip a `file://` clone URL. So this test exercises the
     // underlying mechanism at the library layer: clone-install,
     // upstream-push, clone-install again. The clone+install path is

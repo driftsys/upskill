@@ -74,11 +74,10 @@ src/
 │
 ├── source.rs            Source URL parsing and classification (typed errors)
 ├── fetch.rs             Git clone, shallow clone, local path resolution
-├── auth.rs              Token resolution (env vars, gh/glab CLI fallback)
 ├── search.rs            skills.sh API search
 │
 ├── pipeline.rs          Local + git → per-client install pipeline,
-│                        token-injected clone URLs, SSOT hashing,
+│                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
 ├── bundle.rs            Bundle dependency resolution
 ├── lint.rs              Author command — validate SSOT against the format spec
@@ -130,15 +129,17 @@ committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 - `owner/repo:path/to/skill` — subfolder
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full URL
-- `gitlab:owner/repo[...]` or `https://gitlab.com/...` — GitLab
+- `https://<host>/<path>[...]` — any other https git host (GitLab including
+  self-hosted and subgroups, Bitbucket, Gitea, …)
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 ### Authentication
 
-Token resolution order:
-
-- GitHub: `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` → none.
-- GitLab: `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → none.
+upskill never injects credentials into clone URLs. Clones use the bare
+`https://<host>/...` URL and rely entirely on git's own configuration —
+credential helpers (keychain, manager), `url.<base>.insteadOf` rewrites,
+and SSH. There are no token env vars or `gh` / `glab` CLI fallbacks;
+configure git the way you would for any manual `git clone`.
 
 ### Exit codes
 

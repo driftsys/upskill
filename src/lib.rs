@@ -8,7 +8,6 @@
 //! No Node.js. No npm. No async runtime. Single static binary.
 
 pub mod ancillary;
-pub mod auth;
 pub mod bundle;
 pub mod cli;
 pub mod config;

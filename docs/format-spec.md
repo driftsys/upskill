@@ -500,7 +500,7 @@ documentation; the parser ignores it (§2.2).
 
 `requires` entries are maps. Each entry references another bundle by `name`, optionally pinned
 with a semver `version` constraint, and optionally located in another source with `source` (the
-`upskill add` source DSL — `owner/repo@ref`, https, `gitlab:`, local). Absent `source` resolves
+`upskill add` source DSL — `owner/repo@ref`, https URLs, local paths). Absent `source` resolves
 the required bundle in the **same** source registry as the requiring bundle:
 
 ```yaml

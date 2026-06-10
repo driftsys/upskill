@@ -15,27 +15,26 @@ disables coloured output when `NO_COLOR` is set.
 
 ## Private repositories
 
-Token resolution per host:
+upskill never injects credentials into clone URLs — it clones the bare
+`https://<host>/...` URL and relies entirely on git's own configuration.
+A private source works whenever a manual `git clone <url>` would; set up
+whichever git mechanism you already use:
 
 ```bash
-# GitHub
-export GITHUB_TOKEN=ghp_...      # or GH_TOKEN, or rely on `gh auth token`
+# Credential helper (stores the token in your OS keychain)
+git config --global credential.helper osxkeychain   # macOS
 
-# GitLab
-export GITLAB_TOKEN=glpat_...    # or GL_TOKEN, or rely on `glab auth token`
+# Or rewrite HTTPS → SSH for a host you have keys for
+git config --global url."git@github.com:".insteadOf "https://github.com/"
 ```
 
-Resolution order:
+`gh auth setup-git` and `glab auth login` both configure a git credential
+helper, which upskill then picks up transparently.
 
-| Host   | Order                                                             |
-| ------ | ----------------------------------------------------------------- |
-| GitHub | `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` → unauthenticated   |
-| GitLab | `GITLAB_TOKEN` → `GL_TOKEN` → `glab auth token` → unauthenticated |
-
-Self-hosted GitLab is supported via the full URL form
-(`https://gitlab.mycompany.com/team/repo`), including projects nested under
-subgroups to any depth
-(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
+Any https git host works via the full URL form
+(`https://git.mycompany.com/team/repo`), including projects nested under
+groups to any depth
+(`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ## Pin a source to a specific version
 

@@ -40,6 +40,17 @@ mod tests {
     }
 
     #[test]
+    fn multiline_inline_code_in_list_does_not_panic() {
+        // Regression: an inline code span that spans a hard line break inside
+        // a list item (valid CommonMark) tripped a dprint-core debug assert
+        // ("Found a newline in the string") in debug builds. Must not panic;
+        // the span content must survive.
+        let md = "1. returns `STATUS: available |\n   unavailable | refused` ok.\n";
+        let out = format_markdown(md).expect("must format without panicking");
+        assert!(out.contains("STATUS: available"), "code span lost: {out:?}");
+    }
+
+    #[test]
     fn already_canonical_idempotent() {
         let canonical = "## Heading\n\nA paragraph.\n";
         let pass1 = format_markdown(canonical).unwrap();
