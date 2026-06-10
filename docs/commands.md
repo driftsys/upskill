@@ -41,9 +41,9 @@ upskill add owner/repo:path/to/items                # subfolder
 upskill add owner/repo@v1.2                         # pin to tag
 upskill add owner/repo@main                         # pin to branch
 upskill add owner/repo@abc123                       # pin to commit SHA
-upskill add gitlab:owner/repo                       # GitLab.com
-upskill add https://gitlab.example.com/owner/repo   # self-hosted GitLab
-upskill add https://gitlab.example.com/group/subgroup/repo  # GitLab subgroups (any depth)
+upskill add https://gitlab.com/owner/repo           # GitLab.com
+upskill add https://git.example.com/owner/repo      # any https git host (self-hosted, Gitea, …)
+upskill add https://gitlab.com/group/subgroup/repo  # nested groups (any depth)
 upskill add ./path/to/local                         # local directory
 upskill add owner/repo:platform.bundle.yaml         # bundle file (explicit path)
 upskill add owner/repo platform-baseline            # bundle by name (resolves .bundle.yaml)

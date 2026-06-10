@@ -4,7 +4,7 @@
 //! `InstallSource`, runs `pipeline::install_with_lockfile`, and writes
 //! per-client output for rules / skills / agents (format-spec §7).
 //!
-//! Local-path source only — no network. GitHub/GitLab-source coverage is
+//! Local-path source only — no network. Git-source coverage is
 //! in `tests/pipeline_source.rs` at the library level.
 
 mod common;

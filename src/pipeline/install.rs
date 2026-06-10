@@ -363,7 +363,7 @@ impl Resolver {
 fn source_git_ref(s: &InstallSource) -> Option<String> {
     match s {
         InstallSource::Github(r) => r.git_ref.clone(),
-        InstallSource::Gitlab(r) => r.git_ref.clone(),
+        InstallSource::Git(r) => r.git_ref.clone(),
         InstallSource::LocalPath(_) => None,
     }
 }

@@ -129,7 +129,8 @@ committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 - `owner/repo:path/to/skill` — subfolder
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full URL
-- `gitlab:owner/repo[...]` or `https://gitlab.com/...` — GitLab
+- `https://<host>/<path>[...]` — any other https git host (GitLab including
+  self-hosted and subgroups, Bitbucket, Gitea, …)
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 ### Authentication
