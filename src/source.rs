@@ -598,6 +598,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_git_url_strips_dot_git_before_ref_and_subfolder() {
+        let source = parse_install_source("https://gitlab.com/team/skills.git@v1.0:tools/lint")
+            .expect("must parse");
+        let InstallSource::Git(repo) = source else {
+            panic!("expected Git");
+        };
+        assert_eq!(repo.url, "https://gitlab.com/team/skills");
+        assert_eq!(repo.git_ref.as_deref(), Some("v1.0"));
+        assert_eq!(repo.subfolder.as_deref(), Some("tools/lint"));
+    }
+
+    #[test]
+    fn reject_git_url_empty_ref() {
+        let err = parse_install_source("https://gitlab.com/team/skills@").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptyRef);
+    }
+
+    #[test]
+    fn reject_git_url_empty_subfolder() {
+        let err = parse_install_source("https://gitlab.com/team/skills:").expect_err("must fail");
+        assert_eq!(err, SourceParseError::EmptySubfolder);
+    }
+
+    #[test]
     fn reject_git_url_without_path() {
         let err = parse_install_source("https://gitlab.com").expect_err("must fail");
         assert_eq!(err, SourceParseError::InvalidFormat);
@@ -677,6 +701,28 @@ mod tests {
             git_ref: Some("v0.2.0".into()),
             subfolder: Some("skills/seed.bundle.yaml".into()),
         }));
+    }
+
+    #[test]
+    fn label_roundtrip_git_with_port() {
+        assert_label_roundtrip(&InstallSource::Git(GitRepo {
+            url: "https://git.company.com:8443/team/skills".into(),
+            git_ref: Some("main".into()),
+            subfolder: None,
+        }));
+    }
+
+    #[test]
+    fn git_label_exact_form() {
+        let source = InstallSource::Git(GitRepo {
+            url: "https://git.company.com:8443/team/skills".into(),
+            git_ref: Some("v1.0".into()),
+            subfolder: Some("tools/lint".into()),
+        });
+        assert_eq!(
+            source.to_string(),
+            "https://git.company.com:8443/team/skills@v1.0:tools/lint"
+        );
     }
 
     #[test]
