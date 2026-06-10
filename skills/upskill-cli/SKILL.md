@@ -87,7 +87,7 @@ on content you authored and understand, and always lint after.
 ### Adding installable content to a consumer project
 
 1. Identify the source: either an org repo (e.g. `driftsys/skills`), a
-   GitLab path (`gitlab:team/repo`), a full https URL, or a local path
+   full https URL (any git host), or a local path
    (`./local-source`).
 2. From the consumer project root, run `upskill add <source>` to install
    every item in the source, or `upskill add <source> item-a item-b` to
