@@ -267,8 +267,8 @@ credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
 repository works whenever a manual `git clone <url>` would; configure git
 the same way. upskill resolves no tokens and reads no token env vars.
 
-Any https host is treated as a git remote and cloned through git's own
-configuration (`https://git.mycompany.com/team/repo`), including projects
+Any https host is treated as an opaque git remote
+(`https://git.mycompany.com/team/repo`), including projects
 nested under groups to any depth
 (`https://git.mycompany.com/group/subgroup/team/repo`).
 
