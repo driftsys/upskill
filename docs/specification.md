@@ -75,9 +75,9 @@ upskill add <source> [items...] [--global|--project]
 - `owner/repo:path/to/name.bundle.yaml` — bundle file (resolves transitively, see §2.6)
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full HTTPS URL
-- `gitlab:owner/repo[...]` or `https://gitlab.com/[...]` — GitLab
-- `gitlab:group/subgroup[/…]/project[...]` — GitLab subgroups (any nesting
-  depth); the segment before the project is the full namespace path
+- `https://<host>/<path>[...]` — any other https git host: GitLab
+  (including self-hosted instances and subgroups at any nesting depth),
+  Bitbucket, Gitea, or a plain git server
 - `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 `upskill add <source>` installs everything the source contains. Optional
@@ -267,10 +267,10 @@ credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
 repository works whenever a manual `git clone <url>` would; configure git
 the same way. upskill resolves no tokens and reads no token env vars.
 
-Self-hosted GitLab is supported via full URL form
-(`https://gitlab.mycompany.com/team/repo`), including projects nested under
-subgroups to any depth
-(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
+Any https host is treated as a git remote and cloned through git's own
+configuration (`https://git.mycompany.com/team/repo`), including projects
+nested under groups to any depth
+(`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ## 6. CLI compliance
 

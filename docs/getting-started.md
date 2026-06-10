@@ -74,7 +74,7 @@ config:
 # ~/.config/upskill/config.yaml
 registries:
   - name: corp
-    source: gitlab:mycompany/ai-skills
+    source: https://gitlab.com/mycompany/ai-skills
   - name: team
     source: myorg/team-skills
 ```

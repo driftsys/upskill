@@ -31,10 +31,10 @@ git config --global url."git@github.com:".insteadOf "https://github.com/"
 `gh auth setup-git` and `glab auth login` both configure a git credential
 helper, which upskill then picks up transparently.
 
-Self-hosted GitLab is supported via the full URL form
-(`https://gitlab.mycompany.com/team/repo`), including projects nested under
-subgroups to any depth
-(`https://gitlab.mycompany.com/group/subgroup/team/repo`).
+Any https git host works via the full URL form
+(`https://git.mycompany.com/team/repo`), including projects nested under
+groups to any depth
+(`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ## Pin a source to a specific version
 
