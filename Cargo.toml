@@ -37,3 +37,16 @@ strip = true
 codegen-units = 1
 opt-level = "z"
 panic = "abort"
+
+# dprint-plugin-markdown 0.21.1 emits a multi-line inline code span (valid
+# CommonMark — `code` wrapping across a source line break) as a single
+# dprint-core IR string that still contains the newline. That trips a
+# dprint-core debug_assert ("Found a newline in the string") and panics
+# `upskill add` in debug/test builds. The rendered output is correct — the
+# assertion is compiled out in release, where dprint-core runs with
+# debug-assertions off. upskill never authors dprint IR itself (it only
+# calls dprint-plugin-markdown), so this third-party self-check polices
+# nothing in our code. Disable it for the dprint-core package only, so dev
+# and test builds match release behaviour on valid input.
+[profile.dev.package.dprint-core]
+debug-assertions = false
