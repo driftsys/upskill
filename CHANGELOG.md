@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.8.0] (2026-06-10)
+
+### Refactoring
+
+- **source:** replace GitLab-specific source with generic git URL ([96c473a])
+- **pipeline:** clone via git config only, drop token injection ([e7c4120])
+
+### Bug Fixes
+
+- **generate:** avoid dprint-core debug panic on multi-line inline code
+  ([4a7bd09])
+
+### Documentation
+
+- **adr:** record generic git-url source decision; garden wip ([#234])
+  ([1c7fe0c])
+- fix stale gitlab mentions from final review ([f46c22f])
+- polish generic git-url wording from review ([1916ec1])
+- **skills:** drop removed gitlab shorthand from upskill-cli skill ([3a23954])
+- describe generic git-url sources, drop gitlab shorthand ([3b70939])
+- **wip:** implementation plan for generic git-url source ([f987fa5])
+- **wip:** design spec for generic git-url source ([813173b])
+
+### BREAKING CHANGES
+
+- GITHUB_TOKEN / GH_TOKEN / GITLAB_TOKEN / GL_TOKEN and the
+  `gh auth token` / `glab auth token` fallbacks are no longer read. Private
+  repositories now authenticate through git's own configuration (credential
+  helper, insteadOf, or SSH), the same as a manual `git clone`. CI relying
+  on an env-var token must configure git credentials instead.
+
+[0.8.0]: https://github.com/driftsys/upskill/compare/v0.7.8...v0.8.0
+[96c473a]: https://github.com/driftsys/upskill/commit/96c473a
+[e7c4120]: https://github.com/driftsys/upskill/commit/e7c4120
+[4a7bd09]: https://github.com/driftsys/upskill/commit/4a7bd09
+[1c7fe0c]: https://github.com/driftsys/upskill/commit/1c7fe0c
+[#234]: https://github.com/driftsys/upskill/issues/234
+[f46c22f]: https://github.com/driftsys/upskill/commit/f46c22f
+[1916ec1]: https://github.com/driftsys/upskill/commit/1916ec1
+[3a23954]: https://github.com/driftsys/upskill/commit/3a23954
+[3b70939]: https://github.com/driftsys/upskill/commit/3b70939
+[f987fa5]: https://github.com/driftsys/upskill/commit/f987fa5
+[813173b]: https://github.com/driftsys/upskill/commit/813173b
+
 ## [0.7.8] (2026-06-10)
 
 ### Features
