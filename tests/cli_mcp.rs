@@ -163,6 +163,7 @@ fn add_bundle_with_mcp_is_deterministic_second_run() {
             .success();
     }
 
+    // Claude's `.mcp.json` holds exactly the one server (one file per target).
     let raw = fs::read_to_string(project.join(".mcp.json")).unwrap();
     let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
     let servers = doc["mcpServers"].as_object().expect("mcpServers object");
@@ -172,12 +173,15 @@ fn add_bundle_with_mcp_is_deterministic_second_run() {
         "second add must not duplicate the server entry; got {servers:?}"
     );
 
+    // The lockfile records one entry per MCP target (claude, copilot, vscode,
+    // opencode) — a single server fans out to four. The second run upserts by
+    // (name, client) and must NOT accumulate duplicates beyond those four.
     let lock_raw = fs::read_to_string(project.join(".upskill-lock.json")).unwrap();
     let lock: serde_json::Value = serde_json::from_str(&lock_raw).unwrap();
     let mcps = lock["mcps"].as_array().expect("mcps array");
     assert_eq!(
         mcps.len(),
-        1,
-        "second add must not duplicate the lockfile mcp entry; got {mcps:?}"
+        4,
+        "second add must not duplicate beyond one entry per target; got {mcps:?}"
     );
 }

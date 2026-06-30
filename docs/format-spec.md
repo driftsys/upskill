@@ -751,14 +751,33 @@ secret values anywhere (not in config files, not in the lockfile, not in SSOT). 
 install time (e.g., during `upskill add`) when a declared variable is unset in the current
 environment, without reading its value.
 
-**Per-client install behavior (v1):** v1 targets Claude Code only. Other clients produce a
-warn-skip.
+**Per-client install behavior:** A bundle's `mcps:` entry is configured for every MCP **target** —
+Claude Code, GitHub Copilot, VS Code, and opencode — CLI-first with a config-write fallback per
+target. VS Code is an MCP target but **not** a generation client: it shares `.github/**`
+rules/skills/agents output with Copilot and forks **only** on MCP, so the MCP target set
+(`claude`, `copilot`, `vscode`, `opencode`) is modelled separately from the generation `Client`
+enum (`claude`, `copilot`, `opencode`).
 
-| Client      | Primary (CLI)                                                                         | Fallback (config-write, CLI absent)                          |
-| ----------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Claude Code | `claude mcp add <name> --scope <scope> [-e K=${V}] -- <cmd> [args]` (local)           | Write `{ "mcpServers": { "<name>": { … } } }` to `.mcp.json` |
-| Claude Code | `claude mcp add --transport <http\|sse> <name> <url> --scope <scope> [-H …]` (remote) | Same `.mcp.json` fallback                                    |
-| other       | not supported in v1 — warn-skip                                                       | —                                                            |
+| Target         | Primary (CLI)                                                                                                                                                       | Fallback config file                      | Root key     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ |
+| Claude Code    | `claude mcp add <name> --scope <scope> [-e K=${V}] -- <cmd> [args]` (local) / `claude mcp add --transport <http\|sse> <name> <url> --scope <scope> [-H …]` (remote) | `.mcp.json`                               | `mcpServers` |
+| GitHub Copilot | `copilot mcp add …` (no `--scope`)                                                                                                                                  | `~/.copilot/mcp-config.json` (user scope) | `mcpServers` |
+| VS Code        | `code --add-mcp '<json>'`                                                                                                                                           | `.vscode/mcp.json`                        | `servers`    |
+| opencode       | — (no `mcp add` verb; config-only)                                                                                                                                  | `opencode.json`                           | `mcp`        |
+
+Per-target config shapes differ:
+
+- **Claude Code / GitHub Copilot** — `{ command, args?, env? }` (local) or `{ type, url, headers? }`
+  (remote).
+- **VS Code** — local servers are typed `"stdio"`; remote servers carry their `http`/`sse` value in
+  `type`, plus `url` and `headers`. The root key is **`servers`**, not `mcpServers`.
+- **opencode** — `type` is `"local"` or `"remote"`. For local servers `command` is a single **array**
+  combining the command and its args (`["npx", "-y", "my-tool-mcp"]`) and the env map is named
+  **`environment`** (not `env`). Remote servers carry `url` and `headers`.
+- **GitHub Copilot scope caveat** — Copilot has no documented project-scope MCP config file
+  (`.github/mcp.json` is not a Copilot CLI config source). The config-write fallback therefore always
+  targets the **user-scope** `~/.copilot/mcp-config.json`; project scope is configured via the
+  `copilot mcp add` CLI or warn-skipped.
 
 Claude's `--scope` derives from upskill's project/global context:
 
@@ -795,16 +814,21 @@ Lockfile MCP entry shape:
 The `mcps` array is additive. Implementations that do not support this field MUST ignore it
 (serde `default`). The lockfile `schema` field stays at `1` — no version bump.
 
-**Removal:** `upskill remove-mcp <name>` unregisters the named server from the client (via
-`claude mcp remove <name> --scope <scope>`, falling back to removing the entry from `.mcp.json`
-when the CLI is absent) and drops the `LockedMcp` entry from the lockfile.
+**Removal:** `upskill remove-mcp <name>` unregisters the named server from every target it was
+configured for and drops the matching `LockedMcp` entries from the lockfile. Targets with a native
+remove verb (Claude `claude mcp remove`, Copilot `copilot mcp remove`) are CLI-first, falling back
+to deleting the entry from the target's config file when the CLI is absent; VS Code and opencode
+are config-file only.
 
-**Reconciliation:** `upskill doctor` checks each Claude-client MCP entry in the lockfile
-against `claude mcp list`. A server present in the lockfile but absent from the client is
-reported as `NotRegistered` and causes doctor to exit non-clean (exit 1). Doctor also reports
-`CliNotFound` when the `claude` CLI is absent and `QueryFailed` when the list query fails;
-it does not check `requires-env` variables. The unset-env warning for `requires-env` variables
-is emitted by `upskill add` at install time.
+**Reconciliation:** `upskill doctor` reconciles each lockfile MCP entry against its target. Claude
+is queried via `claude mcp list`; the config-write targets (Copilot, VS Code, opencode) are checked
+against their config file. A server present in the lockfile but absent from a present config file
+(or from the Claude client) is reported as `NotRegistered` and causes doctor to exit non-clean
+(exit 1). Claude also reports `CliNotFound` when the `claude` CLI is absent and `QueryFailed` when
+the list query fails; for a config-write target whose config file is absent the state is
+undetermined and the entry is skipped rather than reported as drift (no false positives). Doctor
+does not check `requires-env` variables — the unset-env warning is emitted by `upskill add` at
+install time.
 
 Implementations:
 

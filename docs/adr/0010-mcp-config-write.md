@@ -110,25 +110,45 @@ upskill never owns a secret value. The rule:
 This is the same posture upskill already takes for git auth (tokens come
 from env / `gh` / `glab`, never persisted).
 
-### Per-client install contract — CLI-first, config-write fallback
+### Per-target install contract — CLI-first, config-write fallback
 
-v1 targets **Claude Code only**. opencode, VS Code, and GitHub Copilot are
-deferred to future releases (see Deferred section). An MCP entry in a
-bundle that arrives on a machine where only non-Claude clients are targeted
-produces a warn-skip — not an error.
+> **Amended 2026-07-01 (issue #237):** the contract below now covers **all
+> four MCP targets** — Claude Code, GitHub Copilot, VS Code, and opencode.
+> The original v1 shipped Claude-only; the _Deferred → Non-Claude clients_
+> note is now delivered. VS Code is an MCP **target** but not a generation
+> `Client`: it shares `.github/**` output with Copilot and forks only on MCP,
+> so the MCP target set (`claude`, `copilot`, `vscode`, `opencode`) is modelled
+> separately from `Client` (the `McpTarget` enum in `src/mcp.rs`).
 
-For Claude Code, the preference order is:
+Each bundle `mcps:` entry is configured for every target, CLI-first with a
+config-write fallback per target. A target whose CLI is absent **and** has no
+applicable config-write target produces a warn-skip — not an error.
 
-1. **CLI-first**: shell out to `claude mcp add`. The specific form depends
-   on transport:
-   - Local (stdio):
-     `claude mcp add <name> --scope <scope> [-e KEY=${VAR} …] -- <command> [args…]`
-   - Remote (http/sse):
-     `claude mcp add --transport <http|sse> <name> <url> --scope <scope> [-H "Header: ${VAR}" …]`
-2. **Config-write fallback**: when `claude` is not on PATH
-   (`ErrorKind::NotFound`), fall back to writing `.mcp.json` in the project
-   root (for project scope) or the user config location (for global scope).
-   The `.mcp.json` shape is `{ "mcpServers": { "<name>": { … } } }`.
+| Target         | CLI-first                                                 | Config-write fallback file                | Root key     |
+| -------------- | --------------------------------------------------------- | ----------------------------------------- | ------------ |
+| Claude Code    | `claude mcp add …` (`--scope`, `-e`, `--transport`, `-H`) | `.mcp.json`                               | `mcpServers` |
+| GitHub Copilot | `copilot mcp add …` (no `--scope`)                        | `~/.copilot/mcp-config.json` (user scope) | `mcpServers` |
+| VS Code        | `code --add-mcp '<json>'`                                 | `.vscode/mcp.json`                        | `servers`    |
+| opencode       | — (no `mcp add` verb)                                     | `opencode.json`                           | `mcp`        |
+
+The Claude forms are unchanged:
+
+- Local (stdio):
+  `claude mcp add <name> --scope <scope> [-e KEY=${VAR} …] -- <command> [args…]`
+- Remote (http/sse):
+  `claude mcp add --transport <http|sse> <name> <url> --scope <scope> [-H "Header: ${VAR}" …]`
+
+Per-target config shapes diverge:
+
+- **Claude / Copilot** share `{ command, args?, env? }` (local) /
+  `{ type, url, headers? }` (remote) under `mcpServers`.
+- **VS Code** uses root key `servers`; local servers are typed `"stdio"`.
+- **opencode** uses `type: "local"|"remote"`; local `command` is a single array
+  `[command, args…]` and the env map is named `environment`.
+- **Copilot** has no documented project-scope config file (`.github/mcp.json`
+  is not a Copilot CLI source), so the fallback is always the user-scope
+  `~/.copilot/mcp-config.json`; project scope is configured via the CLI or
+  warn-skipped.
 
 Config-write fallback is never the primary path — the same stance
 ADR-0008 took against patching `settings.json` as the primary plugin
@@ -179,17 +199,20 @@ entries silently ignore the unknown array (serde `default`).
 ### Removal and reconciliation
 
 - **`upskill remove-mcp <name>`**: a dedicated top-level subcommand (not
-  `upskill remove`). It shells out to `claude mcp remove <name> --scope
-  <scope>` (CLI-first), falling back to removing the entry from `.mcp.json`
-  when the CLI is absent. Drops the `LockedMcp` entry from the lockfile.
-- **`upskill doctor`**: checks each `claude`-client MCP entry in the
-  lockfile via `claude mcp list` (substring match on the server name). A
-  server present in the lockfile but absent from the client makes doctor
-  report `NotRegistered` and exit non-clean (exit 1). Doctor also reports
-  `CliNotFound` when the `claude` CLI is absent and `QueryFailed` when the
-  list query fails; it does **not** check `requires-env` variables.
-  Reconciliation never auto-removes entries — consistent with the project's
-  "never auto-delete" ethos.
+  `upskill remove`). For targets with a native remove verb (Claude
+  `claude mcp remove <name> --scope <scope>`, Copilot `copilot mcp remove
+  <name>`) it is CLI-first, falling back to deleting the entry from the
+  target's config file when the CLI is absent; VS Code and opencode are
+  config-file only. Drops every matching `LockedMcp` entry from the lockfile.
+- **`upskill doctor`**: reconciles each lockfile MCP entry against its
+  target. Claude is queried via `claude mcp list` (substring match); the
+  config-write targets (Copilot, VS Code, opencode) are checked against their
+  config file. A server present in the lockfile but absent from a present
+  config file (or from the Claude client) makes doctor report `NotRegistered`
+  and exit non-clean (exit 1). Claude also reports `CliNotFound` and
+  `QueryFailed`; for a config-write target whose config file is **absent** the
+  state is undetermined and the entry is skipped — no false positives. Doctor
+  does **not** check `requires-env` variables and never auto-removes entries.
 - **`upskill add` (install time)**: warns for each variable listed in
   `requires-env` that is not set in the current environment, immediately
   after configuring the server.
@@ -199,21 +222,27 @@ entries silently ignore the unknown array (serde `default`).
 - `src/model/bundle.rs` — `McpEntry { transport: McpTransport, requires_env }`;
   `McpTransport::Remote(McpRemote)` / `McpTransport::Local(McpLocal)`;
   `Bundle::validate_mcps`.
-- `src/mcp.rs` — typed CLI-shellout functions (`install_claude_local`,
-  `install_claude_remote`, `uninstall_claude`, `check_claude_installed`),
-  reusing the spawn/CLI-not-found helpers from `src/plugin.rs`. Never
-  writes to stdout/stderr.
-- `src/ancillary.rs` — `write_claude_mcp_local` / `write_claude_mcp_remote`
-  (config-write fallback into `.mcp.json`); `remove_claude_mcp` (removal
-  fallback). Merge-preserving: existing servers in `mcpServers` are not
-  clobbered.
-- `src/pipeline/install.rs` — `install_mcps_from_bundles`: iterates
-  resolved bundles, attempts CLI shellout, falls back to config-write on
-  `CliNotFound`, returns structured `McpResult` per server.
-- `src/lockfile.rs` — `LockedMcp`, `McpInstallStatus`, `upsert_mcp`,
-  `remove_mcps_by_name`.
-- `src/cli.rs` / `src/main.rs` — `Commands::RemoveMcp`; doctor
-  reconciliation loop over `mcps` lockfile entries.
+- `src/mcp.rs` — the `McpTarget` enum (`Claude`, `Copilot`, `VsCode`,
+  `OpenCode`) plus typed CLI-shellout functions per target with a CLI verb
+  (`install_claude_*`, `install_copilot_*`, `install_vscode_*`,
+  `uninstall_claude`, `uninstall_copilot`, `check_claude_installed`), reusing
+  the spawn/CLI-not-found helpers from `src/plugin.rs`. Never writes to
+  stdout/stderr.
+- `src/ancillary.rs` — config-write fallbacks per target
+  (`write_claude_mcp_*` → `.mcp.json`, `write_copilot_mcp_*` →
+  `~/.copilot/mcp-config.json`, `write_vscode_mcp_*` → `.vscode/mcp.json`,
+  `write_opencode_mcp_*` → `opencode.json`), the shared merge `upsert_mcp_server`
+  (path + root key), removers (`remove_*_mcp`), and doctor state queries
+  (`vscode_mcp_state` / `opencode_mcp_state` / `copilot_mcp_state`). All
+  merge-preserving: sibling servers and other top-level keys are never clobbered.
+- `src/pipeline/install.rs` — `install_mcps_from_bundles`: for each bundle
+  `mcps:` entry, fans out over `McpTarget::ALL`, attempts CLI shellout, falls
+  back to the target's config-write on `CliNotFound`, returns one structured
+  `McpResult` per `(name, target)`.
+- `src/lockfile.rs` — `LockedMcp`, `McpInstallStatus`, `upsert_mcp`
+  (keyed by `(name, client)`), `remove_mcps_by_name`.
+- `src/cli.rs` / `src/main.rs` — `Commands::RemoveMcp`; the `unconfigure_mcp`
+  dispatch over targets; doctor reconciliation loop over `mcps` lockfile entries.
 
 ## Consequences
 
@@ -234,19 +263,23 @@ entries silently ignore the unknown array (serde `default`).
 
 **Negative / limits.**
 
-- v1 is Claude-only. Teams using opencode or VS Code in parallel do not get
-  MCP configuration from the same bundle install — they must configure MCP
-  manually until those clients are supported.
-- Determinism loss: install outcome depends on whether `claude` is on PATH.
-  Integration tests that exercise the CLI path must shim `claude` on PATH;
-  tests that exercise config-write must clear PATH or point to an absent
-  binary.
+- A single bundle `mcps:` entry now fans out to four targets, so one server
+  yields four `LockedMcp` rows and may write up to four config files. There is
+  not yet a consumer-side switch to narrow the target set (tracked by #238); a
+  per-target consumer selection should honour the same filtering when it lands.
+- Determinism loss: install outcome depends on whether each target CLI is on
+  PATH. Integration tests that exercise a CLI path must shim it on PATH; tests
+  that exercise config-write must clear PATH or point to an absent binary.
 - The warn-skip policy can mask a real misconfiguration. Mitigated by
   `doctor`, which surfaces every `NotRegistered` server, and by `upskill add`
   which warns at install time for every unset `requires-env` variable.
-- Config-write fallback (`.mcp.json`) is a project-scope file; it does not
-  cover the global scope as cleanly as the CLI. The global config location
-  is client-version-specific and not yet handled by the fallback path.
+- Config-write fallbacks are project-scope files except Copilot, whose only
+  documented config file is the user-scope `~/.copilot/mcp-config.json`. The
+  Claude global-scope config location is client-version-specific and not yet
+  handled by the fallback path. VS Code's `code --add-mcp` writes the user
+  profile MCP store, which differs from the `.vscode/mcp.json` workspace file
+  the fallback writes — so a CLI-installed VS Code server is not removed by the
+  config-file remover.
 
 ## Alternatives considered
 
@@ -294,9 +327,10 @@ v1 config-write machinery. v2 also includes a generated skill-body preflight
 runtime under the client's permission prompts. upskill stays
 execution-free.
 
-**Non-Claude clients.** opencode, VS Code (`code --add-mcp`), and GitHub
-Copilot MCP configuration are deferred. When added, they will follow the
-same CLI-first / config-write-fallback pattern used here for Claude.
+**Non-Claude clients.** ~~Deferred.~~ **Delivered (2026-07-01, issue #237):**
+opencode, VS Code (`code --add-mcp`), and GitHub Copilot (`copilot mcp add`)
+now follow the same CLI-first / config-write-fallback pattern — see the
+amended _Per-target install contract_ above.
 
 ## Migration
 

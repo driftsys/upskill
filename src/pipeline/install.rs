@@ -924,54 +924,114 @@ pub(super) fn install_plugins_from_bundles(
 // ---------------------------------------------------------------------------
 
 /// Iterate all resolved bundles and configure each declared MCP server for
-/// Claude Code (v1's only target client). CLI-first: `claude mcp add`; on
-/// CliNotFound, fall back to writing `.mcp.json`. Warn-skip preserved: a
-/// failure never aborts the overall install.
+/// every [`McpTarget`](crate::mcp::McpTarget): Claude, Copilot, VS Code, and
+/// opencode (ADR-0010, issue #237). Per target, CLI-first; on `CliNotFound`,
+/// fall back to the target's config-write file. Warn-skip preserved: a single
+/// target's failure or skip never aborts the overall install. One `McpResult`
+/// is recorded per `(name, target)`.
 ///
 /// Covered by the `tests/pipeline_mcp.rs` integration test, which clears
 /// PATH so the config-write fallback runs deterministically into a tempdir
-/// (an in-process unit test cannot safely force the `claude` CLI off PATH).
+/// (an in-process unit test cannot safely force the client CLIs off PATH).
 pub(super) fn install_mcps_from_bundles(
     bundles: &[crate::model::Bundle],
     scope: crate::plugin::PluginScope,
     target: &Path,
 ) -> Vec<McpResult> {
-    use crate::model::bundle::McpTransport;
-    use crate::plugin::PluginOutcome;
+    use crate::mcp::McpTarget;
 
     let mut results = Vec::new();
     for bundle in bundles {
         for (name, entry) in &bundle.mcps {
-            let cli_outcome = match &entry.transport {
-                McpTransport::Local(local) => crate::mcp::install_claude_local(name, local, scope),
-                McpTransport::Remote(remote) => {
-                    crate::mcp::install_claude_remote(name, remote, scope)
-                }
-            };
-
-            // CLI absent → config-write fallback into .mcp.json.
-            let outcome = match cli_outcome {
-                PluginOutcome::CliNotFound => match &entry.transport {
-                    McpTransport::Local(local) => {
-                        crate::ancillary::write_claude_mcp_local(target, name, local)
-                    }
-                    McpTransport::Remote(remote) => {
-                        crate::ancillary::write_claude_mcp_remote(target, name, remote)
-                    }
-                },
-                other => other,
-            };
-
-            results.push(McpResult {
-                name: name.clone(),
-                client: "claude".into(),
-                outcome,
-                bundle: bundle.name.clone(),
-                requires_env: entry.requires_env.clone(),
-            });
+            for mcp_target in McpTarget::ALL {
+                let outcome = configure_mcp_for_target(mcp_target, name, entry, scope, target);
+                results.push(McpResult {
+                    name: name.clone(),
+                    client: mcp_target.name().into(),
+                    outcome,
+                    bundle: bundle.name.clone(),
+                    requires_env: entry.requires_env.clone(),
+                });
+            }
         }
     }
     results
+}
+
+/// Configure one MCP server into one target: CLI-first, then the target's
+/// config-write fallback when the CLI is absent. opencode has no `mcp add`
+/// verb, so it goes straight to config-write.
+fn configure_mcp_for_target(
+    mcp_target: crate::mcp::McpTarget,
+    name: &str,
+    entry: &crate::model::bundle::McpEntry,
+    scope: crate::plugin::PluginScope,
+    target: &Path,
+) -> crate::plugin::PluginOutcome {
+    use crate::mcp::McpTarget;
+    use crate::model::bundle::McpTransport;
+    use crate::plugin::PluginOutcome;
+
+    // CLI-first. opencode is config-only — treat as CliNotFound so the match
+    // below routes it to config-write.
+    let cli_outcome = match (mcp_target, &entry.transport) {
+        (McpTarget::Claude, McpTransport::Local(l)) => {
+            crate::mcp::install_claude_local(name, l, scope)
+        }
+        (McpTarget::Claude, McpTransport::Remote(r)) => {
+            crate::mcp::install_claude_remote(name, r, scope)
+        }
+        (McpTarget::Copilot, McpTransport::Local(l)) => crate::mcp::install_copilot_local(name, l),
+        (McpTarget::Copilot, McpTransport::Remote(r)) => {
+            crate::mcp::install_copilot_remote(name, r)
+        }
+        (McpTarget::VsCode, McpTransport::Local(l)) => crate::mcp::install_vscode_local(name, l),
+        (McpTarget::VsCode, McpTransport::Remote(r)) => crate::mcp::install_vscode_remote(name, r),
+        (McpTarget::OpenCode, _) => PluginOutcome::CliNotFound,
+    };
+
+    match cli_outcome {
+        PluginOutcome::CliNotFound => config_write_mcp_for_target(mcp_target, name, entry, target),
+        other => other,
+    }
+}
+
+/// Config-write fallback dispatch — one writer per target/transport. Copilot
+/// writes its user-scope `~/.copilot/mcp-config.json` (no project file).
+fn config_write_mcp_for_target(
+    mcp_target: crate::mcp::McpTarget,
+    name: &str,
+    entry: &crate::model::bundle::McpEntry,
+    target: &Path,
+) -> crate::plugin::PluginOutcome {
+    use crate::ancillary;
+    use crate::mcp::McpTarget;
+    use crate::model::bundle::McpTransport;
+
+    match (mcp_target, &entry.transport) {
+        (McpTarget::Claude, McpTransport::Local(l)) => {
+            ancillary::write_claude_mcp_local(target, name, l)
+        }
+        (McpTarget::Claude, McpTransport::Remote(r)) => {
+            ancillary::write_claude_mcp_remote(target, name, r)
+        }
+        (McpTarget::Copilot, McpTransport::Local(l)) => ancillary::write_copilot_mcp_local(name, l),
+        (McpTarget::Copilot, McpTransport::Remote(r)) => {
+            ancillary::write_copilot_mcp_remote(name, r)
+        }
+        (McpTarget::VsCode, McpTransport::Local(l)) => {
+            ancillary::write_vscode_mcp_local(target, name, l)
+        }
+        (McpTarget::VsCode, McpTransport::Remote(r)) => {
+            ancillary::write_vscode_mcp_remote(target, name, r)
+        }
+        (McpTarget::OpenCode, McpTransport::Local(l)) => {
+            ancillary::write_opencode_mcp_local(target, name, l)
+        }
+        (McpTarget::OpenCode, McpTransport::Remote(r)) => {
+            ancillary::write_opencode_mcp_remote(target, name, r)
+        }
+    }
 }
 
 /// The per-kind frontmatter fields the install loop needs after parsing,

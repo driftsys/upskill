@@ -338,51 +338,215 @@ pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> Result<()>
     Ok(())
 }
 
-/// Filename Claude Code reads for project-scoped MCP servers.
-const CLAUDE_MCP_JSON: &str = ".mcp.json";
+// ---------------------------------------------------------------------------
+// MCP config-write fallbacks (ADR-0010, issue #237)
+//
+// Each MCP target has its own config file and root key; the CLI is preferred
+// and these writers run only when the target's CLI is absent. All writes are
+// merge-preserving via `upsert_mcp_server` and never expand `${VAR}` values.
+// ---------------------------------------------------------------------------
 
-/// Write a local (stdio) MCP server into `<target>/.mcp.json` under
-/// `mcpServers.<name>`. Merge-preserving; creates the file if absent.
-/// Used as the fallback when the `claude` CLI is not on PATH.
-pub fn write_claude_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+/// Filename Claude Code reads for project-scoped MCP servers (root key
+/// `mcpServers`).
+const CLAUDE_MCP_JSON: &str = ".mcp.json";
+/// Filename VS Code reads for workspace MCP servers (root key `servers`).
+const VSCODE_MCP_JSON: &str = ".vscode/mcp.json";
+/// User-scope file the GitHub Copilot CLI reads (root key `mcpServers`).
+/// Copilot has no documented project-scope config file, so the fallback is
+/// always user-scope (issue #237 caveat).
+const COPILOT_MCP_CONFIG: &str = ".copilot/mcp-config.json";
+
+/// Resolve `~/.copilot/mcp-config.json`. `None` when neither `HOME` nor
+/// `USERPROFILE` is set.
+fn copilot_mcp_config_path() -> Option<std::path::PathBuf> {
+    crate::source::home_dir().map(|home| home.join(COPILOT_MCP_CONFIG))
+}
+
+// -- Claude / Copilot share the `{ "<root>": { "<name>": { … } } }` shape --
+
+/// `mcpServers`-style server object for a local (stdio) descriptor:
+/// `{ command, args?, env? }`.
+fn mcp_servers_local_value(local: &McpLocal) -> Value {
     let mut server = serde_json::Map::new();
     server.insert("command".into(), json!(local.command));
     if !local.args.is_empty() {
         server.insert("args".into(), json!(local.args));
     }
     if !local.env.is_empty() {
-        let env: serde_json::Map<String, Value> = local
-            .env
-            .iter()
-            .map(|(k, v)| (k.clone(), json!(v)))
-            .collect();
-        server.insert("env".into(), Value::Object(env));
+        server.insert("env".into(), json!(local.env));
     }
-    upsert_mcp_server(target, name, Value::Object(server))
+    Value::Object(server)
+}
+
+/// `mcpServers`-style server object for a remote descriptor:
+/// `{ type, url, headers? }`.
+fn mcp_servers_remote_value(remote: &McpRemote) -> Value {
+    let mut server = serde_json::Map::new();
+    server.insert("type".into(), json!(remote.transport_type));
+    server.insert("url".into(), json!(remote.url));
+    if !remote.headers.is_empty() {
+        server.insert("headers".into(), json!(remote.headers));
+    }
+    Value::Object(server)
+}
+
+/// Write a local (stdio) MCP server into `<target>/.mcp.json` under
+/// `mcpServers.<name>`. Merge-preserving; creates the file if absent.
+/// Used as the fallback when the `claude` CLI is not on PATH.
+pub fn write_claude_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(CLAUDE_MCP_JSON),
+        "mcpServers",
+        name,
+        mcp_servers_local_value(local),
+    )
 }
 
 /// Write a remote MCP server into `<target>/.mcp.json` under
 /// `mcpServers.<name>`. Merge-preserving; creates the file if absent.
 pub fn write_claude_mcp_remote(target: &Path, name: &str, remote: &McpRemote) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(CLAUDE_MCP_JSON),
+        "mcpServers",
+        name,
+        mcp_servers_remote_value(remote),
+    )
+}
+
+/// Write a local (stdio) MCP server into `~/.copilot/mcp-config.json` under
+/// `mcpServers.<name>` (Copilot's user-scope file). Fallback when the
+/// `copilot` CLI is not on PATH.
+pub fn write_copilot_mcp_local(name: &str, local: &McpLocal) -> PluginOutcome {
+    let Some(path) = copilot_mcp_config_path() else {
+        return PluginOutcome::Failed {
+            exit_code: None,
+            stderr: "could not determine HOME for ~/.copilot/mcp-config.json".into(),
+        };
+    };
+    upsert_mcp_server(&path, "mcpServers", name, mcp_servers_local_value(local))
+}
+
+/// Write a remote MCP server into `~/.copilot/mcp-config.json` under
+/// `mcpServers.<name>`.
+pub fn write_copilot_mcp_remote(name: &str, remote: &McpRemote) -> PluginOutcome {
+    let Some(path) = copilot_mcp_config_path() else {
+        return PluginOutcome::Failed {
+            exit_code: None,
+            stderr: "could not determine HOME for ~/.copilot/mcp-config.json".into(),
+        };
+    };
+    upsert_mcp_server(&path, "mcpServers", name, mcp_servers_remote_value(remote))
+}
+
+// -- VS Code: `.vscode/mcp.json`, root key `servers`, stdio typed `"stdio"` --
+
+/// VS Code server object for a local (stdio) descriptor:
+/// `{ type: "stdio", command, args?, env? }`.
+fn vscode_local_value(local: &McpLocal) -> Value {
+    let mut server = serde_json::Map::new();
+    server.insert("type".into(), json!("stdio"));
+    server.insert("command".into(), json!(local.command));
+    if !local.args.is_empty() {
+        server.insert("args".into(), json!(local.args));
+    }
+    if !local.env.is_empty() {
+        server.insert("env".into(), json!(local.env));
+    }
+    Value::Object(server)
+}
+
+/// VS Code server object for a remote descriptor: `{ type, url, headers? }`
+/// where `type` is the `http`/`sse` transport value.
+fn vscode_remote_value(remote: &McpRemote) -> Value {
     let mut server = serde_json::Map::new();
     server.insert("type".into(), json!(remote.transport_type));
     server.insert("url".into(), json!(remote.url));
     if !remote.headers.is_empty() {
-        let headers: serde_json::Map<String, Value> = remote
-            .headers
-            .iter()
-            .map(|(k, v)| (k.clone(), json!(v)))
-            .collect();
-        server.insert("headers".into(), Value::Object(headers));
+        server.insert("headers".into(), json!(remote.headers));
     }
-    upsert_mcp_server(target, name, Value::Object(server))
+    Value::Object(server)
 }
 
-/// Shared merge: insert `server` at `mcpServers.<name>` in `.mcp.json`,
-/// preserving any other top-level keys and other servers.
-fn upsert_mcp_server(target: &Path, name: &str, server: Value) -> PluginOutcome {
-    let path = target.join(CLAUDE_MCP_JSON);
-    let mut doc: Value = match std::fs::read_to_string(&path) {
+/// Write a local (stdio) MCP server into `<target>/.vscode/mcp.json` under
+/// `servers.<name>`. Merge-preserving; fallback when `code` is not on PATH.
+pub fn write_vscode_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(VSCODE_MCP_JSON),
+        "servers",
+        name,
+        vscode_local_value(local),
+    )
+}
+
+/// Write a remote MCP server into `<target>/.vscode/mcp.json` under
+/// `servers.<name>`.
+pub fn write_vscode_mcp_remote(target: &Path, name: &str, remote: &McpRemote) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(VSCODE_MCP_JSON),
+        "servers",
+        name,
+        vscode_remote_value(remote),
+    )
+}
+
+// -- opencode: `opencode.json`, root key `mcp`, distinct field shape --
+
+/// opencode server object for a local descriptor: `{ type: "local",
+/// command: [command, args…], environment? }`. opencode folds command+args
+/// into one array and names the env map `environment`.
+fn opencode_local_value(local: &McpLocal) -> Value {
+    let mut command = Vec::with_capacity(local.args.len() + 1);
+    command.push(local.command.clone());
+    command.extend(local.args.iter().cloned());
+
+    let mut server = serde_json::Map::new();
+    server.insert("type".into(), json!("local"));
+    server.insert("command".into(), json!(command));
+    if !local.env.is_empty() {
+        server.insert("environment".into(), json!(local.env));
+    }
+    Value::Object(server)
+}
+
+/// opencode server object for a remote descriptor: `{ type: "remote", url,
+/// headers? }`.
+fn opencode_remote_value(remote: &McpRemote) -> Value {
+    let mut server = serde_json::Map::new();
+    server.insert("type".into(), json!("remote"));
+    server.insert("url".into(), json!(remote.url));
+    if !remote.headers.is_empty() {
+        server.insert("headers".into(), json!(remote.headers));
+    }
+    Value::Object(server)
+}
+
+/// Write a local MCP server into `<target>/opencode.json` under `mcp.<name>`.
+/// Merge-preserving (opencode.json also holds `instructions`/`plugin`); this
+/// is opencode's only configuration path — it has no `mcp add` CLI verb.
+pub fn write_opencode_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(OPENCODE_JSON),
+        "mcp",
+        name,
+        opencode_local_value(local),
+    )
+}
+
+/// Write a remote MCP server into `<target>/opencode.json` under `mcp.<name>`.
+pub fn write_opencode_mcp_remote(target: &Path, name: &str, remote: &McpRemote) -> PluginOutcome {
+    upsert_mcp_server(
+        &target.join(OPENCODE_JSON),
+        "mcp",
+        name,
+        opencode_remote_value(remote),
+    )
+}
+
+/// Shared merge: insert `server` at `<root_key>.<name>` in `path`,
+/// preserving any other top-level keys and any sibling servers. Creates the
+/// file (and parent dirs) when absent.
+fn upsert_mcp_server(path: &Path, root_key: &str, name: &str, server: Value) -> PluginOutcome {
+    let mut doc: Value = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => json!({}),
         Err(e) => {
             return PluginOutcome::Failed {
@@ -409,17 +573,17 @@ fn upsert_mcp_server(target: &Path, name: &str, server: Value) -> PluginOutcome 
     }
     let obj = doc.as_object_mut().expect("checked is_object");
     let servers = obj
-        .entry("mcpServers")
+        .entry(root_key)
         .or_insert_with(|| Value::Object(serde_json::Map::new()));
     let Some(servers) = servers.as_object_mut() else {
         return PluginOutcome::Failed {
             exit_code: None,
-            stderr: format!("{}: `mcpServers` must be an object", path.display()),
+            stderr: format!("{}: `{root_key}` must be an object", path.display()),
         };
     };
     servers.insert(name.to_string(), server);
 
-    if let Err(e) = write_pretty_json(&path, &doc) {
+    if let Err(e) = write_pretty_json(path, &doc) {
         return PluginOutcome::Failed {
             exit_code: None,
             stderr: e.to_string(),
@@ -430,18 +594,77 @@ fn upsert_mcp_server(target: &Path, name: &str, server: Value) -> PluginOutcome 
 
 /// Remove an MCP server from `<target>/.mcp.json`. No-op if absent.
 pub fn remove_claude_mcp(target: &Path, name: &str) -> Result<()> {
-    let path = target.join(CLAUDE_MCP_JSON);
-    let raw = match std::fs::read_to_string(&path) {
+    remove_mcp_server(&target.join(CLAUDE_MCP_JSON), "mcpServers", name)
+}
+
+/// Remove an MCP server from `<target>/.vscode/mcp.json`. No-op if absent.
+pub fn remove_vscode_mcp(target: &Path, name: &str) -> Result<()> {
+    remove_mcp_server(&target.join(VSCODE_MCP_JSON), "servers", name)
+}
+
+/// Remove an MCP server from `<target>/opencode.json` `mcp` map. No-op if
+/// absent.
+pub fn remove_opencode_mcp(target: &Path, name: &str) -> Result<()> {
+    remove_mcp_server(&target.join(OPENCODE_JSON), "mcp", name)
+}
+
+/// Remove an MCP server from `~/.copilot/mcp-config.json`. No-op if absent or
+/// if HOME is unset.
+pub fn remove_copilot_mcp(name: &str) -> Result<()> {
+    match copilot_mcp_config_path() {
+        Some(path) => remove_mcp_server(&path, "mcpServers", name),
+        None => Ok(()),
+    }
+}
+
+/// Shared removal: drop `<root_key>.<name>` from `path`. No-op if the file is
+/// absent. Preserves all other keys and servers.
+fn remove_mcp_server(path: &Path, root_key: &str, name: &str) -> Result<()> {
+    let raw = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
         Ok(r) => r,
     };
     let mut doc: Value =
         serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
-    if let Some(servers) = doc.get_mut("mcpServers").and_then(Value::as_object_mut) {
+    if let Some(servers) = doc.get_mut(root_key).and_then(Value::as_object_mut) {
         servers.remove(name);
     }
-    write_pretty_json(&path, &doc)
+    write_pretty_json(path, &doc)
+}
+
+// ---------------------------------------------------------------------------
+// MCP doctor reconciliation for config-write targets (issue #237)
+// ---------------------------------------------------------------------------
+
+/// Doctor query: does `<root_key>.<name>` exist in the JSON config at `path`?
+/// `None` means the file is absent or unreadable — the state is undetermined,
+/// so `doctor` must NOT treat it as drift (avoids false positives). `Some(false)`
+/// means the file exists but the server is gone (genuine drift).
+fn mcp_config_state(path: &Path, root_key: &str, name: &str) -> Option<bool> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    let doc: Value = serde_json::from_str(&raw).ok()?;
+    Some(
+        doc.get(root_key)
+            .and_then(Value::as_object)
+            .is_some_and(|m| m.contains_key(name)),
+    )
+}
+
+/// Doctor state for a VS Code MCP entry (`.vscode/mcp.json` `servers.<name>`).
+pub fn vscode_mcp_state(target: &Path, name: &str) -> Option<bool> {
+    mcp_config_state(&target.join(VSCODE_MCP_JSON), "servers", name)
+}
+
+/// Doctor state for an opencode MCP entry (`opencode.json` `mcp.<name>`).
+pub fn opencode_mcp_state(target: &Path, name: &str) -> Option<bool> {
+    mcp_config_state(&target.join(OPENCODE_JSON), "mcp", name)
+}
+
+/// Doctor state for a Copilot MCP entry (`~/.copilot/mcp-config.json`
+/// `mcpServers.<name>`). `None` when HOME is unset or the file is absent.
+pub fn copilot_mcp_state(name: &str) -> Option<bool> {
+    copilot_mcp_config_path().and_then(|p| mcp_config_state(&p, "mcpServers", name))
 }
 
 fn write_pretty_json(path: &Path, value: &Value) -> Result<()> {
@@ -924,5 +1147,140 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         remove_claude_mcp(tmp.path(), "drawio").unwrap();
         assert!(!tmp.path().join(".mcp.json").exists());
+    }
+
+    #[test]
+    fn write_vscode_mcp_uses_servers_root_and_stdio_type() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let mut env = BTreeMap::new();
+        env.insert("TOK".to_string(), "${TOK}".to_string());
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec!["-y".into(), "srv".into()],
+            env,
+        };
+
+        assert!(write_vscode_mcp_local(tmp.path(), "drawio", &local).is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join(".vscode/mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        // Root key MUST be `servers`, not `mcpServers` (AC for issue #237).
+        assert!(doc.get("mcpServers").is_none());
+        assert_eq!(doc["servers"]["drawio"]["type"], "stdio");
+        assert_eq!(doc["servers"]["drawio"]["command"], "npx");
+        assert_eq!(doc["servers"]["drawio"]["env"]["TOK"], "${TOK}");
+    }
+
+    #[test]
+    fn write_vscode_mcp_remote_types_by_transport() {
+        use crate::model::bundle::McpRemote;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let remote = McpRemote {
+            transport_type: "sse".into(),
+            url: "https://example.com/mcp".into(),
+            headers: BTreeMap::new(),
+        };
+        assert!(write_vscode_mcp_remote(tmp.path(), "ex", &remote).is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join(".vscode/mcp.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["servers"]["ex"]["type"], "sse");
+        assert_eq!(doc["servers"]["ex"]["url"], "https://example.com/mcp");
+    }
+
+    #[test]
+    fn write_opencode_mcp_uses_array_command_and_environment() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let mut env = BTreeMap::new();
+        env.insert("TOK".to_string(), "${TOK}".to_string());
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec!["-y".into(), "srv".into()],
+            env,
+        };
+
+        assert!(write_opencode_mcp_local(tmp.path(), "drawio", &local).is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["mcp"]["drawio"]["type"], "local");
+        // command is a single array combining command + args.
+        assert_eq!(
+            doc["mcp"]["drawio"]["command"],
+            serde_json::json!(["npx", "-y", "srv"])
+        );
+        // env is named `environment`; values pass through verbatim.
+        assert_eq!(doc["mcp"]["drawio"]["environment"]["TOK"], "${TOK}");
+        assert!(doc["mcp"]["drawio"].get("env").is_none());
+    }
+
+    #[test]
+    fn write_opencode_mcp_preserves_existing_keys() {
+        use crate::model::bundle::McpRemote;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        // opencode.json commonly already carries instructions / plugin keys.
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"instructions":[".agents/rules/**/RULE.md"],"plugin":["p@git"]}"#,
+        )
+        .unwrap();
+
+        let remote = McpRemote {
+            transport_type: "http".into(),
+            url: "https://example.com/mcp".into(),
+            headers: BTreeMap::new(),
+        };
+        assert!(write_opencode_mcp_remote(tmp.path(), "ex", &remote).is_success());
+
+        let raw = std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(doc["instructions"][0], ".agents/rules/**/RULE.md");
+        assert_eq!(doc["plugin"][0], "p@git");
+        assert_eq!(doc["mcp"]["ex"]["type"], "remote");
+        assert_eq!(doc["mcp"]["ex"]["url"], "https://example.com/mcp");
+    }
+
+    #[test]
+    fn remove_vscode_and_opencode_mcp_drop_only_the_named_server() {
+        use crate::model::bundle::McpLocal;
+        use std::collections::BTreeMap;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let local = McpLocal {
+            command: "npx".into(),
+            args: vec![],
+            env: BTreeMap::new(),
+        };
+        write_vscode_mcp_local(tmp.path(), "a", &local);
+        write_vscode_mcp_local(tmp.path(), "b", &local);
+        write_opencode_mcp_local(tmp.path(), "a", &local);
+        write_opencode_mcp_local(tmp.path(), "b", &local);
+
+        remove_vscode_mcp(tmp.path(), "a").unwrap();
+        remove_opencode_mcp(tmp.path(), "a").unwrap();
+
+        let vscode: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(".vscode/mcp.json")).unwrap(),
+        )
+        .unwrap();
+        assert!(vscode["servers"]["a"].is_null());
+        assert_eq!(vscode["servers"]["b"]["command"], "npx");
+
+        let opencode: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert!(opencode["mcp"]["a"].is_null());
+        assert_eq!(opencode["mcp"]["b"]["type"], "local");
     }
 }

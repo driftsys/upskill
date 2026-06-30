@@ -1360,6 +1360,50 @@ fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&s
     EXIT_SUCCESS
 }
 
+/// Unconfigure one MCP entry from its target during `remove-mcp`. CLI-first
+/// for targets with a native remove verb (claude, copilot); falls back to
+/// deleting the entry from the target's config file when the CLI is absent.
+/// VS Code and opencode are config-only. CLI failures warn (never abort);
+/// config-file errors propagate to the caller.
+fn unconfigure_mcp(
+    client: &str,
+    name: &str,
+    scope: upskill::plugin::PluginScope,
+    target: &std::path::Path,
+) -> anyhow::Result<()> {
+    use upskill::plugin::PluginOutcome;
+
+    // CLI-first for targets with a remove verb; `None` = config-only target.
+    let cli_outcome = match client {
+        "claude" => Some(upskill::mcp::uninstall_claude(name, scope)),
+        "copilot" => Some(upskill::mcp::uninstall_copilot(name)),
+        _ => None,
+    };
+
+    match cli_outcome {
+        // CLI absent, or a config-only target → remove from the config file.
+        Some(PluginOutcome::CliNotFound) | None => match client {
+            "claude" => upskill::ancillary::remove_claude_mcp(target, name)?,
+            "copilot" => upskill::ancillary::remove_copilot_mcp(name)?,
+            "vscode" => upskill::ancillary::remove_vscode_mcp(target, name)?,
+            "opencode" => upskill::ancillary::remove_opencode_mcp(target, name)?,
+            _ => {}
+        },
+        Some(PluginOutcome::Failed { stderr, exit_code }) => {
+            eprintln!(
+                "{} failed to remove MCP '{}' from {} (exit {:?}): {}",
+                style::warn("warning:"),
+                name,
+                client,
+                exit_code,
+                stderr.trim()
+            );
+        }
+        Some(_) => {}
+    }
+    Ok(())
+}
+
 fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
@@ -1392,26 +1436,9 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
     }
 
     for mcp in &matching_mcps {
-        if mcp.client == "claude" {
-            let outcome = upskill::mcp::uninstall_claude(&mcp.name, mcp_scope);
-            match outcome {
-                upskill::plugin::PluginOutcome::CliNotFound => {
-                    if let Err(err) = upskill::ancillary::remove_claude_mcp(&target, &mcp.name) {
-                        print_error_chain(&err);
-                        return EXIT_ERROR;
-                    }
-                }
-                upskill::plugin::PluginOutcome::Failed { stderr, exit_code } => {
-                    eprintln!(
-                        "{} failed to remove MCP '{}' from claude (exit {:?}): {}",
-                        style::warn("warning:"),
-                        mcp.name,
-                        exit_code,
-                        stderr.trim()
-                    );
-                }
-                _ => {}
-            }
+        if let Err(err) = unconfigure_mcp(&mcp.client, &mcp.name, mcp_scope, &target) {
+            print_error_chain(&err);
+            return EXIT_ERROR;
         }
     }
 
