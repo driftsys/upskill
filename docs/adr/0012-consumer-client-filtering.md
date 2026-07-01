@@ -108,6 +108,17 @@ A per-invocation flag replaces the config selection for that run only;
 selection means editing the config file. Config lives in `config.rs`, **not**
 the lockfile — the lockfile is install _state_, not user _preference_.
 
+**`update` preserves the recorded selection.** A bare `update` (no flag, no
+config → the default `all`) would otherwise re-resolve to all clients and
+silently un-narrow a `--claude` install — re-emitting `.github/**` /
+`.agents/**` and overwriting the lockfile `clients` record. Instead, when no
+explicit selection is supplied, `update` reconstructs each source's selection
+from the union of its entries' recorded `clients`, so a narrowed install stays
+narrow. An explicit flag/config selection still overrides. (Recorded `clients`
+are generation clients, so the reconstruction maps a `--vscode`-only install
+onto Copilot on the MCP axis — MCP config is additive and never auto-removed,
+so this widens rather than loses.)
+
 ### `doctor` respects what was actually written; `remove` already does
 
 `doctor` reports "missing output" by checking each item's output path for

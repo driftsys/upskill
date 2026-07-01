@@ -8,6 +8,7 @@
 
 mod common;
 
+use predicates::prelude::*;
 use std::fs;
 use std::path::Path;
 
@@ -287,4 +288,111 @@ fn mcp_fanout_respects_selection() {
         "--claude must configure only the claude MCP target; got {mcps:?}"
     );
     assert_eq!(mcps[0]["client"], "claude");
+}
+
+/// Finding 1 regression: a bare `update` (no flags, no config) must NOT
+/// re-expand a flag-narrowed install, nor overwrite the recorded `clients`.
+#[test]
+fn update_preserves_narrowed_selection() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    stage_skill_registry(&registry, "code-review");
+    let project = stage_project(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap(), "--claude"])
+        .assert()
+        .success();
+    assert!(skill_claude(&project, "code-review").exists());
+    assert!(!skill_copilot(&project, "code-review").exists());
+
+    // Bare update — must stay claude-only.
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    assert!(skill_claude(&project, "code-review").exists());
+    assert!(
+        !skill_copilot(&project, "code-review").exists(),
+        "bare update must not re-expand a --claude install to Copilot"
+    );
+    assert!(!skill_opencode(&project, "code-review").exists());
+
+    // The lockfile record must still be claude-only.
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(project.join(".upskill-lock.json")).unwrap())
+            .unwrap();
+    let item = &lock["items"][0];
+    assert_eq!(
+        item["clients"],
+        serde_json::json!(["claude"]),
+        "update must preserve the recorded clients selection; got {}",
+        item["clients"]
+    );
+}
+
+/// Finding 2 regression: a `--global` install must ignore the current
+/// directory's project `clients:` config (it belongs to an unrelated project).
+#[test]
+fn global_install_ignores_project_config() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    stage_skill_registry(&registry, "code-review");
+    // cwd is a project whose config narrows to claude...
+    let project = stage_project(tmp.path());
+    fs::create_dir_all(project.join(".upskill")).unwrap();
+    fs::write(project.join(".upskill/config.yaml"), "clients: [claude]\n").unwrap();
+
+    // ...but --global targets $HOME and must not read that project config.
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap(), "--global"])
+        .assert()
+        .success();
+
+    assert!(home.join(".claude/skills/code-review/SKILL.md").exists());
+    assert!(
+        home.join(".github/skills/code-review/SKILL.md").exists(),
+        "global install must emit for all clients, ignoring the project's clients: config"
+    );
+    assert!(home.join(".agents/skills/code-review/SKILL.md").exists());
+}
+
+/// Finding 3 regression: an item whose `audience:` shares no client with a
+/// restrictive selection is warn-skipped (stderr warning, exit 0), not
+/// silently dropped.
+#[test]
+fn empty_audience_selection_warns_and_skips() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let dir = registry.join("claude-rule");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: claude-rule\n\
+         description: A Claude-only skill for testing audience-selection warn-skip.\n\
+         audience:\n  - claude\n---\n\n# claude-rule\n\nBody.\n",
+    )
+    .unwrap();
+    let project = stage_project(tmp.path());
+
+    // Select opencode only — disjoint from the item's claude-only audience.
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap(), "--opencode"])
+        .assert()
+        .success()
+        .stderr(predicates::str::contains("warning:").and(predicates::str::contains("skipped")));
+
+    assert!(!skill_claude(&project, "claude-rule").exists());
+    assert!(!skill_opencode(&project, "claude-rule").exists());
 }

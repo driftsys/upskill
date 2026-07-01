@@ -161,6 +161,9 @@ pub(super) fn install_with_name_resolution_from_local(
         let bundle_report = install_bundle_file(bp, target, selection)?;
         report.items.extend(bundle_report.items);
         report.bundles.extend(bundle_report.bundles);
+        report
+            .selection_skipped
+            .extend(bundle_report.selection_skipped);
     }
 
     if !item_names.is_empty() {
@@ -172,6 +175,9 @@ pub(super) fn install_with_name_resolution_from_local(
         let item_report =
             install_from_local_path_selective(local_source, target, Some(&filter), selection)?;
         report.items.extend(item_report.items);
+        report
+            .selection_skipped
+            .extend(item_report.selection_skipped);
     }
 
     Ok(report)
@@ -966,6 +972,13 @@ pub(super) fn install_mcps_from_bundles(
         for (name, entry) in &bundle.mcps {
             for mcp_target in McpTarget::ALL {
                 if !selection.targets_mcp(mcp_target) {
+                    // Deselected targets are skipped, not cleaned up:
+                    // re-running `add` under a narrower selection leaves any
+                    // previously-written MCP config in place. This is
+                    // deliberate and asymmetric with generation cleanup — MCP
+                    // removal is explicit-only via `remove-mcp`, matching the
+                    // never-auto-delete stance for client-native config
+                    // (ADR-0010, ADR-0012).
                     continue;
                 }
                 let outcome = configure_mcp_for_target(mcp_target, name, entry, scope, target);
@@ -1171,6 +1184,15 @@ fn install_items_of_kind(
         if let Some(items) = filter
             && !items.contains(kind, &name)
         {
+            continue;
+        }
+
+        // Warn-skip: a restrictive consumer selection (ADR-0012) that shares
+        // no client with this item's author `audience:` yields zero renders.
+        // Record the item so `main.rs` can warn; a plain audience filter under
+        // the default (all-clients) selection is not a skip and stays silent.
+        if renders.is_empty() && !selection.is_all() {
+            report.selection_skipped.push(name.clone());
             continue;
         }
 

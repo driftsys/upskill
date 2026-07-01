@@ -367,6 +367,7 @@ pub fn install_with_lockfile(
             )?;
             r.items.extend(part.items);
             r.bundles.extend(part.bundles);
+            r.selection_skipped.extend(part.selection_skipped);
         }
         r
     } else if items.is_empty() {

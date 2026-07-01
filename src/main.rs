@@ -198,10 +198,26 @@ fn client_flags(claude: bool, copilot: bool, vscode: bool, opencode: bool) -> Ve
 
 /// Resolve the effective client selection from per-invocation flags and the
 /// merged (global + project) config. Precedence: flags > config > all.
-fn resolve_selection(flag_clients: &[SelectedClient]) -> ClientSelection {
-    let config = config::load_config(home_dir().as_deref(), Some(std::path::Path::new(".")))
-        .unwrap_or_default();
+///
+/// `project_root` is the directory whose `.upskill/config.yaml` is read as the
+/// project layer — `None` for a global-scoped operation, so a `--global`
+/// install is not steered by the unrelated project the shell happens to be in.
+fn resolve_selection(
+    flag_clients: &[SelectedClient],
+    project_root: Option<&std::path::Path>,
+) -> ClientSelection {
+    let config = config::load_config(home_dir().as_deref(), project_root).unwrap_or_default();
     config::resolve_client_selection(flag_clients, &config)
+}
+
+/// The project-config root for a scope: the current directory unless the
+/// operation resolved to global scope.
+fn project_config_root(is_global: bool) -> Option<&'static std::path::Path> {
+    if is_global {
+        None
+    } else {
+        Some(std::path::Path::new("."))
+    }
 }
 
 fn run_add(args: AddArgs) -> i32 {
@@ -233,14 +249,15 @@ fn run_add(args: AddArgs) -> i32 {
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
+    let is_global = global || (!project && !is_inside_git_repo());
+
     let options = upskill::pipeline::AddOptions {
         force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
-        selection: resolve_selection(&flag_clients),
+        selection: resolve_selection(&flag_clients, project_config_root(is_global)),
     };
 
-    let is_global = global || (!project && !is_inside_git_repo());
     let scope_label = if is_global { "global" } else { "project" };
     if !style::is_quiet() {
         eprintln!("scope: {} ({})", scope_label, target.display());
@@ -250,6 +267,7 @@ fn run_add(args: AddArgs) -> i32 {
     match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
             EXIT_SUCCESS
@@ -422,6 +440,20 @@ fn print_install_report(report: &InstallReport, source: &str) {
             style::dim(kind_label),
             style::name(&name),
             clients.join(", ")
+        );
+    }
+}
+
+/// Warn about items skipped because the consumer's client selection
+/// (ADR-0012) shares no client with the item's author `audience:`. Printed to
+/// stderr so `-q/--quiet` (which suppresses informational stdout only) does
+/// not hide it.
+fn print_selection_skipped(report: &InstallReport) {
+    for name in &report.selection_skipped {
+        eprintln!(
+            "{} skipped {} — its audience shares no client with the selected client(s)",
+            style::warn("warning:"),
+            style::name(name)
         );
     }
 }
@@ -676,7 +708,8 @@ fn run_update(
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
-    let selection = resolve_selection(flag_clients);
+    let is_global = global || (!project && !is_inside_git_repo());
+    let selection = resolve_selection(flag_clients, project_config_root(is_global));
 
     if dry_run {
         // Explicit --dry-run: compute and report without applying.

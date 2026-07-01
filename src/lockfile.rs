@@ -481,6 +481,7 @@ mod tests {
             bundles: Vec::new(),
             plugin_results: Vec::new(),
             mcp_results: Vec::new(),
+            selection_skipped: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,

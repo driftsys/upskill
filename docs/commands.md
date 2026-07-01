@@ -130,9 +130,10 @@ command.
 
 `update` honours the same [client-selection](#upskill-add-source-items)
 flags and `clients:` config as `add` (`--claude`, `--copilot`, `--vscode`,
-`--opencode`). With no flag and no config it regenerates for all clients, so
-persist a narrower selection in `clients:` config if you want `update` to keep
-it.
+`--opencode`). With no flag and no config, `update` **preserves each source's
+recorded selection** — a bare `update` of a `--claude`-only install stays
+Claude-only rather than re-expanding to all clients. Pass a flag (or set
+`clients:`) to change the selection on update.
 
 ### `upskill remove [name...] [--source <label>]`
 
