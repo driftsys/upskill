@@ -303,24 +303,41 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         }
     }
 
-    // -- MCP server reconciliation (ADR-0010) --
+    // -- MCP server reconciliation (ADR-0010, issue #237) --
     // Walk the lockfile's MCP entries and check whether each is still
-    // registered in the client. Only `claude` client is supported for
-    // query; others are skipped (no list command available).
+    // configured for its target. Claude is queried via `claude mcp list`; the
+    // config-write targets (copilot, vscode, opencode) are reconciled against
+    // their config file. When that file is absent the state is undetermined,
+    // so the entry is skipped rather than reported as drift (no false
+    // positives for targets configured out-of-band).
     for mcp in &lock.mcps {
-        if mcp.client != "claude" {
-            continue;
-        }
         use crate::pipeline::report::{McpDoctorEntry, McpDoctorStatus};
-        use crate::plugin::PluginCheckResult;
 
-        let status = match crate::mcp::check_claude_installed(&mcp.name) {
-            PluginCheckResult::Installed => McpDoctorStatus::Ok,
-            PluginCheckResult::NotInstalled => McpDoctorStatus::NotRegistered,
-            PluginCheckResult::CliNotFound => McpDoctorStatus::CliNotFound,
-            PluginCheckResult::QueryFailed { stderr, .. } => {
-                McpDoctorStatus::QueryFailed { stderr }
+        let status = match mcp.client.as_str() {
+            "claude" => {
+                use crate::plugin::PluginCheckResult;
+                match crate::mcp::check_claude_installed(&mcp.name) {
+                    PluginCheckResult::Installed => McpDoctorStatus::Ok,
+                    PluginCheckResult::NotInstalled => McpDoctorStatus::NotRegistered,
+                    PluginCheckResult::CliNotFound => McpDoctorStatus::CliNotFound,
+                    PluginCheckResult::QueryFailed { stderr, .. } => {
+                        McpDoctorStatus::QueryFailed { stderr }
+                    }
+                }
             }
+            "copilot" | "vscode" | "opencode" => {
+                let state = match mcp.client.as_str() {
+                    "copilot" => crate::ancillary::copilot_mcp_state(&mcp.name),
+                    "vscode" => crate::ancillary::vscode_mcp_state(target, &mcp.name),
+                    _ => crate::ancillary::opencode_mcp_state(target, &mcp.name),
+                };
+                match state {
+                    Some(true) => McpDoctorStatus::Ok,
+                    Some(false) => McpDoctorStatus::NotRegistered,
+                    None => continue,
+                }
+            }
+            _ => continue,
         };
         report.mcp_entries.push(McpDoctorEntry {
             name: mcp.name.clone(),
