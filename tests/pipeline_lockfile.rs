@@ -146,6 +146,7 @@ fn install_preserves_unrelated_existing_entries() {
         source_name: None,
         required_by: vec![],
         group: None,
+        clients: vec![],
     });
     seed.save(&target).unwrap();
 

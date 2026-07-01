@@ -25,6 +25,7 @@ pub mod pipeline;
 pub mod plugin;
 pub mod scaffold;
 pub mod search;
+pub mod select;
 pub mod source;
 pub mod style;
 

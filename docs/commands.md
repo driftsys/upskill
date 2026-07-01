@@ -60,6 +60,31 @@ Default scope is `--project` (writes into `.agents/...` of the current
 repo), falling back to `--global` (`$HOME/.agents/...`) if you're not
 inside a git repo. Pass either flag explicitly to override.
 
+**Client selection.** By default `add` emits output for **every** client.
+Restrict it to the clients you actually use with one or more of `--claude`,
+`--copilot`, `--vscode`, `--opencode` (an allowlist — naming any restricts to
+exactly those):
+
+```bash
+upskill add owner/repo --claude               # only .claude/**
+upskill add owner/repo --copilot --vscode     # only .github/** (+ VS Code MCP)
+```
+
+`--vscode` writes the shared `.github/**` rules/skills/agents (VS Code reads
+Copilot's tree) plus VS Code's own MCP config; `--copilot --vscode` writes
+`.github/**` once and forks only the MCP config. To persist a selection across
+runs, set `clients:` in config (`.upskill/config.yaml` for the project,
+`~/.config/upskill/config.yaml` globally):
+
+```yaml
+clients: [claude, opencode]
+```
+
+Precedence is **flag > project config > global config > all clients**. A
+per-invocation flag scopes that run only and never rewrites config. An item
+whose author `audience:` excludes every selected client is warn-skipped.
+See [ADR-0012](./adr/0012-consumer-client-filtering.md).
+
 Supporting files in an item directory — anything besides the entrypoint and
 per-client override files, e.g. `scripts/`, `references/`, `assets/` — are
 copied into each client's output alongside the rendered item. For rules and
@@ -102,6 +127,13 @@ upskill update --dry-run             # preview changes without applying
 `sync`. It also re-runs the generation pipeline against the current
 upskill version, so client-format updates land without a separate
 command.
+
+`update` honours the same [client-selection](#upskill-add-source-items)
+flags and `clients:` config as `add` (`--claude`, `--copilot`, `--vscode`,
+`--opencode`). With no flag and no config, `update` **preserves each source's
+recorded selection** — a bare `update` of a `--claude`-only install stays
+Claude-only rather than re-expanding to all clients. Pass a flag (or set
+`clients:`) to change the selection on update.
 
 ### `upskill remove [name...] [--source <label>]`
 

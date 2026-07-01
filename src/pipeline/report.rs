@@ -47,6 +47,10 @@ pub struct InstallReport {
     /// Results of MCP server configuration (ADR-0010). Empty when no
     /// bundles with `mcps:` were resolved.
     pub mcp_results: Vec<McpResult>,
+    /// Names of items warn-skipped because a restrictive consumer selection
+    /// (ADR-0012) left no client in common with the item's author `audience:`.
+    /// Surfaced to the user by `main.rs`; never an error.
+    pub selection_skipped: Vec<String>,
 }
 
 /// Result of a single plugin install attempt, for reporting to the user.

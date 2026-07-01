@@ -16,6 +16,7 @@ use upskill::pipeline::{
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
 use upskill::search;
+use upskill::select::{ClientSelection, SelectedClient};
 use upskill::source::{InstallSource, home_dir, parse_install_source};
 use upskill::style;
 
@@ -53,7 +54,20 @@ fn main() {
             force,
             alias,
             exclude,
-        } => run_add(&source, &items, global, project, force, &alias, &exclude),
+            claude,
+            copilot,
+            vscode,
+            opencode,
+        } => run_add(AddArgs {
+            source: &source,
+            items: &items,
+            global,
+            project,
+            force,
+            aliases: &alias,
+            excludes: &exclude,
+            flag_clients: client_flags(claude, copilot, vscode, opencode),
+        }),
         Commands::Remove {
             names,
             source,
@@ -67,7 +81,18 @@ fn main() {
             global,
             project,
             yes,
-        } => run_update(&names, dry_run, yes, global, project),
+            claude,
+            copilot,
+            vscode,
+            opencode,
+        } => run_update(
+            &names,
+            dry_run,
+            yes,
+            global,
+            project,
+            &client_flags(claude, copilot, vscode, opencode),
+        ),
         Commands::List {
             global,
             project,
@@ -138,15 +163,74 @@ fn map_clap_error(err: &clap::Error) -> i32 {
     }
 }
 
-fn run_add(
-    source: &str,
-    items: &[String],
+/// Positional-argument-heavy `add` inputs grouped into one struct to keep the
+/// resolver call under clippy's `too_many_arguments` bar (AGENTS.md).
+struct AddArgs<'a> {
+    source: &'a str,
+    items: &'a [String],
     global: bool,
     project: bool,
     force: bool,
-    aliases: &[String],
-    excludes: &[String],
-) -> i32 {
+    aliases: &'a [String],
+    excludes: &'a [String],
+    /// Clients named by `--claude`/`--copilot`/`--vscode`/`--opencode`.
+    /// Empty means no client flag was passed (fall back to config / all).
+    flag_clients: Vec<SelectedClient>,
+}
+
+/// Collect the per-client boolean flags into an ordered selection list.
+fn client_flags(claude: bool, copilot: bool, vscode: bool, opencode: bool) -> Vec<SelectedClient> {
+    let mut out = Vec::new();
+    if claude {
+        out.push(SelectedClient::Claude);
+    }
+    if copilot {
+        out.push(SelectedClient::Copilot);
+    }
+    if vscode {
+        out.push(SelectedClient::VsCode);
+    }
+    if opencode {
+        out.push(SelectedClient::OpenCode);
+    }
+    out
+}
+
+/// Resolve the effective client selection from per-invocation flags and the
+/// merged (global + project) config. Precedence: flags > config > all.
+///
+/// `project_root` is the directory whose `.upskill/config.yaml` is read as the
+/// project layer — `None` for a global-scoped operation, so a `--global`
+/// install is not steered by the unrelated project the shell happens to be in.
+fn resolve_selection(
+    flag_clients: &[SelectedClient],
+    project_root: Option<&std::path::Path>,
+) -> ClientSelection {
+    let config = config::load_config(home_dir().as_deref(), project_root).unwrap_or_default();
+    config::resolve_client_selection(flag_clients, &config)
+}
+
+/// The project-config root for a scope: the current directory unless the
+/// operation resolved to global scope.
+fn project_config_root(is_global: bool) -> Option<&'static std::path::Path> {
+    if is_global {
+        None
+    } else {
+        Some(std::path::Path::new("."))
+    }
+}
+
+fn run_add(args: AddArgs) -> i32 {
+    let AddArgs {
+        source,
+        items,
+        global,
+        project,
+        force,
+        aliases,
+        excludes,
+        flag_clients,
+    } = args;
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -165,13 +249,15 @@ fn run_add(
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
+    let is_global = global || (!project && !is_inside_git_repo());
+
     let options = upskill::pipeline::AddOptions {
         force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
+        selection: resolve_selection(&flag_clients, project_config_root(is_global)),
     };
 
-    let is_global = global || (!project && !is_inside_git_repo());
     let scope_label = if is_global { "global" } else { "project" };
     if !style::is_quiet() {
         eprintln!("scope: {} ({})", scope_label, target.display());
@@ -181,6 +267,7 @@ fn run_add(
     match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
             EXIT_SUCCESS
@@ -353,6 +440,20 @@ fn print_install_report(report: &InstallReport, source: &str) {
             style::dim(kind_label),
             style::name(&name),
             clients.join(", ")
+        );
+    }
+}
+
+/// Warn about items skipped because the consumer's client selection
+/// (ADR-0012) shares no client with the item's author `audience:`. Printed to
+/// stderr so `-q/--quiet` (which suppresses informational stdout only) does
+/// not hide it.
+fn print_selection_skipped(report: &InstallReport) {
+    for name in &report.selection_skipped {
+        eprintln!(
+            "{} skipped {} — its audience shares no client with the selected client(s)",
+            style::warn("warning:"),
+            style::name(name)
         );
     }
 }
@@ -590,7 +691,14 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project: bool) -> i32 {
+fn run_update(
+    names: &[String],
+    dry_run: bool,
+    yes: bool,
+    global: bool,
+    project: bool,
+    flag_clients: &[SelectedClient],
+) -> i32 {
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -600,10 +708,12 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
+    let is_global = global || (!project && !is_inside_git_repo());
+    let selection = resolve_selection(flag_clients, project_config_root(is_global));
 
     if dry_run {
         // Explicit --dry-run: compute and report without applying.
-        match update(&target, names, UpdateMode::DryRun, plugin_scope) {
+        match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, true);
                 EXIT_SUCCESS
@@ -617,7 +727,7 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
         }
     } else if yes || !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
         // No confirmation needed — apply directly (single fetch).
-        match update(&target, names, UpdateMode::Apply, plugin_scope) {
+        match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
                 EXIT_SUCCESS
@@ -631,7 +741,7 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
         }
     } else {
         // Interactive: dry-run first to show plan, then apply if confirmed.
-        let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope) {
+        let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
             Ok(r) => r,
             Err(err) => {
                 print_error_chain(&err);
@@ -662,7 +772,7 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
             return EXIT_SUCCESS;
         }
 
-        match update(&target, names, UpdateMode::Apply, plugin_scope) {
+        match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
                 EXIT_SUCCESS

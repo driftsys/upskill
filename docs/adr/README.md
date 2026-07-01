@@ -14,3 +14,4 @@ Numbered sequentially. Status one of: Proposed | Accepted | Superseded.
 - [0009 — Coupling tiers and directed dependencies](0009-coupling-tiers-and-dependencies.md)
 - [0010 — MCP server configuration — bundle `mcps:`, CLI-first config-write](0010-mcp-config-write.md)
 - [0011 — Generic git-URL source — replace GitLab-specific source with host-agnostic https](0011-generic-git-url-source.md)
+- [0012 — Consumer-side client filtering — per-invocation flags and config](0012-consumer-client-filtering.md)

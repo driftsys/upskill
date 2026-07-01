@@ -42,8 +42,9 @@ pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
 use install::{
-    ResolvedBundle, install_mcps_from_bundles, install_plugins_from_bundles,
-    install_with_name_resolution_from_local, resolve_bundle_request, resolve_requires_closure,
+    ResolvedBundle, install_from_local_path_selective, install_mcps_from_bundles,
+    install_plugins_from_bundles, install_with_name_resolution_from_local, resolve_bundle_request,
+    resolve_requires_closure,
 };
 pub use lifecycle::{doctor, list, remove, update};
 pub use report::*;
@@ -102,6 +103,9 @@ pub struct AddOptions {
     pub aliases: Vec<(String, String)>,
     /// Item names to skip during install.
     pub excludes: Vec<String>,
+    /// Consumer-side client selection (ADR-0012). Default targets all
+    /// clients, preserving the emit-for-everyone behaviour.
+    pub selection: crate::select::ClientSelection,
 }
 
 const ALL_CLIENTS: [Client; 3] = Client::ALL;
@@ -355,15 +359,21 @@ pub fn install_with_lockfile(
         // dropping them early would delete the fetched roots.
         let mut r = InstallReport::default();
         for si in closure.by_source.values() {
-            let part = install_from_local_path(&si.root, target, Some(&si.items))?;
+            let part = install_from_local_path_selective(
+                &si.root,
+                target,
+                Some(&si.items),
+                &options.selection,
+            )?;
             r.items.extend(part.items);
             r.bundles.extend(part.bundles);
+            r.selection_skipped.extend(part.selection_skipped);
         }
         r
     } else if items.is_empty() {
-        install_from_local_path(&local_source, target, None)?
+        install_from_local_path_selective(&local_source, target, None, &options.selection)?
     } else {
-        install_with_name_resolution_from_local(&local_source, target, items)?
+        install_with_name_resolution_from_local(&local_source, target, items, &options.selection)?
     };
 
     // A bundle-shaped install resolves its items per source above (no bundles
@@ -380,8 +390,9 @@ pub fn install_with_lockfile(
     let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
     report.plugin_results = plugin_results;
 
-    // -- MCP server configuration (ADR-0010) --
-    let mcp_results = install_mcps_from_bundles(&report.bundles, plugin_scope, target);
+    // -- MCP server configuration (ADR-0010), restricted to the selection --
+    let mcp_results =
+        install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
     report.mcp_results = mcp_results;
 
     // -- Apply excludes --

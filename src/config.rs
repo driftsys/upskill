@@ -9,11 +9,16 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
+use crate::select::{ClientSelection, SelectedClient};
+
 /// Top-level configuration.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub registries: Vec<RegistryEntry>,
+    /// Persistent consumer-side client selection (ADR-0012). Empty means the
+    /// built-in default: emit for all clients.
+    pub clients: Vec<SelectedClient>,
 }
 
 /// A named registry source.
@@ -32,7 +37,9 @@ pub fn parse_config(yaml: &str) -> Result<Config> {
 }
 
 /// Merge two config layers. Project entries override global entries by name;
-/// global entries not shadowed are preserved.
+/// global entries not shadowed are preserved. `clients:` does not merge
+/// element-wise: a project `clients:` replaces the global one wholesale, so a
+/// narrower project selection wins over a broader global one (ADR-0012).
 pub fn merge_configs(global: Config, project: Config) -> Config {
     let mut registries = project.registries;
     let project_names: Vec<String> = registries.iter().map(|r| r.name.clone()).collect();
@@ -41,7 +48,30 @@ pub fn merge_configs(global: Config, project: Config) -> Config {
             registries.push(entry);
         }
     }
-    Config { registries }
+    let clients = if project.clients.is_empty() {
+        global.clients
+    } else {
+        project.clients
+    };
+    Config {
+        registries,
+        clients,
+    }
+}
+
+/// Resolve the effective client selection. Precedence, highest first:
+/// per-invocation flags, then the merged config `clients:`, then the built-in
+/// default (all clients). An empty `flag_clients` means no client flag was
+/// passed on the command line.
+pub fn resolve_client_selection(
+    flag_clients: &[SelectedClient],
+    config: &Config,
+) -> ClientSelection {
+    if !flag_clients.is_empty() {
+        ClientSelection::restrict(flag_clients)
+    } else {
+        ClientSelection::restrict(&config.clients)
+    }
 }
 
 /// Load configuration from standard paths, merging global and project layers.
@@ -115,12 +145,14 @@ mod tests {
                     source: "global-b".into(),
                 },
             ],
+            ..Default::default()
         };
         let project = Config {
             registries: vec![RegistryEntry {
                 name: "a".into(),
                 source: "project-a".into(),
             }],
+            ..Default::default()
         };
         let merged = merge_configs(global, project);
         assert_eq!(merged.registries.len(), 2);
@@ -128,6 +160,77 @@ mod tests {
         assert_eq!(merged.registries[0].source, "project-a");
         assert_eq!(merged.registries[1].name, "b");
         assert_eq!(merged.registries[1].source, "global-b");
+    }
+
+    #[test]
+    fn parse_config_with_clients() {
+        let cfg = parse_config("clients: [claude, opencode]\n").unwrap();
+        assert_eq!(
+            cfg.clients,
+            vec![SelectedClient::Claude, SelectedClient::OpenCode]
+        );
+    }
+
+    #[test]
+    fn parse_config_rejects_unknown_client() {
+        assert!(parse_config("clients: [cursor]\n").is_err());
+    }
+
+    #[test]
+    fn project_clients_replace_global_clients() {
+        let global = Config {
+            clients: vec![
+                SelectedClient::Claude,
+                SelectedClient::Copilot,
+                SelectedClient::OpenCode,
+            ],
+            ..Default::default()
+        };
+        let project = Config {
+            clients: vec![SelectedClient::Claude],
+            ..Default::default()
+        };
+        let merged = merge_configs(global, project);
+        assert_eq!(merged.clients, vec![SelectedClient::Claude]);
+    }
+
+    #[test]
+    fn empty_project_clients_fall_back_to_global() {
+        let global = Config {
+            clients: vec![SelectedClient::OpenCode],
+            ..Default::default()
+        };
+        let merged = merge_configs(global, Config::default());
+        assert_eq!(merged.clients, vec![SelectedClient::OpenCode]);
+    }
+
+    #[test]
+    fn flags_override_config_selection() {
+        let config = Config {
+            clients: vec![SelectedClient::Claude],
+            ..Default::default()
+        };
+        // A flag selection wins over config.
+        let sel = resolve_client_selection(&[SelectedClient::OpenCode], &config);
+        assert!(sel.targets_generation(crate::generate::Client::OpenCode));
+        assert!(!sel.targets_generation(crate::generate::Client::Claude));
+    }
+
+    #[test]
+    fn no_flags_use_config_selection() {
+        let config = Config {
+            clients: vec![SelectedClient::Claude],
+            ..Default::default()
+        };
+        let sel = resolve_client_selection(&[], &config);
+        assert!(sel.targets_generation(crate::generate::Client::Claude));
+        assert!(!sel.targets_generation(crate::generate::Client::Copilot));
+    }
+
+    #[test]
+    fn no_flags_no_config_targets_all() {
+        let sel = resolve_client_selection(&[], &Config::default());
+        assert!(sel.is_all());
     }
 
     #[test]

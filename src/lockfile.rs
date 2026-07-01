@@ -68,6 +68,13 @@ pub struct LockedItem {
     /// same `(source, group)` so a co-located unit travels as one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    /// Effective generation clients this item's output was written for
+    /// (`claude` | `copilot` | `opencode`) — the intersection of author
+    /// `audience:` and the consumer selection (ADR-0012). Empty means "all
+    /// clients", so lockfiles written before this field and unrestricted
+    /// installs both read as "check every client" in `doctor`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub clients: Vec<String>,
 }
 
 /// Bundle entry recorded when an install resolves a `.bundle.yaml` file
@@ -303,26 +310,42 @@ pub fn items_from_report(
     required_by: &std::collections::BTreeMap<(ItemKind, String), Vec<String>>,
     mut hash_for: impl FnMut(ItemKind, &str) -> Option<String>,
 ) -> Vec<LockedItem> {
-    use std::collections::BTreeSet;
-    let mut seen: BTreeSet<(ItemKind, String)> = BTreeSet::new();
-    let mut out = Vec::new();
+    use std::collections::BTreeMap;
+    // Collapse the per-client `report.items` into one `LockedItem` per
+    // (kind, name), accumulating the set of generation clients written (in
+    // first-seen / ALL_CLIENTS order) so `doctor` checks only what was
+    // actually emitted under the consumer selection.
+    let mut order: Vec<(ItemKind, String)> = Vec::new();
+    let mut meta: BTreeMap<(ItemKind, String), (Option<String>, Vec<String>)> = BTreeMap::new();
     for entry in &report.items {
-        if !seen.insert((entry.kind, entry.name.clone())) {
-            continue;
+        let key = (entry.kind, entry.name.clone());
+        let slot = meta.entry(key.clone()).or_insert_with(|| {
+            order.push(key.clone());
+            (entry.group.clone(), Vec::new())
+        });
+        let client_name = entry.client.name().to_string();
+        if !slot.1.contains(&client_name) {
+            slot.1.push(client_name);
         }
-        let (source, git_ref) = source_for(entry.kind, &entry.name);
+    }
+    let mut out = Vec::new();
+    for key in order {
+        let (group, clients) = meta.remove(&key).expect("meta populated for every key");
+        let (kind, name) = key;
+        let (source, git_ref) = source_for(kind, &name);
         out.push(LockedItem {
-            kind: entry.kind,
-            name: entry.name.clone(),
+            kind,
+            name: name.clone(),
             source,
             git_ref,
-            hash: hash_for(entry.kind, &entry.name),
+            hash: hash_for(kind, &name),
             source_name: None,
             required_by: required_by
-                .get(&(entry.kind, entry.name.clone()))
+                .get(&(kind, name.clone()))
                 .cloned()
                 .unwrap_or_default(),
-            group: entry.group.clone(),
+            group,
+            clients,
         });
     }
     out
@@ -345,6 +368,7 @@ mod tests {
             source_name: None,
             required_by: vec![],
             group: None,
+            clients: vec![],
         }
     }
 
@@ -457,6 +481,7 @@ mod tests {
             bundles: Vec::new(),
             plugin_results: Vec::new(),
             mcp_results: Vec::new(),
+            selection_skipped: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -641,6 +666,7 @@ mod tests {
             source_name: Some("brainstorming".to_string()),
             required_by: vec![],
             group: None,
+            clients: vec![],
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(json.contains("\"source_name\":\"brainstorming\""), "{json}");
@@ -657,6 +683,7 @@ mod tests {
             source_name: None,
             required_by: vec![],
             group: None,
+            clients: vec![],
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(!json.contains("source_name"), "{json}");

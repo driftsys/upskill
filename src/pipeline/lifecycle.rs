@@ -162,6 +162,13 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 
         let mut missing = Vec::new();
         for client in ALL_CLIENTS {
+            // Only check clients this item was actually written for. An empty
+            // `clients` list means "all" — pre-ADR-0012 lockfiles and
+            // unrestricted installs both check every client. A narrowed
+            // install's unselected outputs are a deliberate choice, not drift.
+            if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
+                continue;
+            }
             let rel = output_path(kind, client, &entry.name);
             if !target.join(&rel).exists() {
                 missing.push(rel);
@@ -363,12 +370,40 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 /// same source (the pipeline always reinstalls a source as a unit).
 /// Names that match no lockfile entry are an error.
 ///
+/// Rebuild the client selection a bare `update` should reuse for one source:
+/// the union of its entries' recorded generation clients. An entry with an
+/// empty `clients` list was installed for all clients, so it widens the result
+/// back to all — the safe direction (never drops an entry's output trees).
+/// Returns [`ClientSelection::all`] when nothing narrows it (ADR-0012).
+fn reselect_from_entries(
+    entries: &[crate::lockfile::LockedItem],
+) -> crate::select::ClientSelection {
+    use crate::select::{ClientSelection, SelectedClient};
+    let mut set: std::collections::BTreeSet<SelectedClient> = std::collections::BTreeSet::new();
+    for entry in entries {
+        if entry.clients.is_empty() {
+            return ClientSelection::all();
+        }
+        for name in &entry.clients {
+            if let Ok(sc) = name.parse::<SelectedClient>() {
+                set.insert(sc);
+            }
+        }
+    }
+    if set.is_empty() {
+        ClientSelection::all()
+    } else {
+        ClientSelection::restrict(&set.into_iter().collect::<Vec<_>>())
+    }
+}
+
 /// `update` always fetches per ADR-0004 — there is no `--offline`.
 pub fn update(
     target: &Path,
     names: &[String],
     mode: UpdateMode,
     plugin_scope: crate::plugin::PluginScope,
+    selection: &crate::select::ClientSelection,
 ) -> Result<UpdateReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
 
@@ -421,10 +456,25 @@ pub fn update(
                             .map(|sn| (sn.clone(), e.name.clone()))
                     })
                     .collect();
+                // Preserve each source's recorded client selection so a bare
+                // `update` (no flags, no config → `is_all`) does not silently
+                // re-expand a flag-narrowed install and overwrite its lockfile
+                // `clients` record (ADR-0012). An explicit flag/config
+                // selection still overrides. Note: recorded `clients` are
+                // generation clients, so a `--vscode`-only install reconstructs
+                // to Copilot on the MCP axis; MCP config is additive and never
+                // auto-removed (see the MCP fan-out note in install.rs), so
+                // this widens rather than loses.
+                let effective_selection = if selection.is_all() {
+                    reselect_from_entries(&source_entries)
+                } else {
+                    selection.clone()
+                };
                 let options = AddOptions {
                     force: true,
                     aliases,
                     excludes: vec![],
+                    selection: effective_selection,
                 };
                 // Scope the reinstall to exactly the items this source already
                 // contributes to the lockfile (by their in-source name), rather
