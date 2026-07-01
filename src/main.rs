@@ -464,6 +464,11 @@ fn print_mcp_results(report: &InstallReport) {
 
     use upskill::plugin::PluginOutcome;
 
+    // A single MCP server fans out to one result per target, so its
+    // `requires-env` warnings would otherwise repeat once per target. Warn
+    // once per (server, var) — the env var is set in the shell, not per client.
+    let mut warned_env: std::collections::HashSet<(&str, &str)> = std::collections::HashSet::new();
+
     for mr in &report.mcp_results {
         match &mr.outcome {
             PluginOutcome::Success => {
@@ -495,7 +500,7 @@ fn print_mcp_results(report: &InstallReport) {
             PluginOutcome::ManualInstructions => {}
         }
         for var in &mr.requires_env {
-            if std::env::var_os(var).is_none() {
+            if std::env::var_os(var).is_none() && warned_env.insert((&mr.name, var)) {
                 eprintln!(
                     "{} MCP '{}' needs env var '{}'; it is not set in your environment.",
                     style::warn("warning:"),
@@ -982,20 +987,20 @@ fn print_doctor_mcps(report: &DoctorReport) {
             McpDoctorStatus::Ok => {}
             McpDoctorStatus::NotRegistered => {
                 println!(
-                    "  MCP '{}' is in the lockfile but not registered in claude; re-run `upskill update`.",
-                    entry.name
+                    "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update`.",
+                    entry.name, entry.client
                 );
             }
             McpDoctorStatus::CliNotFound => {
                 println!(
-                    "  claude CLI not found; cannot verify MCP '{}'.",
-                    entry.name
+                    "  {} CLI not found; cannot verify MCP '{}'.",
+                    entry.client, entry.name
                 );
             }
             McpDoctorStatus::QueryFailed { stderr } => {
                 println!(
-                    "  could not query claude MCP list for '{}': {}",
-                    entry.name, stderr
+                    "  could not query {} MCP list for '{}': {}",
+                    entry.client, entry.name, stderr
                 );
             }
         }

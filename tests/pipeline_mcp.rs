@@ -329,6 +329,19 @@ fn doctor_reconciles_config_targets_and_flags_drift_without_false_positives() {
         "not-registered"
     );
     assert_eq!(doctor_mcp_status(&report, "opencode", "remote-srv"), "ok");
+
+    // The human-readable message must name the drifted target (vscode), not a
+    // hardcoded "claude".
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["doctor"])
+        .assert();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("not registered in vscode"),
+        "doctor must attribute the drift to vscode, not claude: {stdout}"
+    );
 }
 
 #[test]
