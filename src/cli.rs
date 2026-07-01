@@ -80,6 +80,20 @@ pub enum Commands {
         /// Skip specific items during install (repeatable).
         #[arg(long = "exclude", value_name = "NAME")]
         exclude: Vec<String>,
+        /// Restrict output to Claude Code. Combine client flags to target
+        /// several; no client flag emits for all clients (the default).
+        #[arg(long = "claude", help_heading = "Client selection")]
+        claude: bool,
+        /// Restrict output to GitHub Copilot CLI.
+        #[arg(long = "copilot", help_heading = "Client selection")]
+        copilot: bool,
+        /// Restrict output to VS Code (shares Copilot's rules/skills/agents;
+        /// configures VS Code's own MCP servers).
+        #[arg(long = "vscode", help_heading = "Client selection")]
+        vscode: bool,
+        /// Restrict output to opencode.
+        #[arg(long = "opencode", help_heading = "Client selection")]
+        opencode: bool,
     },
     /// Remove installed content.
     ///
@@ -148,6 +162,19 @@ pub enum Commands {
         /// not a terminal (CI / pipes) or when `--dry-run` is used.
         #[arg(short = 'y', long = "yes")]
         yes: bool,
+        /// Restrict regenerated output to Claude Code. Combine client flags to
+        /// target several; no client flag regenerates for all clients.
+        #[arg(long = "claude", help_heading = "Client selection")]
+        claude: bool,
+        /// Restrict regenerated output to GitHub Copilot CLI.
+        #[arg(long = "copilot", help_heading = "Client selection")]
+        copilot: bool,
+        /// Restrict regenerated output to VS Code.
+        #[arg(long = "vscode", help_heading = "Client selection")]
+        vscode: bool,
+        /// Restrict regenerated output to opencode.
+        #[arg(long = "opencode", help_heading = "Client selection")]
+        opencode: bool,
     },
     /// List installed content recorded in `.upskill-lock.json`.
     ///

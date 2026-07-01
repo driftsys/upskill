@@ -90,6 +90,7 @@ mod tests {
                     source_name: None,
                     required_by: vec![],
                     group: None,
+                    clients: vec![],
                 })
                 .collect(),
             bundles: vec![],

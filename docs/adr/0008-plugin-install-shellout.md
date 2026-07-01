@@ -220,9 +220,10 @@ would force users to install two artifacts to get a coherent setup.
 
 **(d) Hard-fail when the target client's CLI is missing.** Rejected:
 too hostile to mixed-client teams. A user who runs `upskill add
-some-bundle --claude --vscode` and is missing `code` would lose the
-entire install. Warn-skip lets the parts that can install proceed,
-and `doctor` reports the gap so it's not silently lost.
+some-bundle --claude --vscode` (the client-selection flags specified in
+[ADR-0012](./0012-consumer-client-filtering.md)) and is missing `code`
+would lose the entire install. Warn-skip lets the parts that can install
+proceed, and `doctor` reports the gap so it's not silently lost.
 
 **(e) Per-plugin `install_url` (single URL, applies to all
 clients).** Rejected: install instructions are usually

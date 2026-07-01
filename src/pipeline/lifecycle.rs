@@ -162,6 +162,13 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 
         let mut missing = Vec::new();
         for client in ALL_CLIENTS {
+            // Only check clients this item was actually written for. An empty
+            // `clients` list means "all" — pre-ADR-0012 lockfiles and
+            // unrestricted installs both check every client. A narrowed
+            // install's unselected outputs are a deliberate choice, not drift.
+            if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
+                continue;
+            }
             let rel = output_path(kind, client, &entry.name);
             if !target.join(&rel).exists() {
                 missing.push(rel);
@@ -365,6 +372,7 @@ pub fn update(
     names: &[String],
     mode: UpdateMode,
     plugin_scope: crate::plugin::PluginScope,
+    selection: &crate::select::ClientSelection,
 ) -> Result<UpdateReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
 
@@ -421,6 +429,7 @@ pub fn update(
                     force: true,
                     aliases,
                     excludes: vec![],
+                    selection: selection.clone(),
                 };
                 // Scope the reinstall to exactly the items this source already
                 // contributes to the lockfile (by their in-source name), rather

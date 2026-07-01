@@ -26,6 +26,7 @@ use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, Plug
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
 use crate::parse::frontmatter;
+use crate::select::ClientSelection;
 use crate::source::{InstallSource, parse_install_source};
 
 /// Install every item under `source` into `target`, generating per-client
@@ -42,17 +43,33 @@ pub fn install_from_local_path(
     target: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<InstallReport> {
+    install_from_local_path_selective(source, target, filter, &ClientSelection::all())
+}
+
+/// [`install_from_local_path`] with an explicit consumer-side client
+/// selection (ADR-0012). The public entry defaults to all clients; the
+/// lockfile `add` path threads the resolved selection here.
+pub(super) fn install_from_local_path_selective(
+    source: &Path,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+    selection: &ClientSelection,
+) -> Result<InstallReport> {
     if is_bundle_file(source) {
-        return install_bundle_file(source, target);
+        return install_bundle_file(source, target, selection);
     }
     let mut report = InstallReport::default();
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        install_items_of_kind(kind, source, target, &mut report, filter)?;
+        install_items_of_kind(kind, source, target, &mut report, filter, selection)?;
     }
     Ok(report)
 }
 
-pub(super) fn install_bundle_file(bundle_path: &Path, target: &Path) -> Result<InstallReport> {
+pub(super) fn install_bundle_file(
+    bundle_path: &Path,
+    target: &Path,
+    selection: &ClientSelection,
+) -> Result<InstallReport> {
     let registry_root = find_registry_root(bundle_path).with_context(|| {
         format!(
             "find SSOT registry root containing skills/, rules/, agents/, or bundles/ \
@@ -88,6 +105,7 @@ pub(super) fn install_bundle_file(bundle_path: &Path, target: &Path) -> Result<I
             target,
             &mut report,
             Some(&resolved.items),
+            selection,
         )?;
     }
     Ok(report)
@@ -100,6 +118,7 @@ pub(super) fn install_with_name_resolution_from_local(
     local_source: &Path,
     target: &Path,
     names: &[String],
+    selection: &ClientSelection,
 ) -> Result<InstallReport> {
     let mut bundle_paths: Vec<std::path::PathBuf> = Vec::new();
     let mut item_names: Vec<String> = Vec::new();
@@ -139,7 +158,7 @@ pub(super) fn install_with_name_resolution_from_local(
     let mut report = InstallReport::default();
 
     for bp in &bundle_paths {
-        let bundle_report = install_bundle_file(bp, target)?;
+        let bundle_report = install_bundle_file(bp, target, selection)?;
         report.items.extend(bundle_report.items);
         report.bundles.extend(bundle_report.bundles);
     }
@@ -150,7 +169,8 @@ pub(super) fn install_with_name_resolution_from_local(
             skills: item_names.clone(),
             agents: item_names.clone(),
         };
-        let item_report = install_from_local_path(local_source, target, Some(&filter))?;
+        let item_report =
+            install_from_local_path_selective(local_source, target, Some(&filter), selection)?;
         report.items.extend(item_report.items);
     }
 
@@ -937,6 +957,7 @@ pub(super) fn install_mcps_from_bundles(
     bundles: &[crate::model::Bundle],
     scope: crate::plugin::PluginScope,
     target: &Path,
+    selection: &ClientSelection,
 ) -> Vec<McpResult> {
     use crate::mcp::McpTarget;
 
@@ -944,6 +965,9 @@ pub(super) fn install_mcps_from_bundles(
     for bundle in bundles {
         for (name, entry) in &bundle.mcps {
             for mcp_target in McpTarget::ALL {
+                if !selection.targets_mcp(mcp_target) {
+                    continue;
+                }
                 let outcome = configure_mcp_for_target(mcp_target, name, entry, scope, target);
                 results.push(McpResult {
                     name: name.clone(),
@@ -1053,6 +1077,7 @@ fn install_items_of_kind(
     target: &Path,
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
+    selection: &ClientSelection,
 ) -> Result<()> {
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
@@ -1080,7 +1105,7 @@ fn install_items_of_kind(
                 let ignore = skill.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
-                    if !targets(client, aud.as_deref()) {
+                    if !targets(client, aud.as_deref()) || !selection.targets_generation(client) {
                         continue;
                     }
                     let rendered = generate::render_skill(&skill, &name, body, client)
@@ -1102,7 +1127,7 @@ fn install_items_of_kind(
                 let ignore = rule.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
-                    if !targets(client, aud.as_deref()) {
+                    if !targets(client, aud.as_deref()) || !selection.targets_generation(client) {
                         continue;
                     }
                     let rendered = generate::render_rule(&rule, &name, body, client)
@@ -1124,7 +1149,7 @@ fn install_items_of_kind(
                 let ignore = agent.ignore.clone();
                 let mut out = Vec::new();
                 for client in ALL_CLIENTS {
-                    if !targets(client, aud.as_deref()) {
+                    if !targets(client, aud.as_deref()) || !selection.targets_generation(client) {
                         continue;
                     }
                     let rendered = generate::render_agent(&agent, &name, body, client)
@@ -1183,9 +1208,10 @@ fn install_items_of_kind(
             });
         }
 
-        // Clean up outputs for clients no longer targeted.
+        // Clean up outputs for clients no longer targeted — by author
+        // audience or by the consumer selection (ADR-0012).
         for client in ALL_CLIENTS {
-            if targets(client, audience.as_deref()) {
+            if targets(client, audience.as_deref()) && selection.targets_generation(client) {
                 continue;
             }
             let rel = output_path(kind, client, &name);
