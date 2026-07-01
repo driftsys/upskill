@@ -303,14 +303,15 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         }
     }
 
-    // -- MCP server reconciliation (ADR-0010, issue #237) --
+    // -- MCP server reconciliation (ADR-0010, issue #237, #241) --
     // Walk the lockfile's MCP entries and check whether each is still
     // configured for its target. Claude is queried via `claude mcp list`; the
     // config-write targets (copilot, vscode, opencode) are reconciled against
-    // their config file. When that file is absent the state is undetermined,
-    // so the entry is skipped rather than reported as drift (no false
-    // positives for targets configured out-of-band).
+    // their config file. A present-but-missing entry is drift; an absent or
+    // unreadable config file is surfaced as an informational "cannot verify"
+    // state rather than drift, so it never produces a false-positive exit 1.
     for mcp in &lock.mcps {
+        use crate::ancillary::McpConfigState;
         use crate::pipeline::report::{McpDoctorEntry, McpDoctorStatus};
 
         let status = match mcp.client.as_str() {
@@ -332,9 +333,12 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                     _ => crate::ancillary::opencode_mcp_state(target, &mcp.name),
                 };
                 match state {
-                    Some(true) => McpDoctorStatus::Ok,
-                    Some(false) => McpDoctorStatus::NotRegistered,
-                    None => continue,
+                    McpConfigState::Present => McpDoctorStatus::Ok,
+                    McpConfigState::Missing => McpDoctorStatus::NotRegistered,
+                    McpConfigState::FileAbsent => McpDoctorStatus::ConfigMissing,
+                    McpConfigState::Unreadable(detail) => {
+                        McpDoctorStatus::ConfigUnreadable { detail }
+                    }
                 }
             }
             _ => continue,

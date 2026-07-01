@@ -189,6 +189,11 @@ pub struct McpDoctorEntry {
 }
 
 /// The specific condition detected during doctor MCP reconciliation.
+///
+/// Only `NotRegistered` is drift that fails [`DoctorReport::is_clean`]. The
+/// other non-`Ok` variants are informational "cannot verify" states — the
+/// server may well be configured, upskill just cannot confirm it — so they are
+/// surfaced without flipping the exit code (issue #241).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum McpDoctorStatus {
@@ -200,6 +205,12 @@ pub enum McpDoctorStatus {
     CliNotFound,
     /// CLI returned non-zero when listing MCP servers.
     QueryFailed { stderr: String },
+    /// Config-write target: the config file does not exist, so state is
+    /// undetermined (the server may be configured via the client's own CLI).
+    ConfigMissing,
+    /// Config-write target: the config file exists but could not be read or
+    /// parsed as JSON.
+    ConfigUnreadable { detail: String },
 }
 
 /// A dependency-pulled item whose every requirer is no longer installed.
@@ -412,6 +423,29 @@ mod tests {
             bundle: "my-bundle".into(),
             status: McpDoctorStatus::QueryFailed {
                 stderr: "some error".into(),
+            },
+        });
+        assert!(report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_clean_with_config_missing_or_unreadable_mcp() {
+        // Config-write targets whose config file is absent or unreadable are
+        // informational "cannot verify" states — they must NOT flip is_clean
+        // (issue #241, no false-positive exit 1).
+        let mut report = DoctorReport::default();
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "vscode".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::ConfigMissing,
+        });
+        report.mcp_entries.push(McpDoctorEntry {
+            name: "my-mcp".into(),
+            client: "opencode".into(),
+            bundle: "my-bundle".into(),
+            status: McpDoctorStatus::ConfigUnreadable {
+                detail: "expected value at line 1".into(),
             },
         });
         assert!(report.is_clean());

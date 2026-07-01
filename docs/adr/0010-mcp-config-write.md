@@ -210,8 +210,11 @@ entries silently ignore the unknown array (serde `default`).
   config file. A server present in the lockfile but absent from a present
   config file (or from the Claude client) makes doctor report `NotRegistered`
   and exit non-clean (exit 1). Claude also reports `CliNotFound` and
-  `QueryFailed`; for a config-write target whose config file is **absent** the
-  state is undetermined and the entry is skipped — no false positives. Doctor
+  `QueryFailed`; a config-write target whose config file is **absent** reports
+  `ConfigMissing` and one that is **unreadable/corrupt** reports
+  `ConfigUnreadable` (issue #241) — both are informational "cannot verify"
+  states that are surfaced but do **not** fail `is_clean` (no false-positive
+  exit 1, since the server may be configured via the client's own CLI). Doctor
   does **not** check `requires-env` variables and never auto-removes entries.
 - **`upskill add` (install time)**: warns for each variable listed in
   `requires-env` that is not set in the current environment, immediately

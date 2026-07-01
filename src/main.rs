@@ -1003,6 +1003,18 @@ fn print_doctor_mcps(report: &DoctorReport) {
                     entry.client, entry.name, stderr
                 );
             }
+            McpDoctorStatus::ConfigMissing => {
+                println!(
+                    "  MCP '{}' for {}: config file not found; cannot verify (it may be configured via the {} CLI).",
+                    entry.name, entry.client, entry.client
+                );
+            }
+            McpDoctorStatus::ConfigUnreadable { detail } => {
+                println!(
+                    "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update`.",
+                    entry.name, entry.client, detail
+                );
+            }
         }
     }
 }
