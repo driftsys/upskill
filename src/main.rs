@@ -966,42 +966,73 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
 fn print_doctor_mcps(report: &DoctorReport) {
     use upskill::pipeline::McpDoctorStatus;
 
-    let non_ok: Vec<&upskill::pipeline::McpDoctorEntry> = report
+    // Split genuine drift (fails is_clean → exit 1) from "cannot verify"
+    // states (informational; the server may be configured via the client's
+    // own CLI). Only the former is framed as "needs attention" so a normal
+    // doctor run over a CLI-installed target does not look alarming.
+    let drifted: Vec<&upskill::pipeline::McpDoctorEntry> = report
         .mcp_entries
         .iter()
-        .filter(|e| !matches!(e.status, McpDoctorStatus::Ok))
+        .filter(|e| matches!(e.status, McpDoctorStatus::NotRegistered))
+        .collect();
+    let unverifiable: Vec<&upskill::pipeline::McpDoctorEntry> = report
+        .mcp_entries
+        .iter()
+        .filter(|e| {
+            !matches!(
+                e.status,
+                McpDoctorStatus::Ok | McpDoctorStatus::NotRegistered
+            )
+        })
         .collect();
 
-    if non_ok.is_empty() {
-        return;
+    if !drifted.is_empty() {
+        println!(
+            "{} {} MCP server(s) need attention",
+            style::warn("doctor:"),
+            drifted.len()
+        );
+        for entry in &drifted {
+            println!(
+                "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update`.",
+                entry.name, entry.client
+            );
+        }
     }
 
-    println!(
-        "{} {} MCP server(s) need attention",
-        style::warn("doctor:"),
-        non_ok.len()
-    );
-
-    for entry in &non_ok {
-        match &entry.status {
-            McpDoctorStatus::Ok => {}
-            McpDoctorStatus::NotRegistered => {
-                println!(
-                    "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update`.",
-                    entry.name, entry.client
-                );
-            }
-            McpDoctorStatus::CliNotFound => {
-                println!(
-                    "  {} CLI not found; cannot verify MCP '{}'.",
-                    entry.client, entry.name
-                );
-            }
-            McpDoctorStatus::QueryFailed { stderr } => {
-                println!(
-                    "  could not query {} MCP list for '{}': {}",
-                    entry.client, entry.name, stderr
-                );
+    if !unverifiable.is_empty() {
+        println!(
+            "{} {} MCP server(s) could not be verified",
+            style::dim("doctor:"),
+            unverifiable.len()
+        );
+        for entry in &unverifiable {
+            match &entry.status {
+                McpDoctorStatus::CliNotFound => {
+                    println!(
+                        "  {} CLI not found; cannot verify MCP '{}'.",
+                        entry.client, entry.name
+                    );
+                }
+                McpDoctorStatus::QueryFailed { stderr } => {
+                    println!(
+                        "  could not query {} MCP list for '{}': {}",
+                        entry.client, entry.name, stderr
+                    );
+                }
+                McpDoctorStatus::ConfigMissing => {
+                    println!(
+                        "  MCP '{}' for {}: config file not found; cannot verify (it may be configured via the {} CLI).",
+                        entry.name, entry.client, entry.client
+                    );
+                }
+                McpDoctorStatus::ConfigUnreadable { detail } => {
+                    println!(
+                        "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update`.",
+                        entry.name, entry.client, detail
+                    );
+                }
+                McpDoctorStatus::Ok | McpDoctorStatus::NotRegistered => {}
             }
         }
     }

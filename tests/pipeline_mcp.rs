@@ -345,6 +345,107 @@ fn doctor_reconciles_config_targets_and_flags_drift_without_false_positives() {
 }
 
 #[test]
+fn doctor_surfaces_missing_config_file_without_flagging_drift() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+
+    let registry = tmp.path().join("registry");
+    let project = tmp.path().join("project");
+    stage_registry(&registry, BUNDLE_REMOTE_YAML);
+    fs::create_dir_all(project.join(".git")).unwrap();
+
+    let bundle_path = registry.join("bundles/b.bundle.yaml");
+    let path_val = empty_bin_path(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["add", bundle_path.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Delete VS Code's config file entirely (the server may have been
+    // configured via the `code` CLI instead) — this is *undetermined*, not
+    // drift.
+    fs::remove_file(project.join(".vscode/mcp.json")).unwrap();
+    let report = run_doctor_json(&home, &project, &path_val);
+    assert_eq!(
+        doctor_mcp_status(&report, "vscode", "remote-srv"),
+        "config-missing"
+    );
+    // Not reported as drift, so it must not be `not-registered`.
+    assert_ne!(
+        doctor_mcp_status(&report, "vscode", "remote-srv"),
+        "not-registered"
+    );
+    // The other targets are unaffected.
+    assert_eq!(doctor_mcp_status(&report, "opencode", "remote-srv"), "ok");
+
+    // Human-readable output explains the undetermined state for vscode.
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["doctor"])
+        .assert();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("config file not found") && stdout.contains("vscode"),
+        "doctor must surface the missing vscode config as undetermined: {stdout}"
+    );
+}
+
+#[test]
+fn doctor_surfaces_unreadable_config_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+
+    let registry = tmp.path().join("registry");
+    let project = tmp.path().join("project");
+    stage_registry(&registry, BUNDLE_REMOTE_YAML);
+    fs::create_dir_all(project.join(".git")).unwrap();
+
+    let bundle_path = registry.join("bundles/b.bundle.yaml");
+    let path_val = empty_bin_path(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["add", bundle_path.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Corrupt opencode's config file so it no longer parses as JSON.
+    fs::write(project.join("opencode.json"), "{ not valid json").unwrap();
+    let report = run_doctor_json(&home, &project, &path_val);
+    let entry = report["mcp_entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["client"] == "opencode" && e["name"] == "remote-srv")
+        .unwrap_or_else(|| panic!("no opencode entry: {report}"));
+    assert!(
+        entry["status"]
+            .get("config-unreadable")
+            .and_then(|v| v.get("detail"))
+            .is_some(),
+        "opencode entry must report config-unreadable with a detail: {entry}"
+    );
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["doctor"])
+        .assert();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("config file could not be read") && stdout.contains("opencode"),
+        "doctor must surface the unreadable opencode config: {stdout}"
+    );
+}
+
+#[test]
 fn remove_mcp_clears_every_target_config_file() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");

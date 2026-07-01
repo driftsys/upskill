@@ -634,37 +634,67 @@ fn remove_mcp_server(path: &Path, root_key: &str, name: &str) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// MCP doctor reconciliation for config-write targets (issue #237)
+// MCP doctor reconciliation for config-write targets (issue #237, #241)
 // ---------------------------------------------------------------------------
 
-/// Doctor query: does `<root_key>.<name>` exist in the JSON config at `path`?
-/// `None` means the file is absent or unreadable — the state is undetermined,
-/// so `doctor` must NOT treat it as drift (avoids false positives). `Some(false)`
-/// means the file exists but the server is gone (genuine drift).
-fn mcp_config_state(path: &Path, root_key: &str, name: &str) -> Option<bool> {
-    let raw = std::fs::read_to_string(path).ok()?;
-    let doc: Value = serde_json::from_str(&raw).ok()?;
-    Some(
-        doc.get(root_key)
-            .and_then(Value::as_object)
-            .is_some_and(|m| m.contains_key(name)),
-    )
+/// Result of probing a config-write target's file for a named MCP server.
+/// Lets `doctor` distinguish "configured", "drifted", "file absent", and
+/// "file unreadable" instead of collapsing the last three into a silent skip
+/// (issue #241).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum McpConfigState {
+    /// The server is present in the target's config file.
+    Present,
+    /// The config file exists but the server entry is gone (genuine drift).
+    Missing,
+    /// The config file does not exist — state undetermined (the server may be
+    /// configured via the client's own CLI in a store upskill cannot read).
+    FileAbsent,
+    /// The config file exists but could not be read or parsed as JSON.
+    Unreadable(String),
+}
+
+/// Doctor query: is `<root_key>.<name>` present in the JSON config at `path`?
+/// Distinguishes absent from unreadable so `doctor` can surface a broken or
+/// missing config instead of silently skipping it.
+fn mcp_config_state(path: &Path, root_key: &str, name: &str) -> McpConfigState {
+    let raw = match std::fs::read_to_string(path) {
+        Ok(raw) => raw,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return McpConfigState::FileAbsent,
+        Err(e) => return McpConfigState::Unreadable(e.to_string()),
+    };
+    let doc: Value = match serde_json::from_str(&raw) {
+        Ok(doc) => doc,
+        Err(e) => return McpConfigState::Unreadable(e.to_string()),
+    };
+    if doc
+        .get(root_key)
+        .and_then(Value::as_object)
+        .is_some_and(|m| m.contains_key(name))
+    {
+        McpConfigState::Present
+    } else {
+        McpConfigState::Missing
+    }
 }
 
 /// Doctor state for a VS Code MCP entry (`.vscode/mcp.json` `servers.<name>`).
-pub fn vscode_mcp_state(target: &Path, name: &str) -> Option<bool> {
+pub fn vscode_mcp_state(target: &Path, name: &str) -> McpConfigState {
     mcp_config_state(&target.join(VSCODE_MCP_JSON), "servers", name)
 }
 
 /// Doctor state for an opencode MCP entry (`opencode.json` `mcp.<name>`).
-pub fn opencode_mcp_state(target: &Path, name: &str) -> Option<bool> {
+pub fn opencode_mcp_state(target: &Path, name: &str) -> McpConfigState {
     mcp_config_state(&target.join(OPENCODE_JSON), "mcp", name)
 }
 
 /// Doctor state for a Copilot MCP entry (`~/.copilot/mcp-config.json`
-/// `mcpServers.<name>`). `None` when HOME is unset or the file is absent.
-pub fn copilot_mcp_state(name: &str) -> Option<bool> {
-    copilot_mcp_config_path().and_then(|p| mcp_config_state(&p, "mcpServers", name))
+/// `mcpServers.<name>`). Treated as `FileAbsent` when HOME is unset.
+pub fn copilot_mcp_state(name: &str) -> McpConfigState {
+    match copilot_mcp_config_path() {
+        Some(path) => mcp_config_state(&path, "mcpServers", name),
+        None => McpConfigState::FileAbsent,
+    }
 }
 
 fn write_pretty_json(path: &Path, value: &Value) -> Result<()> {

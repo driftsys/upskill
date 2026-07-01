@@ -825,10 +825,11 @@ is queried via `claude mcp list`; the config-write targets (Copilot, VS Code, op
 against their config file. A server present in the lockfile but absent from a present config file
 (or from the Claude client) is reported as `NotRegistered` and causes doctor to exit non-clean
 (exit 1). Claude also reports `CliNotFound` when the `claude` CLI is absent and `QueryFailed` when
-the list query fails; for a config-write target whose config file is absent the state is
-undetermined and the entry is skipped rather than reported as drift (no false positives). Doctor
-does not check `requires-env` variables — the unset-env warning is emitted by `upskill add` at
-install time.
+the list query fails; a config-write target whose config file is absent reports `ConfigMissing`
+and one that is unreadable reports `ConfigUnreadable` — both are informational "cannot verify"
+states that are surfaced but do not fail cleanliness (no false-positive exit 1), since the server
+may be configured via the client's own CLI. Doctor does not check `requires-env` variables — the
+unset-env warning is emitted by `upskill add` at install time.
 
 Implementations:
 
