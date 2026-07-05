@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.8.1] (2026-07-05)
+
+### Documentation
+
+- **skills:** fix stale upskill-cli claims (no --bundle flag, full command list)
+  ([#235]) ([324aa77])
+
+### Features
+
+- **cli:** consumer-side client filtering via flags and config ([#243])
+  ([4810306]), closes [#238]
+- **mcp:** doctor surfaces missing/unreadable config for config-write targets
+  ([#241]) ([bec4fa6])
+- **mcp:** configure MCP servers for Copilot, VS Code, and opencode ([#237])
+  ([b0c1d1d])
+
+[0.8.1]: https://github.com/driftsys/upskill/compare/v0.8.0...v0.8.1
+[324aa77]: https://github.com/driftsys/upskill/commit/324aa77
+[#235]: https://github.com/driftsys/upskill/issues/235
+[4810306]: https://github.com/driftsys/upskill/commit/4810306
+[#243]: https://github.com/driftsys/upskill/issues/243
+[#238]: https://github.com/driftsys/upskill/issues/238
+[bec4fa6]: https://github.com/driftsys/upskill/commit/bec4fa6
+[#241]: https://github.com/driftsys/upskill/issues/241
+[b0c1d1d]: https://github.com/driftsys/upskill/commit/b0c1d1d
+[#237]: https://github.com/driftsys/upskill/issues/237
+
 ## [0.8.0] (2026-06-10)
 
 ### Refactoring
