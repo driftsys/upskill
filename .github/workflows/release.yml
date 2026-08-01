@@ -32,7 +32,7 @@ jobs:
             os: macos-latest
             cross: false
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.0
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -41,7 +41,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y musl-tools
       - name: Install cross
         if: matrix.cross
-        uses: taiki-e/install-action@v2.81.1
+        uses: taiki-e/install-action@v2.82.7
         with:
           tool: cross
       - name: Build (cargo)
@@ -75,7 +75,7 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@v3.0.1
         with:
           files: dist/*
           fail_on_unmatched_files: true
