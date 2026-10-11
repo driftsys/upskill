@@ -114,7 +114,7 @@ def check_publication_sources(root):
         if not source.is_file():
             continue  # Missing sources are diagnosed by the build.
         text = source.read_text()
-        for target in re.findall(r"\{\{#include\s+([^}\s]+)\s*\}\}", text):
+        for target in re.findall(r"\{\{#(?:include|rustdoc_include|playground)\s+([^}\s]+)[^}]*\}\}", text):
             pending.append(source.parent / target.split(":", 1)[0])
         if source.name == "SUMMARY.md":
             for link in markdown_links(text):

@@ -35,14 +35,16 @@ class DocumentationChecks(unittest.TestCase):
         self.assertEqual(check.check_book(self.root), [])
 
     def test_source_link_failure_and_fenced_example_exclusion(self):
-        (self.root / "README.md").write_text(
+        folder = self.root / "docs/specification"
+        folder.mkdir()
+        (folder / "contract.md").write_text(
             '# Test\n\n```md\n[Example](example.md)\n```\n'
             '[Broken](missing.md)\n[Reference][target]\n\n[target]: lost.md\n'
         )
         errors = check.check_markdown(self.root)
         self.assertEqual(len(errors), 2)
-        self.assertTrue(any('missing.md' in error for error in errors))
-        self.assertTrue(any('lost.md' in error for error in errors))
+        self.assertIn('docs/specification/contract.md: missing missing.md', errors)
+        self.assertIn('docs/specification/contract.md: missing lost.md', errors)
 
     def test_missing_chapter_fails_without_modifying_sources(self):
         chapter = self.root / "docs/book/intro.md"
@@ -62,7 +64,7 @@ class DocumentationChecks(unittest.TestCase):
         folder = self.root / "docs/technotes/research/schemas"
         folder.mkdir(parents=True)
         schema = folder / "example.schema.json"
-        raw = b'{}'
+        raw = b'{"a":1}'
         schema.write_bytes(raw)
         (folder / "manifest.json").write_text(json.dumps([{
             "file": schema.name,
@@ -70,7 +72,7 @@ class DocumentationChecks(unittest.TestCase):
             "sha256": hashlib.sha256(raw).hexdigest(),
         }]))
         self.assertEqual(check.check_snapshots(self.root), [])
-        schema.write_bytes(b'{ }')
+        schema.write_bytes(b'{"a":2}')
         self.assertTrue(any('changed' in error for error in check.check_snapshots(self.root)))
 
     def test_research_include_leak_fails(self):
@@ -78,9 +80,22 @@ class DocumentationChecks(unittest.TestCase):
         folder.mkdir()
         (folder / "private.md").write_text("# Research\n")
         # Follow indirect includes too, not only directives in book chapters.
-        (self.root / "docs/book/intermediate.md").write_text("{{#include ../technotes/private.md}}\n")
-        (self.root / "docs/book/intro.md").write_text("# Intro\n\n{{#include intermediate.md}}\n")
+        canonical = self.root / "docs/specification"
+        canonical.mkdir()
+        (canonical / "intermediate.md").write_text("{{#include ../technotes/private.md}}\n")
+        (self.root / "docs/book/intro.md").write_text("# Intro\n\n{{#include ../specification/intermediate.md}}\n")
         self.assertTrue(any('Unpublished source' in error for error in check.check_book(self.root)))
+
+    def test_research_rust_directives_fail(self):
+        folder = self.root / "docs/technotes"
+        folder.mkdir()
+        (folder / "private.rs").write_text("fn main() {}\n")
+        for directive in ("rustdoc_include", "playground"):
+            with self.subTest(directive=directive):
+                (self.root / "docs/book/intro.md").write_text(
+                    "# Intro\n\n{{#" + directive + " ../technotes/private.rs}}\n"
+                )
+                self.assertTrue(any('Unpublished source' in error for error in check.check_book(self.root)))
 
     def test_research_summary_leak_fails(self):
         folder = self.root / "docs/technotes"

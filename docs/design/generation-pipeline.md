@@ -8,15 +8,15 @@ The Rust crate provides both a library and CLI. `src/main.rs` and `src/cli.rs`
 provide the CLI surface and orchestration. Domain work belongs in library
 modules; presentation stays at the CLI boundary.
 
-| Responsibility                              | Modules                                                  |
-| ------------------------------------------- | -------------------------------------------------------- |
-| Content model and parsing                   | `src/model/`, `src/parse/`                               |
-| Source classification and retrieval         | `src/source.rs`, `src/fetch.rs`                          |
-| Bundle composition                          | `src/bundle.rs`                                          |
-| Per-client rendering                        | `src/generate/`                                          |
-| Installation and installed-state operations | `src/pipeline.rs`, `src/lockfile.rs`, `src/ancillary.rs` |
-| Native integrations                         | `src/plugin.rs`, `src/mcp.rs`                            |
-| Author commands                             | `src/lint.rs`, `src/fmt.rs`, `src/scaffold.rs`           |
+| Responsibility                              | Modules                                                |
+| ------------------------------------------- | ------------------------------------------------------ |
+| Content model and parsing                   | `src/model/`, `src/parse/`                             |
+| Source classification and retrieval         | `src/source.rs`, `src/fetch.rs`                        |
+| Bundle composition                          | `src/bundle.rs`                                        |
+| Per-client rendering                        | `src/generate/`                                        |
+| Installation and installed-state operations | `src/pipeline/`, `src/lockfile.rs`, `src/ancillary.rs` |
+| Native integrations                         | `src/plugin.rs`, `src/mcp.rs`                          |
+| Author commands                             | `src/lint.rs`, `src/fmt.rs`, `src/scaffold.rs`         |
 
 The central flow is source content to parsed items to per-client output.
 Bundles compose items and native integrations. Generated content is copied to

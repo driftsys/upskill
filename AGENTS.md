@@ -76,7 +76,7 @@ src/
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search
 │
-├── pipeline.rs          Local + git → per-client install pipeline,
+├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
 ├── bundle.rs            Bundle dependency resolution
