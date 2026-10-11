@@ -90,14 +90,14 @@ or editor support from a CLI using a similar path.
 
 For a selected item, validation produces a plan or diagnostics before effects:
 
-| Condition                                    | Result                                                      |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| Item audience excludes every selected family | Existing warn-skip behavior for the whole item              |
-| Required behavior cannot be represented      | Error naming source field, surface, and remedy              |
-| Restriction or approval meaning would change | Error; no automatic weakening or stronger substitute        |
-| Cosmetic metadata cannot be represented      | Warning identifying the omitted field                       |
-| Client CLI absent for file-only generation   | Files may be installed; native discovery remains unverified |
-| Required native operation unavailable        | Incomplete operation, never installed/successful            |
+| Condition                                                   | Result                                                      |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| Restrictive selection and audience leave no selected family | Existing warn-skip behavior for the whole item              |
+| Required behavior cannot be represented                     | Error naming source field, surface, and remedy              |
+| Restriction or approval meaning would change                | Error; no automatic weakening or stronger substitute        |
+| Cosmetic metadata cannot be represented                     | Warning identifying the omitted field                       |
+| Client CLI absent for file-only generation                  | Files may be installed; native discovery remains unverified |
+| Required native operation unavailable                       | Incomplete operation, never installed/successful            |
 
 An author can supply an explicit native alternative or exclude a target. There
 is no blanket “ignore restrictions” fallback. Native extension data is validated
