@@ -54,7 +54,7 @@
 
 **Files:** `src/target.rs`, its unit tests.
 
-**Interfaces:** `CapabilityCategory` (the seven requested categories); `CapabilityKey` (category plus native field/operation identifier); `Representation` (`Native`, `Adapted`, `NativeUnsupported`, `Deferred`); `Requirement` (`RequiredBehavior`, `OptionalMetadata`); a structured decision that carries surface, key, reason, and disposition. Validation accepts explicit capability declarations, each with its requirement; it has no implicit success default.
+**Interfaces:** `CapabilityCategory` (the seven requested categories); `CapabilityKey` (category plus native field/operation identifier); `Representation` (`Native`, `Adapted`, `NativeUnsupported`, `Deferred`); `Requirement` (`RequiredBehavior`, `OptionalMetadata`); a supported result or structured warning/error with surface, key, and reason. Validation accepts explicit capability declarations, each with its requirement; it has no implicit success default.
 
 - [ ] Write failing table tests: exact native support passes; adapted required behavior, missing declaration, native-unsupported, and deferred required behavior fail with target/key/reason; optional cosmetic data can warn; permissions/tool restrictions are required behavior.
 - [ ] Run focused tests and confirm failure before implementation.

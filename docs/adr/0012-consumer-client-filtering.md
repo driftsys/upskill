@@ -165,3 +165,18 @@ needs no change.
 - Docs that showed `--claude` / `--vscode` as aspirational
   ([ADR-0008](./0008-plugin-install-shellout.md),
   [recipes.md](../recipes.md)) are reconciled to describe the shipped flags.
+
+## Amendment: fixed default target set (2026-10-11)
+
+The earlier “all clients” default means the four consumer surfaces available
+when this decision was accepted: Claude CLI, Copilot CLI, Copilot VS Code Local,
+and OpenCode CLI. It is a fixed selection, not a rule that newly added adapters
+automatically join. Codex CLI will require explicit selection when its
+instruction lifecycle is implemented. An empty `clients:` list retains the
+fixed default; an explicit list remains an override.
+
+The warn-skip behavior described above applies when a restrictive consumer
+selection leaves an item with no selected generation client. The existing
+pipeline does not emit that warning for an empty audience under the implicit
+default selection. A later diagnostic change must state and test its own
+behavior separately.

@@ -108,6 +108,12 @@ impl CapabilityKey {
     pub const fn new(category: CapabilityCategory, name: &'static str) -> Self {
         Self { category, name }
     }
+
+    /// Only reviewed presentation fields may degrade to a warning. New
+    /// fields remain behavior-bearing until this contract explicitly adds them.
+    fn may_omit(self) -> bool {
+        self.category == CapabilityCategory::Subagents && self.name == "color"
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -199,6 +205,13 @@ impl TargetProfile {
                 reason: "capability is not declared",
             });
         };
+        if entry.requirement == Requirement::OptionalMetadata && !key.may_omit() {
+            return Err(CapabilityError {
+                surface: self.surface,
+                key,
+                reason: "capability is not classified as optional metadata",
+            });
+        }
         if entry.representation == Representation::Native {
             return Ok(CapabilityDecision::Supported);
         }
@@ -313,6 +326,30 @@ mod tests {
                 .to_string()
                 .contains("duplicate")
         );
+        let misclassified = CapabilityDeclaration {
+            surface: TargetSurface::CodexCli,
+            key,
+            representation: Representation::NativeUnsupported,
+            requirement: Requirement::OptionalMetadata,
+            reason: "missing tool restriction",
+        };
+        assert!(profile.validate_capability(key, &[misclassified]).is_err());
+        let unrelated = CapabilityDeclaration {
+            key: CapabilityKey::new(CapabilityCategory::Subagents, "tools.allow"),
+            ..duplicate
+        };
+        assert!(profile.validate_capability(key, &[unrelated]).is_err());
+        let wrong_category = CapabilityDeclaration {
+            key: CapabilityKey::new(CapabilityCategory::Permissions, "tools.restrict"),
+            ..duplicate
+        };
+        assert!(profile.validate_capability(key, &[wrong_category]).is_err());
+        assert_eq!(
+            profile
+                .validate_capability(key, &[unrelated, duplicate])
+                .unwrap(),
+            CapabilityDecision::Supported
+        );
     }
 
     #[test]
@@ -331,7 +368,7 @@ mod tests {
             CapabilityDecision::Supported
         );
 
-        let cosmetic = CapabilityKey::new(CapabilityCategory::Skills, "color");
+        let cosmetic = CapabilityKey::new(CapabilityCategory::Subagents, "color");
         assert!(
             profile.validate_capability(cosmetic, &[]).is_err(),
             "undeclared fields must not be assumed cosmetic"
@@ -348,7 +385,14 @@ mod tests {
                 }],
             )
             .unwrap();
-        assert!(matches!(warning, CapabilityDecision::Warning(_)));
+        assert_eq!(
+            warning,
+            CapabilityDecision::Warning(CapabilityWarning {
+                surface: TargetSurface::ClaudeCli,
+                key: cosmetic,
+                reason: "cosmetic field unavailable",
+            })
+        );
         let other_surface = CapabilityDeclaration {
             surface: TargetSurface::CodexCli,
             ..native
@@ -358,6 +402,38 @@ mod tests {
                 .validate_capability(required, &[other_surface])
                 .is_err(),
             "another surface's declaration must not authorize this one"
+        );
+        let sibling = TargetSurface::CodexIde.profile();
+        let sibling_key = CapabilityKey::new(CapabilityCategory::Subagents, "tools.restrict");
+        let cli_declaration = CapabilityDeclaration {
+            surface: TargetSurface::CodexCli,
+            key: sibling_key,
+            representation: Representation::Native,
+            requirement: Requirement::RequiredBehavior,
+            reason: "CLI only",
+        };
+        assert!(
+            sibling
+                .validate_capability(sibling_key, &[cli_declaration])
+                .is_err()
+        );
+        let ide_declaration = CapabilityDeclaration {
+            surface: TargetSurface::CodexIde,
+            representation: Representation::NativeUnsupported,
+            reason: "IDE has no tool restriction",
+            ..cli_declaration
+        };
+        assert_eq!(
+            TargetSurface::CodexCli
+                .profile()
+                .validate_capability(sibling_key, &[ide_declaration, cli_declaration])
+                .unwrap(),
+            CapabilityDecision::Supported
+        );
+        assert!(
+            sibling
+                .validate_capability(sibling_key, &[ide_declaration, cli_declaration])
+                .is_err()
         );
     }
 }
