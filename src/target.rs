@@ -306,6 +306,9 @@ mod tests {
                 }],
             );
             let error = decision.expect_err("required restriction must fail closed");
+            assert_eq!(error.surface, TargetSurface::CodexCli);
+            assert_eq!(error.key, key);
+            assert_eq!(error.reason, reason);
             let message = error.to_string();
             assert!(message.contains("codex.cli"), "{message}");
             assert!(message.contains("tools.restrict"), "{message}");
@@ -345,6 +348,21 @@ mod tests {
                 )
                 .is_err()
         );
+        for key in [
+            CapabilityKey::new(CapabilityCategory::Subagents, "tools.deny"),
+            CapabilityKey::new(CapabilityCategory::Subagents, "unknown-field"),
+        ] {
+            for representation in [Representation::Native, Representation::NativeUnsupported] {
+                let declaration = CapabilityDeclaration {
+                    surface: TargetSurface::CodexCli,
+                    key,
+                    representation,
+                    requirement: Requirement::OptionalMetadata,
+                    reason: "unreviewed field",
+                };
+                assert!(profile.validate_capability(key, &[declaration]).is_err());
+            }
+        }
         let unrelated = CapabilityDeclaration {
             key: CapabilityKey::new(CapabilityCategory::Subagents, "tools.allow"),
             ..duplicate
@@ -403,6 +421,21 @@ mod tests {
                 key: cosmetic,
                 reason: "cosmetic field unavailable",
             })
+        );
+        assert_eq!(
+            profile
+                .validate_capability(
+                    cosmetic,
+                    &[CapabilityDeclaration {
+                        surface: TargetSurface::ClaudeCli,
+                        key: cosmetic,
+                        representation: Representation::Native,
+                        requirement: Requirement::OptionalMetadata,
+                        reason: "native cosmetic field",
+                    }],
+                )
+                .unwrap(),
+            CapabilityDecision::Supported
         );
         for category in [CapabilityCategory::Skills, CapabilityCategory::Permissions] {
             let unreviewed = CapabilityKey::new(category, "color");
