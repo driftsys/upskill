@@ -550,6 +550,28 @@ fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutati
 }
 
 #[test]
+fn deterministic_serialization_sorts_whole_files_by_relative_path() {
+    let mut earlier = file();
+    earlier.path = "A.md".into();
+    let mut later = earlier.clone();
+    later.path = "Z.md".into();
+    let records = vec![later, earlier];
+    let mut reversed = records.clone();
+    reversed.reverse();
+
+    let json = serialize_artifacts(&records).unwrap();
+    let decoded = parse_artifacts(&json).unwrap();
+    assert_eq!(
+        decoded
+            .iter()
+            .map(|record| record.path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["A.md", "Z.md"]
+    );
+    assert_eq!(json, serialize_artifacts(&reversed).unwrap());
+}
+
+#[test]
 fn rejects_unknown_fields_at_every_record_layer() {
     for pointer in ["/0", "/0/root", "/0/owners/0", "/0/content"] {
         let mut value = serde_json::to_value(vec![file()]).unwrap();
