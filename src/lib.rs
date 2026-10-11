@@ -16,6 +16,7 @@ pub mod fetch;
 pub mod fmt;
 pub mod generate;
 pub mod index;
+pub mod instructions;
 pub mod lint;
 pub mod lockfile;
 pub mod mcp;
@@ -28,5 +29,6 @@ pub mod search;
 pub mod select;
 pub mod source;
 pub mod style;
+pub mod target;
 
 pub use source::{InstallSource, home_dir, parse_install_source};

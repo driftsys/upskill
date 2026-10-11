@@ -119,6 +119,18 @@ Linux/macOS/Windows test combinations before claiming their support. The
 [research snapshots](../../technotes/2026-10-11-agent-customization/README.md)
 remain the contract inventory, not substitutes for those tests.
 
+### F-A implementation boundary
+
+F-A adds stable family/surface identities and a pure capability validator.
+The validator requires a declaration for the exact surface and field, rejects
+unknown or incompatible required behavior, and permits warning-only omission
+for fields classified as cosmetic in code. The existing default selection is
+stored as the original four surfaces. Codex has an identity but no selectable
+CLI flag, output renderer, or installation lifecycle yet; those start in M1.
+F-A does not populate native version ranges, discovery evidence, OS/scope
+combinations, or runtime conformance results. Those remain gates for the
+category adapters and release qualification.
+
 ## 2. Consumer selection and author targeting
 
 Keep existing boolean selectors and config precedence. Add `--codex` and config
