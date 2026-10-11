@@ -8,22 +8,22 @@
 
 **Tech Stack:** POSIX `sh`, `shellcheck`, GitHub Actions (`dtolnay/rust-toolchain`, `taiki-e/install-action` for `cross`, `softprops/action-gh-release`), Rust integration tests (`assert_cmd` + `predicates` + `tempfile`).
 
-Spec: `docs/superpowers/specs/2026-05-16-install-script-design.md`
+Spec: `docs/wip/specs/2026-05-16-install-script-design.md`
 
 ---
 
 ## File Structure
 
-| File                                                         | Responsibility                                              | Action               |
-| ------------------------------------------------------------ | ----------------------------------------------------------- | -------------------- |
-| `install.sh`                                                 | POSIX installer: detect platform, download, verify, install | Create (repo root)   |
-| `tests/cli_install.rs`                                       | ATDD: `--help` and unsupported-platform behavior            | Create               |
-| `.github/workflows/release.yml`                              | Tag-triggered build matrix + release publish                | Create               |
-| `justfile`                                                   | Add `shellcheck install.sh` to the `lint` recipe            | Modify               |
-| `.github/workflows/ci.yml`                                   | Add `shellcheck` job; add it to the `ci` gate               | Modify               |
-| `README.md`                                                  | Add the `curl` one-liner above `cargo install`              | Modify (lines 15-16) |
-| `docs/getting-started.md`                                    | Add the `curl` one-liner + env-var note                     | Modify (lines 3-11)  |
-| `docs/superpowers/specs/2026-05-16-install-script-design.md` | Flip `Status` to approved                                   | Modify (line 4)      |
+| File                                                 | Responsibility                                              | Action               |
+| ---------------------------------------------------- | ----------------------------------------------------------- | -------------------- |
+| `install.sh`                                         | POSIX installer: detect platform, download, verify, install | Create (repo root)   |
+| `tests/cli_install.rs`                               | ATDD: `--help` and unsupported-platform behavior            | Create               |
+| `.github/workflows/release.yml`                      | Tag-triggered build matrix + release publish                | Create               |
+| `justfile`                                           | Add `shellcheck install.sh` to the `lint` recipe            | Modify               |
+| `.github/workflows/ci.yml`                           | Add `shellcheck` job; add it to the `ci` gate               | Modify               |
+| `README.md`                                          | Add the `curl` one-liner above `cargo install`              | Modify (lines 15-16) |
+| `docs/getting-started.md`                            | Add the `curl` one-liner + env-var note                     | Modify (lines 3-11)  |
+| `docs/wip/specs/2026-05-16-install-script-design.md` | Flip `Status` to approved                                   | Modify (line 4)      |
 
 ---
 
@@ -607,11 +607,11 @@ git commit -m "docs: document curl|sh installer and env vars"
 
 **Files:**
 
-- Modify: `docs/superpowers/specs/2026-05-16-install-script-design.md` (line 4)
+- Modify: `docs/wip/specs/2026-05-16-install-script-design.md` (line 4)
 
 - [ ] **Step 1: Flip the spec status**
 
-In `docs/superpowers/specs/2026-05-16-install-script-design.md`, change:
+In `docs/wip/specs/2026-05-16-install-script-design.md`, change:
 
 ```text
 Status: Approved (pending spec review)
@@ -637,7 +637,7 @@ markdownlint, shellcheck).
 - [ ] **Step 3: Commit and push**
 
 ```bash
-git add docs/superpowers/specs/2026-05-16-install-script-design.md
+git add docs/wip/specs/2026-05-16-install-script-design.md
 git commit -m "docs(spec): mark install-script design approved"
 git push -u origin claude/add-install-script-eZubT
 ```

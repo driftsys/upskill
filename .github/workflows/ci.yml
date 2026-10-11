@@ -69,10 +69,24 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git std lint --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Install mdBook
+        run: |
+          mkdir mdbook
+          curl -fsSL https://github.com/rust-lang/mdBook/releases/download/v0.5.4/mdbook-v0.5.4-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=mdbook
+          echo "$PWD/mdbook" >> "$GITHUB_PATH"
+      - run: python3 scripts/test-check-docs.py
+      - run: python3 scripts/check-docs.py
+
   ci:
     name: CI
     if: always()
-    needs: [fmt, clippy, test, shellcheck, repository-tools]
+    needs: [fmt, clippy, test, shellcheck, repository-tools, docs]
     runs-on: ubuntu-latest
     steps:
       - name: Check results

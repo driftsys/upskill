@@ -7,7 +7,7 @@
 [ADR-0003](./0003-generation-pipeline.md) established the generation
 contract: one SSOT item renders to per-client output for **every** client.
 The only knob that narrows the target set is the **author-side** `audience:`
-field in item frontmatter ([format-spec §5](../format-spec.md)). A
+field in item frontmatter ([format-spec §5](../specification/format-spec.md)). A
 **consumer** has no say: every `upskill add` writes `.claude/**`,
 `.github/**`, and `.agents/**` for every item, plus — since
 [ADR-0010](./0010-mcp-config-write.md) — MCP config for all four MCP targets.

@@ -6,7 +6,7 @@
 
 [ADR-0002](./0002-portable-content-format.md) established the SSOT
 on-disk contract, including bundle files as
-[Markdown-with-frontmatter](../format-spec.md) named `<name>.bundle.md`.
+[Markdown-with-frontmatter](../specification/format-spec.md) named `<name>.bundle.md`.
 The frontmatter carried the manifest (`schema`, `name`, `description`,
 `items`, `requires`, `metadata`); the body carried human-readable
 documentation (install examples, adoption path, caveats).
@@ -163,7 +163,7 @@ to the manifest itself.
   "Bundle file shape" — superseded by this ADR for the file format;
   the bundle schema (fields, semantics, transitive resolution) is
   unchanged.
-- Authoritative spec: [`docs/format-spec.md`](../format-spec.md) §2.2,
+- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md) §2.2,
   §3.7.
 - Related: [ADR-0006](./0006-flat-item-layout.md) (same "drop
   redundancy in the SSOT contract" rationale, applied to items).

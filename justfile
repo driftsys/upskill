@@ -24,7 +24,7 @@ sanity:
     cargo check --all-targets --locked
 
 # Run all checks (test + lint)
-check: test lint
+check: test lint docs-check
 
 # Assemble + check
 build: assemble check
@@ -49,6 +49,11 @@ man:
 # Build the mdBook docs into book/
 book:
     mdbook build
+
+# Check repository links, rendered book and publication isolation
+docs-check:
+    python3 scripts/test-check-docs.py
+    python3 scripts/check-docs.py
 
 # Serve the mdBook docs with live reload (opens in browser)
 book-serve:

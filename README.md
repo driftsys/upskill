@@ -75,9 +75,12 @@ flows know which items came from which bundle.
 
 ## Documentation
 
-- User guide: [Getting started](docs/getting-started.md), [Commands](docs/commands.md), [Recipes](docs/recipes.md).
-- Specification: [`docs/specification.md`](docs/specification.md).
-- On-disk contract: [`docs/format-spec.md`](docs/format-spec.md).
+See the [documentation map](docs/README.md) for design records, technical notes,
+working documents and archives.
+
+- User guide: [Getting started](docs/book/getting-started.md), [Commands](docs/book/commands.md), [Recipes](docs/book/recipes.md).
+- Specification: [`docs/specification/specification.md`](docs/specification/specification.md).
+- On-disk contract: [`docs/specification/format-spec.md`](docs/specification/format-spec.md).
 - Architecture decisions: [`docs/adr/`](docs/adr/) — see
   [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
   umbrella decision.

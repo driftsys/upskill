@@ -250,7 +250,7 @@ extension; v0.5 bundles parse unchanged.
   (generation pipeline this ADR explicitly _does not_ extend).
 - Predecessor: [ADR-0007](./0007-bundle-yaml-format.md)
   (Bundle YAML schema this ADR extends with `plugins:`).
-- Authoritative spec: [`docs/format-spec.md`](../format-spec.md) §3.7
+- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md) §3.7
   — to be updated with the `plugins:` sub-shape.
 - Claude Code plugin CLI: `claude plugin --help`,
   `claude plugin marketplace --help`.

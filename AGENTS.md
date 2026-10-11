@@ -76,7 +76,7 @@ src/
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search
 │
-├── pipeline.rs          Local + git → per-client install pipeline,
+├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
 ├── bundle.rs            Bundle dependency resolution
@@ -88,14 +88,18 @@ src/
 └── lockfile.rs          .upskill-lock.json (`schema: 1`) read/write
 ```
 
-Core docs (published as mdBook at <https://driftsys.github.io/upskill/>):
+Documentation map: [docs/README.md](docs/README.md). The published mdBook
+source is `docs/book/`; specifications are included from their canonical files.
+Working specs and plans are in `docs/wip/`; research is in `docs/technotes/`.
 
-- `docs/intro.md` — book entrypoint
-- `docs/getting-started.md` / `docs/commands.md` / `docs/recipes.md` — user guide
-- `docs/conventions.md` — upskill conventions, including the recommended `skills/` layout
-- `docs/specification.md` — upskill specification
-- `docs/format-spec.md` — portable on-disk content format
-- `docs/adr/` — architecture decision records (0000 baseline, 0001 umbrella, 0002–0005)
+Core docs (published at <https://driftsys.github.io/upskill/>):
+
+- `docs/book/intro.md` — book entrypoint
+- `docs/book/getting-started.md` / `docs/book/commands.md` / `docs/book/recipes.md` — user guide
+- `docs/book/conventions.md` — upskill conventions, including the recommended `skills/` layout
+- `docs/specification/specification.md` — upskill specification
+- `docs/specification/format-spec.md` — portable on-disk content format
+- `docs/adr/` — architecture decisions; [the index](docs/adr/README.md) lists all records
 
 ### Key conventions
 
@@ -118,7 +122,7 @@ shape (`.upskill-lock.json`, `schema: 1`) in two possible locations:
 committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 `.vscode/settings.json`, `opencode.json`) are specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
-[format-spec §7](docs/format-spec.md).
+[format-spec §7](docs/specification/format-spec.md).
 
 ### Source format
 

@@ -166,7 +166,7 @@ wasmtime runtime, adds a second runtime to debug, reimplements what
 
 ## References
 
-- Format spec §7 (generation): [`docs/format-spec.md`](../format-spec.md)
+- Format spec §7 (generation): [`docs/format-spec.md`](../specification/format-spec.md)
 - Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
   [ADR-0004](./0004-cli-surface.md),

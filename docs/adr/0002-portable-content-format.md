@@ -22,7 +22,7 @@ This ADR is one of four child ADRs of [ADR-0001](./0001-multi-kind-compiler-arch
 It owns the on-disk SSOT contract; [ADR-0003](./0003-generation-pipeline.md)
 owns how that SSOT becomes per-client output.
 
-The authoritative specification lives at [`docs/format-spec.md`](../format-spec.md).
+The authoritative specification lives at [`docs/format-spec.md`](../specification/format-spec.md).
 This ADR records the design decisions; the spec records the contract.
 
 ## Decision
@@ -159,7 +159,7 @@ versioning from bundle versioning.
 
 ## References
 
-- Authoritative spec: [`docs/format-spec.md`](../format-spec.md)
+- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md)
 - Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
 - Sibling ADRs: [ADR-0003](./0003-generation-pipeline.md),
   [ADR-0004](./0004-cli-surface.md),
