@@ -92,7 +92,7 @@ For a selected item, validation produces a plan or diagnostics before effects:
 
 | Condition                                    | Result                                                      |
 | -------------------------------------------- | ----------------------------------------------------------- |
-| Item audience excludes a selected family     | Existing warn-skip behavior, visibly excluded               |
+| Item audience excludes every selected family | Existing warn-skip behavior for the whole item              |
 | Required behavior cannot be represented      | Error naming source field, surface, and remedy              |
 | Restriction or approval meaning would change | Error; no automatic weakening or stronger substitute        |
 | Cosmetic metadata cannot be represented      | Warning identifying the omitted field                       |
