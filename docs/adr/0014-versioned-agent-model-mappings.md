@@ -40,8 +40,9 @@ combinations fail validation rather than silently changing the requested tier.
 For Copilot CLI, generate an ordered `models` preference list in this order:
 latest Claude, latest GPT, previous Claude, previous GPT. Use
 `modelPolicy: preferred`. If no listed model is accessible, Copilot's session
-model is the fallback; upskill reports that the authored tier was not
-enforced. `auto` may be a session fallback but is not a tier mapping.
+model is the fallback. At generation time, upskill warns that the authored tier
+may not be enforced; it cannot observe the model chosen at dispatch. `auto` may
+be a session fallback but is not a tier mapping.
 Copilot's native `reasoningEffort` applies to the entire agent, so every model
 in one generated fallback list must accept one effective effort. If the list
 cannot satisfy that contract, generation reports a capability conflict rather
