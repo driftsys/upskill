@@ -20,7 +20,7 @@
 ### M1-A: Owned artifact and state foundation
 
 - M1-A1 is a pure Markdown contribution editor with tests for manual-byte preservation, independently owned blocks, edited-block conflict, and malformed markers. It does not change CLI behavior or claim file ownership until state integration lands.
-- M1-A2 integrates ownership records and migration across add, update, remove, list, and doctor; M1-A3 adds preflight, writer locking, and interruption recovery. Keep these as separate task PRs.
+- M1-A2a delivers the pure validated owned-artifact record model and deterministic internal JSON codec; see the [owned artifact records plan](2026-10-12-owned-artifact-records.md). M1-A2 continues with legacy projection and lifecycle integration across add, update, remove, list, and doctor. M1-A3 adds preflight, writer locking, and interruption recovery. Keep these as separate task PRs.
 - Start with CLI acceptance tests for conflicting unowned files, manual-content preservation, edited owned content, and legacy lockfile read/upgrade.
 - Define schema-2 records for requested surfaces, installed files and contribution selectors, source identity, and tagged legacy integrations. Keep source schema independent.
 - Add pure plan/precondition and Markdown contribution editing. Use deterministic markers and per-contribution hashes. Reject malformed, duplicate, missing, or edited markers. Preserve bytes outside owned regions.
@@ -36,6 +36,30 @@ A future state writer must persist all three fields; the editor uses them
 to reject edits and to restore manual bytes when a block is removed. Unrecorded
 markers conflict rather than becoming implicitly owned. This is an internal
 format until M1-A2 supplies durable state and CLI integration.
+
+M1-A2a records a concrete project or user installation root, a portable relative
+artifact path, explicit installation owners with separate source names and installed
+aliases, and consuming target surfaces. Its tagged content identifies either a
+whole file with a SHA-256 and optional permission mode, or one Markdown contribution
+with its ID, SHA-256, and both newline counts. Multiple contribution IDs may share a
+location; whole-file ownership cannot share that location with contributions. A
+repeated installation ID must retain its exact source, revision, item kind, source
+name, and installed alias binding across all records.
+
+The codec reads and writes an internal JSON array of these records, rejects unknown
+fields and invalid or ambiguous records, and serializes a sorted copy as pretty
+JSON with one trailing newline. It does not activate CLI behavior or schema-2
+lockfile writes. Root validation uses the current host's absolute-path rules;
+location comparisons use exact lexical root spellings and portable relative paths.
+Validation performs no filesystem access, canonicalization, case or alias checks,
+symlink containment, source verification, or writer locking. Those checks remain
+executor and state integration work.
+
+The next M1-A2 task projects legacy state without fabricating ownership or requested
+surfaces. Lifecycle integration must then preserve these records through add,
+update, remove, list, and doctor before schema-2 writes can be enabled with migration
+backup and the M1-A3 preflight and journal boundary. M1-A2a alone does not complete
+M1-A2 or provide schema-2 support.
 
 ### M1-B: Project and user unconditional instructions
 
