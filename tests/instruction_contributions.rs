@@ -54,6 +54,34 @@ fn updating_one_contribution_preserves_other_owner_and_manual_text() {
          <!-- upskill:begin beta -->\nBeta guidance.\n<!-- upskill:end beta -->\n"
     );
     assert_eq!(updated.owned.len(), 2);
+    let repeated = reconcile(
+        &updated.content,
+        &updated.owned,
+        &[
+            Contribution::new("alpha", "Alpha new.\n"),
+            Contribution::new("beta", "Beta guidance.\n"),
+        ],
+    )
+    .unwrap();
+    assert_eq!(repeated.content, updated.content);
+}
+
+#[test]
+fn updating_a_block_preserves_manual_text_after_it() {
+    let initial = reconcile("# Before\n", &[], &[Contribution::new("alpha", "Old.\n")]).unwrap();
+    let with_tail = format!("{}\n# After\nKeep this.\n", initial.content);
+
+    let updated = reconcile(
+        &with_tail,
+        &initial.owned,
+        &[Contribution::new("alpha", "New.\n")],
+    )
+    .unwrap();
+
+    assert!(updated.content.starts_with("# Before\n"));
+    assert!(updated.content.ends_with("\n# After\nKeep this.\n"));
+    assert!(updated.content.contains("New.\n"));
+    assert!(!updated.content.contains("Old.\n"));
 }
 
 #[test]
@@ -135,4 +163,57 @@ fn edited_owned_contribution_blocks_update_and_removal() {
     assert!(update_error.to_string().contains("edited"));
     let remove_error = reconcile(&changed, &initial.owned, &[]).unwrap_err();
     assert!(remove_error.to_string().contains("edited"));
+}
+
+#[test]
+fn removed_owned_separator_cannot_consume_a_manual_newline() {
+    let manual = "Manual.\n";
+    let initial = reconcile(manual, &[], &[Contribution::new("alpha", "Guidance.\n")]).unwrap();
+    let changed = initial
+        .content
+        .replacen("Manual.\n\n<!--", "Manual.\n<!--", 1);
+
+    let error = reconcile(&changed, &initial.owned, &[]).unwrap_err();
+    assert!(error.to_string().contains("separator"));
+}
+
+#[test]
+fn removed_owned_separator_cannot_consume_multiple_manual_newlines() {
+    let manual = "Manual.\n\n\n";
+    let initial = reconcile(manual, &[], &[Contribution::new("alpha", "Guidance.\n")]).unwrap();
+    let changed = initial
+        .content
+        .replacen("Manual.\n\n\n\n<!--", "Manual.\n\n\n<!--", 1);
+
+    let error = reconcile(&changed, &initial.owned, &[]).unwrap_err();
+    assert!(error.to_string().contains("separator"));
+    let removed = reconcile(&initial.content, &initial.owned, &[]).unwrap();
+    assert_eq!(removed.content, manual);
+}
+
+#[test]
+fn missing_or_unclosed_owned_block_blocks_removal() {
+    let initial = reconcile(
+        "Manual.\n",
+        &[],
+        &[Contribution::new("alpha", "Guidance.\n")],
+    )
+    .unwrap();
+    let without_begin = initial
+        .content
+        .replace("<!-- upskill:begin alpha -->\n", "");
+    assert!(
+        reconcile(&without_begin, &initial.owned, &[])
+            .unwrap_err()
+            .to_string()
+            .contains("missing")
+    );
+
+    let without_end = initial.content.replace("<!-- upskill:end alpha -->\n", "");
+    assert!(
+        reconcile(&without_end, &initial.owned, &[])
+            .unwrap_err()
+            .to_string()
+            .contains("no end marker")
+    );
 }

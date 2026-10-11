@@ -30,8 +30,9 @@
 
 The M1-A1 editor uses `<!-- upskill:begin ID -->` and
 `<!-- upskill:end ID -->` lines around each contribution. Its returned record
-contains the content SHA-256 and the exact count of newlines inserted before
-the block. A future state writer must persist both fields; the editor uses them
+contains the content SHA-256, the exact count of newlines inserted before
+the block, and the count already present immediately before those newlines.
+A future state writer must persist all three fields; the editor uses them
 to reject edits and to restore manual bytes when a block is removed. Unrecorded
 markers conflict rather than becoming implicitly owned. This is an internal
 format until M1-A2 supplies durable state and CLI integration.

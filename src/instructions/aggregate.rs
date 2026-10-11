@@ -24,6 +24,7 @@ pub struct OwnedContribution {
     pub id: String,
     pub content_sha256: String,
     pub leading_newlines: u8,
+    pub preceding_newlines: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,6 +59,11 @@ fn validate_contribution(contribution: &Contribution) -> Result<()> {
 }
 
 fn append_contribution(content: &mut String, contribution: Contribution) -> OwnedContribution {
+    let preceding_newlines = content
+        .bytes()
+        .rev()
+        .take_while(|byte| *byte == b'\n')
+        .count();
     let leading_newlines = if content.is_empty() {
         0
     } else if content.ends_with('\n') {
@@ -75,6 +81,7 @@ fn append_contribution(content: &mut String, contribution: Contribution) -> Owne
         id: contribution.id,
         content_sha256: content_hash(&contribution.markdown),
         leading_newlines,
+        preceding_newlines,
     }
 }
 
@@ -118,6 +125,17 @@ fn find_owned_span<'a>(existing: &str, record: &'a OwnedContribution) -> Result<
         .iter()
         .all(|byte| *byte == b'\n')
     {
+        bail!(
+            "owned instruction contribution {} has a changed separator",
+            record.id
+        );
+    }
+    let preceding_newlines = existing[..start]
+        .bytes()
+        .rev()
+        .take_while(|byte| *byte == b'\n')
+        .count();
+    if preceding_newlines != record.preceding_newlines {
         bail!(
             "owned instruction contribution {} has a changed separator",
             record.id
@@ -172,6 +190,11 @@ pub fn reconcile(
         }
         content.push_str(&existing[cursor..span.start]);
         if let Some(contribution) = desired_by_id.remove(&span.record.id) {
+            let preceding_newlines = content
+                .bytes()
+                .rev()
+                .take_while(|byte| *byte == b'\n')
+                .count();
             content.push_str(&existing[span.start..span.begin]);
             content.push_str(&format!("<!-- upskill:begin {} -->\n", contribution.id));
             content.push_str(&contribution.markdown);
@@ -180,6 +203,7 @@ pub fn reconcile(
                 id: contribution.id,
                 content_sha256: content_hash(&contribution.markdown),
                 leading_newlines: span.record.leading_newlines,
+                preceding_newlines,
             });
         }
         cursor = span.end;
