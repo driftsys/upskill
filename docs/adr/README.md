@@ -20,3 +20,4 @@ decision explicitly; documentation moves do not change its status.
 | [0011 — Generic git-URL source — replace GitLab-specific source with host-agnostic https](0011-generic-git-url-source.md) | Accepted |
 | [0012 — Consumer-side client filtering — per-invocation flags and config](0012-consumer-client-filtering.md)              | Accepted |
 | [0013 — Agent customization targets — Codex, Cursor, and Gemini CLI](0013-agent-customization-targets.md)                 | Accepted |
+| [0014 — Versioned model mappings for custom agents](0014-versioned-agent-model-mappings.md)                               | Accepted |
