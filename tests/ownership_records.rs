@@ -328,6 +328,62 @@ fn rejects_duplicate_file_and_contribution_selectors() {
 }
 
 #[test]
+fn rejects_duplicate_files_with_different_valid_payload_or_metadata() {
+    for difference in ["hash", "mode", "owners", "consumers"] {
+        let first = file();
+        let mut second = first.clone();
+        match difference {
+            "hash" => {
+                second.content = ArtifactContent::File {
+                    content_sha256: "0".repeat(64),
+                    mode: Some(0o644),
+                }
+            }
+            "mode" => {
+                second.content = ArtifactContent::File {
+                    content_sha256: HASH.into(),
+                    mode: Some(0o600),
+                }
+            }
+            "owners" => second.owners = vec![second_owner()],
+            _ => second.consumers = vec![TargetSurface::CodexCli],
+        }
+        validate_artifacts(std::slice::from_ref(&first)).unwrap();
+        validate_artifacts(std::slice::from_ref(&second)).unwrap();
+        assert_invalid(&[first.clone(), second.clone()], difference);
+        assert_invalid(&[second, first], &format!("{difference}, reversed"));
+    }
+}
+
+#[test]
+fn rejects_duplicate_contributions_with_different_valid_payload_or_metadata() {
+    for difference in [
+        "hash",
+        "leading_newlines",
+        "preceding_newlines",
+        "owners",
+        "consumers",
+    ] {
+        let first = contribution("alpha");
+        let mut second = first.clone();
+        let ArtifactContent::MarkdownContribution { contribution } = &mut second.content else {
+            unreachable!();
+        };
+        match difference {
+            "hash" => contribution.content_sha256 = "0".repeat(64),
+            "leading_newlines" => contribution.leading_newlines = 0,
+            "preceding_newlines" => contribution.preceding_newlines = 17,
+            "owners" => second.owners = vec![second_owner()],
+            _ => second.consumers = vec![TargetSurface::CodexCli],
+        }
+        validate_artifacts(std::slice::from_ref(&first)).unwrap();
+        validate_artifacts(std::slice::from_ref(&second)).unwrap();
+        assert_invalid(&[first.clone(), second.clone()], difference);
+        assert_invalid(&[second, first], &format!("{difference}, reversed"));
+    }
+}
+
+#[test]
 fn rejects_file_contribution_mixtures_in_either_order() {
     let first = contribution("alpha");
     let mut second = file();
@@ -396,35 +452,62 @@ fn user_scope_parses_literal_wire_name() {
 
 #[test]
 fn rejects_installation_binding_changes_across_records() {
-    for owner_index in [0, 1] {
-        for field in [
-            "source",
-            "source_revision",
-            "kind",
-            "source_name",
-            "installed_name",
-        ] {
-            let mut first = file();
-            first.owners.push(second_owner());
-            let mut second = first.clone();
-            second.path = "other.md".into();
-            let changed_owner = &mut second.owners[owner_index];
-            match field {
-                "source" => changed_owner.source = "other/repo".into(),
-                "source_revision" => changed_owner.source_revision = None,
-                "kind" => changed_owner.kind = ItemKind::Skill,
-                "source_name" => changed_owner.source_name = "different-source".into(),
-                _ => changed_owner.installed_name = "different-alias".into(),
+    for (pair, template, second_content) in [
+        ("file/file", file(), file().content),
+        (
+            "contribution/contribution",
+            contribution("alpha"),
+            contribution("beta").content,
+        ),
+        ("file/contribution", file(), contribution("alpha").content),
+    ] {
+        for owner_index in [0, 1] {
+            for field in [
+                "source",
+                "source_revision",
+                "kind",
+                "source_name",
+                "installed_name",
+            ] {
+                let mut first = template.clone();
+                first.owners.push(second_owner());
+                let mut second = first.clone();
+                second.path = "other.md".into();
+                second.content = second_content.clone();
+                validate_artifacts(&[first.clone(), second.clone()]).unwrap();
+                let changed_owner = &mut second.owners[owner_index];
+                match field {
+                    "source" => changed_owner.source = "other/repo".into(),
+                    "source_revision" => changed_owner.source_revision = None,
+                    "kind" => changed_owner.kind = ItemKind::Skill,
+                    "source_name" => changed_owner.source_name = "different-source".into(),
+                    _ => changed_owner.installed_name = "different-alias".into(),
+                }
+                let reason = format!("{pair}, {field} on owner {owner_index}");
+                assert_invalid(&[first.clone(), second.clone()], &reason);
+                assert_invalid(&[second, first], &format!("{reason}, reversed"));
             }
-            assert_invalid(&[first, second], &format!("{field} on owner {owner_index}"));
         }
     }
 }
 
 #[test]
 fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutation() {
+    let owner_by_id_first = ArtifactOwner {
+        source: "z/source".into(),
+        source_revision: Some("z-revision".into()),
+        kind: ItemKind::Agent,
+        ..owner("order-a")
+    };
+    let owner_by_id_second = ArtifactOwner {
+        installation_id: "order-b".into(),
+        source: "a/source".into(),
+        source_revision: Some("a-revision".into()),
+        kind: ItemKind::Rule,
+        ..second_owner()
+    };
     let mut beta = contribution("beta");
-    beta.owners = vec![second_owner(), owner("install-a")];
+    beta.owners = vec![owner_by_id_second.clone(), owner_by_id_first.clone()];
     beta.consumers = vec![TargetSurface::OpenCodeCli, TargetSurface::ClaudeCli];
     let mut alpha = beta.clone();
     alpha.content = contribution("alpha").content;
@@ -432,6 +515,7 @@ fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutati
     earlier_path.path = "A.md".into();
     let mut later_root = file();
     later_root.root.path = later_root.root.path.join("z");
+    later_root.path = "0.md".into();
     let mut user = file();
     user.root.scope = OwnershipScope::User;
     let records = vec![user, later_root, beta, alpha, earlier_path];
@@ -452,12 +536,16 @@ fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutati
     assert_eq!(decoded[0].path, "A.md");
     assert_eq!(decoded[1].content, contribution("alpha").content);
     assert_eq!(decoded[2].content, contribution("beta").content);
-    assert_eq!(decoded[1].owners, vec![owner("install-a"), second_owner()]);
+    assert_eq!(
+        decoded[1].owners,
+        vec![owner_by_id_first, owner_by_id_second]
+    );
     assert_eq!(
         decoded[1].consumers,
         vec![TargetSurface::ClaudeCli, TargetSurface::OpenCodeCli]
     );
     assert_eq!(decoded[3].root.path, before[1].root.path);
+    assert_eq!(decoded[3].path, "0.md");
     assert_eq!(decoded[4].root.scope, OwnershipScope::User);
 }
 
