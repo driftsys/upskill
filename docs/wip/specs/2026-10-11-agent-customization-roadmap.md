@@ -367,6 +367,10 @@ For each implementation slice:
 
 ## Recommended next step
 
+The [AC-00 foundation proposal](2026-10-11-agent-customization-foundation-design.md)
+develops the contracts below. It remains proposed and lists the native validation
+evidence needed before M0 can be completed.
+
 Start AC-00 with a focused design covering target identity, capability validation,
 artifact ownership, and migrations, plus permission preservation and shared-path
 examples. Its output should make AC-01 implementable without revisiting the

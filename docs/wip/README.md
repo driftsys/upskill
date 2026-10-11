@@ -12,6 +12,10 @@ must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md)
+  — AC-00 target capabilities, ownership, installation planning, migrations,
+  and permission preservation; proposed contracts with explicit evidence gates.
+
 - [Agent customization delivery roadmap](specs/2026-10-11-agent-customization-roadmap.md)
   — Claude Code, Copilot, and Codex first; instructions, skills, subagents, MCP,
   marketplaces/plugins, hooks, and permissions. Proposed sequencing and acceptance
