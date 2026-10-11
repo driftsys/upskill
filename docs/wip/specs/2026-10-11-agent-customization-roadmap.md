@@ -350,6 +350,10 @@ stories. Once a parent epic exists, create children with `Epic: #N`, the matchin
 before applying the repository severity/effort/priority matrix. Existing issues
 remain open references; this roadmap does not claim to resolve them.
 
+Inventory evidence: `gh issue list --repo driftsys/upskill --state open --limit 100 --json number,title,labels`
+returned four issues: #245, #244, #236, and #229; none had an epic label.
+Recheck this inventory before selecting a parent or creating child issues.
+
 For each implementation slice:
 
 1. Record the selected native contract and testable acceptance criteria.
