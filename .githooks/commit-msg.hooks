@@ -17,4 +17,4 @@
 #   git std hook enable commit-msg
 #   git std hook disable commit-msg
 #
-! git std lint --file {msg}
+! git std lint --file "$1"

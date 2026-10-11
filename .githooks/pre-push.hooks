@@ -17,4 +17,4 @@
 #   git std hook enable pre-push
 #   git std hook disable pre-push
 #
-! just verify
+! just sanity

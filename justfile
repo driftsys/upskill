@@ -15,7 +15,13 @@ lint:
     cargo fmt -- --check
     dprint check
     npx markdownlint-cli '**/*.md' --ignore node_modules
-    shellcheck install.sh
+    shellcheck install.sh bootstrap
+
+# Fast pre-push sanity check; CI runs tests and Clippy.
+sanity:
+    cargo fmt -- --check
+    prim lint .
+    cargo check --all-targets --locked
 
 # Run all checks (test + lint)
 check: test lint

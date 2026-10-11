@@ -5,6 +5,8 @@
 | Tool       | Version                    | Install                        |
 | ---------- | -------------------------- | ------------------------------ |
 | Rust       | ≥ 1.85 (edition 2024 MSRV) | [rustup.rs](https://rustup.rs) |
+| git-std    | latest stable              | `./bootstrap`                  |
+| prim       | latest stable              | `./bootstrap`                  |
 | just       | latest                     | `cargo install just`           |
 | dprint     | latest                     | `cargo install dprint`         |
 | shellcheck | latest                     | `brew install shellcheck`      |
@@ -23,6 +25,7 @@ just build
 
 | Command       | Purpose                            |
 | ------------- | ---------------------------------- |
+| `just sanity` | Fast pre-push code checks          |
 | `just test`   | Run all tests                      |
 | `just fmt`    | Format Rust + Markdown             |
 | `just lint`   | Clippy + shellcheck + dprint check |
@@ -45,7 +48,16 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 - `test:` — test additions/changes
 - `chore:` — tooling, CI, dependencies
 
-Not enforced by hook — just documented.
+The `commit-msg` hook enforces this convention with `git std lint`.
+
+The `pre-commit` hook checks staged whitespace with `git diff --cached --check`.
+It does not format files or compile code. The `pre-push` hook runs `just sanity`:
+Rust formatting, Prim hygiene, and `cargo check --all-targets --locked`. CI runs
+the full tests and Clippy checks.
+
+Bootstrap installs or updates `git-std` and `prim` from their latest stable
+GitHub releases, verifies archive checksums, and activates the hooks. It requires
+network access; commit and push hooks do not download tools.
 
 ## PR checklist
 

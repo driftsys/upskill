@@ -44,31 +44,35 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
 
-  convco:
-    name: Conventional commits
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-      - run: |
-          curl -sSfL https://github.com/convco/convco/releases/latest/download/convco-ubuntu.zip -o /tmp/convco.zip
-          unzip -o /tmp/convco.zip -d /usr/local/bin
-          chmod +x /usr/local/bin/convco
-      - run: convco check ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-
   shellcheck:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
-      - run: shellcheck install.sh
+      - run: shellcheck install.sh bootstrap
+
+  repository-tools:
+    name: Repository tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Install latest git-std and prim
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          ./bootstrap
+      - name: Check repository hygiene
+        run: prim lint .
+      - name: Check commit messages
+        if: github.event_name == 'pull_request'
+        run: git std lint --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
   ci:
     name: CI
     if: always()
-    needs: [fmt, clippy, test, convco, shellcheck]
+    needs: [fmt, clippy, test, shellcheck, repository-tools]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
