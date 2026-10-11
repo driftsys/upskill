@@ -7,6 +7,7 @@
 use std::str::FromStr;
 
 use anyhow::{Result, bail};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TargetFamily {
@@ -75,6 +76,19 @@ impl FromStr for TargetSurface {
             .into_iter()
             .find(|surface| surface.name() == s)
             .ok_or_else(|| anyhow::anyhow!("unknown target surface: {s}"))
+    }
+}
+
+impl Serialize for TargetSurface {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for TargetSurface {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        name.parse().map_err(serde::de::Error::custom)
     }
 }
 
