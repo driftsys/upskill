@@ -222,8 +222,8 @@ execute bundle-provided installers or scripts while constructing a plan.
 
 Execution sequence:
 
-1. Resolve source content and dependencies. Preview may fetch into upskill's
-   cache, as current update preview does; it may not change client installation
+1. Resolve source content and dependencies. Preview may fetch into a temporary
+   directory, as current update preview does; it may not change client installation
    state, authenticate, launch MCP servers, or execute hooks.
 2. Validate required capabilities and aggregate all destination conflicts.
 3. Build deterministic actions and show any loss of coverage or change of access.
