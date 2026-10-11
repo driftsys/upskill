@@ -125,7 +125,7 @@ src/
 Cross-references:
 
 - The on-disk shape consumed by `model/` and `parse/` is specified in
-  [`docs/format-spec.md`](../format-spec.md) and motivated by
+  [`docs/format-spec.md`](../specification/format-spec.md) and motivated by
   [ADR-0002](./0002-portable-content-format.md).
 - The pipeline implemented in `generate/` and `pipeline.rs` follows
   [ADR-0003](./0003-generation-pipeline.md).

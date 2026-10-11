@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (edition 2024), `dprint-plugin-markdown` `=0.21.1`, `anyhow`, `serde_yaml_ng`; integration tests with `assert_cmd` + `tempfile`.
 
-**Reference spec:** [docs/superpowers/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
+**Reference spec:** [docs/wip/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
 
 ---
 
@@ -850,7 +850,7 @@ in the ADR).
 - fmt ATDD: `upskill fmt` formats a dirty body end-to-end
 - lint unit + ATDD: `body-format` warning, clean body has none, `--strict` fails
 
-Spec: docs/superpowers/specs/2026-06-04-fmt-format-body-design.md
+Spec: docs/wip/specs/2026-06-04-fmt-format-body-design.md
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 BODY

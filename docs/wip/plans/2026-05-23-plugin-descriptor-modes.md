@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (edition 2024), serde + serde_yaml_ng (untagged enums), serde_json (opencode.json manipulation), existing test infrastructure (tempfile, assert_cmd).
 
-**Spec:** `docs/superpowers/specs/2026-05-23-plugin-descriptor-modes-design.md`
+**Spec:** `docs/wip/specs/2026-05-23-plugin-descriptor-modes-design.md`
 
 ---
 

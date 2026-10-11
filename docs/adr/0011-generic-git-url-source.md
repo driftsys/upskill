@@ -86,7 +86,7 @@ through the lockfile.
 
 ## Satisfies
 
-- Acceptance criteria from `docs/superpowers/specs/2026-06-10-generic-git-url-source-design.md`
+- Acceptance criteria from `docs/wip/specs/2026-06-10-generic-git-url-source-design.md`
 - Implemented in: `src/source.rs` (`GitRepo`, `parse_git_url`, `GitlabShorthandRemoved`),
   `src/pipeline/git.rs` (`git_clone_url`, `install_from_git`)
 - Tested by: `tests/cli_exit_codes.rs::removed_gitlab_shorthand_exits_two_with_url_hint`,

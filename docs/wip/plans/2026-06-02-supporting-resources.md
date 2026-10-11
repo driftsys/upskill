@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust 2024, `pulldown-cmark` 0.11 (link detection), `anyhow`, `assert_cmd` + `tempfile` (integration tests).
 
-**Spec:** `docs/superpowers/specs/2026-06-02-supporting-resources-design.md`
+**Spec:** `docs/wip/specs/2026-06-02-supporting-resources-design.md`
 
 ---
 
@@ -1304,7 +1304,7 @@ format-spec §2.4 / §9-#6.
   — no lockfile change).
 - `--as` on a resource-bearing item is guarded; relocation tracked as debt.
 
-Design: docs/superpowers/specs/2026-06-02-supporting-resources-design.md
+Design: docs/wip/specs/2026-06-02-supporting-resources-design.md
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

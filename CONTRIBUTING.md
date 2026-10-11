@@ -2,15 +2,16 @@
 
 ## Prerequisites
 
-| Tool       | Version                    | Install                        |
-| ---------- | -------------------------- | ------------------------------ |
-| Rust       | ≥ 1.85 (edition 2024 MSRV) | [rustup.rs](https://rustup.rs) |
-| git-std    | latest stable              | `./bootstrap`                  |
-| prim       | latest stable              | `./bootstrap`                  |
-| just       | latest                     | `cargo install just`           |
-| dprint     | latest                     | `cargo install dprint`         |
-| shellcheck | latest                     | `brew install shellcheck`      |
-| mdbook     | latest                     | `cargo install mdbook`         |
+| Tool       | Version                    | Install                                         |
+| ---------- | -------------------------- | ----------------------------------------------- |
+| Rust       | ≥ 1.85 (edition 2024 MSRV) | [rustup.rs](https://rustup.rs)                  |
+| git-std    | latest stable              | `./bootstrap`                                   |
+| prim       | latest stable              | `./bootstrap`                                   |
+| just       | latest                     | `cargo install just`                            |
+| dprint     | latest                     | `cargo install dprint`                          |
+| shellcheck | latest                     | `brew install shellcheck`                       |
+| Python     | ≥ 3.9                      | System package manager                          |
+| mdbook     | 0.5.4                      | `cargo install mdbook --version 0.5.4 --locked` |
 
 ## Quick start
 
@@ -69,3 +70,29 @@ network access; commit and push hooks do not download tools.
 
 See [AGENTS.md](AGENTS.md) for AI-specific conventions, issue model, and
 workflow rules.
+
+## Documentation lifecycle
+
+Use the [documentation map](docs/README.md) to select the owning record.
+Requirements belong in specifications, accepted decisions in ADRs, and
+implemented architecture in design records. User-facing instructions belong in
+`docs/book/`. Technical notes are informative; new proposals and implementation
+plans belong in `docs/wip/specs/` and `docs/wip/plans/`.
+
+When a feature is complete, reconcile its working documents with code and tests,
+update the durable records and book, then archive its raw spec and plan with
+delivery evidence and successor links. Keep unfinished scope in WIP. The
+initial migration preserves historical statuses; it does not ratify Draft
+specifications or Proposed ADRs.
+
+`just docs-check` checks documentation links and builds the book in a temporary
+directory. It checks rendered local links, missing chapters/includes and
+publication isolation. It runs in `just verify` and PR CI. Python 3.9 or newer
+and mdBook 0.5.4 are development tools only. The local and CI version is pinned
+because mdBook 0.5 changed the edit-link path template. External URLs and historical WIP/archive
+body references are outside the link check; their indexes are checked.
+
+The book's specification chapters include canonical sources. Keep published
+chapter filenames and anchors stable, and check both repository links and the
+rendered book when changing includes. Preserve schema snapshot bytes and their
+provenance checksums when moving research.

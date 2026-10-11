@@ -6,10 +6,10 @@
 
 Co-location — multiple entrypoints in one item directory sharing the directory
 name ([ADR-0006](./0006-flat-item-layout.md),
-[format-spec §2.1](../format-spec.md)) — is currently the only mechanism for
+[format-spec §2.1](../specification/format-spec.md)) — is currently the only mechanism for
 "install a rule + skill + agent together." Using co-location for that purpose
 causes three failures (see the
-[coupling redesign design](../superpowers/specs/2026-06-03-coupling-redesign-design.md)
+[coupling redesign design](../wip/specs/2026-06-03-coupling-redesign-design.md)
 §1):
 
 - **Forced shared name.** All co-located kinds must share the folder name, even
@@ -105,7 +105,7 @@ ignore: ["scripts/**", "fixtures/**"]
   source machinery.
 - **Conflict.** The same `(kind, name)` resolving to a different source/ref is
   an **error** — this reuses the existing same-name-different-source rule
-  ([format-spec §3.7](../format-spec.md)). No version-range solving, no SAT.
+  ([format-spec §3.7](../specification/format-spec.md)). No version-range solving, no SAT.
 - **Cycle detection** is keyed by `(canonical-source-label, kind, name)`.
 - **Provenance.** A dependency-pulled item is recorded with its **own** source
   plus a **`required_by`** provenance list.
@@ -120,7 +120,7 @@ ignore: ["scripts/**", "fixtures/**"]
 
 The item-level `requires` above carries directed dependencies between
 **items**. Bundles carry their own `requires` (bundle → bundle composition,
-[format-spec §3.7](../format-spec.md)), and a meta-bundle frequently composes
+[format-spec §3.7](../specification/format-spec.md)), and a meta-bundle frequently composes
 bundles that live in **other** sources (e.g. a methodology bundle that pulls a
 generic-literacy bundle and a working-memory bundle from separate repos).
 
@@ -192,7 +192,7 @@ not a defect to engineer around.
 ## Alternatives considered (Rejected — do not revisit)
 
 Lifted from the
-[design spec §4](../superpowers/specs/2026-06-03-coupling-redesign-design.md):
+[design spec §4](../wip/specs/2026-06-03-coupling-redesign-design.md):
 
 - **Reference-aware / traced copy** — under-copies transitive deps hidden
   inside scripts/binaries (validated against Vercel NFT and
@@ -228,7 +228,7 @@ fields, no dual-support window.
 ## References
 
 - Amends: [ADR-0006](./0006-flat-item-layout.md) — flat item layout.
-- Authoritative spec: [`docs/format-spec.md`](../format-spec.md) §§2.1, 2.4,
+- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md) §§2.1, 2.4,
   3.1, 3.4, 3.7, 3.8, 11.
 - Design source:
-  [coupling redesign design](../superpowers/specs/2026-06-03-coupling-redesign-design.md).
+  [coupling redesign design](../wip/specs/2026-06-03-coupling-redesign-design.md).
