@@ -27,7 +27,7 @@
 | `src/lib.rs`                                                         | Export the new target module                                                                          |
 | `src/select.rs`                                                      | Map current consumer selections to surfaces and hold the frozen default set                           |
 | `src/config.rs`                                                      | Keep config behavior and tests aligned with the frozen default                                        |
-| `tests/cli_add.rs` or matching existing CLI file                     | Pin unchanged default install output from the user-facing command                                     |
+| `tests/cli_client_filtering.rs`                                      | Pin unchanged default install output and selection precedence                                         |
 | `docs/wip/specs/2026-10-11-agent-customization-foundation-design.md` | Record any implementation choice differing from the proposal                                          |
 
 ## Review focus
@@ -40,7 +40,7 @@
 
 ## Task 1: Freeze selection and connect surface identity
 
-**Files:** `src/target.rs`, `src/lib.rs`, `src/select.rs`, `src/config.rs`, `tests/cli_add.rs` (or the existing file that covers default add).
+**Files:** `src/target.rs`, `src/lib.rs`, `src/select.rs`, `src/config.rs`, `tests/cli_client_filtering.rs`.
 
 **Interfaces:** `TargetFamily`, `TargetSurface`, `TargetProfile { family, surface, contract_revision }`; `SelectedClient::surface() -> TargetSurface`; `ClientSelection::default_clients() -> &'static [SelectedClient]`. Existing `generation()` and `mcp()` remain.
 
@@ -54,7 +54,7 @@
 
 **Files:** `src/target.rs`, its unit tests.
 
-**Interfaces:** `CapabilityCategory` (the seven requested categories); `CapabilityKey` (category plus native field/operation identifier); `Representation` (`Native`, `Adapted`, `NativeUnsupported`, `Deferred`); `Requirement` (`RequiredBehavior`, `OptionalMetadata`); a structured decision that carries surface, key, reason, and disposition. Validation accepts a profile's explicit capability entries and a requirement; it has no implicit success default.
+**Interfaces:** `CapabilityCategory` (the seven requested categories); `CapabilityKey` (category plus native field/operation identifier); `Representation` (`Native`, `Adapted`, `NativeUnsupported`, `Deferred`); `Requirement` (`RequiredBehavior`, `OptionalMetadata`); a structured decision that carries surface, key, reason, and disposition. Validation accepts explicit capability declarations, each with its requirement; it has no implicit success default.
 
 - [ ] Write failing table tests: exact native support passes; adapted required behavior, missing declaration, native-unsupported, and deferred required behavior fail with target/key/reason; optional cosmetic data can warn; permissions/tool restrictions are required behavior.
 - [ ] Run focused tests and confirm failure before implementation.
