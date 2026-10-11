@@ -230,3 +230,100 @@ fn missing_or_unclosed_owned_block_blocks_removal() {
             .contains("no end marker")
     );
 }
+
+#[test]
+fn manual_prefix_before_a_block_with_no_owned_separator_survives() {
+    let initial = reconcile("", &[], &[Contribution::new("alpha", "Old.\n")]).unwrap();
+    let with_prefix = format!("# Manual\n{}", initial.content);
+    let updated = reconcile(
+        &with_prefix,
+        &initial.owned,
+        &[Contribution::new("alpha", "New.\n")],
+    )
+    .unwrap();
+    assert_eq!(
+        updated.content,
+        "# Manual\n<!-- upskill:begin alpha -->\nNew.\n<!-- upskill:end alpha -->\n"
+    );
+    let removed = reconcile(&updated.content, &updated.owned, &[]).unwrap();
+    assert_eq!(removed.content, "# Manual\n");
+}
+
+#[test]
+fn opening_marker_must_start_on_its_own_line() {
+    let initial = reconcile("", &[], &[Contribution::new("alpha", "Old.\n")]).unwrap();
+    let inline = format!("Manual prose{}", initial.content);
+    assert!(
+        reconcile(&inline, &initial.owned, &[])
+            .unwrap_err()
+            .to_string()
+            .contains("marker")
+    );
+}
+
+#[test]
+fn same_length_body_edit_is_a_conflict_and_record_has_sha256() {
+    let initial = reconcile("", &[], &[Contribution::new("alpha", "Guidance.\n")]).unwrap();
+    assert_eq!(
+        initial.owned[0].content_sha256,
+        "7370422ff30a9380aedf0a5d7a9d701953b284b1576e9fb2bfa9a1cac392dfdf"
+    );
+    let changed = initial.content.replace("Guidance.", "Different");
+    assert!(
+        reconcile(&changed, &initial.owned, &[])
+            .unwrap_err()
+            .to_string()
+            .contains("edited")
+    );
+}
+
+#[test]
+fn removing_first_owner_recalculates_second_separator_context() {
+    for manual in ["Manual.", "Manual.\n\n\n"] {
+        let initial = reconcile(
+            manual,
+            &[],
+            &[
+                Contribution::new("alpha", "Alpha.\n"),
+                Contribution::new("beta", "Beta.\n"),
+            ],
+        )
+        .unwrap();
+        let without_alpha = reconcile(
+            &initial.content,
+            &initial.owned,
+            &[Contribution::new("beta", "Beta.\n")],
+        )
+        .unwrap();
+        assert_eq!(without_alpha.owned.len(), 1);
+        let restored = reconcile(&without_alpha.content, &without_alpha.owned, &[]).unwrap();
+        assert_eq!(restored.content, manual);
+    }
+}
+
+#[test]
+fn independently_added_owners_reconcile_in_file_order() {
+    let manual = "Manual.";
+    let beta = reconcile(manual, &[], &[Contribution::new("beta", "Beta.\n")]).unwrap();
+    let both = reconcile(
+        &beta.content,
+        &beta.owned,
+        &[
+            Contribution::new("beta", "Beta.\n"),
+            Contribution::new("alpha", "Alpha.\n"),
+        ],
+    )
+    .unwrap();
+    assert!(both.content.find("begin beta").unwrap() < both.content.find("begin alpha").unwrap());
+    assert_eq!(both.owned[0].id, "alpha");
+    let without_beta = reconcile(
+        &both.content,
+        &both.owned,
+        &[Contribution::new("alpha", "Alpha new.\n")],
+    )
+    .unwrap();
+    assert!(!without_beta.content.contains("Beta."));
+    assert!(without_beta.content.contains("Alpha new."));
+    let restored = reconcile(&without_beta.content, &without_beta.owned, &[]).unwrap();
+    assert_eq!(restored.content, manual);
+}

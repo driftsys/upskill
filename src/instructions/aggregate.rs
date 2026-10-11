@@ -99,6 +99,12 @@ fn find_owned_span<'a>(existing: &str, record: &'a OwnedContribution) -> Result<
     let begin = existing.find(&begin_marker).ok_or_else(|| {
         anyhow::anyhow!("owned instruction contribution {} is missing", record.id)
     })?;
+    if begin > 0 && existing.as_bytes()[begin - 1] != b'\n' {
+        bail!(
+            "owned instruction contribution {} has an inline marker",
+            record.id
+        );
+    }
     if existing[begin + begin_marker.len()..].contains(&begin_marker) {
         bail!("duplicate instruction contribution {}", record.id);
     }
@@ -135,7 +141,7 @@ fn find_owned_span<'a>(existing: &str, record: &'a OwnedContribution) -> Result<
         .rev()
         .take_while(|byte| *byte == b'\n')
         .count();
-    if preceding_newlines != record.preceding_newlines {
+    if record.leading_newlines > 0 && preceding_newlines != record.preceding_newlines {
         bail!(
             "owned instruction contribution {} has a changed separator",
             record.id
