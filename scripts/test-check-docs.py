@@ -101,10 +101,10 @@ class DocumentationChecks(unittest.TestCase):
         folder = self.root / "docs/specification"
         folder.mkdir()
         (folder / "example.rs").write_text("fn main() {}\n")
-        for directive in ("rustdoc_include", "playground"):
-            with self.subTest(directive=directive):
+        for directive, options in (("rustdoc_include", ""), ("playground", ""), ("playground", " editable")):
+            with self.subTest(directive=directive, options=options):
                 (self.root / "docs/book/intro.md").write_text(
-                    "# Intro\n\n{{#" + directive + " ../specification/example.rs}}\n"
+                    "# Intro\n\n{{#" + directive + " ../specification/example.rs" + options + "}}\n"
                 )
                 self.assertEqual(check.check_book(self.root), [])
 
