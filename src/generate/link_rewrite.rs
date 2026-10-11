@@ -72,11 +72,11 @@ fn apply_dest_edits(rendered: &str, remap: impl Fn(&str) -> Option<String>) -> S
     // initial scan and are not emitted as link events, so collect them
     // separately. `RefDef.span` covers the whole definition line.
     for (_label, def) in parser.reference_definitions().iter() {
-        if let Some(new_dest) = remap(&def.dest)
-            && let Some(off) = locate_dest(&rendered[def.span.clone()], &def.dest, true)
-        {
-            let abs = def.span.start + off;
-            edits.push((abs..abs + def.dest.len(), new_dest));
+        if let Some(new_dest) = remap(&def.dest) {
+            if let Some(off) = locate_dest(&rendered[def.span.clone()], &def.dest, true) {
+                let abs = def.span.start + off;
+                edits.push((abs..abs + def.dest.len(), new_dest));
+            }
         }
     }
 
@@ -87,11 +87,11 @@ fn apply_dest_edits(rendered: &str, remap: impl Fn(&str) -> Option<String>) -> S
             | Event::Start(Tag::Image { dest_url, .. }) => dest_url.to_string(),
             _ => continue,
         };
-        if let Some(new_dest) = remap(&dest)
-            && let Some(off) = locate_dest(&rendered[range.clone()], &dest, false)
-        {
-            let abs = range.start + off;
-            edits.push((abs..abs + dest.len(), new_dest));
+        if let Some(new_dest) = remap(&dest) {
+            if let Some(off) = locate_dest(&rendered[range.clone()], &dest, false) {
+                let abs = range.start + off;
+                edits.push((abs..abs + dest.len(), new_dest));
+            }
         }
     }
 
@@ -173,19 +173,18 @@ fn percent_decode(s: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'%'
-            && i + 2 < bytes.len()
-            && let (Some(hi), Some(lo)) = (
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(hi), Some(lo)) = (
                 (bytes[i + 1] as char).to_digit(16),
                 (bytes[i + 2] as char).to_digit(16),
-            )
-        {
-            out.push((hi * 16 + lo) as u8);
-            i += 3;
-        } else {
-            out.push(bytes[i]);
-            i += 1;
+            ) {
+                out.push((hi * 16 + lo) as u8);
+                i += 3;
+                continue;
+            }
         }
+        out.push(bytes[i]);
+        i += 1;
     }
     String::from_utf8(out).unwrap_or_else(|_| s.to_string())
 }
@@ -364,6 +363,21 @@ mod tests {
         // item directory.
         let body = "[x](..%2Fother%2Fgate.sh)";
         assert_eq!(run(body, &["other/gate.sh"]), body);
+    }
+
+    #[test]
+    fn percent_decode_preserves_malformed_escapes_and_invalid_utf8() {
+        for (input, expected) in [
+            ("%", "%"),
+            ("%2", "%2"),
+            ("%GG", "%GG"),
+            ("%2G", "%2G"),
+            ("%G2", "%G2"),
+            ("%FF", "%FF"),
+            ("x%20y%", "x y%"),
+        ] {
+            assert_eq!(percent_decode(input), expected, "input: {input}");
+        }
     }
 
     #[test]

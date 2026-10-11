@@ -176,8 +176,10 @@ impl FileKind {
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if root.is_file() {
-        if let Some(name) = root.file_name().and_then(|n| n.to_str())
-            && FileKind::from_filename(name).is_some()
+        if root
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|name| FileKind::from_filename(name).is_some())
         {
             out.push(root.to_path_buf());
         }
@@ -260,8 +262,10 @@ fn walk_bundles(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
         if path.is_dir() {
             walk_bundles(&path, out)?;
         } else if path.is_file()
-            && let Some(filename) = path.file_name().and_then(|n| n.to_str())
-            && filename.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
+            && path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|filename| filename.ends_with(crate::parse::bundle::BUNDLE_SUFFIX))
         {
             out.push(path);
         }
@@ -533,9 +537,7 @@ fn check_bundle_item_name_collisions(root: &Path, out: &mut Vec<Finding>) -> Res
     for bundle_path in bundle_files {
         let raw = fs::read_to_string(&bundle_path)
             .with_context(|| format!("read {}", bundle_path.display()))?;
-        if let Some(name) = extract_bundle_name(&raw)
-            && item_names.contains(&name)
-        {
+        if let Some(name) = extract_bundle_name(&raw).filter(|name| item_names.contains(name)) {
             let item_kind = detect_item_kind(root, &name);
             out.push(Finding {
                 rule_id: "name-collision",

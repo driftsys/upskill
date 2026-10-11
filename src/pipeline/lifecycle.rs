@@ -70,8 +70,10 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
             .filter_map(|i| i.group.clone().map(|g| (i.source.clone(), g)))
             .collect();
         for it in &lock.items {
-            if let Some(g) = &it.group
-                && groups.contains(&(it.source.clone(), g.clone()))
+            if it
+                .group
+                .as_ref()
+                .is_some_and(|g| groups.contains(&(it.source.clone(), g.clone())))
                 && !to_remove
                     .iter()
                     .any(|r| r.kind == it.kind && r.name == it.name)

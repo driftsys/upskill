@@ -26,9 +26,7 @@ pub fn search_index(
         .items
         .iter()
         .filter(|item| {
-            if let Some(kind) = kind_filter
-                && item.kind != kind
-            {
+            if kind_filter.is_some_and(|kind| item.kind != kind) {
                 return false;
             }
             item.name.to_lowercase().contains(&query_lower)
