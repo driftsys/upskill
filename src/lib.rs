@@ -28,5 +28,6 @@ pub mod search;
 pub mod select;
 pub mod source;
 pub mod style;
+pub mod target;
 
 pub use source::{InstallSource, home_dir, parse_install_source};

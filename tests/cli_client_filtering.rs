@@ -396,3 +396,32 @@ fn empty_audience_selection_warns_and_skips() {
     assert!(!skill_claude(&project, "claude-rule").exists());
     assert!(!skill_opencode(&project, "claude-rule").exists());
 }
+
+#[test]
+fn empty_audience_with_implicit_default_has_no_selection_warning() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let dir = registry.join("empty-audience");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: empty-audience\n\
+         description: A skill with no target audience.\n\
+         audience: []\n---\n\n# empty-audience\n",
+    )
+    .unwrap();
+    let project = stage_project(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap()])
+        .assert()
+        .success()
+        .stderr(predicates::str::contains("warning:").not());
+
+    assert!(!skill_claude(&project, "empty-audience").exists());
+    assert!(!skill_copilot(&project, "empty-audience").exists());
+    assert!(!skill_opencode(&project, "empty-audience").exists());
+}

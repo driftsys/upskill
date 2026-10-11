@@ -16,6 +16,7 @@ use serde::Deserialize;
 
 use crate::generate::Client;
 use crate::mcp::McpTarget;
+use crate::target::TargetSurface;
 
 /// One consumer-selectable client.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
@@ -31,6 +32,15 @@ impl SelectedClient {
     /// Every selectable client, in declaration order.
     pub const ALL: [SelectedClient; 4] =
         [Self::Claude, Self::Copilot, Self::VsCode, Self::OpenCode];
+
+    pub const fn surface(self) -> TargetSurface {
+        match self {
+            Self::Claude => TargetSurface::ClaudeCli,
+            Self::Copilot => TargetSurface::CopilotCli,
+            Self::VsCode => TargetSurface::CopilotVscodeLocal,
+            Self::OpenCode => TargetSurface::OpenCodeCli,
+        }
+    }
 
     /// Stable identifier used on the CLI and in config.
     pub fn name(self) -> &'static str {
@@ -86,54 +96,76 @@ impl TryFrom<String> for SelectedClient {
     }
 }
 
-/// A consumer's client selection. `None` = the built-in default (all
-/// clients); `Some(set)` = restrict to exactly this set.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ClientSelection(Option<BTreeSet<SelectedClient>>);
+/// A consumer's selected clients and whether the built-in default supplied
+/// them. Keep the origin because `update` treats an explicit selection of
+/// every current client differently from an unspecified selection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClientSelection {
+    clients: BTreeSet<SelectedClient>,
+    implicit_default: bool,
+}
+
+impl Default for ClientSelection {
+    fn default() -> Self {
+        Self::all()
+    }
+}
 
 impl ClientSelection {
-    /// The default selection: every client.
-    pub fn all() -> Self {
-        Self(None)
+    const DEFAULT_CLIENTS: [SelectedClient; 4] = [
+        SelectedClient::Claude,
+        SelectedClient::Copilot,
+        SelectedClient::VsCode,
+        SelectedClient::OpenCode,
+    ];
+
+    pub const fn default_clients() -> &'static [SelectedClient] {
+        &Self::DEFAULT_CLIENTS
     }
 
-    /// Restrict to `clients`. An empty slice yields the all-clients default,
-    /// so "no flags set" and "empty config list" both mean all.
-    pub fn restrict(clients: &[SelectedClient]) -> Self {
-        if clients.is_empty() {
-            Self(None)
-        } else {
-            Self(Some(clients.iter().copied().collect()))
+    /// The original default selection, held constant as new clients are added.
+    pub fn all() -> Self {
+        Self {
+            clients: Self::DEFAULT_CLIENTS.into_iter().collect(),
+            implicit_default: true,
         }
     }
 
-    /// True when this selection is the built-in default (all clients).
+    /// Restrict to `clients`. An empty slice yields the original default,
+    /// so "no flags set" and "empty config list" have the same selection.
+    pub fn restrict(clients: &[SelectedClient]) -> Self {
+        if clients.is_empty() {
+            Self::all()
+        } else {
+            Self {
+                clients: clients.iter().copied().collect(),
+                implicit_default: false,
+            }
+        }
+    }
+
+    /// True when selection was implicit rather than explicitly requested.
     pub fn is_all(&self) -> bool {
-        self.0.is_none()
+        self.implicit_default
     }
 
     /// True when generation client `c` is targeted. copilot and vscode both
     /// target [`Client::Copilot`], so the shared `.github/**` tree renders
     /// once regardless of which (or both) are selected.
     pub fn targets_generation(&self, c: Client) -> bool {
-        match &self.0 {
-            None => true,
-            Some(set) => set.iter().any(|s| s.generation() == c),
-        }
+        self.clients.iter().any(|s| s.generation() == c)
     }
 
     /// True when MCP target `t` is configured by this selection.
     pub fn targets_mcp(&self, t: McpTarget) -> bool {
-        match &self.0 {
-            None => true,
-            Some(set) => set.iter().any(|s| s.mcp() == t),
-        }
+        self.clients.iter().any(|s| s.mcp() == t)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::target::TargetSurface;
 
     #[test]
     fn from_str_round_trips_all_names() {
@@ -162,13 +194,18 @@ mod tests {
     }
 
     #[test]
-    fn default_and_empty_restrict_target_everything() {
+    fn default_and_empty_restrict_use_original_targets() {
         for sel in [ClientSelection::all(), ClientSelection::restrict(&[])] {
             assert!(sel.is_all());
-            for c in Client::ALL {
+            for c in [Client::Claude, Client::Copilot, Client::OpenCode] {
                 assert!(sel.targets_generation(c));
             }
-            for t in McpTarget::ALL {
+            for t in [
+                McpTarget::Claude,
+                McpTarget::Copilot,
+                McpTarget::VsCode,
+                McpTarget::OpenCode,
+            ] {
                 assert!(sel.targets_mcp(t));
             }
         }
@@ -201,5 +238,46 @@ mod tests {
         assert!(sel.targets_generation(Client::Copilot));
         assert!(sel.targets_mcp(McpTarget::VsCode));
         assert!(!sel.targets_mcp(McpTarget::Copilot));
+    }
+
+    #[test]
+    fn default_selection_is_the_existing_four_surfaces() {
+        let selected = ClientSelection::all();
+        assert_eq!(
+            selected.clients,
+            ClientSelection::default_clients().iter().copied().collect()
+        );
+        assert_eq!(
+            ClientSelection::default_clients()
+                .iter()
+                .map(|client| client.surface())
+                .collect::<Vec<_>>(),
+            vec![
+                TargetSurface::ClaudeCli,
+                TargetSurface::CopilotCli,
+                TargetSurface::CopilotVscodeLocal,
+                TargetSurface::OpenCodeCli,
+            ]
+        );
+        assert!(
+            !ClientSelection::default_clients()
+                .iter()
+                .any(|client| client.surface() == TargetSurface::CodexCli)
+        );
+        assert_eq!(ClientSelection::all(), ClientSelection::restrict(&[]));
+        let explicit_all = ClientSelection::restrict(ClientSelection::default_clients());
+        assert_ne!(selected, explicit_all);
+        assert!(!explicit_all.is_all());
+    }
+
+    #[test]
+    fn surface_ids_are_stable_and_new_surface_is_not_selectable() {
+        assert_eq!(TargetSurface::CodexCli.name(), "codex.cli");
+        assert_eq!(TargetSurface::CodexIde.name(), "codex.ide");
+        assert_eq!(
+            TargetSurface::CopilotVscodeLocal.name(),
+            "copilot.vscode-local"
+        );
+        assert!("codex".parse::<SelectedClient>().is_err());
     }
 }

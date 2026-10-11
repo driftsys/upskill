@@ -17,7 +17,7 @@ use crate::select::{ClientSelection, SelectedClient};
 pub struct Config {
     pub registries: Vec<RegistryEntry>,
     /// Persistent consumer-side client selection (ADR-0012). Empty means the
-    /// built-in default: emit for all clients.
+    /// built-in default: emit for the original four selected surfaces.
     pub clients: Vec<SelectedClient>,
 }
 
@@ -61,7 +61,7 @@ pub fn merge_configs(global: Config, project: Config) -> Config {
 
 /// Resolve the effective client selection. Precedence, highest first:
 /// per-invocation flags, then the merged config `clients:`, then the built-in
-/// default (all clients). An empty `flag_clients` means no client flag was
+/// default (the original four surfaces). An empty `flag_clients` means no client flag was
 /// passed on the command line.
 pub fn resolve_client_selection(
     flag_clients: &[SelectedClient],
