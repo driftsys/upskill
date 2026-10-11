@@ -78,10 +78,10 @@ fn updating_a_block_preserves_manual_text_after_it() {
     )
     .unwrap();
 
-    assert!(updated.content.starts_with("# Before\n"));
-    assert!(updated.content.ends_with("\n# After\nKeep this.\n"));
-    assert!(updated.content.contains("New.\n"));
-    assert!(!updated.content.contains("Old.\n"));
+    assert_eq!(
+        updated.content,
+        "# Before\n\n<!-- upskill:begin alpha -->\nNew.\n<!-- upskill:end alpha -->\n\n# After\nKeep this.\n"
+    );
 }
 
 #[test]
@@ -189,6 +189,19 @@ fn removed_owned_separator_cannot_consume_multiple_manual_newlines() {
     assert!(error.to_string().contains("separator"));
     let removed = reconcile(&initial.content, &initial.owned, &[]).unwrap();
     assert_eq!(removed.content, manual);
+}
+
+#[test]
+fn added_separator_newline_blocks_update_and_removal() {
+    let initial = reconcile("Manual.\n", &[], &[Contribution::new("alpha", "Old.\n")]).unwrap();
+    let changed = initial
+        .content
+        .replacen("Manual.\n\n<!--", "Manual.\n\n\n<!--", 1);
+
+    for desired in [Vec::new(), vec![Contribution::new("alpha", "New.\n")]] {
+        let error = reconcile(&changed, &initial.owned, &desired).unwrap_err();
+        assert!(error.to_string().contains("separator"));
+    }
 }
 
 #[test]
