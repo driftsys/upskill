@@ -19,4 +19,4 @@
 #   git std hook enable pre-commit
 #   git std hook disable pre-commit
 #
-~ just fmt
+! git diff --cached --check

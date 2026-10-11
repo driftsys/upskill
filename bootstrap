@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Minimum git-std version required by this project.
-MIN_VERSION="0.10.1"
-REPO="driftsys/git-std"
 INSTALL_DIR="${GIT_STD_INSTALL_DIR:-$HOME/.local/bin}"
+export PATH="$INSTALL_DIR:$PATH"
 
 die() { printf 'error: %s\n' "$1" >&2; exit 1; }
 
@@ -24,8 +22,8 @@ detect_target() {
   case "$os" in
     Linux)
       case "$arch" in
-        x86_64)  echo "x86_64-unknown-linux-gnu" ;;
-        aarch64) echo "aarch64-unknown-linux-gnu" ;;
+        x86_64)  echo "x86_64-unknown-linux-musl" ;;
+        aarch64) echo "aarch64-unknown-linux-musl" ;;
         *)       die "unsupported architecture: $arch" ;;
       esac
       ;;
@@ -45,7 +43,10 @@ detect_target() {
 # Compare two semver strings. Returns 0 if $1 >= $2, 1 otherwise.
 version_gte() {
   local IFS=.
-  local i a=($1) b=($2)
+  local i
+  local -a a b
+  read -r -a a <<< "$1"
+  read -r -a b <<< "$2"
   for ((i = 0; i < 3; i++)); do
     local ai="${a[i]:-0}" bi="${b[i]:-0}"
     if ((ai > bi)); then return 0; fi
@@ -54,27 +55,28 @@ version_gte() {
   return 0
 }
 
-ensure_git_std() {
-  if command -v git-std >/dev/null 2>&1; then
-    local current
-    current="$(git-std --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
-    if version_gte "$current" "$MIN_VERSION"; then
-      return 0
-    fi
-    printf 'git-std %s found, need >= %s — upgrading\n' "$current" "$MIN_VERSION"
-  else
-    printf 'git-std not found — installing\n'
-  fi
-
-  local target base download_url version tmp_dir
-  target="$(detect_target)"
-
-  version="$(curl -sSf "https://api.github.com/repos/$REPO/releases/latest" \
+ensure_tool() (
+  local tool="$1" repo="$2"
+  local target base download_url version latest_version tmp_dir
+  version="$(curl -sSf "https://api.github.com/repos/$repo/releases/latest" \
     | grep '"tag_name"' | head -1 | cut -d'"' -f4)"
   [ -n "$version" ] || die "could not determine latest release"
+  latest_version="${version#v}"
 
-  base="git-std-$target"
-  download_url="https://github.com/$REPO/releases/download/$version/$base.tar.gz"
+  if command -v "$tool" >/dev/null 2>&1; then
+    local current
+    current="$("$tool" --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+    if version_gte "$current" "$latest_version"; then
+      return 0
+    fi
+    printf '%s %s found, latest is %s — upgrading\n' "$tool" "$current" "$version"
+  else
+    printf '%s not found — installing\n' "$tool"
+  fi
+
+  target="$(detect_target)"
+  base="$tool-$target"
+  download_url="https://github.com/$repo/releases/download/$version/$base.tar.gz"
   printf 'downloading %s\n' "$download_url"
 
   tmp_dir="$(mktemp -d)"
@@ -91,21 +93,22 @@ ensure_git_std() {
   tar -xzf "$tmp_dir/$base.tar.gz" -C "$tmp_dir"
 
   mkdir -p "$INSTALL_DIR"
-  mv "$tmp_dir/git-std" "$INSTALL_DIR/git-std"
-  chmod +x "$INSTALL_DIR/git-std"
+  mv "$tmp_dir/$tool" "$INSTALL_DIR/$tool"
+  chmod +x "$INSTALL_DIR/$tool"
 
-  printf 'installed git-std %s to %s/git-std\n' "$version" "$INSTALL_DIR"
+  printf 'installed %s %s to %s/%s\n' "$tool" "$version" "$INSTALL_DIR" "$tool"
 
   # Install man pages if present in the tarball.
   local man_dir="${GIT_STD_MAN_DIR:-$INSTALL_DIR/../share/man/man1}"
-  if ls "$tmp_dir"/git-std*.1 >/dev/null 2>&1; then
+  if ls "$tmp_dir"/"$tool"*.1 >/dev/null 2>&1; then
     mkdir -p "$man_dir"
-    cp "$tmp_dir"/git-std*.1 "$man_dir/"
+    cp "$tmp_dir"/"$tool"*.1 "$man_dir/"
     printf 'installed man pages to %s\n' "$man_dir"
-    printf "hint: if 'man git-std' doesn't work, add to your shell profile:\n"
+    printf "hint: if 'man %s' does not work, add to your shell profile:\n" "$tool"
     printf "      export MANPATH=\"\$HOME/.local/share/man:\${MANPATH:-}\"\n"
   fi
-}
+)
 
-ensure_git_std
+ensure_tool git-std driftsys/git-std
+ensure_tool prim driftsys/prim
 exec git std bootstrap
