@@ -334,6 +334,17 @@ mod tests {
             reason: "missing tool restriction",
         };
         assert!(profile.validate_capability(key, &[misclassified]).is_err());
+        assert!(
+            profile
+                .validate_capability(
+                    key,
+                    &[CapabilityDeclaration {
+                        representation: Representation::Native,
+                        ..misclassified
+                    }],
+                )
+                .is_err()
+        );
         let unrelated = CapabilityDeclaration {
             key: CapabilityKey::new(CapabilityCategory::Subagents, "tools.allow"),
             ..duplicate
@@ -392,6 +403,52 @@ mod tests {
                 key: cosmetic,
                 reason: "cosmetic field unavailable",
             })
+        );
+        for category in [CapabilityCategory::Skills, CapabilityCategory::Permissions] {
+            let unreviewed = CapabilityKey::new(category, "color");
+            assert!(
+                profile
+                    .validate_capability(
+                        unreviewed,
+                        &[CapabilityDeclaration {
+                            surface: TargetSurface::ClaudeCli,
+                            key: unreviewed,
+                            representation: Representation::NativeUnsupported,
+                            requirement: Requirement::OptionalMetadata,
+                            reason: "unreviewed omission",
+                        }],
+                    )
+                    .is_err()
+            );
+        }
+        for representation in [Representation::Adapted, Representation::Deferred] {
+            assert!(matches!(
+                profile.validate_capability(
+                    cosmetic,
+                    &[CapabilityDeclaration {
+                        surface: TargetSurface::ClaudeCli,
+                        key: cosmetic,
+                        representation,
+                        requirement: Requirement::OptionalMetadata,
+                        reason: "cosmetic change",
+                    }],
+                ),
+                Ok(CapabilityDecision::Warning(_))
+            ));
+        }
+        assert!(
+            profile
+                .validate_capability(
+                    cosmetic,
+                    &[CapabilityDeclaration {
+                        surface: TargetSurface::ClaudeCli,
+                        key: cosmetic,
+                        representation: Representation::NativeUnsupported,
+                        requirement: Requirement::RequiredBehavior,
+                        reason: "required color",
+                    }],
+                )
+                .is_err()
         );
         let other_surface = CapabilityDeclaration {
             surface: TargetSurface::CodexCli,

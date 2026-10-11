@@ -172,8 +172,9 @@ The earlier “all clients” default means the four consumer surfaces available
 when this decision was accepted: Claude CLI, Copilot CLI, Copilot VS Code Local,
 and OpenCode CLI. It is a fixed selection, not a rule that newly added adapters
 automatically join. Codex CLI will require explicit selection when its
-instruction lifecycle is implemented. An empty `clients:` list retains the
-fixed default; an explicit list remains an override.
+instruction lifecycle is implemented. An empty effective merged `clients:`
+list retains the fixed default; an empty project list can still inherit a
+nonempty global selection. An explicit list remains an override.
 
 The warn-skip behavior described above applies when a restrictive consumer
 selection leaves an item with no selected generation client. The existing
