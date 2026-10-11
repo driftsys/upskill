@@ -201,7 +201,12 @@ not invent a universally portable slash-command kind.
 Support native Claude/Copilot Markdown profiles and Codex TOML agents, with
 prompts, description/identity, models, tool exposure, instruction inheritance,
 skill dependencies, and native execution settings. Model aliases and skill
-preloading need documented mappings or native alternatives. Preserve the
+preloading need documented mappings or native alternatives. Follow
+[ADR-0014](../../adr/0014-versioned-agent-model-mappings.md): ship offline,
+versioned S/A/B/C defaults, allow explicit mapping updates and persistent
+global overrides, and resolve models at installation or regeneration. Copilot
+uses ordered `models` preferences with one agent-wide effort; verify native
+model IDs before implementing the generator. Preserve the
 difference between selecting a main agent and delegating to a subagent.
 
 Acceptance: native discovery and a bounded delegated task use the intended
@@ -211,6 +216,14 @@ inheritance and precedence, including conflicting names and parent constraints.
 Prose mentioning a skill is not reported as native skill preloading. Features
 such as memory, worktree isolation, and handoffs get explicit capability entries
 rather than silently discarded fields.
+
+Model acceptance: offline installs are repeatable for a pinned mapping
+version; a mapping update changes no installed agent until explicit
+regeneration. Global overrides survive the update and win at regeneration.
+For Copilot, generated preferences preserve the documented order, use
+`modelPolicy: preferred`, and apply one supported effort to the whole list.
+Tests cover a user without access to any preferred model, a stale native ID,
+and an incompatible effort without claiming that `auto` enforces a tier.
 
 ### M4 — MCP configuration and lifecycle
 
