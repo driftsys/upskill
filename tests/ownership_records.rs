@@ -22,6 +22,17 @@ fn owner(id: &str) -> ArtifactOwner {
     }
 }
 
+fn second_owner() -> ArtifactOwner {
+    ArtifactOwner {
+        installation_id: "install-b".into(),
+        source: "other/assistants@v2:agents".into(),
+        source_revision: Some("fedcba9876543210".into()),
+        kind: ItemKind::Agent,
+        source_name: "original-agent".into(),
+        installed_name: "agent-alias".into(),
+    }
+}
+
 fn file() -> OwnedArtifact {
     OwnedArtifact {
         root: InstallationRoot {
@@ -53,12 +64,27 @@ fn contribution(id: &str) -> OwnedArtifact {
 }
 
 fn assert_invalid(records: &[OwnedArtifact], reason: &str) {
-    for result in [
-        validate_artifacts(records),
-        serialize_artifacts(records).map(|_| ()),
-        parse_artifacts(&serde_json::to_string(records).unwrap()).map(|_| ()),
-    ] {
-        let error = result.expect_err(reason);
+    let results = [
+        ("validate_artifacts", validate_artifacts(records)),
+        (
+            "serialize_artifacts",
+            serialize_artifacts(records).map(|_| ()),
+        ),
+        (
+            "parse_artifacts",
+            parse_artifacts(&serde_json::to_string(records).unwrap()).map(|_| ()),
+        ),
+    ];
+    let accepted: Vec<_> = results
+        .iter()
+        .filter_map(|(boundary, result)| result.is_ok().then_some(*boundary))
+        .collect();
+    assert!(
+        accepted.is_empty(),
+        "{reason}: unexpectedly accepted by {accepted:?}"
+    );
+    for (_, result) in results {
+        let error = result.unwrap_err();
         assert!(format!("{error:#}").contains("owned artifact"), "{error:#}");
     }
 }
@@ -78,7 +104,7 @@ fn codec_preserves_alias_revision_shared_owners_and_editor_record() {
     artifact.content = ArtifactContent::MarkdownContribution {
         contribution: edit.owned[0].clone(),
     };
-    artifact.owners.push(owner("install-b"));
+    artifact.owners.push(second_owner());
     artifact.consumers = vec![TargetSurface::CodexCli, TargetSurface::CopilotCli];
     let records = vec![artifact];
     let json = serialize_artifacts(&records).unwrap();
@@ -86,7 +112,7 @@ fn codec_preserves_alias_revision_shared_owners_and_editor_record() {
     assert_eq!(decoded, records);
     assert_eq!(decoded[0].owners[0].source_name, "original-guidance");
     assert_eq!(decoded[0].owners[0].installed_name, "local-alias");
-    assert_eq!(decoded[0].owners[1].installation_id, "install-b");
+    assert_eq!(decoded[0].owners[1], second_owner());
     assert_eq!(
         decoded[0].owners[0].source_revision.as_deref(),
         Some("0123456789abcdef")
@@ -336,32 +362,69 @@ fn allows_equal_paths_under_distinct_root_paths_and_scopes() {
 }
 
 #[test]
+fn user_scope_serializes_with_literal_wire_name() {
+    let mut artifact = file();
+    artifact.root.scope = OwnershipScope::User;
+    let json = serialize_artifacts(&[artifact]).unwrap();
+    let value: Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(value[0]["root"]["scope"], "user");
+}
+
+#[test]
+fn user_scope_parses_literal_wire_name() {
+    let mut expected = file();
+    expected.root.scope = OwnershipScope::User;
+    let literal = json!([{
+        "root": {"scope": "user", "path": expected.root.path},
+        "path": "rules/guidance.md",
+        "content": {"kind": "file", "content_sha256": HASH, "mode": 420},
+        "owners": [{
+            "installation_id": "install-a",
+            "source": "driftsys/guidance@v1:rules",
+            "source_revision": "0123456789abcdef",
+            "kind": "rule",
+            "source_name": "original-guidance",
+            "installed_name": "local-alias"
+        }],
+        "consumers": ["claude.cli"]
+    }]);
+    assert_eq!(
+        parse_artifacts(&literal.to_string()).unwrap(),
+        vec![expected]
+    );
+}
+
+#[test]
 fn rejects_installation_binding_changes_across_records() {
-    for field in [
-        "source",
-        "source_revision",
-        "kind",
-        "source_name",
-        "installed_name",
-    ] {
-        let first = file();
-        let mut second = first.clone();
-        second.path = "other.md".into();
-        match field {
-            "source" => second.owners[0].source = "other/repo".into(),
-            "source_revision" => second.owners[0].source_revision = None,
-            "kind" => second.owners[0].kind = ItemKind::Skill,
-            "source_name" => second.owners[0].source_name = "different-source".into(),
-            _ => second.owners[0].installed_name = "different-alias".into(),
+    for owner_index in [0, 1] {
+        for field in [
+            "source",
+            "source_revision",
+            "kind",
+            "source_name",
+            "installed_name",
+        ] {
+            let mut first = file();
+            first.owners.push(second_owner());
+            let mut second = first.clone();
+            second.path = "other.md".into();
+            let changed_owner = &mut second.owners[owner_index];
+            match field {
+                "source" => changed_owner.source = "other/repo".into(),
+                "source_revision" => changed_owner.source_revision = None,
+                "kind" => changed_owner.kind = ItemKind::Skill,
+                "source_name" => changed_owner.source_name = "different-source".into(),
+                _ => changed_owner.installed_name = "different-alias".into(),
+            }
+            assert_invalid(&[first, second], &format!("{field} on owner {owner_index}"));
         }
-        assert_invalid(&[first, second], field);
     }
 }
 
 #[test]
 fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutation() {
     let mut beta = contribution("beta");
-    beta.owners = vec![owner("install-b"), owner("install-a")];
+    beta.owners = vec![second_owner(), owner("install-a")];
     beta.consumers = vec![TargetSurface::OpenCodeCli, TargetSurface::ClaudeCli];
     let mut alpha = beta.clone();
     alpha.content = contribution("alpha").content;
@@ -389,10 +452,7 @@ fn deterministic_serialization_sorts_records_owners_and_consumers_without_mutati
     assert_eq!(decoded[0].path, "A.md");
     assert_eq!(decoded[1].content, contribution("alpha").content);
     assert_eq!(decoded[2].content, contribution("beta").content);
-    assert_eq!(
-        decoded[1].owners,
-        vec![owner("install-a"), owner("install-b")]
-    );
+    assert_eq!(decoded[1].owners, vec![owner("install-a"), second_owner()]);
     assert_eq!(
         decoded[1].consumers,
         vec![TargetSurface::ClaudeCli, TargetSurface::OpenCodeCli]

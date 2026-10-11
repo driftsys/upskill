@@ -4,7 +4,7 @@
 
 **Goal:** Give the M1 lifecycle a validated, serializable record of exact owned files and Markdown contributions, without activating schema-2 writes before lifecycle integration.
 
-**Architecture:** Add a pure `ownership` library module. An artifact belongs to a concrete installation root and relative path, records either whole-file bytes/mode or the existing Markdown editor's contribution record, and carries explicit installation owners and consuming target surfaces. Validation and a deterministic JSON codec supply the boundary later state integration will use; they perform no filesystem operations.
+**Architecture:** Add a pure `ownership` library module. An artifact belongs to a concrete installation root and relative path, records either a whole-file SHA-256 and optional permission mode or the existing Markdown editor's contribution record, and carries explicit installation owners and consuming target surfaces. Validation and a deterministic JSON codec supply the boundary later state integration will use; they perform no filesystem operations.
 
 **Tech Stack:** Rust edition 2024, existing serde/serde_json/anyhow; no new dependency.
 
