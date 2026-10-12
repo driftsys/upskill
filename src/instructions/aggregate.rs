@@ -91,6 +91,7 @@ struct OwnedSpan<'a> {
     record: &'a OwnedContribution,
     start: usize,
     begin: usize,
+    content_start: usize,
     end_marker_start: usize,
     end: usize,
 }
@@ -153,6 +154,7 @@ fn find_owned_span<'a>(existing: &str, record: &'a OwnedContribution) -> Result<
         record,
         start,
         begin,
+        content_start,
         end_marker_start: content_end,
         end: content_end + end_marker.len(),
     })
@@ -176,26 +178,11 @@ pub fn reconcile(
             );
         }
     }
-    let mut spans = prior
-        .iter()
-        .map(|record| find_owned_span(existing, record))
-        .collect::<Result<Vec<_>>>()?;
-    for (position, _) in existing.match_indices("<!-- upskill:") {
-        if !spans
-            .iter()
-            .any(|span| position == span.begin || position == span.end_marker_start)
-        {
-            bail!("unowned or malformed instruction contribution marker");
-        }
-    }
-    spans.sort_by_key(|span| span.start);
+    let spans = verified_spans(existing, prior)?;
     let mut content = String::new();
     let mut owned = Vec::new();
     let mut cursor = 0;
     for span in spans {
-        if span.start < cursor {
-            bail!("overlapping instruction contributions");
-        }
         content.push_str(&existing[cursor..span.start]);
         if let Some(contribution) = desired_by_id.remove(&span.record.id) {
             let preceding_newlines = content
@@ -222,4 +209,42 @@ pub fn reconcile(
     }
     owned.sort_by(|left, right| left.id.cmp(&right.id));
     Ok(AggregateEdit { content, owned })
+}
+
+fn verified_spans<'a>(
+    existing: &str,
+    prior: &'a [OwnedContribution],
+) -> Result<Vec<OwnedSpan<'a>>> {
+    let mut spans = prior
+        .iter()
+        .map(|record| find_owned_span(existing, record))
+        .collect::<Result<Vec<_>>>()?;
+    for (position, _) in existing.match_indices("<!-- upskill:") {
+        if !spans
+            .iter()
+            .any(|span| position == span.begin || position == span.end_marker_start)
+        {
+            bail!("unowned or malformed instruction contribution marker");
+        }
+    }
+    spans.sort_by_key(|span| span.start);
+    for pair in spans.windows(2) {
+        if pair[1].start < pair[0].end {
+            bail!("overlapping instruction contributions");
+        }
+    }
+    Ok(spans)
+}
+
+/// Read exact verified contribution bodies in document order, without editing.
+pub fn inspect_owned(existing: &str, prior: &[OwnedContribution]) -> Result<Vec<Contribution>> {
+    Ok(verified_spans(existing, prior)?
+        .into_iter()
+        .map(|span| {
+            Contribution::new(
+                &span.record.id,
+                &existing[span.content_start..span.end_marker_start],
+            )
+        })
+        .collect())
 }

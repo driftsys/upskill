@@ -5,3 +5,4 @@ current behavior; [ADRs](../adr/README.md) own binding decisions and rationale.
 Future designs remain in [WIP](../wip/README.md).
 
 - [Generation and installation](generation-pipeline.md)
+- [Owned instruction operation planning](owned-instruction-planning.md)

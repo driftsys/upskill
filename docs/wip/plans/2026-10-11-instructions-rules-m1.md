@@ -69,6 +69,22 @@ labels, and describes the fixed historical Claude/Copilot/OpenCode candidate
 layouts. Requested selection remains unresolved; diagnostics retain malformed and
 duplicate state. It performs no I/O, source verification or ownership adoption.
 
+The [bounded owned instruction planning prerequisite](../../archive/plans/2026-10-12-owned-instruction-planning.md)
+joins the aggregate editor and owned-artifact model through a pure public planner
+and shared verified body reader. It plans complete installation contribution sets
+from exact supplied observations, preserves untouched bodies/owners/consumers and
+manual bytes, rebuilds separator metadata, and retains exact before bytes for
+no-ops. Last-region removal retains manual bytes and keeps the file, which is empty
+only when no content remains. Affected whole files and multi-owner regions
+conflict; unrelated records survive. It enables no CLI or native support and does
+not complete M1-A2 or M1-A3.
+
+The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
+remains active WIP after the bounded pair completes and must not be archived with
+it. Complete reference-graph authority, per-owner consumer association,
+source/filesystem evidence, whole-file/resource plans, durable state/lifecycle and
+transactional execution remain activation work.
+
 M1-A2 still requires verified source resolution, reproducible historical rendering
 and resource enumeration, requested-selection reconciliation, and adoption.
 Lifecycle integration must preserve records through add, update, remove, list and
