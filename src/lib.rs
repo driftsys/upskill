@@ -15,6 +15,7 @@ pub mod config;
 pub mod conflict;
 pub mod fetch;
 pub mod files;
+pub mod filesystem;
 pub mod fmt;
 pub mod generate;
 pub mod index;

@@ -686,6 +686,41 @@ writer locking, durable state and apply/recovery. It does not complete M1-A2,
 M1-A3 or M1. The public declarations are in
 [`operations::plan`](https://github.com/driftsys/upskill/blob/main/src/operations/plan.rs).
 
+### 4.7 Qualified scope roots and advisory writer locking
+
+`filesystem::QualifiedScope::open(&InstallationRoot)` pins an existing absolute
+scope directory on Linux and macOS. Parent components, missing or non-directory
+roots and final symlinks are rejected. Dot components and trailing separators
+are normalized before final symlink checks. Ancestor aliases are permitted during
+explicit selection; native non-UTF-8 paths are preserved where the underlying
+filesystem accepts them. Filesystem refusals remain contextual errors.
+
+`verify_binding()` revalidates the normalized selected spelling, canonical path
+and directory device/inode identity. A renamed, replaced or symlink-substituted
+root, or retargeted ancestor alias, invalidates the old binding. The held handle
+does not freeze the path namespace or establish descendant containment.
+
+`try_lock_writer()` uses a fresh close-on-exec directory description and a
+nonblocking exclusive advisory lock. It revalidates binding before and after
+acquisition. Same-process and cross-process writers to one physical directory
+contend, including aliases and different Project/User labels; distinct directories
+remain independent. Contention returns a busy error. Other filesystem failures
+remain errors. An opaque borrowing `ScopeWriterGuard` retains exclusion until
+drop or holder termination; ordinary exec does not retain it. Temporary fork
+inheritance is possible. No fork-safe lease, fairness, network-filesystem guarantee
+or exclusion against external editors is promised.
+
+These operations create no files, directories or persistent state and preserve
+existing bytes and permissions. The API exposes no raw descriptor, cloning or
+write operation. Other operating systems explicitly report unsupported behavior.
+This library prerequisite activates no CLI command, schema change, lifecycle
+execution, descendant containment, observation or recovery. It does not complete
+the M1 filesystem stage or Windows qualification.
+
+See [AD-0028](../adr/0028-lock-qualified-scope-directories.md) and the
+[qualified scope-lock design](../design/qualified-scope-locking.md) for rationale,
+acceptance examples and platform evidence.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

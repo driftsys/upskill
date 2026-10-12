@@ -14,3 +14,5 @@ Future designs remain in [WIP](../wip/README.md).
 - [Captured item compilation](captured-item-compilation.md)
 
 - [Mixed owned-artifact operation planning](mixed-owned-artifact-planning.md)
+
+- [Qualified scope roots and advisory writer locking](qualified-scope-locking.md)

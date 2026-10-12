@@ -50,3 +50,7 @@ records the implemented library boundary and its documented alternatives.
 ## Mixed owned-artifact planning
 
 - [AD-0027 — Compose complete owned-artifact plans before lifecycle effects](0027-compose-complete-owned-artifact-plans.md)
+
+## Qualified scope directories
+
+- [AD-0028 — Lock qualified scope directories before owned lifecycle effects](0028-lock-qualified-scope-directories.md)
