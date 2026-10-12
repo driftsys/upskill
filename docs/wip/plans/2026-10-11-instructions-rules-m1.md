@@ -69,7 +69,7 @@ labels, and describes the fixed historical Claude/Copilot/OpenCode candidate
 layouts. Requested selection remains unresolved; diagnostics retain malformed and
 duplicate state. It performs no I/O, source verification or ownership adoption.
 
-The [bounded owned instruction planning prerequisite](2026-10-12-owned-instruction-planning.md)
+The [bounded owned instruction planning prerequisite](../../archive/plans/2026-10-12-owned-instruction-planning.md)
 joins the aggregate editor and owned-artifact model through a pure public planner
 and shared verified body reader. It plans complete installation contribution sets
 from exact supplied observations, preserves untouched bodies/owners/consumers and

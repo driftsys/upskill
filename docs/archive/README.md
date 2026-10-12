@@ -37,3 +37,37 @@ source verification, historical rendering and resources, adoption,
 requested-selection reconciliation, schema-2 lifecycle preservation, exact
 backup and transactional execution are unfinished. Other WIP material retains
 its existing disposition; this archive entry concerns only the named pair.
+
+## Owned instruction operation planning
+
+Source paths: `docs/wip/specs/2026-10-12-owned-instruction-planning-design.md`
+and `docs/wip/plans/2026-10-12-owned-instruction-planning.md`.
+The archived [spec](specs/2026-10-12-owned-instruction-planning-design.md) and
+[plan](plans/2026-10-12-owned-instruction-planning.md) retain the original material;
+parent-context links follow their active WIP destination and the completed plan
+explicitly qualifies its historical RED sequencing deviation.
+
+Implementation commit: `0a0fb93dd83589cb554df8d2d302d7bfdba40105`.
+Final acceptance-test and documentation commit:
+`7b8b52d3a09b66645a72b0a02647c58b9fa80c4d`.
+Local completion evidence: ordered formatting and full verification passed with
+725 Rust tests and 11 documentation-checker tests; Rust 1.85 all-targets checking
+passed. Fresh task review approved functional quality without functional blockers.
+These commits and checks do not claim a PR merge. Compile RED preceded code;
+valid behavioral assertion RED followed an implementation draft. Subsequent stub
+assertions and semantic mutation checks validate current behavior, while the
+historical test-first process exception remains explicit in the plan.
+
+Durable successors:
+[specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning),
+[planner design](../design/owned-instruction-planning.md),
+[AD-0016](../adr/0016-pure-instruction-planning.md),
+[AD-0017](../adr/0017-shared-instruction-owner-evidence.md) and
+[AD-0018](../adr/0018-retain-empty-instruction-aggregates.md).
+
+The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
+Source/filesystem evidence, complete reference authority, per-owner consumer
+association, whole-file/resource planning, mixed-state lifecycle integration and
+transactional execution remain pending. This entry resolves only the named pair;
+other WIP material retains its existing disposition.

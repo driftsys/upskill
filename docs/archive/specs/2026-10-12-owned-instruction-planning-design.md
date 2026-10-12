@@ -2,7 +2,7 @@
 
 Date: 2026-10-12. Status: **Ready for bounded implementation**.
 Baseline: `f7d36bf`.
-Parent direction: [M1 owned lifecycle](2026-10-12-m1-owned-lifecycle-design.md).
+Parent direction: [M1 owned lifecycle](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 ## Outcome and boundaries
 

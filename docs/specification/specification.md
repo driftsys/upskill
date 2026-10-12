@@ -346,6 +346,9 @@ association, whole-file/resource plans, state/lifecycle integration and
 transactional execution remain pending. This prerequisite changes no CLI behavior,
 source format or lockfile format and enables no native client support.
 
+See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
+and its decision records for implementation boundaries and rationale.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

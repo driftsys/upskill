@@ -9,7 +9,7 @@
 **Tech Stack:** Existing Rust 2024 crate, `anyhow`, current ownership/editor APIs; Rust 1.85; no new dependencies.
 
 **Spec:** [Owned instruction operation planning](../specs/2026-10-12-owned-instruction-planning-design.md).
-The [operational direction](../specs/2026-10-12-m1-owned-lifecycle-design.md) remains active future work.
+The [operational direction](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md) remains active future work.
 
 ## Global Constraints
 
@@ -205,6 +205,14 @@ overlapping spans, inline/malformed markers and separator edits through the same
 validation used by reconciliation. Reuse focused existing fixtures where useful.
 
 - [x] **Step 2: Establish compile RED then behavioral assertion RED.**
+
+Completion qualification: compile RED preceded implementation, but valid behavioral
+assertion RED occurred after an implementation draft. Initial overlapping runs and
+an invalid test enum variant prevented the intended sequence. The draft was saved,
+minimal stubs produced valid assertion failures, and the draft was restored with
+byte comparisons. Subsequent semantic mutations and independent task review
+validated current behavior. This checked step records completed validation,
+not compliance with the original RED-before-implementation order.
 
 Run `cargo test --test instruction_plans` before defining the module; save the
 expected missing API compile failure. Introduce only the DTOs, module export and
