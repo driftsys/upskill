@@ -100,3 +100,19 @@ fn removed_gitlab_shorthand_exits_two_with_url_hint() {
         .code(2)
         .stderr(predicate::str::contains("https://gitlab.com"));
 }
+
+#[test]
+fn removed_self_hosted_gitlab_shorthand_exits_two_with_url_hint() {
+    let cwd = tempdir().unwrap();
+    let home = cwd.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(cwd.path())
+        .args([
+            "add",
+            "gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("https://"));
+}

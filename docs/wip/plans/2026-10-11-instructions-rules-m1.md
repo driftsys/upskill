@@ -55,6 +55,14 @@ Validation performs no filesystem access, canonicalization, case or alias checks
 symlink containment, source verification, or writer locking. Those checks remain
 executor and state integration work.
 
+The [legacy source-label compatibility prerequisite](2026-10-12-legacy-source-labels.md)
+restores schema-1 updates from unambiguous persisted `gitlab:` and `gitlab+`
+labels. The applying lifecycle canonicalizes reinstalled item and bundle labels
+to HTTPS while preserving aliases, pins and unrelated records. Inspection and
+preview preserve bytes. New user syntax stays unchanged; ambiguous or
+unrepresentable labels require explicit reconciliation. This prerequisite does
+not adopt output files or introduce schema 2.
+
 The next M1-A2 task projects legacy state without fabricating ownership or requested
 surfaces. Lifecycle integration must then preserve these records through add,
 update, remove, list, and doctor before schema-2 writes can be enabled with migration

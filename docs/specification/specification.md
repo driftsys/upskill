@@ -105,6 +105,21 @@ covered by passing local paths to `add` / `update`.
 - **Track upstream evolution.** `update` git-pulls source repos and
   regenerates items whose source hash changed.
 
+Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain
+readable for updates. Unambiguous historical labels decode to generic HTTPS
+sources, preserving namespace, ref and subfolder. Applying `update` canonicalizes
+the source labels of reinstalled items and bundles, even when their content is
+unchanged. `update --dry-run`, `list` and `doctor` do not rewrite lockfiles or
+generated output. Aliases, recorded selection, bundle membership and unrelated
+item/plugin/MCP records remain intact. This does not introduce schema 2 or infer
+artifact ownership.
+
+The supported historical authority grammar and reconciliation limits are defined
+in the [ADR-0011 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12).
+Unsupported or ambiguous labels fail before fetch with the recorded label and
+guidance to reconcile a verified HTTPS URL, ref and subfolder. Modern `add` still
+rejects the removed GitLab shorthands with exit 2; use a full HTTPS URL.
+
 ### 2.3 `remove`
 
 ```text

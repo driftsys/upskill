@@ -77,6 +77,11 @@ pub enum SourceParseError {
          e.g. https://gitlab.com/owner/repo"
     )]
     GitlabShorthandRemoved,
+    #[error(
+        "cannot decode historical GitLab source label: {reason}; reconcile this lockfile \
+         source with a verified https:// URL, ref and subfolder before updating"
+    )]
+    InvalidLegacyGitlabLabel { reason: &'static str },
 }
 
 /// Resolve the running user's home directory.
@@ -163,6 +168,8 @@ fn is_windows_absolute(s: &str) -> bool {
 /// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
 /// - `https://<host>/<path>[@<ref>][:<subfolder>]` — generic git source
 /// - `local:<path>` — absolute on round-trip; passed through verbatim
+/// - Historical `gitlab:` / `gitlab+host:` labels — decode unambiguous state
+///   into generic HTTPS sources; never accepted by [`parse_install_source`]
 pub fn parse_install_source_label(label: &str) -> Result<InstallSource, SourceParseError> {
     if let Some(rest) = label.strip_prefix("local:") {
         return Ok(InstallSource::LocalPath(PathBuf::from(rest)));
@@ -174,9 +181,92 @@ pub fn parse_install_source_label(label: &str) -> Result<InstallSource, SourcePa
         return parse_url_source(rest);
     }
     if label.starts_with("gitlab:") || label.starts_with("gitlab+") {
-        return Err(SourceParseError::GitlabShorthandRemoved);
+        return parse_legacy_gitlab_label(label);
     }
     Err(SourceParseError::InvalidFormat)
+}
+
+/// Decode persisted labels only. Validate the historical authority separately:
+/// the permissive modern URL parser must not turn ambiguous state into a remote.
+fn parse_legacy_gitlab_label(label: &str) -> Result<InstallSource, SourceParseError> {
+    let invalid = |reason| SourceParseError::InvalidLegacyGitlabLabel { reason };
+    let (hostname, authority, path) = if let Some(path) = label.strip_prefix("gitlab:") {
+        ("gitlab.com", "gitlab.com", path)
+    } else {
+        let rest = label.strip_prefix("gitlab+").unwrap();
+        let (hostname, after_host) = if rest.starts_with('[') {
+            let (address, after) = rest
+                .split_once(']')
+                .ok_or_else(|| invalid("IPv6 authority requires closing brackets"))?;
+            address[1..]
+                .parse::<std::net::Ipv6Addr>()
+                .map_err(|_| invalid("invalid bracketed IPv6 address"))?;
+            let after = after
+                .strip_prefix(':')
+                .ok_or_else(|| invalid("expected a path or port delimiter after IPv6 brackets"))?;
+            (&rest[..address.len() + 1], after)
+        } else {
+            rest.split_once(':')
+                .ok_or_else(|| invalid("expected host:namespace/repository"))?
+        };
+        let (prefix, _) = after_host
+            .split_once('/')
+            .ok_or_else(|| invalid("expected namespace/repository after the authority"))?;
+        // A second colon BEFORE the first path slash identifies a port.
+        // Without it, even a numeric first namespace component is a path.
+        let (authority, path) = if let Some((port, _)) = prefix.split_once(':') {
+            if port.is_empty()
+                || !port.chars().all(|c| c.is_ascii_digit())
+                || !matches!(port.parse::<u16>(), Ok(1..=65535))
+            {
+                return Err(invalid(
+                    "HTTPS port must contain decimal digits with a value in 1..=65535",
+                ));
+            }
+            (
+                &rest[..hostname.len() + 1 + port.len()],
+                &after_host[port.len() + 1..],
+            )
+        } else {
+            (hostname, after_host)
+        };
+        (hostname, authority, path)
+    };
+    if !hostname.starts_with('[')
+        && !hostname.split('.').all(|part| {
+            !part.is_empty()
+                && part.starts_with(|c: char| c.is_ascii_alphanumeric())
+                && part.ends_with(|c: char| c.is_ascii_alphanumeric())
+                && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        })
+    {
+        return Err(invalid(
+            "host must contain non-empty ASCII alphanumeric or hyphen labels, without credentials, schemes or whitespace",
+        ));
+    }
+
+    let before_subfolder = path.split(':').next().unwrap();
+    let repo_path = before_subfolder.split('@').next().unwrap();
+    if !repo_path.contains('/') || repo_path.split('/').any(|s| s.trim().is_empty()) {
+        return Err(invalid(
+            "namespace and repository components must be non-empty",
+        ));
+    }
+    let repo = parse_git_url(authority, path)
+        .map_err(|_| invalid("invalid or empty ref, subfolder or repository"))?;
+    if repo.url != format!("https://{authority}/{repo_path}") {
+        return Err(invalid(
+            "repository spelling changes under modern URL normalization",
+        ));
+    }
+    let source = InstallSource::Git(repo);
+    let canonical = source.to_string();
+    if parse_install_source_label(&canonical).ok().as_ref() != Some(&source) {
+        return Err(invalid(
+            "host or path cannot round-trip faithfully through the modern source parser",
+        ));
+    }
+    Ok(source)
 }
 
 fn parse_url_source(url_without_scheme: &str) -> Result<InstallSource, SourceParseError> {
@@ -726,14 +816,128 @@ mod tests {
     }
 
     #[test]
-    fn label_rejects_removed_gitlab_shorthand() {
-        // Old lockfiles may still carry `gitlab:` labels — they hard-fail
-        // with the same self-serve error as the CLI input form (pre-1.0,
-        // no migration).
-        let err = parse_install_source_label("gitlab:team/x@main").expect_err("must reject");
-        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
-        let err = parse_install_source_label("gitlab+h.com:team/x").expect_err("must reject");
-        assert_eq!(err, SourceParseError::GitlabShorthandRemoved);
+    fn legacy_labels_decode_and_roundtrip_as_modern_git() {
+        for (legacy, url, git_ref, subfolder) in [
+            (
+                "gitlab:team/repo",
+                "https://gitlab.com/team/repo",
+                None,
+                None,
+            ),
+            (
+                "gitlab:org/team/repo@feature/one:skills/tool",
+                "https://gitlab.com/org/team/repo",
+                Some("feature/one"),
+                Some("skills/tool"),
+            ),
+            (
+                "gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml",
+                "https://gitlab.example.com/org/team/repo",
+                None,
+                Some("skills/team.bundle.yaml"),
+            ),
+            (
+                "gitlab+gitlab-internal.example.com:org/repo",
+                "https://gitlab-internal.example.com/org/repo",
+                None,
+                None,
+            ),
+            (
+                "gitlab+gitlab:org/repo",
+                "https://gitlab/org/repo",
+                None,
+                None,
+            ),
+            ("gitlab+host:123/repo", "https://host/123/repo", None, None),
+            (
+                "gitlab+host:8443/org/repo:sub",
+                "https://host/8443/org/repo",
+                None,
+                Some("sub"),
+            ),
+            (
+                "gitlab+[2001:db8::1]:org/repo",
+                "https://[2001:db8::1]/org/repo",
+                None,
+                None,
+            ),
+            (
+                "gitlab+[::1]:8443:org/team/repo@v1:content",
+                "https://[::1]:8443/org/team/repo",
+                Some("v1"),
+                Some("content"),
+            ),
+            (
+                "gitlab+gitlab.example.com:8443:org/team/repo@v1:content",
+                "https://gitlab.example.com:8443/org/team/repo",
+                Some("v1"),
+                Some("content"),
+            ),
+        ] {
+            let parsed = parse_install_source_label(legacy).expect(legacy);
+            assert_eq!(
+                parsed,
+                InstallSource::Git(GitRepo {
+                    url: url.into(),
+                    git_ref: git_ref.map(str::to_string),
+                    subfolder: subfolder.map(str::to_string),
+                })
+            );
+            assert_label_roundtrip(&parsed);
+        }
+    }
+
+    #[test]
+    fn legacy_labels_reject_malformed_or_unrepresentable_state() {
+        for legacy in [
+            "gitlab:repo",
+            "gitlab:/repo",
+            "gitlab:org/",
+            "gitlab:org//repo",
+            "gitlab:org/repo@",
+            "gitlab:org/repo:",
+            "gitlab+:org/repo",
+            "gitlab+host",
+            "gitlab+host:/org/repo",
+            "gitlab+host:port:org/repo",
+            "gitlab+host:+8443:org/repo",
+            "gitlab+[::1]:+8443:org/repo",
+            "gitlab+host::org/repo",
+            "gitlab+host:65536:org/repo",
+            "gitlab+host:0:org/repo",
+            "gitlab+host:8443:extra:org/repo",
+            "gitlab+user@host:org/repo",
+            "gitlab+user:password@host:org/repo",
+            "gitlab+https://host:org/repo",
+            "gitlab+host/path:org/repo",
+            "gitlab+bad host:org/repo",
+            "gitlab+host\n:org/repo",
+            "gitlab+host\t:org/repo",
+            "gitlab+host?:org/repo",
+            "gitlab+host#fragment:org/repo",
+            "gitlab+-host:org/repo",
+            "gitlab+host-:org/repo",
+            "gitlab+host-.example.com:org/repo",
+            "gitlab+host..example:org/repo",
+            "gitlab+[not::ip]:org/repo",
+            "gitlab+::1:org/repo",
+            "gitlab+[::1]extra:org/repo",
+            "gitlab+[::1:org/repo",
+            "gitlab+[::1]:port:org/repo",
+            "gitlab+github.com:org/repo",
+            "gitlab+github.com:8443:org/repo",
+            "gitlab+github.com:org/team/repo",
+            "gitlab:org/repo.git",
+            "gitlab:org/repo/",
+        ] {
+            let error = parse_install_source_label(legacy)
+                .expect_err(legacy)
+                .to_string();
+            assert!(
+                error.contains("reconcile") && error.contains("https://"),
+                "{legacy}: {error}"
+            );
+        }
     }
 
     #[test]

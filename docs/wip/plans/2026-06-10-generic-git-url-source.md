@@ -1,5 +1,11 @@
 # Generic git-URL Source Implementation Plan
 
+**Supersession notice (2026-10-12):** the
+[ADR-0011 persisted-state amendment](../../adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12)
+supersedes this document's rejection of historical GitLab lockfile labels.
+New user input still rejects the removed shorthands. The original design and
+implementation steps below are retained as historical context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the GitLab-specific source machinery with a generic https git-URL source so any git host works, per the approved spec at `docs/wip/2026-06-10-generic-git-url-source-design.md`.

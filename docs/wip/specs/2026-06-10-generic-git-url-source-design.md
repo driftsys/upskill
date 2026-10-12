@@ -1,5 +1,11 @@
 # Generic git-URL source — design
 
+**Supersession notice (2026-10-12):** the
+[ADR-0011 persisted-state amendment](../../adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12)
+supersedes this document's rejection of historical GitLab lockfile labels.
+New user input still rejects the removed shorthands. The original design and
+implementation steps below are retained as historical context.
+
 Date: 2026-06-10
 Status: approved (brainstorm), pending implementation plan
 Branch: `refactor/generic-git-url-source` (based on
