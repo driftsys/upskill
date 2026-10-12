@@ -921,3 +921,149 @@ fn shared_file_rejects_replacement_when_all_owners_are_selected() {
         "multi-owner",
     );
 }
+
+fn multiple_old_files() -> (DesiredFile, DesiredFile, OwnedArtifact) {
+    let mut entry = desired("demo/SKILL.md", b"abc");
+    entry.value.mode = Some(0o640);
+    let mut resource = desired("demo/assets/data.bin", &[0, 255]);
+    resource.value.mode = Some(0o600);
+    let mut unrelated = record("other", &desired("untouched.bin", b"keep"));
+    unrelated.owners.push(owner("shared"));
+    unrelated.consumers = vec![TargetSurface::CodexCli, TargetSurface::CopilotCli];
+    (entry, resource, unrelated)
+}
+
+#[test]
+fn complete_multi_file_removal_deletes_every_old_location() {
+    let (entry, resource, unrelated) = multiple_old_files();
+    let prior = vec![
+        record("install-a", &resource),
+        unrelated.clone(),
+        record("install-a", &entry),
+    ];
+    let changes = vec![remove("install-a")];
+    let observations = vec![observe(&resource, true), observe(&entry, true)];
+    let snapshot = (prior.clone(), changes.clone(), observations.clone());
+    let result = plan_files(&prior, &changes, &observations);
+    assert!(
+        result.is_ok(),
+        "complete removal must account for every prior file: {result:?}"
+    );
+    assert_eq!(
+        result.unwrap(),
+        upskill::files::plan::FileOperationPlan {
+            artifacts: vec![unrelated],
+            files: vec![
+                upskill::files::plan::PlannedFile {
+                    location: entry.location,
+                    before: Some(entry.value),
+                    after: None
+                },
+                upskill::files::plan::PlannedFile {
+                    location: resource.location,
+                    before: Some(resource.value),
+                    after: None
+                },
+            ],
+        }
+    );
+    assert_eq!((prior, changes, observations), snapshot);
+}
+
+#[test]
+fn complete_multi_file_replacement_deletes_every_omitted_location() {
+    let (entry, resource, unrelated) = multiple_old_files();
+    let prior = vec![
+        record("install-a", &resource),
+        unrelated.clone(),
+        record("install-a", &entry),
+    ];
+    let mut new = desired("replacement/SKILL.md", b"changed");
+    new.value.mode = Some(0o700);
+    new.consumers = vec![TargetSurface::CopilotCli, TargetSurface::ClaudeCli];
+    let mut binding = owner("install-a");
+    binding.source_revision = Some("revision-2".into());
+    let changes = vec![FileInstallationChange::Set {
+        owner: binding.clone(),
+        files: vec![new.clone()],
+    }];
+    let observations = vec![
+        observe(&new, false),
+        observe(&resource, true),
+        observe(&entry, true),
+    ];
+    let snapshot = (prior.clone(), changes.clone(), observations.clone());
+    let result = plan_files(&prior, &changes, &observations);
+    assert!(
+        result.is_ok(),
+        "complete replacement must account for every omitted file: {result:?}"
+    );
+    assert_eq!(
+        result.unwrap(),
+        upskill::files::plan::FileOperationPlan {
+            artifacts: vec![
+                unrelated,
+                OwnedArtifact {
+                    root: new.location.root.clone(),
+                    path: "replacement/SKILL.md".into(),
+                    content: ArtifactContent::File {
+                        content_sha256:
+                            "d67e2e944994496c8d8ec76eed0cf9f09679448d584b532bebf941852a37f5ed"
+                                .into(),
+                        mode: Some(0o700),
+                    },
+                    owners: vec![binding],
+                    consumers: vec![TargetSurface::CopilotCli, TargetSurface::ClaudeCli],
+                }
+            ],
+            files: vec![
+                upskill::files::plan::PlannedFile {
+                    location: entry.location,
+                    before: Some(entry.value),
+                    after: None
+                },
+                upskill::files::plan::PlannedFile {
+                    location: resource.location,
+                    before: Some(resource.value),
+                    after: None
+                },
+                upskill::files::plan::PlannedFile {
+                    location: new.location,
+                    before: None,
+                    after: Some(new.value)
+                },
+            ],
+        }
+    );
+    assert_eq!((prior, changes, observations), snapshot);
+}
+
+#[test]
+fn removal_only_topology_rejects_either_owned_endpoint() {
+    let parent = desired("a", b"abc");
+    let child = desired("a/b", b"changed");
+    let prior = vec![record("parent", &parent), record("child", &child)];
+    for (id, file) in [("parent", &parent), ("child", &child)] {
+        rejects(&prior, &[remove(id)], &[observe(file, true)], "topology");
+    }
+}
+
+#[test]
+fn removal_only_topology_rejects_untouched_contribution_endpoint() {
+    let parent = desired("a", b"abc");
+    let child = desired("a/b", b"changed");
+    let child_contribution = vec![record("parent", &parent), contribution("manual", "a/b")];
+    rejects(
+        &child_contribution,
+        &[remove("parent")],
+        &[observe(&parent, true)],
+        "topology",
+    );
+    let parent_contribution = vec![contribution("manual", "a"), record("child", &child)];
+    rejects(
+        &parent_contribution,
+        &[remove("child")],
+        &[observe(&child, true)],
+        "topology",
+    );
+}
