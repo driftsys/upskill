@@ -339,10 +339,12 @@ fn invalid_legacy_label_fails_before_fetch_with_reconciliation_context() {
             .stderr(predicate::str::contains("clone").not());
         assert_eq!(snapshot(&f.target), before);
     }
-    f.cmd().args(["list"]).assert().success();
-    assert_eq!(
-        snapshot(&f.target),
-        before,
-        "invalid legacy state remains inspectable"
-    );
+    for command in ["list", "doctor"] {
+        f.cmd().args([command]).assert().success();
+        assert_eq!(
+            snapshot(&f.target),
+            before,
+            "{command} must preserve invalid legacy state and output bytes"
+        );
+    }
 }

@@ -837,6 +837,12 @@ mod tests {
                 Some("skills/team.bundle.yaml"),
             ),
             (
+                "gitlab+gitlab-internal.example.com:org/repo",
+                "https://gitlab-internal.example.com/org/repo",
+                None,
+                None,
+            ),
+            (
                 "gitlab+gitlab:org/repo",
                 "https://gitlab/org/repo",
                 None,
@@ -908,6 +914,8 @@ mod tests {
             "gitlab+host?:org/repo",
             "gitlab+host#fragment:org/repo",
             "gitlab+-host:org/repo",
+            "gitlab+host-:org/repo",
+            "gitlab+host-.example.com:org/repo",
             "gitlab+host..example:org/repo",
             "gitlab+[not::ip]:org/repo",
             "gitlab+::1:org/repo",
