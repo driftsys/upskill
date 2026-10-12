@@ -344,10 +344,10 @@ filesystem evidence. Callers must resolve direct/bundle references and native
 compatibility first. The separate pure whole-file planner is implemented in
 [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 [§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
-resource outputs. Complete reference-graph authority, per-owner consumer
-association, connecting compiled outputs to complete lifecycle desired sets,
-mixed instruction/file composition, state/lifecycle integration and transactional
-execution remain pending. This prerequisite changes no CLI behavior,
+resource outputs. The complete mixed coordinator is implemented in
+[§4.6](#46-mixed-owned-artifact-operation-plans). Complete reference-graph authority,
+per-owner consumer association, connecting compiled outputs to complete lifecycle
+desired sets, state/lifecycle integration and transactional execution remain pending. This prerequisite changes no CLI behavior,
 source format or lockfile format and enables no native client support.
 
 See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -403,8 +403,8 @@ descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
 evidence, source stabilization, qualified filesystem observation, destination
-qualification, source-derived file/resource plans, lifecycle state and execution, and
-Codex activation remain pending.
+qualification, compiler-to-lifecycle desired-set integration, lifecycle state and
+execution, and Codex activation remain pending.
 
 See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
 and its decision records for implementation boundaries and rationale.
@@ -507,10 +507,11 @@ returns no successful partial plan.
 
 This prerequisite leaves existing commands, CLI flags, lockfile persistence and
 native-client behavior unchanged. Connecting compiled captured item outputs to
-complete lifecycle desired sets, mixed instruction/file plan composition,
-qualified observation, destination equivalence/containment, writer
-locking, permission policy, durable state, apply/recovery and Codex activation
-remain pending. Neither planner authorizes partial application of mixed
+complete lifecycle desired sets, qualified observation, destination
+equivalence/containment, writer locking, permission policy, durable state,
+apply/recovery and Codex activation remain pending. The mixed coordinator in
+[§4.6](#46-mixed-owned-artifact-operation-plans) composes complete sets across both
+forms; the individual planners do not authorize partial application of mixed
 installations. This API does not complete M1-A2, M1-A3 or M1.
 
 See the [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-file-planning.md)
@@ -582,15 +583,108 @@ Returning an OpenCode rule file does not install its instruction registration.
 The API supplies no installation roots, ownership, destination observations,
 reference claims or application instructions and makes no native support claim.
 Connecting these outputs to lifecycle planning, registry/bundle resolution,
-requested-selection reconciliation, mixed instruction/file composition, qualified
-source/filesystem evidence, writer locking, durable state, execution/recovery and
-Codex activation remain pending. This prerequisite completes neither M1-A2 nor
+requested-selection reconciliation, qualified source/filesystem evidence, writer
+locking, durable state, execution/recovery and Codex activation remain pending.
+The separate mixed coordinator in [§4.6](#46-mixed-owned-artifact-operation-plans)
+accepts explicit desired ownership and observations; compilation does not produce
+those lifecycle inputs. This prerequisite completes neither M1-A2 nor
 M1-A3.
 
 See the [compiler design](https://github.com/driftsys/upskill/blob/main/docs/design/captured-item-compilation.md),
 [AD-0024](https://github.com/driftsys/upskill/blob/main/docs/adr/0024-pure-captured-item-compilation.md),
 [AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
 and [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md).
+
+### 4.6 Mixed owned-artifact operation plans
+
+The pure library module `operations::plan` composes the existing dedicated-file
+and instruction planners into one complete installation operation. Its two new
+value types derive `Debug`, `Clone`, `PartialEq` and `Eq`, without serialization:
+
+```rust
+pub enum DesiredArtifact {
+    File(DesiredFile),
+    Instruction(DesiredInstructionContribution),
+}
+
+pub enum InstallationChange {
+    Set {
+        owner: ArtifactOwner,
+        artifacts: Vec<DesiredArtifact>,
+    },
+    Remove {
+        installation_id: String,
+    },
+}
+
+pub fn plan_owned_artifacts(
+    prior: &[OwnedArtifact],
+    changes: &[InstallationChange],
+    observations: &[ObservedFile],
+) -> anyhow::Result<FileOperationPlan>;
+```
+
+The existing `files::plan` and `instructions::plan` modules supply the desired
+values. `ownership` supplies records and owners. The result reuses `FileOperationPlan`,
+`PlannedFile`, `FileLocation` and `FileValue` from `files::plan`; both physical
+forms therefore carry exact optional before and after values.
+
+A Set replaces the installation's complete desired set across both forms.
+Omitted old files and contributions are removed through their respective
+planners; a global Remove reaches every old form. Empty Sets require explicit
+Remove. Duplicate changes, unknown removals, duplicate desired file locations or
+contribution selectors, invalid owners and invalid consumers conflict. An existing
+installation retains its source, item kind, source name and installed alias even
+when the old and desired forms are disjoint. Its revision may change coherently
+across all desired records. Any multi-owner record at an affected location
+conflicts; untouched shared rows survive exactly.
+
+Locations compare `(scope, raw root OsStr, portable relative path)`. Raw dot
+components and project/user scopes remain distinct. Roots must be nonempty and
+absolute; paths must use portable relative components. Supplied optional modes
+must be within `0..=0o7777`. Every affected physical location requires exactly one
+observation, including no-ops: the affected union includes every old row belonging
+to a changed installation and every desired location. Missing, duplicate or extra
+observations conflict, and all observations are validated before membership checks.
+
+A location cannot participate in both forms anywhere in the prior/desired union.
+Even explicit old-owner removal and new-owner replacement cannot convert a
+contribution into a whole file or the reverse at that location: contribution
+ownership does not establish authority over manual aggregate bytes. Same-form
+handoffs retain the underlying planners' rules. An ancestor/descendant pair in
+the union conflicts when either location is affected, within the same exact root
+and scope. This includes cross-form, removal-only and old/new transitions.
+Slash-component boundaries distinguish `a/b` from `ab`; unrelated historical
+pairs survive without a filesystem safety claim.
+
+Dedicated actions retain exact optional before/after bytes and modes. Owned
+bytes and optional modes must still match prior evidence on update, removal and
+no-op; an unowned destination must be absent. Aggregate actions use the exact
+observed before value and the editor's after bytes, preserving the observed
+optional mode. An absent aggregate receives after mode `None`. Invalid UTF-8,
+edited or unrecorded markers and missing owned aggregates conflict. Manual bytes
+survive; removing the last contribution retains the aggregate, even when empty.
+No permission authority follows from the supplied mode values.
+
+Every affected action remains in the result, including byte-identical no-ops.
+Actions sort by exact location and duplicate physical actions conflict. Retained
+artifact identities replace rows at their original positions across the original
+interleaved forms and installations. Removed identities disappear; new rows
+append in exact location/selector order, with whole files distinguished from
+contribution selectors. Final combined ownership is validated, including revision
+coherence. Reordering changes, desired entries or observations does not change
+the result. The API performs no I/O or input mutation; any failure returns no
+successful partial plan. It may return the first contextual conflict rather than
+all diagnostics.
+
+This library prerequisite activates no CLI selector, native adapter, source fetch,
+filesystem observation, lock, journal, schema-2 persistence or execution. Connecting
+the captured compiler to complete lifecycle desired sets remains pending, along
+with complete reference authority, per-owner consumer associations, immutable
+source evidence, target qualification, filesystem safety, permission policy,
+writer locking, durable state and apply/recovery. It does not complete M1-A2,
+M1-A3 or M1. The public declarations are in
+[`operations::plan`](https://github.com/driftsys/upskill/blob/main/src/operations/plan.rs).
 
 ## 5. Source format and authentication
 

@@ -46,3 +46,7 @@ records the implemented library boundary and its documented alternatives.
 - [AD-0024 — Pure captured item compilation with current generation compatibility](0024-pure-captured-item-compilation.md)
 - [AD-0025 — Reject active captured overrides until precedence is implemented](0025-reject-active-captured-overrides.md)
 - [AD-0026 — Separate captured resource modes from generated permission policy](0026-separate-generated-permission-policy.md)
+
+## Mixed owned-artifact planning
+
+- [AD-0027 — Compose complete owned-artifact plans before lifecycle effects](0027-compose-complete-owned-artifact-plans.md)

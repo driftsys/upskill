@@ -24,6 +24,7 @@ pub mod lint;
 pub mod lockfile;
 pub mod mcp;
 pub mod model;
+pub mod operations;
 pub mod ownership;
 pub mod parse;
 pub mod pipeline;

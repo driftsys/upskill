@@ -135,7 +135,7 @@ fn desired_record(owner: &ArtifactOwner, file: &DesiredFile) -> Result<OwnedArti
     Ok(record)
 }
 
-fn validate_binding(prior: &ArtifactOwner, desired: &ArtifactOwner) -> Result<()> {
+pub(crate) fn validate_binding(prior: &ArtifactOwner, desired: &ArtifactOwner) -> Result<()> {
     let changed = if prior.source != desired.source {
         Some("source")
     } else if prior.kind != desired.kind {

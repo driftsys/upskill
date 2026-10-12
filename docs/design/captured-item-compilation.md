@@ -97,10 +97,11 @@ supplied-value compilation and compatibility, without filesystem execution or
 native-target conformance.
 
 The producer prepares complete source-derived sets for future lifecycle
-coordination. Connecting them to ownership and planners still requires explicit
-roots, consumers and destination evidence. Registry/bundle resolution, qualified
-source and destination observation, mixed instruction/file composition, writer
-locking, destination permission policy, durable state, apply/recovery and native
-Codex activation remain pending. Returning an OpenCode rule file does not install
+coordination. The implemented [mixed coordinator](mixed-owned-artifact-planning.md)
+composes explicit complete file/contribution sets, without deriving ownership
+inputs from compiled outputs. Connecting them to ownership and planners still
+requires explicit roots, consumers and destination evidence. Registry/bundle resolution, qualified
+source and destination observation, writer locking, destination permission policy,
+durable state, apply/recovery and native Codex activation remain pending. Returning an OpenCode rule file does not install
 its separate instruction registration. This prerequisite changes no commands,
 installer behavior or schema-1 persistence and completes neither M1-A2 nor M1-A3.

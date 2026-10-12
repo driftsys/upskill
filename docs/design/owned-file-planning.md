@@ -82,9 +82,12 @@ literal SHA-256 values. Other fixture-derived expected records use test-side
 `Sha256::digest`. The tests establish supplied-value behavior, without proving
 actual filesystem observation or execution.
 
-A future compiler must derive complete desired resource and entrypoint sets from
-captured sources and reviewed adapters. Mixed instruction/file installations
-need a coordinator; neither planner authorizes partial application. Qualified
+The [captured item compiler](captured-item-compilation.md) already derives complete
+per-client resource and entrypoint outputs from validated captured sources. The
+[mixed coordinator](mixed-owned-artifact-planning.md) composes complete explicit
+file/contribution sets; neither individual planner authorizes partial application
+of a mixed installation. Connecting compiled outputs to complete lifecycle
+desired sets and reviewed adapters remains pending. Qualified
 source/destination observation, equivalence and containment, writer locking,
 permission policy, durable state, apply/recovery and Codex activation remain
 pending. This prerequisite leaves current commands, schema-1 lockfiles and native

@@ -75,8 +75,12 @@ Closeout status recorded before the whole-file planner:
 > other WIP material retains its existing disposition.
 
 Current successor: the [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
-is implemented for explicit complete file sets. Source-derived resource sets,
-mixed instruction/file composition, qualified evidence, durable state and
+is implemented for explicit complete file sets. The
+[captured item compiler](../specification/specification.md#45-captured-item-compilation)
+derives complete per-client entrypoint/resource outputs, and the
+[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+composes explicit complete file/contribution sets. Connecting compiler outputs to
+lifecycle desired sets, qualified source/destination evidence, durable state and
 transactional execution remain pending. The operational lifecycle design and M1
 plan remain active; the whole-file planning pair is archived in its own entry below.
 
@@ -115,11 +119,15 @@ Closeout status recorded before the whole-file planner:
 > changes no other WIP disposition.
 
 Current successor: the [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
-is implemented for explicit complete file sets. Source-derived file/resource sets,
-mixed instruction/file composition, immutable Git evidence, source stabilization,
-qualified observation, destination qualification, state/execution and Codex
-activation remain pending. The source-manifest platform evidence above is retained
-as recorded; the whole-file planning pair is archived in its own entry below.
+is implemented for explicit complete file sets. The
+[captured item compiler](../specification/specification.md#45-captured-item-compilation)
+derives complete per-client entrypoint/resource outputs, and the
+[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+composes explicit complete file/contribution sets. Compiler-to-lifecycle desired
+sets, immutable Git evidence, source stabilization, qualified observation,
+destination qualification, state/execution and Codex activation remain pending.
+The source-manifest platform evidence above is retained as recorded; the
+whole-file planning pair is archived in its own entry below.
 
 ## Owned whole-file operation planning
 
@@ -149,10 +157,13 @@ The [command guide](../book/commands.md) describes the unchanged command boundar
 
 The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-Source-derived resource sets, mixed instruction/file composition, qualified source
-and destination observation, filesystem equivalence/containment, writer locking,
-permission policy, durable state, apply/recovery and Codex activation remain
-pending. This prerequisite does not complete M1-A2, M1-A3 or M1. Other WIP retains
+The [captured item compiler](../specification/specification.md#45-captured-item-compilation)
+derives complete entrypoint/resource sets, and the
+[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+composes explicit complete file/contribution sets. Connecting compiler outputs to
+lifecycle desired sets, qualified source/destination observation, filesystem
+equivalence/containment, writer locking, permission policy, durable state,
+apply/recovery and Codex activation remain pending. This prerequisite does not complete M1-A2, M1-A3 or M1. Other WIP retains
 its prior disposition; this entry resolves only the exact named pair.
 
 ## Captured item compilation
@@ -182,12 +193,44 @@ Durable successors: [specification §4.5](../specification/specification.md#45-c
 The [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The pure producer now derives complete generation entrypoint/resource sets from
-captured values. Connecting them to complete lifecycle desired sets and
-ownership, qualified source/destination observation, mixed instruction/file
-composition, writer locking, destination permission policy, durable state,
+captured values. The
+[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+composes explicit complete file/contribution sets. Connecting compiled outputs to
+complete lifecycle desired sets and ownership, qualified source/destination
+observation, writer locking, destination permission policy, durable state,
 apply/recovery and native Codex activation remain pending. Active matching body
 overrides are explicitly rejected pending precedence implementation. The
 [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active;
 this prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
 disposition; this entry resolves only the exact named pair.
+
+## Mixed owned-artifact planning
+
+The archived [spec](specs/2026-10-12-mixed-owned-planning-design.md) and
+[plan](plans/2026-10-12-mixed-owned-planning.md) preserve the exact working
+material. Their parent-context links are historical relative references; the
+operational lifecycle design and M1 delivery plan remain active in WIP.
+
+Implementation and reviewed corrections: `7d00798` through `73fb891`.
+Local completion evidence: 851 Rust tests and 11 documentation-checker tests,
+ordered formatting and full verification, locked Rust 1.85 all-targets check
+and whitespace check passed; fresh independent task review approved compliance
+and quality. Genuine missing-API RED and valid stub assertion failures preceded
+implementation. Six initial semantic controls and three review-fix controls failed
+intended assertions with exact production restoration and focused GREEN. The
+cross-form collision control
+bypassed both the initial membership check and redundant duplicate-action guard.
+These checks establish local supplied-value behavior; hosted runtime execution,
+final branch/PR review and merge remain separate gates.
+
+Durable successors: [specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans),
+[mixed planning design](../design/mixed-owned-artifact-planning.md) and
+[AD-0027](../adr/0027-compose-complete-owned-artifact-plans.md).
+The coordinator composes complete explicit file/contribution sets; connecting
+captured compiler outputs to lifecycle ownership and evidence remains pending.
+Source/target qualification, complete reference authority, per-owner consumers,
+filesystem safety, permission policy, writer locking, durable state and
+apply/recovery remain deferred. No native, CLI or schema-2 activation follows;
+M1-A2, M1-A3 and M1 remain incomplete. Other WIP retains its prior disposition;
+this entry resolves only the exact named pair.
