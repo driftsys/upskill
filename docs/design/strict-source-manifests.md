@@ -64,9 +64,12 @@ collisions, reserved names or destination filesystem limits.
 Legacy hashing and discovery retain their existing runtime behavior and persisted
 digest meanings. No CLI, lockfile, source-schema or native-client activation is
 introduced. The separate [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
-is implemented for explicitly supplied complete file sets. Source stabilization,
-qualified observation, source-derived file/resource sets, mixed instruction/file
-composition, destination qualification and lifecycle execution remain later work.
+is implemented for explicitly supplied complete file sets. The separate
+[captured item compiler](captured-item-compilation.md) derives complete per-client
+entrypoint and resource outputs from these captured values. Connecting compiled
+outputs to complete lifecycle desired sets, source stabilization, qualified
+observation, mixed instruction/file composition, destination qualification and
+lifecycle execution remain later work.
 
 [`tests/source_manifests.rs`](../../tests/source_manifests.rs) pins literal file
 and manifest vectors, path/content/mode changes, complete inclusion, validation

@@ -1,6 +1,6 @@
 # Commands
 
-`upskill` ships ten commands. They split cleanly into **consumer**
+`upskill` ships eleven commands. They split cleanly into **consumer**
 (run inside a project that consumes AI-assistance content) and
 **author** (run inside a source-registry repo).
 
@@ -18,8 +18,10 @@
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
-The library's strict source-manifest capture supplies values for future
-source-derived file and resource sets. Current commands keep their existing discovery,
+The library's strict source-manifest capture supplies values to the implemented
+pure item compiler, which derives complete per-client entrypoint and resource
+outputs. Connecting compiled outputs to complete lifecycle desired sets remains
+pending. Current commands keep their existing discovery,
 hashing and persistence behavior; they do not invoke capture or activate the
 owned lifecycle. Captured bytes do not establish source authenticity, an atomic
 snapshot or qualified filesystem containment. See the
@@ -27,10 +29,17 @@ snapshot or qualified filesystem containment. See the
 
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
 sets from explicit desired bytes and supplied observations. Current commands do
-not call it or change their lifecycle behavior. Source/resource classification,
+not call it or change their lifecycle behavior. Lifecycle desired-set integration,
 mixed-plan composition, qualified observation, execution/state integration and
 Codex activation remain pending. See the
 [owned whole-file planning specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
+
+The library's pure `compile::item::compile_item` API produces complete per-client
+entrypoint and resource files from validated captured bytes, preserving resource
+modes and rejecting unsupported active overrides. It does not activate lifecycle
+planning, execution, state changes or native Codex support. Current commands keep
+their existing installer behavior. See the
+[captured item compilation specification](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation).
 
 ## Global flags
 
@@ -371,7 +380,7 @@ project (one with a `.upskill-lock.json`).
 
 ### `upskill lint [paths...]`
 
-Validate SSOT files against the [format spec](./format-spec.md). Five
+Validate SSOT files against the [format spec](./format-spec.md). Six
 rules ship out of the box:
 
 | Rule ID            | Severity | Source           |
@@ -431,10 +440,12 @@ multi-owner regions conflict; unrelated records survive. This library prerequisi
 adds no command or Codex CLI support. The separate pure whole-file planner is
 implemented as described in the
 [specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
+The separate [captured item compiler](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation)
+derives complete per-client entrypoint and resource outputs from captured bytes.
 Reference resolution, qualified source/filesystem evidence, per-owner consumer
-associations, source-derived resource sets, mixed instruction/file composition,
-state integration and transactional execution remain pending; current commands
-and schema-1 persistence are unchanged.
+associations, connecting compiled outputs to complete lifecycle desired sets,
+mixed instruction/file composition, state integration and transactional execution
+remain pending; current commands and schema-1 persistence are unchanged.
 
 ## Per-client output paths
 

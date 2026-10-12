@@ -10,3 +10,5 @@ Future designs remain in [WIP](../wip/README.md).
 - [Strict captured source manifests](strict-source-manifests.md)
 
 - [Owned whole-file operation planning](owned-file-planning.md)
+
+- [Captured item compilation](captured-item-compilation.md)

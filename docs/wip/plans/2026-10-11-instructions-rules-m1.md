@@ -94,11 +94,24 @@ provides pure `files::plan` operation plans for explicit complete desired sets a
 supplied before-state observations. It preserves untouched ownership, requires
 exact byte/hash and optional-mode evidence, rejects unowned destinations and
 affected shared/contribution records, and enumerates only individual file changes.
-The observations remain unqualified. Source/resource classification and desired-set
-derivation, mixed instruction/file composition, destination qualification, durable
+The observations remain unqualified. Lifecycle desired-set integration, mixed
+instruction/file composition, destination qualification, durable
 state, executor/recovery and Codex activation remain pending. Existing commands,
 lockfiles and native behavior are unchanged; this does not complete M1-A2, M1-A3
 or M1.
+
+The [captured item compilation prerequisite](../../design/captured-item-compilation.md)
+provides an opt-in pure producer for one validated captured rule, skill or agent.
+It reuses current rendering, historical paths, resource classification and ignore
+semantics, retains exact captured resource bytes and modes, and reports explicit
+audience exclusions. Aliases change paths and resource link namespaces while
+rendering retains source identity. Active matching overrides fail explicitly;
+body override precedence remains deferred. It does not reread sources, write
+outputs, activate CLI/native behavior or supply ownership and qualified destination
+evidence. Connecting complete compiled outputs to the lifecycle coordinator,
+requested-selection reconciliation, mixed-plan composition, filesystem qualification,
+durable state, executor/recovery and target gates remains pending. This bounded
+prerequisite does not complete M1-A2 or M1-A3.
 
 The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active WIP after the bounded pair completes and must not be archived with

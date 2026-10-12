@@ -74,10 +74,13 @@ partial plan and inputs remain borrowed and unchanged.
 
 Callers must resolve direct/bundle references and native compatibility before
 planning. The separate [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
-is implemented for explicitly supplied complete file sets. Complete reference-graph
-authority, per-owner consumer association, qualified source and filesystem evidence,
-source-derived resource sets, mixed instruction/file composition and state/lifecycle
-integration, writer locking, recovery and execution remain pending.
+is implemented for explicitly supplied complete file sets. The separate
+[captured item compiler](captured-item-compilation.md) derives complete per-client
+entrypoint and resource outputs from validated captured bytes. Complete
+reference-graph authority, per-owner consumer association, qualified source and
+filesystem evidence, connecting compiled outputs to complete lifecycle desired
+sets, mixed instruction/file composition and state/lifecycle integration, writer
+locking, recovery and execution remain pending.
 Current commands, lockfile/source formats and native client support are unchanged.
 
 [`tests/instruction_plans.rs`](../../tests/instruction_plans.rs) covers owner

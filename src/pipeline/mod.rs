@@ -38,8 +38,10 @@ mod output;
 mod report;
 
 use discovery::scan_source_items;
+pub(crate) use discovery::{effective_name, is_entrypoint_or_override};
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
+pub(crate) use ignore::filter_ignored;
 pub use install::install_from_local_path;
 use install::{
     ResolvedBundle, install_from_local_path_selective, install_mcps_from_bundles,

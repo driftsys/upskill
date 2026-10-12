@@ -154,3 +154,40 @@ and destination observation, filesystem equivalence/containment, writer locking,
 permission policy, durable state, apply/recovery and Codex activation remain
 pending. This prerequisite does not complete M1-A2, M1-A3 or M1. Other WIP retains
 its prior disposition; this entry resolves only the exact named pair.
+
+## Captured item compilation
+
+Source paths: `docs/wip/specs/2026-10-12-captured-item-compilation-design.md`
+and `docs/wip/plans/2026-10-12-captured-item-compilation.md`.
+The archived [spec](specs/2026-10-12-captured-item-compilation-design.md) and
+[plan](plans/2026-10-12-captured-item-compilation.md) retain the working material;
+the spec's parent-context link follows its active WIP destination.
+
+Implementation commit: `03a0f5d51f183e0389316199611faeece605e52c`.
+Final acceptance-test correction:
+`0282aa16c5bcb0dd144a8cc9da6820b669435f7b`.
+Local completion evidence: ordered formatting and full verification passed with
+822 Rust tests and 11 documentation-checker tests, warning-free; fresh task
+review approved compliance and quality without findings. Production code passed
+a locked Rust 1.85 all-targets check before the test-only correction, which left
+production unchanged. Genuine compile RED and two valid stub assertion failures
+preceded implementation. Eight actual semantic controls failed their intended
+assertions, with exact production restoration and focused GREEN. These local
+commits and checks do not claim a PR merge. Hosted Linux and Windows runtime
+execution remains pending.
+
+Durable successors: [specification §4.5](../specification/specification.md#45-captured-item-compilation),
+[compiler design](../design/captured-item-compilation.md) and
+[AD-0024 through AD-0026](../adr/README.md#captured-item-compilation).
+The [command guide](../book/commands.md) describes the unchanged command boundary.
+
+The pure producer now derives complete generation entrypoint/resource sets from
+captured values. Connecting them to complete lifecycle desired sets and
+ownership, qualified source/destination observation, mixed instruction/file
+composition, writer locking, destination permission policy, durable state,
+apply/recovery and native Codex activation remain pending. Active matching body
+overrides are explicitly rejected pending precedence implementation. The
+[operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active;
+this prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
+disposition; this entry resolves only the exact named pair.

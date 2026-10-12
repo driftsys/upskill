@@ -342,9 +342,12 @@ data. Observations must match affected locations exactly; missing, duplicate or
 extraneous observations conflict. Supplied bytes do not establish source or
 filesystem evidence. Callers must resolve direct/bundle references and native
 compatibility first. The separate pure whole-file planner is implemented in
-[§4.4](#44-owned-whole-file-operation-plans). Complete reference-graph authority,
-per-owner consumer association, source-derived resource sets, mixed instruction/file
-composition, state/lifecycle integration and transactional execution remain pending. This prerequisite changes no CLI behavior,
+[§4.4](#44-owned-whole-file-operation-plans); captured compilation in
+[§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
+resource outputs. Complete reference-graph authority, per-owner consumer
+association, connecting compiled outputs to complete lifecycle desired sets,
+mixed instruction/file composition, state/lifecycle integration and transactional
+execution remain pending. This prerequisite changes no CLI behavior,
 source format or lockfile format and enables no native client support.
 
 See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -356,9 +359,11 @@ The separate library module `source_manifest` provides
 `capture_source(&Path) -> anyhow::Result<SourceManifest>` and pure
 `validate_manifest(&SourceManifest) -> anyhow::Result<()>`. It does not change
 commands, legacy source hashing/discovery, source formats or lockfile writes.
-This supplies captured values for future source-derived file and resource sets;
-the pure planner for explicitly supplied whole-file sets is implemented in
-[§4.4](#44-owned-whole-file-operation-plans).
+This supplies the captured values consumed by the implemented
+[item compiler](#45-captured-item-compilation) to derive complete per-client
+entrypoint and resource outputs. The pure planner for explicitly supplied
+whole-file sets is implemented in [§4.4](#44-owned-whole-file-operation-plans).
+Connecting compiled outputs to complete lifecycle desired sets remains pending.
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
@@ -501,15 +506,91 @@ in lexical order. The final record set is validated before return. Any failure
 returns no successful partial plan.
 
 This prerequisite leaves existing commands, CLI flags, lockfile persistence and
-native-client behavior unchanged. Source/resource classification, deriving
-complete desired sets from captured sources, mixed instruction/file plan
-composition, qualified observation, destination equivalence/containment, writer
+native-client behavior unchanged. Connecting compiled captured item outputs to
+complete lifecycle desired sets, mixed instruction/file plan composition,
+qualified observation, destination equivalence/containment, writer
 locking, permission policy, durable state, apply/recovery and Codex activation
 remain pending. Neither planner authorizes partial application of mixed
 installations. This API does not complete M1-A2, M1-A3 or M1.
 
 See the [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-file-planning.md)
 and the active [operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
+
+### 4.5 Captured item compilation
+
+The opt-in `compile::item` library API compiles one captured item into complete
+per-client file sets without rereading source paths, writing destinations or
+mutating inputs:
+
+`compile_item` borrows a `SourceManifest` and `ItemCompileRequest` and returns
+`anyhow::Result<CompiledItem>`. The exact public declarations are in
+[`compile::item`](https://github.com/driftsys/upskill/blob/main/src/compile/item.rs).
+`ItemCompileRequest` contains `kind: ItemKind`, `folder_name: String`,
+`alias: Option<String>` and `clients: Vec<Client>`. `CompiledItemFile` contains
+`path: String`, `bytes: Vec<u8>` and `mode: Option<u32>`. `CompiledClientItem`
+contains `client: Client` and `files: Vec<CompiledItemFile>`. `CompiledItem`
+contains `kind: ItemKind`, `source_name: String`, `installed_name: String`,
+`source_manifest_sha256: String`, `outputs: Vec<CompiledClientItem>` and
+`audience_excluded: Vec<Client>`.
+
+All four structures derive `Debug`, `Clone`, `PartialEq` and `Eq`, without
+serialization. `ItemKind` is the existing pipeline kind and `Client` is the
+current Claude, Copilot and OpenCode generation vocabulary. The result owns its
+values and records the exact validated supplied manifest digest as source identity;
+that digest does not establish provenance or identify generated content.
+
+Compilation first validates every manifest path, ordering, digest and mode,
+including files later excluded or ignored. File/descendant pairs such as `a` and
+`a/b` fail even when ignored. Requested clients must be explicit, nonempty and
+unique. The canonical root entrypoint for the requested kind must exist, contain
+UTF-8 and parse as its existing typed frontmatter with a supported schema.
+The folder, resolved source name and optional alias must each be one portable
+relative component. Skills use the folder name; rules and agents use their
+optional declared name, otherwise the folder. An invalid declared rule or agent
+name fails. An alias controls installed paths and resource namespaces while
+rendered frontmatter retains the source identity under the existing renderers.
+
+Outputs and `audience_excluded` follow `Client::ALL` order regardless of request
+order. Each requested client omitted by canonical `audience` is explicitly
+excluded; a wholly excluded selection succeeds with empty outputs. This does not
+imply removal of existing files.
+
+Resource selection reuses the existing root-only canonical entrypoint and known
+`<KIND>.<client>.md` override exclusions and the requested kind's subtractive
+`ignore` semantics. Nested equivalents, unrelated client-suffixed filenames,
+unknown-client suffixes, hidden files, empty files and binary files remain resources
+unless ignored. A root override for the requested kind and an emitted client
+fails with an unsupported-override error even if ignored. Overrides for other
+kinds or non-emitted clients remain excluded source inputs. Body override
+precedence is deferred.
+
+Each included output contains exactly one rendered entrypoint and every retained
+resource, sorted by portable UTF-8 relative path. Compilation reuses existing
+renderers, directives, passthrough, formatting and frozen historical layout.
+For flat outputs it rewrites copied-resource links using the source name, then
+re-prefixes source namespaces to the alias when different, including previously
+namespaced links. Directory-backed outputs retain relative links. Duplicate or
+file/descendant output paths fail; errors return no successful partial result.
+
+Resource bytes and optional permission modes equal captured evidence exactly.
+Generated entrypoints carry `mode: None`; this does not authorize permission
+changes. A qualified writer must establish destination permission policy and
+persist observed mode evidence separately.
+
+Current commands, installer behavior and lockfile persistence remain unchanged.
+Returning an OpenCode rule file does not install its instruction registration.
+The API supplies no installation roots, ownership, destination observations,
+reference claims or application instructions and makes no native support claim.
+Connecting these outputs to lifecycle planning, registry/bundle resolution,
+requested-selection reconciliation, mixed instruction/file composition, qualified
+source/filesystem evidence, writer locking, durable state, execution/recovery and
+Codex activation remain pending. This prerequisite completes neither M1-A2 nor
+M1-A3.
+
+See the [compiler design](https://github.com/driftsys/upskill/blob/main/docs/design/captured-item-compilation.md),
+[AD-0024](https://github.com/driftsys/upskill/blob/main/docs/adr/0024-pure-captured-item-compilation.md),
+[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
+and [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md).
 
 ## 5. Source format and authentication
 
