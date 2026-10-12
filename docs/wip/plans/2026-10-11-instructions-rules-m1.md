@@ -79,7 +79,7 @@ only when no content remains. Affected whole files and multi-owner regions
 conflict; unrelated records survive. It enables no CLI or native support and does
 not complete M1-A2 or M1-A3.
 
-The [strict captured source manifest prerequisite](2026-10-12-strict-source-manifests.md)
+The [strict captured source manifest prerequisite](../../design/strict-source-manifests.md)
 is implemented as a separate opt-in library API: complete captured regular-file
 bytes, optional observed Unix modes, framed versioned digests and pure validation.
 Observed links, special entries and read/traversal errors fail rather than return

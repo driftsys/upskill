@@ -398,6 +398,9 @@ evidence, source stabilization, qualified filesystem observation, destination
 qualification, whole-file/resource plans, lifecycle state and execution, and
 Codex activation remain pending.
 
+See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
+and its decision records for implementation boundaries and rationale.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

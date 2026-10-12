@@ -2,7 +2,7 @@
 
 Date: 2026-10-12. Status: **Design for bounded implementation**.
 Baseline: `2a3c3b5`.
-Parent direction: [M1 owned lifecycle](2026-10-12-m1-owned-lifecycle-design.md).
+Parent direction: [M1 owned lifecycle](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 ## Intent and boundary
 

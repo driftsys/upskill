@@ -71,3 +71,35 @@ Source/filesystem evidence, complete reference authority, per-owner consumer
 association, whole-file/resource planning, mixed-state lifecycle integration and
 transactional execution remain pending. This entry resolves only the named pair;
 other WIP material retains its existing disposition.
+
+## Strict captured source manifests
+
+Source paths: `docs/wip/specs/2026-10-12-strict-source-manifests-design.md`
+and `docs/wip/plans/2026-10-12-strict-source-manifests.md`.
+The archived [spec](specs/2026-10-12-strict-source-manifests-design.md) and
+[plan](plans/2026-10-12-strict-source-manifests.md) retain the original material;
+the spec's parent-context link follows its active WIP destination.
+
+Implementation commit: `daee42f176d8f0a54e6c810f63f454e45083de96`.
+Final task correction: `2247e818edf9a4900f4e64c7c9469cf1b21823c7`.
+Local completion evidence: fresh task review approved without findings; ordered
+formatting and full verification passed with 763 Rust tests and 11 documentation
+tests, and Rust 1.85 all-targets checking passed. These local commits and checks
+do not claim a PR merge. Compile and valid behavioral assertion RED preceded
+implementation; semantic mutations exposed skipped entries/errors and digest
+framing, mode, directory-path and inclusion regressions, with exact restoration.
+
+Durable successors:
+[specification §4.3](../specification/specification.md#43-strict-captured-source-manifests),
+[source manifest design](../design/strict-source-manifests.md),
+[AD-0019](../adr/0019-separate-strict-source-capture.md) and
+[AD-0020](../adr/0020-framed-source-manifest-evidence.md).
+
+The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
+Whole-file/resource planning, immutable Git evidence, source stabilization,
+qualified observation, destination qualification, state/execution and Codex
+activation remain pending. Actual non-UTF-8 filesystem-name creation was
+unsupported on the development macOS filesystem; pure conversion rejection was
+tested there, with the real fixture gated to other Unix hosts. This archive entry
+changes no other WIP disposition.
