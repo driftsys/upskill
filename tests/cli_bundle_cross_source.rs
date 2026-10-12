@@ -271,6 +271,43 @@ fn add_bundle_cross_source_item_conflict_errors() {
 }
 
 #[test]
+fn add_bundle_cross_source_bundle_name_conflict_errors() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    // Disjoint items isolate the bundle identity conflict from item conflicts.
+    let reg_dep = tmp.path().join("reg-dep");
+    write_rule(&reg_dep, "dep-rule");
+    write_bundle(&reg_dep, "shared", "items:\n  rules:\n  - dep-rule\n");
+
+    let reg_meta = tmp.path().join("reg-meta");
+    write_rule(&reg_meta, "meta-rule");
+    write_bundle(
+        &reg_meta,
+        "shared",
+        &format!(
+            "items:\n  rules:\n  - meta-rule\nrequires:\n  - {{ name: shared, source: {} }}\n",
+            reg_dep.display()
+        ),
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", reg_meta.to_str().unwrap(), "shared"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(format!(
+            "bundle `shared` is required from two different sources: `local:{}` and `local:{}`",
+            reg_meta.display(),
+            reg_dep.display()
+        )));
+}
+
+#[test]
 fn add_bundle_missing_cross_source_bundle_errors() {
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
