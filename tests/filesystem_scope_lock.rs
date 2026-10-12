@@ -110,8 +110,13 @@ mod qualified {
         symlink("directory", tmp.path().join("alias")).unwrap();
         let _socket = std::os::unix::net::UnixListener::bind(tmp.path().join("socket")).unwrap();
         let before = snapshot(tmp.path());
+        assert!(
+            Path::new(".").is_dir(),
+            "relative directory fixture must exist"
+        );
         let invalid = [
             PathBuf::new(),
+            PathBuf::from("."),
             PathBuf::from("relative"),
             tmp.path().join("directory/../directory"),
             tmp.path().join("missing"),
