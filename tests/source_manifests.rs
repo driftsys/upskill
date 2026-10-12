@@ -7,6 +7,10 @@ use upskill::source_manifest::{
 
 const EMPTY_DIGEST: &str = "ecbfd2081fcd5a8c1c993491058a1913b092eb5cb7d16034f12807969ab4619b";
 
+const MIXED_MODE_DIGEST: &str = "d349d581c2e5bdf60cc476d62688ee3abc3f12f7b815d961ac80c38a1ad6ed63";
+const SWAPPED_MODE_DIGEST: &str =
+    "84b31d2e445d49686c1ea82b36b61d9429de950c1a11dd0d003bf8c818236b1b";
+
 fn single_a() -> SourceManifest {
     SourceManifest {
         files: vec![CapturedSourceFile {
@@ -163,6 +167,88 @@ fn literal_framing_distinguishes_ambiguous_path_and_content_streams() {
     let mut changed = ab;
     changed.content_sha256 = a.content_sha256;
     assert_rejected(&changed, "manifest digest");
+}
+
+#[test]
+fn mixed_mode_literal_digests_bind_modes_to_paths() {
+    let mut original = single_a();
+    original.files.extend(single_ab().files);
+    assert_eq!(original.files.len(), 2);
+    original.files[0].mode = Some(0o640);
+    original.files[1].mode = Some(0o2640);
+    original.content_sha256 = MIXED_MODE_DIGEST.into();
+    assert_valid(&original);
+
+    let mut swapped = original.clone();
+    swapped.files[0].mode = Some(0o2640);
+    swapped.files[1].mode = Some(0o640);
+    assert_rejected(&swapped, "manifest digest");
+    swapped.content_sha256 = SWAPPED_MODE_DIGEST.into();
+    assert_valid(&swapped);
+    assert_ne!(original.content_sha256, swapped.content_sha256);
+
+    let mut wrong_digest = original;
+    wrong_digest.content_sha256 = swapped.content_sha256;
+    assert_rejected(&wrong_digest, "manifest digest");
+}
+
+#[test]
+fn multibyte_utf8_path_matches_literal_byte_length_framing() {
+    let pure = SourceManifest {
+        files: vec![CapturedSourceFile {
+            path: "雪.md".into(),
+            bytes: b"bc".to_vec(),
+            content_sha256: "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac"
+                .into(),
+            mode: None,
+        }],
+        content_sha256: "2c185ac1577faee63b84378f18a1fff47479369212bb97d0a5357b916c2699f4".into(),
+    };
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("雪.md");
+    fs::write(&path, b"bc").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o640)).unwrap();
+    }
+    let captured = capture_source(root.path()).unwrap();
+    assert_eq!(captured.files.len(), 1);
+    let mut expected_files = pure.files.clone();
+    if cfg!(unix) {
+        expected_files[0].mode = Some(0o640);
+    }
+    assert_eq!(captured.files, expected_files);
+    let expected_digest = if cfg!(unix) {
+        "4e8d9cb3aa95b2fbf1d1d03c77bfd5bbb74a3744c79c8ec19131e2fd0a186252"
+    } else {
+        "2c185ac1577faee63b84378f18a1fff47479369212bb97d0a5357b916c2699f4"
+    };
+    assert_eq!(captured.content_sha256, expected_digest);
+    assert_valid(&pure);
+    assert_valid(&captured);
+}
+
+#[test]
+fn valid_permission_mode_boundaries_match_literal_evidence() {
+    for (mode, digest) in [
+        (
+            0,
+            "12ead865136b67ce0a5ae43391ba23e8315268825fec4f2344aa342e72429b3f",
+        ),
+        (
+            0o7777,
+            "b31224184e34373b695f52b22660b8030e6650eb0577bfac7faa5441fdfcbfe8",
+        ),
+    ] {
+        let mut manifest = single_a();
+        manifest.files[0].mode = Some(mode);
+        manifest.content_sha256 = digest.into();
+        assert_valid(&manifest);
+        let mut absent = manifest;
+        absent.files[0].mode = None;
+        assert_rejected(&absent, "manifest digest");
+    }
 }
 
 #[test]
@@ -348,6 +434,35 @@ mod unix {
         let captured = capture_source(root.path()).unwrap();
         assert_eq!(captured.files.len(), 2);
         assert_eq!(captured.files, expected);
+        assert_eq!(captured.content_sha256, MIXED_MODE_DIGEST);
+        assert_valid(&captured);
+
+        fs::set_permissions(root.path().join("a"), fs::Permissions::from_mode(0o2640)).unwrap();
+        fs::set_permissions(root.path().join("ab"), fs::Permissions::from_mode(0o640)).unwrap();
+        let swapped = capture_source(root.path()).unwrap();
+        assert_eq!(swapped.files.len(), 2);
+        let mut swapped_expected = expected;
+        swapped_expected[0].mode = Some(0o2640);
+        swapped_expected[1].mode = Some(0o640);
+        assert_eq!(swapped.files, swapped_expected);
+        assert_ne!(swapped.content_sha256, captured.content_sha256);
+        assert_eq!(swapped.content_sha256, SWAPPED_MODE_DIGEST);
+        assert_valid(&swapped);
+    }
+
+    #[test]
+    fn maximum_permission_mode_is_captured_without_masking() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("a");
+        fs::write(&path, b"bc").unwrap();
+        fs::set_permissions(path, fs::Permissions::from_mode(0o7777)).unwrap();
+        let captured = capture_source(root.path()).unwrap();
+        assert_eq!(captured.files.len(), 1);
+        let mut expected = single_a();
+        expected.files[0].mode = Some(0o7777);
+        expected.content_sha256 =
+            "b31224184e34373b695f52b22660b8030e6650eb0577bfac7faa5441fdfcbfe8".into();
+        assert_eq!(captured, expected);
         assert_valid(&captured);
     }
 

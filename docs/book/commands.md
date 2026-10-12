@@ -23,7 +23,7 @@ file and resource planning. Current commands keep their existing discovery,
 hashing and persistence behavior; they do not invoke capture or activate the
 owned lifecycle. Captured bytes do not establish source authenticity, an atomic
 snapshot or qualified filesystem containment. See the
-[strict captured source manifest specification](https://driftsys.github.io/upskill/specification/specification.html#43-strict-captured-source-manifests).
+[strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
 
 ## Global flags
 
