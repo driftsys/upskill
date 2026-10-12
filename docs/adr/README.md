@@ -21,3 +21,6 @@ decision explicitly; documentation moves do not change its status.
 | [0012 — Consumer-side client filtering — per-invocation flags and config](0012-consumer-client-filtering.md)              | Accepted |
 | [0013 — Agent customization targets — Codex, Cursor, and Gemini CLI](0013-agent-customization-targets.md)                 | Accepted |
 | [0014 — Versioned model mappings for custom agents](0014-versioned-agent-model-mappings.md)                               | Accepted |
+
+[0015 — Pure projection before legacy-state migration](0015-pure-legacy-state-projection.md)
+records the implemented library boundary and its documented alternatives.

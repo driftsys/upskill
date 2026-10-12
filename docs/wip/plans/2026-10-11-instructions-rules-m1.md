@@ -63,7 +63,7 @@ preview preserve bytes. New user syntax stays unchanged; ambiguous or
 unrepresentable labels require explicit reconciliation. This prerequisite does
 not adopt output files or introduce schema 2.
 
-The [pure legacy-state projection prerequisite](2026-10-12-legacy-state-projection.md)
+The [pure legacy-state projection prerequisite](../../archive/plans/2026-10-12-legacy-state-projection.md)
 is implemented: it preserves the typed snapshot and indexed rows, decodes source
 labels, and describes the fixed historical Claude/Copilot/OpenCode candidate
 layouts. Requested selection remains unresolved; diagnostics retain malformed and

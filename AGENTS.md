@@ -79,6 +79,7 @@ src/
 ├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
+├── legacy/              Pure legacy projection and frozen historical layout
 ├── bundle.rs            Bundle dependency resolution
 ├── lint.rs              Author command — validate SSOT against the format spec
 ├── fmt.rs               Author command — canonicalise YAML frontmatter

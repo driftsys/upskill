@@ -294,7 +294,9 @@ resource search base. The frozen nine kind/client layouts are shared with the
 current pipeline and use the installed alias. They do not inspect roots, files or
 resources, establish ownership, or authorize adoption or deletion. Bundle names
 and ancillary files do not produce candidates. Invalid installed names suppress
-candidates; invalid sources retain otherwise known layout facts. Duplicate
+candidates: empty names, dot, dot-dot, slash, backslash, colon and control
+characters are invalid; spaces and Unicode remain representable. Invalid sources
+retain otherwise known layout facts. Duplicate
 identities and identical entrypoints identify all affected item indices without
 selecting a winner. Diagnostics retain malformed rows for inspection. Unsupported
 schema values retain all typed records but produce no interpreted sources, clients
@@ -304,6 +306,10 @@ This prerequisite leaves commands and schema-1 persistence unchanged. Verified
 sources, reproducible historical rendering, resource enumeration, adoption,
 requested-selection reconciliation, schema-2 lifecycle preservation, exact backup,
 containment, preflight, writer locking and recovery remain later work.
+
+See the [projection design](https://github.com/driftsys/upskill/blob/main/docs/design/generation-pipeline.md#pure-legacy-state-projection)
+and [AD-0015](https://github.com/driftsys/upskill/blob/main/docs/adr/0015-pure-legacy-state-projection.md) for implementation
+boundaries and rationale.
 
 ## 5. Source format and authentication
 
