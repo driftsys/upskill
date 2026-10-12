@@ -402,6 +402,12 @@ Files whose frontmatter and body are already canonical are left untouched
 The lockfile carries a top-level `schema: 1` field for forward
 compatibility.
 
+An internal library projection can describe typed legacy records and candidate
+historical output paths without reading files or changing state. It preserves raw
+records and leaves requested selections unresolved. This prerequisite adds no CLI
+command and leaves existing commands and schema-1 persistence unchanged; it does
+not migrate state or adopt output files.
+
 ## Per-client output paths
 
 | Item kind | Claude Code                | GitHub Copilot                                | opencode                       |

@@ -1,9 +1,9 @@
 //! Per-client output path computation and file I/O.
 //!
 //! The install pipeline writes (and `remove` deletes) per-client output
-//! files at the paths defined in format-spec §7 / ADR-0003. Centralising
-//! the path mapping here keeps install and remove in lockstep — they
-//! both go through [`output_path`].
+//! files at the paths defined in format-spec §7 / ADR-0003. The frozen
+//! legacy layout keeps install, remove and legacy candidates in lockstep;
+//! pipeline callers go through [`output_path`].
 
 use anyhow::{Context, Result};
 use std::fs;
@@ -17,38 +17,17 @@ use crate::generate::Client;
 /// install target root and matches format-spec §7. Used by both
 /// `install_*` and `remove` so the two stay in lockstep.
 pub(super) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
-    match kind {
-        ItemKind::Skill => skill_output_path(client, name),
-        ItemKind::Rule => rule_output_path(client, name),
-        ItemKind::Agent => agent_output_path(client, name),
-    }
+    crate::legacy::layout::output_path(kind, client.into(), name)
 }
 
-/// True when an item's entrypoint for `client` lives inside its own
-/// `<name>/` directory (all skills; opencode rules). Such items hold
-/// resources beside the entrypoint and need no link rewrite. Flat kinds
-/// (Claude/Copilot rules, all agents) return false.
+/// Whether resources live beside the entrypoint in the item's own directory.
 pub(super) fn is_dir_backed(kind: ItemKind, client: Client) -> bool {
-    matches!(
-        (kind, client),
-        (ItemKind::Skill, _) | (ItemKind::Rule, Client::OpenCode)
-    )
+    crate::legacy::layout::is_dir_backed(kind, client.into())
 }
 
-/// Directory (relative to the install target) under which an item's
-/// supporting resources are copied for `client`. Directory-backed items
-/// use the entrypoint's own `<name>/` directory; flat items use a sibling
-/// `<name>/` namespace directory next to the flat entrypoint file.
+/// Historical resource namespace, relative to the installation root.
 pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
-    let entry = output_path(kind, client, name);
-    let parent = entry
-        .parent()
-        .expect("output path always has a parent directory");
-    if is_dir_backed(kind, client) {
-        parent.to_path_buf()
-    } else {
-        parent.join(name)
-    }
+    crate::legacy::layout::resource_base_path(kind, client.into(), name)
 }
 
 /// Copy each resource (a path relative to the SSOT item directory
@@ -78,36 +57,6 @@ pub(super) fn copy_item_resources(
             .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
     }
     Ok(())
-}
-
-/// Per format-spec §7 / ADR-0003. opencode `.agents/skills/<n>/SKILL.md`
-/// is the canonical-store path; opencode walks it natively.
-fn skill_output_path(client: Client, name: &str) -> PathBuf {
-    match client {
-        Client::Claude => PathBuf::from(format!(".claude/skills/{name}/SKILL.md")),
-        Client::Copilot => PathBuf::from(format!(".github/skills/{name}/SKILL.md")),
-        Client::OpenCode => PathBuf::from(format!(".agents/skills/{name}/SKILL.md")),
-    }
-}
-
-/// Per format-spec §7 / ADR-0003. Copilot uses
-/// `<name>.instructions.md`; opencode uses a per-rule directory under
-/// `.agents/rules/`.
-fn rule_output_path(client: Client, name: &str) -> PathBuf {
-    match client {
-        Client::Claude => PathBuf::from(format!(".claude/rules/{name}.md")),
-        Client::Copilot => PathBuf::from(format!(".github/instructions/{name}.instructions.md")),
-        Client::OpenCode => PathBuf::from(format!(".agents/rules/{name}/RULE.md")),
-    }
-}
-
-/// Per format-spec §7 / ADR-0003. Copilot uses `<name>.agent.md`.
-fn agent_output_path(client: Client, name: &str) -> PathBuf {
-    match client {
-        Client::Claude => PathBuf::from(format!(".claude/agents/{name}.md")),
-        Client::Copilot => PathBuf::from(format!(".github/agents/{name}.agent.md")),
-        Client::OpenCode => PathBuf::from(format!(".opencode/agents/{name}.md")),
-    }
 }
 
 pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<()> {
@@ -144,53 +93,92 @@ mod tests {
     use super::*;
 
     #[test]
-    fn output_paths_match_spec() {
-        assert_eq!(
-            skill_output_path(Client::Claude, "x"),
-            PathBuf::from(".claude/skills/x/SKILL.md")
-        );
-        assert_eq!(
-            skill_output_path(Client::OpenCode, "x"),
-            PathBuf::from(".agents/skills/x/SKILL.md")
-        );
-        assert_eq!(
-            rule_output_path(Client::Copilot, "x"),
-            PathBuf::from(".github/instructions/x.instructions.md")
-        );
-        assert_eq!(
-            rule_output_path(Client::OpenCode, "x"),
-            PathBuf::from(".agents/rules/x/RULE.md")
-        );
-        assert_eq!(
-            agent_output_path(Client::Copilot, "x"),
-            PathBuf::from(".github/agents/x.agent.md")
-        );
-        assert_eq!(
-            agent_output_path(Client::OpenCode, "x"),
-            PathBuf::from(".opencode/agents/x.md")
-        );
+    fn output_paths_and_resource_bases_match_historical_spec() {
+        let cases = [
+            (
+                ItemKind::Skill,
+                Client::Claude,
+                ".claude/skills/x/SKILL.md",
+                ".claude/skills/x",
+            ),
+            (
+                ItemKind::Skill,
+                Client::Copilot,
+                ".github/skills/x/SKILL.md",
+                ".github/skills/x",
+            ),
+            (
+                ItemKind::Skill,
+                Client::OpenCode,
+                ".agents/skills/x/SKILL.md",
+                ".agents/skills/x",
+            ),
+            (
+                ItemKind::Rule,
+                Client::Claude,
+                ".claude/rules/x.md",
+                ".claude/rules/x",
+            ),
+            (
+                ItemKind::Rule,
+                Client::Copilot,
+                ".github/instructions/x.instructions.md",
+                ".github/instructions/x",
+            ),
+            (
+                ItemKind::Rule,
+                Client::OpenCode,
+                ".agents/rules/x/RULE.md",
+                ".agents/rules/x",
+            ),
+            (
+                ItemKind::Agent,
+                Client::Claude,
+                ".claude/agents/x.md",
+                ".claude/agents/x",
+            ),
+            (
+                ItemKind::Agent,
+                Client::Copilot,
+                ".github/agents/x.agent.md",
+                ".github/agents/x",
+            ),
+            (
+                ItemKind::Agent,
+                Client::OpenCode,
+                ".opencode/agents/x.md",
+                ".opencode/agents/x",
+            ),
+        ];
+        for (kind, client, entrypoint, resources) in cases {
+            assert_eq!(output_path(kind, client, "x"), PathBuf::from(entrypoint));
+            assert_eq!(
+                resource_base_path(kind, client, "x"),
+                PathBuf::from(resources)
+            );
+        }
     }
 
     #[test]
-    fn output_path_dispatches_to_per_kind_helper() {
-        // The dispatcher must produce the same path as the per-kind
-        // function for the same `(kind, client, name)` tuple, otherwise
-        // `install` would write to one place and `remove` would look in
-        // another.
-        for client in ALL_CLIENTS {
-            assert_eq!(
-                output_path(ItemKind::Skill, client, "x"),
-                skill_output_path(client, "x")
-            );
-            assert_eq!(
-                output_path(ItemKind::Rule, client, "x"),
-                rule_output_path(client, "x")
-            );
-            assert_eq!(
-                output_path(ItemKind::Agent, client, "x"),
-                agent_output_path(client, "x")
-            );
-        }
+    fn raw_separator_names_retain_native_pipeline_layout() {
+        assert_eq!(
+            output_path(ItemKind::Rule, Client::Claude, "a/b"),
+            PathBuf::from(".claude/rules/a/b.md")
+        );
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Claude, "a/b"),
+            PathBuf::from(".claude/rules/a/a/b")
+        );
+        #[cfg(unix)]
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Claude, "a\\b"),
+            PathBuf::from(".claude/rules/a\\b")
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            resource_base_path(ItemKind::Rule, Client::Claude, "a\\b"),
+            PathBuf::from(".claude/rules/a/a/b")
+        );
     }
 
     #[test]

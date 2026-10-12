@@ -17,6 +17,7 @@ pub mod fmt;
 pub mod generate;
 pub mod index;
 pub mod instructions;
+pub mod legacy;
 pub mod lint;
 pub mod lockfile;
 pub mod mcp;

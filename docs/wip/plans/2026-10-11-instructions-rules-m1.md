@@ -63,11 +63,18 @@ preview preserve bytes. New user syntax stays unchanged; ambiguous or
 unrepresentable labels require explicit reconciliation. This prerequisite does
 not adopt output files or introduce schema 2.
 
-The next M1-A2 task projects legacy state without fabricating ownership or requested
-surfaces. Lifecycle integration must then preserve these records through add,
-update, remove, list, and doctor before schema-2 writes can be enabled with migration
-backup and the M1-A3 preflight and journal boundary. M1-A2a alone does not complete
-M1-A2 or provide schema-2 support.
+The [pure legacy-state projection prerequisite](../../archive/plans/2026-10-12-legacy-state-projection.md)
+is implemented: it preserves the typed snapshot and indexed rows, decodes source
+labels, and describes the fixed historical Claude/Copilot/OpenCode candidate
+layouts. Requested selection remains unresolved; diagnostics retain malformed and
+duplicate state. It performs no I/O, source verification or ownership adoption.
+
+M1-A2 still requires verified source resolution, reproducible historical rendering
+and resource enumeration, requested-selection reconciliation, and adoption.
+Lifecycle integration must preserve records through add, update, remove, list and
+doctor before schema-2 writes can be enabled with exact schema-1 backup and the
+M1-A3 containment, preflight, writer-lock and recoverable journal boundary. These
+prerequisites do not complete M1-A2 or provide schema-2 support.
 
 ### M1-B: Project and user unconditional instructions
 
