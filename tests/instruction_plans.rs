@@ -200,6 +200,26 @@ fn updating_one_owner_preserves_manual_prefix_suffix_and_other_metadata() {
     assert_eq!(result.files[0].before, Some(bytes));
     assert_eq!(result.files[0].after, b"Manual\n\n<!-- upskill:begin a -->\nNew A\n<!-- upskill:end a -->\n\n<!-- upskill:begin b -->\nB\n<!-- upskill:end b -->\n\nTail\r\n");
     assert_eq!(result.artifacts[1], prior[1]);
+    let ArtifactContent::MarkdownContribution { contribution } = &result.artifacts[0].content
+    else {
+        panic!("updated region must retain contribution metadata")
+    };
+    assert_eq!(
+        contribution.content_sha256,
+        "4f20c82a5fc868b914151c1e0ee4b67a2b290c3f902c835690264f0cdfaca476"
+    );
+    let removed = plan_instructions(
+        &result.artifacts,
+        &[remove("a")],
+        &[observe("AGENTS.md", Some(result.files[0].after.clone()))],
+    )
+    .unwrap();
+    assert_eq!(removed.artifacts.len(), 1);
+    assert_eq!(removed.artifacts[0].owners, vec![owner("b")]);
+    assert_eq!(
+        removed.files[0].after,
+        b"Manual\n<!-- upskill:begin b -->\nB\n<!-- upskill:end b -->\n\nTail\r\n"
+    );
 }
 
 #[test]
@@ -309,6 +329,71 @@ fn revision_replacement_updates_all_owner_bindings() {
 }
 
 #[test]
+fn creation_preserves_distinct_source_name_and_installed_alias() {
+    let binding = ArtifactOwner {
+        source_name: "source-rule".into(),
+        installed_name: "installed-alias".into(),
+        source_revision: Some("v1".into()),
+        ..owner("installation")
+    };
+    let plan = plan_instructions(
+        &[],
+        &[InstructionInstallationChange::Set {
+            owner: binding.clone(),
+            contributions: vec![desired("AGENTS.md", "region", "Initial\n")],
+        }],
+        &[observe("AGENTS.md", None)],
+    )
+    .unwrap();
+    assert_eq!(plan.artifacts.len(), 1);
+    assert_eq!(plan.artifacts[0].owners, vec![binding]);
+    assert_eq!(
+        plan.files[0].after,
+        b"<!-- upskill:begin region -->\nInitial\n<!-- upskill:end region -->\n"
+    );
+}
+
+#[test]
+fn revision_replacement_preserves_distinct_source_name_and_installed_alias() {
+    let binding = ArtifactOwner {
+        source_name: "source-rule".into(),
+        installed_name: "installed-alias".into(),
+        source_revision: Some("v1".into()),
+        ..owner("installation")
+    };
+    let edit = aggregate::reconcile("", &[], &[Contribution::new("region", "Initial\n")]).unwrap();
+    let prior = vec![OwnedArtifact {
+        root: location("AGENTS.md").root,
+        path: "AGENTS.md".into(),
+        content: ArtifactContent::MarkdownContribution {
+            contribution: edit.owned[0].clone(),
+        },
+        owners: vec![binding.clone()],
+        consumers: vec![TargetSurface::CodexCli],
+    }];
+    let replacement = ArtifactOwner {
+        source_revision: Some("v2".into()),
+        ..binding
+    };
+    let plan = plan_instructions(
+        &prior,
+        &[InstructionInstallationChange::Set {
+            owner: replacement.clone(),
+            contributions: vec![desired("AGENTS.md", "region", "Replacement\n")],
+        }],
+        &[observe("AGENTS.md", Some(edit.content.into_bytes()))],
+    )
+    .unwrap();
+    assert_eq!(plan.artifacts.len(), 1);
+    assert_eq!(plan.artifacts[0].owners, vec![replacement]);
+    assert_eq!(
+        plan.files[0].after,
+        b"<!-- upskill:begin region -->\nReplacement\n<!-- upskill:end region -->\n"
+    );
+    assert_eq!(prior[0].owners[0].source_revision.as_deref(), Some("v1"));
+}
+
+#[test]
 fn existing_binding_cannot_be_reinterpreted() {
     let (prior, bytes) = fixture();
     for field in 0..4 {
@@ -351,6 +436,37 @@ fn untouched_selector_cannot_be_taken_over_even_with_identical_body() {
             .contains("b")
         );
     }
+}
+
+#[test]
+fn setting_first_shared_owner_rejects_multi_owner_region() {
+    assert_shared_owner_change_rejected(set("a", "Replacement\n"));
+}
+
+#[test]
+fn removing_first_shared_owner_rejects_multi_owner_region() {
+    assert_shared_owner_change_rejected(remove("a"));
+}
+
+#[test]
+fn setting_later_shared_owner_rejects_multi_owner_region() {
+    assert_shared_owner_change_rejected(set("c", "Replacement\n"));
+}
+
+#[test]
+fn removing_later_shared_owner_rejects_multi_owner_region() {
+    assert_shared_owner_change_rejected(remove("c"));
+}
+
+fn assert_shared_owner_change_rejected(change: InstructionInstallationChange) {
+    let (mut prior, bytes) = fixture();
+    prior[0].owners.push(owner("c"));
+    let snapshot = prior.clone();
+    assert_rejected_with(
+        plan_instructions(&prior, &[change], &[observe("AGENTS.md", Some(bytes))]),
+        "multi-owner instruction region",
+    );
+    assert_eq!(prior, snapshot);
 }
 
 #[test]
@@ -794,22 +910,63 @@ fn scopes_distinguish_locations_and_sort_project_before_user() {
 }
 
 #[test]
+fn new_selectors_at_one_location_append_in_ascending_id_order() {
+    let plan = plan_instructions(
+        &[],
+        &[set("z", "Z\n"), set("m", "M\n"), set("c", "C\n")],
+        &[observe("AGENTS.md", None)],
+    )
+    .unwrap();
+    assert_eq!(
+        plan.artifacts
+            .iter()
+            .map(|row| match &row.content {
+                ArtifactContent::MarkdownContribution { contribution } => contribution.id.as_str(),
+                _ => panic!("expected contribution metadata"),
+            })
+            .collect::<Vec<_>>(),
+        vec!["c", "m", "z"]
+    );
+}
+
+#[test]
 fn nonempty_changes_preserve_surviving_prior_row_order() {
     let (mut prior, bytes) = fixture();
     prior.reverse();
     let original = prior.clone();
     let plan = plan_instructions(
         &prior,
-        &[set("a", "Updated A\n"), set("c", "C\n")],
+        &[
+            set("z", "Z\n"),
+            set("a", "Updated A\n"),
+            set("m", "M\n"),
+            set("c", "C\n"),
+        ],
         &[observe("AGENTS.md", Some(bytes))],
     )
     .unwrap();
     assert_eq!(
         plan.artifacts
             .iter()
+            .map(|row| match &row.content {
+                ArtifactContent::MarkdownContribution { contribution } => contribution.id.as_str(),
+                _ => panic!("expected contribution metadata"),
+            })
+            .collect::<Vec<_>>(),
+        vec!["b", "a", "c", "m", "z"]
+    );
+    assert_eq!(
+        plan.artifacts
+            .iter()
             .map(|row| row.owners.clone())
             .collect::<Vec<_>>(),
-        vec![vec![owner("b")], vec![owner("a")], vec![owner("c")]]
+        vec![
+            vec![owner("b")],
+            vec![owner("a")],
+            vec![owner("c")],
+            vec![owner("m")],
+            vec![owner("z")],
+        ]
     );
     assert_eq!(plan.artifacts[0], original[0]);
     assert_eq!(prior, original);
