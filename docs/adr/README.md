@@ -54,3 +54,7 @@ records the implemented library boundary and its documented alternatives.
 ## Qualified scope directories
 
 - [AD-0028 — Lock qualified scope directories before owned lifecycle effects](0028-lock-qualified-scope-directories.md)
+
+## Qualified destination observation
+
+- [AD-0029 — Capture qualified destination evidence](0029-capture-qualified-destination-evidence.md)
