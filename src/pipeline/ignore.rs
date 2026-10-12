@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 /// Drop every resource (path relative to the item dir) that matches any
 /// `ignore` glob. Returns the kept resources, order preserved.
-pub(super) fn filter_ignored(resources: Vec<PathBuf>, patterns: &[String]) -> Vec<PathBuf> {
+pub(crate) fn filter_ignored(resources: Vec<PathBuf>, patterns: &[String]) -> Vec<PathBuf> {
     if patterns.is_empty() {
         return resources;
     }

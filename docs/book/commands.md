@@ -27,10 +27,17 @@ snapshot or qualified filesystem containment. See the
 
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
 sets from explicit desired bytes and supplied observations. Current commands do
-not call it or change their lifecycle behavior. Source/resource classification,
+not call it or change their lifecycle behavior. Lifecycle desired-set integration,
 mixed-plan composition, qualified observation, execution/state integration and
 Codex activation remain pending. See the
 [owned whole-file planning specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
+
+The library's pure `compile::item::compile_item` API produces complete per-client
+entrypoint and resource files from validated captured bytes, preserving resource
+modes and rejecting unsupported active overrides. It does not activate lifecycle
+planning, execution, state changes or native Codex support. Current commands keep
+their existing installer behavior. See the
+[captured item compilation specification](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation).
 
 ## Global flags
 

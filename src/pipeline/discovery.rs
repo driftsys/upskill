@@ -18,7 +18,7 @@ use crate::parse::frontmatter;
 /// Effective identity name for an item (§2.1). Skills always take the
 /// folder name (Agent Skills standard mandates name == dir); rules/agents
 /// take their frontmatter name when present, else the folder name.
-pub(super) fn effective_name(
+pub(crate) fn effective_name(
     kind: ItemKind,
     frontmatter_name: Option<&str>,
     folder: &str,
@@ -351,7 +351,7 @@ fn walk_files_into(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-fn is_entrypoint_or_override(fname: &str) -> bool {
+pub(crate) fn is_entrypoint_or_override(fname: &str) -> bool {
     matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md") || is_override_file(fname)
 }
 
