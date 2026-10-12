@@ -77,8 +77,10 @@ records the ordering choice.
 replacement, removal, owner handoff, no-op preconditions, untouched-record
 retention, metadata validation, mode boundaries, binary/empty/Unicode values,
 raw-root and scope isolation, ancestor conflicts and deterministic output. The
-expected hashes are independent literals. The tests establish supplied-value
-behavior, without proving actual filesystem observation or execution.
+critical creation, update and empty-content hash assertions use independent
+literal SHA-256 values. Other fixture-derived expected records use test-side
+`Sha256::digest`. The tests establish supplied-value behavior, without proving
+actual filesystem observation or execution.
 
 A future compiler must derive complete desired resource and entrypoint sets from
 captured sources and reviewed adapters. Mixed instruction/file installations
