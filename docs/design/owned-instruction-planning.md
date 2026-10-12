@@ -73,9 +73,11 @@ The complete result passes ownership validation before return; errors return no
 partial plan and inputs remain borrowed and unchanged.
 
 Callers must resolve direct/bundle references and native compatibility before
-planning. Complete reference-graph authority, per-owner consumer association,
-source and filesystem evidence, whole-file/resource planning, mixed-state
-lifecycle integration, writer locking, recovery and execution remain pending.
+planning. The separate [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+is implemented for explicitly supplied complete file sets. Complete reference-graph
+authority, per-owner consumer association, qualified source and filesystem evidence,
+source-derived resource sets, mixed instruction/file composition and state/lifecycle
+integration, writer locking, recovery and execution remain pending.
 Current commands, lockfile/source formats and native client support are unchanged.
 
 [`tests/instruction_plans.rs`](../../tests/instruction_plans.rs) covers owner

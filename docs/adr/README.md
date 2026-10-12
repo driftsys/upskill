@@ -34,3 +34,9 @@ records the implemented library boundary and its documented alternatives.
 [0019 — Separate strict source capture from legacy discovery](0019-separate-strict-source-capture.md) records the opt-in observation boundary.
 
 [0020 — Version and frame captured source evidence](0020-framed-source-manifest-evidence.md) records its separate digest encoding.
+
+## Owned whole-file planning
+
+- [AD-0021 — Pure whole-file planning before lifecycle effects](0021-pure-file-planning.md)
+- [AD-0022 — Require conservative file ownership and before-state evidence](0022-conservative-file-ownership-evidence.md)
+- [AD-0023 — Reject affected file and descendant topology](0023-reject-file-topology-transitions.md)
