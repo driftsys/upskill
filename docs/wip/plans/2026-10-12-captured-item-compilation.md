@@ -187,6 +187,7 @@ fn validate_name(name: &str) -> anyhow::Result<()> {
         anyhow::bail!("item name must be a single portable component");
     }
     Ok(())
+}
 ```
 
 Dispatch by `ItemKind` to parse the existing model and collect its audience/ignore and per-client rendered strings. Iterate `Client::ALL`, including only explicitly requested clients. Record audience exclusions; check active override presence before rendering and independently of ignore. Use contextual `render_skill`, `render_rule` or `render_agent` calls with the source name.
