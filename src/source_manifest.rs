@@ -63,7 +63,7 @@ pub fn validate_manifest(manifest: &SourceManifest) -> Result<()> {
 }
 
 trait ObservationIo {
-    fn entries(&self, path: &Path) -> std::io::Result<Vec<PathBuf>>;
+    fn entries(&self, path: &Path) -> std::io::Result<Vec<std::io::Result<PathBuf>>>;
     fn metadata(&self, path: &Path) -> std::io::Result<fs::Metadata>;
     fn read(&self, path: &Path) -> std::io::Result<Vec<u8>>;
 }
@@ -71,10 +71,10 @@ trait ObservationIo {
 struct StdIo;
 
 impl ObservationIo for StdIo {
-    fn entries(&self, path: &Path) -> std::io::Result<Vec<PathBuf>> {
-        fs::read_dir(path)?
+    fn entries(&self, path: &Path) -> std::io::Result<Vec<std::io::Result<PathBuf>>> {
+        Ok(fs::read_dir(path)?
             .map(|entry| entry.map(|entry| entry.path()))
-            .collect()
+            .collect())
     }
 
     fn metadata(&self, path: &Path) -> std::io::Result<fs::Metadata> {
@@ -118,6 +118,12 @@ fn capture_directory(
         .entries(directory)
         .with_context(|| format!("enumerate source directory {}", directory.display()))?;
     for entry in entries {
+        let entry = entry.with_context(|| {
+            format!(
+                "enumerate source directory entry in {}",
+                directory.display()
+            )
+        })?;
         let metadata = io
             .metadata(&entry)
             .with_context(|| format!("inspect source entry metadata {}", entry.display()))?;
@@ -242,13 +248,24 @@ mod tests {
     }
 
     impl ObservationIo for TestIo {
-        fn entries(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
+        fn entries(&self, path: &Path) -> io::Result<Vec<io::Result<PathBuf>>> {
             self.check("enumerate", path)?;
             let mut entries = fs::read_dir(path)?
                 .map(|entry| entry.map(|entry| entry.path()))
                 .collect::<io::Result<Vec<_>>>()?;
             entries.sort();
-            Ok(entries)
+            Ok(entries
+                .into_iter()
+                .map(|entry| {
+                    if self.failure.as_ref().is_some_and(|(operation, selected)| {
+                        *operation == "iterator" && selected == &entry
+                    }) {
+                        Err(io::Error::other("injected observation failure"))
+                    } else {
+                        Ok(entry)
+                    }
+                })
+                .collect())
         }
 
         fn metadata(&self, path: &Path) -> io::Result<fs::Metadata> {
@@ -284,8 +301,13 @@ mod tests {
             "expected {operation} failure, got {result:?}"
         );
         let message = format!("{:#}", result.unwrap_err());
-        assert!(message.contains(operation), "{message}");
-        assert!(message.contains(failing.to_str().unwrap()), "{message}");
+        if operation == "iterator" {
+            assert!(message.contains("directory entry"), "{message}");
+            assert!(message.contains(root.path().to_str().unwrap()), "{message}");
+        } else {
+            assert!(message.contains(operation), "{message}");
+            assert!(message.contains(failing.to_str().unwrap()), "{message}");
+        }
         assert!(
             message.contains("injected observation failure"),
             "{message}"
@@ -306,6 +328,11 @@ mod tests {
     #[test]
     fn injected_read_failure_returns_no_partial_manifest() {
         assert_fault("read", false);
+    }
+
+    #[test]
+    fn injected_iterator_failure_returns_no_partial_manifest() {
+        assert_fault("iterator", false);
     }
 
     #[test]

@@ -245,6 +245,48 @@ fn missing_and_regular_file_roots_are_rejected() {
     assert_capture_rejected(&root.path().join("file"), "source root must be a directory");
 }
 
+#[test]
+fn hidden_and_gitignore_matched_entries_are_captured() {
+    let root = tempfile::tempdir().unwrap();
+    let mode = if cfg!(unix) { Some(0o640) } else { None };
+    let expected = vec![
+        CapturedSourceFile {
+            path: ".gitignore".into(),
+            bytes: b"ignored\n".to_vec(),
+            content_sha256: "a6c7e3c5ddd823efc8b7a30853eabc152dac866843bd7a39dc4a29e0a0eb68b3"
+                .into(),
+            mode,
+        },
+        CapturedSourceFile {
+            path: ".hidden".into(),
+            bytes: b"bc".to_vec(),
+            content_sha256: "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac"
+                .into(),
+            mode,
+        },
+        CapturedSourceFile {
+            path: "ignored".into(),
+            bytes: b"bc".to_vec(),
+            content_sha256: "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac"
+                .into(),
+            mode,
+        },
+    ];
+    for file in &expected {
+        let path = root.path().join(&file.path);
+        fs::write(&path, &file.bytes).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(path, fs::Permissions::from_mode(0o640)).unwrap();
+        }
+    }
+    let captured = capture_source(root.path()).unwrap();
+    assert_eq!(captured.files.len(), 3);
+    assert_eq!(captured.files, expected);
+    assert_valid(&captured);
+}
+
 #[cfg(unix)]
 mod unix {
     use super::*;
@@ -277,6 +319,76 @@ mod unix {
         assert_ne!(original.content_sha256, changed.content_sha256);
         assert_valid(&original);
         assert_valid(&changed);
+    }
+
+    #[test]
+    fn mixed_modes_preserve_each_files_permission_identity() {
+        let root = tempfile::tempdir().unwrap();
+        let expected = vec![
+            CapturedSourceFile {
+                path: "a".into(),
+                bytes: b"bc".to_vec(),
+                content_sha256: "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac"
+                    .into(),
+                mode: Some(0o640),
+            },
+            CapturedSourceFile {
+                path: "ab".into(),
+                bytes: b"c".to_vec(),
+                content_sha256: "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6"
+                    .into(),
+                mode: Some(0o2640),
+            },
+        ];
+        for file in &expected {
+            let path = root.path().join(&file.path);
+            fs::write(&path, &file.bytes).unwrap();
+            fs::set_permissions(path, fs::Permissions::from_mode(file.mode.unwrap())).unwrap();
+        }
+        let captured = capture_source(root.path()).unwrap();
+        assert_eq!(captured.files.len(), 2);
+        assert_eq!(captured.files, expected);
+        assert_valid(&captured);
+    }
+
+    #[test]
+    fn invalid_lexical_directory_names_are_rejected_even_when_empty() {
+        for name in ["back\\slash", "with:colon", "control\n", "unicode\u{85}"] {
+            let root = tempfile::tempdir().unwrap();
+            fs::create_dir(root.path().join(name)).unwrap();
+            assert_capture_rejected(root.path(), "source path");
+        }
+    }
+
+    #[test]
+    fn hardlinked_regular_files_are_captured_by_each_path() {
+        let root = tempfile::tempdir().unwrap();
+        let first = root.path().join("a");
+        fs::write(&first, b"bc").unwrap();
+        fs::set_permissions(&first, fs::Permissions::from_mode(0o640)).unwrap();
+        fs::hard_link(first, root.path().join("b")).unwrap();
+        let captured = capture_source(root.path()).unwrap();
+        assert_eq!(captured.files.len(), 2);
+        assert_eq!(
+            captured.files,
+            vec![
+                CapturedSourceFile {
+                    path: "a".into(),
+                    bytes: b"bc".to_vec(),
+                    content_sha256:
+                        "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac".into(),
+                    mode: Some(0o640),
+                },
+                CapturedSourceFile {
+                    path: "b".into(),
+                    bytes: b"bc".to_vec(),
+                    content_sha256:
+                        "1e0bbd6c686ba050b8eb03ffeedc64fdc9d80947fce821abbe5d6dc8d252c5ac".into(),
+                    mode: Some(0o640),
+                },
+            ]
+        );
+        assert_valid(&captured);
     }
 
     #[test]
