@@ -210,7 +210,7 @@ Extend the matching public test file with these concrete cases, checking full be
 
 A helper may construct valid prior fixture hashes from independent `sha2` in test code, but critical creation/update/empty expected hashes above remain literal. Do not use the production planner or production hashing to derive expected post-state values. Assert root raw spellings explicitly because `PathBuf` structural equality normalizes components.
 
-Run `cargo test --test file_plans` and `cargo test --test instruction_plans`, plus `cargo test ownership::`; save command/output logs. Extend meaningful existing regression coverage only if this feature changes a shared boundary.
+Run `cargo test --test file_plans` and `cargo test --test instruction_plans`, plus `cargo test --test ownership_records`; save command/output logs. Extend meaningful existing regression coverage only if this feature changes a shared boundary.
 
 - [ ] **Step 5: Demonstrate semantic sensitivity and exact restoration.**
 
