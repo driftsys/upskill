@@ -318,12 +318,12 @@ pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
-/// Every non-symlink regular file under `dir`, recursively. Symlinks (file
-/// and directory) are skipped so a directory-symlink cycle cannot drive
-/// unbounded recursion and a symlinked file cannot smuggle content from
-/// outside `dir`. Order is filesystem-dependent; callers that need
-/// determinism sort the result. Shared by [`iter_item_resources`] and
-/// `hash::hash_item_dir`.
+/// Best-effort recursive discovery of non-directory, non-symlink entries.
+/// This can include special entries rather than only regular files. Directory
+/// enumeration, iterator and file-type errors are silently skipped. Observed
+/// symlinks are skipped before recursion; this does not qualify containment or
+/// concurrent replacement. Order is filesystem-dependent; callers sort when
+/// needed. Shared by [`iter_item_resources`] and `hash::hash_item_dir`.
 pub(super) fn walk_files(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     walk_files_into(dir, &mut out);

@@ -30,6 +30,7 @@ pub mod scaffold;
 pub mod search;
 pub mod select;
 pub mod source;
+pub mod source_manifest;
 pub mod style;
 pub mod target;
 

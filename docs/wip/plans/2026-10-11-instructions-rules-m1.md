@@ -79,10 +79,20 @@ only when no content remains. Affected whole files and multi-owner regions
 conflict; unrelated records survive. It enables no CLI or native support and does
 not complete M1-A2 or M1-A3.
 
+The [strict captured source manifest prerequisite](2026-10-12-strict-source-manifests.md)
+is implemented as a separate opt-in library API: complete captured regular-file
+bytes, optional observed Unix modes, framed versioned digests and pure validation.
+Observed links, special entries and read/traversal errors fail rather than return
+partial evidence. Current commands and legacy hashes remain unchanged. This
+prerequisite does not complete whole-file/resource planning or qualify an atomic
+snapshot, source authenticity or containment. Immutable Git evidence, source
+stabilization, destination qualification, executor/state integration and Codex
+activation remain pending.
+
 The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active WIP after the bounded pair completes and must not be archived with
 it. Complete reference-graph authority, per-owner consumer association,
-source/filesystem evidence, whole-file/resource plans, durable state/lifecycle and
+qualified source/filesystem evidence, whole-file/resource plans, durable state/lifecycle and
 transactional execution remain activation work.
 
 M1-A2 still requires verified source resolution, reproducible historical rendering

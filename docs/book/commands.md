@@ -18,6 +18,13 @@
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
+The library's strict source-manifest capture is a prerequisite for future owned
+file and resource planning. Current commands keep their existing discovery,
+hashing and persistence behavior; they do not invoke capture or activate the
+owned lifecycle. Captured bytes do not establish source authenticity, an atomic
+snapshot or qualified filesystem containment. See the
+[strict captured source manifest specification](https://driftsys.github.io/upskill/specification/specification.html#43-strict-captured-source-manifests).
+
 ## Global flags
 
 These work on every subcommand:

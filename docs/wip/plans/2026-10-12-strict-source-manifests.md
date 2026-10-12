@@ -69,7 +69,7 @@ No serde or trusted-provenance wrapper. Capture reads; validation is pure. Publi
 fields can be modified, so validation checks all evidence. No resource selection,
 Git revision, source-label parsing or destination operations enter this module.
 
-- [ ] **Step 1: Write public acceptance tests before production code.**
+- [x] **Step 1: Write public acceptance tests before production code.**
 
 Use `tempfile` directly for library tests; no CLI process or real home is needed.
 Create two different temporary roots with these files, deliberately writing them
@@ -142,7 +142,7 @@ status. Socket listeners stay alive while capturing. Windows executes portable
 capture/validator tests. Do not claim device-entry, native-client, alias or
 concurrent replacement qualification.
 
-- [ ] **Step 2: Record compile RED, then genuine assertion RED.**
+- [x] **Step 2: Record compile RED, then genuine assertion RED.**
 
 Before adding the module, run `cargo test --test source_manifests`; save expected
 missing-module compile failure. Add only DTOs/module export and minimal signatures:
@@ -160,7 +160,7 @@ manifest validation. Do not draft real observation/validation helpers before
 these valid assertions complete. Bounds panics, compile errors and incorrect
 fixtures are not assertion RED evidence. Report any deviation honestly.
 
-- [ ] **Step 3: Implement the narrow private filesystem seam and strict capture.**
+- [x] **Step 3: Implement the narrow private filesystem seam and strict capture.**
 
 Keep the seam module-private and synchronous. A suitable concrete contract is:
 
@@ -198,7 +198,7 @@ entries never read. Keep fault state local, not environment/global mutation.
 Sort entries locally in fault fixtures if deterministic failure ordering needs it;
 production correctness must not depend on directory enumeration order.
 
-- [ ] **Step 4: Implement exact digest/validation and unchanged path-rule extraction.**
+- [x] **Step 4: Implement exact digest/validation and unchanged path-rule extraction.**
 
 Extract the existing ownership path conditional unchanged into the crate-private
 helper; keep its exact error text and validation position. Source validation
@@ -226,7 +226,7 @@ before the aggregate hash, with useful path diagnostics. It borrows inputs and
 never sorts them in place. Validate captured output too. Do not introduce state
 codecs or broaden ownership rules.
 
-- [ ] **Step 5: Focused GREEN and required semantic controls.**
+- [x] **Step 5: Focused GREEN and required semantic controls.**
 
 Run `cargo test --test source_manifests`, `cargo test source_manifest::` and the
 `cargo test --test ownership_records --test instruction_plans --test
@@ -239,7 +239,7 @@ run the complete-vector acceptance test; file-count/body assertion must fail.
 Restore byte-for-byte in `finally`, compare with `cmp`, exclude compiler failures
 from semantic evidence and rerun focused GREEN. No temporary mutation is committed.
 
-- [ ] **Step 6: Docs, ordered gates, self-review and commit.**
+- [x] **Step 6: Docs, ordered gates, self-review and commit.**
 
 Describe the library API, exact digest framing, captured byte/mode evidence,
 strict observed-entry failure behavior and qualification limits in canonical docs.
