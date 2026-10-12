@@ -29,6 +29,9 @@ relaxed for `serde_yaml_ng`, `pulldown-cmark`, `dprint-plugin-markdown`).
   `dprint-plugin-markdown` `=0.21.1` (exact pin — see
   [ADR-0003](docs/adr/0003-generation-pipeline.md)), `sha2` 0.11, `ureq` 2,
   `ctrlc` 3.
+- **Linux/macOS dependency**: `rustix` `=1.1.4` with the `fs` feature for
+  qualified scope roots and writer locking; see
+  [AD-0028](docs/adr/0028-lock-qualified-scope-directories.md).
 - **Out**: `tokio`, `reqwest` (no async, `ureq` is sync), `git2` (~5 MB —
   shell out to `git`), `dialoguer` (raw stdin is enough). Don't add these
   without a strong reason recorded in an ADR.
