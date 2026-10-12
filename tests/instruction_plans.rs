@@ -483,7 +483,7 @@ fn unknown_removal_is_rejected_without_observations() {
 #[test]
 fn invalid_desired_records_are_rejected_even_while_removing() {
     let (prior, bytes) = fixture();
-    for invalid in 0..14 {
+    for invalid in [0, 1, 2, 3, 4, 5, 6, 9, 10, 11] {
         let mut binding = owner("new");
         let mut contribution = desired("AGENTS.md", "new", "New\n");
         match invalid {
@@ -494,13 +494,10 @@ fn invalid_desired_records_are_rejected_even_while_removing() {
             4 => binding.source_revision = Some(String::new()),
             5 => contribution.consumers.clear(),
             6 => contribution.consumers.push(TargetSurface::CodexCli),
-            7 => contribution.location.path = "../bad".into(),
-            8 => contribution.location.root.path = "relative".into(),
             9 => contribution.id = "bad id".into(),
             10 => contribution.markdown = "no newline".into(),
             11 => contribution.markdown = "<!-- upskill:begin rogue -->\n".into(),
-            12 => contribution.location.path.clear(),
-            _ => contribution.location.root.path = "".into(),
+            _ => unreachable!("all invalid record cases are listed"),
         }
         let changes = [
             remove("a"),
@@ -542,6 +539,67 @@ fn invalid_desired_records_are_rejected_even_while_removing() {
         },
     ];
     assert!(error(&prior, &cross_owner, &[observe("AGENTS.md", Some(bytes))]).contains("a"));
+}
+
+fn assert_invalid_desired_location(location: InstructionLocation, diagnostic: &str) {
+    let (prior, bytes) = fixture();
+    let observations = [
+        observe("AGENTS.md", Some(bytes)),
+        ObservedInstructionFile {
+            location: location.clone(),
+            content: None,
+        },
+    ];
+    let changes = [
+        remove("a"),
+        InstructionInstallationChange::Set {
+            owner: owner("new"),
+            contributions: vec![DesiredInstructionContribution {
+                location,
+                ..desired("AGENTS.md", "new", "New\n")
+            }],
+        },
+    ];
+    assert_rejected_with(
+        plan_instructions(&prior, &changes, &observations),
+        diagnostic,
+    );
+}
+
+#[test]
+fn parent_component_desired_path_reports_path_validation_while_removing() {
+    assert_invalid_desired_location(
+        location("../bad"),
+        "artifact path must contain portable forward-slash relative components",
+    );
+}
+
+#[test]
+fn empty_desired_path_reports_path_validation_while_removing() {
+    assert_invalid_desired_location(
+        location(""),
+        "artifact path must contain portable forward-slash relative components",
+    );
+}
+
+#[test]
+fn relative_desired_root_reports_root_validation_while_removing() {
+    let mut location = location("AGENTS.md");
+    location.root.path = "relative".into();
+    assert_invalid_desired_location(
+        location,
+        "installation root must be a nonempty absolute path",
+    );
+}
+
+#[test]
+fn empty_desired_root_reports_root_validation_while_removing() {
+    let mut location = location("AGENTS.md");
+    location.root.path = "".into();
+    assert_invalid_desired_location(
+        location,
+        "installation root must be a nonempty absolute path",
+    );
 }
 
 #[test]
