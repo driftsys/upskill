@@ -85,15 +85,19 @@ impl Fixture {
     }
 
     fn cmd(&self) -> assert_cmd::Command {
-        let mut cmd = common::upskill_cmd(&self.home);
+        self.cmd_at(&self.home, &self.target)
+    }
+
+    fn cmd_at(&self, home: &Path, target: &Path) -> assert_cmd::Command {
+        let mut cmd = common::upskill_cmd(home);
         for (key, _) in std::env::vars_os() {
             if key.to_string_lossy().starts_with("GIT_") {
                 cmd.env_remove(key);
             }
         }
-        cmd.current_dir(&self.target)
+        cmd.current_dir(target)
             .env("GIT_CONFIG_NOSYSTEM", "1")
-            .env("GIT_CONFIG_GLOBAL", self.home.join("empty-gitconfig"))
+            .env("GIT_CONFIG_GLOBAL", home.join("empty-gitconfig"))
             .env("GIT_CONFIG_COUNT", "2")
             .env(
                 "GIT_CONFIG_KEY_0",
@@ -106,6 +110,32 @@ impl Fixture {
             .env("GIT_ALLOW_PROTOCOL", "file")
             .env("GIT_TERMINAL_PROMPT", "0");
         cmd
+    }
+
+    /// Derive the expected updated-source hash through a separate modern install,
+    /// never from the historical installation's updated lockfile.
+    fn fresh_modern_hash(&self, source: &str, name: &str) -> String {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        let target = tmp.path().join("target");
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(target.join(".git")).unwrap();
+        fs::write(home.join("empty-gitconfig"), "").unwrap();
+        self.cmd_at(&home, &target)
+            .args(["add", source, "--claude"])
+            .assert()
+            .success();
+        let lock: Value =
+            serde_json::from_slice(&fs::read(target.join(".upskill-lock.json")).unwrap()).unwrap();
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| entry["name"] == name)
+            .unwrap()["hash"]
+            .as_str()
+            .expect("fresh modern install must record a source hash")
+            .to_string()
     }
 
     fn lock(&self) -> Value {
@@ -187,6 +217,11 @@ fn legacy_item_update_preserves_alias_subfolder_and_preview_bytes() {
             "Updated upstream content.",
         );
         f.commit();
+        let expected_hash = f.fresh_modern_hash(&modern, "original");
+        assert_ne!(
+            old_lock["items"][0]["hash"].as_str(),
+            Some(expected_hash.as_str())
+        );
         f.cmd().args(["list"]).assert().success();
         f.cmd().args(["doctor"]).assert().success();
         assert_eq!(
@@ -214,10 +249,21 @@ fn legacy_item_update_preserves_alias_subfolder_and_preview_bytes() {
         let lock = f.lock();
         let mut expected = old_lock;
         expected["items"][0]["source"] = modern.into();
-        expected["items"][0]["hash"] = lock["items"][0]["hash"].clone();
+        expected["items"][0]["hash"] = expected_hash.into();
         assert_eq!(
             lock, expected,
             "only source spelling and changed hash may change"
+        );
+        let updated = snapshot(&f.target);
+        f.cmd()
+            .args(["update", "installed", "--dry-run"])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("would update 0 of 1"));
+        assert_eq!(
+            snapshot(&f.target),
+            updated,
+            "second preview must preserve bytes"
         );
     }
 }
@@ -243,6 +289,16 @@ fn reported_legacy_bundle_updates_and_preserves_unrelated_metadata() {
     let before = snapshot(&f.target);
     f.write_skill("skills/original/SKILL.md", "Changed bundle content.");
     f.commit();
+    let expected_hash = f.fresh_modern_hash(modern, "original");
+    let old_hash = old_lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["name"] == "original")
+        .unwrap()["hash"]
+        .as_str()
+        .unwrap();
+    assert_ne!(old_hash, expected_hash);
     f.cmd().args(["list"]).assert().success();
     f.cmd().args(["doctor"]).assert().success();
     assert_eq!(snapshot(&f.target), before);
@@ -267,19 +323,24 @@ fn reported_legacy_bundle_updates_and_preserves_unrelated_metadata() {
     for entry in expected["items"].as_array_mut().unwrap() {
         if entry["name"] == "original" {
             entry["source"] = modern.into();
-            entry["hash"] = lock["items"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .find(|e| e["name"] == "original")
-                .unwrap()["hash"]
-                .clone();
+            entry["hash"] = expected_hash.clone().into();
         }
     }
     expected["bundles"][0]["source"] = modern.into();
     assert_eq!(
         lock, expected,
         "preserve schema, bundle membership and unrelated records"
+    );
+    let updated = snapshot(&f.target);
+    f.cmd()
+        .args(["update", "original", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("would update 0 of 1"));
+    assert_eq!(
+        snapshot(&f.target),
+        updated,
+        "second bundle preview must preserve bytes"
     );
 }
 

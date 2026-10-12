@@ -900,6 +900,8 @@ mod tests {
             "gitlab+host",
             "gitlab+host:/org/repo",
             "gitlab+host:port:org/repo",
+            "gitlab+host:+8443:org/repo",
+            "gitlab+[::1]:+8443:org/repo",
             "gitlab+host::org/repo",
             "gitlab+host:65536:org/repo",
             "gitlab+host:0:org/repo",
