@@ -1,12 +1,13 @@
 use upskill::legacy::{
-    LegacyClient, LegacyDiagnostic, LegacyDiagnosticKind, LegacyIntegration, LegacyLocation,
-    RequestedSelection, project_legacy,
+    LegacyBundle, LegacyCandidate, LegacyClient, LegacyDiagnostic, LegacyDiagnosticKind,
+    LegacyIntegration, LegacyLocation, RequestedSelection, project_legacy,
 };
 use upskill::lockfile::{
     LockedBundle, LockedItem, LockedMcp, LockedPlugin, Lockfile, McpInstallStatus,
     PluginInstallStatus,
 };
 use upskill::pipeline::ItemKind;
+use upskill::source::{GitRepo, GithubRepo, InstallSource};
 
 fn item() -> LockedItem {
     LockedItem {
@@ -132,16 +133,78 @@ fn empty_clients_preserve_state_and_expand_only_historical_clients() {
             LegacyClient::OpenCode
         ]
     );
-    assert_eq!(projected.items[0].candidates.len(), 3);
     assert_eq!(
-        projected.items[0].candidates[0].entrypoint,
-        ".claude/skills/installed alias/SKILL.md"
+        projected.items[0].candidates,
+        vec![
+            LegacyCandidate {
+                client: LegacyClient::Claude,
+                entrypoint: ".claude/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".claude/skills/installed alias".into(),
+            },
+            LegacyCandidate {
+                client: LegacyClient::Copilot,
+                entrypoint: ".github/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".github/skills/installed alias".into(),
+            },
+            LegacyCandidate {
+                client: LegacyClient::OpenCode,
+                entrypoint: ".agents/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".agents/skills/installed alias".into(),
+            },
+        ]
     );
     assert_eq!(
         projected.items[0].source.as_ref().unwrap().to_string(),
         "https://gitlab.example.com/org/team/repo@v1:skills/tool"
     );
     assert!(projected.diagnostics.is_empty());
+}
+
+#[test]
+fn explicit_multiple_clients_preserve_order_and_candidate_identity() {
+    let mut record = item();
+    record.clients = vec![
+        "opencode".into(),
+        "claude".into(),
+        "copilot".into(),
+        "opencode".into(),
+    ];
+    let lock = Lockfile {
+        items: vec![record],
+        ..Lockfile::new()
+    };
+    let projection = project_legacy(&lock);
+    assert_eq!(projection.snapshot, lock);
+    assert_eq!(projection.items[0].record, lock.items[0]);
+    assert_eq!(
+        projection.items[0].clients,
+        vec![
+            LegacyClient::OpenCode,
+            LegacyClient::Claude,
+            LegacyClient::Copilot
+        ]
+    );
+    assert_eq!(
+        projection.items[0].candidates,
+        vec![
+            LegacyCandidate {
+                client: LegacyClient::OpenCode,
+                entrypoint: ".agents/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".agents/skills/installed alias".into(),
+            },
+            LegacyCandidate {
+                client: LegacyClient::Claude,
+                entrypoint: ".claude/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".claude/skills/installed alias".into(),
+            },
+            LegacyCandidate {
+                client: LegacyClient::Copilot,
+                entrypoint: ".github/skills/installed alias/SKILL.md".into(),
+                resource_search_base: ".github/skills/installed alias".into(),
+            },
+        ]
+    );
+    assert!(projection.diagnostics.is_empty());
 }
 
 #[test]
@@ -290,6 +353,80 @@ fn raw_clients_are_preserved_and_unknown_spellings_diagnosed() {
 }
 
 #[test]
+fn unknown_only_clients_preserve_raw_state_without_default_candidates() {
+    let mut record = item();
+    record.clients = vec!["codex".into()];
+    let lock = Lockfile {
+        items: vec![record],
+        ..Lockfile::new()
+    };
+    let before = lock.clone();
+    let projection = project_legacy(&lock);
+    assert_eq!(lock, before);
+    assert_eq!(projection.snapshot, before);
+    assert_eq!(projection.items.len(), 1);
+    assert_eq!(projection.items[0].index, 0);
+    assert_eq!(projection.items[0].record, before.items[0]);
+    assert_eq!(
+        projection.items[0].requested_selection,
+        RequestedSelection::Unresolved
+    );
+    assert!(projection.items[0].clients.is_empty());
+    assert!(projection.items[0].candidates.is_empty());
+    assert_eq!(
+        projection.diagnostics,
+        vec![LegacyDiagnostic {
+            location: LegacyLocation::Item(0),
+            kind: LegacyDiagnosticKind::UnknownClient {
+                client: "codex".into()
+            },
+        }]
+    );
+}
+
+#[test]
+fn distinct_bundles_preserve_indexed_rows_and_exact_decoded_sources() {
+    let mut second = bundle();
+    second.name = "second bundle".into();
+    second.source =
+        "gitlab+gitlab.example.com:org/team/registry@v2:bundles/other.bundle.yaml".into();
+    second.git_ref = Some("v2".into());
+    second.items = vec!["other".into()];
+    let lock = Lockfile {
+        bundles: vec![bundle(), second],
+        ..Lockfile::new()
+    };
+    let projection = project_legacy(&lock);
+    assert_eq!(projection.snapshot, lock);
+    assert_eq!(
+        projection.bundles,
+        vec![
+            LegacyBundle {
+                index: 0,
+                record: lock.bundles[0].clone(),
+                source: Some(InstallSource::Github(GithubRepo {
+                    owner: "org".into(),
+                    name: "registry".into(),
+                    git_ref: Some("main".into()),
+                    subfolder: Some("skills/base.bundle.yaml".into()),
+                })),
+            },
+            LegacyBundle {
+                index: 1,
+                record: lock.bundles[1].clone(),
+                source: Some(InstallSource::Git(GitRepo {
+                    url: "https://gitlab.example.com/org/team/registry".into(),
+                    git_ref: Some("v2".into()),
+                    subfolder: Some("bundles/other.bundle.yaml".into()),
+                })),
+            },
+        ]
+    );
+    assert!(projection.items.is_empty());
+    assert!(projection.diagnostics.is_empty());
+}
+
+#[test]
 fn invalid_sources_retain_rows_and_known_candidate_facts() {
     let mut bad_item = item();
     bad_item.source = "gitlab:org/repo@".into();
@@ -402,8 +539,10 @@ fn invalid_names_suppress_candidates_but_retain_other_facts() {
 fn duplicate_identity_and_entrypoint_diagnostics_include_every_row() {
     let mut record = item();
     record.clients = vec!["claude".into()];
+    let mut unrelated = record.clone();
+    unrelated.name = "unrelated".into();
     let lock = Lockfile {
-        items: vec![record.clone(), record.clone(), record],
+        items: vec![unrelated, record.clone(), record.clone(), record],
         ..Lockfile::new()
     };
     let projection = project_legacy(&lock);
@@ -417,18 +556,18 @@ fn duplicate_identity_and_entrypoint_diagnostics_include_every_row() {
         projection.diagnostics,
         vec![
             LegacyDiagnostic {
-                location: LegacyLocation::Item(0),
+                location: LegacyLocation::Item(1),
                 kind: LegacyDiagnosticKind::DuplicateItemIdentity {
                     kind: ItemKind::Skill,
                     name: "installed alias".into(),
-                    indices: vec![0, 1, 2]
+                    indices: vec![1, 2, 3]
                 }
             },
             LegacyDiagnostic {
-                location: LegacyLocation::Item(0),
+                location: LegacyLocation::Item(1),
                 kind: LegacyDiagnosticKind::IdenticalCandidateEntrypoint {
                     entrypoint: ".claude/skills/installed alias/SKILL.md".into(),
-                    indices: vec![0, 1, 2]
+                    indices: vec![1, 2, 3]
                 }
             },
         ]
