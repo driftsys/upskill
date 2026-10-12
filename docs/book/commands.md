@@ -25,6 +25,13 @@ owned lifecycle. Captured bytes do not establish source authenticity, an atomic
 snapshot or qualified filesystem containment. See the
 [strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
 
+The library's pure `files::plan::plan_files` API plans complete owned whole-file
+sets from explicit desired bytes and supplied observations. Current commands do
+not call it or change their lifecycle behavior. Source/resource classification,
+mixed-plan composition, qualified observation, execution/state integration and
+Codex activation remain pending. See the
+[owned whole-file planning specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
+
 ## Global flags
 
 These work on every subcommand:

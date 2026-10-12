@@ -89,10 +89,22 @@ snapshot, source authenticity or containment. Immutable Git evidence, source
 stabilization, destination qualification, executor/state integration and Codex
 activation remain pending.
 
+The [owned whole-file planning prerequisite](2026-10-12-owned-file-planning.md)
+provides pure `files::plan` operation plans for explicit complete desired sets and
+supplied before-state observations. It preserves untouched ownership, requires
+exact byte/hash and optional-mode evidence, rejects unowned destinations and
+affected shared/contribution records, and enumerates only individual file changes.
+The observations remain unqualified. Source/resource classification and desired-set
+derivation, mixed instruction/file composition, destination qualification, durable
+state, executor/recovery and Codex activation remain pending. Existing commands,
+lockfiles and native behavior are unchanged; this does not complete M1-A2, M1-A3
+or M1.
+
 The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active WIP after the bounded pair completes and must not be archived with
 it. Complete reference-graph authority, per-owner consumer association,
-qualified source/filesystem evidence, whole-file/resource plans, durable state/lifecycle and
+qualified source/filesystem evidence, source-derived file/resource plans, mixed-plan
+composition, durable state/lifecycle and
 transactional execution remain activation work.
 
 M1-A2 still requires verified source resolution, reproducible historical rendering

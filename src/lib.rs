@@ -13,6 +13,7 @@ pub mod cli;
 pub mod config;
 pub mod conflict;
 pub mod fetch;
+pub mod files;
 pub mod fmt;
 pub mod generate;
 pub mod index;

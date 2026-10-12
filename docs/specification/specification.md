@@ -395,11 +395,118 @@ descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
 evidence, source stabilization, qualified filesystem observation, destination
-qualification, whole-file/resource plans, lifecycle state and execution, and
+qualification, source-derived file/resource plans, lifecycle state and execution, and
 Codex activation remain pending.
 
 See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
 and its decision records for implementation boundaries and rationale.
+
+### 4.4 Owned whole-file operation plans
+
+The pure library module `files::plan` exports these public values, all deriving
+`Debug`, `Clone`, `PartialEq` and `Eq` without serialization:
+
+```rust
+pub struct FileLocation {
+    pub root: InstallationRoot,
+    pub path: String,
+}
+pub struct FileValue {
+    pub bytes: Vec<u8>,
+    pub mode: Option<u32>,
+}
+pub struct ObservedFile {
+    pub location: FileLocation,
+    pub value: Option<FileValue>,
+}
+pub struct DesiredFile {
+    pub location: FileLocation,
+    pub value: FileValue,
+    pub consumers: Vec<TargetSurface>,
+}
+pub enum FileInstallationChange {
+    Set { owner: ArtifactOwner, files: Vec<DesiredFile> },
+    Remove { installation_id: String },
+}
+pub struct PlannedFile {
+    pub location: FileLocation,
+    pub before: Option<FileValue>,
+    pub after: Option<FileValue>,
+}
+pub struct FileOperationPlan {
+    pub artifacts: Vec<OwnedArtifact>,
+    pub files: Vec<PlannedFile>,
+}
+pub fn plan_files(
+    prior: &[OwnedArtifact],
+    changes: &[FileInstallationChange],
+    observations: &[ObservedFile],
+) -> anyhow::Result<FileOperationPlan>;
+```
+
+`FileLocation` uses the ownership model's `InstallationRoot`; desired files use
+explicit `TargetSurface` consumers and changes use an explicit `ArtifactOwner`.
+Inputs are borrowed and unchanged. Outputs own their bytes and ownership records.
+The planner performs no I/O. An observed `None` means an absent directory entry,
+not an unreadable file or directory; supplied observations are unqualified
+before-state evidence and do not establish provenance.
+
+Prior and desired records pass `ownership::validate_artifacts`. Observed and
+desired locations require host-absolute nonempty roots and portable relative paths;
+optional modes must be in `0..=0o7777`. Invalid locations and modes are rejected
+before observation membership diagnostics. Location identity and sorting compare
+scope, the exact root `OsStr` spelling and portable path. There is no component
+normalization, canonicalization, case folding, alias resolution or containment
+claim.
+
+A `Set` supplies the complete nonempty whole-file set for its installation;
+`Remove` removes its last files. Duplicate changes, unknown removals and duplicate
+desired locations conflict. Reusing an installation ID cannot change source,
+kind, source name or installed alias. Its revision may change consistently across
+all replacement records. Equal content establishes neither compatibility nor
+shared ownership.
+
+Affected locations include prior records owned by selected installations and
+all desired locations. Each requires exactly one observation, including
+revision-only changes and byte-identical no-ops. Duplicate, missing and extraneous
+observations conflict. Affected Markdown contributions and multi-owner whole files
+conflict. Unrelated records, including shared files and contributions, survive
+exactly. A desired file cannot take over an untouched installation; explicit
+removal of the old owner plus selection of the new owner permits handoff only
+when the recorded before-state is verified.
+
+Owned locations require present observed bytes matching the recorded SHA-256 and
+exact equality of the optional recorded and observed modes. `None` differs from
+`Some(0)`. Edited or missing files conflict on update, removal and no-op. Unowned
+locations require absence even when present bytes and modes equal desired values.
+The planner does not reinterpret platform mode evidence or authorize permission
+application.
+
+An affected location cannot be a strict slash-component ancestor or descendant of
+any prior or desired artifact within the same exact root and scope. Contributions
+count as files here. `a` and `ab` are distinct siblings; removing `a` while creating
+`a/b` still conflicts. Disjoint untouched topology pairs do not block other work.
+
+The result contains one `PlannedFile` per affected location in lexical order,
+with exact observed `before` and desired `after` values, including no-ops. Creation
+has absent `before`; deletion has absent `after` and identifies only an individual
+recorded file, granting no directory ownership or recursive removal authority.
+Desired ownership records contain SHA-256 of exact desired bytes, optional mode,
+explicit owner and explicit consumers. Untouched rows and same-location
+replacements retain prior row order; removed rows disappear and new rows append
+in lexical order. The final record set is validated before return. Any failure
+returns no successful partial plan.
+
+This prerequisite leaves existing commands, CLI flags, lockfile persistence and
+native-client behavior unchanged. Source/resource classification, deriving
+complete desired sets from captured sources, mixed instruction/file plan
+composition, qualified observation, destination equivalence/containment, writer
+locking, permission policy, durable state, apply/recovery and Codex activation
+remain pending. Neither planner authorizes partial application of mixed
+installations. This API does not complete M1-A2, M1-A3 or M1.
+
+See the [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-owned-file-planning-design.md)
+and the active [operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 ## 5. Source format and authentication
 

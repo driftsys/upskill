@@ -60,7 +60,7 @@
 - Produce the exact seven DTOs and `plan_files` signature in the spec's Public interface. Read that section before declaring types; do not rename fields or add serialization.
 - The planner consumes complete desired whole-file sets, not source directories or a manifest authenticity token. No filesystem or current pipeline callers are added.
 
-- [ ] **Step 1: Write public acceptance tests and capture compile RED.**
+- [x] **Step 1: Write public acceptance tests and capture compile RED.**
 
 Start `tests/file_plans.rs` with the following fixture and creation test. The byte hashes are independent Python `hashlib.sha256` results; use these literal expected values rather than calling production hashing to construct expectations.
 
@@ -138,7 +138,7 @@ fn creates_sorted_entrypoint_and_binary_resource_with_literal_evidence() {
 
 Run `cargo test --test file_plans creates_sorted_entrypoint_and_binary_resource_with_literal_evidence`. Save its compile failure for the missing public module/API. Do not start real implementation before Step 2's valid behavioral assertion failures.
 
-- [ ] **Step 2: Add only compile scaffolding and capture genuine assertion RED.**
+- [x] **Step 2: Add only compile scaffolding and capture genuine assertion RED.**
 
 Declare the spec's DTOs, expose `pub mod plan;` in `files/mod.rs` and `pub mod files;` in `lib.rs`. Use this deliberately empty stub temporarily:
 
@@ -154,7 +154,7 @@ pub fn plan_files(
 
 Re-run the creation test and save its `plan.files.len()` assertion failure (0 versus 2), distinct from compile RED. Add a second test that supplies an existing unowned file with identical desired bytes/mode and requires an error containing `unowned`; run it against the stub and save the failed rejection assertion. Run Cargo commands serially and wait for completion. If a fixture fails to compile, correct it and rerun until these valid behavioral RED cases are recorded before drafting real logic.
 
-- [ ] **Step 3: Implement validation and deterministic planning.**
+- [x] **Step 3: Implement validation and deterministic planning.**
 
 Use exact lexical keys and SHA-256 of captured desired bytes:
 
@@ -166,7 +166,10 @@ fn location_key(location: &FileLocation) -> LocationKey {
     (location.root.scope, location.root.path.as_os_str().to_owned(), location.path.clone())
 }
 fn content_hash(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 fn is_descendant(parent: &str, child: &str) -> bool {
     child.strip_prefix(parent).is_some_and(|suffix| suffix.starts_with('/'))
@@ -185,7 +188,7 @@ Implement the following algorithm in focused private helpers; all helpers remain
 
 Use `BTreeMap`/`BTreeSet` for deterministic indexing. No iteration over unordered hash collections may determine output order. Never infer directory ownership, selected consumers, source revisions or compatibility from equal content. No fallback to lossy UTF-8, filesystem access or legacy resource walkers.
 
-- [ ] **Step 4: Complete the acceptance matrix and focused GREEN.**
+- [x] **Step 4: Complete the acceptance matrix and focused GREEN.**
 
 Extend the matching public test file with these concrete cases, checking full before/after values and ownership metadata where meaningful:
 
@@ -212,7 +215,7 @@ A helper may construct valid prior fixture hashes from independent `sha2` in tes
 
 Run `cargo test --test file_plans` and `cargo test --test instruction_plans`, plus `cargo test --test ownership_records`; save command/output logs. Extend meaningful existing regression coverage only if this feature changes a shared boundary.
 
-- [ ] **Step 5: Demonstrate semantic sensitivity and exact restoration.**
+- [x] **Step 5: Demonstrate semantic sensitivity and exact restoration.**
 
 One mutation at a time, with saved original production bytes and `finally` restoration plus byte comparison:
 
@@ -223,7 +226,7 @@ One mutation at a time, with saved original production bytes and `finally` resto
 
 Require intended assertion failures, not compilation errors or panics in unrelated fixtures. Save failed command/output, restoration comparison and restored focused GREEN for each. Restore source exactly and run the full file-plan acceptance suite once after all controls. Do not treat these later mutants as a substitute for Step 2's genuine assertion RED.
 
-- [ ] **Step 6: Update canonical records and run ordered final gates.**
+- [x] **Step 6: Update canonical records and run ordered final gates.**
 
 Add a specification subsection after strict source manifests describing the exact public API, ownership/precondition/mode/topology contracts, sorted actions and record-order guarantees. State supplied observations are unqualified, source/resource classification and mixed-plan composition are pending, and no existing command/native behavior changes. Use GitHub links for non-book design documents and the actual `specification.html` published path for book links.
 
