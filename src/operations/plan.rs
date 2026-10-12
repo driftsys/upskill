@@ -7,7 +7,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::files::plan::{
     DesiredFile, FileInstallationChange, FileLocation, FileOperationPlan, FileValue, ObservedFile,
-    PlannedFile, plan_files,
+    PlannedFile, plan_files, validate_binding,
 };
 use crate::instructions::plan::{
     DesiredInstructionContribution, InstructionInstallationChange, InstructionLocation,
@@ -78,27 +78,6 @@ fn validate_location(root: &InstallationRoot, path: &str) -> Result<()> {
 fn validate_mode(mode: Option<u32>) -> Result<()> {
     if mode.is_some_and(|mode| mode > 0o7777) {
         bail!("file mode must contain permission bits only (0..=0o7777)");
-    }
-    Ok(())
-}
-
-fn validate_binding(prior: &ArtifactOwner, desired: &ArtifactOwner) -> Result<()> {
-    let changed = if prior.source != desired.source {
-        Some("source")
-    } else if prior.kind != desired.kind {
-        Some("kind")
-    } else if prior.source_name != desired.source_name {
-        Some("source_name")
-    } else if prior.installed_name != desired.installed_name {
-        Some("installed_name")
-    } else {
-        None
-    };
-    if let Some(field) = changed {
-        bail!(
-            "installation {} cannot change {field}",
-            desired.installation_id
-        );
     }
     Ok(())
 }

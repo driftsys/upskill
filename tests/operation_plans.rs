@@ -253,10 +253,30 @@ fn c02_omitted_two_resources_are_removed_and_contribution_is_updated() {
     if let DesiredArtifact::Instruction(value) = &mut updated {
         value.markdown = "Updated\n".into();
     }
-    let result =
-        plan_owned_artifacts(&prior, &[set("a", vec![updated])], &mixed_observations()).unwrap();
-    assert_eq!(paths(&result.artifacts), vec!["AGENTS.md"]);
-    assert_eq!(result.artifacts[0].owners, vec![owner("a")]);
+    let result = plan_owned_artifacts(
+        &prior,
+        &[set("a", vec![updated.clone()])],
+        &mixed_observations(),
+    )
+    .unwrap();
+    assert_eq!(
+        result.artifacts,
+        vec![OwnedArtifact {
+            root: location("AGENTS.md").root,
+            path: "AGENTS.md".into(),
+            content: ArtifactContent::MarkdownContribution {
+                contribution: aggregate::OwnedContribution {
+                    id: "a".into(),
+                    content_sha256:
+                        "1e77af781a8b33e666b31dd6fc97f48d064d1eac5c021f9255c8a4b133fd7ab8".into(),
+                    leading_newlines: 2,
+                    preceding_newlines: 0,
+                },
+            },
+            owners: vec![owner("a")],
+            consumers: vec![TargetSurface::CodexCli],
+        }]
+    );
     assert_eq!(
         result.files,
         vec![
@@ -289,6 +309,28 @@ fn c02_omitted_two_resources_are_removed_and_contribution_is_updated() {
                 after: None
             },
         ]
+    );
+    let no_op = plan_owned_artifacts(
+        &result.artifacts,
+        &[set("a", vec![updated])],
+        &[ObservedFile {
+            location: location("AGENTS.md"),
+            value: result.files[0].after.clone(),
+        }],
+    )
+    .unwrap();
+    assert_eq!(no_op.artifacts, result.artifacts);
+    let expected = Some(FileValue {
+        bytes: b"Manual\n\n<!-- upskill:begin a -->\nUpdated\n<!-- upskill:end a -->\n".to_vec(),
+        mode: Some(0o640),
+    });
+    assert_eq!(
+        no_op.files,
+        vec![PlannedFile {
+            location: location("AGENTS.md"),
+            before: expected.clone(),
+            after: expected,
+        }]
     );
 }
 #[test]
@@ -1117,4 +1159,57 @@ fn c10_no_changes_preserve_all_interleaved_rows_and_require_no_observations() {
     assert_eq!(result.artifacts, saved);
     assert!(result.files.is_empty());
     assert_eq!(prior, saved);
+}
+
+// A revision update must reach every retained artifact, including both forms.
+#[test]
+fn c03_retained_mixed_forms_receive_coherent_revision_update() {
+    let prior = mixed_prior();
+    let mut binding = owner("a");
+    binding.source_revision = Some("v2".into());
+    let changes = vec![InstallationChange::Set {
+        owner: binding.clone(),
+        artifacts: vec![
+            instruction("AGENTS.md", "a"),
+            file("old-1", Some(0o755)),
+            file("old-2", None),
+        ],
+    }];
+    let observations = mixed_observations();
+    let saved = (prior.clone(), changes.clone(), observations.clone());
+    let result = plan_owned_artifacts(&prior, &changes, &observations).unwrap();
+    assert_eq!(
+        paths(&result.artifacts),
+        vec!["AGENTS.md", "old-1", "old-2"]
+    );
+    for row in &result.artifacts {
+        assert_eq!(row.owners, vec![binding.clone()]);
+        assert_eq!(row.owners[0].source_revision.as_deref(), Some("v2"));
+    }
+    assert_eq!(result.files.len(), 3);
+    for (action, observation) in result.files.iter().zip(&observations) {
+        assert_eq!(action.before, observation.value);
+        assert_eq!(action.after, observation.value);
+    }
+    assert_eq!((prior, changes, observations), saved);
+}
+
+// Removing every row cannot conceal a conflicting binding between the forms.
+#[test]
+fn c04_conflicting_prior_mixed_revisions_reject_global_removal() {
+    let mut prior = vec![
+        instruction_record("a", "AGENTS.md", "a", "Manual"),
+        file_record("a", "data", None),
+    ];
+    prior[0].owners[0].source_revision = Some("v1".into());
+    prior[1].owners[0].source_revision = Some("v2".into());
+    rejects(
+        &prior,
+        &[remove("a")],
+        &[
+            observed("AGENTS.md", Some(AGGREGATE), Some(0o640)),
+            observed("data", Some(b"abc"), None),
+        ],
+        "validate prior owned-artifact records",
+    );
 }
