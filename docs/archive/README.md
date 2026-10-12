@@ -251,7 +251,7 @@ Local completion evidence: the initial complete suite passed 862 main-harness
 tests; the reviewed correction passed 12 real-filesystem integration tests,
 two scope unit tests, locked Rust 1.85 all-targets compilation, warning-denying
 clippy and documentation checks. Fresh independent task review and rereview
-approved the corrected slice. Missing-API RED, valid stub assertions and
+approved the corrected slice. Missing-API RED and
 independent semantic controls cover locking, independent descriptions, binding
 validation, close-on-exec, acquisition ordering, canonical relocation and
 final-symlink refusal. A deliberate descriptor-leak control failed the bounded

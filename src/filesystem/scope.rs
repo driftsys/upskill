@@ -9,9 +9,18 @@ use crate::ownership::InstallationRoot;
 /// Linux and macOS are supported. Other platforms return an explicit error.
 /// Ancestor aliases are allowed at selection; this is not descendant containment
 /// or protection against external namespace changes. No filesystem state is written.
+///
+/// Callers cannot construct a scope directly on any platform:
+///
+/// ```compile_fail
+/// use upskill::filesystem::QualifiedScope;
+/// let _scope = QualifiedScope {};
+/// ```
 pub struct QualifiedScope {
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     root: backend::PinnedRoot,
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    _unsupported: (),
 }
 
 /// A nonblocking advisory exclusive writer lock borrowing its qualified scope.
