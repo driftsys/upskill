@@ -319,7 +319,8 @@ installation contribution replacements or removals and exact observations for
 every affected file. The result contains the complete resulting artifact vector
 and file plans with exact optional before bytes and after bytes, including content
 no-ops. Absent files and existing empty files have distinct preconditions. Removing
-the last region retains an empty aggregate file; the plan has no deletion action.
+the last region retains manual bytes and keeps the aggregate file, which is empty
+only when no content remains. The plan has no deletion action.
 
 Set replaces one installation's complete contribution set. Existing installation
 IDs retain their source, item kind, source name and installed alias; recorded

@@ -416,19 +416,68 @@ fn unrelated_whole_file_and_shared_regions_survive() {
     );
 }
 
+fn assert_rejected_with(result: anyhow::Result<InstructionOperationPlan>, diagnostic: &str) {
+    assert_eq!(
+        result
+            .err()
+            .map(|error| format!("{error:#}").contains(diagnostic)),
+        Some(true),
+        "expected rejection mentioning {diagnostic}"
+    );
+}
+
 #[test]
-fn duplicate_changes_empty_set_and_unknown_removal_are_rejected() {
-    for changes in [
-        vec![set("a", "A\n"), set("a", "A\n")],
-        vec![set("a", "A\n"), remove("a")],
-        vec![InstructionInstallationChange::Set {
+fn duplicate_set_changes_are_rejected_with_disjoint_selectors() {
+    let changes = [
+        InstructionInstallationChange::Set {
             owner: owner("a"),
-            contributions: vec![],
-        }],
-        vec![remove("unknown")],
-    ] {
-        assert!(!error(&[], &changes, &[observe("AGENTS.md", None)]).is_empty());
-    }
+            contributions: vec![desired("AGENTS.md", "left", "Left\n")],
+        },
+        InstructionInstallationChange::Set {
+            owner: owner("a"),
+            contributions: vec![desired("AGENTS.md", "right", "Right\n")],
+        },
+    ];
+    assert_rejected_with(
+        plan_instructions(&[], &changes, &[observe("AGENTS.md", None)]),
+        "duplicate instruction change for installation a",
+    );
+}
+
+#[test]
+fn duplicate_set_remove_changes_are_rejected_for_known_installation() {
+    let (prior, bytes) = fixture();
+    assert_rejected_with(
+        plan_instructions(
+            &prior,
+            &[set("a", "A\n"), remove("a")],
+            &[observe("AGENTS.md", Some(bytes))],
+        ),
+        "duplicate instruction change for installation a",
+    );
+}
+
+#[test]
+fn empty_set_is_rejected_without_observations() {
+    assert_rejected_with(
+        plan_instructions(
+            &[],
+            &[InstructionInstallationChange::Set {
+                owner: owner("a"),
+                contributions: vec![],
+            }],
+            &[],
+        ),
+        "installation a has an empty contribution set",
+    );
+}
+
+#[test]
+fn unknown_removal_is_rejected_without_observations() {
+    assert_rejected_with(
+        plan_instructions(&[], &[remove("unknown")], &[]),
+        "unknown installation unknown for removal",
+    );
 }
 
 #[test]
@@ -610,4 +659,100 @@ fn raw_lexical_roots_are_distinct_and_new_outputs_sort_deterministically() {
     assert_eq!(first.artifacts[0].owners, vec![owner("a")]);
     assert_eq!(first.artifacts[1].owners, vec![owner("z")]);
     assert_eq!((changes, observations), original);
+}
+
+#[test]
+fn desired_consumers_survive_creation_and_consumer_only_update() {
+    let initial_change = InstructionInstallationChange::Set {
+        owner: owner("a"),
+        contributions: vec![DesiredInstructionContribution {
+            consumers: vec![TargetSurface::ClaudeCli, TargetSurface::CopilotCli],
+            ..desired("AGENTS.md", "a", "A\n")
+        }],
+    };
+    let first = plan_instructions(&[], &[initial_change], &[observe("AGENTS.md", None)]).unwrap();
+    assert_eq!(
+        first.artifacts[0].consumers,
+        vec![TargetSurface::ClaudeCli, TargetSurface::CopilotCli]
+    );
+    let before = first.files[0].after.clone();
+    let replacement = InstructionInstallationChange::Set {
+        owner: owner("a"),
+        contributions: vec![DesiredInstructionContribution {
+            consumers: vec![TargetSurface::CopilotCli, TargetSurface::CodexCli],
+            ..desired("AGENTS.md", "a", "A\n")
+        }],
+    };
+    let second = plan_instructions(
+        &first.artifacts,
+        &[replacement],
+        &[observe("AGENTS.md", Some(before.clone()))],
+    )
+    .unwrap();
+    assert_eq!(
+        second.artifacts[0].consumers,
+        vec![TargetSurface::CopilotCli, TargetSurface::CodexCli]
+    );
+    assert_eq!(second.artifacts[0].owners, vec![owner("a")]);
+    assert_eq!(second.files[0].before, Some(before.clone()));
+    assert_eq!(second.files[0].after, before);
+}
+
+#[test]
+fn scopes_distinguish_locations_and_sort_project_before_user() {
+    let mut user = location("AGENTS.md");
+    user.root.scope = OwnershipScope::User;
+    let changes = [
+        InstructionInstallationChange::Set {
+            owner: owner("user"),
+            contributions: vec![DesiredInstructionContribution {
+                location: user.clone(),
+                ..desired("AGENTS.md", "user", "User\n")
+            }],
+        },
+        set("project", "Project\n"),
+    ];
+    let observations = [
+        ObservedInstructionFile {
+            location: user,
+            content: None,
+        },
+        observe("AGENTS.md", None),
+    ];
+    let plan = plan_instructions(&[], &changes, &observations).unwrap();
+    assert_eq!(plan.files.len(), 2);
+    assert_eq!(plan.files[0].location.root.scope, OwnershipScope::Project);
+    assert_eq!(plan.files[1].location.root.scope, OwnershipScope::User);
+    assert_eq!(
+        plan.files[0].after,
+        b"<!-- upskill:begin project -->\nProject\n<!-- upskill:end project -->\n"
+    );
+    assert_eq!(
+        plan.files[1].after,
+        b"<!-- upskill:begin user -->\nUser\n<!-- upskill:end user -->\n"
+    );
+    assert_eq!(plan.artifacts[0].owners, vec![owner("project")]);
+    assert_eq!(plan.artifacts[1].owners, vec![owner("user")]);
+}
+
+#[test]
+fn nonempty_changes_preserve_surviving_prior_row_order() {
+    let (mut prior, bytes) = fixture();
+    prior.reverse();
+    let original = prior.clone();
+    let plan = plan_instructions(
+        &prior,
+        &[set("a", "Updated A\n"), set("c", "C\n")],
+        &[observe("AGENTS.md", Some(bytes))],
+    )
+    .unwrap();
+    assert_eq!(
+        plan.artifacts
+            .iter()
+            .map(|row| row.owners.clone())
+            .collect::<Vec<_>>(),
+        vec![vec![owner("b")], vec![owner("a")], vec![owner("c")]]
+    );
+    assert_eq!(plan.artifacts[0], original[0]);
+    assert_eq!(prior, original);
 }

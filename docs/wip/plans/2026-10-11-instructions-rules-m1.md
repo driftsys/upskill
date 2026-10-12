@@ -74,9 +74,10 @@ joins the aggregate editor and owned-artifact model through a pure public planne
 and shared verified body reader. It plans complete installation contribution sets
 from exact supplied observations, preserves untouched bodies/owners/consumers and
 manual bytes, rebuilds separator metadata, and retains exact before bytes for
-no-ops. Last-region removal retains an empty file. Affected whole files and
-multi-owner regions conflict; unrelated records survive. It enables no CLI or
-native support and does not complete M1-A2 or M1-A3.
+no-ops. Last-region removal retains manual bytes and keeps the file, which is empty
+only when no content remains. Affected whole files and multi-owner regions
+conflict; unrelated records survive. It enables no CLI or native support and does
+not complete M1-A2 or M1-A3.
 
 The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active WIP after the bounded pair completes and must not be archived with

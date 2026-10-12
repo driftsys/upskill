@@ -411,9 +411,10 @@ not migrate state or adopt output files.
 The pure library instruction planner can compute owned contribution changes from
 caller-supplied observations. It preserves untouched owners and manual bytes,
 verifies managed regions through the shared body reader, and retains exact before
-bytes even for content no-ops. Last-region removal plans an empty file. Affected
-whole files and multi-owner regions conflict; unrelated records survive. This
-library prerequisite adds no command or Codex CLI support. Reference resolution,
+bytes even for content no-ops. Last-region removal retains manual bytes and keeps
+the file, which is empty only when no content remains. Affected whole files and
+multi-owner regions conflict; unrelated records survive. This library prerequisite
+adds no command or Codex CLI support. Reference resolution,
 source/filesystem evidence, per-owner consumer associations, whole-file/resource
 planning, state integration and transactional execution remain pending; current
 commands and schema-1 persistence are unchanged.
