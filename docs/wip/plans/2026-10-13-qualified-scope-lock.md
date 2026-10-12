@@ -33,11 +33,13 @@
 ### Task 1: Qualified root and writer guard
 
 **Files:**
+
 - Create: `src/filesystem.rs`, `src/filesystem/scope.rs`, `tests/filesystem_scope_lock.rs`.
 - Modify: `src/lib.rs`, `Cargo.toml`, `Cargo.lock`.
 - Update: `docs/design/qualified-scope-locking.md`, `docs/adr/0028-lock-qualified-scope-directories.md`, `docs/adr/README.md`, `docs/design/README.md`, `docs/specification/specification.md`, book summary file as required by existing documentation checker.
 
 **Interfaces:**
+
 - Consumes `ownership::{InstallationRoot, OwnershipScope}` without changing those types.
 - Produces `filesystem::QualifiedScope::open(root: &InstallationRoot) -> anyhow::Result<Self>`, `verify_binding(&self) -> anyhow::Result<()>`, `try_lock_writer(&self) -> anyhow::Result<ScopeWriterGuard<'_>>` and guard `verify_binding(&self) -> anyhow::Result<()>`.
 - QualifiedScope and ScopeWriterGuard remain opaque, non-Clone and non-serializable; safe Debug may omit raw descriptor and sensitive path details.
