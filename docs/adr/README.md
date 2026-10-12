@@ -40,3 +40,9 @@ records the implemented library boundary and its documented alternatives.
 - [AD-0021 — Pure whole-file planning before lifecycle effects](0021-pure-file-planning.md)
 - [AD-0022 — Require conservative file ownership and before-state evidence](0022-conservative-file-ownership-evidence.md)
 - [AD-0023 — Reject affected file and descendant topology](0023-reject-file-topology-transitions.md)
+
+## Captured item compilation
+
+- [AD-0024 — Pure captured item compilation with current generation compatibility](0024-pure-captured-item-compilation.md)
+- [AD-0025 — Reject active captured overrides until precedence is implemented](0025-reject-active-captured-overrides.md)
+- [AD-0026 — Separate captured resource modes from generated permission policy](0026-separate-generated-permission-policy.md)

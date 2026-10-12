@@ -100,7 +100,7 @@ state, executor/recovery and Codex activation remain pending. Existing commands,
 lockfiles and native behavior are unchanged; this does not complete M1-A2, M1-A3
 or M1.
 
-The [captured item compilation prerequisite](../specs/2026-10-12-captured-item-compilation-design.md)
+The [captured item compilation prerequisite](../../design/captured-item-compilation.md)
 provides an opt-in pure producer for one validated captured rule, skill or agent.
 It reuses current rendering, historical paths, resource classification and ignore
 semantics, retains exact captured resource bytes and modes, and reports explicit

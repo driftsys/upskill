@@ -517,39 +517,16 @@ The opt-in `compile::item` library API compiles one captured item into complete
 per-client file sets without rereading source paths, writing destinations or
 mutating inputs:
 
-```rust
-pub struct ItemCompileRequest {
-    pub kind: ItemKind,
-    pub folder_name: String,
-    pub alias: Option<String>,
-    pub clients: Vec<Client>,
-}
-
-pub struct CompiledItemFile {
-    pub path: String,
-    pub bytes: Vec<u8>,
-    pub mode: Option<u32>,
-}
-
-pub struct CompiledClientItem {
-    pub client: Client,
-    pub files: Vec<CompiledItemFile>,
-}
-
-pub struct CompiledItem {
-    pub kind: ItemKind,
-    pub source_name: String,
-    pub installed_name: String,
-    pub source_manifest_sha256: String,
-    pub outputs: Vec<CompiledClientItem>,
-    pub audience_excluded: Vec<Client>,
-}
-
-pub fn compile_item(
-    source: &SourceManifest,
-    request: &ItemCompileRequest,
-) -> anyhow::Result<CompiledItem>;
-```
+`compile_item` borrows a `SourceManifest` and `ItemCompileRequest` and returns
+`anyhow::Result<CompiledItem>`. The exact public declarations are in
+[`compile::item`](https://github.com/driftsys/upskill/blob/main/src/compile/item.rs).
+`ItemCompileRequest` contains `kind: ItemKind`, `folder_name: String`,
+`alias: Option<String>` and `clients: Vec<Client>`. `CompiledItemFile` contains
+`path: String`, `bytes: Vec<u8>` and `mode: Option<u32>`. `CompiledClientItem`
+contains `client: Client` and `files: Vec<CompiledItemFile>`. `CompiledItem`
+contains `kind: ItemKind`, `source_name: String`, `installed_name: String`,
+`source_manifest_sha256: String`, `outputs: Vec<CompiledClientItem>` and
+`audience_excluded: Vec<Client>`.
 
 All four structures derive `Debug`, `Clone`, `PartialEq` and `Eq`, without
 serialization. `ItemKind` is the existing pipeline kind and `Client` is the
@@ -604,6 +581,11 @@ requested-selection reconciliation, mixed instruction/file composition, qualifie
 source/filesystem evidence, writer locking, durable state, execution/recovery and
 Codex activation remain pending. This prerequisite completes neither M1-A2 nor
 M1-A3.
+
+See the [compiler design](https://github.com/driftsys/upskill/blob/main/docs/design/captured-item-compilation.md),
+[AD-0024](https://github.com/driftsys/upskill/blob/main/docs/adr/0024-pure-captured-item-compilation.md),
+[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
+and [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md).
 
 ## 5. Source format and authentication
 
