@@ -71,8 +71,8 @@ pub fn plan_files(
 ) -> anyhow::Result<FileOperationPlan>;
 ```
 
-Inputs are borrowed and unchanged. Outputs own their bytes and records. An absent
-observation means an absent directory entry, not an unreadable file or directory.
+Inputs are borrowed and unchanged. Outputs own their bytes and records. An observation whose
+`value` is `None` means an absent directory entry, not an unreadable file or directory.
 Only a later qualified observer can establish that fact. The planner performs no
 I/O and treats supplied values as evidence, not trusted provenance.
 
