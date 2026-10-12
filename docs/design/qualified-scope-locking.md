@@ -1,7 +1,6 @@
 # Qualified scope roots and writer locking
 
-Date: 2026-10-13. Status: Library boundary implemented; broader platform qualification pending.
-Baseline: PR #265, `e2ce18e`.
+The library boundary is implemented; broader platform qualification remains pending.
 
 ## Intent and boundary
 
@@ -11,9 +10,19 @@ of the M1 filesystem stage. Destination observation, equivalence, containment,
 source enumeration, file application, recovery and Windows qualification remain
 separate gates. Completing this slice does not complete the filesystem stage.
 
-The user delegated routine design and delivery decisions for the continuing loop.
 Retain Rust 1.85, synchronous execution, a single binary, zero warnings and
 library-only presentation. Current commands remain on schema 1.
+
+## Components and interfaces
+
+The [filesystem module](https://github.com/driftsys/upskill/blob/4a80c9d2a385fe003df226ad2bf268c2e3e665e4/src/filesystem.rs) exports `QualifiedScope` and
+`ScopeWriterGuard`. Their [implementation](https://github.com/driftsys/upskill/blob/4a80c9d2a385fe003df226ad2bf268c2e3e665e4/src/filesystem/scope.rs) keeps
+selection, binding validation and the Linux/macOS directory-lock backend private.
+It consumes `ownership::InstallationRoot`; the scope label does not determine
+physical lock identity. Unsupported-platform branches return contextual errors.
+The [real-filesystem integration tests](https://github.com/driftsys/upskill/blob/4a80c9d2a385fe003df226ad2bf268c2e3e665e4/tests/filesystem_scope_lock.rs)
+exercise the public boundary and subprocess lifetime; private unit tests pin
+acquisition ordering and final-symlink refusal independently.
 
 ## Alternatives and decision
 
@@ -45,9 +54,10 @@ root paths without lossy conversion where the filesystem accepts them; propagate
 filesystem refusal contextually.
 
 Ancestor symlinks are permitted during explicit ambient root selection, including
-macOS temporary-directory aliases. Resolve them once, open the resolved directory
-with no final symlink following, and compare metadata identity with the selected
-root. Retain original normalized spelling, resolved path and open identity.
+macOS temporary-directory aliases. Open both the normalized selected path and its
+resolved directory with no final symlink following, and compare both metadata
+identities with the selected root. Retain original normalized spelling, resolved
+path and the resolved directory's open identity.
 This binds the explicitly chosen root; it is not descendant containment or a
 security sandbox against hostile namespace relocation.
 

@@ -2,7 +2,7 @@
 
 AD-0028
 
-Status: Accepted. The library boundary is implemented with local macOS evidence;
+The library boundary is implemented with local macOS evidence;
 hosted Linux and Windows unsupported-boundary evidence remain pending.
 
 ## Context

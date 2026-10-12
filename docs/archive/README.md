@@ -234,3 +234,42 @@ filesystem safety, permission policy, writer locking, durable state and
 apply/recovery remain deferred. No native, CLI or schema-2 activation follows;
 M1-A2, M1-A3 and M1 remain incomplete. Other WIP retains its prior disposition;
 this entry resolves only the exact named pair.
+
+## Qualified scope roots and writer locking
+
+Source paths: `docs/wip/specs/2026-10-13-qualified-scope-lock-design.md`
+and `docs/wip/plans/2026-10-13-qualified-scope-lock.md`.
+The archived [spec](specs/2026-10-13-qualified-scope-lock-design.md) and
+[plan](plans/2026-10-13-qualified-scope-lock.md) preserve the exact working bytes
+committed at `c25d3a8`. Before final archival, that source commit added two blank
+lines required by Markdown formatting to the plan at its original WIP path;
+the spec was unchanged. Parent-context and working-pair references remain
+historical references.
+
+Implementation and reviewed correction: `eeabc81` and `4a80c9d`.
+Local completion evidence: the initial complete suite passed 862 main-harness
+tests; the reviewed correction passed 12 real-filesystem integration tests,
+two scope unit tests, locked Rust 1.85 all-targets compilation, warning-denying
+clippy and documentation checks. Fresh independent task review and rereview
+approved the corrected slice. Missing-API RED, valid stub assertions and
+independent semantic controls cover locking, independent descriptions, binding
+validation, close-on-exec, acquisition ordering, canonical relocation and
+final-symlink refusal. A deliberate descriptor-leak control failed the bounded
+cleanup check. Root-controller full-suite verification after the correction,
+hosted Linux/Windows checks, branch/PR review and merge remain separate gates;
+these local commits do not claim a PR merge.
+
+Durable successors: [specification §4.7](../specification/specification.md#47-qualified-scope-roots-and-advisory-writer-locking),
+[scope-lock design](../design/qualified-scope-locking.md) and
+[AD-0028](../adr/0028-lock-qualified-scope-directories.md).
+The working spec introduced no requirements beyond that early durable contract.
+
+The API pins explicitly selected ambient roots and excludes cooperating writers
+on Linux/macOS without persistent files. It activates no CLI lifecycle or schema
+change and promises no descendant containment, fork-safe lease or network
+filesystem behavior. Native non-UTF-8 support remains conditional on filesystem
+acceptance; local APFS refused the fixture with EILSEQ. Qualified observation,
+destination equivalence/containment, source stabilization, permission policy,
+state, execution, recovery and broader platform qualification remain unfinished.
+The 34 other WIP files retain their existing disposition unchanged; this entry
+resolves only the named pair and does not complete the M1 filesystem stage.
