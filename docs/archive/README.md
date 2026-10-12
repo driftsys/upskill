@@ -78,7 +78,7 @@ Current successor: the [pure whole-file planner](../specification/specification.
 is implemented for explicit complete file sets. Source-derived resource sets,
 mixed instruction/file composition, qualified evidence, durable state and
 transactional execution remain pending. The operational lifecycle design and M1
-plan remain active; this entry does not archive the whole-file planning pair.
+plan remain active; the whole-file planning pair is archived in its own entry below.
 
 ## Strict captured source manifests
 
@@ -119,4 +119,38 @@ is implemented for explicit complete file sets. Source-derived file/resource set
 mixed instruction/file composition, immutable Git evidence, source stabilization,
 qualified observation, destination qualification, state/execution and Codex
 activation remain pending. The source-manifest platform evidence above is retained
-as recorded; this entry does not archive the whole-file planning pair.
+as recorded; the whole-file planning pair is archived in its own entry below.
+
+## Owned whole-file operation planning
+
+Source paths: `docs/wip/specs/2026-10-12-owned-file-planning-design.md`
+and `docs/wip/plans/2026-10-12-owned-file-planning.md`.
+The archived [spec](specs/2026-10-12-owned-file-planning-design.md) and
+[plan](plans/2026-10-12-owned-file-planning.md) retain the working material;
+the spec's parent-context links follow their active WIP destinations.
+
+Implementation commit: `5a69568dde1d9a8f3857237ef7fea93e647e2afb`.
+Final acceptance-test and documentation correction:
+`d9853787ad3c73d0cfde463702d7e6e336cb803d`.
+Local completion evidence: ordered formatting and full verification passed with
+799 Rust tests and 11 documentation-checker tests, warning-free; fresh task review
+approved specification compliance and quality without findings. Production code
+passed a locked Rust 1.85 all-targets check at the implementation commit and was
+unchanged by the test/documentation correction. Compile RED and two valid stub
+assertion failures preceded implementation; seven semantic mutation controls
+failed their intended assertions with exact production restoration. These local
+commits and checks do not claim a PR merge. Linux and Windows runtime execution
+remain for hosted CI.
+
+Durable successors: [specification §4.4](../specification/specification.md#44-owned-whole-file-operation-plans),
+[whole-file planner design](../design/owned-file-planning.md) and
+[AD-0021 through AD-0023](../adr/README.md#owned-whole-file-planning).
+The [command guide](../book/commands.md) describes the unchanged command boundary.
+
+The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
+Source-derived resource sets, mixed instruction/file composition, qualified source
+and destination observation, filesystem equivalence/containment, writer locking,
+permission policy, durable state, apply/recovery and Codex activation remain
+pending. This prerequisite does not complete M1-A2, M1-A3 or M1. Other WIP retains
+its prior disposition; this entry resolves only the exact named pair.

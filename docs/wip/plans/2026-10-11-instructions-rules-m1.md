@@ -89,7 +89,7 @@ snapshot, source authenticity or containment. Immutable Git evidence, source
 stabilization, destination qualification, executor/state integration and Codex
 activation remain pending.
 
-The [owned whole-file planning prerequisite](2026-10-12-owned-file-planning.md)
+The [owned whole-file planning prerequisite](../../archive/plans/2026-10-12-owned-file-planning.md)
 provides pure `files::plan` operation plans for explicit complete desired sets and
 supplied before-state observations. It preserves untouched ownership, requires
 exact byte/hash and optional-mode evidence, rejects unowned destinations and

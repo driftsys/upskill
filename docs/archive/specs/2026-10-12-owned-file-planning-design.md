@@ -2,8 +2,8 @@
 
 Date: 2026-10-12. Status: **Implementation contract**.
 Baseline: `d170f2b` (PR #260).
-Authority: [M1 lifecycle design](2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 delivery plan](../plans/2026-10-11-instructions-rules-m1.md).
+Authority: [M1 lifecycle design](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 delivery plan](../../wip/plans/2026-10-11-instructions-rules-m1.md).
 
 ## Intent and boundary
 

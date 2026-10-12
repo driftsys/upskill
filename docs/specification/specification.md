@@ -508,7 +508,7 @@ locking, permission policy, durable state, apply/recovery and Codex activation
 remain pending. Neither planner authorizes partial application of mixed
 installations. This API does not complete M1-A2, M1-A3 or M1.
 
-See the [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-owned-file-planning-design.md)
+See the [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-file-planning.md)
 and the active [operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 ## 5. Source format and authentication
