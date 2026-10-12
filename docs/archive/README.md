@@ -67,10 +67,18 @@ Durable successors:
 
 The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-Source/filesystem evidence, complete reference authority, per-owner consumer
-association, whole-file/resource planning, mixed-state lifecycle integration and
-transactional execution remain pending. This entry resolves only the named pair;
-other WIP material retains its existing disposition.
+Closeout status recorded before the whole-file planner:
+
+> Source/filesystem evidence, complete reference authority, per-owner consumer
+> association, whole-file/resource planning, mixed-state lifecycle integration and
+> transactional execution remain pending. This entry resolves only the named pair;
+> other WIP material retains its existing disposition.
+
+Current successor: the [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+is implemented for explicit complete file sets. Source-derived resource sets,
+mixed instruction/file composition, qualified evidence, durable state and
+transactional execution remain pending. The operational lifecycle design and M1
+plan remain active; this entry does not archive the whole-file planning pair.
 
 ## Strict captured source manifests
 
@@ -97,9 +105,18 @@ Durable successors:
 
 The [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-Whole-file/resource planning, immutable Git evidence, source stabilization,
+Closeout status recorded before the whole-file planner:
+
+> Whole-file/resource planning, immutable Git evidence, source stabilization,
+> qualified observation, destination qualification, state/execution and Codex
+> activation remain pending. Actual non-UTF-8 filesystem-name creation was
+> unsupported on the development macOS filesystem; pure conversion rejection was
+> tested there, with the real fixture gated to other Unix hosts. This archive entry
+> changes no other WIP disposition.
+
+Current successor: the [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+is implemented for explicit complete file sets. Source-derived file/resource sets,
+mixed instruction/file composition, immutable Git evidence, source stabilization,
 qualified observation, destination qualification, state/execution and Codex
-activation remain pending. Actual non-UTF-8 filesystem-name creation was
-unsupported on the development macOS filesystem; pure conversion rejection was
-tested there, with the real fixture gated to other Unix hosts. This archive entry
-changes no other WIP disposition.
+activation remain pending. The source-manifest platform evidence above is retained
+as recorded; this entry does not archive the whole-file planning pair.

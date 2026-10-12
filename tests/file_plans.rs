@@ -812,3 +812,112 @@ fn empty_operation_preserves_exact_prior_records_and_order() {
         "extraneous observation",
     );
 }
+
+fn assert_isolated_ancestor_plan(child_root: InstallationRoot) {
+    let mut parent = desired("a", b"abc");
+    parent.value.mode = Some(0o640);
+    let mut child = desired("a/b", b"changed");
+    child.location.root = child_root;
+    child.value.mode = Some(0o700);
+    child.consumers = vec![TargetSurface::CodexCli, TargetSurface::ClaudeCli];
+    let prior = vec![record("a", &parent)];
+    let changes = vec![set("b", vec![child.clone()])];
+    let observations = vec![observe(&child, false)];
+    let snapshot = (prior.clone(), changes.clone(), observations.clone());
+    let result = plan_files(&prior, &changes, &observations);
+    assert!(
+        result.is_ok(),
+        "ancestor paths in distinct locations must remain independent: {result:?}"
+    );
+    let plan = result.unwrap();
+    assert_eq!(
+        plan,
+        upskill::files::plan::FileOperationPlan {
+            artifacts: vec![
+                prior[0].clone(),
+                OwnedArtifact {
+                    root: child.location.root.clone(),
+                    path: "a/b".into(),
+                    content: ArtifactContent::File {
+                        content_sha256:
+                            "d67e2e944994496c8d8ec76eed0cf9f09679448d584b532bebf941852a37f5ed"
+                                .into(),
+                        mode: Some(0o700),
+                    },
+                    owners: vec![owner("b")],
+                    consumers: vec![TargetSurface::CodexCli, TargetSurface::ClaudeCli],
+                }
+            ],
+            files: vec![upskill::files::plan::PlannedFile {
+                location: child.location.clone(),
+                before: None,
+                after: Some(child.value.clone()),
+            }],
+        }
+    );
+    assert_eq!(
+        plan.artifacts[0].root.path.as_os_str(),
+        parent.location.root.path.as_os_str()
+    );
+    assert_eq!(
+        plan.artifacts[1].root.path.as_os_str(),
+        child.location.root.path.as_os_str()
+    );
+    assert_eq!(
+        plan.files[0].location.root.path.as_os_str(),
+        child.location.root.path.as_os_str()
+    );
+    assert_eq!((prior, changes, observations), snapshot);
+}
+
+#[test]
+fn isolated_ancestor_paths_in_distinct_roots_preserve_exact_plan() {
+    let mut root = location("a/b").root;
+    root.path.push("other");
+    assert_ne!(root.path.as_os_str(), location("a").root.path.as_os_str());
+    assert_isolated_ancestor_plan(root);
+}
+
+#[test]
+fn isolated_ancestor_paths_in_distinct_scopes_preserve_exact_plan() {
+    let mut root = location("a/b").root;
+    root.scope = OwnershipScope::User;
+    assert_isolated_ancestor_plan(root);
+}
+
+#[test]
+fn isolated_ancestor_paths_in_lexical_dot_roots_preserve_exact_plan() {
+    let mut root = location("a/b").root;
+    let mut raw = root.path.as_os_str().to_owned();
+    raw.push("/.");
+    root.path = raw.into();
+    assert_ne!(root.path.as_os_str(), location("a").root.path.as_os_str());
+    assert_isolated_ancestor_plan(root);
+}
+
+#[test]
+fn shared_file_rejects_removal_when_all_owners_are_selected() {
+    let file = desired("shared", b"abc");
+    let mut shared = record("a", &file);
+    shared.owners.push(owner("b"));
+    rejects(
+        &[shared],
+        &[remove("a"), remove("b")],
+        &[observe(&file, true)],
+        "multi-owner",
+    );
+}
+
+#[test]
+fn shared_file_rejects_replacement_when_all_owners_are_selected() {
+    let old = desired("shared", b"abc");
+    let new = desired("shared", b"changed");
+    let mut shared = record("a", &old);
+    shared.owners.push(owner("b"));
+    rejects(
+        &[shared],
+        &[remove("a"), set("b", vec![new])],
+        &[observe(&old, true)],
+        "multi-owner",
+    );
+}

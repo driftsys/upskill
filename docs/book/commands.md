@@ -18,8 +18,8 @@
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
-The library's strict source-manifest capture is a prerequisite for future owned
-file and resource planning. Current commands keep their existing discovery,
+The library's strict source-manifest capture supplies values for future
+source-derived file and resource sets. Current commands keep their existing discovery,
 hashing and persistence behavior; they do not invoke capture or activate the
 owned lifecycle. Captured bytes do not establish source authenticity, an atomic
 snapshot or qualified filesystem containment. See the
@@ -428,10 +428,13 @@ verifies managed regions through the shared body reader, and retains exact befor
 bytes even for content no-ops. Last-region removal retains manual bytes and keeps
 the file, which is empty only when no content remains. Affected whole files and
 multi-owner regions conflict; unrelated records survive. This library prerequisite
-adds no command or Codex CLI support. Reference resolution,
-source/filesystem evidence, per-owner consumer associations, whole-file/resource
-planning, state integration and transactional execution remain pending; current
-commands and schema-1 persistence are unchanged.
+adds no command or Codex CLI support. The separate pure whole-file planner is
+implemented as described in the
+[specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
+Reference resolution, qualified source/filesystem evidence, per-owner consumer
+associations, source-derived resource sets, mixed instruction/file composition,
+state integration and transactional execution remain pending; current commands
+and schema-1 persistence are unchanged.
 
 ## Per-client output paths
 

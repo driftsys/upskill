@@ -341,9 +341,10 @@ Planning performs no I/O and validates prior and final ownership plus all desire
 data. Observations must match affected locations exactly; missing, duplicate or
 extraneous observations conflict. Supplied bytes do not establish source or
 filesystem evidence. Callers must resolve direct/bundle references and native
-compatibility first. Complete reference-graph authority, per-owner consumer
-association, whole-file/resource plans, state/lifecycle integration and
-transactional execution remain pending. This prerequisite changes no CLI behavior,
+compatibility first. The separate pure whole-file planner is implemented in
+[§4.4](#44-owned-whole-file-operation-plans). Complete reference-graph authority,
+per-owner consumer association, source-derived resource sets, mixed instruction/file
+composition, state/lifecycle integration and transactional execution remain pending. This prerequisite changes no CLI behavior,
 source format or lockfile format and enables no native client support.
 
 See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -355,7 +356,9 @@ The separate library module `source_manifest` provides
 `capture_source(&Path) -> anyhow::Result<SourceManifest>` and pure
 `validate_manifest(&SourceManifest) -> anyhow::Result<()>`. It does not change
 commands, legacy source hashing/discovery, source formats or lockfile writes.
-This is a prerequisite for future whole-file and resource planning.
+This supplies captured values for future source-derived file and resource sets;
+the pure planner for explicitly supplied whole-file sets is implemented in
+[§4.4](#44-owned-whole-file-operation-plans).
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
