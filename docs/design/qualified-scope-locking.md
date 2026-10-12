@@ -110,11 +110,11 @@ measurements do not establish future executor size.
 Local evidence recorded on 2026-10-13 uses `rustc 1.97.1 (8bab26f4f 2026-07-14)`,
 LLVM 22.1.6, target `aarch64-apple-darwin`. Rust 1.85.0
 `cargo check --locked --all-targets` passed. The complete `cargo test --locked`
-suite passed (862 main-harness tests), as did
+suite passed at initial implementation `eeabc81` (862 main-harness tests), as did
 `cargo clippy --locked --all-targets -- -D warnings` and the rendered
 documentation checker.
 
-The real-filesystem integration binary passes all 10 tests covering Q01-Q08,
+The initial real-filesystem integration binary passed all 10 tests covering Q01-Q08,
 including exact recursive entries, bytes and Unix modes, alias and label
 contention, independent roots, graceful and forced child release, root replacement,
 ancestor retargeting and a live exec successor. Helpers run only under explicit
@@ -141,6 +141,34 @@ used. Hosted Linux contention, release and native-path success evidence and the
 Windows unsupported-boundary test remain pending actual CI. Other filesystems
 and operating systems are not qualified by this local run.
 
+### Review follow-up controls
+
+Subsequent review added two public integration examples and two focused unit
+examples. A stale root with an existing guard must fail binding validation before
+attempting the contended lock. A small private acquisition closure lets the unit
+test replace the namespace after the initial check and then acquire a real lock
+on the pinned directory; the final check must reject the guard and release that
+lock. Only this unit test's final cleanup reacquisition tolerates busy errors
+for up to two seconds: unrelated library tests can fork while a descriptor is
+open. Other errors fail immediately, and a persistent descriptor leak must fail
+at the deadline. Integration release assertions remain immediate under serialized
+fixtures. The public method always passes the real backend acquisition operation.
+There is no public test hook or new runtime policy.
+
+A same-inode canonical relocation example renames an ancestor and retargets its
+alias to the renamed directory, preserving the selected child's device/inode
+while changing its canonical path. Binding verification and acquisition both
+reject the old scope. A direct backend directory-open test rejects a final symlink
+independently of selection-time metadata validation.
+
+Independent mutations removing only the pre-lock check, only the post-lock check,
+only the canonical-path comparison and only NOFOLLOW each produced runtime
+assertion failures. A separate deliberate descriptor-leak control failed at the
+cleanup deadline, proving the bounded test wait does not accept a persistent leak.
+Restored focused runs passed 12 integration and two scope
+unit tests. Updated all-target Rust 1.85 compilation and clippy passed. The
+controller owns the next complete-suite gate after this focused review fix.
+
 ### Release size
 
 Baseline source is commit `a18a888`. Baseline and candidate used the compiler and
@@ -149,7 +177,9 @@ codegen-units 1, stripping and aborting panic). Two separate temporary probe
 packages used that same profile and matched native-argument, path and Result
 scaffolding: the control performs basic absolute-path/directory checks; the live
 probe calls root qualification, writer locking and guard binding verification.
-Both probes ran successfully against a temporary directory. Probe sources are
+Both probes ran successfully against a temporary directory. Measurements were
+refreshed after the private acquisition-helper refactor and remained unchanged.
+Probe sources are
 not part of the shipped binary.
 
 | Artifact              | Baseline/control bytes | Candidate/live bytes | Delta bytes |

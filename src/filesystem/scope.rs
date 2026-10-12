@@ -69,16 +69,24 @@ impl QualifiedScope {
     pub fn try_lock_writer(&self) -> Result<ScopeWriterGuard<'_>> {
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
-            self.verify_binding()?;
-            let lock = self.root.try_lock_writer()?;
-            self.verify_binding()?;
-            Ok(ScopeWriterGuard {
-                scope: self,
-                _lock: lock,
-            })
+            self.try_lock_writer_with(backend::PinnedRoot::try_lock_writer)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         anyhow::bail!("qualified scope writer locking is unsupported on this operating system")
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    fn try_lock_writer_with(
+        &self,
+        acquire: impl FnOnce(&backend::PinnedRoot) -> Result<std::fs::File>,
+    ) -> Result<ScopeWriterGuard<'_>> {
+        self.verify_binding()?;
+        let lock = acquire(&self.root)?;
+        self.verify_binding()?;
+        Ok(ScopeWriterGuard {
+            scope: self,
+            _lock: lock,
+        })
     }
 }
 
@@ -207,6 +215,97 @@ mod backend {
                 }
             })?;
             Ok(lock)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::fs;
+        use std::os::unix::fs::symlink;
+
+        use super::open_directory;
+
+        #[test]
+        fn directory_open_refuses_final_symlink_independently_of_selection() {
+            let tmp = tempfile::tempdir().unwrap();
+            let directory = tmp.path().join("directory");
+            let alias = tmp.path().join("alias");
+            fs::create_dir(&directory).unwrap();
+            fs::write(directory.join("data"), b"unchanged").unwrap();
+            symlink("directory", &alias).unwrap();
+            drop(open_directory(&directory).unwrap());
+            assert!(
+                open_directory(&alias).is_err(),
+                "directory open followed final symlink"
+            );
+            assert_eq!(
+                fs::read_link(&alias).unwrap(),
+                std::path::Path::new("directory")
+            );
+            assert_eq!(fs::read(directory.join("data")).unwrap(), b"unchanged");
+            assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 2);
+        }
+    }
+}
+
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+mod tests {
+    use std::fs;
+
+    use super::QualifiedScope;
+    use crate::ownership::{InstallationRoot, OwnershipScope};
+
+    #[test]
+    fn namespace_replacement_during_acquisition_rejects_guard_and_releases_lock() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("scope");
+        let moved = tmp.path().join("moved");
+        fs::create_dir(&path).unwrap();
+        fs::write(path.join("data"), b"exact\0bytes\xff\n").unwrap();
+        let root = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: path.clone(),
+        };
+        let scope = QualifiedScope::open(&root).unwrap();
+        let result = scope.try_lock_writer_with(|pinned| {
+            // The initial check has completed. Replace the namespace before the
+            // real lock completes on the original pinned directory.
+            fs::rename(&path, &moved)?;
+            fs::create_dir(&path)?;
+            pinned.try_lock_writer()
+        });
+        assert!(
+            result.is_err(),
+            "replacement during acquisition returned guard"
+        );
+        let error = result.unwrap_err();
+        assert!(error.to_string().contains("binding"), "{error:#}");
+        assert_eq!(fs::read(moved.join("data")).unwrap(), b"exact\0bytes\xff\n");
+        assert_eq!(fs::read_dir(&path).unwrap().count(), 0);
+        assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 2);
+        let moved_scope = QualifiedScope::open(&InstallationRoot {
+            path: moved,
+            ..root
+        })
+        .unwrap();
+        // Other library tests can fork concurrently, temporarily inheriting a
+        // CLOEXEC description before exec. That transient lease is unsupported;
+        // a persistent descriptor leak must still fail this bounded check.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            match moved_scope.try_lock_writer() {
+                Ok(guard) => {
+                    drop(guard);
+                    break;
+                }
+                Err(error) => {
+                    assert!(
+                        error.to_string().contains("busy") && std::time::Instant::now() < deadline,
+                        "rejected acquisition must release its real lock: {error:#}"
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ mod qualified {
     use std::ffi::OsString;
     use std::fs;
     use std::os::unix::ffi::OsStringExt;
-    use std::os::unix::fs::{PermissionsExt, symlink};
+    use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
     use std::os::unix::process::CommandExt;
     use std::path::{Path, PathBuf};
     use std::process::{Child, Command, ExitStatus};
@@ -326,6 +326,60 @@ mod qualified {
         let before = snapshot(tmp.path());
         assert!(scope.verify_binding().is_err());
         assert!(scope.try_lock_writer().is_err());
+        assert_eq!(snapshot(tmp.path()), before);
+    }
+
+    #[test]
+    fn q06_stale_binding_is_rejected_before_attempting_a_contended_lock() {
+        let _serial = SERIAL.lock().unwrap_or_else(|error| error.into_inner());
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("scope");
+        fs::create_dir(&path).unwrap();
+        let scope = QualifiedScope::open(&root(&path)).unwrap();
+        let _guard = scope.try_lock_writer().unwrap();
+        fs::rename(&path, tmp.path().join("moved")).unwrap();
+        fs::create_dir(&path).unwrap();
+        let before = snapshot(tmp.path());
+        let error = scope.try_lock_writer().unwrap_err();
+        assert!(
+            error.to_string().contains("binding"),
+            "lock attempted before stale binding rejection: {error:#}"
+        );
+        assert_eq!(snapshot(tmp.path()), before);
+    }
+
+    #[test]
+    fn q06_changed_canonical_path_with_same_inode_invalidates_binding() {
+        let _serial = SERIAL.lock().unwrap_or_else(|error| error.into_inner());
+        let tmp = tempfile::tempdir().unwrap();
+        let original = tmp.path().join("original");
+        let renamed = tmp.path().join("renamed");
+        fs::create_dir_all(original.join("child")).unwrap();
+        fixture(&original.join("child"));
+        let alias = tmp.path().join("alias");
+        symlink("original", &alias).unwrap();
+        let path = alias.join("child");
+        let scope = QualifiedScope::open(&root(&path)).unwrap();
+        let selected = fs::metadata(&path).unwrap();
+        let canonical = fs::canonicalize(&path).unwrap();
+        fs::rename(&original, &renamed).unwrap();
+        fs::remove_file(&alias).unwrap();
+        symlink("renamed", &alias).unwrap();
+        let retargeted = fs::metadata(&path).unwrap();
+        assert_eq!(
+            (selected.dev(), selected.ino()),
+            (retargeted.dev(), retargeted.ino())
+        );
+        assert_ne!(fs::canonicalize(&path).unwrap(), canonical);
+        let before = snapshot(tmp.path());
+        assert!(
+            scope.verify_binding().is_err(),
+            "same-inode canonical relocation accepted"
+        );
+        assert!(
+            scope.try_lock_writer().is_err(),
+            "same-inode canonical relocation returned guard"
+        );
         assert_eq!(snapshot(tmp.path()), before);
     }
 
