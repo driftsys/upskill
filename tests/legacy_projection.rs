@@ -427,6 +427,76 @@ fn distinct_bundles_preserve_indexed_rows_and_exact_decoded_sources() {
 }
 
 #[test]
+fn bundle_sources_decode_label_selectors_independently_of_recorded_refs() {
+    let cases = [
+        (
+            "github:org/registry@label-branch:bundles/base.bundle.yaml",
+            "recorded-github-commit",
+            InstallSource::Github(GithubRepo {
+                owner: "org".into(),
+                name: "registry".into(),
+                git_ref: Some("label-branch".into()),
+                subfolder: Some("bundles/base.bundle.yaml".into()),
+            }),
+        ),
+        (
+            "github:org/unpinned:bundles/base.bundle.yaml",
+            "recorded-unpinned-github-commit",
+            InstallSource::Github(GithubRepo {
+                owner: "org".into(),
+                name: "unpinned".into(),
+                git_ref: None,
+                subfolder: Some("bundles/base.bundle.yaml".into()),
+            }),
+        ),
+        (
+            "https://git.example.com/team/registry@label-tag:bundles/base.bundle.yaml",
+            "recorded-git-commit",
+            InstallSource::Git(GitRepo {
+                url: "https://git.example.com/team/registry".into(),
+                git_ref: Some("label-tag".into()),
+                subfolder: Some("bundles/base.bundle.yaml".into()),
+            }),
+        ),
+        (
+            "https://git.example.com/team/unpinned:bundles/base.bundle.yaml",
+            "recorded-unpinned-git-commit",
+            InstallSource::Git(GitRepo {
+                url: "https://git.example.com/team/unpinned".into(),
+                git_ref: None,
+                subfolder: Some("bundles/base.bundle.yaml".into()),
+            }),
+        ),
+    ];
+    let lock = Lockfile {
+        bundles: cases
+            .iter()
+            .enumerate()
+            .map(|(index, (label, recorded_ref, _))| LockedBundle {
+                name: format!("bundle {index}"),
+                source: (*label).into(),
+                git_ref: Some((*recorded_ref).into()),
+                items: vec!["installed alias".into()],
+            })
+            .collect(),
+        ..Lockfile::new()
+    };
+    let before = lock.clone();
+    let projection = project_legacy(&lock);
+    assert_eq!(lock, before);
+    assert_eq!(projection.snapshot, before);
+    assert_eq!(projection.bundles.len(), cases.len());
+    for (index, (_, recorded_ref, expected_source)) in cases.iter().enumerate() {
+        let row = &projection.bundles[index];
+        assert_eq!(row.index, index);
+        assert_eq!(row.record, before.bundles[index]);
+        assert_eq!(row.record.git_ref.as_deref(), Some(*recorded_ref));
+        assert_eq!(row.source.as_ref(), Some(expected_source));
+    }
+    assert!(projection.diagnostics.is_empty());
+}
+
+#[test]
 fn invalid_sources_retain_rows_and_known_candidate_facts() {
     let mut bad_item = item();
     bad_item.source = "gitlab:org/repo@".into();
@@ -498,7 +568,9 @@ fn source_labels_decode_without_promoting_recorded_metadata() {
 
 #[test]
 fn invalid_names_suppress_candidates_but_retain_other_facts() {
-    for name in ["", ".", "..", "a/b", "a\\b", "C:x", "a\n", "a\u{7f}"] {
+    for name in [
+        "", ".", "..", "a/b", "a\\b", "C:x", "a\n", "a\u{7f}", "a\u{85}",
+    ] {
         let mut record = item();
         record.name = name.into();
         let lock = Lockfile {
@@ -510,7 +582,10 @@ fn invalid_names_suppress_candidates_but_retain_other_facts() {
         assert_eq!(projection.items[0].record, lock.items[0]);
         assert!(projection.items[0].source.is_some());
         assert_eq!(projection.items[0].clients.len(), 3);
-        assert!(projection.items[0].candidates.is_empty());
+        assert!(
+            projection.items[0].candidates.is_empty(),
+            "invalid name {name:?} produced candidates"
+        );
         assert_eq!(
             projection.diagnostics,
             vec![LegacyDiagnostic {
