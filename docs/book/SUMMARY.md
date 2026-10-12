@@ -15,3 +15,6 @@
 
 - [Specification](specification.md)
 - [Portable format](format-spec.md)
+
+- [Qualified scope locking design](../design/qualified-scope-locking.md)
+- [Scope locking decision](../adr/0028-lock-qualified-scope-directories.md)

@@ -1,6 +1,6 @@
 # Qualified scope roots and writer locking
 
-Date: 2026-10-13. Status: Accepted for implementation under delegated delivery authority.
+Date: 2026-10-13. Status: Library boundary implemented; broader platform qualification pending.
 Baseline: PR #265, `e2ce18e`.
 
 ## Intent and boundary
@@ -40,8 +40,9 @@ library file locks require Rust 1.89 and cannot satisfy Rust 1.85.
 non-Clone pinned root or an error. Require a nonempty absolute existing directory.
 Reject parent components, root symlinks, regular files, missing roots and special
 files. Normalize redundant current-directory and trailing separators before
-checking the final component, so they cannot hide a symlink. Accept non-UTF-8
-root paths without lossy conversion.
+checking the final component, so they cannot hide a symlink. Preserve non-UTF-8
+root paths without lossy conversion where the filesystem accepts them; propagate
+filesystem refusal contextually.
 
 Ancestor symlinks are permitted during explicit ambient root selection, including
 macOS temporary-directory aliases. Resolve them once, open the resolved directory
@@ -81,16 +82,16 @@ They do not establish state/source/destination preconditions or authorize writes
 
 ## Acceptance and evidence
 
-| ID | Required example |
-| --- | --- |
-| Q01 | Pin a real absolute root, verify binding, acquire/drop/reacquire without changing recursive directory contents or modes. |
-| Q02 | Reject relative, empty, parent-traversing, missing, file and symlink roots, including trailing slash and dot disguises. |
-| Q03 | Equivalent root spellings and different scope labels contend; independent roots can lock together. |
-| Q04 | A second guard in the same process is busy while the first lives and succeeds after drop. |
+| ID  | Required example                                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q01 | Pin a real absolute root, verify binding, acquire/drop/reacquire without changing recursive directory contents or modes.                                              |
+| Q02 | Reject relative, empty, parent-traversing, missing, file and symlink roots, including trailing slash and dot disguises.                                               |
+| Q03 | Equivalent root spellings and different scope labels contend; independent roots can lock together.                                                                    |
+| Q04 | A second guard in the same process is busy while the first lives and succeeds after drop.                                                                             |
 | Q05 | A real child process holds the lock; parent is busy; graceful child exit and forced termination each permit reacquisition. Synchronize readiness and bound all waits. |
-| Q06 | Replacement/rename/symlink substitution and ancestor-alias retargeting reject stale binding before a guard is returned. |
-| Q07 | Non-UTF-8 roots work; unsupported platforms return explicit errors without effects. |
-| Q08 | A child exec from a holder does not retain the lock after the holder exits. |
+| Q06 | Replacement/rename/symlink substitution and ancestor-alias retargeting reject stale binding before a guard is returned.                                               |
+| Q07 | Native non-UTF-8 roots work where the filesystem accepts them; filesystem refusal remains contextual. Unsupported platforms return explicit errors without effects.   |
+| Q08 | A child exec from a holder does not retain the lock after the holder exits.                                                                                           |
 
 Tests use temporary roots and never write developer HOME. Capture failing
 acceptance tests before implementation, assertion-failure semantic controls for
@@ -103,6 +104,64 @@ small release probe that actually calls root qualification and locking against a
 matched probe, because dead-code elimination hides an inactive library feature
 from CLI size. Record toolchain, target, exact bytes and interpretation; these
 measurements do not establish future executor size.
+
+## Implementation evidence
+
+Local evidence recorded on 2026-10-13 uses `rustc 1.97.1 (8bab26f4f 2026-07-14)`,
+LLVM 22.1.6, target `aarch64-apple-darwin`. Rust 1.85.0
+`cargo check --locked --all-targets` passed. The complete `cargo test --locked`
+suite passed (862 main-harness tests), as did
+`cargo clippy --locked --all-targets -- -D warnings` and the rendered
+documentation checker.
+
+The real-filesystem integration binary passes all 10 tests covering Q01-Q08,
+including exact recursive entries, bytes and Unix modes, alias and label
+contention, independent roots, graceful and forced child release, root replacement,
+ancestor retargeting and a live exec successor. Helpers run only under explicit
+test environment variables with temporary HOME/USERPROFILE. Readiness and exit
+polling have deadlines; cleanup kills and reaps unfinished children. Tests
+serialize process setup because temporary pre-exec fork inheritance can overlap
+another fixture's immediate release check. Close-on-exec prevents retention after
+exec; the API does not promise a fork-safe lease.
+
+One-at-a-time semantic controls produced assertion failures: omitting flock
+failed same-process and subprocess contention, cloning the pinned description
+failed same-process contention, omitting binding validation failed replacement
+and ancestor-retargeting checks, and omitting close-on-exec failed reacquisition
+while the exec successor remained alive. Restored focused and complete tests
+passed. These controls are scratch evidence, not production toggles.
+
+The local Data volume was verified as APFS with `diskutil info
+/System/Volumes/Data`. Native `root-0xff` directory creation was refused before
+qualification with `EILSEQ`, errno 92, “Illegal byte sequence”. The macOS test
+records that refusal and verifies contextual API failure without effects. On
+filesystems accepting that native name, including the required Linux fixture,
+the same test must pin, verify and lock it successfully. No lossy conversion is
+used. Hosted Linux contention, release and native-path success evidence and the
+Windows unsupported-boundary test remain pending actual CI. Other filesystems
+and operating systems are not qualified by this local run.
+
+### Release size
+
+Baseline source is commit `a18a888`. Baseline and candidate used the compiler and
+target above with the repository release profile (`opt-level = "z"`, LTO,
+codegen-units 1, stripping and aborting panic). Two separate temporary probe
+packages used that same profile and matched native-argument, path and Result
+scaffolding: the control performs basic absolute-path/directory checks; the live
+probe calls root qualification, writer locking and guard binding verification.
+Both probes ran successfully against a temporary directory. Probe sources are
+not part of the shipped binary.
+
+| Artifact              | Baseline/control bytes | Candidate/live bytes | Delta bytes |
+| --------------------- | ---------------------: | -------------------: | ----------: |
+| Release CLI           |              3,215,120 |            3,215,120 |           0 |
+| Matched release probe |                302,848 |              303,168 |         320 |
+
+The inactive CLI can eliminate this unused API, so its unchanged size alone is
+not admission evidence. The live-probe file delta includes root, lock and error
+machinery, as well as ordinary linker and Mach-O padding effects; it is not an
+exact code-size estimate and does not establish future executor size. No Linux
+or Windows size claim follows from these local macOS measurements.
 
 ## References
 
