@@ -1213,3 +1213,140 @@ fn c04_conflicting_prior_mixed_revisions_reject_global_removal() {
         "validate prior owned-artifact records",
     );
 }
+
+// Distinct payloads expose accidental reuse between artifacts in the same Set.
+#[test]
+fn c01_mixed_set_preserves_distinct_resource_and_selector_payloads() {
+    let changes = vec![set(
+        "multi",
+        vec![
+            DesiredArtifact::File(DesiredFile {
+                location: location("resources/zeta.bin"),
+                value: FileValue {
+                    bytes: vec![128, 0, 254, 2],
+                    mode: Some(0o600),
+                },
+                consumers: vec![TargetSurface::CopilotCli],
+            }),
+            DesiredArtifact::Instruction(DesiredInstructionContribution {
+                location: InstructionLocation {
+                    root: location("AGENTS.md").root,
+                    path: "AGENTS.md".into(),
+                },
+                id: "zeta".into(),
+                markdown: "Second rule\n".into(),
+                consumers: vec![TargetSurface::ClaudeCli, TargetSurface::CopilotCli],
+            }),
+            DesiredArtifact::File(DesiredFile {
+                location: location("resources/alpha.bin"),
+                value: FileValue {
+                    bytes: vec![0, 255, 1],
+                    mode: Some(0o755),
+                },
+                consumers: vec![TargetSurface::ClaudeCli],
+            }),
+            DesiredArtifact::Instruction(DesiredInstructionContribution {
+                location: InstructionLocation {
+                    root: location("AGENTS.md").root,
+                    path: "AGENTS.md".into(),
+                },
+                id: "alpha".into(),
+                markdown: "First rule\n".into(),
+                consumers: vec![TargetSurface::CodexCli],
+            }),
+        ],
+    )];
+    let observations = vec![
+        observed("resources/zeta.bin", None, None),
+        observed("AGENTS.md", None, None),
+        observed("resources/alpha.bin", None, None),
+    ];
+    let saved = (changes.clone(), observations.clone());
+    let result = plan_owned_artifacts(&[], &changes, &observations).unwrap();
+    assert_eq!(result.files, vec![
+        PlannedFile {
+            location: location("AGENTS.md"), before: None,
+            after: Some(FileValue {
+                bytes: b"<!-- upskill:begin alpha -->\nFirst rule\n<!-- upskill:end alpha -->\n\n<!-- upskill:begin zeta -->\nSecond rule\n<!-- upskill:end zeta -->\n".to_vec(),
+                mode: None,
+            }),
+        },
+        PlannedFile {
+            location: location("resources/alpha.bin"), before: None,
+            after: Some(FileValue { bytes: vec![0, 255, 1], mode: Some(0o755) }),
+        },
+        PlannedFile {
+            location: location("resources/zeta.bin"), before: None,
+            after: Some(FileValue { bytes: vec![128, 0, 254, 2], mode: Some(0o600) }),
+        },
+    ]);
+    assert_eq!(
+        result.artifacts,
+        vec![
+            OwnedArtifact {
+                root: location("AGENTS.md").root,
+                path: "AGENTS.md".into(),
+                content: ArtifactContent::MarkdownContribution {
+                    contribution: aggregate::OwnedContribution {
+                        id: "alpha".into(),
+                        content_sha256:
+                            "fecc2d0efc31c17c0910c49a258c6d81a7579ba289a6aab24554b949db153914"
+                                .into(),
+                        leading_newlines: 0,
+                        preceding_newlines: 0,
+                    },
+                },
+                owners: vec![owner("multi")],
+                consumers: vec![TargetSurface::CodexCli],
+            },
+            OwnedArtifact {
+                root: location("AGENTS.md").root,
+                path: "AGENTS.md".into(),
+                content: ArtifactContent::MarkdownContribution {
+                    contribution: aggregate::OwnedContribution {
+                        id: "zeta".into(),
+                        content_sha256:
+                            "c12055f0d3b9b5fd4ef73ac42b5737c0b83949ef79d23b3caa56aa0ea82ee123"
+                                .into(),
+                        leading_newlines: 1,
+                        preceding_newlines: 1,
+                    },
+                },
+                owners: vec![owner("multi")],
+                consumers: vec![TargetSurface::ClaudeCli, TargetSurface::CopilotCli],
+            },
+            OwnedArtifact {
+                root: location("resources/alpha.bin").root,
+                path: "resources/alpha.bin".into(),
+                content: ArtifactContent::File {
+                    content_sha256:
+                        "47ffa3ea45a70b8a41c2c0825df323c00a8b7a01c1ea06083cc41dddcc001123".into(),
+                    mode: Some(0o755),
+                },
+                owners: vec![owner("multi")],
+                consumers: vec![TargetSurface::ClaudeCli],
+            },
+            OwnedArtifact {
+                root: location("resources/zeta.bin").root,
+                path: "resources/zeta.bin".into(),
+                content: ArtifactContent::File {
+                    content_sha256:
+                        "c09d2ee343e046f4abad68e24d5eb7b4578b2825ce4b9b57f73c55d45761da61".into(),
+                    mode: Some(0o600),
+                },
+                owners: vec![owner("multi")],
+                consumers: vec![TargetSurface::CopilotCli],
+            },
+        ]
+    );
+    let mut reversed = changes.clone();
+    let InstallationChange::Set { artifacts, .. } = &mut reversed[0] else {
+        unreachable!()
+    };
+    artifacts.reverse();
+    assert_eq!(
+        plan_owned_artifacts(&[], &reversed, &observations).unwrap(),
+        result
+    );
+    assert_eq!((changes, observations), saved);
+}

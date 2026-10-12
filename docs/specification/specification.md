@@ -403,8 +403,8 @@ descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
 evidence, source stabilization, qualified filesystem observation, destination
-qualification, source-derived file/resource plans, lifecycle state and execution, and
-Codex activation remain pending.
+qualification, compiler-to-lifecycle desired-set integration, lifecycle state and
+execution, and Codex activation remain pending.
 
 See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
 and its decision records for implementation boundaries and rationale.
