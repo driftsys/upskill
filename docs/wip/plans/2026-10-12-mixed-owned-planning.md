@@ -37,6 +37,7 @@
 ### Task 1: Compose complete mixed installation plans
 
 **Files:**
+
 - Create `src/operations/mod.rs` and `src/operations/plan.rs`.
 - Modify `src/lib.rs` to export `operations`.
 - Create `tests/operation_plans.rs` for public API acceptance examples.
@@ -64,7 +65,7 @@ crate-private `ownership::validate_relative_path`. Existing helpers and planner
 bodies remain unchanged. The two new public types and function have exactly the
 design's signatures and derive Debug, Clone, PartialEq and Eq without Serde.
 
-- [ ] **Step 1: Add a creation acceptance test before the API exists.**
+- [x] **Step 1: Add a creation acceptance test before the API exists.**
 
 Use this independently specified fixture and literal expected bytes in
 `tests/operation_plans.rs` (imports include the types used here):
@@ -147,7 +148,7 @@ fn creates_mixed_installation_with_exact_manual_bytes_and_modes() {
 Run `cargo test --test operation_plans creates_mixed_installation_with_exact_manual_bytes_and_modes -- --exact`.
 Save actual missing-API compile RED. Do not call that an assertion failure.
 
-- [ ] **Step 2: Add only DTOs/module exports and an empty-result stub, then record genuine assertion RED.**
+- [x] **Step 2: Add only DTOs/module exports and an empty-result stub, then record genuine assertion RED.**
 
 `src/operations/mod.rs` contains `pub mod plan;`. Export `pub mod operations;`
 from lib.rs. Copy the exact enum declarations from the design and import their
@@ -165,7 +166,7 @@ must fail against the stub. Save both logs and append a report checkpoint before
 writing real composition logic. Fix test-fixture compile errors before recording
 behavioral RED.
 
-- [ ] **Step 3: Extend acceptance examples before implementing composition.**
+- [x] **Step 3: Extend acceptance examples before implementing composition.**
 
 Create named tests for every design example C01–C10. Expected actions, manual
 bytes, modes, ordering and ownership lists are independent literals. A setup may
@@ -173,22 +174,22 @@ use existing planners to construct valid prior metadata, but expected combined
 outcomes must not be computed by the new API under test. Every error test checks
 context and unchanged inputs. Cover these exact matrices:
 
-| Test group | Cases and assertions |
-| --- | --- |
-| Complete replacement | Mixed update omits two old resources; remove both and keep/update the contribution. Mixed update omits the contribution; preserve exact manual bytes and retain desired resources. Global removal reaches both forms and retains empty aggregate. |
-| Cross-form binding | File-only prior to instruction-only Set and reverse at distinct paths. Reject changes independently to source, kind, source_name and installed_name; accept coherent source_revision changes. |
-| Complete request | Duplicate Set/Remove ID, duplicate Sets, unknown Remove, empty Set, duplicate desired file, duplicate contribution selector, malformed owner and consumers. |
-| Physical collision | Both forms desired at one location; old file to desired contribution and reverse; explicit A removal/B replacement across forms; untouched owner at the other form. All conflict. Same-form file and contribution handoffs keep existing semantics. |
-| Topology | Contribution `a` and file `a/b`, reverse forms, nonadjacent lexical ancestor `a`, `a-keep`, `a/b`; removal-only prior conflict; old/new transitions. Reject affected pairs; unrelated historical pairs and siblings `a/b` versus `ab` survive. |
-| Evidence | Missing either form observation, duplicate location, extra observation, relative/empty root, invalid portable path, mode above `0o7777`, absent owned file, edited bytes, changed or missing file mode, invalid aggregate UTF-8 and edited/unrecorded markers. |
-| Modes and no-ops | Aggregate Some(0o640) survives update/no-op/last removal; absent aggregate after mode None. Dedicated Some(0o755), Some(0o600) and None remain exact and distinct; all no-op preconditions remain. |
-| Sharing and identity | Affected shared file or contribution conflicts, untouched shared records survive; roots with raw `.` components remain distinct and project/user scopes remain distinct. |
-| Stable order | At least four prior rows interleaving forms and installations, two old files removed, two retained rows replaced in place, sorted new selectors/paths appended. Reversing changes, desired entries and observations yields the same result. |
+| Test group           | Cases and assertions                                                                                                                                                                                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Complete replacement | Mixed update omits two old resources; remove both and keep/update the contribution. Mixed update omits the contribution; preserve exact manual bytes and retain desired resources. Global removal reaches both forms and retains empty aggregate.              |
+| Cross-form binding   | File-only prior to instruction-only Set and reverse at distinct paths. Reject changes independently to source, kind, source_name and installed_name; accept coherent source_revision changes.                                                                  |
+| Complete request     | Duplicate Set/Remove ID, duplicate Sets, unknown Remove, empty Set, duplicate desired file, duplicate contribution selector, malformed owner and consumers.                                                                                                    |
+| Physical collision   | Both forms desired at one location; old file to desired contribution and reverse; explicit A removal/B replacement across forms; untouched owner at the other form. All conflict. Same-form file and contribution handoffs keep existing semantics.            |
+| Topology             | Contribution `a` and file `a/b`, reverse forms, nonadjacent lexical ancestor `a`, `a-keep`, `a/b`; removal-only prior conflict; old/new transitions. Reject affected pairs; unrelated historical pairs and siblings `a/b` versus `ab` survive.                 |
+| Evidence             | Missing either form observation, duplicate location, extra observation, relative/empty root, invalid portable path, mode above `0o7777`, absent owned file, edited bytes, changed or missing file mode, invalid aggregate UTF-8 and edited/unrecorded markers. |
+| Modes and no-ops     | Aggregate Some(0o640) survives update/no-op/last removal; absent aggregate after mode None. Dedicated Some(0o755), Some(0o600) and None remain exact and distinct; all no-op preconditions remain.                                                             |
+| Sharing and identity | Affected shared file or contribution conflicts, untouched shared records survive; roots with raw `.` components remain distinct and project/user scopes remain distinct.                                                                                       |
+| Stable order         | At least four prior rows interleaving forms and installations, two old files removed, two retained rows replaced in place, sorted new selectors/paths appended. Reversing changes, desired entries and observations yields the same result.                    |
 
 Run the compiled matrix against the stub and preserve its actual failures. Do
 not claim every matrix failure is assertion-only unless the log proves that.
 
-- [ ] **Step 4: Implement the coordinator in operations/plan.rs.**
+- [x] **Step 4: Implement the coordinator in operations/plan.rs.**
 
 Use private focused helpers in the same module. Keep existing planner bodies
 unchanged. Implement these stages in order:
@@ -228,7 +229,7 @@ Do not infer modes, delete aggregates, normalize roots, adopt equal-byte files,
 drop omitted old forms or silently retain shared affected ownership. Run
 `cargo test --test operation_plans` until the specified matrix is GREEN.
 
-- [ ] **Step 5: Execute six meaningful semantic controls, restoring exact bytes.**
+- [x] **Step 5: Execute six meaningful semantic controls, restoring exact bytes.**
 
 Mutate one production behavior at a time: retain omitted dedicated files; bypass
 global stable binding validation for disjoint-form changes; bypass cross-form
@@ -239,7 +240,7 @@ test and require an intended assertion failure, not a compile/fixture failure.
 Use finally restoration and compare source bytes to the saved snapshot. After
 all controls, require the full focused suite GREEN and no production mutation.
 
-- [ ] **Step 6: Update documentation and self-review the complete task diff.**
+- [x] **Step 6: Update documentation and self-review the complete task diff.**
 
 Document the exact API, complete mixed Sets, cross-form safety boundary, aggregate
 mode evidence, deterministic ordering and remaining activation gates in the
@@ -248,7 +249,7 @@ and bounded M1 status. Refresh archive current successor prose for #264; preserv
 historical quotations, totals and unrelated WIP dispositions. No native/CLI/schema-2
 activation claim. Read every changed file against the spec before final gates.
 
-- [ ] **Step 7: Run final gates once, commit and report.**
+- [x] **Step 7: Run final gates once, commit and report.**
 
 Use `PATH=/tmp/upskill-captured-check-bin:/Users/sebastientasson/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin`
 for the test/gate processes; it contains required tools but excludes native agent

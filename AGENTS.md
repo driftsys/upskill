@@ -75,6 +75,7 @@ src/
 ├── source.rs            Source URL parsing and classification (typed errors)
 ├── source_manifest.rs   Strict captured source evidence and pure validation
 ├── files/               Pure whole-file operation planning
+├── operations/          Pure complete mixed owned-artifact planning
 ├── compile/             Pure captured-item compilation
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search

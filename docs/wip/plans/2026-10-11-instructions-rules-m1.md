@@ -94,9 +94,9 @@ provides pure `files::plan` operation plans for explicit complete desired sets a
 supplied before-state observations. It preserves untouched ownership, requires
 exact byte/hash and optional-mode evidence, rejects unowned destinations and
 affected shared/contribution records, and enumerates only individual file changes.
-The observations remain unqualified. Lifecycle desired-set integration, mixed
-instruction/file composition, destination qualification, durable
-state, executor/recovery and Codex activation remain pending. Existing commands,
+The observations remain unqualified. Lifecycle desired-set integration,
+destination qualification, durable state, executor/recovery and Codex activation
+remain pending. The complete mixed coordinator is described below. Existing commands,
 lockfiles and native behavior are unchanged; this does not complete M1-A2, M1-A3
 or M1.
 
@@ -109,16 +109,25 @@ rendering retains source identity. Active matching overrides fail explicitly;
 body override precedence remains deferred. It does not reread sources, write
 outputs, activate CLI/native behavior or supply ownership and qualified destination
 evidence. Connecting complete compiled outputs to the lifecycle coordinator,
-requested-selection reconciliation, mixed-plan composition, filesystem qualification,
-durable state, executor/recovery and target gates remains pending. This bounded
+requested-selection reconciliation, filesystem qualification, durable state,
+executor/recovery and target gates remains pending. This bounded
 prerequisite does not complete M1-A2 or M1-A3.
+
+The [mixed owned-artifact planning prerequisite](../../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+provides one pure complete-operation boundary over dedicated files and instruction
+contributions. Sets replace both forms, including omitted old artifacts. It
+validates global installation bindings, exact physical evidence, cross-form
+collisions and affected ancestor topology before composing the existing planners.
+It preserves aggregate modes and manual bytes, every affected no-op, untouched
+owners and prior interleaved row order. This does not connect compiled outputs to
+lifecycle desired sets or activate commands, native targets, state or effects.
+M1-A2, M1-A3 and M1 remain incomplete.
 
 The [operational lifecycle design](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active WIP after the bounded pair completes and must not be archived with
 it. Complete reference-graph authority, per-owner consumer association,
-qualified source/filesystem evidence, source-derived file/resource plans, mixed-plan
-composition, durable state/lifecycle and
-transactional execution remain activation work.
+qualified source/filesystem evidence, compiler-to-lifecycle desired sets,
+durable state/lifecycle and transactional execution remain activation work.
 
 M1-A2 still requires verified source resolution, reproducible historical rendering
 and resource enumeration, requested-selection reconciliation, and adoption.

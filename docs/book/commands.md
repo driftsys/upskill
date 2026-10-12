@@ -30,8 +30,8 @@ snapshot or qualified filesystem containment. See the
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
 sets from explicit desired bytes and supplied observations. Current commands do
 not call it or change their lifecycle behavior. Lifecycle desired-set integration,
-mixed-plan composition, qualified observation, execution/state integration and
-Codex activation remain pending. See the
+qualified observation, execution/state integration and Codex activation remain
+pending. The complete mixed library coordinator is described below. See the
 [owned whole-file planning specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
 
 The library's pure `compile::item::compile_item` API produces complete per-client
@@ -40,6 +40,16 @@ modes and rejecting unsupported active overrides. It does not activate lifecycle
 planning, execution, state changes or native Codex support. Current commands keep
 their existing installer behavior. See the
 [captured item compilation specification](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation).
+
+The pure library `operations::plan::plan_owned_artifacts` API accepts one complete
+mixed Set per changed installation, containing dedicated files and instruction
+contributions, or explicit Remove. Callers supply ownership and exactly one
+observation per affected location. The combined result preserves manual bytes,
+aggregate modes, no-op actions and interleaved prior record order; cross-form
+collisions and affected ancestor paths conflict. Current commands do not invoke
+this coordinator. Compiler-to-lifecycle desired sets, qualified source/destination
+evidence, state, execution and native activation remain separate work. See the
+[mixed owned-artifact planning specification](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans).
 
 ## Global flags
 
@@ -444,8 +454,10 @@ The separate [captured item compiler](https://driftsys.github.io/upskill/specifi
 derives complete per-client entrypoint and resource outputs from captured bytes.
 Reference resolution, qualified source/filesystem evidence, per-owner consumer
 associations, connecting compiled outputs to complete lifecycle desired sets,
-mixed instruction/file composition, state integration and transactional execution
-remain pending; current commands and schema-1 persistence are unchanged.
+state integration and transactional execution remain pending. The separate
+[mixed coordinator](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans)
+composes explicit complete file and contribution sets; current commands and
+schema-1 persistence are unchanged.
 
 ## Per-client output paths
 

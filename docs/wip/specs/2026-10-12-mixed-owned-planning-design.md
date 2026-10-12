@@ -137,17 +137,17 @@ execution authority, state writes, source provenance or native-success claims.
 
 ## Acceptance examples
 
-| ID | Required behavior |
-| --- | --- |
-| C01 | Create one installation with a contribution beside manual bytes and a binary resource; return exact complete records/actions and preserved modes. |
-| C02 | Update and remove mixed installations; omitted forms are removed, manual text and untouched owners survive, last-region removal keeps the aggregate. |
-| C03 | Convert an installation between forms at distinct locations with the same stable binding; allow a coherent revision change. |
-| C04 | Reject changed stable bindings even when old and desired forms are disjoint; reject duplicate changes, unknown removal and empty complete Set. |
-| C05 | Reject same-location cross-form takeovers in both directions, including explicit removal/handoff; preserve unchanged inputs on errors. |
-| C06 | Reject affected cross-form ancestor topology, including removal-only conflicts and old/new transitions; preserve unrelated historical pairs. |
-| C07 | Require exact observations for the physical affected union; reject missing, duplicate, extra, invalid-root/path/mode evidence. |
-| C08 | Preserve exact aggregate bytes and modes for no-ops; reject invalid UTF-8, edited markers, missing owned files and changed file byte/mode evidence. |
-| C09 | Reject affected shared records but preserve untouched shared rows; retain same-form handoff semantics and exact scope/root distinctions. |
+| ID  | Required behavior                                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C01 | Create one installation with a contribution beside manual bytes and a binary resource; return exact complete records/actions and preserved modes.        |
+| C02 | Update and remove mixed installations; omitted forms are removed, manual text and untouched owners survive, last-region removal keeps the aggregate.     |
+| C03 | Convert an installation between forms at distinct locations with the same stable binding; allow a coherent revision change.                              |
+| C04 | Reject changed stable bindings even when old and desired forms are disjoint; reject duplicate changes, unknown removal and empty complete Set.           |
+| C05 | Reject same-location cross-form takeovers in both directions, including explicit removal/handoff; preserve unchanged inputs on errors.                   |
+| C06 | Reject affected cross-form ancestor topology, including removal-only conflicts and old/new transitions; preserve unrelated historical pairs.             |
+| C07 | Require exact observations for the physical affected union; reject missing, duplicate, extra, invalid-root/path/mode evidence.                           |
+| C08 | Preserve exact aggregate bytes and modes for no-ops; reject invalid UTF-8, edited markers, missing owned files and changed file byte/mode evidence.      |
+| C09 | Reject affected shared records but preserve untouched shared rows; retain same-form handoff semantics and exact scope/root distinctions.                 |
 | C10 | Preserve prior interleaved row order, sort new rows/actions, produce deterministic output under change/observation permutations and never mutate inputs. |
 
 ## Delivery and remaining gates
