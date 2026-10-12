@@ -67,7 +67,7 @@ fn tampered_manifest_is_rejected() {
 }
 
 use sha2::{Digest, Sha256};
-use upskill::compile::item::CompiledItemFile;
+use upskill::compile::item::{CompiledClientItem, CompiledItemFile};
 use upskill::source_manifest::{CapturedSourceFile, validate_manifest};
 
 const ENTRY: &[u8] = b"---\nschema: 1\ndescription: demo\n---\n\n# Demo\n";
@@ -208,40 +208,46 @@ fn all_nine_kind_client_pairs_match_checked_in_goldens_and_complete_resources() 
         ),
     ];
     for (kind, name, input, goldens, entries, resources) in cases {
-        let source = fixture(&[
+        let captured = fixture(&[
             (kind.entrypoint_filename(), input),
             ("data.bin", &[0, 255, 17]),
         ]);
-        let before = source.clone();
-        let req = ItemCompileRequest {
-            folder_name: name.into(),
-            ..request(kind)
-        };
-        let req_before = req.clone();
-        let result = compile_item(&source, &req).unwrap();
-        assert_eq!(result.kind, kind);
-        assert_eq!(result.source_name, name);
-        assert_eq!(result.installed_name, name);
-        assert_eq!(result.source_manifest_sha256, source.content_sha256);
-        assert_eq!(result.audience_excluded, []);
-        assert_eq!(result.outputs.len(), 3);
-        let mode = source
+        let captured_mode = captured
             .files
             .iter()
-            .find(|f| f.path == "data.bin")
+            .find(|file| file.path == "data.bin")
             .unwrap()
             .mode;
-        for (i, output) in result.outputs.iter().enumerate() {
-            assert_eq!(output.client, Client::ALL[i]);
-            let mut expected = vec![
-                expected_file(entries[i], goldens[i], None),
-                expected_file(resources[i], &[0, 255, 17], mode),
-            ];
-            expected.sort_by(|a, b| a.path.cmp(&b.path));
-            assert_eq!(output.files, expected, "{kind} {:?}", output.client);
+        let distinct_modes = synthetic(&[
+            (kind.entrypoint_filename(), input, Some(0o700)),
+            ("data.bin", &[0, 255, 17], Some(0o640)),
+        ]);
+        for (source, mode) in [(captured, captured_mode), (distinct_modes, Some(0o640))] {
+            let before = source.clone();
+            let req = ItemCompileRequest {
+                folder_name: name.into(),
+                ..request(kind)
+            };
+            let req_before = req.clone();
+            let result = compile_item(&source, &req).unwrap();
+            assert_eq!(result.kind, kind);
+            assert_eq!(result.source_name, name);
+            assert_eq!(result.installed_name, name);
+            assert_eq!(result.source_manifest_sha256, source.content_sha256);
+            assert_eq!(result.audience_excluded, []);
+            assert_eq!(result.outputs.len(), 3);
+            for (i, output) in result.outputs.iter().enumerate() {
+                assert_eq!(output.client, Client::ALL[i]);
+                let mut expected = vec![
+                    expected_file(entries[i], goldens[i], None),
+                    expected_file(resources[i], &[0, 255, 17], mode),
+                ];
+                expected.sort_by(|a, b| a.path.cmp(&b.path));
+                assert_eq!(output.files, expected, "{kind} {:?}", output.client);
+            }
+            assert_eq!(source, before);
+            assert_eq!(req, req_before);
         }
-        assert_eq!(source, before);
-        assert_eq!(req, req_before);
     }
 }
 
@@ -745,4 +751,147 @@ fn changing_and_removing_original_source_cannot_change_captured_output() {
         ]
     );
     assert_eq!(source, before);
+}
+
+#[test]
+fn explicit_claude_and_opencode_audiences_emit_exact_outputs_for_every_kind() {
+    for kind in ItemKind::ALL {
+        for (audience, client, exclusions) in [
+            (
+                "claude",
+                Client::Claude,
+                [Client::Copilot, Client::OpenCode],
+            ),
+            (
+                "opencode",
+                Client::OpenCode,
+                [Client::Claude, Client::Copilot],
+            ),
+        ] {
+            let entry = format!(
+                "---\nschema: 1\ndescription: demo\naudience: [{audience}]\n---\n\n# Demo\n"
+            );
+            let source = fixture(&[(kind.entrypoint_filename(), entry.as_bytes())]);
+            let result = compile_item(&source, &request(kind)).unwrap();
+            let (path, bytes) = match (kind, client) {
+                (ItemKind::Skill, Client::Claude) => (
+                    ".claude/skills/demo/SKILL.md",
+                    b"---\nname: demo\ndescription: demo\n---\n\n# Demo\n".as_slice(),
+                ),
+                (ItemKind::Skill, Client::OpenCode) => (
+                    ".agents/skills/demo/SKILL.md",
+                    b"---\nname: demo\ndescription: demo\n---\n\n# Demo\n".as_slice(),
+                ),
+                (ItemKind::Rule, Client::Claude) => (
+                    ".claude/rules/demo.md",
+                    b"---\nname: demo\ndescription: demo\n---\n\n# Demo\n".as_slice(),
+                ),
+                (ItemKind::Rule, Client::OpenCode) => (
+                    ".agents/rules/demo/RULE.md",
+                    b"---\nname: demo\ndescription: demo\n---\n\n# Demo\n".as_slice(),
+                ),
+                (ItemKind::Agent, Client::Claude) => (
+                    ".claude/agents/demo.md",
+                    b"---\nname: demo\ndescription: demo\n---\n\n# Demo\n".as_slice(),
+                ),
+                (ItemKind::Agent, Client::OpenCode) => (
+                    ".opencode/agents/demo.md",
+                    b"---\nname: demo\ndescription: demo\nmode: subagent\n---\n\n# Demo\n"
+                        .as_slice(),
+                ),
+                _ => unreachable!(),
+            };
+            assert_eq!(result.audience_excluded, exclusions, "{kind} {audience}");
+            assert_eq!(
+                result.outputs,
+                [CompiledClientItem {
+                    client,
+                    files: vec![expected_file(path, bytes, None)]
+                }],
+                "{kind} {audience}"
+            );
+        }
+    }
+}
+
+#[test]
+fn wholly_audience_excluded_requests_still_validate_ignored_and_resource_files() {
+    for kind in ItemKind::ALL {
+        let source = fixture(&[
+            (
+                kind.entrypoint_filename(),
+                b"---\nschema: 1\ndescription: demo\naudience: []\nignore: [ignored]\n---\n",
+            ),
+            ("ignored", b"ignored bytes"),
+            ("resource", b"retained bytes"),
+        ]);
+        let req = request(kind);
+        let valid = compile_item(&source, &req).unwrap();
+        assert_eq!(valid.outputs, []);
+        assert_eq!(valid.audience_excluded, Client::ALL);
+        for path in ["ignored", "resource"] {
+            let mut corrupt = source.clone();
+            corrupt
+                .files
+                .iter_mut()
+                .find(|file| file.path == path)
+                .unwrap()
+                .bytes
+                .push(255);
+            rejected(&corrupt, &req, "validate source manifest");
+            rejected(&corrupt, &req, "source file digest mismatch");
+            rejected(&corrupt, &req, path);
+        }
+    }
+}
+
+#[test]
+fn changing_only_ignored_or_reserved_files_changes_exact_source_identity_not_outputs() {
+    for kind in ItemKind::ALL {
+        let entry = b"---\nschema: 1\ndescription: demo\nignore: [ignored]\n---\n\n# Demo\n";
+        let reserved = ItemKind::ALL
+            .into_iter()
+            .find(|other| *other != kind)
+            .unwrap()
+            .entrypoint_filename();
+        for changed in ["ignored", reserved] {
+            let first = synthetic(&[
+                (kind.entrypoint_filename(), entry, Some(0o700)),
+                ("ignored", b"original ignored", Some(0o600)),
+                (reserved, b"original reserved", Some(0o644)),
+                ("resource", &[0, 255], Some(0o755)),
+            ]);
+            let mut values: Vec<_> = first
+                .files
+                .iter()
+                .map(|file| (file.path.as_str(), file.bytes.as_slice(), file.mode))
+                .collect();
+            values
+                .iter_mut()
+                .find(|(path, _, _)| *path == changed)
+                .unwrap()
+                .1 = b"changed excluded bytes";
+            let second = synthetic(&values);
+            assert_ne!(first.content_sha256, second.content_sha256);
+            let compiled_first = compile_item(&first, &request(kind)).unwrap();
+            let compiled_second = compile_item(&second, &request(kind)).unwrap();
+            assert_eq!(compiled_first.source_manifest_sha256, first.content_sha256);
+            assert_eq!(
+                compiled_second.source_manifest_sha256,
+                second.content_sha256
+            );
+            assert_ne!(
+                compiled_first.source_manifest_sha256,
+                compiled_second.source_manifest_sha256
+            );
+            assert_eq!(
+                compiled_first.outputs, compiled_second.outputs,
+                "{kind} {changed}"
+            );
+            assert_eq!(
+                compiled_first.audience_excluded,
+                compiled_second.audience_excluded
+            );
+        }
+    }
 }
