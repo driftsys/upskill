@@ -79,8 +79,10 @@ is implemented for explicitly supplied complete file sets. The separate
 entrypoint and resource outputs from validated captured bytes. Complete
 reference-graph authority, per-owner consumer association, qualified source and
 filesystem evidence, connecting compiled outputs to complete lifecycle desired
-sets, mixed instruction/file composition and state/lifecycle integration, writer
-locking, recovery and execution remain pending.
+sets, state/lifecycle integration, writer locking, recovery and execution remain
+pending. The implemented [mixed coordinator](mixed-owned-artifact-planning.md)
+composes complete explicit sets across both forms; neither individual planner
+authorizes partial application of a mixed installation.
 Current commands, lockfile/source formats and native client support are unchanged.
 
 [`tests/instruction_plans.rs`](../../tests/instruction_plans.rs) covers owner

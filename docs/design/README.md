@@ -12,3 +12,5 @@ Future designs remain in [WIP](../wip/README.md).
 - [Owned whole-file operation planning](owned-file-planning.md)
 
 - [Captured item compilation](captured-item-compilation.md)
+
+- [Mixed owned-artifact operation planning](mixed-owned-artifact-planning.md)

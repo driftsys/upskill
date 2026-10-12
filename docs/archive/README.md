@@ -204,3 +204,33 @@ overrides are explicitly rejected pending precedence implementation. The
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active;
 this prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
 disposition; this entry resolves only the exact named pair.
+
+## Mixed owned-artifact planning
+
+The archived [spec](specs/2026-10-12-mixed-owned-planning-design.md) and
+[plan](plans/2026-10-12-mixed-owned-planning.md) preserve the exact working
+material. Their parent-context links are historical relative references; the
+operational lifecycle design and M1 delivery plan remain active in WIP.
+
+Implementation and reviewed corrections: `7d00798` through `73fb891`.
+Local completion evidence: 851 Rust tests and 11 documentation-checker tests,
+ordered formatting and full verification, locked Rust 1.85 all-targets check
+and whitespace check passed; fresh independent task review approved compliance
+and quality. Genuine missing-API RED and valid stub assertion failures preceded
+implementation. Six initial semantic controls and three review-fix controls failed
+intended assertions with exact production restoration and focused GREEN. The
+cross-form collision control
+bypassed both the initial membership check and redundant duplicate-action guard.
+These checks establish local supplied-value behavior; hosted runtime execution,
+final branch/PR review and merge remain separate gates.
+
+Durable successors: [specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans),
+[mixed planning design](../design/mixed-owned-artifact-planning.md) and
+[AD-0027](../adr/0027-compose-complete-owned-artifact-plans.md).
+The coordinator composes complete explicit file/contribution sets; connecting
+captured compiler outputs to lifecycle ownership and evidence remains pending.
+Source/target qualification, complete reference authority, per-owner consumers,
+filesystem safety, permission policy, writer locking, durable state and
+apply/recovery remain deferred. No native, CLI or schema-2 activation follows;
+M1-A2, M1-A3 and M1 remain incomplete. Other WIP retains its prior disposition;
+this entry resolves only the exact named pair.
