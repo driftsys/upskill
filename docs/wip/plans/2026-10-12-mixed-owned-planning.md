@@ -134,7 +134,7 @@ fn creates_mixed_installation_with_exact_manual_bytes_and_modes() {
     assert_eq!(result.files[0].location, instructions);
     assert_eq!(result.files[0].before, observations[1].value);
     assert_eq!(result.files[0].after, Some(FileValue {
-        bytes: b"Manual\n<!-- upskill:begin rule-a -->\nA\n<!-- upskill:end rule-a -->\n".to_vec(),
+        bytes: b"Manual\n\n<!-- upskill:begin rule-a -->\nA\n<!-- upskill:end rule-a -->\n".to_vec(),
         mode: Some(0o640),
     }));
     assert_eq!(result.files[1].location, resource);
