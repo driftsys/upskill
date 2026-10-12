@@ -408,6 +408,16 @@ records and leaves requested selections unresolved. This prerequisite adds no CL
 command and leaves existing commands and schema-1 persistence unchanged; it does
 not migrate state or adopt output files.
 
+The pure library instruction planner can compute owned contribution changes from
+caller-supplied observations. It preserves untouched owners and manual bytes,
+verifies managed regions through the shared body reader, and retains exact before
+bytes even for content no-ops. Last-region removal plans an empty file. Affected
+whole files and multi-owner regions conflict; unrelated records survive. This
+library prerequisite adds no command or Codex CLI support. Reference resolution,
+source/filesystem evidence, per-owner consumer associations, whole-file/resource
+planning, state integration and transactional execution remain pending; current
+commands and schema-1 persistence are unchanged.
+
 ## Per-client output paths
 
 | Item kind | Claude Code                | GitHub Copilot                                | opencode                       |

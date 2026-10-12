@@ -327,3 +327,94 @@ fn independently_added_owners_reconcile_in_file_order() {
     let restored = reconcile(&without_beta.content, &without_beta.owned, &[]).unwrap();
     assert_eq!(restored.content, manual);
 }
+
+#[test]
+fn verified_reader_returns_bodies_in_document_order() {
+    let beta = reconcile("Manual", &[], &[Contribution::new("beta", "B\r\n")]).unwrap();
+    let both = reconcile(
+        &beta.content,
+        &beta.owned,
+        &[
+            Contribution::new("alpha", "A\n"),
+            Contribution::new("beta", "B\r\n"),
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        upskill::instructions::aggregate::inspect_owned(&both.content, &both.owned).unwrap(),
+        vec![
+            Contribution::new("beta", "B\r\n"),
+            Contribution::new("alpha", "A\n")
+        ]
+    );
+}
+
+#[test]
+fn reader_and_editor_reject_the_same_unverified_spans() {
+    use upskill::instructions::aggregate::inspect_owned;
+    let edit = reconcile(
+        "Manual.\n",
+        &[],
+        &[
+            Contribution::new("alpha", "A\n"),
+            Contribution::new("beta", "B\n"),
+        ],
+    )
+    .unwrap();
+    let mut duplicate = edit.owned.clone();
+    duplicate.push(duplicate[0].clone());
+    let mut overlap = edit.owned.clone();
+    overlap[1].leading_newlines = 2;
+    overlap[1].preceding_newlines = 0;
+    let cases = vec![
+        (edit.content.clone(), duplicate),
+        (edit.content.clone(), overlap),
+        (edit.content.replace("A\n", "Z\n"), edit.owned.clone()),
+        (
+            edit.content.replace("<!-- upskill:begin alpha -->\n", ""),
+            edit.owned.clone(),
+        ),
+        (
+            edit.content.replace("<!-- upskill:end alpha -->\n", ""),
+            edit.owned.clone(),
+        ),
+        (
+            edit.content
+                .replace("<!-- upskill:begin alpha", "inline<!-- upskill:begin alpha"),
+            edit.owned.clone(),
+        ),
+        (
+            edit.content.replace(
+                "<!-- upskill:begin alpha -->",
+                "<!-- upskill:begin alpha-- >",
+            ),
+            edit.owned.clone(),
+        ),
+        (
+            edit.content.replace("Manual.\n\n", "Manual.\n"),
+            edit.owned.clone(),
+        ),
+        (
+            edit.content.replace("Manual.\n\n", "Manual.\n\n\n"),
+            edit.owned.clone(),
+        ),
+        (
+            format!("{}<!-- upskill:unknown -->\n", edit.content),
+            edit.owned.clone(),
+        ),
+        (
+            format!("{}{}", edit.content, edit.content),
+            edit.owned.clone(),
+        ),
+    ];
+    for (index, (content, records)) in cases.into_iter().enumerate() {
+        assert!(
+            inspect_owned(&content, &records).is_err(),
+            "reader case {index}"
+        );
+        assert!(
+            reconcile(&content, &records, &[]).is_err(),
+            "editor case {index}"
+        );
+    }
+}

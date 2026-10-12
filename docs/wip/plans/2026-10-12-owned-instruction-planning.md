@@ -102,7 +102,7 @@ supplying changes. This planner does not establish those facts or infer referenc
 counts. Set replaces one owner's complete contribution set, not the whole input
 ownership vector. An absent file is distinct from an existing empty file.
 
-- [ ] **Step 1: Write acceptance tests before production changes.**
+- [x] **Step 1: Write acceptance tests before production changes.**
 
 Use public APIs and actual editor/record values. Include these complete core
 examples, plus the explicit table below. Build platform-valid roots through
@@ -204,7 +204,7 @@ Reader tests in `instruction_contributions.rs` also pin duplicate prior IDs,
 overlapping spans, inline/malformed markers and separator edits through the same
 validation used by reconciliation. Reuse focused existing fixtures where useful.
 
-- [ ] **Step 2: Establish compile RED then behavioral assertion RED.**
+- [x] **Step 2: Establish compile RED then behavioral assertion RED.**
 
 Run `cargo test --test instruction_plans` before defining the module; save the
 expected missing API compile failure. Introduce only the DTOs, module export and
@@ -213,7 +213,7 @@ is sufficient to compile. Run focused tests again and save actual assertion
 failures for owner/new-region plans and the no-op precondition. Compiler failures
 are not behavioral RED evidence. Tests must be meaningful before full code.
 
-- [ ] **Step 3: Implement shared inspection and pure planning.**
+- [x] **Step 3: Implement shared inspection and pure planning.**
 
 In `aggregate.rs`, extract current span/marker verification into one private
 helper returning sorted verified spans. Keep `find_owned_span` hash/separator
@@ -263,7 +263,7 @@ Do not return partial plans on any error. Add contextual errors naming the
 installation, path or selector involved. Validate desired data even if it could
 otherwise be optimized out; no idempotence fast path may bypass ownership checks.
 
-- [ ] **Step 4: Run focused GREEN and semantic negative controls.**
+- [x] **Step 4: Run focused GREEN and semantic negative controls.**
 
 Run `cargo test --test instruction_plans` and
 `cargo test --test instruction_contributions`; all existing editor tests remain
@@ -274,7 +274,7 @@ must fail. Restore production byte-for-byte in `finally` and confirm with `cmp`.
 Save command, exit status and intended assertion excerpt; exclude any accidental
 compiler failures from semantic RED evidence. Re-run focused GREEN after restore.
 
-- [ ] **Step 5: Update canonical docs and M1 progress.**
+- [x] **Step 5: Update canonical docs and M1 progress.**
 
 Document the pure public planner, supplied-observation limit, single-owner affected
 region restriction, untouched owner preservation, shared body reader, exact
@@ -285,7 +285,7 @@ the bounded plan and operational design from the M1 plan. Do not claim CLI/Codex
 support or change source/lockfile formats. Operational design is active WIP and
 must not be archived when this bounded pair is later completed.
 
-- [ ] **Step 6: Verify, self-review, commit and report.**
+- [x] **Step 6: Verify, self-review, commit and report.**
 
 Run ordered `just fmt` then `just verify`, followed by
 `cargo +1.85.0 check --locked --all-targets`. Full access permits existing tool

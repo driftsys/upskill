@@ -311,6 +311,40 @@ See the [projection design](https://github.com/driftsys/upskill/blob/main/docs/d
 and [AD-0015](https://github.com/driftsys/upskill/blob/main/docs/adr/0015-pure-legacy-state-projection.md) for implementation
 boundaries and rationale.
 
+### 4.2 Pure owned instruction planning
+
+The library function `instructions::plan::plan_instructions` joins validated
+owned-artifact records with the Markdown aggregate editor. Callers supply complete
+installation contribution replacements or removals and exact observations for
+every affected file. The result contains the complete resulting artifact vector
+and file plans with exact optional before bytes and after bytes, including content
+no-ops. Absent files and existing empty files have distinct preconditions. Removing
+the last region retains an empty aggregate file; the plan has no deletion action.
+
+Set replaces one installation's complete contribution set. Existing installation
+IDs retain their source, item kind, source name and installed alias; recorded
+revision may change. Untouched selectors retain their bodies, owners and consumers
+and cannot be taken over, even with identical content. Affected regions require
+one owner; affected whole files or shared regions conflict. Unaffected records,
+including whole files and shared regions, survive exactly. At affected locations,
+the editor rebuilds separator metadata for retained regions after other removals.
+
+`instructions::aggregate::inspect_owned` reads exact verified Markdown bodies in
+document order through the same private marker/span validator as reconciliation.
+Edited, missing, duplicate, overlapping, unknown or malformed regions conflict.
+Bytes outside managed regions remain unchanged. Locations use scope, raw lexical
+root spelling and portable relative path; file plans sort by that key. Surviving
+artifact rows retain prior order and new selectors append in location/ID order.
+
+Planning performs no I/O and validates prior and final ownership plus all desired
+data. Observations must match affected locations exactly; missing, duplicate or
+extraneous observations conflict. Supplied bytes do not establish source or
+filesystem evidence. Callers must resolve direct/bundle references and native
+compatibility first. Complete reference-graph authority, per-owner consumer
+association, whole-file/resource plans, state/lifecycle integration and
+transactional execution remain pending. This prerequisite changes no CLI behavior,
+source format or lockfile format and enables no native client support.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).
