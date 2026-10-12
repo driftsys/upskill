@@ -633,12 +633,11 @@ fn run_remove(
         }
     };
 
-    if let RemoveFilter::BySource(label) = &filter
-        && !yes
-        && !confirm_bulk_remove(label)
-    {
-        eprintln!("aborted");
-        return EXIT_SUCCESS;
+    if let RemoveFilter::BySource(label) = &filter {
+        if !yes && !confirm_bulk_remove(label) {
+            eprintln!("aborted");
+            return EXIT_SUCCESS;
+        }
     }
 
     let target = match install_target(global, project) {
@@ -1406,9 +1405,7 @@ fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&s
                 return EXIT_ERROR;
             }
         };
-        if let Some(w) = &fresh.warning
-            && !style::is_quiet()
-        {
+        if let Some(w) = fresh.warning.as_ref().filter(|_| !style::is_quiet()) {
             eprintln!("{}", style::warn(w));
         }
         let results = search::search_index(&fresh.index, query, kind);
@@ -1472,9 +1469,7 @@ fn run_search(query: &str, limit: usize, registry: Option<&str>, kind: Option<&s
                     continue;
                 }
             };
-            if let Some(w) = &fresh.warning
-                && !style::is_quiet()
-            {
+            if let Some(w) = fresh.warning.as_ref().filter(|_| !style::is_quiet()) {
                 eprintln!("{}", style::warn(w));
             }
             let results = search::search_index(&fresh.index, query, kind);
@@ -1608,11 +1603,11 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
 fn run_index(registry: Option<&str>, clear: bool) -> i32 {
     if clear {
         let dir = index::cache_dir();
-        if dir.exists()
-            && let Err(err) = std::fs::remove_dir_all(&dir)
-        {
-            eprintln!("error: failed to clear index cache: {}", err);
-            return EXIT_ERROR;
+        if dir.exists() {
+            if let Err(err) = std::fs::remove_dir_all(&dir) {
+                eprintln!("error: failed to clear index cache: {}", err);
+                return EXIT_ERROR;
+            }
         }
         if !style::is_quiet() {
             println!("cleared index cache");

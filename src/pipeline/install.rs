@@ -322,9 +322,7 @@ impl Resolver {
 
         // Cross-source identity conflict: the same (kind, name) reached from
         // two different sources (format-spec §3.7).
-        if let Some(prev) = self.item_label.get(&node)
-            && prev != label
-        {
+        if let Some(prev) = self.item_label.get(&node).filter(|prev| *prev != label) {
             anyhow::bail!(
                 "{kind} `{name}` is required from two different sources: `{prev}` and `{label}`"
             );
@@ -571,9 +569,7 @@ impl BundleResolver {
 
     fn visit(&mut self, label: &str, name: &str) -> Result<()> {
         // Cross-source bundle conflict: same bundle name from two sources.
-        if let Some(prev) = self.bundle_label.get(name)
-            && prev != label
-        {
+        if let Some(prev) = self.bundle_label.get(name).filter(|prev| *prev != label) {
             anyhow::bail!(
                 "bundle `{name}` is required from two different sources: `{prev}` and `{label}`"
             );
@@ -1181,9 +1177,7 @@ fn install_items_of_kind(
         // Audience/identity filtering keys on the effective name, not the
         // folder, so a filter referencing a divergent rule/agent name
         // resolves correctly.
-        if let Some(items) = filter
-            && !items.contains(kind, &name)
-        {
+        if filter.is_some_and(|items| !items.contains(kind, &name)) {
             continue;
         }
 
@@ -1241,13 +1235,13 @@ fn install_items_of_kind(
             if full.exists() {
                 let _ = fs::remove_file(&full);
             }
-            if let Some(parent) = full.parent()
-                && parent
+            if let Some(parent) = full.parent().filter(|parent| {
+                parent
                     .file_name()
                     .and_then(|f| f.to_str())
                     .is_some_and(|f| f == name)
-                && parent.is_dir()
-            {
+                    && parent.is_dir()
+            }) {
                 let _ = fs::remove_dir(parent);
             }
         }

@@ -480,14 +480,14 @@ pub fn install_with_lockfile(
             std::collections::BTreeMap::new()
         };
     let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
-        if let Some(closure) = &closure
-            && let Some(src_label) = closure.item_source.get(&(kind, name.to_string()))
-        {
-            let gr = closure
-                .by_source
-                .get(src_label)
-                .and_then(|si| si.git_ref.clone());
-            return (src_label.clone(), gr);
+        if let Some(closure) = &closure {
+            if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
+                let gr = closure
+                    .by_source
+                    .get(src_label)
+                    .and_then(|si| si.git_ref.clone());
+                return (src_label.clone(), gr);
+            }
         }
         (label.clone(), git_ref.map(str::to_string))
     };

@@ -154,9 +154,7 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
             std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
         // An absent `name:` falls back to the directory name (§2.1), so it
         // can never conflict — only an explicit divergent name does.
-        if let Some(existing_name) = read_name_field(&raw, &path)?
-            && existing_name != name
-        {
+        if let Some(existing_name) = read_name_field(&raw, &path)?.filter(|n| n != name) {
             bail!(
                 "{}: existing skill entrypoint declares `name: {existing_name}` — a skill \
                  must share the directory's name `{name}` (format-spec §2.1, Agent Skills \

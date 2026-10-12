@@ -20,9 +20,7 @@ pub fn rule_frontmatter(rule: &Rule, name: &str) -> Result<String> {
         Value::from(rule.description.clone()),
     );
 
-    if let Some(scope) = &rule.scope
-        && !scope.paths.is_empty()
-    {
+    if let Some(scope) = rule.scope.as_ref().filter(|scope| !scope.paths.is_empty()) {
         let paths: Vec<Value> = scope.paths.iter().cloned().map(Value::from).collect();
         map.insert(Value::from("paths"), Value::Sequence(paths));
     }

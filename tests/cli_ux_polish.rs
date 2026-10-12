@@ -129,10 +129,7 @@ fn remove_short_source_flag_is_recognised() {
 }
 
 #[test]
-fn remove_by_source_under_yes_flag_skips_prompt_and_proceeds() {
-    // No TTY in assert_cmd, so the prompt would already be skipped — but
-    // the explicit -y is the user-visible contract: never prompt, always
-    // proceed. Worth pinning down.
+fn remove_by_source_under_yes_flag_in_non_tty_proceeds() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -159,6 +156,88 @@ fn remove_by_source_under_yes_flag_skips_prompt_and_proceeds() {
         stdout.contains("Removed"),
         "expected removal report on stdout, got: {stdout}"
     );
+}
+
+#[test]
+#[cfg(unix)]
+fn remove_by_source_under_yes_flag_with_terminal_stdin_skips_prompt_and_proceeds() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
+        .assert()
+        .success();
+
+    let output_paths = [
+        ".claude/skills/create-api-endpoint/SKILL.md",
+        ".github/skills/create-api-endpoint/SKILL.md",
+        ".agents/skills/create-api-endpoint/SKILL.md",
+    ];
+    for path in output_paths {
+        assert!(target.join(path).is_file(), "not installed: {path}");
+    }
+
+    let label = format!("local:{}", source.display());
+    let mut remove = common::upskill_cmd(&home);
+    remove
+        .current_dir(&target)
+        .args(["remove", "--source", &label, "--yes"])
+        .env("NO_COLOR", "1");
+    let spec = serde_json::json!({
+        "program": remove.get_program().to_str().unwrap(),
+        "args": remove.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),
+        "cwd": remove.get_current_dir().unwrap(),
+        "home": home,
+        "env": remove.get_envs().map(|(key, value)| {
+            (key.to_str().unwrap(), value.map(|value| value.to_str().unwrap()))
+        }).collect::<Vec<_>>(),
+    });
+    let output = std::process::Command::new("python3")
+        .env("HOME", &home)
+        .env("USERPROFILE", &home)
+        .args([
+            "-c",
+            include_str!("fixtures/terminal_stdin.py"),
+            &spec.to_string(),
+        ])
+        .output()
+        .expect("Python 3 with stdlib pty is required for the Unix terminal test");
+    assert!(
+        output.status.success(),
+        "terminal fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let stderr = result["stderr"].as_str().unwrap();
+    let stdout = result["stdout"].as_str().unwrap();
+    assert!(
+        stderr.contains("terminal stdin verified\n"),
+        "child did not verify terminal stdin: {result}"
+    );
+    assert_eq!(
+        result["timed_out"], false,
+        "--yes must finish without waiting for terminal input: {result}"
+    );
+    assert_eq!(result["returncode"], 0, "remove failed: {result}");
+    assert!(!stderr.contains("[y/N]"), "unexpected prompt: {stderr}");
+    assert!(
+        stdout.contains("Removed 4 item(s)"),
+        "expected all fixture items removed: {stdout}"
+    );
+    let lock = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&lock).unwrap();
+    assert!(parsed["items"].as_array().unwrap().is_empty(), "{parsed}");
+    for path in output_paths {
+        assert!(!target.join(path).exists(), "still installed: {path}");
+    }
 }
 
 #[test]
