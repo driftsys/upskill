@@ -342,9 +342,12 @@ data. Observations must match affected locations exactly; missing, duplicate or
 extraneous observations conflict. Supplied bytes do not establish source or
 filesystem evidence. Callers must resolve direct/bundle references and native
 compatibility first. The separate pure whole-file planner is implemented in
-[§4.4](#44-owned-whole-file-operation-plans). Complete reference-graph authority,
-per-owner consumer association, source-derived resource sets, mixed instruction/file
-composition, state/lifecycle integration and transactional execution remain pending. This prerequisite changes no CLI behavior,
+[§4.4](#44-owned-whole-file-operation-plans); captured compilation in
+[§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
+resource outputs. Complete reference-graph authority, per-owner consumer
+association, connecting compiled outputs to complete lifecycle desired sets,
+mixed instruction/file composition, state/lifecycle integration and transactional
+execution remain pending. This prerequisite changes no CLI behavior,
 source format or lockfile format and enables no native client support.
 
 See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -356,9 +359,11 @@ The separate library module `source_manifest` provides
 `capture_source(&Path) -> anyhow::Result<SourceManifest>` and pure
 `validate_manifest(&SourceManifest) -> anyhow::Result<()>`. It does not change
 commands, legacy source hashing/discovery, source formats or lockfile writes.
-This supplies captured values for future source-derived file and resource sets;
-the pure planner for explicitly supplied whole-file sets is implemented in
-[§4.4](#44-owned-whole-file-operation-plans).
+This supplies the captured values consumed by the implemented
+[item compiler](#45-captured-item-compilation) to derive complete per-client
+entrypoint and resource outputs. The pure planner for explicitly supplied
+whole-file sets is implemented in [§4.4](#44-owned-whole-file-operation-plans).
+Connecting compiled outputs to complete lifecycle desired sets remains pending.
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,

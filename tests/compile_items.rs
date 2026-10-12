@@ -363,6 +363,26 @@ fn active_overrides_are_rejected_for_every_kind_client_even_when_ignored() {
 }
 
 #[test]
+fn ordinary_overrides_reject_complete_all_client_compilation_including_late_clients() {
+    for kind in ItemKind::ALL {
+        for client in [Client::OpenCode, Client::Claude, Client::Copilot] {
+            let filename = format!(
+                "{}.{}.md",
+                kind.entrypoint_filename().strip_suffix(".md").unwrap(),
+                client.name()
+            );
+            let source = fixture(&[
+                (kind.entrypoint_filename(), ENTRY),
+                (&filename, b"ordinary unignored override"),
+            ]);
+            let req = request(kind);
+            rejected(&source, &req, "unsupported override");
+            rejected(&source, &req, &filename);
+        }
+    }
+}
+
+#[test]
 fn overrides_for_audience_excluded_clients_do_not_block_compilation() {
     let source = fixture(&[
         (
@@ -613,23 +633,28 @@ fn selection_order_and_audience_exclusions_follow_client_declaration_order() {
 #[test]
 fn invalid_names_fail_and_valid_unicode_names_survive() {
     for invalid in ["", ".", "..", "a/b", "a\\b", "a:b", "a\nb", "a\u{7f}b"] {
-        let source = fixture(&[("SKILL.md", ENTRY)]);
-        rejected(
-            &source,
-            &ItemCompileRequest {
-                folder_name: invalid.into(),
-                ..request(ItemKind::Skill)
-            },
-            "folder name",
-        );
-        rejected(
-            &source,
-            &ItemCompileRequest {
-                alias: Some(invalid.into()),
-                ..request(ItemKind::Skill)
-            },
-            "alias",
-        );
+        for kind in ItemKind::ALL {
+            let source = fixture(&[(
+                kind.entrypoint_filename(),
+                b"---\nschema: 1\nname: declared-source\ndescription: demo\n---\n\n# Demo\n",
+            )]);
+            rejected(
+                &source,
+                &ItemCompileRequest {
+                    folder_name: invalid.into(),
+                    ..request(kind)
+                },
+                "folder name",
+            );
+            rejected(
+                &source,
+                &ItemCompileRequest {
+                    alias: Some(invalid.into()),
+                    ..request(kind)
+                },
+                "alias",
+            );
+        }
         for kind in [ItemKind::Rule, ItemKind::Agent] {
             let name = serde_yaml_ng::to_string(invalid).unwrap();
             let entry = format!(
