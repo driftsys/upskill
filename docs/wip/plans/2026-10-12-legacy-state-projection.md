@@ -55,7 +55,7 @@
 - Diagnostics are structured row locations (`Global`, `Item(usize)`, `Bundle(usize)`) plus distinguishable kinds: unsupported schema, invalid source, unknown client, invalid installed name, duplicate item identity, identical candidate entrypoint. Invalid-source diagnostics carry the existing actionable parser message. Collision diagnostics identify all involved row indices. Do not add a generic blocking-policy flag.
 - No type in this module derives Serialize/Deserialize or contains `OwnedArtifact`, owners, artifact hashes, modes, source verification or I/O handles. `Clone`, `Debug`, `PartialEq`, `Eq` are suitable for data assertions.
 
-- [ ] **Step 1: Add public-boundary failing acceptance tests.**
+- [x] **Step 1: Add public-boundary failing acceptance tests.**
 
 Create the fixture using actual typed state (no CLI or filesystem fixture is required):
 
@@ -113,15 +113,15 @@ Add separate assertions for each case below, with exact diagnostic variant/locat
 8. Plugin statuses Installed/Skipped/Instructions and MCP Installed/Skipped, arbitrary client/scope strings, bundle references and duplicate integration rows survive exact typed equality. Include all fields and vector order in snapshot assertions.
 9. Projection has no scope input: identical typed state gives identical relative paths regardless of a future project/user scope root.
 
-- [ ] **Step 2: Run the acceptance test and record the expected failure.**
+- [x] **Step 2: Run the acceptance test and record the expected failure.**
 
 Run `cargo test --test legacy_projection`. Before adding the module, expect unresolved `upskill::legacy`; save the compiler failure. After minimal public type declarations compile, run again and record assertion failures proving missing interpretation/layout behavior. Do not count only compile failure as behavioral RED evidence.
 
-- [ ] **Step 3: Implement the pure projection and frozen layout.**
+- [x] **Step 3: Implement the pure projection and frozen layout.**
 
 Build the owned snapshot first. Enumerate original vectors without reordering or dropping rows. Check `schema == 1` before interpreting values. For schema 1, decode sources with the persisted-label parser; resolve the fixed historical client strings; validate the portable single-component installed name; compute candidates for distinct known clients. Collect diagnostics while continuing other rows. Detect duplicate identities and identical entrypoints across distinct rows without choosing a winner. Use borrowed-key grouping or simple bounded loops for diagnostics, never replace source vectors with maps.
 
-Implement the historical path mapping once in `src/legacy/layout.rs`; keep the fixed client enum explicit. Return portable strings. Existing `output_path`, `is_dir_backed` and `resource_base_path` wrappers convert `generate::Client` explicitly and construct `PathBuf` from the historical paths. Keep existing filesystem operations and pipeline caller signatures intact. Preserve or adapt existing layout tests to literal expectations, avoiding tests that merely compare a wrapper to its own implementation.
+Implement the historical path mapping once in `src/legacy/layout.rs`; keep the fixed client enum explicit. Preserve the existing pure native `PathBuf` computation, including raw-name behavior, and let current pipeline wrappers delegate through explicit `generate::Client` conversion. Only the projector validates installed names and converts the resulting safe UTF-8 paths into portable forward-slash strings. This controller ruling preserves the stronger unchanged-pipeline contract without duplicating resource layout logic. Keep existing filesystem operations and pipeline caller signatures intact. Preserve or adapt existing layout tests to literal expectations, avoiding tests that merely compare a wrapper to its own implementation.
 
 ```rust
 // Pure boundary: no root, filesystem, fetch or native client access.
@@ -134,15 +134,15 @@ pub fn project_legacy(lockfile: &Lockfile) -> LegacyProjection {
 
 `project_records` is a private decomposition choice, not a required extra layer; implement directly if clearer. The concrete row/diagnostic types above are the contract. Do not return `Result` for malformed historical facts that must remain inspectable.
 
-- [ ] **Step 4: Run focused GREEN checks and a semantic mutation.**
+- [x] **Step 4: Run focused GREEN checks and a semantic mutation.**
 
 Run `cargo test --test legacy_projection` and `cargo test --lib pipeline::output::tests`. Temporarily alter empty-client expansion to omit OpenCode, run only `empty_clients_preserve_state_and_expand_only_historical_clients`, and require an assertion failure. Restore production bytes and show focused GREEN again. Record exact commands and outputs; never commit the mutant. Existing pipeline golden/resource tests must also stay green in full verification.
 
-- [ ] **Step 5: Update canonical docs and the M1 plan.**
+- [x] **Step 5: Update canonical docs and the M1 plan.**
 
 Document the pure library prerequisite, typed preservation, fixed historical defaults, unresolved requested selection and candidate-only semantics in the specification. In the book, state that current commands and schema remain unchanged; avoid advertising an unavailable migration command. In M1, identify this completed prerequisite and retain pending source verification, historical reproducibility/resources, adoption, schema-2 command preservation, exact backup and transactional execution work.
 
-- [ ] **Step 6: Verify and commit.**
+- [x] **Step 6: Verify and commit.**
 
 Run `just fmt`, `just verify`, and `cargo +1.85.0 check --locked --all-targets`. Use the authorized escalation only where the existing formatter cache, npm resolution, shared git index or loopback test restrictions require it. Report genuine failures separately from environment failures. Update checkboxes, write the complete ignored task report with RED/GREEN/mutation/gate evidence and scope limits, then commit `feat: project legacy lockfile state without adoption` with code, tests and docs together. Do not push or open a PR; controller handles task/final/PR review, CI and merge.
 
