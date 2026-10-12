@@ -79,19 +79,23 @@ fn validate_hash(hash: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_artifact(artifact: &OwnedArtifact) -> Result<()> {
-    if artifact.root.path.as_os_str().is_empty() || !artifact.root.path.is_absolute() {
-        bail!("installation root must be a nonempty absolute path");
-    }
-    if artifact.path.contains(['\\', ':'])
-        || artifact.path.chars().any(char::is_control)
-        || artifact
-            .path
+pub(crate) fn validate_relative_path(path: &str) -> Result<()> {
+    if path.contains(['\\', ':'])
+        || path.chars().any(char::is_control)
+        || path
             .split('/')
             .any(|component| matches!(component, "" | "." | ".."))
     {
         bail!("artifact path must contain portable forward-slash relative components");
     }
+    Ok(())
+}
+
+fn validate_artifact(artifact: &OwnedArtifact) -> Result<()> {
+    if artifact.root.path.as_os_str().is_empty() || !artifact.root.path.is_absolute() {
+        bail!("installation root must be a nonempty absolute path");
+    }
+    validate_relative_path(&artifact.path)?;
     if artifact.owners.is_empty() || artifact.consumers.is_empty() {
         bail!("at least one owner and one consumer are required");
     }

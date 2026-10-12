@@ -15,11 +15,12 @@ use anyhow::{Context, Result};
 use super::ItemKind;
 use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs, walk_files};
 
-/// SHA-256 hash of every file under `dir`, with each file's path-relative
-/// name folded into the hash so renames register as drift. Recursive,
-/// deterministic (sorted file list), and `None` when `dir` is empty or
-/// unreadable. Used by the pipeline to populate `LockedItem.hash` and by
-/// `doctor` (Phase B3) to detect SSOT drift.
+/// Best-effort legacy SHA-256 over sorted discovered paths and readable content.
+/// Recursive discovery skips symlinks and traversal errors and can include
+/// non-directory special entries. A read failure retains that entry's path in the
+/// digest but omits its bytes. Returns `None` when discovery yields no entries.
+/// Used for `LockedItem.hash` and `doctor` drift detection; this is not complete
+/// captured source evidence.
 pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
     let mut files = walk_files(dir);
     if files.is_empty() {

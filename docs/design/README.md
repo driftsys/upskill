@@ -6,3 +6,5 @@ Future designs remain in [WIP](../wip/README.md).
 
 - [Generation and installation](generation-pipeline.md)
 - [Owned instruction operation planning](owned-instruction-planning.md)
+
+- [Strict captured source manifests](strict-source-manifests.md)

@@ -349,6 +349,58 @@ source format or lockfile format and enables no native client support.
 See the [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
 and its decision records for implementation boundaries and rationale.
 
+### 4.3 Strict captured source manifests
+
+The separate library module `source_manifest` provides
+`capture_source(&Path) -> anyhow::Result<SourceManifest>` and pure
+`validate_manifest(&SourceManifest) -> anyhow::Result<()>`. It does not change
+commands, legacy source hashing/discovery, source formats or lockfile writes.
+This is a prerequisite for future whole-file and resource planning.
+
+`SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
+`content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
+owned `bytes`, their lowercase `content_sha256`, and optional `mode`. Capture
+includes every observed regular file without ignore rules or entrypoint
+exclusions, including nested entrypoints, overrides, empty and binary files.
+Empty directories have no record. Each file is read once; on Unix its observed
+mode is `PermissionsExt::mode() & 0o7777`, and on other hosts mode is absent.
+Mode evidence does not authorize applying permissions or executing content.
+
+Capture reconstructs the root from `Path::components()` before metadata lookup,
+so trailing separators and dot suffixes do not hide an observed root symlink.
+It rejects observed root symlinks and non-directory roots, every observed entry
+symlink and special entry, and enumeration, metadata or file-read errors. Errors
+return no partial manifest. Relative paths reject empty, dot and parent components,
+backslashes, colons, control characters and non-UTF-8 names. Hard-linked regular
+files are represented by each path without a topology claim.
+
+The manifest hash is SHA-256 over these exact bytes, in order:
+
+1. ASCII `upskill:source-manifest:v1` followed by one NUL byte.
+2. File count as an unsigned 64-bit big-endian integer.
+3. For each file in Rust string path order: path byte length as unsigned 64-bit
+   big-endian, UTF-8 path bytes, content byte length in the same encoding, exact
+   content bytes, then mode-presence byte (`0` absent or `1` present). A present
+   mode follows as an unsigned 32-bit big-endian integer.
+
+Length conversion is checked. Per-file hash fields are verified but are not
+additional digest inputs. Root spelling, timestamps and enumeration order are
+excluded. Pure validation borrows the public values without mutation or sorting
+and checks lexical paths, strict ascending uniqueness, optional mode range
+`0..=0o7777`, exact file hashes and the aggregate hash. Public records and valid
+hashes do not establish trusted provenance or source authenticity.
+
+Standard synchronous filesystem observation is not an atomic snapshot,
+descriptor-relative containment or protection against concurrent replacement.
+Root ancestors may be symlinks. Lexical validation does not qualify destination
+case collisions, reserved names, aliases or filesystem limits. Immutable Git
+evidence, source stabilization, qualified filesystem observation, destination
+qualification, whole-file/resource plans, lifecycle state and execution, and
+Codex activation remain pending.
+
+See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
+and its decision records for implementation boundaries and rationale.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

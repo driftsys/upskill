@@ -73,6 +73,7 @@ src/
 │                        Client enum + claude/copilot/opencode + directives + dprint
 │
 ├── source.rs            Source URL parsing and classification (typed errors)
+├── source_manifest.rs   Strict captured source evidence and pure validation
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search
 │
