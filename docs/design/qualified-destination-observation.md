@@ -1,6 +1,7 @@
 # Qualified destination observation
 
-Status: selected design; implementation and hosted qualification are pending.
+Status: implemented with local APFS evidence; hosted Linux and Windows checks
+remain pending.
 
 ## Intent and scope
 
@@ -200,3 +201,62 @@ observed on the hosted filesystem, including required mount-ID availability.
 Windows checks establish the explicit unsupported/compilation boundary only.
 Measure matched release CLI and live snapshot/verification probe sizes using the
 same toolchain and baseline. Record exact scope, bytes and remaining limits.
+
+## Implementation evidence and remaining gates
+
+The library boundary is implemented in `src/filesystem/destinations.rs`, with
+portable candidate validation, descriptor-relative acquisition/revalidation and
+filesystem qualification in separate private modules. Scope reopening reuses the
+original selected-spelling, canonical-path and pinned-identity comparisons.
+
+Local APFS acceptance covers D01-D09, including exact binary bytes and modes,
+absence, root aliases, conservative overlap, stored spelling, FIFO/socket
+rejection, adversarial changes and observation under an existing writer guard.
+Private tests independently pin no-follow openers, exact-byte verification with
+unchanged real-file stamps, first-missing-component insertion, profile/mount
+validators, descriptor flags and drop/error cleanup. A small private acquisition
+phase hook pins namespace replacement between capture and its before-return
+postcheck. Linux metadata-validator examples run on macOS with synthetic fields;
+they do not establish kernel statx or privileged mount behavior.
+
+macOS FIFO fixtures use a bounded `/usr/bin/mkfifo` child because rustix does not
+export `mkfifoat` there. Linux fixtures use rustix directly. Descriptor cleanup is
+measured in a bounded isolated child, with a positive retained-handle count and
+baseline restoration after both success/drop and failure. This checks read
+handle ownership independently of writer-lock reacquisition. Native non-UTF-8
+root support remains conditional: local APFS rejects the fixture with errno 92.
+
+Hosted Linux runtime qualification, including a returned statx mount ID, and
+hosted Windows compilation/unsupported-boundary checks remain pending. No
+privileged mount creation, device-node creation, hostile namespace relocation,
+real I/O/resource-exhaustion injection or exotic filesystem qualification is
+claimed. Synthetic metadata and error-classification tests do not replace those
+experiments. The API remains inactive in existing commands and schema 1.
+
+Local validation passed `just fmt`, full `just verify`, warning-denying
+all-target Clippy and `cargo +1.85.0 check --locked --all-targets`. The focused
+APFS suites pass 22 destination cases, 15 private destination cases and the
+existing 12 scope cases. Separate compile-fail rustdoc cases pin literal
+construction and Clone rejection. Sixteen independent semantic controls produced
+assertion failures, including omission of capture's before-return postcheck,
+exact-byte comparison and its production call, directory identity, profile and
+mount evidence, first-missing verification and each retained descriptor flag
+class and exact location tuple ordering. Mutated source bytes were restored and SHA-256 hashes compared before the
+final green gates. Local permission denial was observed as EACCES.
+
+Matched stripped release measurements use Rust 1.97.1, LLVM 22.1.6 and
+`aarch64-apple-darwin`, with the repository release profile and matching package
+versions. CLI baseline `8298386` and candidate both measure 3,215,120 bytes;
+the inactive API is removed from the CLI by dead-code elimination, so this does
+not measure its active cost. Standalone probes create identical temporary binary
+input. The control constructs only the path/data; the live probe opens a scope,
+captures destinations, verifies them and consumes captured bytes. Both run
+successfully on APFS. Control: 302,960 bytes; live: 336,848 bytes; measured
+increment: 33,888 bytes. The live code section grows by 30,288 bytes. Data,
+constants, alignment padding and Mach-O linking/signature metadata contribute
+to the file-size result; this is not a runtime memory or performance estimate.
+
+Local all-target cross-compilation also passed for `aarch64-unknown-linux-musl`
+and `x86_64-pc-windows-gnu`, using Zig C wrappers for the existing ring dependency.
+These compile checks do not establish hosted execution, Linux mount-ID
+availability or Windows runtime behavior.

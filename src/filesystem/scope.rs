@@ -73,6 +73,11 @@ impl QualifiedScope {
         anyhow::bail!("qualified scope roots are unsupported on this operating system")
     }
 
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(super) fn reopen_directory(&self) -> Result<std::fs::File> {
+        self.root.reopen_directory()
+    }
+
     /// Acquire a fresh nonblocking exclusive directory lock, or return an error.
     /// Contention returns a busy error; filesystem failures retain their cause.
     pub fn try_lock_writer(&self) -> Result<ScopeWriterGuard<'_>> {
@@ -189,7 +194,11 @@ mod backend {
         }
 
         pub(super) fn verify_binding(&self) -> Result<()> {
-            let (resolved, identity, _) =
+            self.reopen_directory().map(drop)
+        }
+
+        pub(super) fn reopen_directory(&self) -> Result<File> {
+            let (resolved, identity, directory) =
                 select(&self.selected).context("revalidate qualified scope root binding")?;
             let held = self
                 .directory
@@ -201,7 +210,7 @@ mod backend {
             {
                 bail!("qualified scope root binding changed");
             }
-            Ok(())
+            Ok(directory)
         }
 
         pub(super) fn try_lock_writer(&self) -> Result<File> {

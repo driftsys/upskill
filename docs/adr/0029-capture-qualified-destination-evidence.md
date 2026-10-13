@@ -1,6 +1,6 @@
 # AD-0029: Capture qualified destination evidence
 
-Status: selected; implementation and hosted qualification pending.
+Status: implemented with local APFS evidence; hosted qualification pending.
 
 ## Context
 
@@ -46,4 +46,15 @@ Source stabilization, permission policy, schema-2 persistence, apply/recovery an
 CLI activation remain separate gates. Completion requires acceptance RED,
 independent semantic controls, real APFS and hosted Linux evidence, unsupported
 Windows checks, Rust 1.85, full repository verification and matched live-API size
-measurements. No completion evidence exists yet.
+measurements. Local APFS acceptance, private evidence tests and independent
+semantic controls now cover the implemented boundary. Linux profile, absent
+mount-ID mask and same-device/different-mount-ID validators are tested separately
+with synthetic metadata; actual hosted Linux statx and Windows qualification
+remain pending. Privileged mounts, device nodes and hostile namespace relocation
+remain unexercised. See the durable design for the evidence scope and limits.
+
+Local full verification, warning-denying all-target Clippy and Rust 1.85
+all-target checks passed. Matching Rust 1.97.1 macOS release probes measure
+33,888 additional bytes when snapshot capture and verification are live; the
+inactive CLI remains 3,215,120 bytes at both baseline `8298386` and candidate.
+This is local binary evidence, not hosted qualification or runtime cost.

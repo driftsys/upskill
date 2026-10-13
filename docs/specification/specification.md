@@ -721,6 +721,55 @@ See [AD-0028](../adr/0028-lock-qualified-scope-directories.md) and the
 [qualified scope-lock design](../design/qualified-scope-locking.md) for rationale,
 acceptance examples and platform evidence.
 
+### 4.8 Qualified destination observations
+
+`QualifiedScope::observe_destinations(&[FileLocation])` captures exact optional
+`FileValue` values beneath the borrowed physical scope. Regular files return
+binary bytes and Unix permission bits (`Some(mode & 0o7777)`); absent destinations
+return `None`. Observations preserve the supplied native roots and portable
+paths, sorted by scope, raw root spelling and relative path. Every supplied root
+must independently qualify and bind to the same physical directory, including
+ancestor-alias spellings and different Project/User labels. Empty input still
+validates the scope and filesystem profile.
+
+Capture validates portable paths and rejects every potentially overlapping pair
+before descendant reads. Components may match when either contains non-ASCII
+characters or both compare equal ignoring ASCII case. If every component pair
+through the shorter path may match, the batch is rejected, including duplicates,
+prefix pairs and aliases across root spellings or labels. This conservative rule
+can reject distinct files on case-sensitive filesystems.
+
+The inactive API qualifies APFS on macOS and ext-family/tmpfs filesystems on
+Linux. Linux requires a returned statx mount ID; macOS retains the fstatfs
+filesystem ID and mount bindings. Unknown profiles, missing mount evidence,
+cross-mount traversal and other operating systems return explicit errors.
+Descriptor-relative enumeration requires exact stored component spellings.
+No-follow traversal rejects symlinks, non-directory ancestors, directory leaves,
+files with multiple links and special files. Only ENOENT establishes absence;
+permission, I/O, resource and unsupported failures remain contextual errors.
+
+An opaque, non-Clone `DestinationSnapshot` retains close-on-exec root, directory
+and file handles, selected root bindings, mount evidence and either exact file
+stamps or the first missing component with its unresolved suffix. Capture checks
+identity, type, links, size, mode, modification/change times and byte count around
+each read. Before returning, and again from `verify_unchanged()`, it checks fresh
+bindings and directory identities, exact stored spellings, mounts, exact bytes,
+file stamps and absence evidence. These checks never refresh stale expectations.
+Same-size edits with restored mtime, chmod, identical-byte inode replacement,
+ancestor replacement, missing-to-present transitions and root-alias retargeting
+invalidate evidence. Access times and unrelated directory timestamp changes do
+not invalidate it. Retained handles close on drop and every error path.
+
+Observation creates no files, directories, locks or persistent state and acquires
+no writer guard. Plain observations convey no execution or permission authority.
+These sampled checks do not exclude external writers or hostile ancestor
+relocation. A future executor must retain its writer guard and independently
+establish complete lifecycle inputs, authority, permission policy, immediate
+pre-effect checks and recovery. Existing commands and schema 1 remain unchanged;
+Windows qualification, hosted platform evidence and lifecycle execution remain
+pending. See [AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
+the [destination observation design](../design/qualified-destination-observation.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).
