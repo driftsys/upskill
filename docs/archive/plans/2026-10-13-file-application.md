@@ -40,7 +40,7 @@ Create src/files/permissions.rs for the pure public policy, tests/file_permissio
 - Consumes: DestinationMode::Absent or Present(Option<u32>); PermissionSource::Generated or Resource { captured_mode: Option<u32> }; ResourceExecutionPolicy::Disabled or OwnerExecutable.
 - Produces: files::permissions::select_file_mode(destination, source, resource_execution) -> anyhow::Result<u32>; all three enums derive Debug, Clone, Copy, PartialEq, Eq. No serialized representation or effect capability.
 
-- [ ] **Step 1: Write public acceptance tests before implementation.**
+- [x] **Step 1: Write public acceptance tests before implementation.**
 
 Use this concrete starting suite in tests/file_permissions.rs, extending its diagnostic assertions where the spec distinguishes contextual errors:
 
@@ -123,9 +123,9 @@ fn invalid_evidence_rejects_even_when_existing_mode_would_win() {
 
 These are library integration tests with no binary invocation or HOME mutation. Do not add a CLI harness call for a pure API. P10 input immutability follows from Copy value inputs; inspect purity rather than writing a tautological copy test.
 
-- [ ] **Step 2: Run acceptance RED.** Run cargo test --test file_permissions before adding the module. Preserve the expected unresolved-import compile RED separately from later semantic assertion RED controls.
+- [x] **Step 2: Run acceptance RED.** Run cargo test --test file_permissions before adding the module. Preserve the expected unresolved-import compile RED separately from later semantic assertion RED controls.
 
-- [ ] **Step 3: Implement the minimal public policy.**
+- [x] **Step 3: Implement the minimal public policy.**
 
 Add `pub mod permissions;` beside plan in files/mod.rs. Create the three enum definitions from the spec and a function following this complete algorithm; keep diagnostics contextual and document the inactive supplied-value boundary.
 
@@ -172,13 +172,13 @@ pub fn select_file_mode(
 }
 ```
 
-- [ ] **Step 4: Run focused GREEN and independently failing semantic controls.** Run cargo test --test file_permissions. Then perform one independent compiled omission per assertion: existing-mode preservation; unknown-present rejection; copying source mode under Disabled; any execute bit instead of owner bit; ignoring explicit Disabled; rejecting existing special bits; destination range validation; captured resource range validation; unknown executable-resource mode rejection. Preserve actual assertion output, exact original/restored SHA and focused GREEN after each. Keep temporary controls in owned scratch or /tmp, never commit them. Record any invalid control honestly and do not count compiler failures as semantic RED. Use the production code unchanged after exact restoration.
+- [x] **Step 4: Run focused GREEN and independently failing semantic controls.** Run cargo test --test file_permissions. Then perform one independent compiled omission per assertion: existing-mode preservation; unknown-present rejection; copying source mode under Disabled; any execute bit instead of owner bit; ignoring explicit Disabled; rejecting existing special bits; destination range validation; captured resource range validation; unknown executable-resource mode rejection. Preserve actual assertion output, exact original/restored SHA and focused GREEN after each. Keep temporary controls in owned scratch or /tmp, never commit them. Record any invalid control honestly and do not count compiler failures as semantic RED. Use the production code unchanged after exact restoration.
 
-- [ ] **Step 5: Complete current documentation.** Document exact API/selection/validation examples and remaining metadata/application/recovery boundaries in specification 4.10 and the existing durable records. Add the corresponding design/ADR/book links. Do not link durable documentation to docs/wip and do not rewrite prior raw archives or the broader application draft.
+- [x] **Step 5: Complete current documentation.** Document exact API/selection/validation examples and remaining metadata/application/recovery boundaries in specification 4.10 and the existing durable records. Add the corresponding design/ADR/book links. Do not link durable documentation to docs/wip and do not rewrite prior raw archives or the broader application draft.
 
-- [ ] **Step 6: Verify and commit.** Run just fmt followed by just verify; run fresh cargo +1.85.0 check --locked --all-targets and cargo clippy --all-targets --locked -- -D warnings. Use isolated HOME and a task-specific CARGO_TARGET_DIR; preserve logs and machine-readable evidence. Check every inherited protected hash. Stage only assigned code/tests/current permission docs and assigned raw spec/plan (never the broader draft or scratch). Commit normally with `feat: select explicit file permission policy`; do not bypass hooks. No push or PR by the implementer.
+- [x] **Step 6: Verify and commit.** Run just fmt followed by just verify; run fresh cargo +1.85.0 check --locked --all-targets and cargo clippy --all-targets --locked -- -D warnings. Use isolated HOME and a task-specific CARGO_TARGET_DIR; preserve logs and machine-readable evidence. Check every inherited protected hash. Stage only assigned code/tests/current permission docs and assigned raw spec/plan (never the broader draft or scratch). Commit normally with `feat: select explicit file permission policy`; do not bypass hooks. No push or PR by the implementer.
 
-- [ ] **Step 7: Return complete evidence for the independent task gate.** Write task-1-report.md under .superpowers/sdd/2026-10-13-file-application with commands, outcomes, semantic controls, restoration hashes, actual touched files, commit and remaining limits. Controller runs task review and the required whole-branch review, scoped gardening of only this spec/plan pair, then hosted CI and the numbered PR passes. Do not spawn an implementer-owned broad reviewer.
+- [x] **Step 7: Return complete evidence for the independent task gate.** Write task-1-report.md under .superpowers/sdd/2026-10-13-file-application with commands, outcomes, semantic controls, restoration hashes, actual touched files, commit and remaining limits. Controller runs task review and the required whole-branch review, scoped gardening of only this spec/plan pair, then hosted CI and the numbered PR passes. Do not spawn an implementer-owned broad reviewer.
 
 ## Controller handoff
 

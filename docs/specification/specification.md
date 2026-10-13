@@ -902,7 +902,8 @@ effect capability.
 
 Every supplied destination and captured resource mode must be within
 `0o0000..=0o7777`, including evidence unused by the selection branch. Errors
-identify destination or captured resource evidence. `Present(None)` rejects as
+identify destination or captured resource evidence. When multiple inputs are invalid,
+no particular diagnostic ordering is promised. `Present(None)` rejects as
 unknown existing mode. Existing modes containing any `0o7000` special bit reject
 as unsupported application policy; ordinary existing modes are returned exactly,
 including `0o000`, `0o400`, `0o640`, `0o755` and `0o777`, under either resource policy.

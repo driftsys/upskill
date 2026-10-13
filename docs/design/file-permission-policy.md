@@ -1,6 +1,6 @@
 # Explicit file permission selection
 
-Status: implemented as an inactive pure library API.
+This design describes the implemented inactive pure library API.
 
 [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md) separates captured resource modes from generated output permissions. The selected next prerequisite adds a pure selection interface before any qualified file effects.
 
@@ -28,7 +28,8 @@ evidence rejects even when an existing destination mode would otherwise win.
 Contextual errors distinguish destination evidence, captured resource evidence,
 unknown existing mode, existing special bits and unknown executable-resource mode.
 
-The public acceptance tests in `tests/file_permissions.rs` exercise literal modes
+The [implementation](https://github.com/driftsys/upskill/blob/main/src/files/permissions.rs)
+selects from supplied values. The [public acceptance tests](https://github.com/driftsys/upskill/blob/main/tests/file_permissions.rs) exercise literal modes
 and diagnostics. Independent omission controls pin preservation, unknown-mode
 handling, explicit policy, owner execution, special-bit handling and both evidence
 ranges. No mutable input exists: all inputs are `Copy` values and the function
