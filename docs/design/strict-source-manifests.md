@@ -67,10 +67,12 @@ introduced. The separate [pure whole-file planner](../specification/specificatio
 is implemented for explicitly supplied complete file sets. The separate
 [captured item compiler](captured-item-compilation.md) derives complete per-client
 entrypoint and resource outputs from these captured values. Connecting compiled
-outputs to complete lifecycle desired sets, source stabilization, qualified source
-observation and lifecycle execution remain later work. Qualified scope roots,
-writer locking and the inactive [destination observation boundary](qualified-destination-observation.md)
-are implemented separately; they do not stabilize these source manifests.
+outputs to complete lifecycle desired sets, immutable Git revision evidence and
+lifecycle execution remain later work. Qualified scope roots, writer locking,
+[destination observation](qualified-destination-observation.md) and
+[qualified source observation](qualified-source-observation.md) are implemented
+separately. Source snapshots retain revalidation evidence around this unchanged
+plain manifest format.
 The [mixed coordinator](mixed-owned-artifact-planning.md) now composes complete
 explicit file/contribution sets from supplied ownership and observations; it does
 not derive those lifecycle inputs from compiler outputs.
@@ -84,3 +86,14 @@ creation, so a private pure path-conversion fixture covers rejection there.
 FIFO and socket tests do not claim device-entry or concurrent-containment
 qualification. Platform-gated tests describe coverage, not proof that each host
 has executed them.
+
+## Qualified observation companion
+
+The inactive [qualified source boundary](qualified-source-observation.md) adds
+`SourceSnapshot`, borrowing one qualified scope and exposing this same manifest
+only by shared reference. It retains complete directory topology and native
+descriptor evidence for later non-refreshing checks. Its canonical assembly
+shares the strict source digest implementation; the existing ambient
+`capture_source` behavior and freely mutable plain values remain unchanged.
+This implements source observation only. Hosted qualification, lifecycle effects,
+permission policy, application and recovery remain separate gates.

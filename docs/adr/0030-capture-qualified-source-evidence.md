@@ -1,6 +1,6 @@
 # AD-0030: Capture qualified source evidence
 
-Selected design; implementation and qualification evidence pending.
+Inactive library implementation complete locally; final-head hosted qualification pending.
 
 ## Context
 
@@ -34,5 +34,22 @@ allocation or OS termination is not a recoverable exhaustion guarantee. A sample
 check cannot promise an atomic snapshot or exclusion against hostile writers.
 Source and destination roots may use separate qualified mounts. Permission
 application, Git revision/authenticity, lifecycle state, effects, recovery and
-Windows qualification remain separate gates. Implementation and hosted evidence
-must be recorded before changing this document's pending status.
+Windows qualification remain separate gates.
+
+Native APFS focused evidence currently covers 7 public source acceptance tests,
+25 source-private tests, 24 unchanged strict-manifest acceptance tests and 28
+destination acceptance tests. Independent omission controls retain exact
+restoration evidence. Complete release checks, MSRV and warning-denying all-target
+Clippy are required at task closeout; final-head hosted Linux missing-mask and
+Windows unsupported-host checks remain pending. See the design record for the
+local coverage and evidence limits. No lifecycle or CLI activation follows.
+
+## Matched local release size
+
+Rust 1.97.1 release builds with identical pinned root dependency resolution and
+release profile produce byte-identical baseline/candidate CLI binaries of
+3,215,120 bytes (delta 0). Minimal public-API probes use the same pinned package
+versions and profile: control 303,120 bytes, source capture plus revalidation
+353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
+records binary size only, not performance; inactive API code is stripped from the
+current CLI. Final-head hosted Linux/Windows qualification remains pending.

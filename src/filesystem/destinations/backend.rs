@@ -1,7 +1,7 @@
 //! Descriptor-relative traversal, retained identities and exact revalidation.
-use super::qualification::Mount;
 use crate::files::plan::{FileLocation, FileValue, ObservedFile};
 use crate::filesystem::QualifiedScope;
+use crate::filesystem::qualification::Mount;
 use anyhow::{Context, Result, bail};
 use rustix::fs::{AtFlags, Dir, FileType, Mode, OFlags, Stat, fstat, openat, statat};
 use rustix::io::Errno;

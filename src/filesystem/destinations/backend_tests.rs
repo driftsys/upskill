@@ -395,7 +395,7 @@ fn different_mount_binding_rejected_by_directory_and_evidence() {
     let (_tmp, scope, locations) = fixture();
     let (mut evidence, observations) = Evidence::capture(&scope, &locations).unwrap();
     evidence.verify(&scope, &observations).unwrap();
-    let different = super::super::qualification::tests::different_binding(&evidence.mount);
+    let different = crate::filesystem::qualification::tests::different_binding(&evidence.mount);
     let root = scope.reopen_directory().unwrap();
     assert!(
         Directory::new(root, &different).is_err(),

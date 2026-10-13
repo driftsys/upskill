@@ -5,7 +5,7 @@ use rustix::fs::AtFlags;
 use rustix::fs::fstatfs;
 use std::fs::File;
 #[derive(Debug, PartialEq, Eq)]
-pub(super) struct Mount {
+pub(in crate::filesystem) struct Mount {
     #[cfg(target_os = "linux")]
     id: u64,
     #[cfg(target_os = "macos")]
@@ -48,14 +48,15 @@ fn require_same_mount<T: PartialEq>(expected: &T, actual: &T) -> Result<()> {
     Ok(())
 }
 #[cfg(target_os = "macos")]
-pub(super) type DescriptorQueries = fn(&File) -> rustix::io::Result<rustix::fs::StatFs>;
+pub(in crate::filesystem) type DescriptorQueries =
+    fn(&File) -> rustix::io::Result<rustix::fs::StatFs>;
 #[cfg(target_os = "linux")]
-pub(super) type DescriptorQueries = (
+pub(in crate::filesystem) type DescriptorQueries = (
     fn(&File) -> rustix::io::Result<rustix::fs::StatFs>,
     fn(&File) -> rustix::io::Result<rustix::fs::Statx>,
 );
 impl Mount {
-    pub(super) fn queries() -> DescriptorQueries {
+    pub(in crate::filesystem) fn queries() -> DescriptorQueries {
         #[cfg(target_os = "macos")]
         {
             |file| fstatfs(file)
@@ -75,7 +76,7 @@ impl Mount {
             )
         }
     }
-    pub(super) fn of(file: &File, queries: DescriptorQueries) -> Result<Self> {
+    pub(in crate::filesystem) fn of(file: &File, queries: DescriptorQueries) -> Result<Self> {
         #[cfg(target_os = "macos")]
         let profile_query = queries;
         #[cfg(target_os = "linux")]
@@ -106,12 +107,12 @@ impl Mount {
             })
         }
     }
-    pub(super) fn require_same(&self, other: &Self) -> Result<()> {
+    pub(in crate::filesystem) fn require_same(&self, other: &Self) -> Result<()> {
         require_same_mount(self, other)
     }
 }
 #[cfg(test)]
-pub(super) mod tests {
+pub(in crate::filesystem) mod tests {
     use super::*;
     #[test]
     fn unknown_linux_profile_is_rejected() {
@@ -150,7 +151,7 @@ pub(super) mod tests {
         );
         apfs_profile(b"apfs").unwrap();
     }
-    pub(in crate::filesystem::destinations) fn different_binding(mount: &Mount) -> Mount {
+    pub(in crate::filesystem) fn different_binding(mount: &Mount) -> Mount {
         #[cfg(target_os = "macos")]
         {
             let mut on = mount.on.clone();

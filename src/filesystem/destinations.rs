@@ -8,8 +8,6 @@ use std::fmt;
 mod backend;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod candidates;
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-mod qualification;
 
 /// Opaque, non-Clone evidence for exact values beneath a borrowed scope.
 ///

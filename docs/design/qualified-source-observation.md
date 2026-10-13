@@ -1,10 +1,11 @@
 # Qualified source tree observation
 
-Date: 2026-10-13. Status: selected contract; implementation pending.
+Date: 2026-10-13. Status: inactive library boundary implemented; hosted qualification pending.
 Baseline: `1d8ac581a2111b149e5bcceb6d789a0063814696` (PR #273).
 Decision: [AD-0030](../adr/0030-capture-qualified-source-evidence.md).
-This durable contract records selected requirements; no source snapshot API is
-implemented at the recorded baseline.
+The source snapshot API is implemented separately from command dispatch. The
+recorded baseline predates this implementation; final-head hosted Linux and
+Windows evidence remains pending.
 
 ## Intent
 
@@ -171,3 +172,34 @@ activate CLI/schema-2, write migration backup/state, establish permission policy
 apply files, implement recovery or complete M1-A2/M1-A3/M1. Real privileged mounts,
 device nodes, physical I/O/exhaustion failures and hostile namespace behavior are
 unexercised unless separately evidenced. Durable status must remain honest.
+
+## Local implementation evidence
+
+Native APFS focused coverage includes 7 public source acceptance tests, 25
+source-private tests (including the public pre-return seam), 24 existing strict
+manifest tests and 28 existing destination acceptance tests. Source-private tests
+exercise stable reads, changed metadata, short reads, returned counts, contextual
+errors, retained flags, failed-capture cleanup, exact values, complete membership,
+independent inode identity, fractional mtime, changed mounts and native profile
+rejection. FIFO subprocesses own their deadlines, kill and reap only their child.
+Linux-only non-UTF-8 and missing returned mount-ID mask cases require native Linux
+execution. Windows exposes the opaque API but has no qualified backend.
+
+Independent omission evidence normalizes only competing stamp differences for
+membership and identity fixtures. Redundant source root-binding checks remain:
+their end-to-end omission control bypasses all source verification binding
+frontiers and rereads through original retained descriptors. Existing scope tests
+pin the underlying binding implementation. Individual redundant checks are not
+claimed independently necessary. Final task counts, restored checks and matched
+release-size evidence are recorded with implementation review; these local
+results do not complete hosted gates or M1.
+
+## Matched local release size
+
+Rust 1.97.1 release builds with identical pinned root dependency resolution and
+release profile produce byte-identical baseline/candidate CLI binaries of
+3,215,120 bytes (delta 0). Minimal public-API probes use the same pinned package
+versions and profile: control 303,120 bytes, source capture plus revalidation
+353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
+records binary size only, not performance; inactive API code is stripped from the
+current CLI. Final-head hosted Linux/Windows qualification remains pending.

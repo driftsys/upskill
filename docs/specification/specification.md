@@ -402,11 +402,12 @@ Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
-evidence, source stabilization, qualified source observation,
-compiler-to-lifecycle desired-set integration, lifecycle state and execution, and
+evidence, compiler-to-lifecycle desired-set integration, lifecycle state and
+execution, and
 Codex activation remain pending. Qualified scope roots and writer locking (§4.7)
 and the inactive destination observation boundary (§4.8) are implemented
-separately; neither stabilizes these source manifests.
+separately. Qualified source snapshots (§4.9) add retained source evidence without
+changing this freely mutable value interface.
 
 See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
 and its decision records for implementation boundaries and rationale.
@@ -859,3 +860,60 @@ nested under groups to any depth
 - User guide: [Getting started](https://driftsys.github.io/upskill/getting-started.html), [Commands](https://driftsys.github.io/upskill/commands.html), [Recipes](https://driftsys.github.io/upskill/recipes.html)
 - Agent Skills open standard: <https://agentskills.io>
 - skills.sh ecosystem: <https://skills.sh>
+
+### 4.9 Qualified source tree observations
+
+The inactive library boundary exposes
+`QualifiedScope::observe_source_tree(&self) -> anyhow::Result<SourceSnapshot<'_>>`.
+An opaque, non-Clone snapshot borrows exactly one independently selected
+qualified source scope. Its `manifest(&self) -> &SourceManifest` accessor borrows
+plain captured values, and `verify_unchanged(&self) -> anyhow::Result<()>` checks
+the original evidence without refreshing it. There is no public constructor,
+mutable accessor, serialization, write API or implicit writer lock. Debug output
+contains no captured content. Unsupported hosts expose the type and return
+explicit errors.
+
+Capture covers every descendant: hidden and ignored names, .git contents, binary
+and empty files, and empty directories. Names must be UTF-8 and satisfy the
+portable relative-path rules before recursion or reading. Hard-linked regular
+source paths remain distinct manifest records; this does not change destination
+single-link eligibility. Exact sorted directory membership, topology, identities
+and stamps remain private evidence, including empty directories absent from the
+manifest. Repeated directory identities, symlinks and special entries reject.
+
+Every access is relative to a pinned directory descriptor and one exact stored
+component. Inspection uses SYMLINK_NOFOLLOW; opens use NOFOLLOW and CLOEXEC,
+DIRECTORY for directories and NONBLOCK for regular entries. Selected/opened
+identity and type must agree. The shared native qualification policy applies to
+the root and every opened descendant, and requires one unchanged source mount
+binding. The source mount may differ from any destination mount.
+
+File acquisition compares metadata before open, immediately before read and
+after read, then requires exact byte count and nonnegative observed size to
+agree. Stamps retain device/inode, complete native mode, link count, size and
+nanosecond mtime/ctime; atime is ignored. Directory stamps must remain stable
+across enumeration and descendant capture. Permission evidence is
+`Some(mode & 0o7777)`. Canonical assembly shares the existing strict-manifest v1
+hash framing and pure validation, preserving legacy capture signatures,
+diagnostics and digests.
+
+Before returning, capture performs full revalidation. Every later check verifies
+retained descriptors, reopens the bound root, acquires a fresh complete tree and
+compares membership, identities, stamps, exact bytes and modes with original
+evidence. The fresh tree is discarded. Both checks after one mutation must reject
+and leave the manifest unchanged. Root and ancestor-alias rebinding, same-byte
+inode replacement, same-descendant directory replacement, file/empty-directory
+addition or removal, rename, mode and fractional timestamp changes reject.
+Binding is checked again after the walk.
+
+This read-only sampled boundary changes no CLI, schema, native adapter, source
+fetch, lifecycle state, permission policy, application or recovery behavior.
+Recoverable failures retain operation/path context and original causes and return
+no partial snapshot. Ordinary infallible allocation may abort; OS termination is
+outside Result guarantees. Checks provide neither an atomic snapshot nor
+exclusion against external editors, relocation or hostile ABA changes. Native
+Linux/macOS qualification uses existing profiles; Windows qualification,
+privileged mounts/devices and physical I/O or exhaustion faults remain separate
+evidence limits. Final-head hosted Linux/Windows gates remain required. See
+[AD-0030](../adr/0030-capture-qualified-source-evidence.md) and the
+[source observation design](../design/qualified-source-observation.md).
