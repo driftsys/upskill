@@ -72,9 +72,17 @@ compilation/unsupported-boundary checks for PR head
 `242930ef9107aff6eff432484f474e47157983f2`). This is historical evidence for that
 head; later local timestamp and special-bit assertion controls are separate.
 A qualified Windows backend remains pending. Privileged mounts, device nodes and
-hostile namespace relocation remain unexercised. Acquisition-read stamp/size and
-production qualification-wiring negative controls remain deferred under
-issue #270. See the durable design for the evidence scope, counts and limits.
+hostile namespace relocation remain unexercised. The issue #270 regression
+implementation now independently pins fractional mtime, acquisition-read
+stamp/size and call wiring, native profile rejection, retained mount comparison,
+existing-file overlap and repeated stale verification. Local APFS passes 28
+public and 22 private destination cases; 14 independent production omissions
+produce assertion failures, with exact source restoration and focused green
+checks. Restored full repository verification passes without warnings.
+Current-head hosted Linux execution of the missing returned mount-ID mask test,
+and native Linux profile/mask omission, restoration and green checks, remain
+merge gates. Synthetic metadata and local cross-compilation do not satisfy them.
+See the durable design for the evidence scope, counts and limits.
 
 Local full verification, warning-denying all-target Clippy and Rust 1.85
 all-target checks passed. Matching Rust 1.97.1 macOS release probes measure

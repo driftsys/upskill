@@ -302,5 +302,14 @@ two consecutive stale-verification errors without changing captured observations
 The existing-file fixture has an independent control that exempts only pairs
 whose files both exist from overlap rejection. A fresh-observation substitution
 must fail the stale-verification example. Local APFS passes 28 public acceptance
-cases and 22 private destination cases. The Linux-only mask example requires a
-current-head hosted Linux runtime result as a separate gate. Privileged mounts, device nodes and hostile relocation remain unexercised.
+cases and 22 private destination cases. Fourteen independent native production
+omissions produce the intended assertion failures. Each mutation is restored
+byte-for-byte before focused green checks; restored full repository verification
+passes without warnings. These results establish the local regression controls,
+not completion of the hosted merge gates.
+
+Current-head hosted Linux must execute the missing returned mount-ID mask
+example and independently omit the native profile and mask checks and their
+production call wiring, then restore exact source bytes and pass focused checks.
+These Linux runtime and assertion controls remain pending. Privileged mounts,
+device nodes and hostile relocation remain unexercised.
