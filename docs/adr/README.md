@@ -58,3 +58,7 @@ records the implemented library boundary and its documented alternatives.
 ## Qualified destination observation
 
 - [AD-0029 — Capture qualified destination evidence](0029-capture-qualified-destination-evidence.md)
+
+## Qualified source observation
+
+- [AD-0030 — Capture qualified source evidence](0030-capture-qualified-source-evidence.md)
