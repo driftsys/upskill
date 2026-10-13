@@ -191,9 +191,13 @@ Add D03 invalid path examples `""`, `"."`, `"../x"`, `"a/../x"`, `"/x"`,
 `"a//x"`, `"a\\x"`, `"a:x"`, and a control-character component. Add a different
 physical root, equivalent ancestor-alias root spellings and User/Project labels.
 Add D04 inside/outside symlinks at final and intermediate components, file
-ancestors, directory leaves, an outside hard link and a Unix socket. A FIFO
-fixture uses `rustix::fs::mkfifoat(CWD, absolute_path, Mode::RUSR | Mode::WUSR)`;
-bound any hang-sensitive test in a child that is killed/reaped on timeout.
+ancestors, directory leaves, an outside hard link and a Unix socket. A Linux FIFO
+fixture uses `rustix::fs::mkfifoat(CWD, absolute_path, Mode::RUSR | Mode::WUSR)`.
+On macOS, rustix does not export that helper: use a bounded `/usr/bin/mkfifo`
+subprocess inside the temporary fixture with temporary HOME/USERPROFILE, captured
+output and deadline/kill/reap cleanup. This is test setup only, with no product
+subprocess dependency. Bound any hang-sensitive observation in a child that is
+killed/reaped on timeout.
 No privileged device-node or mount creation is authorized. Pin nonregular type
 classification separately if a device fixture cannot be made safely.
 
