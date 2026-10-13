@@ -331,7 +331,7 @@ Durable successors: [specification §4.9](../specification/specification.md#49-q
 [AD-0030](../adr/0030-capture-qualified-source-evidence.md). These authorities
 existed before implementation; archival does not redirect their citations.
 
-Implementation and reviewed corrections end at
+Earlier implementation and task-reviewed corrections ended at
 `a4e84d9334f7717bfb170d59afcbaf7f829d1e82`. Local formatting, full verification,
 locked warning-denying all-target Clippy and Rust 1.85 compilation passed:
 964 outer Rust tests and 11 documentation-checker tests, zero failures. Independent
@@ -344,8 +344,12 @@ The opaque read-only snapshot captures and non-refreshingly revalidates complete
 source evidence using qualified roots and shared mount policy. Legacy capture,
 CLI, dependencies and schema 1 remain unchanged. It establishes no atomic tree
 snapshot, authenticity, external-writer exclusion or qualified Windows backend.
-Initial public root-binding diagnostic context and retained-descendant diagnostic
-coverage remain controller observations, detailed in the current design. Source
+The final whole-branch correction resolves initial public source-binding context
+and independently pins retained-descendant full-path diagnostics, while keeping
+the original scope cause and immutable manifest. Current focused source coverage
+is 12 public and 31 private tests; combined independent omission evidence has 46
+valid controls and the same two historical discarded attempts. Scoped re-review
+and final-head hosted qualification remain required. Source
 lifecycle integration, permission policy, durable state, effects and recovery
 remain pending; M1-A2, M1-A3 and M1 are not complete. All 34 foreign WIP files and
 18 earlier raw archive files retain their original bytes and disposition; this

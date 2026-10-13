@@ -21,3 +21,7 @@ may be recorded here before implementation when their status is explicit.
 - [Qualified destination observation](qualified-destination-observation.md)
   — implemented with APFS and hosted Linux evidence; hosted Windows unsupported
   boundary checked, Windows qualification pending.
+
+- [Qualified source observation](qualified-source-observation.md)
+  — implemented as an inactive read-only library capability; final-head hosted
+  Linux/Windows qualification and lifecycle integration remain pending.

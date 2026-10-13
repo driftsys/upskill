@@ -776,3 +776,40 @@ fn complete_nested_comparison_reports_relative_path_and_original_cause() {
         "source exact values changed"
     );
 }
+
+#[test]
+fn retained_nested_file_reports_full_path_without_parent_changes() {
+    let (tmp, scope) = fixture();
+    std::fs::set_permissions(
+        tmp.path().join("nested/data"),
+        std::fs::Permissions::from_mode(0o640),
+    )
+    .unwrap();
+    let (evidence, manifest) = Evidence::capture(&scope).unwrap();
+    let Entry::Directory(nested) = &evidence.root.children[0] else {
+        panic!("nested directory")
+    };
+    std::fs::set_permissions(
+        tmp.path().join("nested/data"),
+        std::fs::Permissions::from_mode(0o700),
+    )
+    .unwrap();
+    assert_eq!(
+        Stamp::of(&fstat(&evidence.root.file).unwrap()),
+        evidence.root.stamp
+    );
+    assert_eq!(Stamp::of(&fstat(&nested.file).unwrap()), nested.stamp);
+    assert_eq!(names(&evidence.root.file, "").unwrap(), evidence.root.names);
+    assert_eq!(names(&nested.file, "nested").unwrap(), nested.names);
+    for _ in 0..2 {
+        let error = evidence.verify(&scope).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("revalidate retained source \"nested/data\""),
+            "retained descendant revalidation lost complete relative path: {error:#}"
+        );
+        assert_eq!(error.root_cause().to_string(), "source metadata changed");
+        let mut files = Vec::new();
+        evidence.root.records(&mut files);
+        assert_eq!(assemble_manifest(files).unwrap(), manifest);
+    }
+}

@@ -146,33 +146,38 @@ unexercised unless separately evidenced. Durable status must remain honest.
 
 ## Local implementation evidence
 
-The completed local checks at implementation commit
+The historical local checks before the final source-binding correction at commit
 `a4e84d9334f7717bfb170d59afcbaf7f829d1e82` passed 964 outer Rust tests
 (457 library, 500 integration and seven compile-fail doctests), with zero failed
 or ignored tests, and 11 documentation-checker tests. Formatting, full
 verification, locked warning-denying all-target Clippy and Rust 1.85 all-target
 compilation passed. Nested subprocess summaries are excluded from these counts.
-Focused native APFS coverage includes 11 public source tests, 30 source-private
-tests, 24 strict-manifest tests and 28 destination acceptance tests. The combined
+Before that final correction, focused native APFS coverage included 11 public source tests, 30 source-private
+tests, 24 strict-manifest tests and 28 destination acceptance tests. The earlier combined
 independent omission evidence contains 43 valid assertion failures with exact
 restoration and focused success; two historical discarded experiments are not
 counted as controls.
 
-Retained-root and complete-tree comparisons preserve operation/path context and
-original causes. The initial public `verify_unchanged` binding check currently
-propagates the scope error without source-operation wrapping. This is a known
-as-built gap against the contextual-error contract, requiring controller
-confirmation rather than silently weakening the requirement. Retained-descendant
-path propagation is implemented but lacks an independently isolating diagnostic
-assertion. Independent link-count and ctime omission isolation also remains a
-coverage limit; production stamps compare both fields.
+The final source-binding correction preserves source-root/verification context
+at the initial public `verify_unchanged` check while retaining the redundant
+binding check and original scope cause. Public root replacement and ancestor
+alias tests require the complete chain twice and preserve the original manifest.
+An actual nested-file chmod fixture leaves complete parent stamps and membership
+unchanged, then requires retained `nested/data` context, the original cause and
+manifest preservation twice. Current focused coverage includes 12 public source
+tests and 31 source-private tests. Three additional independent context/path
+controls bring the combined valid count to 46, with exact restoration and focused
+success; the same two historical discarded attempts remain excluded. The earlier
+initial-binding exception and retained-descendant assertion gap are resolved.
+Independent link-count and ctime omission isolation remains a coverage limit;
+production stamps compare both fields.
 
 Linux-only non-UTF-8 and missing returned mount-ID mask cases require final-head
 native Linux execution. Windows exposes the opaque API but has no qualified
 backend. FIFO subprocess fixtures own their deadlines and kill/reap only their
 child. No privileged mount/device or physical fault claim follows.
 
-## Matched local release size
+## Historical matched local release size before the final binding fix
 
 Matched Rust 1.97.1 locked release builds against baseline `fa2f322`, using the
 same profile and pinned common dependencies, measure baseline and candidate CLI
@@ -181,3 +186,11 @@ public-API probe is 303,120 bytes; live capture plus explicit revalidation is
 353,840 bytes (delta 50,720). Both runtime-input fixtures pass. These measurements
 establish binary size only; inactive API code is stripped from the CLI. Earlier
 measurements are historical and do not establish final-head hosted qualification.
+
+The final binding-context fix refreshes the candidate CLI and live public-API
+probe under the same Rust 1.97.1 locked dependencies, release profile and runtime
+inputs. Exact hash-verified prior baseline/control binaries are reused: CLI
+baseline/candidate remain 3,215,120 bytes (delta zero); control is 303,120 bytes and
+live capture/revalidation is 353,840 bytes (delta 50,720). Both runtime-input
+fixtures pass. No byte-identity, performance or final-head hosted success claim
+follows from these size measurements.

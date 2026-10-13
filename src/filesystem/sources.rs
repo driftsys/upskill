@@ -1,7 +1,7 @@
 //! Immutable source evidence borrowing one qualified scope.
 use super::QualifiedScope;
 use crate::source_manifest::SourceManifest;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::fmt;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod backend;
@@ -73,7 +73,9 @@ impl SourceSnapshot<'_> {
     }
     /// Verify without refreshing original evidence.
     pub fn verify_unchanged(&self) -> Result<()> {
-        self.scope.verify_binding()?;
+        self.scope
+            .verify_binding()
+            .context("verify source root \".\" before revalidation")?;
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
             self.evidence.verify(self.scope)

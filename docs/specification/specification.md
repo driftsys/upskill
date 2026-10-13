@@ -860,7 +860,7 @@ evidence limits. Final-head hosted Linux/Windows gates remain required. See
 [AD-0030](../adr/0030-capture-qualified-source-evidence.md) and the
 [source observation design](../design/qualified-source-observation.md).
 
-Local APFS source coverage includes 11 public acceptance tests and 30 private
+Local APFS source coverage includes 12 public acceptance tests and 31 private
 tests, with independent regular-descendant profile/mount qualification before
 reading, complete permission-bit mapping, held-writer capture/revalidation and
 non-content Debug checks. Independent link-count and ctime omission isolation
@@ -868,7 +868,10 @@ remains a coverage limit; both fields participate in production stamps.
 
 Scoped revalidation diagnostic tests retain source-root/operation context, complete
 relative paths in tree comparisons and original causes, including repeated public
-rejection without refreshing the manifest. Hosted qualification remains pending.
+rejection without refreshing the manifest. Public root and ancestor binding
+failures retain source-root/verification context and the original scope cause.
+Retained nested-file diagnostics are independently pinned with unchanged parent
+stamps and membership. Hosted qualification remains pending.
 
 ## 5. Source format and authentication
 

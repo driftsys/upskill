@@ -209,30 +209,40 @@ mod native {
             fs::set_permissions(p.join("parent/data"), fs::Permissions::from_mode(0o700)).unwrap()
         });
     }
-    #[test]
-    fn selected_root_and_ancestor_alias_rebinding_stay_stale() {
-        for ancestor in [false, true] {
-            let tmp = tempfile::tempdir().unwrap();
-            fs::create_dir_all(tmp.path().join("outer/root")).unwrap();
-            fs::write(tmp.path().join("outer/root/data"), b"original").unwrap();
-            let scope = source_scope(&tmp.path().join("outer/root"));
-            let snapshot = scope.observe_source_tree().unwrap();
-            let original = snapshot.manifest().clone();
-            let selected = if ancestor { "outer" } else { "outer/root" };
-            fs::rename(tmp.path().join(selected), tmp.path().join("moved")).unwrap();
-            if ancestor {
-                symlink("moved", tmp.path().join("outer")).unwrap();
-            } else {
-                fs::create_dir(tmp.path().join(selected)).unwrap();
-            }
-            for call in 1..=2 {
-                assert!(
-                    snapshot.verify_unchanged().is_err(),
-                    "root/ancestor rebind accepted on verification {call}"
-                );
-                assert_eq!(snapshot.manifest(), &original);
-            }
+    fn assert_rebound_source_diagnostics(ancestor: bool) {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("outer/root")).unwrap();
+        fs::write(tmp.path().join("outer/root/data"), b"original").unwrap();
+        let scope = source_scope(&tmp.path().join("outer/root"));
+        let snapshot = scope.observe_source_tree().unwrap();
+        let original = snapshot.manifest().clone();
+        let selected = if ancestor { "outer" } else { "outer/root" };
+        fs::rename(tmp.path().join(selected), tmp.path().join("moved")).unwrap();
+        if ancestor {
+            symlink("moved", tmp.path().join("outer")).unwrap();
+        } else {
+            fs::create_dir(tmp.path().join(selected)).unwrap();
         }
+        for _ in 1..=2 {
+            let error = snapshot.verify_unchanged().unwrap_err();
+            assert!(
+                format!("{error:#}").contains("verify source root \".\" before revalidation"),
+                "source binding revalidation lost operation and source-root context: {error:#}"
+            );
+            assert_eq!(
+                error.root_cause().to_string(),
+                "qualified scope root binding changed"
+            );
+            assert_eq!(snapshot.manifest(), &original);
+        }
+    }
+    #[test]
+    fn selected_root_rebinding_retains_source_context_and_manifest() {
+        assert_rebound_source_diagnostics(false);
+    }
+    #[test]
+    fn ancestor_alias_rebinding_retains_source_context_and_manifest() {
+        assert_rebound_source_diagnostics(true);
     }
     #[test]
     fn unsafe_entries_reject_without_following_or_writes() {
