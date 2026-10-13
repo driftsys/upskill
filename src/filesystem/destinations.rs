@@ -27,6 +27,13 @@ mod qualification;
 /// use upskill::filesystem::DestinationSnapshot;
 /// fn clone_evidence(snapshot: DestinationSnapshot<'_>) { let _ = snapshot.clone(); }
 /// ```
+/// Captured observations remain private and cannot be cleared by callers:
+/// ```compile_fail,E0616
+/// use upskill::filesystem::DestinationSnapshot;
+/// fn clear_observations(mut snapshot: DestinationSnapshot<'_>) {
+///     snapshot.observations.clear();
+/// }
+/// ```
 pub struct DestinationSnapshot<'scope> {
     scope: &'scope QualifiedScope,
     observations: Vec<ObservedFile>,

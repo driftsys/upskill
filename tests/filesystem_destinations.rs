@@ -35,6 +35,59 @@ mod qualified {
         snapshot.verify_unchanged().unwrap();
     }
     #[test]
+    fn d01_heterogeneous_batch_keeps_exact_values_associated_with_locations() {
+        use upskill::files::plan::{FileValue, ObservedFile};
+
+        let tmp = tempfile::tempdir().unwrap();
+        let first_bytes = b"first\0\xff\n";
+        let second_bytes = b"\x80second\0\x01";
+        fs::write(tmp.path().join("a-first.bin"), first_bytes).unwrap();
+        fs::write(tmp.path().join("b-second.bin"), second_bytes).unwrap();
+        fs::set_permissions(
+            tmp.path().join("a-first.bin"),
+            fs::Permissions::from_mode(0o640),
+        )
+        .unwrap();
+        fs::set_permissions(
+            tmp.path().join("b-second.bin"),
+            fs::Permissions::from_mode(0o600),
+        )
+        .unwrap();
+        let first = location(tmp.path(), "a-first.bin");
+        let second = location(tmp.path(), "b-second.bin");
+        let absent = location(tmp.path(), "z-absent.bin");
+        let expected = vec![
+            ObservedFile {
+                location: first.clone(),
+                value: Some(FileValue {
+                    bytes: first_bytes.to_vec(),
+                    mode: Some(0o640),
+                }),
+            },
+            ObservedFile {
+                location: second.clone(),
+                value: Some(FileValue {
+                    bytes: second_bytes.to_vec(),
+                    mode: Some(0o600),
+                }),
+            },
+            ObservedFile {
+                location: absent.clone(),
+                value: None,
+            },
+        ];
+        let input = vec![absent, first, second];
+        let reversed: Vec<_> = input.iter().cloned().rev().collect();
+        let before = unchanged_tree(tmp.path());
+        let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
+        for locations in [&input, &reversed] {
+            let snapshot = scope.observe_destinations(locations).unwrap();
+            assert_eq!(snapshot.observations(), expected.as_slice());
+            snapshot.verify_unchanged().unwrap();
+        }
+        assert_eq!(unchanged_tree(tmp.path()), before);
+    }
+    #[test]
     fn d02_absent_leaf_and_parents_create_nothing() {
         let tmp = tempfile::tempdir().unwrap();
         let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
