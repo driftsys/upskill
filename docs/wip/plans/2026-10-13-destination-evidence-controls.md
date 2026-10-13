@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust edition 2024, MSRV 1.85, existing rustix 1.1.4 and standard library; no new dependencies or unsafe code.
 
-**Spec:** `docs/design/qualified-destination-observation.md`, AD-0029, and issue #270 acceptance criteria. The durable design remains the binding authority; this is regression coverage of existing checks.
+**Spec:** `docs/wip/specs/2026-10-13-destination-evidence-controls-design.md`, `docs/design/qualified-destination-observation.md`, AD-0029, and issue #270 acceptance criteria. The durable design remains the binding authority; this is regression coverage of existing checks.
 
 ## Global constraints
 
@@ -96,3 +96,11 @@ just verify
 ```bash
 git commit -m "test: independently pin destination evidence rejection"
 ```
+
+## Task 1 scope amendment from landed-commit QUICK advisory
+
+The immutable8298386..714c4c3 QUICK advisory adds acceptance within this same bounded regression task. Extend owned files to `docs/design/captured-item-compilation.md`, `docs/design/owned-file-planning.md` and `docs/design/strict-source-manifests.md`, editing only current successor-status paragraphs; update matching specification paragraphs, including already-implemented writer-lock status. Preserve historical archives.
+
+Before final gates, create two distinct regular files `a/é` and `a/e`, assert both exact stored spellings and existing regular values, and require overlap rejection in both input permutations. Independently skip candidate overlap comparison only when both destinations exist and require an assertion RED, then restore. Capture another file, mutate it once, call verification twice and require both errors plus unchanged borrowed observations; an expectation-refresh omission control must assert-fail. These additions pin existing semantics, not new behavior.
+
+Private qualification seam ruling: put the exact native metadata query closure on `Mount::of(file, query)`, with production callers using `Mount::query`. Test the actual Mount::of entry with one native result altered, and Directory/Evidence mount comparison with only the retained expected binding changed. Avoid an outer wrapper that could bypass the tested qualification entry.
