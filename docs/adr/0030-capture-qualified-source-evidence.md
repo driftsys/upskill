@@ -36,8 +36,8 @@ Source and destination roots may use separate qualified mounts. Permission
 application, Git revision/authenticity, lifecycle state, effects, recovery and
 Windows qualification remain separate gates.
 
-Native APFS focused evidence currently covers 7 public source acceptance tests,
-25 source-private tests, 24 unchanged strict-manifest acceptance tests and 28
+Native APFS focused evidence currently covers 10 public source acceptance tests,
+27 source-private tests, 24 unchanged strict-manifest acceptance tests and 28
 destination acceptance tests. Independent omission controls retain exact
 restoration evidence. Complete release checks, MSRV and warning-denying all-target
 Clippy are required at task closeout; final-head hosted Linux missing-mask and
@@ -53,3 +53,11 @@ versions and profile: control 303,120 bytes, source capture plus revalidation
 353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
 records binary size only, not performance; inactive API code is stripped from the
 current CLI. Final-head hosted Linux/Windows qualification remains pending.
+
+The correction for issue #274 independently pins regular-descendant native
+profile and mount-binding qualification before any reader invocation, exact
+special permission bits by path, capture and verification under an existing
+writer guard, and Debug excluding captured content. These tests do not establish
+privileged mount behavior. Independent link-count and ctime omission isolation
+remains an advisory coverage limit; production stamps retain and compare both
+fields.

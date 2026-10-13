@@ -305,10 +305,14 @@ Durable successors: [specification §4.8](../specification/specification.md#48-q
 [qualified destination design](../design/qualified-destination-observation.md) and
 [AD-0029](../adr/0029-capture-qualified-destination-evidence.md).
 These current records establish the implemented inactive qualified destination
-and writer-lock boundaries. Earlier archive entries describe their dated slices;
-statements there that these boundaries remain pending are historical, not current
-successor status. Lifecycle integration, qualified source evidence, permission
-policy, durable state and apply/recovery remain pending. No qualified Windows
+and writer-lock boundaries. The separate
+[qualified source design](../design/qualified-source-observation.md) and
+[AD-0030](../adr/0030-capture-qualified-source-evidence.md) now establish inactive
+source observation; final-head hosted source qualification remains required.
+Earlier archive entries describe their dated slices; statements there that these
+boundaries remain pending are historical, not current successor status.
+Integrating qualified source evidence into the lifecycle, permission policy,
+durable state and apply/recovery remain pending. No qualified Windows
 backend, real privileged mount or fault behavior is established. The 34 other WIP
 files retain their existing disposition unchanged; this entry resolves only the
 named pair and does not complete M1.

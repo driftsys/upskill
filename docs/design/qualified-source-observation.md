@@ -175,7 +175,7 @@ unexercised unless separately evidenced. Durable status must remain honest.
 
 ## Local implementation evidence
 
-Native APFS focused coverage includes 7 public source acceptance tests, 25
+Native APFS focused coverage includes 10 public source acceptance tests, 27
 source-private tests (including the public pre-return seam), 24 existing strict
 manifest tests and 28 existing destination acceptance tests. Source-private tests
 exercise stable reads, changed metadata, short reads, returned counts, contextual
@@ -203,3 +203,11 @@ versions and profile: control 303,120 bytes, source capture plus revalidation
 353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
 records binary size only, not performance; inactive API code is stripped from the
 current CLI. Final-head hosted Linux/Windows qualification remains pending.
+
+The correction for issue #274 independently pins regular-descendant native
+profile and mount-binding qualification before any reader invocation, exact
+special permission bits by path, capture and verification under an existing
+writer guard, and Debug excluding captured content. These tests do not establish
+privileged mount behavior. Independent link-count and ctime omission isolation
+remains an advisory coverage limit; production stamps retain and compare both
+fields.

@@ -917,3 +917,9 @@ privileged mounts/devices and physical I/O or exhaustion faults remain separate
 evidence limits. Final-head hosted Linux/Windows gates remain required. See
 [AD-0030](../adr/0030-capture-qualified-source-evidence.md) and the
 [source observation design](../design/qualified-source-observation.md).
+
+Local APFS source coverage includes 10 public acceptance tests and 27 private
+tests, with independent regular-descendant profile/mount qualification before
+reading, complete permission-bit mapping, held-writer capture/revalidation and
+non-content Debug checks. Independent link-count and ctime omission isolation
+remains a coverage limit; both fields participate in production stamps.

@@ -639,3 +639,89 @@ fn same_descendant_directory_replacement_compares_independent_identity() {
         "verification ignored independent directory identity"
     );
 }
+
+fn unknown_regular_profile(file: &File) -> rustix::io::Result<rustix::fs::StatFs> {
+    if FileType::from_raw_mode(fstat(file)?.st_mode) == FileType::RegularFile {
+        unknown_profile(file)
+    } else {
+        rustix::fs::fstatfs(file)
+    }
+}
+fn unknown_regular_queries() -> DescriptorQueries {
+    #[cfg(target_os = "macos")]
+    {
+        unknown_regular_profile
+    }
+    #[cfg(target_os = "linux")]
+    {
+        (unknown_regular_profile, Mount::queries().1)
+    }
+}
+fn changed_regular_binding_queries() -> DescriptorQueries {
+    #[cfg(target_os = "macos")]
+    {
+        |file| {
+            let mut stat = rustix::fs::fstatfs(file)?;
+            if FileType::from_raw_mode(fstat(file)?.st_mode) == FileType::RegularFile {
+                stat.f_mntonname[0] ^= 1;
+            }
+            Ok(stat)
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        (Mount::queries().0, |file| {
+            let mut stat = Mount::queries().1(file)?;
+            if FileType::from_raw_mode(fstat(file)?.st_mode) == FileType::RegularFile {
+                stat.stx_mnt_id ^= 1;
+            }
+            Ok(stat)
+        })
+    }
+}
+fn reject_regular_before_read(queries: DescriptorQueries, assertion: &str) {
+    let (tmp, scope) = fixture();
+    Evidence::capture(&scope).unwrap();
+    let root = scope.reopen_directory().unwrap();
+    let mount = Mount::of(&root, queries).unwrap();
+    let nested = open_entry(&root, "nested", true).unwrap();
+    mount
+        .require_same(&Mount::of(&nested, queries).unwrap())
+        .unwrap();
+    let regular = open_entry(&nested, "data", false).unwrap();
+    assert!(
+        Mount::of(&regular, queries)
+            .and_then(|actual| mount.require_same(&actual))
+            .is_err(),
+        "fixture changed no regular-file qualification evidence"
+    );
+    let mut reads = 0;
+    let mut read = |file: &File, bytes: &mut Vec<u8>| {
+        reads += 1;
+        native_read(file, bytes)
+    };
+    let result = Evidence::capture_with(&scope, &mut read, queries);
+    assert_eq!(reads, 0, "{assertion}");
+    assert!(
+        result.is_err(),
+        "unqualified regular descendant capture succeeded"
+    );
+    assert_eq!(
+        std::fs::read(tmp.path().join("nested/data")).unwrap(),
+        b"original"
+    );
+}
+#[test]
+fn descendant_profile_rejects_before_regular_reader_runs() {
+    reject_regular_before_read(
+        unknown_regular_queries(),
+        "descendant profile qualification was bypassed before reading",
+    );
+}
+#[test]
+fn descendant_mount_binding_rejects_before_regular_reader_runs() {
+    reject_regular_before_read(
+        changed_regular_binding_queries(),
+        "descendant mount comparison was bypassed before reading",
+    );
+}

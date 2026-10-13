@@ -76,11 +76,13 @@ Callers must resolve direct/bundle references and native compatibility before
 planning. The separate [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
 is implemented for explicitly supplied complete file sets. The separate
 [captured item compiler](captured-item-compilation.md) derives complete per-client
-entrypoint and resource outputs from validated captured bytes. Complete
-reference-graph authority, per-owner consumer association, qualified source and
-filesystem evidence, connecting compiled outputs to complete lifecycle desired
-sets, state/lifecycle integration, writer locking, recovery and execution remain
-pending. The implemented [mixed coordinator](mixed-owned-artifact-planning.md)
+entrypoint and resource outputs from validated captured bytes. Qualified scope
+roots, writer locking, [destination observation](qualified-destination-observation.md)
+and [qualified source observation](qualified-source-observation.md) are implemented
+as separate inactive capabilities. Final-head hosted source qualification remains
+required. Complete reference-graph authority, per-owner consumer association,
+integrating qualified source evidence and compiled outputs into complete
+lifecycle desired sets, state integration, recovery and execution remain pending. The implemented [mixed coordinator](mixed-owned-artifact-planning.md)
 composes complete explicit sets across both forms; neither individual planner
 authorizes partial application of a mixed installation.
 Current commands, lockfile/source formats and native client support are unchanged.

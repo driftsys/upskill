@@ -301,6 +301,77 @@ mod native {
             fifo(&p.join("parent/data"));
         });
     }
+    #[test]
+    fn capture_preserves_complete_permission_bits_by_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (path, mode) in [("group-data", 0o2640), ("executable", 0o751)] {
+            fs::write(tmp.path().join(path), path.as_bytes()).unwrap();
+            fs::set_permissions(tmp.path().join(path), fs::Permissions::from_mode(mode)).unwrap();
+            assert_eq!(
+                fs::metadata(tmp.path().join(path))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o7777,
+                mode,
+                "OS did not preserve the explicit permission fixture"
+            );
+        }
+        let legacy = capture_source(tmp.path()).unwrap();
+        let scope = source_scope(tmp.path());
+        let snapshot = scope.observe_source_tree().unwrap();
+        let modes = snapshot
+            .manifest()
+            .files
+            .iter()
+            .map(|file| (file.path.as_str(), file.mode))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            modes,
+            [("executable", Some(0o751)), ("group-data", Some(0o2640))],
+            "qualified capture lost complete permission bits by path"
+        );
+        assert_eq!(snapshot.manifest(), &legacy);
+        snapshot.verify_unchanged().unwrap();
+    }
+    #[test]
+    fn capture_and_verify_succeed_while_scope_writer_guard_is_held() {
+        if bounded_child(
+            "native::capture_and_verify_succeed_while_scope_writer_guard_is_held",
+            "UPSKILL_SOURCE_CORRECTION_WRITER_CHILD",
+        ) {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("data"), b"writer-guard-source").unwrap();
+        let scope = source_scope(tmp.path());
+        let guard = scope.try_lock_writer().unwrap();
+        let result = scope.observe_source_tree();
+        assert!(result.is_ok(), "source capture attempted writer locking");
+        let snapshot = result.unwrap();
+        assert!(
+            snapshot.verify_unchanged().is_ok(),
+            "source verification attempted writer locking"
+        );
+        guard.verify_binding().unwrap();
+        assert_eq!(snapshot.manifest().files[0].bytes, b"writer-guard-source");
+    }
+    #[test]
+    fn snapshot_debug_excludes_captured_content() {
+        const MARKER: &[u8] = b"qualified-source-content-marker-20261013-correction";
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("data"), MARKER).unwrap();
+        let scope = source_scope(tmp.path());
+        let snapshot = scope.observe_source_tree().unwrap();
+        assert_eq!(snapshot.manifest().files[0].bytes, MARKER);
+        let debug = format!("{snapshot:?}");
+        assert!(debug.contains("SourceSnapshot"));
+        assert!(
+            !debug.contains(std::str::from_utf8(MARKER).unwrap())
+                && !debug.contains(&format!("{MARKER:?}")),
+            "snapshot Debug exposed captured content"
+        );
+    }
     #[cfg(target_os = "linux")]
     #[test]
     fn non_utf8_entry_rejects() {
