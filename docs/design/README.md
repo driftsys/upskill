@@ -27,3 +27,6 @@ may be recorded here before implementation when their status is explicit.
   Windows scope/compile checks passed at `a393263` on 2026-10-13. Final-head hosted
   checks, new Windows source-method runtime coverage and lifecycle integration
   remain pending.
+
+- [Explicit file permission selection](file-permission-policy.md)
+  — implemented as an inactive pure supplied-value policy; qualified file effects remain pending.

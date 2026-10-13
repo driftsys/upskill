@@ -62,3 +62,7 @@ records the implemented library boundary and its documented alternatives.
 ## Qualified source observation
 
 - [AD-0030 — Capture qualified source evidence](0030-capture-qualified-source-evidence.md)
+
+## Explicit file permission selection
+
+- [AD-0031 — Select explicit file permissions before file effects](0031-select-explicit-file-permissions.md)

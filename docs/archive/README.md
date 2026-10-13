@@ -361,3 +361,32 @@ lifecycle integration, permission policy, durable state, effects and recovery
 remain pending; M1-A2, M1-A3 and M1 are not complete. All 34 foreign WIP files and
 18 earlier raw archive files retain their original bytes and disposition; this
 entry resolves only the assigned pair.
+
+## Explicit file permission selection
+
+The archived [spec](specs/2026-10-13-file-permissions-design.md) and
+[plan](plans/2026-10-13-file-application.md) retain the exact final working bytes
+from their respective `docs/wip/specs/` and `docs/wip/plans/` paths. The plan
+includes controller completion marks; its original nine-control list and the
+spec's unimplemented status remain historical. The appended task brief clarified
+special-bit-only source examples and the tenth independently valid control.
+
+Durable successors: [specification §4.10](../specification/specification.md#410-explicit-file-permission-selection),
+[permission design](../design/file-permission-policy.md) and
+[AD-0031](../adr/0031-select-explicit-file-permissions.md). These records existed
+before implementation and remain the current authorities.
+
+Implementation commit: `b3a8acde76a81817fd39b662591d1e1a5421d11b`. Independent
+Task 1 review approved the bounded pure API. Local full verification passed with
+978 outer Rust tests and 11 documentation-checker tests; fresh locked Rust 1.85
+all-target checking and warning-denying Clippy passed. Ten compiled semantic
+assertion controls recorded exact restoration and focused success; one invalid
+attempt is excluded. These are local checks, not hosted or numbered PR review.
+
+The API selects supplied permission bits without filesystem or permission effects.
+Owner/group, ACLs, extended metadata, containment, atomic replacement, application,
+journal/recovery, actual resulting state and lifecycle activation remain pending.
+No binary-size, performance or native-effect claim follows; M1-A2, M1-A3 and M1
+remain incomplete. All 54 inherited WIP/raw archive files, including 34 foreign WIP
+files, retain their original bytes and disposition. The broader application draft
+remains separate and unchanged. This entry resolves only the assigned pair.

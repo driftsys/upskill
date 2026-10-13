@@ -22,3 +22,5 @@
 - [Destination observation decision](../adr/0029-capture-qualified-destination-evidence.md)
 - [Qualified source observation contract](../design/qualified-source-observation.md)
 - [Source observation decision](../adr/0030-capture-qualified-source-evidence.md)
+- [Explicit file permission selection](../design/file-permission-policy.md)
+- [File permission selection decision](../adr/0031-select-explicit-file-permissions.md)
