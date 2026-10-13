@@ -54,6 +54,64 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
+      - name: Validate Linux destination omission controls (temporary)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          import signal
+          import subprocess
+          import tempfile
+
+          source = Path("src/filesystem/destinations/qualification.rs")
+          original = source.read_bytes()
+          expected_hash = hashlib.sha256(original).hexdigest()
+          cases = [
+              ("linux-profile-check", "if magic != 0xef53 && magic != 0x01021994 {", "if false {", "production_entry_rejects_unknown_native_profile", "production qualification accepted unknown native profile"),
+              ("linux-profile-wiring", "linux_profile(metadata.f_type as u64)?;", "let _ = metadata.f_type;", "production_entry_rejects_unknown_native_profile", "production qualification accepted unknown native profile"),
+              ("linux-mask-check", "if mask & MOUNT_ID_MASK == 0 {", "if false && mask & MOUNT_ID_MASK == 0 {", "production_entry_rejects_missing_returned_mount_id_mask", "production qualification accepted missing returned mount-ID mask"),
+              ("linux-mask-wiring", "id: linux_mount_id(stat.stx_mask, stat.stx_mnt_id)?,", "id: stat.stx_mnt_id,", "production_entry_rejects_missing_returned_mount_id_mask", "production qualification accepted missing returned mount-ID mask"),
+          ]
+
+          def run(command, environment):
+              child = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, start_new_session=True)
+              try:
+                  output = child.communicate(timeout=180)[0].decode(errors="replace")
+              except subprocess.TimeoutExpired:
+                  os.killpg(child.pid, signal.SIGKILL)
+                  output = child.communicate()[0].decode(errors="replace")
+                  print(output, flush=True)
+                  raise
+              print(output, flush=True)
+              return child.returncode, output
+
+          with tempfile.TemporaryDirectory(prefix="upskill-linux-control-home-") as home:
+              environment = os.environ.copy()
+              environment.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
+              environment.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
+              environment.update(HOME=home, USERPROFILE=home, RUSTC_WRAPPER="")
+              for name, old, new, test, assertion in cases:
+                  text = original.decode()
+                  assert text.count(old) == 1, (name, "mutation target count")
+                  try:
+                      source.write_text(text.replace(old, new, 1))
+                      status, output = run(["cargo", "test", "--locked", "--lib", test], environment)
+                      assert status == 101, (name, status)
+                      assert "panicked at" in output and assertion in output, name
+                      assert "error[E" not in output and "warning:" not in output, name
+                      print("CONTROL " + name + ": intended assertion RED", flush=True)
+                  finally:
+                      source.write_bytes(original)
+                      assert hashlib.sha256(source.read_bytes()).hexdigest() == expected_hash
+                      print("RESTORED " + name + ": " + expected_hash, flush=True)
+              status, _ = run(["cargo", "test", "--locked", "--lib", "filesystem::destinations::"], environment)
+              assert status == 0, "restored destination GREEN"
+              print("RESTORED GREEN qualification SHA256 " + expected_hash, flush=True)
+          PY
 
   shellcheck:
     name: ShellCheck
