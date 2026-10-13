@@ -42,7 +42,7 @@
 
 **Interfaces:** Consumes a borrowed slice of RecoveryAction. Produces plan_recovery(actions: &[RecoveryAction]) -> anyhow::Result<RecoveryDecision> with the exact enums and fields in the spec. No lifecycle caller is activated.
 
-- [ ] **Step 1: Write literal acceptance tests and capture RED.**
+- [x] **Step 1: Write literal acceptance tests and capture RED.**
 
 Import the spec's public types from upskill::operations::recovery. Use the following assertion helper so a changed Result is reported by a named assertion rather than an earlier unwrap:
 
@@ -75,7 +75,7 @@ python3 .superpowers/sdd/2026-10-14-file-recovery/recovery-run.py task1-acceptan
 
 Expected: initial unresolved API failure. This is acceptance-first RED, not a semantic mutation control.
 
-- [ ] **Step 2: Implement the public types and minimal pure planner.**
+- [x] **Step 2: Implement the public types and minimal pure planner.**
 
 Copy exact public types from the spec. Add pub mod recovery to operations/mod.rs. Implement this algorithm, retaining contextual anyhow errors for structural defects:
 
@@ -126,7 +126,7 @@ pub fn plan_recovery(actions: &[RecoveryAction]) -> anyhow::Result<RecoveryDecis
 
 Use clear rustdoc to describe supplied classifications and absence of effect authority. Do not add a redundant pending counter or a second computed oracle.
 
-- [ ] **Step 3: Run focused GREEN and independent semantic controls.**
+- [x] **Step 3: Run focused GREEN and independent semantic controls.**
 
 ```bash
 python3 .superpowers/sdd/2026-10-14-file-recovery/recovery-run.py task1-focused-green cargo test --test recovery_plans
@@ -134,15 +134,15 @@ python3 .superpowers/sdd/2026-10-14-file-recovery/recovery-run.py task1-focused-
 
 Expected: all acceptance tests pass. Perform thirteen independent one-at-a-time compiled controls: remove final-State position guard; remove single-State count guard; remove completed-prefix ordering guard; remove Pending position guard; accept Done/Before; accept Queued/After; return Apply for Pending/After; return Acknowledge for Pending/Before; return Apply for Queued/Both; exclude Pending from verified-post extension; truncate observation scan through recorded_prefix + 1; overwrite the first conflict with a later conflict; extend the verified prefix for Pending post-state despite an earlier broken completed prefix. Each must fail a named behavioral assertion. A guard may enforce multiple related constraints; do not distort production code merely to isolate redundant syntax. Use unique logs and save mutated sources, exact original hashes and compiled failure names in scratch. Compiler failures do not count; retain and disclose invalid attempts. Restore exact original source after each control; rerun focused GREEN on restoration.
 
-- [ ] **Step 4: Update current docs and debt #278 wording.**
+- [x] **Step 4: Update current docs and debt #278 wording.**
 
 Document implemented pure classification and remaining qualified-producer, identity, reconstruction, receipt, metadata and effects contracts. Add a concise public API example using a Pending State/After -> Acknowledge result. Clarify that Apply is a proposed logical step, not permission to write. Do not claim actual recovery, journal or M1 completion. Index links must target durable documents from the start, not WIP paths.
 
-- [ ] **Step 5: Run complete verification and inspect preservation.**
+- [x] **Step 5: Run complete verification and inspect preservation.**
 
 Run just fmt through the runner, then just verify with a new unique log. Run locked all-target cargo check with toolchain1.85 and a fresh target directory using a separately named runner environment; retain exact command and result. Run all-target clippy with -D warnings if not already covered by just verify. Check the 56 protected hashes against protected-before.json, the copied broad draft against inherited-application-draft.json, and git diff --check. No claim of hosted platform validation before CI runs. Count outer test results separately from nested captured fixtures if reporting totals.
 
-- [ ] **Step 6: Commit, self-review and report.**
+- [x] **Step 6: Commit, self-review and report.**
 
 Stage only assigned code/tests/current durable docs/indexes and the #278 paragraph; keep broad application draft untracked. Commit with feat: model ordered recovery checkpoints. Self-review the diff against every spec section and Review Focus row. Save task-1-report.md in this plan's scratch with status, commit, files, acceptance RED/GREEN, thirteen controls, restored hashes, complete gate evidence, test counts and limitations. No worker-spawned agents. Controller dispatches the task reviewer after the report.
 

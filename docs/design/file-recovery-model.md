@@ -1,6 +1,6 @@
 # File recovery checkpoint model
 
-Status: implemented inactive pure library API.
+This design describes the implemented inactive pure library API.
 
 `operations::recovery::plan_recovery` consumes a borrowed slice of supplied
 `RecoveryAction` values and returns `anyhow::Result<RecoveryDecision>`. Each action
@@ -16,6 +16,7 @@ its schema or path. Exactly one State action must be final; state-only operation
 are valid. Checkpoints must follow `Done* Pending? Queued*`. The complete sequence
 is structurally validated before any observation decision; invalid structure
 returns a contextual error with the position or required State condition.
+Diagnostic ordering is unspecified when multiple structural conditions are invalid.
 
 Observations compare supplied current values to exact expected before and after
 values. Before and After match only their respective values; Both matches both
@@ -43,25 +44,11 @@ one `RecoveryStep` at the first unfinished index:
 - Pending After or Both proposes `Acknowledge { index }`, avoiding repetition.
 - Queued Both proposes `CheckpointOnly { index }`, with no physical write.
 
-For example, a pending final State already at post-state is acknowledged:
-
-```rust
-use upskill::operations::recovery::{
-    ActionKind, Checkpoint, ObservedRelation, RecoveryAction,
-    RecoveryDecision, RecoveryStep, plan_recovery,
-};
-
-let actions = [RecoveryAction {
-    kind: ActionKind::State,
-    checkpoint: Checkpoint::Pending,
-    observed: ObservedRelation::After,
-}];
-assert_eq!(plan_recovery(&actions).unwrap(), RecoveryDecision::Ready {
-    recorded_prefix: 0,
-    verified_post_prefix: 1,
-    step: RecoveryStep::Acknowledge { index: 0 },
-});
-```
+For a state-only operation supplied as Pending and After, the decision is Ready
+with recorded prefix 0, verified post-state prefix 1 and Acknowledge at index 0.
+The pending final state write is recognized without proposing it again. See the
+[public model and planner](https://github.com/driftsys/upskill/blob/main/src/operations/recovery.rs)
+and the [literal acceptance cases](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs).
 
 Apply is a proposed logical step, not permission to write. The function changes
 no checkpoint and skips no action. Before another application decision, a future
