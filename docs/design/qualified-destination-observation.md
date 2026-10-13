@@ -137,8 +137,8 @@ No permission to remove or replace anything follows from successful observation.
 ## Capture and revalidation
 
 Capture the regular file through its retained handle. Require stable identity,
-type, link count, size, permission bits, modification time and change time across
-the read, and require the read byte count to match the sampled size. Do not use
+type, link count, size, permission bits, modification time and change time,
+including fractional seconds, across the read, and require the read byte count to match the sampled size. Do not use
 access time as a precondition: reads can update it. Capture failure returns no
 snapshot. File data may be binary; never decode or normalize it.
 
@@ -223,7 +223,7 @@ No privileged mount creation, device-node creation, hostile namespace relocation
 real I/O or descriptor-exhaustion injection or exotic filesystem qualification is
 claimed. Synthetic metadata and error-classification tests do not replace those
 experiments. Acquisition-read stamp/size isolation and negative controls for
-production qualification wiring remain deferred under issue #270. The API remains
+production qualification wiring are covered by the issue #270 controls below. The API remains
 inactive in existing commands and schema 1.
 
 Earlier local validation passed `just fmt`, full `just verify`, warning-denying
@@ -265,3 +265,42 @@ Local all-target cross-compilation also passed for `aarch64-unknown-linux-musl`
 and `x86_64-pc-windows-gnu`, using Zig C wrappers for the existing ring dependency.
 These compile checks are distinct from the dated hosted runtime evidence above.
 Neither establishes a qualified Windows backend.
+
+## Independent destination regression controls
+
+Additional controls for issue #270 exercise the production acquisition and
+qualification entries. A real file starts with an explicit nonzero nanosecond
+mtime, then changes only that fractional value within the same whole second.
+The fixture asserts exact filesystem retention and unchanged identity, bytes,
+mode, links and size, and normalizes only retained ctime so verification must
+reject the fractional mtime change independently.
+
+A private read-to-end parameter keeps the opened descriptor and its before-read
+stamp together. The production reader remains `File::read_to_end`. Deterministic
+read fixtures change real descriptor metadata while returning the same bytes and
+count, or return fewer bytes while all compared descriptor metadata remains
+unchanged. Both must reject during acquisition before the snapshot postcheck.
+Stable reads preserve exact bytes, and read errors preserve context and cause.
+Omission controls remove the stamp check, byte-count check and acquisition call
+wiring separately; each must fail its intended assertion.
+
+The private `Mount::of` entry accepts only native descriptor-query functions;
+production supplies fstatfs and, on Linux, statx with MNT_ID. Tests alter only the
+native profile or Linux returned mount-ID mask and require this same entry to
+reject, with qualified real metadata as a success control. A different expected
+mount binding must reject through `Directory::new`, retained directory
+verification and `Evidence::verify`, with other real evidence unchanged.
+Independent controls omit the profile/mask checks, their entry wiring and mount
+comparison wiring. Linux mask runtime controls require hosted Linux for the
+current head; cross-compilation and synthetic validators on macOS cannot replace
+that gate. Injected query results and expected bindings do not establish real
+kernel cross-mount rejection or privileged mount behavior.
+
+Public examples additionally reject both permutations of two existing,
+individually valid files with exact stored spellings `a/é` and `a/e`, and require
+two consecutive stale-verification errors without changing captured observations.
+The existing-file fixture has an independent control that exempts only pairs
+whose files both exist from overlap rejection. A fresh-observation substitution
+must fail the stale-verification example. Local APFS passes 28 public acceptance
+cases and 22 private destination cases. The Linux-only mask example requires a
+current-head hosted Linux runtime result as a separate gate. Privileged mounts, device nodes and hostile relocation remain unexercised.

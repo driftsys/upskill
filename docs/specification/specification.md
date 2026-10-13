@@ -402,9 +402,11 @@ Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
-evidence, source stabilization, qualified filesystem observation, destination
-qualification, compiler-to-lifecycle desired-set integration, lifecycle state and
-execution, and Codex activation remain pending.
+evidence, source stabilization, qualified source observation,
+compiler-to-lifecycle desired-set integration, lifecycle state and execution, and
+Codex activation remain pending. Qualified scope roots and writer locking (§4.7)
+and the inactive destination observation boundary (§4.8) are implemented
+separately; neither stabilizes these source manifests.
 
 See the [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
 and its decision records for implementation boundaries and rationale.
@@ -755,8 +757,8 @@ the process instead of returning `Err`.
 An opaque, non-Clone `DestinationSnapshot` retains close-on-exec root, directory
 and file handles, selected root bindings, mount evidence and either exact file
 stamps or the first missing component with its unresolved suffix. Capture checks
-identity, type, links, size, mode, modification/change times and byte count around
-each read. Before returning, and again from `verify_unchanged()`, it checks fresh
+identity, type, links, size, mode, modification/change times (including fractional
+seconds) and byte count around each read. Before returning, and again from `verify_unchanged()`, it checks fresh
 bindings and directory identities, exact stored spellings, mounts, exact bytes,
 file stamps and absence evidence. These checks never refresh stale expectations.
 Timestamp-only changes, edits with bytes and mtime restored but changed ctime,
@@ -778,7 +780,14 @@ runtime qualification and Windows unsupported-boundary checks passed on
 `242930ef9107aff6eff432484f474e47157983f2`) in
 [Actions run 38330080515](https://github.com/driftsys/upskill/actions/runs/38330080515).
 That evidence does not establish a qualified Windows backend or cover later
-local timestamp and special-bit tests. See
+local timestamp and special-bit tests. Independent regression controls now cover
+fractional mtime changes, metadata changes during acquisition, short reads with
+unchanged descriptor metadata, unknown native profiles and different retained
+mount bindings through the production qualification and verification paths.
+Existing-file overlap and repeated stale verification are also pinned. Linux's
+missing returned mount-ID mask has a production-path control requiring hosted
+Linux runtime validation for the current head. Injected query results and
+expected mount bindings do not establish real privileged mount behavior. See
 [AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
 the [destination observation design](../design/qualified-destination-observation.md).
 
