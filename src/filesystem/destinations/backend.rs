@@ -111,6 +111,20 @@ fn verify_value(expected: &FileValue, actual: &FileValue) -> Result<()> {
     }
     Ok(())
 }
+fn capture_bytes(
+    file: &File,
+    stamp: &Stamp,
+    read: &mut impl FnMut(&File, &mut Vec<u8>) -> std::io::Result<usize>,
+) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    read(file, &mut bytes).context("capture destination bytes")?;
+    let after = fstat(file).context("inspect captured destination file")?;
+    if *stamp != Stamp::of(&after) || stamp.size < 0 || bytes.len() as u64 != stamp.size as u64 {
+        bail!("destination file changed during capture");
+    }
+    Ok(bytes)
+}
+
 struct Directory {
     file: File,
     identity: Identity,
@@ -121,7 +135,7 @@ impl Directory {
         if FileType::from_raw_mode(stat.st_mode) != FileType::Directory {
             bail!("destination ancestor is not a directory");
         }
-        mount.require_same(&Mount::of(&file)?)?;
+        mount.require_same(&Mount::of(&file, Mount::queries())?)?;
         Ok(Self {
             file,
             identity: Identity::of(&stat),
@@ -134,7 +148,7 @@ impl Directory {
         {
             bail!("retained directory identity changed");
         }
-        mount.require_same(&Mount::of(&self.file)?)
+        mount.require_same(&Mount::of(&self.file, Mount::queries())?)
     }
 }
 struct BoundRoot {
@@ -164,6 +178,17 @@ impl PathEvidence {
         }
     }
     fn capture(root: usize, directory: &File, mount: &Mount, path: &str) -> Result<Self> {
+        Self::capture_with_read(root, directory, mount, path, &mut |file, bytes| {
+            (&*file).read_to_end(bytes)
+        })
+    }
+    fn capture_with_read(
+        root: usize,
+        directory: &File,
+        mount: &Mount,
+        path: &str,
+        read: &mut impl FnMut(&File, &mut Vec<u8>) -> std::io::Result<usize>,
+    ) -> Result<Self> {
         let components: Vec<_> = path.split('/').collect();
         let mut directories = Vec::<Directory>::new();
         for (index, component) in components.iter().enumerate() {
@@ -185,24 +210,15 @@ impl PathEvidence {
             exact_spelling(parent, component)?;
             if index + 1 == components.len() {
                 require_regular(&selected)?;
-                let mut file = open_file(parent, component)?;
+                let file = open_file(parent, component)?;
                 let opened = fstat(&file).context("inspect opened destination file")?;
                 require_regular(&opened)?;
                 if Stamp::of(&selected) != Stamp::of(&opened) {
                     bail!("destination file changed during open");
                 }
-                mount.require_same(&Mount::of(&file)?)?;
+                mount.require_same(&Mount::of(&file, Mount::queries())?)?;
                 let stamp = Stamp::of(&opened);
-                let mut bytes = Vec::new();
-                file.read_to_end(&mut bytes)
-                    .context("capture destination bytes")?;
-                let after = fstat(&file).context("inspect captured destination file")?;
-                if stamp != Stamp::of(&after)
-                    || stamp.size < 0
-                    || bytes.len() as u64 != stamp.size as u64
-                {
-                    bail!("destination file changed during capture");
-                }
+                let bytes = capture_bytes(&file, &stamp, read)?;
                 let value = FileValue {
                     bytes,
                     mode: Some(stamp.mode & 0o7777),
@@ -248,7 +264,7 @@ impl PathEvidence {
                     ..
                 },
             ) => {
-                mount.require_same(&Mount::of(file)?)?;
+                mount.require_same(&Mount::of(file, Mount::queries())?)?;
                 if stamp != actual
                     || *stamp
                         != Stamp::of(&fstat(file).context("revalidate retained destination file")?)
@@ -273,7 +289,7 @@ impl Evidence {
         locations: &[FileLocation],
     ) -> Result<(Self, Vec<ObservedFile>)> {
         let file = scope.reopen_directory()?;
-        let mount = Mount::of(&file)?;
+        let mount = Mount::of(&file, Mount::queries())?;
         let root = Directory::new(file, &mount)?;
         let mut bindings = Vec::<BoundRoot>::new();
         let mut indices = Vec::new();

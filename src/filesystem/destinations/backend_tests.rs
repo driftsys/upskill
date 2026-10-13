@@ -261,3 +261,154 @@ fn failed_capture_and_snapshot_drop_close_owned_descriptors() {
         );
     }
 }
+
+#[test]
+fn fractional_mtime_revalidation_independent_of_changed_timestamp() {
+    let (tmp, scope, locations) = fixture();
+    let writable = File::options()
+        .write(true)
+        .open(tmp.path().join("a/data"))
+        .unwrap();
+    let seconds = 1_700_000_000;
+    let initial = std::time::UNIX_EPOCH + std::time::Duration::new(seconds, 123_456_789);
+    writable
+        .set_times(std::fs::FileTimes::new().set_modified(initial))
+        .unwrap();
+    let (mut evidence, observations) = Evidence::capture(&scope, &locations).unwrap();
+    evidence.verify(&scope, &observations).unwrap();
+    let Final::Present { file, stamp, value } = &mut evidence.paths[0].last else {
+        panic!("fixture must be present")
+    };
+    let before = fstat(&*file).unwrap();
+    assert_eq!(
+        (before.st_mtime as i64, before.st_mtime_nsec as i64),
+        (seconds as i64, 123_456_789)
+    );
+    let changed = std::time::UNIX_EPOCH + std::time::Duration::new(seconds, 987_654_321);
+    writable
+        .set_times(std::fs::FileTimes::new().set_modified(changed))
+        .unwrap();
+    let after = fstat(&*file).unwrap();
+    assert_eq!(
+        (after.st_mtime as i64, after.st_mtime_nsec as i64),
+        (seconds as i64, 987_654_321)
+    );
+    assert_eq!(before.st_mtime, after.st_mtime);
+    assert_ne!(before.st_mtime_nsec, after.st_mtime_nsec);
+    assert_eq!(Identity::of(&before), Identity::of(&after));
+    assert_eq!(before.st_mode, after.st_mode);
+    assert_eq!(before.st_size, after.st_size);
+    assert_eq!(before.st_nlink, after.st_nlink);
+    assert_eq!(
+        std::fs::read(tmp.path().join("a/data")).unwrap(),
+        value.bytes
+    );
+    // Retain the old mtime, but neutralize the ctime update caused by set_times.
+    stamp.changed = Stamp::of(&after).changed;
+    let mut normalized = Stamp::of(&before);
+    normalized.changed = stamp.changed;
+    normalized.modified = Stamp::of(&after).modified;
+    assert_eq!(normalized, Stamp::of(&after));
+    assert!(
+        evidence.verify(&scope, &observations).is_err(),
+        "production revalidation ignored fractional mtime"
+    );
+}
+
+#[test]
+fn acquisition_rejects_metadata_changed_during_exact_read() {
+    let (tmp, scope, _) = fixture();
+    let root = scope.reopen_directory().unwrap();
+    let mount = Mount::of(&root, Mount::queries()).unwrap();
+    let mut read = |file: &File, bytes: &mut Vec<u8>| {
+        let before = fstat(file).unwrap();
+        let count = (&*file).read_to_end(bytes)?;
+        let writable = File::options()
+            .write(true)
+            .open(tmp.path().join("a/data"))
+            .unwrap();
+        let changed = std::time::UNIX_EPOCH + std::time::Duration::new(1_700_000_000, 123_456_789);
+        writable
+            .set_times(std::fs::FileTimes::new().set_modified(changed))
+            .unwrap();
+        let after = fstat(file).unwrap();
+        assert_eq!(Identity::of(&before), Identity::of(&after));
+        assert_eq!(before.st_mode, after.st_mode);
+        assert_eq!(before.st_size, after.st_size);
+        assert_eq!(before.st_nlink, after.st_nlink);
+        assert_ne!(
+            (before.st_mtime, before.st_mtime_nsec),
+            (after.st_mtime, after.st_mtime_nsec)
+        );
+        assert_eq!(bytes, b"unchanged");
+        assert_eq!(count, 9);
+        Ok(count)
+    };
+    let result = PathEvidence::capture_with_read(0, &root, &mount, "a/data", &mut read);
+    assert!(
+        result.is_err(),
+        "acquisition accepted metadata changed during exact read"
+    );
+}
+
+#[test]
+fn acquisition_rejects_short_read_with_unchanged_metadata() {
+    let (_tmp, scope, _) = fixture();
+    let root = scope.reopen_directory().unwrap();
+    let mount = Mount::of(&root, Mount::queries()).unwrap();
+    let mut read = |file: &File, bytes: &mut Vec<u8>| {
+        let before = Stamp::of(&fstat(file).unwrap());
+        let count = std::io::Cursor::new(b"short").read_to_end(bytes)?;
+        assert_eq!(before, Stamp::of(&fstat(file).unwrap()));
+        assert_eq!(before.size, 9);
+        assert_eq!(count, 5);
+        Ok(count)
+    };
+    let result = PathEvidence::capture_with_read(0, &root, &mount, "a/data", &mut read);
+    assert!(
+        result.is_err(),
+        "acquisition accepted short read with unchanged metadata"
+    );
+}
+
+#[test]
+fn acquisition_stable_read_preserves_exact_bytes_and_contextual_error() {
+    let (_tmp, scope, _) = fixture();
+    let root = scope.reopen_directory().unwrap();
+    let mount = Mount::of(&root, Mount::queries()).unwrap();
+    let mut read = |file: &File, bytes: &mut Vec<u8>| (&*file).read_to_end(bytes);
+    let captured = PathEvidence::capture_with_read(0, &root, &mount, "a/data", &mut read).unwrap();
+    assert_eq!(captured.value().unwrap().bytes, b"unchanged");
+    let mut failed = |_: &File, _: &mut Vec<u8>| Err(std::io::Error::other("fixture read failure"));
+    let result = PathEvidence::capture_with_read(0, &root, &mount, "a/data", &mut failed);
+    let error = result.err().expect("read error must reject acquisition");
+    assert!(error.to_string().contains("capture destination bytes"));
+    assert!(
+        error
+            .chain()
+            .any(|cause| cause.to_string().contains("fixture read failure"))
+    );
+}
+
+#[test]
+fn different_mount_binding_rejected_by_directory_and_evidence() {
+    let (_tmp, scope, locations) = fixture();
+    let (mut evidence, observations) = Evidence::capture(&scope, &locations).unwrap();
+    evidence.verify(&scope, &observations).unwrap();
+    let different = super::super::qualification::tests::different_binding(&evidence.mount);
+    let root = scope.reopen_directory().unwrap();
+    assert!(
+        Directory::new(root, &different).is_err(),
+        "directory acquisition omitted mount comparison"
+    );
+    assert!(
+        evidence.root.verify(&different).is_err(),
+        "retained directory omitted mount comparison"
+    );
+    // Alter only the expected mount: real identities, values and file stamps remain stable.
+    evidence.mount = different;
+    assert!(
+        evidence.verify(&scope, &observations).is_err(),
+        "production evidence verification omitted mount binding"
+    );
+}

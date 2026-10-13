@@ -47,19 +47,44 @@ fn require_same_mount<T: PartialEq>(expected: &T, actual: &T) -> Result<()> {
     }
     Ok(())
 }
+#[cfg(target_os = "macos")]
+pub(super) type DescriptorQueries = fn(&File) -> rustix::io::Result<rustix::fs::StatFs>;
+#[cfg(target_os = "linux")]
+pub(super) type DescriptorQueries = (
+    fn(&File) -> rustix::io::Result<rustix::fs::StatFs>,
+    fn(&File) -> rustix::io::Result<rustix::fs::Statx>,
+);
 impl Mount {
-    pub(super) fn of(file: &File) -> Result<Self> {
-        let metadata = fstatfs(file).context("qualify descriptor filesystem profile")?;
+    pub(super) fn queries() -> DescriptorQueries {
+        #[cfg(target_os = "macos")]
+        {
+            |file| fstatfs(file)
+        }
+        #[cfg(target_os = "linux")]
+        {
+            (
+                |file| fstatfs(file),
+                |file| {
+                    rustix::fs::statx(
+                        file,
+                        "",
+                        AtFlags::EMPTY_PATH,
+                        rustix::fs::StatxFlags::MNT_ID,
+                    )
+                },
+            )
+        }
+    }
+    pub(super) fn of(file: &File, queries: DescriptorQueries) -> Result<Self> {
+        #[cfg(target_os = "macos")]
+        let profile_query = queries;
+        #[cfg(target_os = "linux")]
+        let (profile_query, mount_query) = queries;
+        let metadata = profile_query(file).context("qualify descriptor filesystem profile")?;
         #[cfg(target_os = "linux")]
         {
             linux_profile(metadata.f_type as u64)?;
-            let stat = rustix::fs::statx(
-                file,
-                "",
-                AtFlags::EMPTY_PATH,
-                rustix::fs::StatxFlags::MNT_ID,
-            )
-            .context("obtain Linux statx mount-ID evidence")?;
+            let stat = mount_query(file).context("obtain Linux statx mount-ID evidence")?;
             Ok(Self {
                 id: linux_mount_id(stat.stx_mask, stat.stx_mnt_id)?,
             })
@@ -86,7 +111,7 @@ impl Mount {
     }
 }
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     #[test]
     fn unknown_linux_profile_is_rejected() {
@@ -124,5 +149,67 @@ mod tests {
             "unknown macOS profile accepted"
         );
         apfs_profile(b"apfs").unwrap();
+    }
+    pub(in crate::filesystem::destinations) fn different_binding(mount: &Mount) -> Mount {
+        #[cfg(target_os = "macos")]
+        {
+            let mut on = mount.on.clone();
+            on.push(b'x');
+            Mount {
+                fsid: mount.fsid,
+                on,
+                from: mount.from.clone(),
+            }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            Mount { id: mount.id ^ 1 }
+        }
+    }
+    #[test]
+    fn production_entry_rejects_unknown_native_profile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = File::open(tmp.path()).unwrap();
+        Mount::of(&file, Mount::queries()).unwrap();
+        let unknown = |file: &File| {
+            let mut metadata = fstatfs(file)?;
+            #[cfg(target_os = "macos")]
+            {
+                metadata.f_fstypename.fill(0);
+                metadata.f_fstypename[0] = b'x' as std::ffi::c_char;
+            }
+            #[cfg(target_os = "linux")]
+            {
+                metadata.f_type = 0x794c7630;
+            }
+            Ok(metadata)
+        };
+        #[cfg(target_os = "macos")]
+        let queries: DescriptorQueries = unknown;
+        #[cfg(target_os = "linux")]
+        let queries: DescriptorQueries = (unknown, Mount::queries().1);
+        assert!(
+            Mount::of(&file, queries).is_err(),
+            "production qualification accepted unknown native profile"
+        );
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn production_entry_rejects_missing_returned_mount_id_mask() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = File::open(tmp.path()).unwrap();
+        Mount::of(&file, Mount::queries()).unwrap();
+        let missing = |file: &File| {
+            let mut stat = Mount::queries().1(file)?;
+            stat.stx_mask &= !MOUNT_ID_MASK;
+            stat.stx_mnt_id = 77;
+            assert_eq!(stat.stx_mask & MOUNT_ID_MASK, 0);
+            assert_eq!(stat.stx_mnt_id, 77);
+            Ok(stat)
+        };
+        assert!(
+            Mount::of(&file, (Mount::queries().0, missing)).is_err(),
+            "production qualification accepted missing returned mount-ID mask"
+        );
     }
 }

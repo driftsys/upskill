@@ -105,6 +105,66 @@ mod qualified {
         assert_eq!(unchanged_tree(tmp.path()), before);
     }
     #[test]
+    fn d04_existing_non_ascii_potential_overlap_rejects_both_permutations() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join("a")).unwrap();
+        fs::write(tmp.path().join("a/é"), b"accented").unwrap();
+        fs::write(tmp.path().join("a/e"), b"ascii").unwrap();
+        let names: Vec<_> = fs::read_dir(tmp.path().join("a"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert!(names.contains(&std::ffi::OsString::from("é")));
+        assert!(names.contains(&std::ffi::OsString::from("e")));
+        let accented = fs::metadata(tmp.path().join("a/é")).unwrap();
+        let ascii = fs::metadata(tmp.path().join("a/e")).unwrap();
+        assert_ne!((accented.dev(), accented.ino()), (ascii.dev(), ascii.ino()));
+        let before = unchanged_tree(tmp.path());
+        let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
+        // Each file is individually valid; only conservative batch overlap rejects them.
+        for path in ["a/é", "a/e"] {
+            scope
+                .observe_destinations(&[location(tmp.path(), path)])
+                .unwrap()
+                .verify_unchanged()
+                .unwrap();
+        }
+        for paths in [["a/é", "a/e"], ["a/e", "a/é"]] {
+            let locations = paths.map(|path| location(tmp.path(), path));
+            assert!(
+                scope.observe_destinations(&locations).is_err(),
+                "existing potential overlap accepted: {paths:?}"
+            );
+        }
+        assert_eq!(unchanged_tree(tmp.path()), before);
+    }
+
+    #[test]
+    fn d06_failed_verification_never_refreshes_observations() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("data"), b"original").unwrap();
+        let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
+        let snapshot = scope
+            .observe_destinations(&[location(tmp.path(), "data")])
+            .unwrap();
+        let expected = snapshot.observations().to_vec();
+        snapshot.verify_unchanged().unwrap();
+        fs::write(tmp.path().join("data"), b"modified").unwrap();
+        for attempt in 1..=2 {
+            assert!(
+                snapshot.verify_unchanged().is_err(),
+                "stale evidence accepted on verification {attempt}"
+            );
+            assert_eq!(snapshot.observations(), expected.as_slice());
+            assert_eq!(
+                snapshot.observations()[0].value.as_ref().unwrap().bytes,
+                b"original"
+            );
+        }
+        assert_eq!(fs::read(tmp.path().join("data")).unwrap(), b"modified");
+    }
+
+    #[test]
     fn d02_absent_leaf_and_parents_create_nothing() {
         let tmp = tempfile::tempdir().unwrap();
         let scope = QualifiedScope::open(&root(tmp.path())).unwrap();

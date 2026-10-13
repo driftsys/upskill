@@ -72,9 +72,25 @@ compilation/unsupported-boundary checks for PR head
 `242930ef9107aff6eff432484f474e47157983f2`). This is historical evidence for that
 head; later local timestamp and special-bit assertion controls are separate.
 A qualified Windows backend remains pending. Privileged mounts, device nodes and
-hostile namespace relocation remain unexercised. Acquisition-read stamp/size and
-production qualification-wiring negative controls remain deferred under
-issue #270. See the durable design for the evidence scope, counts and limits.
+hostile namespace relocation remain unexercised. The issue #270 regression
+implementation now independently pins fractional mtime, acquisition-read
+stamp/size and call wiring, native profile rejection, retained mount comparison,
+existing-file overlap and repeated stale verification. Local APFS passes 28
+public and 22 private destination cases; 14 independent production omissions
+produce assertion failures, with exact source restoration and focused green
+checks. Restored full repository verification passes without warnings.
+On 2026-10-13, [Actions run 38334882688](https://github.com/driftsys/upskill/actions/runs/38334882688)
+passed for PR #273 head `2a50ca6a5163e11912cbcee7987593c68e0a4197`.
+Ubuntu job `115092610337` passed 28 public destination cases and the native missing
+returned mount-ID mask case. Four profile/mask check and production-call omissions
+failed their intended assertions; each restored `qualification.rs` to SHA-256
+`1c5b288ed575ae1ccdd99a10170c13aa9054f92004a0927a64fb1587bac40bd5`,
+followed by 22 restored private cases GREEN. All 13 head checks succeeded,
+including Windows unsupported-boundary job `115092610428`. This dated evidence
+covers that head; hosted CI for the final head after temporary harness removal
+remains required before merge. It establishes neither a qualified Windows backend
+nor real privileged mount or fault behavior. See the durable design for evidence
+scope, counts and limits.
 
 Local full verification, warning-denying all-target Clippy and Rust 1.85
 all-target checks passed. Matching Rust 1.97.1 macOS release probes measure

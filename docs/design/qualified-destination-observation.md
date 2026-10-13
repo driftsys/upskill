@@ -137,8 +137,8 @@ No permission to remove or replace anything follows from successful observation.
 ## Capture and revalidation
 
 Capture the regular file through its retained handle. Require stable identity,
-type, link count, size, permission bits, modification time and change time across
-the read, and require the read byte count to match the sampled size. Do not use
+type, link count, size, permission bits, modification time and change time,
+including fractional seconds, across the read, and require the read byte count to match the sampled size. Do not use
 access time as a precondition: reads can update it. Capture failure returns no
 snapshot. File data may be binary; never decode or normalize it.
 
@@ -223,7 +223,7 @@ No privileged mount creation, device-node creation, hostile namespace relocation
 real I/O or descriptor-exhaustion injection or exotic filesystem qualification is
 claimed. Synthetic metadata and error-classification tests do not replace those
 experiments. Acquisition-read stamp/size isolation and negative controls for
-production qualification wiring remain deferred under issue #270. The API remains
+production qualification wiring are covered by the issue #270 controls below. The API remains
 inactive in existing commands and schema 1.
 
 Earlier local validation passed `just fmt`, full `just verify`, warning-denying
@@ -265,3 +265,67 @@ Local all-target cross-compilation also passed for `aarch64-unknown-linux-musl`
 and `x86_64-pc-windows-gnu`, using Zig C wrappers for the existing ring dependency.
 These compile checks are distinct from the dated hosted runtime evidence above.
 Neither establishes a qualified Windows backend.
+
+## Independent destination regression controls
+
+Additional controls for issue #270 exercise the production acquisition and
+qualification entries. A real file starts with an explicit nonzero nanosecond
+mtime, then changes only that fractional value within the same whole second.
+The fixture asserts exact filesystem retention and unchanged identity, bytes,
+mode, links and size, and normalizes only retained ctime so verification must
+reject the fractional mtime change independently.
+
+A private read-to-end parameter keeps the opened descriptor and its before-read
+stamp together. The production reader remains `File::read_to_end`. Deterministic
+read fixtures change real descriptor metadata while returning the same bytes and
+count, or return fewer bytes while all compared descriptor metadata remains
+unchanged. Both must reject during acquisition before the snapshot postcheck.
+Stable reads preserve exact bytes, and read errors preserve context and cause.
+Omission controls remove the stamp check, byte-count check and acquisition call
+wiring separately; each must fail its intended assertion.
+
+The private `Mount::of` entry accepts only native descriptor-query functions;
+production supplies `Mount::queries`, which calls fstatfs and, on Linux, statx
+with MNT_ID. Tests alter only the native profile or Linux returned mount-ID mask and require this same entry to
+reject, with qualified real metadata as a success control. A different expected
+mount binding must reject through `Directory::new`, retained directory
+verification and `Evidence::verify`, with other real evidence unchanged.
+Independent controls omit the profile/mask checks, their entry wiring and mount
+comparison wiring. Linux mask runtime controls require native hosted Linux
+execution; cross-compilation and synthetic validators on macOS cannot replace
+that gate. Injected query results and expected bindings do not establish real
+kernel cross-mount rejection or privileged mount behavior.
+
+Public examples additionally reject both permutations of two existing,
+individually valid files with exact stored spellings `a/é` and `a/e`, and require
+two consecutive stale-verification errors without changing captured observations.
+The existing-file fixture has an independent control that exempts only pairs
+whose files both exist from overlap rejection. A fresh-observation substitution
+must fail the stale-verification example. Local APFS passes 28 public acceptance
+cases and 22 private destination cases. Fourteen independent native production
+omissions produce the intended assertion failures. Each mutation is restored
+byte-for-byte before focused green checks; restored full repository verification
+passes without warnings. These results establish the local regression controls,
+with hosted evidence recorded separately below.
+
+Hosted evidence on 2026-10-13 for PR #273 head
+`2a50ca6a5163e11912cbcee7987593c68e0a4197` passed in
+[Actions run 38334882688](https://github.com/driftsys/upskill/actions/runs/38334882688).
+Ubuntu job `115092610337` passed 28 public destination cases, including native
+qualification, and the missing returned mount-ID mask case. Four separate native
+profile/mask check and production-call omissions produced their intended assertion
+RED. After each omission, `qualification.rs` was restored to SHA-256
+`1c5b288ed575ae1ccdd99a10170c13aa9054f92004a0927a64fb1587bac40bd5`;
+the final restored private destination suite passed all 22 cases. All 13 head
+checks succeeded, including Windows unsupported-boundary job `115092610428`.
+This dated evidence covers that head. Removing the temporary Linux CI harness
+requires hosted CI for the resulting final head before merge. Windows has no
+qualified backend; privileged mounts, device nodes, real I/O or exhaustion faults
+and hostile relocation remain unexercised.
+
+The archived [bounded spec](https://github.com/driftsys/upskill/blob/2a50ca6a5163e11912cbcee7987593c68e0a4197/docs/archive/specs/2026-10-13-destination-evidence-controls-design.md)
+and [plan](https://github.com/driftsys/upskill/blob/2a50ca6a5163e11912cbcee7987593c68e0a4197/docs/archive/plans/2026-10-13-destination-evidence-controls.md) retain the
+provisional supplier name `Mount::query`. The implemented private supplier is
+`Mount::queries`; the singular name was a sketch, not an additional interface.
+The archive index records this as-built clarification while preserving the raw
+working bytes.
