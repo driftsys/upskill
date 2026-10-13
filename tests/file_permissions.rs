@@ -121,52 +121,73 @@ fn unknown_resource_mode_cannot_grant_new_execution() {
 #[test]
 fn invalid_evidence_rejects_even_when_existing_mode_would_win() {
     for mode in [0o10000, u32::MAX] {
-        assert!(
-            select_file_mode(
-                Absent,
-                Resource {
-                    captured_mode: Some(mode)
-                },
-                Disabled
-            )
-            .is_err(),
-            "invalid captured resource mode was accepted"
-        );
-        assert!(
-            select_file_mode(
-                Present(Some(0o640)),
-                Resource {
-                    captured_mode: Some(mode)
-                },
-                Disabled
-            )
-            .is_err(),
-            "unused invalid captured resource mode bypassed validation"
-        );
-        assert!(
-            select_file_mode(Present(Some(mode)), Generated, Disabled).is_err(),
-            "invalid destination mode was accepted"
-        );
+        for policy in [Disabled, OwnerExecutable] {
+            assert!(
+                select_file_mode(
+                    Absent,
+                    Resource {
+                        captured_mode: Some(mode)
+                    },
+                    policy
+                )
+                .is_err(),
+                "invalid captured resource mode was accepted under {policy:?}"
+            );
+            assert!(
+                select_file_mode(
+                    Present(Some(0o640)),
+                    Resource {
+                        captured_mode: Some(mode)
+                    },
+                    policy
+                )
+                .is_err(),
+                "unused invalid captured resource mode bypassed validation under {policy:?}"
+            );
+            assert!(
+                select_file_mode(Present(Some(mode)), Generated, policy).is_err(),
+                "invalid destination mode was accepted under {policy:?}"
+            );
+        }
     }
 }
 
 #[test]
 fn errors_identify_evidence_and_policy_context() {
+    for mode in [0o10000, u32::MAX] {
+        for policy in [Disabled, OwnerExecutable] {
+            for (destination, source, expected) in [
+                (
+                    Present(Some(mode)),
+                    Generated,
+                    "destination mode must contain permission bits only",
+                ),
+                (
+                    Absent,
+                    Resource {
+                        captured_mode: Some(mode),
+                    },
+                    "captured resource mode must contain permission bits only",
+                ),
+                (
+                    Present(Some(0o640)),
+                    Resource {
+                        captured_mode: Some(mode),
+                    },
+                    "captured resource mode must contain permission bits only",
+                ),
+            ] {
+                let diagnostic = select_file_mode(destination, source, policy)
+                    .unwrap_err()
+                    .to_string();
+                assert!(
+                    diagnostic.contains(expected),
+                    "expected {expected:?} under {policy:?}, got {diagnostic:?}"
+                );
+            }
+        }
+    }
     let cases = [
-        (
-            Present(Some(0o10000)),
-            Generated,
-            Disabled,
-            "destination mode must contain permission bits only",
-        ),
-        (
-            Absent,
-            Resource {
-                captured_mode: Some(0o10000),
-            },
-            Disabled,
-            "captured resource mode must contain permission bits only",
-        ),
         (
             Present(None),
             Generated,

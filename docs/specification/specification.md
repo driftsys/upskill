@@ -684,8 +684,10 @@ This library prerequisite activates no CLI selector, native adapter, source fetc
 filesystem observation, lock, journal, schema-2 persistence or execution. Connecting
 the captured compiler to complete lifecycle desired sets remains pending, along
 with complete reference authority, per-owner consumer associations, immutable
-source evidence, target qualification, filesystem safety, permission policy,
-writer locking, durable state and apply/recovery. It does not complete M1-A2,
+source evidence, target qualification, filesystem safety, physical permission
+application and metadata qualification, writer locking, durable state and
+apply/recovery. Pure [permission selection](../design/file-permission-policy.md)
+is implemented as a separate inactive supplied-value capability. It does not complete M1-A2,
 M1-A3 or M1. The public declarations are in
 [`operations::plan`](https://github.com/driftsys/upskill/blob/main/src/operations/plan.rs).
 
