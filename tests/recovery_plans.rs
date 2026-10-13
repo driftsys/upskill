@@ -407,6 +407,32 @@ fn multi_action_literal_outcomes() {
             "full suffix After blocks Ready",
         ),
         (
+            vec![
+                action(File, Queued, Before),
+                action(File, Queued, After),
+                action(State, Queued, Before),
+            ],
+            Reconcile {
+                index: 1,
+                recorded_prefix: 0,
+                verified_post_prefix: 0,
+            },
+            "later File After blocks Ready",
+        ),
+        (
+            vec![
+                action(File, Queued, Before),
+                action(File, Queued, Neither),
+                action(State, Queued, Before),
+            ],
+            Reconcile {
+                index: 1,
+                recorded_prefix: 0,
+                verified_post_prefix: 0,
+            },
+            "later File Neither blocks Ready",
+        ),
+        (
             vec![action(File, Done, After), action(State, Done, Before)],
             Reconcile {
                 index: 1,
@@ -484,6 +510,42 @@ fn invalid_structure_is_rejected_before_observations() {
             ],
             "action 1",
             "multiple Pending actions reject",
+        ),
+        (
+            vec![
+                action(File, Queued, Before),
+                action(File, Done, After),
+                action(State, Queued, Before),
+            ],
+            "action 1",
+            "File Done after Queued rejects",
+        ),
+        (
+            vec![
+                action(File, Pending, Before),
+                action(File, Done, After),
+                action(State, Queued, Before),
+            ],
+            "action 1",
+            "File Done after Pending rejects",
+        ),
+        (
+            vec![
+                action(File, Queued, Before),
+                action(File, Pending, Before),
+                action(State, Queued, Before),
+            ],
+            "action 1",
+            "File Pending after Queued rejects",
+        ),
+        (
+            vec![
+                action(File, Pending, Before),
+                action(File, Pending, Before),
+                action(State, Queued, Before),
+            ],
+            "action 1",
+            "multiple File Pending actions reject",
         ),
         (
             vec![action(File, Queued, Neither), action(State, Done, After)],
