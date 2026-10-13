@@ -1,6 +1,7 @@
 # AD-0029: Capture qualified destination evidence
 
-Implemented with local APFS evidence; hosted qualification remains pending.
+Implemented with local APFS and hosted Linux evidence, plus hosted Windows
+unsupported-boundary checks. Windows qualification remains pending.
 
 ## Context
 
@@ -63,15 +64,23 @@ Windows checks, Rust 1.85, full repository verification and matched live-API siz
 measurements. Local APFS acceptance, private evidence tests and independent
 semantic controls now cover the implemented boundary. Linux profile, absent
 mount-ID mask and same-device/different-mount-ID validators are tested separately
-with synthetic metadata; actual hosted Linux statx and Windows qualification
-remain pending. Privileged mounts, device nodes and hostile namespace relocation
-remain unexercised. See the durable design for the evidence scope and limits.
+with synthetic metadata. On 2026-10-13,
+[Actions run 38330080515](https://github.com/driftsys/upskill/actions/runs/38330080515)
+passed Linux runtime qualification with returned statx mount IDs and Windows
+compilation/unsupported-boundary checks for PR head
+`765e70b9b7ce5386530ffea1fe9814b228724428` (merge checkout
+`242930ef9107aff6eff432484f474e47157983f2`). This is historical evidence for that
+head; later local timestamp and special-bit assertion controls are separate.
+A qualified Windows backend remains pending. Privileged mounts, device nodes and
+hostile namespace relocation remain unexercised. Acquisition-read stamp/size and
+production qualification-wiring negative controls remain deferred under
+issue #270. See the durable design for the evidence scope, counts and limits.
 
 Local full verification, warning-denying all-target Clippy and Rust 1.85
 all-target checks passed. Matching Rust 1.97.1 macOS release probes measure
 33,888 additional bytes when snapshot capture and verification are live; the
 inactive CLI remains 3,215,120 bytes at both baseline `8298386` and candidate.
-This is local binary evidence, not hosted qualification or runtime cost.
+This measures local binary size; it does not measure runtime cost.
 
-Satisfies: [specification §4.8](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/docs/specification/specification.md#48-qualified-destination-observations).
+Satisfies: [specification §4.8](https://github.com/driftsys/upskill/blob/765e70b9b7ce5386530ffea1fe9814b228724428/docs/specification/specification.md#48-qualified-destination-observations).
 Related: [AD-0028](0028-lock-qualified-scope-directories.md).

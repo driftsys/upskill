@@ -759,7 +759,8 @@ identity, type, links, size, mode, modification/change times and byte count arou
 each read. Before returning, and again from `verify_unchanged()`, it checks fresh
 bindings and directory identities, exact stored spellings, mounts, exact bytes,
 file stamps and absence evidence. These checks never refresh stale expectations.
-Same-size edits with restored mtime, chmod, identical-byte inode replacement,
+Timestamp-only changes, edits with bytes and mtime restored but changed ctime,
+same-size edits with restored mtime, chmod, identical-byte inode replacement,
 ancestor replacement, missing-to-present transitions and root-alias retargeting
 invalidate evidence. Access times and unrelated directory timestamp changes do
 not invalidate it. Retained handles close on drop and returned-error paths;
@@ -771,8 +772,14 @@ These sampled checks do not exclude external writers or hostile ancestor
 relocation. A future executor must retain its writer guard and independently
 establish complete lifecycle inputs, authority, permission policy, immediate
 pre-effect checks and recovery. Existing commands and schema 1 remain unchanged;
-Windows qualification, hosted platform evidence and lifecycle execution remain
-pending. See [AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
+Windows qualification and lifecycle execution remain pending. Hosted Linux
+runtime qualification and Windows unsupported-boundary checks passed on
+2026-10-13 for PR head `765e70b9b7ce5386530ffea1fe9814b228724428` (merge checkout
+`242930ef9107aff6eff432484f474e47157983f2`) in
+[Actions run 38330080515](https://github.com/driftsys/upskill/actions/runs/38330080515).
+That evidence does not establish a qualified Windows backend or cover later
+local timestamp and special-bit tests. See
+[AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
 the [destination observation design](../design/qualified-destination-observation.md).
 
 ## 5. Source format and authentication

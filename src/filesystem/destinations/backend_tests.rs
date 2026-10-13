@@ -54,6 +54,53 @@ fn exact_bytes_comparison_independent_of_unchanged_stamp() {
 }
 
 #[test]
+fn modified_timestamp_revalidation_independent_of_changed_timestamp() {
+    let (tmp, scope, locations) = fixture();
+    let (mut evidence, observations) = Evidence::capture(&scope, &locations).unwrap();
+    evidence.verify(&scope, &observations).unwrap();
+    let Final::Present { file, stamp, value } = &mut evidence.paths[0].last else {
+        panic!("fixture must be present")
+    };
+    let before = fstat(&*file).unwrap();
+    let modified =
+        file.metadata().unwrap().modified().unwrap() + std::time::Duration::from_secs(60);
+    File::options()
+        .write(true)
+        .open(tmp.path().join("a/data"))
+        .unwrap()
+        .set_times(std::fs::FileTimes::new().set_modified(modified))
+        .unwrap();
+    let after = fstat(&*file).unwrap();
+    assert_ne!(
+        (after.st_mtime, after.st_mtime_nsec),
+        (before.st_mtime, before.st_mtime_nsec)
+    );
+    assert_eq!(Identity::of(&after), Identity::of(&before));
+    assert_eq!(after.st_mode, before.st_mode);
+    assert_eq!(after.st_size, before.st_size);
+    assert_eq!(after.st_nlink, before.st_nlink);
+    assert_eq!(
+        std::fs::read(tmp.path().join("a/data")).unwrap(),
+        value.bytes
+    );
+    // Updating mtime also changes ctime. Neutralize only that competing stamp
+    // difference so production revalidation must independently compare mtime.
+    let current = Stamp::of(&after);
+    stamp.changed = current.changed;
+    let mut normalized = Stamp::of(&before);
+    normalized.changed = current.changed;
+    normalized.modified = current.modified;
+    assert_eq!(
+        normalized, current,
+        "mtime must be the only remaining difference"
+    );
+    assert!(
+        evidence.verify(&scope, &observations).is_err(),
+        "production revalidation ignored mtime"
+    );
+}
+
+#[test]
 fn missing_first_component_insertion_is_rejected_independently() {
     let (tmp, scope, mut locations) = fixture();
     locations[0].path = "absent/parent/data".into();

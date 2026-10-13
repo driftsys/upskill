@@ -2,7 +2,7 @@
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod qualified {
     use std::fs;
-    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
     use std::path::Path;
     use upskill::files::plan::FileLocation;
     use upskill::filesystem::QualifiedScope;
@@ -32,6 +32,23 @@ mod qualified {
         assert_eq!(value.bytes, b"exact\0\xff\n");
         assert_eq!(value.mode, Some(0o640));
         assert_eq!(format!("{snapshot:?}"), "DestinationSnapshot { .. }");
+        snapshot.verify_unchanged().unwrap();
+    }
+    #[test]
+    fn d01_capture_preserves_special_permission_bits() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("data");
+        fs::write(&path, b"special\0bits\xff").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o7640)).unwrap();
+        let actual_mode = fs::metadata(&path).unwrap().mode() & 0o7777;
+        assert_eq!(actual_mode, 0o7640, "fixture must retain all special bits");
+        let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
+        let snapshot = scope
+            .observe_destinations(&[location(tmp.path(), "data")])
+            .unwrap();
+        let value = snapshot.observations()[0].value.as_ref().unwrap();
+        assert_eq!(value.bytes, b"special\0bits\xff");
+        assert_eq!(value.mode, Some(0o7640), "capture discarded special bits");
         snapshot.verify_unchanged().unwrap();
     }
     #[test]
@@ -443,6 +460,64 @@ mod qualified {
                 .unwrap()
                 .set_times(fs::FileTimes::new().set_modified(before.modified().unwrap()))
                 .unwrap();
+        });
+    }
+    #[test]
+    fn d07_timestamp_only_change_preserves_bytes_mode_and_inode() {
+        changed(|path| {
+            let path = path.join("parent/data");
+            let before = fs::metadata(&path).unwrap();
+            let bytes = fs::read(&path).unwrap();
+            let modified = before.modified().unwrap() + std::time::Duration::from_secs(60);
+            fs::File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(modified))
+                .unwrap();
+            let after = fs::metadata(&path).unwrap();
+            assert_ne!(after.modified().unwrap(), before.modified().unwrap());
+            assert_eq!((after.dev(), after.ino()), (before.dev(), before.ino()));
+            assert_eq!(after.mode(), before.mode());
+            assert_eq!(after.len(), before.len());
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+        });
+    }
+    #[test]
+    fn d07_restored_bytes_and_mtime_still_reject_changed_ctime() {
+        changed(|path| {
+            let path = path.join("parent/data");
+            let before = fs::metadata(&path).unwrap();
+            let bytes = fs::read(&path).unwrap();
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+            let after = loop {
+                fs::write(&path, b"same-size-change").unwrap();
+                fs::write(&path, &bytes).unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(&path)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(before.modified().unwrap()))
+                    .unwrap();
+                let after = fs::metadata(&path).unwrap();
+                if (after.ctime(), after.ctime_nsec()) != (before.ctime(), before.ctime_nsec()) {
+                    break after;
+                }
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "fixture ctime did not change"
+                );
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            };
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+            assert_eq!(after.modified().unwrap(), before.modified().unwrap());
+            assert_eq!((after.dev(), after.ino()), (before.dev(), before.ino()));
+            assert_eq!(after.mode(), before.mode());
+            assert_eq!(after.len(), before.len());
+            assert_ne!(
+                (after.ctime(), after.ctime_nsec()),
+                (before.ctime(), before.ctime_nsec())
+            );
         });
     }
     #[test]

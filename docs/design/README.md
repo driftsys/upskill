@@ -19,4 +19,5 @@ may be recorded here before implementation when their status is explicit.
 - [Qualified scope roots and advisory writer locking](qualified-scope-locking.md)
 
 - [Qualified destination observation](qualified-destination-observation.md)
-  — implemented with local APFS evidence; hosted Linux and Windows checks pending.
+  — implemented with APFS and hosted Linux evidence; hosted Windows unsupported
+  boundary checked, Windows qualification pending.

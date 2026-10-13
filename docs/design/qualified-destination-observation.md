@@ -1,7 +1,7 @@
 # Qualified destination observation
 
-Implemented with local APFS evidence; hosted Linux and Windows checks remain
-pending.
+Implemented with local APFS evidence and hosted Linux and Windows boundary
+checks. Windows qualification remains pending.
 
 ## Intent and scope
 
@@ -147,8 +147,10 @@ mount evidence and final entry identity or absence. Recheck captured file
 metadata and exact bytes. `verify_unchanged()` repeats those checks against the
 retained evidence and exact observations; it never refreshes the snapshot into a
 new accepted state. Detect same-length byte edits even when modification time is
-restored, permission changes, identical-byte inode replacement, ancestor
-replacement, missing-to-present transitions and root-alias retargeting. Unrelated
+restored, timestamp-only changes, and edits with bytes and modification time
+restored while change time differs. Also detect permission changes, identical-byte
+inode replacement, ancestor replacement, missing-to-present transitions and
+root-alias retargeting. Unrelated
 sibling edits do not invalidate a snapshot merely by changing directory times.
 
 These are sampled observations under the same namespace assumptions as AD-0028.
@@ -170,7 +172,7 @@ No production retries or silent fallback to ambient path reads are allowed.
 ## Contract and acceptance coverage
 
 The requirements are recorded in
-[specification §4.8](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/docs/specification/specification.md#48-qualified-destination-observations).
+[specification §4.8](https://github.com/driftsys/upskill/blob/765e70b9b7ce5386530ffea1fe9814b228724428/docs/specification/specification.md#48-qualified-destination-observations).
 The [public acceptance suite](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/tests/filesystem_destinations.rs) covers
 capture, absence, candidate validation, unsafe entries, alias handling,
 adversarial changes and opaque evidence. Focused private tests in the
@@ -204,17 +206,37 @@ baseline restoration after both success/drop and failure. This checks read
 handle ownership independently of writer-lock reacquisition. Native non-UTF-8
 root support remains conditional: local APFS rejects the fixture with errno 92.
 
-Hosted Linux runtime qualification, including a returned statx mount ID, and
-hosted Windows compilation/unsupported-boundary checks remain pending. No
-privileged mount creation, device-node creation, hostile namespace relocation,
+Hosted evidence on 2026-10-13 passed for PR head
+`765e70b9b7ce5386530ffea1fe9814b228724428` in
+[Actions run 38330080515](https://github.com/driftsys/upskill/actions/runs/38330080515).
+The jobs checked out PR merge commit
+`242930ef9107aff6eff432484f474e47157983f2`, combining that head with baseline
+`8298386cb4978dce6515415f0fa7af59b109e5c7`. Linux passed 419 library cases,
+including 14 private destination cases, 23 destination acceptance cases, 12 scope
+cases and four rustdoc cases. This exercises real Linux filesystem qualification
+with a returned statx mount ID. Windows passed 400 library cases, the explicit
+unsupported-platform scope case and four rustdoc cases; its destination suite
+contains zero cases. This establishes compilation and the unsupported boundary,
+not a qualified Windows backend. Windows qualification remains pending.
+
+No privileged mount creation, device-node creation, hostile namespace relocation,
 real I/O or descriptor-exhaustion injection or exotic filesystem qualification is
 claimed. Synthetic metadata and error-classification tests do not replace those
-experiments. The API remains inactive in existing commands and schema 1.
+experiments. Acquisition-read stamp/size isolation and negative controls for
+production qualification wiring remain deferred under issue #270. The API remains
+inactive in existing commands and schema 1.
 
-Local validation passed `just fmt`, full `just verify`, warning-denying
-all-target Clippy and `cargo +1.85.0 check --locked --all-targets`. The focused
-APFS suites pass 23 destination cases, 15 private destination cases and the
-existing 12 scope cases. Separate compile-fail rustdoc cases pin literal
+Earlier local validation passed `just fmt`, full `just verify`, warning-denying
+all-target Clippy and `cargo +1.85.0 check --locked --all-targets`. The later local
+APFS review fixes pass 26 destination cases, 16 private destination cases and four
+warning-denying rustdoc cases; these additional cases were not in the historical
+hosted run. The existing scope suite has 12 cases. The new tests independently
+pin mtime revalidation after neutralizing the competing ctime difference in
+private evidence, ctime rejection after restoring exact bytes and mtime, and
+capture of all permission bits using a fixture confirmed to retain mode 07640.
+Independent omissions of mtime, ctime, both timestamps and special-bit capture
+produce assertion failures, with exact production source bytes restored before
+focused green gates. Separate compile-fail rustdoc cases pin literal
 construction, Clone rejection and private observation storage. Sixteen initial
 independent semantic controls produced
 assertion failures, including omission of capture's before-return postcheck,
@@ -224,7 +246,7 @@ class and exact location tuple ordering. Mutated source bytes were restored and 
 final green gates. Review follow-up controls additionally pin the association
 between each exact location and its optional bytes/mode, and the inability of an
 external caller to mutate private observation storage. The restored acceptance
-suite passes 23 cases and warning-denying rustdoc passes four cases. Local
+suite now passes 26 cases and warning-denying rustdoc passes four cases. Local
 permission denial was observed as EACCES.
 
 Matched stripped release measurements use Rust 1.97.1, LLVM 22.1.6 and
@@ -241,5 +263,5 @@ to the file-size result; this is not a runtime memory or performance estimate.
 
 Local all-target cross-compilation also passed for `aarch64-unknown-linux-musl`
 and `x86_64-pc-windows-gnu`, using Zig C wrappers for the existing ring dependency.
-These compile checks do not establish hosted execution, Linux mount-ID
-availability or Windows runtime behavior.
+These compile checks are distinct from the dated hosted runtime evidence above.
+Neither establishes a qualified Windows backend.
