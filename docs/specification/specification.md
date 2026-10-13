@@ -746,7 +746,11 @@ cross-mount traversal and other operating systems return explicit errors.
 Descriptor-relative enumeration requires exact stored component spellings.
 No-follow traversal rejects symlinks, non-directory ancestors, directory leaves,
 files with multiple links and special files. Only ENOENT establishes absence;
-permission, I/O, resource and unsupported failures remain contextual errors.
+recoverable filesystem, permission, I/O, descriptor-exhaustion and unsupported
+failures remain contextual errors, including allocation errors reported by a
+fallible read. Recoverable memory exhaustion is not guaranteed: ordinary Rust
+infallible allocation failures may abort, and the operating system may terminate
+the process instead of returning `Err`.
 
 An opaque, non-Clone `DestinationSnapshot` retains close-on-exec root, directory
 and file handles, selected root bindings, mount evidence and either exact file
@@ -758,7 +762,8 @@ file stamps and absence evidence. These checks never refresh stale expectations.
 Same-size edits with restored mtime, chmod, identical-byte inode replacement,
 ancestor replacement, missing-to-present transitions and root-alias retargeting
 invalidate evidence. Access times and unrelated directory timestamp changes do
-not invalidate it. Retained handles close on drop and every error path.
+not invalidate it. Retained handles close on drop and returned-error paths;
+process abort or termination does not guarantee Rust destructors run.
 
 Observation creates no files, directories, locks or persistent state and acquires
 no writer guard. Plain observations convey no execution or permission authority.

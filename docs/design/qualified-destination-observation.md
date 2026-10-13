@@ -158,9 +158,14 @@ A future executor must hold the writer guard, validate state/source authority an
 permission policy, recheck destination evidence immediately before each effect,
 and record interruptions. This API provides none of those effects or recovery.
 
-Resource exhaustion and every non-not-found filesystem failure remain contextual
-errors. Retained handles close on drop and on every error path. No production
-retries or silent fallback to ambient path reads are allowed.
+Recoverable filesystem, read and descriptor-exhaustion failures return contextual
+errors; only not-found establishes absence. Allocation errors reported by a
+fallible read also return contextual errors. The API does not guarantee
+recoverable memory exhaustion: ordinary Rust infallible allocations, including
+captured-byte cloning, may abort, and operating-system process termination may
+prevent a return of `Err`. Retained handles close on drop and on returned-error
+paths; process abort or termination does not guarantee Rust destructors run.
+No production retries or silent fallback to ambient path reads are allowed.
 
 ## Contract and acceptance coverage
 
@@ -202,7 +207,7 @@ root support remains conditional: local APFS rejects the fixture with errno 92.
 Hosted Linux runtime qualification, including a returned statx mount ID, and
 hosted Windows compilation/unsupported-boundary checks remain pending. No
 privileged mount creation, device-node creation, hostile namespace relocation,
-real I/O/resource-exhaustion injection or exotic filesystem qualification is
+real I/O or descriptor-exhaustion injection or exotic filesystem qualification is
 claimed. Synthetic metadata and error-classification tests do not replace those
 experiments. The API remains inactive in existing commands and schema 1.
 

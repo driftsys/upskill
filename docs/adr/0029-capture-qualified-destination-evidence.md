@@ -46,11 +46,15 @@ complete lifecycle inputs, writer-lock lifetime and future effect checks.
 
 ## Consequences
 
-Preview creates no probe files, directories or persistent state. Descriptor and
-memory exhaustion remain errors. Linux requires statx mount-ID support; unknown
-filesystems and Windows are explicit pending qualification boundaries. Retained
-handles and sampled checks do not exclude external editors or provide a security
-sandbox against hostile namespace relocation.
+Preview creates no probe files, directories or persistent state. Recoverable
+filesystem, read and descriptor-exhaustion failures return contextual errors,
+including allocation errors reported by a fallible read. This is not a guarantee
+of recoverable memory exhaustion: ordinary Rust infallible allocations, including
+captured-byte cloning, may abort, and the operating system may terminate the
+process instead of returning `Err`. Linux requires statx mount-ID support;
+unknown filesystems and Windows are explicit pending qualification boundaries.
+Retained handles and sampled checks do not exclude external editors or provide
+a security sandbox against hostile namespace relocation.
 
 Source stabilization, permission policy, schema-2 persistence, apply/recovery and
 CLI activation remain separate gates. Completion requires acceptance RED,

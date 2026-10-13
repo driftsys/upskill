@@ -418,6 +418,11 @@ mod qualified {
         let tmp = tempfile::tempdir().unwrap();
         fs::create_dir(tmp.path().join("parent")).unwrap();
         fs::write(tmp.path().join("parent/data"), b"same-size-before").unwrap();
+        fs::set_permissions(
+            tmp.path().join("parent/data"),
+            fs::Permissions::from_mode(0o640),
+        )
+        .unwrap();
         let scope = QualifiedScope::open(&root(tmp.path())).unwrap();
         let snapshot = scope
             .observe_destinations(&[location(tmp.path(), "parent/data")])
@@ -443,8 +448,13 @@ mod qualified {
     #[test]
     fn d07_mode_change() {
         changed(|path| {
-            fs::set_permissions(path.join("parent/data"), fs::Permissions::from_mode(0o600))
-                .unwrap()
+            let path = path.join("parent/data");
+            let before = fs::metadata(&path).unwrap().permissions().mode() & 0o7777;
+            assert_eq!(before, 0o640);
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+            let after = fs::metadata(&path).unwrap().permissions().mode() & 0o7777;
+            assert_eq!(after, 0o600);
+            assert_ne!(before, after);
         });
     }
     #[test]
