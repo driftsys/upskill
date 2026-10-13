@@ -36,39 +36,11 @@ Source and destination roots may use separate qualified mounts. Permission
 application, Git revision/authenticity, lifecycle state, effects, recovery and
 Windows qualification remain separate gates.
 
-Native APFS focused evidence currently covers 11 public source acceptance tests,
-30 source-private tests, 24 unchanged strict-manifest acceptance tests and 28
-destination acceptance tests. Independent omission controls retain exact
-restoration evidence. Complete release checks, MSRV and warning-denying all-target
-Clippy are required at task closeout; final-head hosted Linux missing-mask and
-Windows unsupported-host checks remain pending. See the design record for the
-local coverage and evidence limits. No lifecycle or CLI activation follows.
+Local implementation checks pass; final-head hosted Linux and Windows
+qualification remains pending. The [design evidence](../design/qualified-source-observation.md#local-implementation-evidence)
+records local coverage, independent-control limits, diagnostic exceptions and
+matched release-size measurements. No lifecycle or CLI activation follows.
 
-## Historical local release size before the context fix
-
-Rust 1.97.1 release builds with identical pinned root dependency resolution and
-release profile produce byte-identical baseline/candidate CLI binaries of
-3,215,120 bytes (delta 0). Minimal public-API probes use the same pinned package
-versions and profile: control 303,120 bytes, source capture plus revalidation
-353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
-records binary size only, not performance; inactive API code is stripped from the
-then-current CLI. Final-head hosted Linux/Windows qualification remains pending.
-
-The correction for issue #274 independently pins regular-descendant native
-profile and mount-binding qualification before any reader invocation, exact
-special permission bits by path, capture and verification under an existing
-writer guard, and Debug excluding captured content. These tests do not establish
-privileged mount behavior. Independent link-count and ctime omission isolation
-remains an advisory coverage limit; production stamps retain and compare both
-fields.
-
-Scoped revalidation diagnostic tests retain source-root/operation context, complete
-relative paths in tree comparisons and original causes, including repeated public
-rejection without refreshing the manifest. Hosted qualification remains pending.
-
-The scoped revalidation-context fix has refreshed matched Rust 1.97.1 locked
-release measurements against the same baseline and pinned dependency versions:
-baseline/candidate CLI both 3,215,120 bytes (delta 0), control 303,120 bytes and
-live capture/revalidation probe 353,840 bytes (delta 50,720). CLI hashes differ;
-no byte-identity claim is made for this refresh. Both runtime-input fixtures pass.
-Earlier size artifacts remain historical; these measurements establish size only.
+Satisfies: [specification §4.9](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/docs/specification/specification.md#49-qualified-source-tree-observations).
+Related: [AD-0028](0028-lock-qualified-scope-directories.md),
+[AD-0029](0029-capture-qualified-destination-evidence.md).

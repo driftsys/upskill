@@ -48,7 +48,7 @@
 
 **Produces:** QualifiedScope::observe_source_tree(&self) -> Result<SourceSnapshot<'_>>, SourceSnapshot::manifest(&self) -> &SourceManifest, SourceSnapshot::verify_unchanged(&self) -> Result<()>. Existing source capture and destination APIs remain compatible.
 
-- [ ] **Step 1: Write public acceptance tests before implementation.** Use direct library calls and tempfile; no CLI because this boundary remains inactive. Include helpers selecting the real source scope:
+- [x] **Step 1: Write public acceptance tests before implementation.** Use direct library calls and tempfile; no CLI because this boundary remains inactive. Include helpers selecting the real source scope:
 
 ```rust
 fn source_scope(path: &std::path::Path) -> upskill::filesystem::QualifiedScope {
@@ -89,7 +89,7 @@ On Unix, symlink root/descendant, socket/FIFO and invalid-name fixtures reject;
 Linux alone runs actual non-UTF-8 entry creation if macOS rejects fixture creation.
 Unsupported hosts compile opaque API and return errors without artifacts.
 
-- [ ] **Step 2: Establish assertion RED.** Missing API compile errors are setup feedback, never semantic RED. Add the smallest opaque public scaffold returning contextual unsupported/not-implemented errors on capture; compile the tests, then record the stable-tree acceptance failing at successful capture. Run captured commands with isolated HOME and restricted PATH:
+- [x] **Step 2: Establish assertion RED.** Missing API compile errors are setup feedback, never semantic RED. Add the smallest opaque public scaffold returning contextual unsupported/not-implemented errors on capture; compile the tests, then record the stable-tree acceptance failing at successful capture. Run captured commands with isolated HOME and restricted PATH:
 
 ```bash
 python3 /tmp/upskill-destination-controller-run.py sources-atdd-red cargo test --test filesystem_sources
@@ -99,7 +99,7 @@ Do not count scaffolding compiler errors as rejection-control evidence. Implemen
 no traversal before obtaining the runtime failure. Add compile-fail doctests for
 construction, Clone and mutable access.
 
-- [ ] **Step 3: Share qualification and canonical manifest assembly.** Move the existing qualification module without policy changes, preserving private tests and adapting imports/visibility to filesystem ancestry. Extract the final legacy capture assembly into this crate-private helper and call it from both paths:
+- [x] **Step 3: Share qualification and canonical manifest assembly.** Move the existing qualification module without policy changes, preserving private tests and adapting imports/visibility to filesystem ancestry. Extract the final legacy capture assembly into this crate-private helper and call it from both paths:
 
 ```rust
 pub(crate) fn assemble_manifest(mut files: Vec<CapturedSourceFile>) -> anyhow::Result<SourceManifest> {
@@ -118,7 +118,7 @@ with crate-private visibility, or a similarly narrow canonical constructor; do
 not reimplement framing. Preserve existing diagnostics and order. Run source
 manifest and destination suites after mechanical extraction.
 
-- [ ] **Step 4: Implement complete retained acquisition.** Represent a retained directory as descriptor, identity/full stamp, exact sorted child names and retained children; a regular file as descriptor, full stamp and captured record. Retain one native Mount at tree level and compare it for every opened entry. Use an explicit recursive tree or iterative stack with per-directory evidence; reject a repeated directory identity before descent. Every new source file stays within the listed ownership.
+- [x] **Step 4: Implement complete retained acquisition.** Represent a retained directory as descriptor, identity/full stamp, exact sorted child names and retained children; a regular file as descriptor, full stamp and captured record. Retain one native Mount at tree level and compare it for every opened entry. Use an explicit recursive tree or iterative stack with per-directory evidence; reject a repeated directory identity before descent. Every new source file stays within the listed ownership.
 
 ```rust
 fn directory_flags() -> rustix::fs::OFlags {
@@ -144,7 +144,7 @@ before/after fstat stamp and nonnegative size/byte length to agree. Errors inclu
 operation/path and original cause. Scope/mount/identity and actual read fields
 must participate in production, not only a test helper.
 
-- [ ] **Step 5: Implement non-refreshing full revalidation and pre-return check.**
+- [x] **Step 5: Implement non-refreshing full revalidation and pre-return check.**
       Verify original handles and mounts; capture a fresh complete descriptor-relative
       tree from the revalidated root. Compare exact directory names/topology/stamps and
       file identity/stamps/bytes/modes against original evidence, then discard fresh
@@ -162,7 +162,7 @@ Private tests exercise a change between capture completion and this exact public
 postcheck. Repeated-stale omission controls account for this initial verification
 and must fail specifically on later verification 2. No source lock is acquired.
 
-- [ ] **Step 6: Add focused independent native tests.** Cover acquisition metadata
+- [x] **Step 6: Add focused independent native tests.** Cover acquisition metadata
       change while returned bytes/count stay equal, short-read while metadata stays
       equal, exact error/cause propagation, same-second fractional mtime with competing
       ctime normalized, retained descriptors' CLOEXEC/NONBLOCK flags and no-follow opens,
@@ -173,7 +173,7 @@ and must fail specifically on later verification 2. No source lock is acquired.
       Bound FIFO-related subprocess checks with owned-process timeouts/kill/reap; never
       leave blocking children or terminate unrelated processes.
 
-- [ ] **Step 7: Record independent omission RED and exact restored GREEN.** Store a
+- [x] **Step 7: Record independent omission RED and exact restored GREEN.** Store a
       machine-readable manifest under /tmp/upskill-sources-controls.json with each
       unique mutation, intended test/assertion, exit status and pre/restored SHA256.
       Controls separately remove membership comparison, identity comparison with
@@ -186,7 +186,7 @@ and must fail specifically on later verification 2. No source lock is acquired.
       normal source/destination tests and hosted native Linux missing-mask execution.
       No persistent temporary CI harness unless root authorizes its precise scope.
 
-- [ ] **Step 8: Update current docs and run final task gates.** Add specification
+- [x] **Step 8: Update current docs and run final task gates.** Add specification
       section 4.9 with interface, complete source coverage, hard-link distinction,
       private topology, stable acquisition, immutable revalidation, no-effects and
       platform/evidence limits. Update the early durable source design/AD30 with actual
@@ -209,7 +209,7 @@ claim performance. Existing destination size report/probe under
 /tmp/upskill-destination-probes-pinned is methodology only; create uniquely named
 source artifacts and never overwrite earlier evidence.
 
-- [ ] **Step 9: Commit only owned files with normal hooks and return complete report.**
+- [x] **Step 9: Commit only owned files with normal hooks and return complete report.**
       Use Conventional Commit feat: capture qualified source tree evidence. Do not push,
       open PR, archive, edit unrelated WIP or dispatch agents. Report commit/hash, exact
       files, acceptance RED, every valid/invalid omission result, restored gates, counts,

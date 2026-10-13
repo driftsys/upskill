@@ -803,64 +803,6 @@ nor a qualified Windows backend. See
 [AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
 the [destination observation design](../design/qualified-destination-observation.md).
 
-## 5. Source format and authentication
-
-Source format: see [§2.1](#21-add).
-
-upskill never injects credentials into clone URLs. Clones use the bare
-`https://<host>/...` URL and rely entirely on git's own configuration —
-credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
-repository works whenever a manual `git clone <url>` would; configure git
-the same way. upskill resolves no tokens and reads no token env vars.
-
-Any https host is treated as an opaque git remote
-(`https://git.mycompany.com/team/repo`), including projects
-nested under groups to any depth
-(`https://git.mycompany.com/group/subgroup/team/repo`).
-
-## 6. CLI compliance
-
-### 6.1 Exit codes
-
-| Code  | Meaning                              |
-| ----- | ------------------------------------ |
-| `0`   | Success.                             |
-| `1`   | General error (network, parse, I/O). |
-| `2`   | Usage error (invalid args or flags). |
-| `130` | Interrupted (Ctrl+C / SIGINT).       |
-
-### 6.2 Conventions
-
-- POSIX/GNU long flags (`--flag-name`) and short flags (`-f`).
-- Stdout for data, stderr for progress and errors.
-- Honors `NO_COLOR` and TTY detection (no color in pipes/CI).
-- Global `-q` / `--quiet` suppresses informational stdout. Errors on
-  stderr and exit codes are unaffected.
-- Single static binary, no runtime dependencies.
-
-### 6.3 Environment variables
-
-| Variable         | Purpose                                        |
-| ---------------- | ---------------------------------------------- |
-| `NO_COLOR`       | Disable colored output.                        |
-| `HTTPS_PROXY`    | HTTP proxy for network requests.               |
-| `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
-
-## 7. Out of scope
-
-- Runtime invocation of installed content (each AI client's responsibility).
-- Hosting a registry server or central marketplace.
-- Content quality review (delegated to AI workflows outside upskill).
-- Telemetry, analytics, or usage tracking.
-- Publishing to non-Git destinations (npm, crates.io, PyPI).
-
-## 8. References
-
-- Format spec: [`docs/specification/format-spec.md`](./format-spec.md)
-- User guide: [Getting started](https://driftsys.github.io/upskill/getting-started.html), [Commands](https://driftsys.github.io/upskill/commands.html), [Recipes](https://driftsys.github.io/upskill/recipes.html)
-- Agent Skills open standard: <https://agentskills.io>
-- skills.sh ecosystem: <https://skills.sh>
-
 ### 4.9 Qualified source tree observations
 
 The inactive library boundary exposes
@@ -927,3 +869,61 @@ remains a coverage limit; both fields participate in production stamps.
 Scoped revalidation diagnostic tests retain source-root/operation context, complete
 relative paths in tree comparisons and original causes, including repeated public
 rejection without refreshing the manifest. Hosted qualification remains pending.
+
+## 5. Source format and authentication
+
+Source format: see [§2.1](#21-add).
+
+upskill never injects credentials into clone URLs. Clones use the bare
+`https://<host>/...` URL and rely entirely on git's own configuration —
+credential helpers, `url.<base>.insteadOf` rewrites, and SSH. A private
+repository works whenever a manual `git clone <url>` would; configure git
+the same way. upskill resolves no tokens and reads no token env vars.
+
+Any https host is treated as an opaque git remote
+(`https://git.mycompany.com/team/repo`), including projects
+nested under groups to any depth
+(`https://git.mycompany.com/group/subgroup/team/repo`).
+
+## 6. CLI compliance
+
+### 6.1 Exit codes
+
+| Code  | Meaning                              |
+| ----- | ------------------------------------ |
+| `0`   | Success.                             |
+| `1`   | General error (network, parse, I/O). |
+| `2`   | Usage error (invalid args or flags). |
+| `130` | Interrupted (Ctrl+C / SIGINT).       |
+
+### 6.2 Conventions
+
+- POSIX/GNU long flags (`--flag-name`) and short flags (`-f`).
+- Stdout for data, stderr for progress and errors.
+- Honors `NO_COLOR` and TTY detection (no color in pipes/CI).
+- Global `-q` / `--quiet` suppresses informational stdout. Errors on
+  stderr and exit codes are unaffected.
+- Single static binary, no runtime dependencies.
+
+### 6.3 Environment variables
+
+| Variable         | Purpose                                        |
+| ---------------- | ---------------------------------------------- |
+| `NO_COLOR`       | Disable colored output.                        |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.               |
+| `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
+
+## 7. Out of scope
+
+- Runtime invocation of installed content (each AI client's responsibility).
+- Hosting a registry server or central marketplace.
+- Content quality review (delegated to AI workflows outside upskill).
+- Telemetry, analytics, or usage tracking.
+- Publishing to non-Git destinations (npm, crates.io, PyPI).
+
+## 8. References
+
+- Format spec: [`docs/specification/format-spec.md`](./format-spec.md)
+- User guide: [Getting started](https://driftsys.github.io/upskill/getting-started.html), [Commands](https://driftsys.github.io/upskill/commands.html), [Recipes](https://driftsys.github.io/upskill/recipes.html)
+- Agent Skills open standard: <https://agentskills.io>
+- skills.sh ecosystem: <https://skills.sh>

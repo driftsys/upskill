@@ -316,3 +316,37 @@ durable state and apply/recovery remain pending. No qualified Windows
 backend, real privileged mount or fault behavior is established. The 34 other WIP
 files retain their existing disposition unchanged; this entry resolves only the
 named pair and does not complete M1.
+
+## Qualified source tree observation
+
+The archived [spec](specs/2026-10-13-qualified-sources-design.md) and
+[plan](plans/2026-10-13-qualified-sources.md) retain the exact final working bytes
+from their respective `docs/wip/specs/` and `docs/wip/plans/` paths. Their raw
+relative references remain unchanged. The plan includes controller-approved
+completion marks captured before archival; the raw spec's pending status is
+historical.
+
+Durable successors: [specification §4.9](../specification/specification.md#49-qualified-source-tree-observations),
+[source observation design](../design/qualified-source-observation.md) and
+[AD-0030](../adr/0030-capture-qualified-source-evidence.md). These authorities
+existed before implementation; archival does not redirect their citations.
+
+Implementation and reviewed corrections end at
+`a4e84d9334f7717bfb170d59afcbaf7f829d1e82`. Local formatting, full verification,
+locked warning-denying all-target Clippy and Rust 1.85 compilation passed:
+964 outer Rust tests and 11 documentation-checker tests, zero failures. Independent
+controls record 43 valid assertion failures with exact restoration and focused
+success; two historical discarded experiments are excluded. Fresh task re-review
+approved the scoped diagnostic correction. This records local delivery only;
+final-head hosted Linux/Windows, branch/PR review and merge remain separate gates.
+
+The opaque read-only snapshot captures and non-refreshingly revalidates complete
+source evidence using qualified roots and shared mount policy. Legacy capture,
+CLI, dependencies and schema 1 remain unchanged. It establishes no atomic tree
+snapshot, authenticity, external-writer exclusion or qualified Windows backend.
+Initial public root-binding diagnostic context and retained-descendant diagnostic
+coverage remain controller observations, detailed in the current design. Source
+lifecycle integration, permission policy, durable state, effects and recovery
+remain pending; M1-A2, M1-A3 and M1 are not complete. All 34 foreign WIP files and
+18 earlier raw archive files retain their original bytes and disposition; this
+entry resolves only the assigned pair.

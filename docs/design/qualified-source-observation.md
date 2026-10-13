@@ -1,11 +1,8 @@
 # Qualified source tree observation
 
-Date: 2026-10-13. Status: inactive library boundary implemented; hosted qualification pending.
-Baseline: `1d8ac581a2111b149e5bcceb6d789a0063814696` (PR #273).
+The inactive library boundary is implemented independently of command dispatch.
+Final-head hosted Linux and Windows qualification remains pending.
 Decision: [AD-0030](../adr/0030-capture-qualified-source-evidence.md).
-The source snapshot API is implemented separately from command dispatch. The
-recorded baseline predates this implementation; final-head hosted Linux and
-Windows evidence remains pending.
 
 ## Intent
 
@@ -32,15 +29,10 @@ metadata; selecting a source root grants no ownership or effect authority.
 
 ## Interface
 
-```rust
-impl QualifiedScope {
-    pub fn observe_source_tree(&self) -> anyhow::Result<SourceSnapshot<'_>>;
-}
-impl SourceSnapshot<'_> {
-    pub fn manifest(&self) -> &SourceManifest;
-    pub fn verify_unchanged(&self) -> anyhow::Result<()>;
-}
-```
+`QualifiedScope::observe_source_tree` returns a borrowing `SourceSnapshot`.
+`SourceSnapshot::manifest` borrows its `SourceManifest`; `verify_unchanged`
+returns success only when the captured evidence still agrees. The public
+interface is defined in [the source module](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/src/filesystem/sources.rs).
 
 Export SourceSnapshot from upskill::filesystem. It borrows exactly one
 QualifiedScope, is opaque and non-Clone, and provides a non-content Debug view.
@@ -128,43 +120,22 @@ verification after one mutation must fail on both calls with captured values
 unchanged. Checks sample sequentially and provide neither an atomic tree snapshot
 nor exclusion against external editors or hostile relocation/ABA changes.
 
-## Acceptance and independent controls
+## Components and verification
 
-1. Stable nested, hidden, ignored, binary, empty-file and hard-link fixtures yield
-   the same literal records/digest as strict capture and pure validation succeeds.
-   Verify twice, then compile captured fixture input without ambient rereads.
-2. Empty directory additions/removals, file additions/removals/renames, same-byte
-   inode replacement, directory replacement, root/ancestor rebinding and modes
-   each reject twice while preserving the original manifest and fixture bytes.
-3. Final/ancestor symlinks, socket/FIFO entries, invalid names and traversal errors
-   return contextual errors without writes, follows, blocking or partial results.
-4. Production-path private controls independently pin before/read/after stability,
-   byte-count agreement and read-error context. A same-second nonzero fractional
-   mtime-only verification fixture normalizes competing ctime evidence.
-5. Independently omit complete membership comparison (empty-directory insertion),
-   identity comparison (same-byte replacement with competing stamps normalized),
-   exact value comparison, acquisition stamp/byte-count checks and call wiring,
-   pre-return verification, native qualification call and mount comparison,
-   source root-binding calls, and stale non-refresh behavior. Each omission must
-   produce the named assertion RED; restore exact source bytes and focused GREEN.
-6. Preserve independent destination qualification/mask controls after sharing the
-   module. Source-specific native profile/mount wiring controls use real qualified
-   metadata with only the rejected field/binding altered. Linux executes its
-   missing returned mask case natively in hosted CI; cross-compilation is insufficient.
-7. Unsupported-host compilation/opacity, descriptor CLOEXEC/NONBLOCK/NOFOLLOW and
-   cleanup after failed acquisition are pinned. No privileged mount/device action.
-8. Run just fmt then just verify, warning-denying all-target Clippy, Rust 1.85,
-   native APFS and final-head hosted Linux/Windows CI. Measure matched release
-   baseline/candidate probes with the new API live; record bytes without claiming
-   runtime performance or a qualified Windows backend.
+[The private backend](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/src/filesystem/sources/backend.rs) owns the retained
+`Evidence`, directory tree, regular-file records, native stamps and exact
+membership comparison. [Shared qualification](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/src/filesystem/qualification.rs)
+retains the destination policy. [Manifest assembly](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/src/source_manifest.rs)
+provides the unchanged v1 framing and pure validation.
 
-## Delivery and limits
+[Public acceptance tests](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/tests/filesystem_sources.rs) cover stable complete
+capture, captured compilation, namespace and value changes, immutable stale
+checks, rejected entry kinds, permissions, held-writer operation and non-content
+Debug output. [Private tests](https://github.com/driftsys/upskill/blob/a4e84d9334f7717bfb170d59afcbaf7f829d1e82/src/filesystem/sources/backend_tests.rs) isolate
+acquisition stability, counts, errors, identity, membership, exact values,
+fractional timestamps, qualification wiring, descriptor flags and cleanup.
 
-One self-contained implementation task owns the source capability, private shared
-qualification extraction, source-manifest assembly helper, tests and current docs.
-Use a fresh implementer then independent task review, whole-branch final review,
-scoped gardening, two PR review passes, exact-head hosted checks and squash merge.
-Preserve all 34 unrelated WIP files, earlier raw archives and other worktrees.
+## Limits
 
 This is a sampled read-only source stabilization prerequisite. It does not record
 an immutable Git revision, establish authenticity, lock external source writers,
@@ -175,50 +146,38 @@ unexercised unless separately evidenced. Durable status must remain honest.
 
 ## Local implementation evidence
 
-Native APFS focused coverage includes 11 public source acceptance tests, 30
-source-private tests (including the public pre-return seam), 24 existing strict
-manifest tests and 28 existing destination acceptance tests. Source-private tests
-exercise stable reads, changed metadata, short reads, returned counts, contextual
-errors, retained flags, failed-capture cleanup, exact values, complete membership,
-independent inode identity, fractional mtime, changed mounts and native profile
-rejection. FIFO subprocesses own their deadlines, kill and reap only their child.
-Linux-only non-UTF-8 and missing returned mount-ID mask cases require native Linux
-execution. Windows exposes the opaque API but has no qualified backend.
+The completed local checks at implementation commit
+`a4e84d9334f7717bfb170d59afcbaf7f829d1e82` passed 964 outer Rust tests
+(457 library, 500 integration and seven compile-fail doctests), with zero failed
+or ignored tests, and 11 documentation-checker tests. Formatting, full
+verification, locked warning-denying all-target Clippy and Rust 1.85 all-target
+compilation passed. Nested subprocess summaries are excluded from these counts.
+Focused native APFS coverage includes 11 public source tests, 30 source-private
+tests, 24 strict-manifest tests and 28 destination acceptance tests. The combined
+independent omission evidence contains 43 valid assertion failures with exact
+restoration and focused success; two historical discarded experiments are not
+counted as controls.
 
-Independent omission evidence normalizes only competing stamp differences for
-membership and identity fixtures. Redundant source root-binding checks remain:
-their end-to-end omission control bypasses all source verification binding
-frontiers and rereads through original retained descriptors. Existing scope tests
-pin the underlying binding implementation. Individual redundant checks are not
-claimed independently necessary. Final task counts, restored checks and matched
-release-size evidence are recorded with implementation review; these local
-results do not complete hosted gates or M1.
+Retained-root and complete-tree comparisons preserve operation/path context and
+original causes. The initial public `verify_unchanged` binding check currently
+propagates the scope error without source-operation wrapping. This is a known
+as-built gap against the contextual-error contract, requiring controller
+confirmation rather than silently weakening the requirement. Retained-descendant
+path propagation is implemented but lacks an independently isolating diagnostic
+assertion. Independent link-count and ctime omission isolation also remains a
+coverage limit; production stamps compare both fields.
 
-## Historical local release size before the context fix
+Linux-only non-UTF-8 and missing returned mount-ID mask cases require final-head
+native Linux execution. Windows exposes the opaque API but has no qualified
+backend. FIFO subprocess fixtures own their deadlines and kill/reap only their
+child. No privileged mount/device or physical fault claim follows.
 
-Rust 1.97.1 release builds with identical pinned root dependency resolution and
-release profile produce byte-identical baseline/candidate CLI binaries of
-3,215,120 bytes (delta 0). Minimal public-API probes use the same pinned package
-versions and profile: control 303,120 bytes, source capture plus revalidation
-353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
-records binary size only, not performance; inactive API code is stripped from the
-then-current CLI. Final-head hosted Linux/Windows qualification remains pending.
+## Matched local release size
 
-The correction for issue #274 independently pins regular-descendant native
-profile and mount-binding qualification before any reader invocation, exact
-special permission bits by path, capture and verification under an existing
-writer guard, and Debug excluding captured content. These tests do not establish
-privileged mount behavior. Independent link-count and ctime omission isolation
-remains an advisory coverage limit; production stamps retain and compare both
-fields.
-
-Scoped revalidation diagnostic tests retain source-root/operation context, complete
-relative paths in tree comparisons and original causes, including repeated public
-rejection without refreshing the manifest. Hosted qualification remains pending.
-
-The scoped revalidation-context fix has refreshed matched Rust 1.97.1 locked
-release measurements against the same baseline and pinned dependency versions:
-baseline/candidate CLI both 3,215,120 bytes (delta 0), control 303,120 bytes and
-live capture/revalidation probe 353,840 bytes (delta 50,720). CLI hashes differ;
-no byte-identity claim is made for this refresh. Both runtime-input fixtures pass.
-Earlier size artifacts remain historical; these measurements establish size only.
+Matched Rust 1.97.1 locked release builds against baseline `fa2f322`, using the
+same profile and pinned common dependencies, measure baseline and candidate CLI
+binaries at 3,215,120 bytes each (delta zero). Their hashes differ. The control
+public-API probe is 303,120 bytes; live capture plus explicit revalidation is
+353,840 bytes (delta 50,720). Both runtime-input fixtures pass. These measurements
+establish binary size only; inactive API code is stripped from the CLI. Earlier
+measurements are historical and do not establish final-head hosted qualification.
