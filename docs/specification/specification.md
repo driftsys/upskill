@@ -890,6 +890,42 @@ unsupported-host test now calls the source method and requires contextual
 rejection. Its native Windows execution and all hosted checks for the eventual
 final PR head remain merge gates. No qualified Windows backend is implemented.
 
+### 4.10 Explicit file permission selection
+
+`files::permissions::select_file_mode(destination, source, resource_execution)`
+is an inactive pure library API returning `anyhow::Result<u32>`. Its supplied-value
+inputs are `DestinationMode::{Absent, Present(Option<u32>)}`,
+`PermissionSource::{Generated, Resource { captured_mode: Option<u32> }}` and
+`ResourceExecutionPolicy::{Disabled, OwnerExecutable}`. These types derive
+`Debug`, `Clone`, `Copy`, `PartialEq` and `Eq`; they carry no serialized state or
+effect capability.
+
+Every supplied destination and captured resource mode must be within
+`0o0000..=0o7777`, including evidence unused by the selection branch. Errors
+identify destination or captured resource evidence. `Present(None)` rejects as
+unknown existing mode. Existing modes containing any `0o7000` special bit reject
+as unsupported application policy; ordinary existing modes are returned exactly,
+including `0o000`, `0o400`, `0o640`, `0o755` and `0o777`, under either resource policy.
+
+Absent generated output selects literal `0o600` under either policy. Absent
+resources also select `0o600` when execution is `Disabled`, including unknown
+captured mode. `OwnerExecutable` requires a known captured resource mode and
+selects `0o700` only when its owner-execute bit `0o100` is set; otherwise it selects
+`0o600`. Captured `0o755` and `0o4777` therefore select `0o700`; `0o011`, `0o644`,
+`0o1000`, `0o2000` and `0o4000` select `0o600`. Source group/other and special bits
+are never copied. Unknown captured resource mode rejects only when selecting new
+resource execution; an existing ordinary destination mode remains exact.
+
+The function reads no environment or process umask and performs no I/O. Supplied
+values and selected bits convey no source authenticity, ownership, physical
+qualification or execution authority. Future writers must separately qualify
+owner/group, ACLs, extended metadata, containment and atomic replacement and
+persist actual resulting mode evidence. This API changes no compiler output,
+planner validation, CLI behavior or lockfile schema. File application, journal,
+recovery, state persistence and lifecycle activation remain pending; M1-A2,
+M1-A3 and M1 remain incomplete. See [AD-0031](../adr/0031-select-explicit-file-permissions.md)
+and the [permission design](../design/file-permission-policy.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

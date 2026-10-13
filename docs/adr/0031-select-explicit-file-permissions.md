@@ -2,7 +2,7 @@
 
 AD-0031
 
-Status: selected; pure policy implementation pending.
+Status: accepted; implemented as an inactive pure library API.
 
 ## Context
 
@@ -10,7 +10,15 @@ Captured resource modes and generated entrypoints have different provenance. AD-
 
 ## Decision
 
-Introduce a separate pure permission-selection interface. Preserve supported ordinary existing modes exactly; reject unknown existing modes and existing special bits. Select 0o0600 for newly generated files and resources. An explicit resource execution choice selects 0o0700 only from a known captured owner-execute bit. Never copy source special, group or other bits into a new file. Reject out-of-range supplied modes.
+Expose `files::permissions::select_file_mode` with `DestinationMode`,
+`PermissionSource` and `ResourceExecutionPolicy` as a separate pure
+permission-selection interface. Preserve supported ordinary existing modes exactly; reject unknown existing modes and existing special bits. Select 0o0600 for newly generated files and resources. An explicit resource execution choice selects 0o0700 only from a known captured owner-execute bit. Never copy source special, group or other bits into a new file. Reject all out-of-range supplied modes, including captured evidence unused by
+existing-mode preservation. Unknown existing mode always rejects; unknown captured
+mode rejects when selecting execution for a new resource. Captured special bits
+alone never grant owner execution.
+
+Public acceptance tests pin literal mode selections and contextual diagnostics.
+Independent compiled omission controls pin validation and selection branches.
 
 The selection is deterministic and independent of process umask. It does not modify compiler output or existing planners and has no filesystem effects. Future application must persist actual resulting mode evidence and separately qualify owner/group, ACLs, extended metadata and replacement operations.
 
@@ -18,4 +26,6 @@ The selection is deterministic and independent of process umask. It does not mod
 
 Copying source modes conflates evidence with authority. Reading umask makes a supplied-value policy depend on ambient process state. Default execution grants more authority than a resource-only explicit choice. Private output may need an explicit sharing policy later. Existing special modes fail conservatively until a qualified metadata policy exists.
 
-Related: [AD-0026](0026-separate-generated-permission-policy.md), [permission policy](../design/file-permission-policy.md).
+Related: [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md), [permission policy](../design/file-permission-policy.md).
+
+See [specification 4.10](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#410-explicit-file-permission-selection). File effects, journal/recovery, state persistence and lifecycle activation remain pending; M1-A2, M1-A3 and M1 remain incomplete.
