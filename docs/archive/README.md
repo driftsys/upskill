@@ -273,3 +273,42 @@ destination equivalence/containment, source stabilization, permission policy,
 state, execution, recovery and broader platform qualification remain unfinished.
 The 34 other WIP files retain their existing disposition unchanged; this entry
 resolves only the named pair and does not complete the M1 filesystem stage.
+
+## Destination evidence regression controls
+
+Source paths: `docs/wip/specs/2026-10-13-destination-evidence-controls-design.md`
+and `docs/wip/plans/2026-10-13-destination-evidence-controls.md`.
+The archived [spec](specs/2026-10-13-destination-evidence-controls-design.md) and
+[plan](plans/2026-10-13-destination-evidence-controls.md) preserve the exact raw
+working bytes. Their working-path references are historical provenance.
+The provisional supplier name `Mount::query` in spec line 23 and plan line 106
+was a sketch. The implemented private native-query supplier is `Mount::queries`,
+passed by production callers to `Mount::of`. This as-built clarification resolves
+the PR review naming finding without rewriting the raw archives.
+
+Implementation: `621f19c`; reviewed PR head: `2a50ca6`.
+[PR #273](https://github.com/driftsys/upskill/pull/273) is open, pending final merge.
+Local APFS evidence passed 28 public and 22 private destination cases, with 14
+independent native omission controls producing assertion RED and exact restoration
+before focused GREEN. On 2026-10-13,
+[Actions run 38334882688](https://github.com/driftsys/upskill/actions/runs/38334882688)
+passed at full head `2a50ca6a5163e11912cbcee7987593c68e0a4197`. Ubuntu job
+`115092610337` passed 28 public destination cases, the native missing returned
+mount-ID mask case and four separate profile/mask check and call-wiring assertion
+omissions. Each omission restored `qualification.rs` to SHA-256
+`1c5b288ed575ae1ccdd99a10170c13aa9054f92004a0927a64fb1587bac40bd5`,
+followed by 22 private cases GREEN. All 13 head checks succeeded, including Windows
+unsupported-boundary job `115092610428`. Final-head CI after temporary harness
+removal and final review remain merge gates; this entry makes no merge claim.
+
+Durable successors: [specification §4.8](../specification/specification.md#48-qualified-destination-observations),
+[qualified destination design](../design/qualified-destination-observation.md) and
+[AD-0029](../adr/0029-capture-qualified-destination-evidence.md).
+These current records establish the implemented inactive qualified destination
+and writer-lock boundaries. Earlier archive entries describe their dated slices;
+statements there that these boundaries remain pending are historical, not current
+successor status. Lifecycle integration, qualified source evidence, permission
+policy, durable state and apply/recovery remain pending. No qualified Windows
+backend, real privileged mount or fault behavior is established. The 34 other WIP
+files retain their existing disposition unchanged; this entry resolves only the
+named pair and does not complete M1.

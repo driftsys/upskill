@@ -785,9 +785,20 @@ fractional mtime changes, metadata changes during acquisition, short reads with
 unchanged descriptor metadata, unknown native profiles and different retained
 mount bindings through the production qualification and verification paths.
 Existing-file overlap and repeated stale verification are also pinned. Linux's
-missing returned mount-ID mask has a production-path control requiring hosted
-Linux runtime validation for the current head. Injected query results and
-expected mount bindings do not establish real privileged mount behavior. See
+missing returned mount-ID mask production-path case passed natively on Ubuntu
+in [Actions run 38334882688](https://github.com/driftsys/upskill/actions/runs/38334882688)
+on 2026-10-13 for PR #273 head `2a50ca6a5163e11912cbcee7987593c68e0a4197`.
+Ubuntu job `115092610337` passed 28 public destination cases; four native
+profile/mask check and production-call omissions failed their intended assertions.
+Each restored `qualification.rs` to SHA-256
+`1c5b288ed575ae1ccdd99a10170c13aa9054f92004a0927a64fb1587bac40bd5`,
+followed by 22 restored private cases GREEN. Local APFS separately passed 28
+public and 22 private cases plus 14 independent native omission controls. All 13
+head checks succeeded, including Windows unsupported-boundary job `115092610428`.
+This dated evidence covers that head; hosted CI for the final head after temporary
+harness removal remains required before merge. Injected query results and
+expected mount bindings establish neither real privileged mount or fault behavior
+nor a qualified Windows backend. See
 [AD-0029](../adr/0029-capture-qualified-destination-evidence.md) and
 the [destination observation design](../design/qualified-destination-observation.md).
 

@@ -285,14 +285,14 @@ Omission controls remove the stamp check, byte-count check and acquisition call
 wiring separately; each must fail its intended assertion.
 
 The private `Mount::of` entry accepts only native descriptor-query functions;
-production supplies fstatfs and, on Linux, statx with MNT_ID. Tests alter only the
-native profile or Linux returned mount-ID mask and require this same entry to
+production supplies `Mount::queries`, which calls fstatfs and, on Linux, statx
+with MNT_ID. Tests alter only the native profile or Linux returned mount-ID mask and require this same entry to
 reject, with qualified real metadata as a success control. A different expected
 mount binding must reject through `Directory::new`, retained directory
 verification and `Evidence::verify`, with other real evidence unchanged.
 Independent controls omit the profile/mask checks, their entry wiring and mount
-comparison wiring. Linux mask runtime controls require hosted Linux for the
-current head; cross-compilation and synthetic validators on macOS cannot replace
+comparison wiring. Linux mask runtime controls require native hosted Linux
+execution; cross-compilation and synthetic validators on macOS cannot replace
 that gate. Injected query results and expected bindings do not establish real
 kernel cross-mount rejection or privileged mount behavior.
 
@@ -306,10 +306,26 @@ cases and 22 private destination cases. Fourteen independent native production
 omissions produce the intended assertion failures. Each mutation is restored
 byte-for-byte before focused green checks; restored full repository verification
 passes without warnings. These results establish the local regression controls,
-not completion of the hosted merge gates.
+with hosted evidence recorded separately below.
 
-Current-head hosted Linux must execute the missing returned mount-ID mask
-example and independently omit the native profile and mask checks and their
-production call wiring, then restore exact source bytes and pass focused checks.
-These Linux runtime and assertion controls remain pending. Privileged mounts,
-device nodes and hostile relocation remain unexercised.
+Hosted evidence on 2026-10-13 for PR #273 head
+`2a50ca6a5163e11912cbcee7987593c68e0a4197` passed in
+[Actions run 38334882688](https://github.com/driftsys/upskill/actions/runs/38334882688).
+Ubuntu job `115092610337` passed 28 public destination cases, including native
+qualification, and the missing returned mount-ID mask case. Four separate native
+profile/mask check and production-call omissions produced their intended assertion
+RED. After each omission, `qualification.rs` was restored to SHA-256
+`1c5b288ed575ae1ccdd99a10170c13aa9054f92004a0927a64fb1587bac40bd5`;
+the final restored private destination suite passed all 22 cases. All 13 head
+checks succeeded, including Windows unsupported-boundary job `115092610428`.
+This dated evidence covers that head. Removing the temporary Linux CI harness
+requires hosted CI for the resulting final head before merge. Windows has no
+qualified backend; privileged mounts, device nodes, real I/O or exhaustion faults
+and hostile relocation remain unexercised.
+
+The archived [bounded spec](https://github.com/driftsys/upskill/blob/2a50ca6a5163e11912cbcee7987593c68e0a4197/docs/archive/specs/2026-10-13-destination-evidence-controls-design.md)
+and [plan](https://github.com/driftsys/upskill/blob/2a50ca6a5163e11912cbcee7987593c68e0a4197/docs/archive/plans/2026-10-13-destination-evidence-controls.md) retain the
+provisional supplier name `Mount::query`. The implemented private supplier is
+`Mount::queries`; the singular name was a sketch, not an additional interface.
+The archive index records this as-built clarification while preserving the raw
+working bytes.
