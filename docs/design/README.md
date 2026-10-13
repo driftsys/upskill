@@ -30,3 +30,6 @@ may be recorded here before implementation when their status is explicit.
 
 - [Explicit file permission selection](file-permission-policy.md)
   — implemented as an inactive pure supplied-value policy; qualified file effects remain pending.
+
+- [File recovery checkpoint model](file-recovery-model.md)
+  — implemented as an inactive pure supplied-classification API; qualified recovery and effects remain pending.

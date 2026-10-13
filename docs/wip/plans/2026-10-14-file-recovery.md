@@ -17,7 +17,7 @@
 - No physical qualification or execution authority follows from this API.
 - Preserve all 56 inherited raw/WIP hashes and prior worktrees/evidence. The broader application draft remains a separate untracked design.
 - Types and signatures match the spec exactly; all declared public model types derive Debug, Clone, Copy, PartialEq and Eq.
-- Exactly one final State; checkpoints follow Done*Pending? Queued*; validate complete structure before observations and complete observations before Ready or Complete.
+- Exactly one final State; checkpoints follow `Done* Pending? Queued*`; validate complete structure before observations and complete observations before Ready or Complete.
 - Code, acceptance tests and current documentation belong in one task and PR. Use Conventional Commits and run just fmt then just verify before PR.
 
 ## Review Focus
@@ -36,7 +36,7 @@
 - Modify src/operations/mod.rs: export recovery.
 - Create tests/recovery_plans.rs: literal acceptance cases, no CLI invocation or real HOME use.
 - Update docs/design/file-recovery-model.md and docs/adr/0032-model-recovery-checkpoints-before-effects.md from selected/pending to implemented pure API; describe public decisions, prefixes and unresolved producer obligations.
-- Update docs/specification.md with the next numbered pure-model subsection; link current design and ADR from their existing indexes and docs/SUMMARY.md where those collections are listed.
+- Update docs/specification/specification.md with the next numbered pure-model subsection; link current design and ADR from their existing indexes and docs/book/SUMMARY.md where those collections are listed.
 - Modify only the current integration-status paragraph in docs/design/mixed-owned-artifact-planning.md for debt #278: permission selection is implemented; physical application and qualified integration remain pending. Link file-permission-policy.md.
 - Do not stage docs/design/qualified-file-application.md or modify inherited WIP/raw archives. Controller owns issue metadata and later gardening.
 
@@ -62,6 +62,8 @@ Write two independent literal tables of twelve expected outcomes, using the spec
 For File cases append State/Queued/Before. File Queued/Before yields Ready Apply0 prefixes0/0; Queued/Both yields CheckpointOnly0 prefixes0/0; Queued/After and Neither reconcile0 prefixes0/0. File Pending/Before yields Apply0 prefixes0/0; Pending/After and Both yield Acknowledge0 prefixes0/1; Pending/Neither reconciles0 prefixes0/0. File Done/After and Both yield Ready Apply1 prefixes1/1; Done/Before and Neither reconcile0 prefixes1/0.
 
 Add the ten literal multi-action examples from the spec, plus File Done/After + State Done/Before -> Reconcile index1, recorded_prefix2, verified_post_prefix1. Both recorded checkpoints remain Done even when the final State observation contradicts completion.
+
+Add File Queued/After + State Queued/Neither -> Reconcile index0 recorded0/verified0, and File Done/Before + File Pending/After + State Queued/Before -> Reconcile index0 recorded1/verified0. These independently pin first-conflict selection and contiguous-prefix stopping.
 
 Invalid-structure cases are empty; Files only; State then File; two State actions; Queued then Done; Pending then Done; Queued then Pending; two Pending. Include valid final State where needed to isolate checkpoint errors. Assert Err and diagnostic context (position or final State requirement), without requiring diagnostic ordering for multiple structural defects. Add a late invalid Done checkpoint after an earlier conflicting observation; it must still return Err.
 
@@ -130,7 +132,7 @@ Use clear rustdoc to describe supplied classifications and absence of effect aut
 python3 .superpowers/sdd/2026-10-14-file-recovery/recovery-run.py task1-focused-green cargo test --test recovery_plans
 ```
 
-Expected: all acceptance tests pass. Perform eleven independent one-at-a-time compiled controls: remove final-State position guard; remove single-State count guard; remove completed-prefix ordering guard; remove Pending position guard; accept Done/Before; accept Queued/After; return Apply for Pending/After; return Acknowledge for Pending/Before; return Apply for Queued/Both; exclude Pending from verified-post extension; truncate observation scan through recorded_prefix + 1. Each must fail a named behavioral assertion. A guard may enforce multiple related constraints; do not distort production code merely to isolate redundant syntax. Use unique logs and save mutated sources, exact original hashes and compiled failure names in scratch. Compiler failures do not count; retain and disclose invalid attempts. Restore exact original source after each control; rerun focused GREEN on restoration.
+Expected: all acceptance tests pass. Perform thirteen independent one-at-a-time compiled controls: remove final-State position guard; remove single-State count guard; remove completed-prefix ordering guard; remove Pending position guard; accept Done/Before; accept Queued/After; return Apply for Pending/After; return Acknowledge for Pending/Before; return Apply for Queued/Both; exclude Pending from verified-post extension; truncate observation scan through recorded_prefix + 1; overwrite the first conflict with a later conflict; extend the verified prefix for Pending post-state despite an earlier broken completed prefix. Each must fail a named behavioral assertion. A guard may enforce multiple related constraints; do not distort production code merely to isolate redundant syntax. Use unique logs and save mutated sources, exact original hashes and compiled failure names in scratch. Compiler failures do not count; retain and disclose invalid attempts. Restore exact original source after each control; rerun focused GREEN on restoration.
 
 - [ ] **Step 4: Update current docs and debt #278 wording.**
 
@@ -142,7 +144,7 @@ Run just fmt through the runner, then just verify with a new unique log. Run loc
 
 - [ ] **Step 6: Commit, self-review and report.**
 
-Stage only assigned code/tests/current durable docs/indexes and the #278 paragraph; keep broad application draft untracked. Commit with feat: model ordered recovery checkpoints. Self-review the diff against every spec section and Review Focus row. Save task-1-report.md in this plan's scratch with status, commit, files, acceptance RED/GREEN, eleven controls, restored hashes, complete gate evidence, test counts and limitations. No worker-spawned agents. Controller dispatches the task reviewer after the report.
+Stage only assigned code/tests/current durable docs/indexes and the #278 paragraph; keep broad application draft untracked. Commit with feat: model ordered recovery checkpoints. Self-review the diff against every spec section and Review Focus row. Save task-1-report.md in this plan's scratch with status, commit, files, acceptance RED/GREEN, thirteen controls, restored hashes, complete gate evidence, test counts and limitations. No worker-spawned agents. Controller dispatches the task reviewer after the report.
 
 ## Controller closeout
 

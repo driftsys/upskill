@@ -48,7 +48,7 @@ ObservedRelation describes current supplied evidence relative to an action's exa
 
 ## Structural validation
 
-Validate the complete sequence before classifying observations. Empty sequences reject. Exactly one State action must exist and it must be last. Zero File actions are allowed for a state-only operation. Checkpoints must follow Done*Pending? Queued*: a completed prefix, at most one pending action immediately after it, then queued actions. Reject Done after unfinished work, Pending after a queued action and multiple pending actions. Errors identify the invalid position or required final-state condition; no partial successful decision is returned.
+Validate the complete sequence before classifying observations. Empty sequences reject. Exactly one State action must exist and it must be last. Zero File actions are allowed for a state-only operation. Checkpoints must follow `Done* Pending? Queued*`: a completed prefix, at most one pending action immediately after it, then queued actions. Reject Done after unfinished work, Pending after a queued action and multiple pending actions. Errors identify the invalid position or required final-state condition; no partial successful decision is returned.
 
 ## Observation validation and prefixes
 
@@ -123,3 +123,5 @@ Independent compiled semantic controls must pin: final State position; exactly o
 The alternatives are to embed recovery decisions directly into effectful code, or infer completion from desired bytes alone. The first couples logical mistakes to data mutation; the second adopts unstarted post-state and can repeat a pending state write. Select the separate pure model. Its cost is an additional reviewed interface and a future qualified producer for every supplied observation.
 
 When several structural conditions are invalid, diagnostic ordering is unspecified. File and State action observations must both follow the same relation rules; tests must cover all twelve checkpoint/relation combinations for each action role, with a valid queued State suffix for File cases.
+
+Additional distinguishing examples: File Queued/After followed by State Queued/Neither returns Reconcile at index 0, prefixes 0/0; the first conflict wins. File Done/Before, File Pending/After, State Queued/Before returns Reconcile at index 0, prefixes 1/0; later pending post-state cannot extend a broken verified prefix. Compiled controls must independently pin both conditions in addition to the original eleven.
