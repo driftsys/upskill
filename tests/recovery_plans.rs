@@ -286,6 +286,32 @@ fn multi_action_literal_outcomes() {
         (
             vec![
                 action(File, Done, After),
+                action(File, Pending, Before),
+                action(State, Queued, Before),
+            ],
+            Ready {
+                recorded_prefix: 1,
+                verified_post_prefix: 1,
+                step: Apply { index: 1 },
+            },
+            "pending File Before applies after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Done, Both),
+                action(State, Pending, Before),
+            ],
+            Ready {
+                recorded_prefix: 2,
+                verified_post_prefix: 2,
+                step: Apply { index: 2 },
+            },
+            "pending final State Before applies after completed files",
+        ),
+        (
+            vec![
+                action(File, Done, After),
                 action(File, Pending, After),
                 action(State, Queued, Before),
             ],
@@ -546,6 +572,64 @@ fn invalid_structure_is_rejected_before_observations() {
             ],
             "action 1",
             "multiple File Pending actions reject",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Queued, Before),
+                action(File, Done, After),
+                action(State, Queued, Before),
+            ],
+            "action 2",
+            "File Done after Queued rejects after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Queued, Before),
+                action(State, Pending, Before),
+            ],
+            "action 2",
+            "State Pending after Queued rejects after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Pending, Before),
+                action(State, Pending, Before),
+            ],
+            "action 2",
+            "duplicate State Pending rejects after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Queued, Before),
+                action(File, Pending, Before),
+                action(State, Queued, Before),
+            ],
+            "action 2",
+            "File Pending after Queued rejects after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Pending, Before),
+                action(File, Pending, Before),
+                action(State, Queued, Before),
+            ],
+            "action 2",
+            "duplicate File Pending rejects after completed prefix",
+        ),
+        (
+            vec![
+                action(File, Done, After),
+                action(File, Pending, Before),
+                action(File, Done, After),
+                action(State, Queued, Before),
+            ],
+            "action 2",
+            "File Done after Pending rejects after completed prefix",
         ),
         (
             vec![action(File, Queued, Neither), action(State, Done, After)],
