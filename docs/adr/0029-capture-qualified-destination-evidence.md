@@ -1,6 +1,6 @@
 # AD-0029: Capture qualified destination evidence
 
-Status: implemented with local APFS evidence; hosted qualification pending.
+Implemented with local APFS evidence; hosted qualification remains pending.
 
 ## Context
 
@@ -13,6 +13,16 @@ Filename comparison differs across local filesystems and directory settings.
 Two absent spellings cannot be proved distinct by inspecting only their absence.
 Reproducing every versioned Unicode comparison table is outside the binary and
 dependency budget.
+
+## Options
+
+Ambient path canonicalization followed by ordinary reads does not bind later
+accesses to the inspected directory chain. Creating temporary comparison probes
+would violate preview's no-write contract. Exact emulation of every filesystem's
+Unicode comparison would require version-dependent tables without qualifying
+unknown filesystems. Descriptor-relative traversal with retained identities and
+conservative overlap rejection preserves the selected boundary within the
+existing dependency budget.
 
 ## Decision
 
@@ -58,3 +68,6 @@ all-target checks passed. Matching Rust 1.97.1 macOS release probes measure
 33,888 additional bytes when snapshot capture and verification are live; the
 inactive CLI remains 3,215,120 bytes at both baseline `8298386` and candidate.
 This is local binary evidence, not hosted qualification or runtime cost.
+
+Satisfies: [specification §4.8](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/docs/specification/specification.md#48-qualified-destination-observations).
+Related: [AD-0028](0028-lock-qualified-scope-directories.md).

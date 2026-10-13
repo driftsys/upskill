@@ -1,7 +1,7 @@
 # Qualified destination observation
 
-Status: implemented with local APFS evidence; hosted Linux and Windows checks
-remain pending.
+Implemented with local APFS evidence; hosted Linux and Windows checks remain
+pending.
 
 ## Intent and scope
 
@@ -45,19 +45,10 @@ changing the safety boundary.
 
 ## Public interface
 
-```rust
-impl QualifiedScope {
-    pub fn observe_destinations<'scope>(
-        &'scope self,
-        locations: &[FileLocation],
-    ) -> anyhow::Result<DestinationSnapshot<'scope>>;
-}
-
-impl DestinationSnapshot<'_> {
-    pub fn observations(&self) -> &[ObservedFile];
-    pub fn verify_unchanged(&self) -> anyhow::Result<()>;
-}
-```
+[`QualifiedScope::observe_destinations`](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/src/filesystem/destinations.rs)
+returns a `DestinationSnapshot` borrowing the scope. The snapshot exposes
+`observations()` as a borrowed slice and `verify_unchanged()` as a fallible
+revalidation operation.
 
 Export `DestinationSnapshot` from `filesystem`. Reuse `files::plan::FileLocation`,
 `ObservedFile` and `FileValue`. Existing regular files produce exact bytes and
@@ -171,36 +162,18 @@ Resource exhaustion and every non-not-found filesystem failure remain contextual
 errors. Retained handles close on drop and on every error path. No production
 retries or silent fallback to ambient path reads are allowed.
 
-## Acceptance and evidence
+## Contract and acceptance coverage
 
-| ID  | Required example                                                                                                                                                                        |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D01 | Capture exact binary bytes and Unix mode; immutable borrowed observations; entries, bytes and permission modes remain unchanged.                                                        |
-| D02 | Capture absent leaf and absent intermediate parents without creating anything; verify absence; empty input validates scope/profile.                                                     |
-| D03 | Reject every invalid relative path and a different physical root; allow distinct locations through equivalent roots and labels, preserving exact observation locations.                 |
-| D04 | Reject final and intermediate symlinks, file ancestors, directory leaves, hard links and special files without escaping or hanging.                                                     |
-| D05 | Reject duplicate, ASCII case-only, Unicode-uncertain and prefix pairs, including absent parents and root aliases; accept provably distinct examples and permutation-equivalent input.   |
-| D06 | Reject existing case/normalization aliases where the filesystem resolves them; preserve a single exact Unicode spelling and native root paths where supported.                          |
-| D07 | Reject byte edits with restored mtime, mode edits, identical-byte inode replacement, ancestor replacement, absence changes and root-alias retargeting; allow unrelated sibling changes. |
-| D08 | Unsupported filesystem/profile/mount evidence and non-not-found failures stay errors; no partial result, leaked handles or application writes on failure.                               |
-| D09 | Opaque/non-Clone API and close-on-exec evidence are independently pinned; existing commands and schema 1 stay unchanged.                                                                |
-
-Start with failing acceptance tests before implementation. Demonstrate separate
-assertion failures for no-follow traversal, overlap omission, exact-byte
-revalidation, missing-to-present verification, mount/profile rejection and
-descriptor close-on-exec. Use real temporary files for ordinary behavior and
-small private deterministic seams only where an otherwise unrepeatable check
-needs independent coverage. Do not replace the filesystem with a general mock.
-Tests must not change process-global cwd, touch developer HOME, mount filesystems
-or require elevated privileges. Any unexercised privileged mount behavior remains
-explicitly unswept rather than inferred from synthetic metadata.
-
-Run full repository verification, Rust 1.85 all-target checks, real local APFS
-tests and hosted Linux and Windows checks. Linux runtime qualification must be
-observed on the hosted filesystem, including required mount-ID availability.
-Windows checks establish the explicit unsupported/compilation boundary only.
-Measure matched release CLI and live snapshot/verification probe sizes using the
-same toolchain and baseline. Record exact scope, bytes and remaining limits.
+The requirements are recorded in
+[specification §4.8](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/docs/specification/specification.md#48-qualified-destination-observations).
+The [public acceptance suite](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/tests/filesystem_destinations.rs) covers
+capture, absence, candidate validation, unsafe entries, alias handling,
+adversarial changes and opaque evidence. Focused private tests in the
+[backend](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/src/filesystem/destinations/backend_tests.rs),
+[qualification](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/src/filesystem/destinations/qualification.rs) and
+[candidate](https://github.com/driftsys/upskill/blob/8abad7b57f079ae67c59816e09ddeaf44ff996b2/src/filesystem/destinations/candidates.rs) modules independently
+pin retained evidence and comparison rules. Filesystem fixtures use temporary
+roots; privileged mount behavior remains outside the exercised contract.
 
 ## Implementation evidence and remaining gates
 
@@ -235,14 +208,19 @@ experiments. The API remains inactive in existing commands and schema 1.
 
 Local validation passed `just fmt`, full `just verify`, warning-denying
 all-target Clippy and `cargo +1.85.0 check --locked --all-targets`. The focused
-APFS suites pass 22 destination cases, 15 private destination cases and the
+APFS suites pass 23 destination cases, 15 private destination cases and the
 existing 12 scope cases. Separate compile-fail rustdoc cases pin literal
-construction and Clone rejection. Sixteen independent semantic controls produced
+construction, Clone rejection and private observation storage. Sixteen initial
+independent semantic controls produced
 assertion failures, including omission of capture's before-return postcheck,
 exact-byte comparison and its production call, directory identity, profile and
 mount evidence, first-missing verification and each retained descriptor flag
 class and exact location tuple ordering. Mutated source bytes were restored and SHA-256 hashes compared before the
-final green gates. Local permission denial was observed as EACCES.
+final green gates. Review follow-up controls additionally pin the association
+between each exact location and its optional bytes/mode, and the inability of an
+external caller to mutate private observation storage. The restored acceptance
+suite passes 23 cases and warning-denying rustdoc passes four cases. Local
+permission denial was observed as EACCES.
 
 Matched stripped release measurements use Rust 1.97.1, LLVM 22.1.6 and
 `aarch64-apple-darwin`, with the repository release profile and matching package

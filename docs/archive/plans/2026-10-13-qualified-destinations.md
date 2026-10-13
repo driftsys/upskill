@@ -77,7 +77,7 @@ may return a freshly selected directory only after the existing original-spellin
 canonical-path and pinned-identity comparisons pass. Reuse those comparisons
 rather than introducing weaker alternate scope validation.
 
-- [ ] **Step 1: Write acceptance tests that cannot compile before the API exists.**
+- [x] **Step 1: Write acceptance tests that cannot compile before the API exists.**
 
 Start `tests/filesystem_destinations.rs` with cfg Linux/macOS cases and these helpers:
 
@@ -119,14 +119,14 @@ Extend D01 with the recursive bytes/entries/Unix-mode snapshot pattern from
 and `missing/parent/file` observations, verifying that no entries are created;
 test empty snapshots and unchanged scope writer-lock behavior independently.
 
-- [ ] **Step 2: Run acceptance RED and retain the exact failure.**
+- [x] **Step 2: Run acceptance RED and retain the exact failure.**
 
 Run `cargo test --locked --test filesystem_destinations` with a temporary HOME
 and the restricted PATH in the controller brief. Expected RED is the missing
 `observe_destinations` method, before implementation. Capture the command/output
 and distinguish compile RED from later assertion controls.
 
-- [ ] **Step 3: Pin portable validation, sorting and overlap with unit examples.**
+- [x] **Step 3: Pin portable validation, sorting and overlap with unit examples.**
 
 The component relation has this exact behavior:
 
@@ -156,7 +156,7 @@ path)` using owned raw OsString keys where necessary. Reject duplicate inputs,
 potential aliases and prefix pairs, and test permutations. Preserve exact root
 and path data in the returned observations; never canonicalize ownership records.
 
-- [ ] **Step 4: Implement root and mount qualification with focused unit gates.**
+- [x] **Step 4: Implement root and mount qualification with focused unit gates.**
 
 Reopen and revalidate the borrowed scope, then qualify that descriptor. Linux
 uses rustix `fstatfs` and `statx(fd, "", AtFlags::EMPTY_PATH, StatxFlags::MNT_ID)`;
@@ -174,7 +174,7 @@ Real D01/D02 must qualify the actual local/hosted filesystem, never silently ski
 an unsupported profile. Other OS implementations return explicit unsupported
 errors and keep all public capability types opaque.
 
-- [ ] **Step 5: Implement descriptor-relative capture and special-file rejection.**
+- [x] **Step 5: Implement descriptor-relative capture and special-file rejection.**
 
 Use rustix `Dir::read_from` for exact raw component enumeration and `statat` with
 SYMLINK_NOFOLLOW for entry metadata. Open intermediate directories using
@@ -201,7 +201,7 @@ killed/reaped on timeout.
 No privileged device-node or mount creation is authorized. Pin nonregular type
 classification separately if a device fixture cannot be made safely.
 
-- [ ] **Step 6: Implement exact revalidation and adversarial changes.**
+- [x] **Step 6: Implement exact revalidation and adversarial changes.**
 
 Before returning and from `verify_unchanged`, revalidate scope/root mount
 bindings, walk fresh no-follow descriptors and compare every retained directory
@@ -229,7 +229,7 @@ replacement and ancestor-root alias retargeting. A sibling edit must leave a
 snapshot valid. Root and directory identity checks must each have an independent
 test; one must not accidentally mask the other.
 
-- [ ] **Step 7: Add alias, failure and capability boundary tests.**
+- [x] **Step 7: Add alias, failure and capability boundary tests.**
 
 Add D05 exact duplicates, case-only ASCII names, NFC/NFD Unicode pairs, Unicode
 versus ASCII uncertainty, every prefix direction, and absent-parent pairs across
@@ -253,7 +253,7 @@ construction and `Clone`, and focused private descriptor flags checks for every
 retained descriptor class. No lock is implicitly acquired by observation; test
 observation under a held guard and unchanged same-process writer contention.
 
-- [ ] **Step 8: Run independent semantic controls and restore exactly.**
+- [x] **Step 8: Run independent semantic controls and restore exactly.**
 
 One mutation at a time, capture an assertion failure from: omission of directory
 NOFOLLOW in a direct private opener test with a real directory symlink; omission of conservative pair rejection; omission of
@@ -270,7 +270,7 @@ Likewise keep unknown profile, missing mount-ID mask and different mount ID as
 separate unit inputs and separate controls. Every subprocess must have a deadline
 and be killed/reaped; do not touch unrelated processes.
 
-- [ ] **Step 9: Complete docs, full gates and size evidence.**
+- [x] **Step 9: Complete docs, full gates and size evidence.**
 
 Update specification §4.8, durable design and AD-0029 to describe exactly the
 implemented rejection, sampled guarantees and pending gates. Keep the raw
@@ -286,7 +286,7 @@ open, observe_destinations and verify_unchanged and consumes the captured bytes.
 Record toolchain, exact bytes, code/data/linker interpretation and probe sources.
 Do not claim CLI dead-code elimination measures the active snapshot cost.
 
-- [ ] **Step 10: Commit and report for independent task review.**
+- [x] **Step 10: Commit and report for independent task review.**
 
 ```bash
 git add src/filesystem.rs src/filesystem/scope.rs src/filesystem/destinations.rs src/filesystem/destinations tests/filesystem_destinations.rs docs/specification/specification.md docs/design/qualified-destination-observation.md docs/adr/0029-capture-qualified-destination-evidence.md
