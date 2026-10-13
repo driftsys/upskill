@@ -175,7 +175,7 @@ unexercised unless separately evidenced. Durable status must remain honest.
 
 ## Local implementation evidence
 
-Native APFS focused coverage includes 10 public source acceptance tests, 27
+Native APFS focused coverage includes 11 public source acceptance tests, 30
 source-private tests (including the public pre-return seam), 24 existing strict
 manifest tests and 28 existing destination acceptance tests. Source-private tests
 exercise stable reads, changed metadata, short reads, returned counts, contextual
@@ -194,7 +194,7 @@ claimed independently necessary. Final task counts, restored checks and matched
 release-size evidence are recorded with implementation review; these local
 results do not complete hosted gates or M1.
 
-## Matched local release size
+## Historical local release size before the context fix
 
 Rust 1.97.1 release builds with identical pinned root dependency resolution and
 release profile produce byte-identical baseline/candidate CLI binaries of
@@ -202,7 +202,7 @@ release profile produce byte-identical baseline/candidate CLI binaries of
 versions and profile: control 303,120 bytes, source capture plus revalidation
 353,840 bytes (delta 50,720). Both runtime-input probe fixtures succeed. This
 records binary size only, not performance; inactive API code is stripped from the
-current CLI. Final-head hosted Linux/Windows qualification remains pending.
+then-current CLI. Final-head hosted Linux/Windows qualification remains pending.
 
 The correction for issue #274 independently pins regular-descendant native
 profile and mount-binding qualification before any reader invocation, exact
@@ -211,3 +211,14 @@ writer guard, and Debug excluding captured content. These tests do not establish
 privileged mount behavior. Independent link-count and ctime omission isolation
 remains an advisory coverage limit; production stamps retain and compare both
 fields.
+
+Scoped revalidation diagnostic tests retain source-root/operation context, complete
+relative paths in tree comparisons and original causes, including repeated public
+rejection without refreshing the manifest. Hosted qualification remains pending.
+
+The scoped revalidation-context fix has refreshed matched Rust 1.97.1 locked
+release measurements against the same baseline and pinned dependency versions:
+baseline/candidate CLI both 3,215,120 bytes (delta 0), control 303,120 bytes and
+live capture/revalidation probe 353,840 bytes (delta 50,720). CLI hashes differ;
+no byte-identity claim is made for this refresh. Both runtime-input fixtures pass.
+Earlier size artifacts remain historical; these measurements establish size only.

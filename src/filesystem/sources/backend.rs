@@ -248,16 +248,23 @@ impl Directory {
             }
         }
     }
-    fn verify_retained(&self, mount: &Mount, queries: DescriptorQueries) -> Result<()> {
-        self.verify_handle(&self.file, &self.stamp, mount, queries)?;
+    fn verify_retained(&self, path: &str, mount: &Mount, queries: DescriptorQueries) -> Result<()> {
+        self.verify_handle(&self.file, &self.stamp, mount, queries)
+            .with_context(|| {
+                format!(
+                    "revalidate retained source {:?}",
+                    if path.is_empty() { "." } else { path }
+                )
+            })?;
         for (name, child) in self.names.iter().zip(&self.children) {
+            let relative = relative_path(path, name);
             match child {
-                Entry::Directory(directory) => directory.verify_retained(mount, queries),
+                Entry::Directory(directory) => directory.verify_retained(&relative, mount, queries),
                 Entry::Regular(regular) => {
                     self.verify_handle(&regular.file, &regular.stamp, mount, queries)
                 }
             }
-            .with_context(|| format!("revalidate retained source {name:?}"))?;
+            .with_context(|| format!("revalidate retained source {relative:?}"))?;
         }
         Ok(())
     }
@@ -273,28 +280,45 @@ impl Directory {
         require_stamp(stamp, &actual)?;
         mount.require_same(&Mount::of(file, queries)?)
     }
-    fn compare(&self, current: &Self) -> Result<()> {
-        require_identity(self.stamp.identity, current.stamp.identity)?;
-        require_stamp(&self.stamp, &current.stamp)?;
-        if self.names != current.names {
-            bail!("source directory membership changed");
-        }
-        for (expected, actual) in self.children.iter().zip(&current.children) {
-            match (expected, actual) {
-                (Entry::Directory(expected), Entry::Directory(actual)) => {
-                    expected.compare(actual)?
-                }
-                (Entry::Regular(expected), Entry::Regular(actual)) => {
-                    require_identity(expected.stamp.identity, actual.stamp.identity)?;
-                    require_stamp(&expected.stamp, &actual.stamp)?;
-                    if expected.record != actual.record {
-                        bail!("source exact values changed");
-                    }
-                }
-                _ => bail!("source entry kind changed"),
+    fn compare(&self, current: &Self, path: &str) -> Result<()> {
+        (|| -> Result<()> {
+            require_identity(self.stamp.identity, current.stamp.identity)?;
+            require_stamp(&self.stamp, &current.stamp)?;
+            if self.names != current.names {
+                bail!("source directory membership changed");
             }
-        }
-        Ok(())
+            for (name, (expected, actual)) in self
+                .names
+                .iter()
+                .zip(self.children.iter().zip(&current.children))
+            {
+                let relative = relative_path(path, name);
+                (|| -> Result<()> {
+                    match (expected, actual) {
+                        (Entry::Directory(expected), Entry::Directory(actual)) => {
+                            expected.compare(actual, &relative)?
+                        }
+                        (Entry::Regular(expected), Entry::Regular(actual)) => {
+                            require_identity(expected.stamp.identity, actual.stamp.identity)?;
+                            require_stamp(&expected.stamp, &actual.stamp)?;
+                            if expected.record != actual.record {
+                                bail!("source exact values changed");
+                            }
+                        }
+                        _ => bail!("source entry kind changed"),
+                    }
+                    Ok(())
+                })()
+                .with_context(|| format!("compare source {relative:?}"))?;
+            }
+            Ok(())
+        })()
+        .with_context(|| {
+            format!(
+                "compare source {:?}",
+                if path.is_empty() { "." } else { path }
+            )
+        })
     }
 }
 pub(super) struct Evidence {
@@ -335,14 +359,14 @@ impl Evidence {
         self.verify_with(scope, Mount::queries())
     }
     fn verify_with(&self, scope: &QualifiedScope, queries: DescriptorQueries) -> Result<()> {
-        self.root.verify_retained(&self.mount, queries)?;
+        self.root.verify_retained("", &self.mount, queries)?;
         let (fresh, _) = Self::capture_with(
             scope,
             &mut |file, bytes| (&*file).read_to_end(bytes),
             queries,
         )?;
         self.mount.require_same(&fresh.mount)?;
-        self.root.compare(&fresh.root)?;
+        self.root.compare(&fresh.root, "")?;
         scope
             .verify_binding()
             .context("verify source root after revalidation")?;

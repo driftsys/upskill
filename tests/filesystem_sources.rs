@@ -302,6 +302,24 @@ mod native {
         });
     }
     #[test]
+    fn root_revalidation_error_retains_operation_path_and_cause() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("data"), b"original").unwrap();
+        let scope = source_scope(tmp.path());
+        let snapshot = scope.observe_source_tree().unwrap();
+        let manifest = snapshot.manifest().clone();
+        fs::create_dir(tmp.path().join("new-empty")).unwrap();
+        for _ in 0..2 {
+            let error = snapshot.verify_unchanged().unwrap_err();
+            assert!(
+                format!("{error:#}").contains("revalidate retained source \".\""),
+                "public root revalidation lost operation and source-root context: {error:#}"
+            );
+            assert_eq!(error.root_cause().to_string(), "source metadata changed");
+            assert_eq!(snapshot.manifest(), &manifest);
+        }
+    }
+    #[test]
     fn capture_preserves_complete_permission_bits_by_path() {
         let tmp = tempfile::tempdir().unwrap();
         for (path, mode) in [("group-data", 0o2640), ("executable", 0o751)] {

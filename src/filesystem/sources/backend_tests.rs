@@ -140,7 +140,7 @@ fn membership_compare_independently_of_directory_stamps() {
     assert_eq!(evidence.root.names, ["nested"]);
     assert_eq!(fresh.root.names, ["nested", "new-empty"]);
     assert!(
-        evidence.root.compare(&fresh.root).is_err(),
+        evidence.root.compare(&fresh.root, "").is_err(),
         "verification omitted complete membership comparison"
     );
 }
@@ -171,7 +171,7 @@ fn same_byte_inode_replacement_compares_identity_independently_of_other_stamps()
     old.stamp = new.stamp.clone();
     old.stamp.identity = original_identity;
     assert!(
-        evidence.root.compare(&fresh.root).is_err(),
+        evidence.root.compare(&fresh.root, "").is_err(),
         "verification ignored independent file identity"
     );
 }
@@ -635,7 +635,7 @@ fn same_descendant_directory_replacement_compares_independent_identity() {
     assert_eq!(old_file.record, new_file.record);
     old_file.stamp = new_file.stamp.clone();
     assert!(
-        evidence.root.compare(&fresh.root).is_err(),
+        evidence.root.compare(&fresh.root, "").is_err(),
         "verification ignored independent directory identity"
     );
 }
@@ -723,5 +723,56 @@ fn descendant_mount_binding_rejects_before_regular_reader_runs() {
     reject_regular_before_read(
         changed_regular_binding_queries(),
         "descendant mount comparison was bypassed before reading",
+    );
+}
+
+#[test]
+fn retained_root_revalidation_reports_operation_and_original_cause() {
+    let (tmp, scope) = fixture();
+    let (evidence, manifest) = Evidence::capture(&scope).unwrap();
+    std::fs::create_dir(tmp.path().join("new-empty")).unwrap();
+    for _ in 0..2 {
+        let error = evidence.verify(&scope).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("revalidate retained source \".\""),
+            "retained root diagnostic lost operation and source-root context: {error:#}"
+        );
+        assert_eq!(error.root_cause().to_string(), "source metadata changed");
+        let mut files = Vec::new();
+        evidence.root.records(&mut files);
+        assert_eq!(assemble_manifest(files).unwrap(), manifest);
+    }
+}
+#[test]
+fn complete_root_comparison_reports_operation_and_original_cause() {
+    let (tmp, scope) = fixture();
+    let (mut evidence, _) = Evidence::capture(&scope).unwrap();
+    std::fs::create_dir(tmp.path().join("new-empty")).unwrap();
+    let (fresh, _) = Evidence::capture(&scope).unwrap();
+    evidence.root.stamp = fresh.root.stamp.clone();
+    let error = evidence.root.compare(&fresh.root, "").unwrap_err();
+    assert!(
+        format!("{error:#}").contains("compare source \".\""),
+        "complete root comparison lost operation and source-root context: {error:#}"
+    );
+    assert_eq!(
+        error.root_cause().to_string(),
+        "source directory membership changed"
+    );
+}
+#[test]
+fn complete_nested_comparison_reports_relative_path_and_original_cause() {
+    let (_tmp, scope) = fixture();
+    let (evidence, _) = Evidence::capture(&scope).unwrap();
+    let (mut fresh, _) = Evidence::capture(&scope).unwrap();
+    regular(&mut fresh).record.bytes[0] ^= 1;
+    let error = evidence.root.compare(&fresh.root, "").unwrap_err();
+    assert!(
+        format!("{error:#}").contains("compare source \"nested/data\""),
+        "complete nested comparison lost operation and relative path: {error:#}"
+    );
+    assert_eq!(
+        error.root_cause().to_string(),
+        "source exact values changed"
     );
 }
