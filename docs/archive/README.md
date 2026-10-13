@@ -347,9 +347,16 @@ snapshot, authenticity, external-writer exclusion or qualified Windows backend.
 The final whole-branch correction resolves initial public source-binding context
 and independently pins retained-descendant full-path diagnostics, while keeping
 the original scope cause and immutable manifest. Current focused source coverage
-is 12 public and 31 private tests; combined independent omission evidence has 46
-valid controls and the same two historical discarded attempts. Scoped re-review
-and final-head hosted qualification remain required. Source
+at `a393263` was 12 public and 31 private tests; combined independent omission
+evidence had 46 valid controls and the same two historical discarded attempts.
+The later PR closeout independently pins the final revalidation binding check and
+adds positive qualified empty-root/directory-only fixtures plus a real private
+unsupported-host source-method assertion. [CI run 38346202172](https://github.com/driftsys/upskill/actions/runs/38346202172) and
+[CodeQL run 38346200154](https://github.com/driftsys/upskill/actions/runs/38346200154) succeeded for
+`a393263` on 2026-10-13. Its Linux source mask/non-UTF-8 cases executed natively;
+Windows checked scope rejection and compiled the source API without calling its
+source helper. Scoped PR review and final-head hosted checks, including native
+Windows execution of the new source assertion, remain required. Source
 lifecycle integration, permission policy, durable state, effects and recovery
 remain pending; M1-A2, M1-A3 and M1 are not complete. All 34 foreign WIP files and
 18 earlier raw archive files retain their original bytes and disposition; this

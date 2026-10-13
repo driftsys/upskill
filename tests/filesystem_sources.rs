@@ -19,6 +19,48 @@ mod native {
     use std::os::unix::fs::{PermissionsExt, symlink};
     use upskill::source_manifest::{capture_source, validate_manifest};
 
+    #[test]
+    fn empty_root_captures_and_revalidates_an_empty_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let scope = source_scope(tmp.path());
+        let result = scope.observe_source_tree();
+        assert!(
+            result.is_ok(),
+            "qualified empty root capture rejected: {result:?}"
+        );
+        let snapshot = result.unwrap();
+        assert!(snapshot.manifest().files.is_empty());
+        validate_manifest(snapshot.manifest()).unwrap();
+        snapshot.verify_unchanged().unwrap();
+        snapshot.verify_unchanged().unwrap();
+        assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn directory_only_tree_captures_and_revalidates_an_empty_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("nested/empty")).unwrap();
+        let scope = source_scope(tmp.path());
+        let result = scope.observe_source_tree();
+        assert!(
+            result.is_ok(),
+            "qualified directory-only capture rejected: {result:?}"
+        );
+        let snapshot = result.unwrap();
+        assert!(snapshot.manifest().files.is_empty());
+        validate_manifest(snapshot.manifest()).unwrap();
+        snapshot.verify_unchanged().unwrap();
+        snapshot.verify_unchanged().unwrap();
+        assert!(tmp.path().join("nested/empty").is_dir());
+        assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 1);
+        assert_eq!(
+            fs::read_dir(tmp.path().join("nested/empty"))
+                .unwrap()
+                .count(),
+            0
+        );
+    }
+
     fn fifo(path: &Path) {
         #[cfg(target_os = "linux")]
         rustix::fs::mkfifoat(
@@ -416,7 +458,7 @@ mod native {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 #[test]
-fn unsupported_host_returns_error_without_artifacts() {
+fn unsupported_scope_returns_error_without_artifacts_and_source_api_compiles() {
     let tmp = tempfile::tempdir().unwrap();
     let result = QualifiedScope::open(&InstallationRoot {
         scope: OwnershipScope::Project,
@@ -424,8 +466,12 @@ fn unsupported_host_returns_error_without_artifacts() {
     });
     assert!(result.is_err());
     assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 0);
-    fn opaque_api(scope: &QualifiedScope) {
-        assert!(scope.observe_source_tree().is_err());
+    // The private unsupported-host unit test executes the source method.
+    // This public fixture only checks its signature because open rejects first.
+    fn opaque_source_api(
+        scope: &QualifiedScope,
+    ) -> anyhow::Result<upskill::filesystem::SourceSnapshot<'_>> {
+        scope.observe_source_tree()
     }
-    let _ = opaque_api;
+    let _ = opaque_source_api;
 }

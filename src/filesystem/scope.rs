@@ -111,6 +111,23 @@ impl ScopeWriterGuard<'_> {
     }
 }
 
+#[cfg(all(test, not(any(target_os = "linux", target_os = "macos"))))]
+mod unsupported_tests {
+    use super::QualifiedScope;
+
+    #[test]
+    fn source_observation_returns_explicit_unsupported_error() {
+        let scope = QualifiedScope { _unsupported: () };
+        let result = scope.observe_source_tree();
+        assert!(result.is_err(), "unsupported host returned source evidence");
+        let error = format!("{:#}", result.unwrap_err());
+        assert!(
+            error.contains("qualified source observation") && error.contains("unsupported"),
+            "unsupported source observation lost operation/platform context: {error}"
+        );
+    }
+}
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod backend {
     use std::fs::{self, File, Metadata};

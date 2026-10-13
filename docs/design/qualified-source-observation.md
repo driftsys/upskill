@@ -1,7 +1,9 @@
 # Qualified source tree observation
 
 The inactive library boundary is implemented independently of command dispatch.
-Final-head hosted Linux and Windows qualification remains pending.
+Hosted Linux qualification and the Windows scope/compile boundary passed at
+`a393263` on 2026-10-13. Hosted checks for the eventual final PR head, including
+the new Windows source-method runtime assertion, remain merge gates.
 Decision: [AD-0030](../adr/0030-capture-qualified-source-evidence.md).
 
 ## Intent
@@ -164,7 +166,7 @@ binding check and original scope cause. Public root replacement and ancestor
 alias tests require the complete chain twice and preserve the original manifest.
 An actual nested-file chmod fixture leaves complete parent stamps and membership
 unchanged, then requires retained `nested/data` context, the original cause and
-manifest preservation twice. Current focused coverage includes 12 public source
+manifest preservation twice. Focused coverage at `a393263` included 12 public source
 tests and 31 source-private tests. Three additional independent context/path
 controls bring the combined valid count to 46, with exact restoration and focused
 success; the same two historical discarded attempts remain excluded. The earlier
@@ -172,9 +174,28 @@ initial-binding exception and retained-descendant assertion gap are resolved.
 Independent link-count and ctime omission isolation remains a coverage limit;
 production stamps compare both fields.
 
-Linux-only non-UTF-8 and missing returned mount-ID mask cases require final-head
-native Linux execution. Windows exposes the opaque API but has no qualified
-backend. FIFO subprocess fixtures own their deadlines and kill/reap only their
+The PR closeout adds a final-binding omission control that rebinds an ancestor
+after fresh capture and comparison. It requires operation/root context and the
+original scope cause, while retaining all production binding checks. Empty-root
+and directory-only positive fixtures capture and revalidate valid empty manifests.
+The two positive fixtures reject an injected empty-manifest refusal independently.
+Restored local APFS coverage passes 14 public source tests and 32 source-private
+tests. Historical control totals above remain dated evidence. Independent link-count and
+ctime omission isolation remains outside this closeout.
+
+On 2026-10-13, [CI run 38346202172](https://github.com/driftsys/upskill/actions/runs/38346202172) and
+[CodeQL run 38346200154](https://github.com/driftsys/upskill/actions/runs/38346200154) succeeded for
+PR head `a3932633e9cc9a269f8ba8d8b6dd2ec26d0b828e`. The tested merge commit
+`604dcda92bbc3c08d4ce10b695b18f95fb4d5e83` and that PR head share tree
+`48b716136a7822428e6ed163be2689beaaf9ddfa`. Native Linux job
+[115128098194](https://github.com/driftsys/upskill/actions/runs/38346202172/job/115128098194)
+executed the source missing mount-ID mask and non-UTF-8 cases. Windows job
+[115128098069](https://github.com/driftsys/upskill/actions/runs/38346202172/job/115128098069)
+executed scope rejection and compiled the opaque source API; its uncalled source
+helper did not establish source-method runtime coverage. A new private
+unsupported-host test now calls the source method and requires contextual
+rejection. Its native Windows execution and all hosted checks for the eventual
+final PR head remain merge gates. No qualified Windows backend is implemented. FIFO subprocess fixtures own their deadlines and kill/reap only their
 child. No privileged mount/device or physical fault claim follows.
 
 ## Historical matched local release size before the final binding fix
@@ -187,10 +208,16 @@ public-API probe is 303,120 bytes; live capture plus explicit revalidation is
 establish binary size only; inactive API code is stripped from the CLI. Earlier
 measurements are historical and do not establish final-head hosted qualification.
 
-The final binding-context fix refreshes the candidate CLI and live public-API
+The binding-context fix measured at `a3932633e9cc9a269f8ba8d8b6dd2ec26d0b828e`
+refreshes the candidate CLI and live public-API
 probe under the same Rust 1.97.1 locked dependencies, release profile and runtime
 inputs. Exact hash-verified prior baseline/control binaries are reused: CLI
 baseline/candidate remain 3,215,120 bytes (delta zero); control is 303,120 bytes and
 live capture/revalidation is 353,840 bytes (delta 50,720). Both runtime-input
 fixtures pass. No byte-identity, performance or final-head hosted success claim
 follows from these size measurements.
+
+The PR closeout adds test fixtures and a generic no-op revalidation test seam,
+without changing public runtime semantics. Size builds were not repeated; the
+measurements above apply to the prior measured source at `a393263`, not the
+eventual final PR head.

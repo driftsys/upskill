@@ -1,6 +1,7 @@
 # AD-0030: Capture qualified source evidence
 
-Inactive library implementation complete locally; final-head hosted qualification pending.
+Inactive library implementation complete; hosted Linux and Windows scope/compile
+checks passed at `a393263` on 2026-10-13. Final-head hosted checks remain required.
 
 ## Context
 
@@ -36,8 +37,12 @@ Source and destination roots may use separate qualified mounts. Permission
 application, Git revision/authenticity, lifecycle state, effects, recovery and
 Windows qualification remain separate gates.
 
-Local implementation checks pass; final-head hosted Linux and Windows
-qualification remains pending. The [design evidence](../design/qualified-source-observation.md#local-implementation-evidence)
+Local implementation checks pass. [CI run 38346202172](https://github.com/driftsys/upskill/actions/runs/38346202172) and
+[CodeQL run 38346200154](https://github.com/driftsys/upskill/actions/runs/38346200154) succeeded at
+`a393263` on 2026-10-13. That Windows run checked scope rejection and source API
+compilation, not the source method inside the previously uncalled helper. The new
+private unsupported-host test executes that method. Final-head hosted checks,
+including native execution of this assertion on Windows, remain merge gates. The [design evidence](../design/qualified-source-observation.md#local-implementation-evidence)
 records local coverage, independent-control limits and
 matched release-size measurements. Initial public binding failures preserve
 source-root/verification context and their original scope cause; retained nested
@@ -47,10 +52,15 @@ Satisfies: [specification §4.9](https://github.com/driftsys/upskill/blob/a4e84d
 Related: [AD-0028](0028-lock-qualified-scope-directories.md),
 [AD-0029](0029-capture-qualified-destination-evidence.md).
 
-The final binding-context fix refreshes the candidate CLI and live public-API
+The binding-context fix measured at `a3932633e9cc9a269f8ba8d8b6dd2ec26d0b828e`
+refreshes the candidate CLI and live public-API
 probe under the same Rust 1.97.1 locked dependencies, release profile and runtime
 inputs. Exact hash-verified prior baseline/control binaries are reused: CLI
 baseline/candidate remain 3,215,120 bytes (delta zero); control is 303,120 bytes and
 live capture/revalidation is 353,840 bytes (delta 50,720). Both runtime-input
 fixtures pass. No byte-identity, performance or final-head hosted success claim
 follows from these size measurements.
+
+The later test-seam and fixture closeout does not repeat these size builds or
+claim these measurements for a future head. Independent final revalidation
+binding omission coverage now complements the earlier capture binding controls.

@@ -359,6 +359,14 @@ impl Evidence {
         self.verify_with(scope, Mount::queries())
     }
     fn verify_with(&self, scope: &QualifiedScope, queries: DescriptorQueries) -> Result<()> {
+        self.verify_with_before_binding(scope, queries, || Ok(()))
+    }
+    fn verify_with_before_binding(
+        &self,
+        scope: &QualifiedScope,
+        queries: DescriptorQueries,
+        before_binding: impl FnOnce() -> Result<()>,
+    ) -> Result<()> {
         self.root.verify_retained("", &self.mount, queries)?;
         let (fresh, _) = Self::capture_with(
             scope,
@@ -367,6 +375,7 @@ impl Evidence {
         )?;
         self.mount.require_same(&fresh.mount)?;
         self.root.compare(&fresh.root, "")?;
+        before_binding()?;
         scope
             .verify_binding()
             .context("verify source root after revalidation")?;

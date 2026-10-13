@@ -860,7 +860,7 @@ evidence limits. Final-head hosted Linux/Windows gates remain required. See
 [AD-0030](../adr/0030-capture-qualified-source-evidence.md) and the
 [source observation design](../design/qualified-source-observation.md).
 
-Local APFS source coverage includes 12 public acceptance tests and 31 private
+Local APFS source coverage at `a393263` included 12 public acceptance tests and 31 private
 tests, with independent regular-descendant profile/mount qualification before
 reading, complete permission-bit mapping, held-writer capture/revalidation and
 non-content Debug checks. Independent link-count and ctime omission isolation
@@ -871,7 +871,24 @@ relative paths in tree comparisons and original causes, including repeated publi
 rejection without refreshing the manifest. Public root and ancestor binding
 failures retain source-root/verification context and the original scope cause.
 Retained nested-file diagnostics are independently pinned with unchanged parent
-stamps and membership. Hosted qualification remains pending.
+stamps and membership. A final-binding control now rebinds an ancestor only after
+fresh capture/comparison and independently pins the last revalidation check.
+Empty-root and directory-only positive fixtures exercise qualified capture and
+revalidation of valid empty manifests.
+
+On 2026-10-13, [CI run 38346202172](https://github.com/driftsys/upskill/actions/runs/38346202172) and
+[CodeQL run 38346200154](https://github.com/driftsys/upskill/actions/runs/38346200154) succeeded for
+PR head `a3932633e9cc9a269f8ba8d8b6dd2ec26d0b828e`. The tested merge commit
+`604dcda92bbc3c08d4ce10b695b18f95fb4d5e83` and that PR head share tree
+`48b716136a7822428e6ed163be2689beaaf9ddfa`. Native Linux job
+[115128098194](https://github.com/driftsys/upskill/actions/runs/38346202172/job/115128098194)
+executed the source missing mount-ID mask and non-UTF-8 cases. Windows job
+[115128098069](https://github.com/driftsys/upskill/actions/runs/38346202172/job/115128098069)
+executed scope rejection and compiled the opaque source API; its uncalled source
+helper did not establish source-method runtime coverage. A new private
+unsupported-host test now calls the source method and requires contextual
+rejection. Its native Windows execution and all hosted checks for the eventual
+final PR head remain merge gates. No qualified Windows backend is implemented.
 
 ## 5. Source format and authentication
 

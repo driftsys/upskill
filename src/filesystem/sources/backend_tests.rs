@@ -546,6 +546,43 @@ fn ancestor_rebind_during_capture_rejects_after_walk() {
 }
 
 #[test]
+fn ancestor_rebind_after_fresh_comparison_rejects_final_revalidation() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(tmp.path().join("outer/root")).unwrap();
+    std::fs::write(tmp.path().join("outer/root/data"), b"original").unwrap();
+    let scope = QualifiedScope::open(&InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: tmp.path().join("outer/root"),
+    })
+    .unwrap();
+    let (evidence, manifest) = Evidence::capture(&scope).unwrap();
+    evidence.verify(&scope).unwrap();
+    let result = evidence.verify_with_before_binding(&scope, Mount::queries(), || {
+        std::fs::rename(tmp.path().join("outer"), tmp.path().join("moved"))?;
+        symlink("moved", tmp.path().join("outer"))?;
+        Ok(())
+    });
+    assert!(
+        result.is_err(),
+        "revalidation omitted final source root binding check after fresh comparison"
+    );
+    let error = format!("{:#}", result.unwrap_err());
+    assert!(
+        error.contains("verify source root after revalidation")
+            && error.contains("scope root binding changed"),
+        "final source binding failure lost operation/root context or original cause: {error}"
+    );
+    assert!(evidence.verify(&scope).is_err());
+    let mut records = Vec::new();
+    evidence.root.records(&mut records);
+    assert_eq!(records, manifest.files);
+    assert_eq!(
+        std::fs::read(tmp.path().join("moved/root/data")).unwrap(),
+        b"original"
+    );
+}
+
+#[test]
 fn native_iterator_failure_rejects_without_partial_names() {
     let (_tmp, scope) = fixture();
     let file = scope.reopen_directory().unwrap();
