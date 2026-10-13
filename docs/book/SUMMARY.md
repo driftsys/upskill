@@ -20,3 +20,5 @@
 - [Scope locking decision](../adr/0028-lock-qualified-scope-directories.md)
 - [Qualified destination observation contract](../design/qualified-destination-observation.md)
 - [Destination observation decision](../adr/0029-capture-qualified-destination-evidence.md)
+- [Qualified source observation contract](../design/qualified-source-observation.md)
+- [Source observation decision](../adr/0030-capture-qualified-source-evidence.md)

@@ -99,6 +99,10 @@ fn capture_with(root: &Path, io: &impl ObservationIo) -> Result<SourceManifest> 
     }
     let mut files = Vec::new();
     capture_directory(&root, Path::new(""), io, &mut files)?;
+    assemble_manifest(files)
+}
+
+pub(crate) fn assemble_manifest(mut files: Vec<CapturedSourceFile>) -> Result<SourceManifest> {
     files.sort_by(|left, right| left.path.cmp(&right.path));
     let manifest = SourceManifest {
         content_sha256: manifest_hash(&files)?,
@@ -176,7 +180,7 @@ fn source_path(path: &Path) -> Result<String> {
     Ok(path)
 }
 
-fn content_hash(bytes: &[u8]) -> String {
+pub(crate) fn content_hash(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
         .map(|byte| format!("{byte:02x}"))

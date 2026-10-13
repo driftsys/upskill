@@ -88,8 +88,11 @@ per-client resource and entrypoint outputs from validated captured sources. The
 file/contribution sets; neither individual planner authorizes partial application
 of a mixed installation. Connecting compiled outputs to complete lifecycle
 desired sets and reviewed adapters remains pending. Qualified scope roots,
-writer locking and the inactive [destination observation boundary](qualified-destination-observation.md)
-are implemented separately, including conservative destination overlap rejection
-and descriptor-relative containment. Qualified source observation, permission
-policy, durable state, apply/recovery and Codex activation remain pending. This prerequisite leaves current commands, schema-1 lockfiles and native
+writer locking, [destination observation](qualified-destination-observation.md)
+and [qualified source observation](qualified-source-observation.md) are implemented
+as separate inactive capabilities, including conservative destination overlap
+rejection and descriptor-relative source and destination observation. Final-head
+hosted source qualification remains required. Integrating qualified source
+evidence into the lifecycle, permission policy, durable state, apply/recovery and
+Codex activation remain pending. This prerequisite leaves current commands, schema-1 lockfiles and native
 client behavior unchanged and does not complete M1-A2, M1-A3 or M1.

@@ -101,9 +101,11 @@ coordination. The implemented [mixed coordinator](mixed-owned-artifact-planning.
 composes explicit complete file/contribution sets, without deriving ownership
 inputs from compiled outputs. Connecting them to ownership and planners still
 requires explicit roots, consumers and destination evidence. Qualified scope roots,
-writer locking and the inactive [destination observation boundary](qualified-destination-observation.md)
-are implemented separately. Registry/bundle resolution, qualified source
-observation, destination permission policy, durable state, apply/recovery and
+writer locking, [destination observation](qualified-destination-observation.md)
+and [qualified source observation](qualified-source-observation.md) are implemented
+as separate inactive capabilities. Final-head hosted source qualification remains
+required. Registry/bundle resolution, integrating qualified source evidence into
+the lifecycle, destination permission policy, durable state, apply/recovery and
 native Codex activation remain pending. Returning an OpenCode rule file does not install
 its separate instruction registration. This prerequisite changes no commands,
 installer behavior or schema-1 persistence and completes neither M1-A2 nor M1-A3.

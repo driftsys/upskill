@@ -305,10 +305,59 @@ Durable successors: [specification §4.8](../specification/specification.md#48-q
 [qualified destination design](../design/qualified-destination-observation.md) and
 [AD-0029](../adr/0029-capture-qualified-destination-evidence.md).
 These current records establish the implemented inactive qualified destination
-and writer-lock boundaries. Earlier archive entries describe their dated slices;
-statements there that these boundaries remain pending are historical, not current
-successor status. Lifecycle integration, qualified source evidence, permission
-policy, durable state and apply/recovery remain pending. No qualified Windows
+and writer-lock boundaries. The separate
+[qualified source design](../design/qualified-source-observation.md) and
+[AD-0030](../adr/0030-capture-qualified-source-evidence.md) now establish inactive
+source observation; final-head hosted source qualification remains required.
+Earlier archive entries describe their dated slices; statements there that these
+boundaries remain pending are historical, not current successor status.
+Integrating qualified source evidence into the lifecycle, permission policy,
+durable state and apply/recovery remain pending. No qualified Windows
 backend, real privileged mount or fault behavior is established. The 34 other WIP
 files retain their existing disposition unchanged; this entry resolves only the
 named pair and does not complete M1.
+
+## Qualified source tree observation
+
+The archived [spec](specs/2026-10-13-qualified-sources-design.md) and
+[plan](plans/2026-10-13-qualified-sources.md) retain the exact final working bytes
+from their respective `docs/wip/specs/` and `docs/wip/plans/` paths. Their raw
+relative references remain unchanged. The plan includes controller-approved
+completion marks captured before archival; the raw spec's pending status is
+historical.
+
+Durable successors: [specification §4.9](../specification/specification.md#49-qualified-source-tree-observations),
+[source observation design](../design/qualified-source-observation.md) and
+[AD-0030](../adr/0030-capture-qualified-source-evidence.md). These authorities
+existed before implementation; archival does not redirect their citations.
+
+Earlier implementation and task-reviewed corrections ended at
+`a4e84d9334f7717bfb170d59afcbaf7f829d1e82`. Local formatting, full verification,
+locked warning-denying all-target Clippy and Rust 1.85 compilation passed:
+964 outer Rust tests and 11 documentation-checker tests, zero failures. Independent
+controls record 43 valid assertion failures with exact restoration and focused
+success; two historical discarded experiments are excluded. Fresh task re-review
+approved the scoped diagnostic correction. This records local delivery only;
+final-head hosted Linux/Windows, branch/PR review and merge remain separate gates.
+
+The opaque read-only snapshot captures and non-refreshingly revalidates complete
+source evidence using qualified roots and shared mount policy. Legacy capture,
+CLI, dependencies and schema 1 remain unchanged. It establishes no atomic tree
+snapshot, authenticity, external-writer exclusion or qualified Windows backend.
+The final whole-branch correction resolves initial public source-binding context
+and independently pins retained-descendant full-path diagnostics, while keeping
+the original scope cause and immutable manifest. Current focused source coverage
+at `a393263` was 12 public and 31 private tests; combined independent omission
+evidence had 46 valid controls and the same two historical discarded attempts.
+The later PR closeout independently pins the final revalidation binding check and
+adds positive qualified empty-root/directory-only fixtures plus a real private
+unsupported-host source-method assertion. [CI run 38346202172](https://github.com/driftsys/upskill/actions/runs/38346202172) and
+[CodeQL run 38346200154](https://github.com/driftsys/upskill/actions/runs/38346200154) succeeded for
+`a393263` on 2026-10-13. Its Linux source mask/non-UTF-8 cases executed natively;
+Windows checked scope rejection and compiled the source API without calling its
+source helper. Scoped PR review and final-head hosted checks, including native
+Windows execution of the new source assertion, remain required. Source
+lifecycle integration, permission policy, durable state, effects and recovery
+remain pending; M1-A2, M1-A3 and M1 are not complete. All 34 foreign WIP files and
+18 earlier raw archive files retain their original bytes and disposition; this
+entry resolves only the assigned pair.

@@ -452,9 +452,13 @@ implemented as described in the
 [specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
 The separate [captured item compiler](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation)
 derives complete per-client entrypoint and resource outputs from captured bytes.
-Reference resolution, qualified source/filesystem evidence, per-owner consumer
-associations, connecting compiled outputs to complete lifecycle desired sets,
-state integration and transactional execution remain pending. The separate
+Qualified scope roots, writer locking, destination observation and
+[source observation](https://driftsys.github.io/upskill/specification.html#49-qualified-source-tree-observations)
+are implemented as separate inactive library capabilities. Final-head hosted
+source qualification remains required. Reference resolution, per-owner consumer
+associations, integrating qualified source evidence and compiled outputs into
+complete lifecycle desired sets, state integration and transactional execution
+remain pending. The separate
 [mixed coordinator](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file and contribution sets; current commands and
 schema-1 persistence are unchanged.
