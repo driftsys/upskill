@@ -4,7 +4,8 @@
 
 use anyhow::{Result, bail};
 
-/// Supplied destination mode evidence; unknown presence is distinct from absence.
+/// Supplied destination mode evidence; a present destination with unknown mode
+/// is distinct from absence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DestinationMode {
     Absent,
