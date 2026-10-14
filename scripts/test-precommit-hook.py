@@ -32,11 +32,11 @@ class PreCommitHookTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (repo / "src" / "lib.rs").write_text(
-                "pub fn library() {\n    let value = 1;\n    let _ = value;\n}\n",
+                "pub fn library(){let value=1;let _=value;}\n",
                 encoding="utf-8",
             )
             (repo / "src" / "old.rs").write_text(
-                "pub fn renamed() {\n    let value = 1;\n    let _ = value;\n}\n",
+                "pub fn renamed(){let value=1;let _=value;}\n",
                 encoding="utf-8",
             )
             (repo / "notes" / "staged.md").write_text("# notes\n", encoding="utf-8")
@@ -45,6 +45,8 @@ class PreCommitHookTests(unittest.TestCase):
                 "# golden\n", encoding="utf-8"
             )
             (repo / "notes" / "image.bin").write_bytes(b"\x00\x01binary fixture\xff")
+            (repo / "notes" / "nul-valid-utf8.bin").write_bytes(b"\x00valid UTF-8\n")
+            (repo / "notes" / "invalid-utf8.bin").write_bytes(b"\xffinvalid UTF-8\n")
             self.git(repo, "add", ".")
             self.git(repo, "commit", "--quiet", "-m", "test: seed hook fixture")
 
@@ -62,8 +64,11 @@ class PreCommitHookTests(unittest.TestCase):
 
             renamed = repo / "src" / "renamed.rs"
             (repo / "src" / "old.rs").rename(renamed)
-            renamed.write_text("pub fn renamed(){let value=2;let _=value;}\n", encoding="utf-8")
             self.git(repo, "add", "-A", "--", "src/old.rs", "src/renamed.rs")
+            rename_status_before_format = self.git_output(
+                repo, "diff", "--cached", "--name-status", "--find-renames"
+            )
+            self.assertIn("R100\tsrc/old.rs\tsrc/renamed.rs", rename_status_before_format)
 
             markdown = repo / "notes" / "staged.md"
             markdown.write_text("# staged  \n", encoding="utf-8")
@@ -76,6 +81,8 @@ class PreCommitHookTests(unittest.TestCase):
                 "notes/config.yaml",
                 "tests/fixtures/golden.md",
                 "notes/image.bin",
+                "notes/nul-valid-utf8.bin",
+                "notes/invalid-utf8.bin",
                 "src/file with space.rs",
                 "src/renamed.rs",
             )
@@ -89,7 +96,17 @@ class PreCommitHookTests(unittest.TestCase):
             image = repo / "notes" / "image.bin"
             image.write_bytes(b"\x00\x01staged binary fixture\xff")
             self.git(repo, "add", "notes/image.bin")
+            nul_valid_utf8 = repo / "notes" / "nul-valid-utf8.bin"
+            nul_valid_utf8.write_bytes(b"\x00staged valid UTF-8\n")
+            self.git(repo, "add", "notes/nul-valid-utf8.bin")
+            invalid_utf8 = repo / "notes" / "invalid-utf8.bin"
+            invalid_utf8.write_bytes(b"\xffstaged invalid UTF-8\n")
+            self.git(repo, "add", "notes/invalid-utf8.bin")
 
+            staged_paths_before = self.git_output(
+                repo, "diff", "--cached", "--name-only", "--no-renames", "-z"
+            )
+            lib_index_before = self.index_blob_bytes(repo, "src/lib.rs")
             result = subprocess.run(
                 ["git", "std", "hook", "run", "pre-commit", "--"],
                 cwd=repo,
@@ -109,10 +126,8 @@ class PreCommitHookTests(unittest.TestCase):
             )
             self.assertEqual(
                 self.index_blob(repo, "src/renamed.rs"),
-                "pub fn renamed() {\n    let value = 2;\n    let _ = value;\n}\n",
+                "pub fn renamed() {\n    let value = 1;\n    let _ = value;\n}\n",
             )
-            rename_status = self.git_output(repo, "diff", "--cached", "--name-status")
-            self.assertIn("src/old.rs\tsrc/renamed.rs", rename_status)
             self.assertEqual(self.index_blob(repo, "notes/staged.md"), "# staged\n")
             self.assertEqual(self.index_blob(repo, "notes/config.yaml"), "status: staged\n")
             self.assertEqual(
@@ -122,11 +137,38 @@ class PreCommitHookTests(unittest.TestCase):
                 self.index_blob_bytes(repo, "notes/image.bin"),
                 b"\x00\x01staged binary fixture\xff",
             )
+            self.assertEqual(
+                self.index_blob_bytes(repo, "notes/nul-valid-utf8.bin"),
+                b"\x00staged valid UTF-8\n",
+            )
+            self.assertEqual(
+                self.index_blob_bytes(repo, "notes/invalid-utf8.bin"),
+                b"\xffstaged invalid UTF-8\n",
+            )
+            self.assertEqual(self.index_blob_bytes(repo, "src/lib.rs"), lib_index_before)
+            self.assertEqual(
+                self.git_output(
+                    repo, "diff", "--cached", "--name-only", "--no-renames", "-z"
+                ),
+                staged_paths_before,
+            )
             self.assertEqual(main.read_text(encoding="utf-8"), 'mod child;\nfn main(){let value=3;println!("{value}");}\n')
             self.assertEqual(markdown.read_bytes(), markdown_before)
             self.assertEqual(library.read_bytes(), library_before)
             self.assertIn("notes/staged.md", self.git_output(repo, "diff", "--name-only").splitlines())
             self.assertIn("src/main.rs", self.git_output(repo, "diff", "--name-only").splitlines())
+
+            invalid_rust = repo / "src" / "invalid.rs"
+            invalid_rust.write_text("fn main( {\n", encoding="utf-8")
+            self.git(repo, "add", "src/invalid.rs")
+            result = subprocess.run(
+                ["git", "std", "hook", "run", "pre-commit", "--"],
+                cwd=repo,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
     @classmethod
     def git(cls, repo, *arguments):
