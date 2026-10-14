@@ -19,6 +19,7 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt -- --check
+      - run: python3 scripts/test-format-staged-rust.py
 
   clippy:
     name: Clippy

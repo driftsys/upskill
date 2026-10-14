@@ -50,8 +50,8 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 The `commit-msg` hook enforces this convention with `git std lint`.
 
-The `pre-commit` hook formats staged files with Prim and runs `cargo fmt` on
-staged Rust files. Golden files under `tests/fixtures/` are excluded from
+The `pre-commit` hook formats staged files with Prim and runs `rustfmt` on each
+staged Rust file. Golden files under `tests/fixtures/` are excluded from
 formatting. It does not run lint, tests, or builds. The `pre-push` hook runs
 `just sanity`: Prim lint on the upstream diff, Clippy, and
 `cargo check --all-targets --locked`. Full tests, repository lint, docs checks,

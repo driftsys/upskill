@@ -15,6 +15,7 @@ lint:
     cargo fmt -- --check
     prim lint .
     shellcheck install.sh bootstrap .githooks/format-staged-rust.sh
+    python3 scripts/test-format-staged-rust.py
 
 # Pre-push checks: changed-file hygiene, Clippy, and type checking.
 sanity:

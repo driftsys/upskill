@@ -9,5 +9,5 @@ while IFS= read -r -d '' file; do
 done < <(git diff --cached --name-only -z --diff-filter=ACMRT)
 
 if ((${#staged_rust_files[@]} > 0)); then
-  cargo fmt -- "${staged_rust_files[@]}"
+  rustfmt --edition 2024 --config skip_children=true -- "${staged_rust_files[@]}"
 fi
