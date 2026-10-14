@@ -45,8 +45,12 @@ class PreCommitHookTests(unittest.TestCase):
                 "# golden\n", encoding="utf-8"
             )
             (repo / "notes" / "image.bin").write_bytes(b"\x00\x01binary fixture\xff")
-            (repo / "notes" / "nul-valid-utf8.bin").write_bytes(b"\x00valid UTF-8\n")
-            (repo / "notes" / "invalid-utf8.bin").write_bytes(b"\xffinvalid UTF-8\n")
+            (repo / "notes" / "nul-valid-utf8.md").write_bytes(
+                b"# NUL markdown\n\nline  \n\x00"
+            )
+            (repo / "notes" / "invalid-utf8.md").write_bytes(
+                b"# Invalid UTF-8 \xff\n"
+            )
             self.git(repo, "add", ".")
             self.git(repo, "commit", "--quiet", "-m", "test: seed hook fixture")
 
@@ -81,8 +85,8 @@ class PreCommitHookTests(unittest.TestCase):
                 "notes/config.yaml",
                 "tests/fixtures/golden.md",
                 "notes/image.bin",
-                "notes/nul-valid-utf8.bin",
-                "notes/invalid-utf8.bin",
+                "notes/nul-valid-utf8.md",
+                "notes/invalid-utf8.md",
                 "src/file with space.rs",
                 "src/renamed.rs",
             )
@@ -96,12 +100,12 @@ class PreCommitHookTests(unittest.TestCase):
             image = repo / "notes" / "image.bin"
             image.write_bytes(b"\x00\x01staged binary fixture\xff")
             self.git(repo, "add", "notes/image.bin")
-            nul_valid_utf8 = repo / "notes" / "nul-valid-utf8.bin"
-            nul_valid_utf8.write_bytes(b"\x00staged valid UTF-8\n")
-            self.git(repo, "add", "notes/nul-valid-utf8.bin")
-            invalid_utf8 = repo / "notes" / "invalid-utf8.bin"
-            invalid_utf8.write_bytes(b"\xffstaged invalid UTF-8\n")
-            self.git(repo, "add", "notes/invalid-utf8.bin")
+            nul_valid_utf8 = repo / "notes" / "nul-valid-utf8.md"
+            nul_valid_utf8.write_bytes(b"# NUL markdown\n\nline  \n\x00")
+            self.git(repo, "add", "notes/nul-valid-utf8.md")
+            invalid_utf8 = repo / "notes" / "invalid-utf8.md"
+            invalid_utf8.write_bytes(b"# Invalid UTF-8 \xff\n")
+            self.git(repo, "add", "notes/invalid-utf8.md")
 
             staged_paths_before = self.git_output(
                 repo, "diff", "--cached", "--name-only", "--no-renames", "-z"
@@ -138,12 +142,12 @@ class PreCommitHookTests(unittest.TestCase):
                 b"\x00\x01staged binary fixture\xff",
             )
             self.assertEqual(
-                self.index_blob_bytes(repo, "notes/nul-valid-utf8.bin"),
-                b"\x00staged valid UTF-8\n",
+                self.index_blob_bytes(repo, "notes/nul-valid-utf8.md"),
+                b"# NUL markdown\n\nline  \n\x00",
             )
             self.assertEqual(
-                self.index_blob_bytes(repo, "notes/invalid-utf8.bin"),
-                b"\xffstaged invalid UTF-8\n",
+                self.index_blob_bytes(repo, "notes/invalid-utf8.md"),
+                b"# Invalid UTF-8 \xff\n",
             )
             self.assertEqual(self.index_blob_bytes(repo, "src/lib.rs"), lib_index_before)
             self.assertEqual(
