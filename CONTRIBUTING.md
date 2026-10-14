@@ -8,7 +8,6 @@
 | git-std    | latest stable              | `./bootstrap`                                   |
 | prim       | latest stable              | `./bootstrap`                                   |
 | just       | latest                     | `cargo install just`                            |
-| dprint     | latest                     | `cargo install dprint`                          |
 | shellcheck | latest                     | `brew install shellcheck`                       |
 | Python     | ≥ 3.9                      | System package manager                          |
 | mdbook     | 0.5.4                      | `cargo install mdbook --version 0.5.4 --locked` |
@@ -24,14 +23,14 @@ just build
 
 ## Daily workflow
 
-| Command       | Purpose                            |
-| ------------- | ---------------------------------- |
-| `just sanity` | Fast pre-push code checks          |
-| `just test`   | Run all tests                      |
-| `just fmt`    | Format Rust + Markdown             |
-| `just lint`   | Clippy + shellcheck + dprint check |
-| `just verify` | Full pre-commit check              |
-| `just build`  | Compile + check                    |
+| Command       | Purpose                                             |
+| ------------- | --------------------------------------------------- |
+| `just sanity` | Fast pre-push code checks                           |
+| `just test`   | Run all tests                                       |
+| `just fmt`    | Format Rust + Markdown                              |
+| `just lint`   | Clippy + Rust format check + Prim lint + ShellCheck |
+| `just verify` | Full test, lint, docs, and build checks             |
+| `just build`  | Compile + check                                     |
 
 ## Branch model
 
@@ -51,10 +50,12 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 The `commit-msg` hook enforces this convention with `git std lint`.
 
-The `pre-commit` hook checks staged whitespace with `git diff --cached --check`.
-It does not format files or compile code. The `pre-push` hook runs
-`just sanity`: Rust formatting, Prim hygiene, and
-`cargo check --all-targets --locked`. CI runs the full tests and Clippy checks.
+The `pre-commit` hook formats staged files with Prim and runs `cargo fmt` on
+staged Rust files. Golden files under `tests/fixtures/` are excluded from
+formatting. It does not run lint, tests, or builds. The `pre-push` hook runs
+`just sanity`: Prim lint on the upstream diff, Clippy, and
+`cargo check --all-targets --locked`. Full tests, repository lint, docs checks,
+and builds run through `just verify` and CI.
 
 Bootstrap installs or updates `git-std` and `prim` from their latest stable
 GitHub releases, verifies archive checksums, and activates the hooks. It

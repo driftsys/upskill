@@ -204,11 +204,11 @@ adding behaviour, prefer extending the matching file or creating a new
 ```bash
 just assemble    # cargo build
 just test        # cargo test
-just lint        # cargo clippy + fmt --check + dprint check
+just lint        # cargo clippy + fmt --check + prim lint + shellcheck
 just check       # test + lint
 just build       # assemble + check
 just verify      # commit check + build (run before opening a PR)
-just fmt         # cargo fmt + dprint fmt
+just fmt         # cargo fmt + prim fmt
 ```
 
 After `git clone` or `git worktree add`, run `./bootstrap` once. It installs
