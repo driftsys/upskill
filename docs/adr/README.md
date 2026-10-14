@@ -25,15 +25,20 @@ decision explicitly; documentation moves do not change its status.
 [0015 — Pure projection before legacy-state migration](0015-pure-legacy-state-projection.md)
 records the implemented library boundary and its documented alternatives.
 
-[0016 — Pure instruction planning before lifecycle effects](0016-pure-instruction-planning.md) records the implemented bounded choice.
+[0016 — Pure instruction planning before lifecycle effects](0016-pure-instruction-planning.md)
+records the implemented bounded choice.
 
-[0017 — Require owner evidence before changing shared instruction regions](0017-shared-instruction-owner-evidence.md) records the implemented bounded choice.
+[0017 — Require owner evidence before changing shared instruction regions](0017-shared-instruction-owner-evidence.md)
+records the implemented bounded choice.
 
-[0018 — Retain aggregates after final-region removal](0018-retain-empty-instruction-aggregates.md) records the implemented bounded choice.
+[0018 — Retain aggregates after final-region removal](0018-retain-empty-instruction-aggregates.md)
+records the implemented bounded choice.
 
-[0019 — Separate strict source capture from legacy discovery](0019-separate-strict-source-capture.md) records the opt-in observation boundary.
+[0019 — Separate strict source capture from legacy discovery](0019-separate-strict-source-capture.md)
+records the opt-in observation boundary.
 
-[0020 — Version and frame captured source evidence](0020-framed-source-manifest-evidence.md) records its separate digest encoding.
+[0020 — Version and frame captured source evidence](0020-framed-source-manifest-evidence.md)
+records its separate digest encoding.
 
 ## Owned whole-file planning
 

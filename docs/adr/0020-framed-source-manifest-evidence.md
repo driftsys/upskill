@@ -24,11 +24,13 @@ additional manifest digest inputs. Do not reinterpret legacy digests.
 ## Consequences
 
 Paths, bytes and observed mode evidence affect the digest; roots, timestamps and
-enumeration order do not. Different available mode evidence can produce different
-cross-platform digests. This new internal evidence version must retain its exact
-encoding. A valid digest verifies supplied values rather than source provenance.
+enumeration order do not. Different available mode evidence can produce
+different cross-platform digests. This new internal evidence version must retain
+its exact encoding. A valid digest verifies supplied values rather than source
+provenance.
 
-Satisfies: [Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests).
+Satisfies:
+[Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests).
 Related: [source manifest design](../design/strict-source-manifests.md),
-[AD-0019](0019-separate-strict-source-capture.md).
-Rationale: [archived spec](../archive/specs/2026-10-12-strict-source-manifests-design.md).
+[AD-0019](0019-separate-strict-source-capture.md). Rationale:
+[archived spec](../archive/specs/2026-10-12-strict-source-manifests-design.md).

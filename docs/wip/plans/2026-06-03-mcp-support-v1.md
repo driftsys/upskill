@@ -1,16 +1,32 @@
 # MCP Server Support (v1) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let an upskill bundle declare MCP servers (`mcps:`) that `upskill add` configures into each targeted client — CLI-first, config-write fallback — with a lockfile + `doctor` lifecycle and `${VAR}` secret indirection.
+**Goal:** Let an upskill bundle declare MCP servers (`mcps:`) that `upskill add`
+configures into each targeted client — CLI-first, config-write fallback — with a
+lockfile + `doctor` lifecycle and `${VAR}` secret indirection.
 
-**Architecture:** A near-exact parallel of the existing plugin mechanism (ADR-0008). A new `mcps:` map on `Bundle` carries per-server descriptors (remote `http`/`sse` URL, or local stdio `command`). A new `src/mcp.rs` module shells out to each client's native MCP verb (`claude mcp add`), falling back to writing the client config file when the CLI is absent. Outcomes are recorded as `LockedMcp` entries; `remove`/`doctor` reconcile via the inverse verb. upskill never expands `${VAR}` — values pass through verbatim, so it holds no secret.
+**Architecture:** A near-exact parallel of the existing plugin mechanism
+(ADR-0008). A new `mcps:` map on `Bundle` carries per-server descriptors (remote
+`http`/`sse` URL, or local stdio `command`). A new `src/mcp.rs` module shells
+out to each client's native MCP verb (`claude mcp add`), falling back to writing
+the client config file when the CLI is absent. Outcomes are recorded as
+`LockedMcp` entries; `remove`/`doctor` reconcile via the inverse verb. upskill
+never expands `${VAR}` — values pass through verbatim, so it holds no secret.
 
-**Tech Stack:** Rust 2024 (MSRV 1.85), `serde`/`serde_yaml_ng`/`serde_json`, `std::process::Command` (no new deps), `assert_cmd` + `tempfile` for integration tests.
+**Tech Stack:** Rust 2024 (MSRV 1.85), `serde`/`serde_yaml_ng`/`serde_json`,
+`std::process::Command` (no new deps), `assert_cmd` + `tempfile` for integration
+tests.
 
-**Spec:** [docs/wip/specs/2026-06-03-mcp-support-design.md](../specs/2026-06-03-mcp-support-design.md)
+**Spec:**
+[docs/wip/specs/2026-06-03-mcp-support-design.md](../specs/2026-06-03-mcp-support-design.md)
 
-**Out of scope (v2):** `requires.mcps` skill dependency edge, generated skill-body preflight, the install agent for bare binaries. This plan is v1 (bundle-level, eager config-write) only.
+**Out of scope (v2):** `requires.mcps` skill dependency edge, generated
+skill-body preflight, the install agent for bare binaries. This plan is v1
+(bundle-level, eager config-write) only.
 
 ---
 
@@ -35,8 +51,8 @@
 | `docs/format-spec.md`               | `mcps:` sub-shape + lockfile schema note                                                                                      | Modify     |
 
 > **Worktree note:** all paths are relative to the worktree root
-> `.claude/worktrees/feat-mcp-support/`. Use the full worktree-prefixed
-> absolute path for every Write/Edit.
+> `.claude/worktrees/feat-mcp-support/`. Use the full worktree-prefixed absolute
+> path for every Write/Edit.
 
 ---
 
@@ -48,7 +64,8 @@
 
 - [ ] **Step 1: Write the failing test**
 
-Add to the existing `#[cfg(test)] mod tests` in `src/parse/bundle.rs` (it already exercises `Bundle` parsing — the model has no own test module):
+Add to the existing `#[cfg(test)] mod tests` in `src/parse/bundle.rs` (it
+already exercises `Bundle` parsing — the model has no own test module):
 
 ```rust
 #[test]
@@ -103,7 +120,8 @@ mcps:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cargo test --lib parse::bundle::tests::load_parses_mcp_remote_and_local`
-Expected: FAIL — `no field mcps on type Bundle` / `unresolved import McpTransport`.
+Expected: FAIL — `no field mcps on type Bundle` /
+`unresolved import McpTransport`.
 
 - [ ] **Step 3: Add the model types**
 
@@ -117,7 +135,8 @@ In `src/model/bundle.rs`, add the field to `Bundle` (next to `plugins`):
 pub mcps: BTreeMap<String, McpEntry>,
 ```
 
-Append these types to the end of the file (before `#[cfg(test)]` if any, else end):
+Append these types to the end of the file (before `#[cfg(test)]` if any, else
+end):
 
 ```rust
 /// One entry in the bundle `mcps:` map. Exactly one transport (`remote`
@@ -191,10 +210,10 @@ git commit -m "feat(model): add mcps: descriptor types to Bundle"
 ## Task 2: Model — validation (`exactly-one-of`, remote/local required fields)
 
 `#[serde(flatten)]` on an untagged-style enum already rejects "neither"
-(deserialization fails when neither `remote` nor `local` is present) and
-"both" is rejected because `McpTransport` deserializes the first matching
-variant — so we add an explicit `validate_mcps` for the cases serde does not
-catch: an empty `type`/`url`/`command`, and an unknown remote `type`.
+(deserialization fails when neither `remote` nor `local` is present) and "both"
+is rejected because `McpTransport` deserializes the first matching variant — so
+we add an explicit `validate_mcps` for the cases serde does not catch: an empty
+`type`/`url`/`command`, and an unknown remote `type`.
 
 **Files:**
 
@@ -248,12 +267,13 @@ mcps:
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cargo test --lib parse::bundle::tests::load_rejects_mcp`
-Expected: FAIL — `load` currently accepts these (no validation).
+Run: `cargo test --lib parse::bundle::tests::load_rejects_mcp` Expected: FAIL —
+`load` currently accepts these (no validation).
 
 - [ ] **Step 3: Add `validate_mcps` and call it**
 
-In `src/model/bundle.rs`, add an `impl Bundle` block (or extend an existing one):
+In `src/model/bundle.rs`, add an `impl Bundle` block (or extend an existing
+one):
 
 ```rust
 impl Bundle {
@@ -296,8 +316,8 @@ bundle
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cargo test --lib parse::bundle::tests::load_rejects_mcp`
-Expected: PASS (both).
+Run: `cargo test --lib parse::bundle::tests::load_rejects_mcp` Expected: PASS
+(both).
 
 - [ ] **Step 5: Commit**
 
@@ -310,8 +330,8 @@ git commit -m "feat(model): validate mcps transport fields"
 
 ## Task 3: Expose `plugin.rs` command helpers for reuse
 
-`src/mcp.rs` needs the same spawn/CLI-not-found/run helpers `plugin.rs`
-already has. Promote them to `pub(crate)` rather than duplicating.
+`src/mcp.rs` needs the same spawn/CLI-not-found/run helpers `plugin.rs` already
+has. Promote them to `pub(crate)` rather than duplicating.
 
 **Files:**
 
@@ -339,8 +359,9 @@ pub(crate) fn check_output_for_substring(output: CommandOutput, needle: &str) ->
 
 - [ ] **Step 2: Verify the crate still builds**
 
-Run: `cargo build`
-Expected: builds with zero warnings (the items are now used cross-module in later tasks; until then `pub(crate)` on an in-crate-unused item does not warn).
+Run: `cargo build` Expected: builds with zero warnings (the items are now used
+cross-module in later tasks; until then `pub(crate)` on an in-crate-unused item
+does not warn).
 
 - [ ] **Step 3: Commit**
 
@@ -465,8 +486,9 @@ pub mod mcp;
 
 - [ ] **Step 2: Run the tests to verify they pass**
 
-Run: `cargo test --lib mcp::tests`
-Expected: PASS (these are pure arg-builders — they pass as soon as the code compiles; the value is locking the exact CLI contract).
+Run: `cargo test --lib mcp::tests` Expected: PASS (these are pure arg-builders —
+they pass as soon as the code compiles; the value is locking the exact CLI
+contract).
 
 - [ ] **Step 3: Add the install/remove/check shellout functions**
 
@@ -507,8 +529,7 @@ pub fn check_claude_installed(name: &str) -> PluginCheckResult {
 
 - [ ] **Step 4: Run the full module + build**
 
-Run: `cargo test --lib mcp:: && cargo build`
-Expected: PASS, zero warnings.
+Run: `cargo test --lib mcp:: && cargo build` Expected: PASS, zero warnings.
 
 - [ ] **Step 5: Commit**
 
@@ -522,8 +543,8 @@ git commit -m "feat(mcp): claude mcp add/remove/list shellout"
 ## Task 5: `src/ancillary.rs` — config-write fallbacks
 
 Write the MCP entry into a client config file when its CLI is absent.
-`.mcp.json` (Claude project-scope fallback) and `opencode.json` (`mcp` key)
-are the v1 targets. Both merge without clobbering existing entries, mirroring
+`.mcp.json` (Claude project-scope fallback) and `opencode.json` (`mcp` key) are
+the v1 targets. Both merge without clobbering existing entries, mirroring
 `write_opencode_plugin_uri`.
 
 **Files:**
@@ -579,13 +600,13 @@ fn write_claude_mcp_json_preserves_existing_servers() {
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cargo test --lib ancillary::tests::write_claude_mcp`
-Expected: FAIL — `write_claude_mcp_local` not found.
+Run: `cargo test --lib ancillary::tests::write_claude_mcp` Expected: FAIL —
+`write_claude_mcp_local` not found.
 
 - [ ] **Step 3: Implement the config-write helpers**
 
-Add to `src/ancillary.rs` (near `write_opencode_plugin_uri`). The
-`.mcp.json` shape Claude Code reads is `{ "mcpServers": { "<name>": {…} } }`:
+Add to `src/ancillary.rs` (near `write_opencode_plugin_uri`). The `.mcp.json`
+shape Claude Code reads is `{ "mcpServers": { "<name>": {…} } }`:
 
 ```rust
 use crate::model::bundle::{McpLocal, McpRemote};
@@ -689,14 +710,14 @@ pub fn remove_claude_mcp(target: &Path, name: &str) -> Result<()> {
 ```
 
 > If `json!`, `Value`, `write_pretty_json`, `PluginOutcome`, `Path`,
-> `Context`/`Result` are not already imported at the top of `ancillary.rs`,
-> add the missing `use` lines (the file already uses all of these for
+> `Context`/`Result` are not already imported at the top of `ancillary.rs`, add
+> the missing `use` lines (the file already uses all of these for
 > `write_opencode_plugin_uri`).
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cargo test --lib ancillary::tests::write_claude_mcp`
-Expected: PASS (both).
+Run: `cargo test --lib ancillary::tests::write_claude_mcp` Expected: PASS
+(both).
 
 - [ ] **Step 5: Commit**
 
@@ -758,7 +779,8 @@ fn remove_mcps_by_name_drops_all_clients() {
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cargo test --lib lockfile::tests::upsert_mcp lockfile::tests::remove_mcps_by_name`
+Run:
+`cargo test --lib lockfile::tests::upsert_mcp lockfile::tests::remove_mcps_by_name`
 Expected: FAIL — `mcps` field / `LockedMcp` / `upsert_mcp` not found.
 
 - [ ] **Step 3: Add the field, types, and methods**
@@ -831,7 +853,8 @@ Add the methods to `impl Lockfile` (near `upsert_plugin`):
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cargo test --lib lockfile::tests::upsert_mcp lockfile::tests::remove_mcps_by_name`
+Run:
+`cargo test --lib lockfile::tests::upsert_mcp lockfile::tests::remove_mcps_by_name`
 Expected: PASS (both).
 
 - [ ] **Step 5: Commit**
@@ -853,9 +876,9 @@ git commit -m "feat(lockfile): record MCP servers (LockedMcp + lifecycle)"
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `tests/pipeline_mcp.rs` (new file — full file shown in Task 10; for
-now add this unit-level assertion to `src/pipeline/install.rs` tests, creating
-a `#[cfg(test)] mod tests` if none exists):
+Add to `tests/pipeline_mcp.rs` (new file — full file shown in Task 10; for now
+add this unit-level assertion to `src/pipeline/install.rs` tests, creating a
+`#[cfg(test)] mod tests` if none exists):
 
 ```rust
 #[cfg(test)]
@@ -913,8 +936,8 @@ mod mcp_tests {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cargo test --lib pipeline::install::mcp_tests`
-Expected: FAIL — `install_mcps_from_bundles` not found; `mcp_results` not on report.
+Run: `cargo test --lib pipeline::install::mcp_tests` Expected: FAIL —
+`install_mcps_from_bundles` not found; `mcp_results` not on report.
 
 - [ ] **Step 3: Add `McpResult` to the report**
 
@@ -946,8 +969,8 @@ pub mcp_results: Vec<McpResult>,
 ```
 
 Initialize `mcp_results: Vec::new()` everywhere `InstallReport` is constructed
-(search: `grep -rn "plugin_results: Vec::new()" src/`) and add the sibling
-line. Also update the `lockfile.rs:391` test constructor similarly.
+(search: `grep -rn "plugin_results: Vec::new()" src/`) and add the sibling line.
+Also update the `lockfile.rs:391` test constructor similarly.
 
 - [ ] **Step 4: Add `install_mcps_from_bundles`**
 
@@ -1053,8 +1076,7 @@ Add `install_mcps_from_bundles` to the `use super::install::{…}` import in
 
 - [ ] **Step 6: Run the tests + build**
 
-Run: `cargo test --lib pipeline:: && cargo build`
-Expected: PASS, zero warnings.
+Run: `cargo test --lib pipeline:: && cargo build` Expected: PASS, zero warnings.
 
 - [ ] **Step 7: Commit**
 
@@ -1120,8 +1142,8 @@ print_mcp_results(&report);
 - [ ] **Step 2: Wire `upskill remove mcp <name>`**
 
 Find the `remove` command dispatch and the plugin-removal branch (search:
-`remove_plugins_by_name`). Add a parallel MCP branch. For each
-`LockedMcp` matching `name`, call the inverse:
+`remove_plugins_by_name`). Add a parallel MCP branch. For each `LockedMcp`
+matching `name`, call the inverse:
 
 ```rust
 // MCP removal: inverse of `claude mcp add`, then drop from lockfile.
@@ -1148,8 +1170,8 @@ lock.remove_mcps_by_name(&name);
 
 - [ ] **Step 3: Add doctor reconciliation**
 
-Find the doctor plugin-reconciliation loop (search: `check_claude_plugin_installed`).
-Add a parallel MCP loop:
+Find the doctor plugin-reconciliation loop (search:
+`check_claude_plugin_installed`). Add a parallel MCP loop:
 
 ```rust
 for mcp in &lock.mcps {
@@ -1175,8 +1197,8 @@ for mcp in &lock.mcps {
 
 - [ ] **Step 4: Build + clippy**
 
-Run: `cargo build && cargo clippy --all-targets -- -D warnings`
-Expected: zero warnings.
+Run: `cargo build && cargo clippy --all-targets -- -D warnings` Expected: zero
+warnings.
 
 - [ ] **Step 5: Commit**
 
@@ -1238,10 +1260,10 @@ fn lint_flags_invalid_mcp_transport() {
 
 - [ ] **Step 2: Run the test**
 
-Run: `cargo test --lib lint::tests::lint_flags_invalid_mcp_transport`
-Expected: PASS if `validate_mcps` is reachable (it is — Task 2). If `lint.rs`
-has its own bundle-walk that bypasses `parse::bundle::load`, add a
-`bundle.validate_mcps()` call into that walk and surface the error string.
+Run: `cargo test --lib lint::tests::lint_flags_invalid_mcp_transport` Expected:
+PASS if `validate_mcps` is reachable (it is — Task 2). If `lint.rs` has its own
+bundle-walk that bypasses `parse::bundle::load`, add a `bundle.validate_mcps()`
+call into that walk and surface the error string.
 
 - [ ] **Step 3: Commit**
 
@@ -1316,17 +1338,16 @@ fn add_bundle_with_mcp_writes_claude_mcp_json() {
 }
 ```
 
-> If `env_remove("PATH")` then setting `PATH=/nonexistent` is awkward on the
-> CI runner (`upskill` itself was already located by `cargo_bin`, which
-> returns an absolute path, so it still runs), keep both lines. If the test
-> harness needs `git` on PATH for the local-path source, instead point `PATH`
-> at a temp dir containing only a `git` symlink. Verify by running the test.
+> If `env_remove("PATH")` then setting `PATH=/nonexistent` is awkward on the CI
+> runner (`upskill` itself was already located by `cargo_bin`, which returns an
+> absolute path, so it still runs), keep both lines. If the test harness needs
+> `git` on PATH for the local-path source, instead point `PATH` at a temp dir
+> containing only a `git` symlink. Verify by running the test.
 
 - [ ] **Step 2: Run it to verify it fails, then passes**
 
-Run: `cargo test --test cli_mcp`
-Expected: After Tasks 1–8, PASS. If it fails on PATH handling, adjust per the
-note above and re-run.
+Run: `cargo test --test cli_mcp` Expected: After Tasks 1–8, PASS. If it fails on
+PATH handling, adjust per the note above and re-run.
 
 - [ ] **Step 3: Write `tests/pipeline_mcp.rs`**
 
@@ -1381,13 +1402,12 @@ fn add_then_remove_mcp_updates_lockfile() {
 ```
 
 > Confirm the exact `remove` sub-command shape against the existing CLI
-> (`upskill remove plugin <name>` is the template — match its noun position
-> for `mcp`). Adjust the args array if the CLI uses `remove --mcp` instead.
+> (`upskill remove plugin <name>` is the template — match its noun position for
+> `mcp`). Adjust the args array if the CLI uses `remove --mcp` instead.
 
 - [ ] **Step 4: Run it**
 
-Run: `cargo test --test pipeline_mcp`
-Expected: PASS.
+Run: `cargo test --test pipeline_mcp` Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1419,13 +1439,12 @@ lockfile + doctor lifecycle), the trust invariant (upskill never expands
 - [ ] **Step 2: Document the `mcps:` sub-shape in format-spec**
 
 Add an `mcps:` subsection to `docs/format-spec.md` §3 (next to the `plugins:`
-sub-shape) with the YAML example from the spec, the secret-indirection rule,
-and the lockfile `mcps[]` entry shape (note the `schema` stays `1` — additive).
+sub-shape) with the YAML example from the spec, the secret-indirection rule, and
+the lockfile `mcps[]` entry shape (note the `schema` stays `1` — additive).
 
 - [ ] **Step 3: Run docs lint + book build**
 
-Run: `just fmt && just book`
-Expected: builds clean.
+Run: `just fmt && just book` Expected: builds clean.
 
 - [ ] **Step 4: Commit**
 
@@ -1440,8 +1459,7 @@ git commit -m "docs(mcp): ADR-0010 and format-spec mcps: sub-shape"
 
 - [ ] **Step 1: Full check**
 
-Run: `just fmt && just verify`
-Expected: all green (test + lint + build).
+Run: `just fmt && just verify` Expected: all green (test + lint + build).
 
 - [ ] **Step 2: Open the epic-linked story and PR**
 
@@ -1462,20 +1480,42 @@ Fix CI failures first, then address review comments. Track v2 (skill
 **Spec coverage:**
 
 - Bundle-level `mcps:` descriptor (remote/local) → Tasks 1–2. ✓
-- `${VAR}` indirection, no expansion → upskill never reads env values; passes verbatim (Tasks 4–5). ✓
-- `requires-env` declare-and-check → model (Task 1) + doctor/add warn (Task 8). ✓
+- `${VAR}` indirection, no expansion → upskill never reads env values; passes
+  verbatim (Tasks 4–5). ✓
+- `requires-env` declare-and-check → model (Task 1) + doctor/add warn (Task 8).
+  ✓
 - CLI-first, config-write fallback (Claude) → Tasks 4, 5, 7. ✓
 - Lockfile + remove + doctor lifecycle → Tasks 6, 8. ✓
-- Warn-skip policy preserved → Task 7 (CliNotFound → fallback; Failed → continue) + Task 8 messaging. ✓
-- Trust invariant (no code execution, no secret custody) → no expansion anywhere; only `claude mcp add` shellout + JSON write. ✓
+- Warn-skip policy preserved → Task 7 (CliNotFound → fallback; Failed →
+  continue) + Task 8 messaging. ✓
+- Trust invariant (no code execution, no secret custody) → no expansion
+  anywhere; only `claude mcp add` shellout + JSON write. ✓
 - Tests (unit + integration) → Tasks 1–10. ✓
 - ADR-0010 + format-spec → Task 11. ✓
 
 **Scope notes / deliberate v1 limits (log, don't silently drop):**
 
-- v1 targets **Claude Code only** for active configuration. opencode/VS Code/Copilot MCP writers are deferred — `install_mcps_from_bundles` records a `claude` result only. If a bundle author expects opencode MCP config in v1, that is **not** delivered; note this in the PR description and the ADR's consequences. (Extending to opencode is a small follow-up: add `write_opencode_mcp` + a branch in `install_mcps_from_bundles`.)
-- v1 has **no `requires.mcps`** skill dependency edge — MCP travels with a skill only by shared bundle membership (v2).
+- v1 targets **Claude Code only** for active configuration. opencode/VS
+  Code/Copilot MCP writers are deferred — `install_mcps_from_bundles` records a
+  `claude` result only. If a bundle author expects opencode MCP config in v1,
+  that is **not** delivered; note this in the PR description and the ADR's
+  consequences. (Extending to opencode is a small follow-up: add
+  `write_opencode_mcp` + a branch in `install_mcps_from_bundles`.)
+- v1 has **no `requires.mcps`** skill dependency edge — MCP travels with a skill
+  only by shared bundle membership (v2).
 
-**Placeholder scan:** No "TBD"/"handle appropriately" steps; every code step shows code. The two `> Adjust …` notes (Bundle struct literal field list; CLI remove noun) are real seams against current code, with the exact verification command given — not placeholders.
+**Placeholder scan:** No "TBD"/"handle appropriately" steps; every code step
+shows code. The two `> Adjust …` notes (Bundle struct literal field list; CLI
+remove noun) are real seams against current code, with the exact verification
+command given — not placeholders.
 
-**Type consistency:** `McpEntry { transport, requires_env }`, `McpTransport::{Remote,Local}`, `McpRemote { transport_type, url, headers }`, `McpLocal { command, args, env }`, `LockedMcp { name, client, scope, bundle, status }`, `McpInstallStatus::{Installed,Skipped}`, `McpResult { name, client, outcome, bundle, requires_env }` — names used identically across Tasks 1, 6, 7, 8, 9, 10. `install_mcps_from_bundles` / `install_claude_local` / `install_claude_remote` / `uninstall_claude` / `check_claude_installed` / `write_claude_mcp_local` / `write_claude_mcp_remote` / `remove_claude_mcp` — consistent across Tasks 4, 5, 7, 8.
+**Type consistency:** `McpEntry { transport, requires_env }`,
+`McpTransport::{Remote,Local}`, `McpRemote { transport_type, url, headers }`,
+`McpLocal { command, args, env }`,
+`LockedMcp { name, client, scope, bundle, status }`,
+`McpInstallStatus::{Installed,Skipped}`,
+`McpResult { name, client, outcome, bundle, requires_env }` — names used
+identically across Tasks 1, 6, 7, 8, 9, 10. `install_mcps_from_bundles` /
+`install_claude_local` / `install_claude_remote` / `uninstall_claude` /
+`check_claude_installed` / `write_claude_mcp_local` / `write_claude_mcp_remote`
+/ `remove_claude_mcp` — consistent across Tasks 4, 5, 7, 8.

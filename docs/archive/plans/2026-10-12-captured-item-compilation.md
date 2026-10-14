@@ -1,40 +1,62 @@
 # Captured item compilation implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development to implement this plan task-by-task.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Compile one validated captured item into complete deterministic generation outputs without source rereads or destination effects.
+**Goal:** Compile one validated captured item into complete deterministic
+generation outputs without source rereads or destination effects.
 
-**Architecture:** A pure producer reuses existing typed renderers, historical layouts, naming, resource classification, ignore filtering and link rewriting. Its client vocabulary is generation compatibility, not native target qualification. The current installer remains on its current path.
+**Architecture:** A pure producer reuses existing typed renderers, historical
+layouts, naming, resource classification, ignore filtering and link rewriting.
+Its client vocabulary is generation compatibility, not native target
+qualification. The current installer remains on its current path.
 
-**Tech Stack:** Rust 1.85, synchronous standard library, existing `anyhow`, `sha2`, YAML parsing and Markdown generation dependencies.
+**Tech Stack:** Rust 1.85, synchronous standard library, existing `anyhow`,
+`sha2`, YAML parsing and Markdown generation dependencies.
 
-**Spec:** [Captured item compilation design](../specs/2026-10-12-captured-item-compilation-design.md).
+**Spec:**
+[Captured item compilation design](../specs/2026-10-12-captured-item-compilation-design.md).
 
 ## Global Constraints
 
 - The compiler never rereads a source path or writes output.
 - Inputs are borrowed and unchanged; outputs own their values.
-- Validate the complete manifest, including every digest, path, ordering and mode, before consuming any of its files.
+- Validate the complete manifest, including every digest, path, ordering and
+  mode, before consuming any of its files.
 - Require a nonempty, duplicate-free requested client list.
 - Canonical result order is `Client::ALL`, independent of request order.
-- An entirely excluded selection succeeds with empty outputs and explicit exclusions.
+- An entirely excluded selection succeeds with empty outputs and explicit
+  exclusions.
 - This does not authorize removal of any previous installation.
-- Exclusion from output never removes that file from the captured source identity.
+- Exclusion from output never removes that file from the captured source
+  identity.
 - Render with the resolved source name, as the current installer does.
-- An alias changes output paths and resource link namespaces; it does not change rendered frontmatter identity.
+- An alias changes output paths and resource link namespaces; it does not change
+  rendered frontmatter identity.
 - Resource bytes and optional modes equal the captured values exactly.
-- Generated entrypoints carry `mode: None`, because source permissions are not a generated destination permission policy.
+- Generated entrypoints carry `mode: None`, because source permissions are not a
+  generated destination permission policy.
 - An error returns no successful partial compilation.
-- Use Rust 1.85, synchronous existing dependencies and no library output to stdout or stderr.
+- Use Rust 1.85, synchronous existing dependencies and no library output to
+  stdout or stderr.
 - Do not route the current installer through the new compiler in this task.
 
 ## Review Focus
 
-1. Ignored, excluded-client and non-entrypoint files still participate in source validation and identity; invalid or impossible public manifests cannot bypass validation.
-2. Aliasing preserves original frontmatter and both legacy link passes, including pre-namespaced links, URLs, fragments and code examples.
-3. Resource classification distinguishes reserved root names from nested equivalents and unrelated or unknown-client suffixes, preserving binary/empty bytes and exact modes.
-4. No client output due to audience filtering is explicit and cannot become silent removal; active overrides cannot be hidden by ignore patterns.
-5. Captured bytes remain sufficient after source deletion; exact nine-pair golden output, deterministic selection order and unchanged inputs prevent accidental filesystem or renderer-policy coupling.
+1. Ignored, excluded-client and non-entrypoint files still participate in source
+   validation and identity; invalid or impossible public manifests cannot bypass
+   validation.
+2. Aliasing preserves original frontmatter and both legacy link passes,
+   including pre-namespaced links, URLs, fragments and code examples.
+3. Resource classification distinguishes reserved root names from nested
+   equivalents and unrelated or unknown-client suffixes, preserving binary/empty
+   bytes and exact modes.
+4. No client output due to audience filtering is explicit and cannot become
+   silent removal; active overrides cannot be hidden by ignore patterns.
+5. Captured bytes remain sufficient after source deletion; exact nine-pair
+   golden output, deterministic selection order and unchanged inputs prevent
+   accidental filesystem or renderer-policy coupling.
 
 ## File structure
 
@@ -55,7 +77,9 @@
 
 ### Task 1: Compile complete captured items
 
-**Files:** All files listed above. Modify this plan's checkboxes as evidence is completed. Do not modify the parent lifecycle design, current installer behavior, model mapping, ownership/planner semantics or other WIP documents.
+**Files:** All files listed above. Modify this plan's checkboxes as evidence is
+completed. Do not modify the parent lifecycle design, current installer
+behavior, model mapping, ownership/planner semantics or other WIP documents.
 
 **Interfaces consumed:**
 
@@ -71,13 +95,20 @@ generate::link_rewrite::rewrite_resource_links(&str, &str, &HashSet<PathBuf>) ->
 generate::link_rewrite::reprefix_resource_links(&str, &str, &str, &HashSet<PathBuf>) -> anyhow::Result<String>;
 ```
 
-Also consume the existing crate-private `legacy::layout::{output_path, resource_base_path, is_dir_backed}` using `client.into()`, and `ownership::validate_relative_path`.
+Also consume the existing crate-private
+`legacy::layout::{output_path, resource_base_path, is_dir_backed}` using
+`client.into()`, and `ownership::validate_relative_path`.
 
-**Interfaces produced:** The four exact public structures and `compile_item(&SourceManifest, &ItemCompileRequest) -> anyhow::Result<CompiledItem>` in the spec. These are the only new public API; do not add serialization, source fetching, ownership, planner calls or native outcomes.
+**Interfaces produced:** The four exact public structures and
+`compile_item(&SourceManifest, &ItemCompileRequest) -> anyhow::Result<CompiledItem>`
+in the spec. These are the only new public API; do not add serialization, source
+fetching, ownership, planner calls or native outcomes.
 
 - [x] **Step 1: Write the creation acceptance test and capture compile RED.**
 
-Create `tests/compile_items.rs`. Use `capture_source` to build valid normal fixtures before invoking the new API. This helper writes only into a test tempdir and returns captured values; keep the compiler call separate:
+Create `tests/compile_items.rs`. Use `capture_source` to build valid normal
+fixtures before invoking the new API. This helper writes only into a test
+tempdir and returns captured values; keep the compiler call separate:
 
 ```rust
 use std::fs;
@@ -123,24 +154,42 @@ fn captured_skill_emits_entrypoint_and_exact_binary_resource() {
 }
 ```
 
-Run `cargo test --test compile_items captured_skill_emits_entrypoint_and_exact_binary_resource -- --exact`. Save genuine missing-module/API compile output; no real compiler logic yet. The tempdir in `fixture` is dropped before compilation, proving that the API needs only the captured values.
+Run
+`cargo test --test compile_items captured_skill_emits_entrypoint_and_exact_binary_resource -- --exact`.
+Save genuine missing-module/API compile output; no real compiler logic yet. The
+tempdir in `fixture` is dropped before compilation, proving that the API needs
+only the captured values.
 
-- [x] **Step 2: Add only DTOs and an empty-output stub; obtain genuine assertion RED.**
+- [x] **Step 2: Add only DTOs and an empty-output stub; obtain genuine assertion
+      RED.**
 
-Copy the spec's exact DTO fields with `Debug, Clone, PartialEq, Eq`. Export `compile::item`. The temporary stub returns an owned `CompiledItem` with empty `outputs` and `audience_excluded`, the supplied kind/folder/alias and source digest. Run the exact creation test again: it must compile and fail its `outputs.len()` assertion. Save the output before real validation/rendering logic.
+Copy the spec's exact DTO fields with `Debug, Clone, PartialEq, Eq`. Export
+`compile::item`. The temporary stub returns an owned `CompiledItem` with empty
+`outputs` and `audience_excluded`, the supplied kind/folder/alias and source
+digest. Run the exact creation test again: it must compile and fail its
+`outputs.len()` assertion. Save the output before real validation/rendering
+logic.
 
-Add an input-validation test that corrupts `source.content_sha256` and asserts a contextual rejection:
+Add an input-validation test that corrupts `source.content_sha256` and asserts a
+contextual rejection:
 
 ```rust
 let result = compile_item(&source, &request);
 assert!(result.is_err(), "a tampered source manifest must be rejected");
 ```
 
-Run it against the same stub and capture genuine assertion RED. Fixture/schema/type errors are not behavioral RED; correct those first. Write the initial report checkpoint before drafting real logic.
+Run it against the same stub and capture genuine assertion RED.
+Fixture/schema/type errors are not behavioral RED; correct those first. Write
+the initial report checkpoint before drafting real logic.
 
 - [x] **Step 3: Extend acceptance coverage before implementing the compiler.**
 
-Use fixed expected bytes and paths, including existing checked-in golden sources and outputs for `create-api-endpoint`, `api-conventions` and `security-reviewer` under `tests/fixtures/items` and `tests/fixtures/expected`. Do not generate expected output by calling the renderer/compiler being tested. Pin all nine kind/client combinations. Capture valid sources from temporary copied fixture directories rather than mutating repository fixtures.
+Use fixed expected bytes and paths, including existing checked-in golden sources
+and outputs for `create-api-endpoint`, `api-conventions` and `security-reviewer`
+under `tests/fixtures/items` and `tests/fixtures/expected`. Do not generate
+expected output by calling the renderer/compiler being tested. Pin all nine
+kind/client combinations. Capture valid sources from temporary copied fixture
+directories rather than mutating repository fixtures.
 
 Add cases for every Review Focus line:
 
@@ -163,22 +212,37 @@ Add cases for every Review Focus line:
 | Valid synthetic manifest with `a` and `a/b`                                                     | Reject impossible source topology including ignored paths                                                                     |
 | Original source changed/deleted after capture                                                   | Exact captured output and source identity; no source reread                                                                   |
 
-For impossible topology and independent mode values, build synthetic manifests in test code by the documented framed protocol, rather than adding a production manifest-builder API. First assert `validate_manifest(&source)` succeeds for the synthetic fixture, so the compiler's extra topology assertion is actually exercised. Input hashing helpers may use SHA-256; expected generated bytes and critical resource outputs remain independent literals.
+For impossible topology and independent mode values, build synthetic manifests
+in test code by the documented framed protocol, rather than adding a production
+manifest-builder API. First assert `validate_manifest(&source)` succeeds for the
+synthetic fixture, so the compiler's extra topology assertion is actually
+exercised. Input hashing helpers may use SHA-256; expected generated bytes and
+critical resource outputs remain independent literals.
 
 - [x] **Step 4: Expose narrow pure helpers without changing their behavior.**
 
-Change `effective_name` and `is_entrypoint_or_override` in `pipeline/discovery.rs` to `pub(crate)`. Change `filter_ignored` in `pipeline/ignore.rs` to `pub(crate)`. Re-export only those names from the otherwise private modules in `pipeline/mod.rs`:
+Change `effective_name` and `is_entrypoint_or_override` in
+`pipeline/discovery.rs` to `pub(crate)`. Change `filter_ignored` in
+`pipeline/ignore.rs` to `pub(crate)`. Re-export only those names from the
+otherwise private modules in `pipeline/mod.rs`:
 
 ```rust
 pub(crate) use discovery::{effective_name, is_entrypoint_or_override};
 pub(crate) use ignore::filter_ignored;
 ```
 
-Keep the existing pipeline call paths, helper bodies, discovery error policy and tests unchanged. This is crate-only access for shared policy, not a new public discovery API.
+Keep the existing pipeline call paths, helper bodies, discovery error policy and
+tests unchanged. This is crate-only access for shared policy, not a new public
+discovery API.
 
-- [x] **Step 5: Implement captured validation, typed rendering and complete outputs.**
+- [x] **Step 5: Implement captured validation, typed rendering and complete
+      outputs.**
 
-Start with full `validate_manifest(source)` and contextual errors. Check all source file/descendant pairs. Validate folder/alias and explicit selection before parsing. Decode only the requested canonical entrypoint with `std::str::from_utf8`; use typed `frontmatter::parse` and shared `effective_name`, then validate the resolved name. A single-component check is:
+Start with full `validate_manifest(source)` and contextual errors. Check all
+source file/descendant pairs. Validate folder/alias and explicit selection
+before parsing. Decode only the requested canonical entrypoint with
+`std::str::from_utf8`; use typed `frontmatter::parse` and shared
+`effective_name`, then validate the resolved name. A single-component check is:
 
 ```rust
 fn validate_name(name: &str) -> anyhow::Result<()> {
@@ -190,24 +254,68 @@ fn validate_name(name: &str) -> anyhow::Result<()> {
 }
 ```
 
-Dispatch by `ItemKind` to parse the existing model and collect its audience/ignore and per-client rendered strings. Iterate `Client::ALL`, including only explicitly requested clients. Record audience exclusions; check active override presence before rendering and independently of ignore. Use contextual `render_skill`, `render_rule` or `render_agent` calls with the source name.
+Dispatch by `ItemKind` to parse the existing model and collect its
+audience/ignore and per-client rendered strings. Iterate `Client::ALL`,
+including only explicitly requested clients. Record audience exclusions; check
+active override presence before rendering and independently of ignore. Use
+contextual `render_skill`, `render_rule` or `render_agent` calls with the source
+name.
 
-Classify source resources by root-only shared exclusion, convert their valid portable strings to `PathBuf` for the shared ignore helper and link-rewrite set, and retain the corresponding original captured values. Never read files or convert arbitrary paths lossily. Compute existing output/resource paths through `legacy::layout` and the installed alias. Convert generated paths to portable strings by collecting UTF-8 normal components and joining them with `/`; reject non-normal/non-UTF-8 components rather than using display strings or lossy conversion. This preserves portable output on Windows where `PathBuf::join` can introduce native separators. Validate each output string and preserve the original source manifest digest.
+Classify source resources by root-only shared exclusion, convert their valid
+portable strings to `PathBuf` for the shared ignore helper and link-rewrite set,
+and retain the corresponding original captured values. Never read files or
+convert arbitrary paths lossily. Compute existing output/resource paths through
+`legacy::layout` and the installed alias. Convert generated paths to portable
+strings by collecting UTF-8 normal components and joining them with `/`; reject
+non-normal/non-UTF-8 components rather than using display strings or lossy
+conversion. This preserves portable output on Windows where `PathBuf::join` can
+introduce native separators. Validate each output string and preserve the
+original source manifest digest.
 
-For flat outputs with copied resources, call `rewrite_resource_links` with source name, then `reprefix_resource_links` with source and installed names when different. Emit the generated entrypoint with no permission evidence and resources with exact cloned bytes/modes. Sort each output's files by portable path; reject duplicates and strict ancestor conflicts. Assemble complete client outputs and exclusions in declaration order. No output is returned on error.
+For flat outputs with copied resources, call `rewrite_resource_links` with
+source name, then `reprefix_resource_links` with source and installed names when
+different. Emit the generated entrypoint with no permission evidence and
+resources with exact cloned bytes/modes. Sort each output's files by portable
+path; reject duplicates and strict ancestor conflicts. Assemble complete client
+outputs and exclusions in declaration order. No output is returned on error.
 
 - [x] **Step 6: Run focused tests and genuine semantic controls.**
 
-Run `cargo test --test compile_items`; fix only implementation/fixture defects consistent with the spec. Independently exercise these controls: bypass manifest validation, omit a retained resource, change resource bytes, erase a captured mode, bypass ignore filtering and skip alias re-prefixing. Each must fail an intended behavioral assertion, not fail compilation or fixture setup. Use `try/finally` restoration of exact production bytes, compare restored files to saved bytes, and rerun focused GREEN. Save outputs and report actual results; do not claim unexecuted mutations.
+Run `cargo test --test compile_items`; fix only implementation/fixture defects
+consistent with the spec. Independently exercise these controls: bypass manifest
+validation, omit a retained resource, change resource bytes, erase a captured
+mode, bypass ignore filtering and skip alias re-prefixing. Each must fail an
+intended behavioral assertion, not fail compilation or fixture setup. Use
+`try/finally` restoration of exact production bytes, compare restored files to
+saved bytes, and rerun focused GREEN. Save outputs and report actual results; do
+not claim unexecuted mutations.
 
-Run existing regression coverage with `cargo test --test cli_resources`, `cargo test --test generate_skills`, `cargo test --test generate_rules`, `cargo test --test generate_agents` and `cargo test --test source_manifests`. Do not rerun baseline unnecessarily.
+Run existing regression coverage with `cargo test --test cli_resources`,
+`cargo test --test generate_skills`, `cargo test --test generate_rules`,
+`cargo test --test generate_agents` and `cargo test --test source_manifests`. Do
+not rerun baseline unnecessarily.
 
 - [x] **Step 7: Update canonical docs and run final gates.**
 
-Add an as-built specification section with the actual API, validation, compatibility, override rejection, mode boundary and deferred activation. Add a brief command-guide note that the library producer does not activate lifecycle changes. Update only the M1 plan's bounded prerequisite context and incoming link to this design; retain pending coordinator/qualification/state/executor/target gates.
+Add an as-built specification section with the actual API, validation,
+compatibility, override rejection, mode boundary and deferred activation. Add a
+brief command-guide note that the library producer does not activate lifecycle
+changes. Update only the M1 plan's bounded prerequisite context and incoming
+link to this design; retain pending
+coordinator/qualification/state/executor/target gates.
 
-Run ordered `just fmt`, `just verify`, `cargo +1.85.0 check --all-targets --locked`, then `git diff --check`. Save full output and a detailed report in the plan's ignored SDD workspace: compile/assertion RED chronology, implemented fields/files, focused results, each semantic control/restoration, gate results, deviations, self-review and limits. Bootstrap and baseline are controller-owned and already recorded.
+Run ordered `just fmt`, `just verify`,
+`cargo +1.85.0 check --all-targets --locked`, then `git diff --check`. Save full
+output and a detailed report in the plan's ignored SDD workspace:
+compile/assertion RED chronology, implemented fields/files, focused results,
+each semantic control/restoration, gate results, deviations, self-review and
+limits. Bootstrap and baseline are controller-owned and already recorded.
 
 - [x] **Step 8: Commit the task and hand off for review.**
 
-Stage only assigned code, tests, canonical docs and plan checkboxes. Commit with `feat: compile captured item outputs`; return exact HEAD and clean status. No push or PR by the implementer. The controller owns independent task review, exact-pair gardening, broad whole-branch review, final verification, PR, full review, CI and squash merge. Any explicitly triggered automatic QUICK is advisory only and does not replace those gates; no review cycle over its fixes.
+Stage only assigned code, tests, canonical docs and plan checkboxes. Commit with
+`feat: compile captured item outputs`; return exact HEAD and clean status. No
+push or PR by the implementer. The controller owns independent task review,
+exact-pair gardening, broad whole-branch review, final verification, PR, full
+review, CI and squash merge. Any explicitly triggered automatic QUICK is
+advisory only and does not replace those gates; no review cycle over its fixes.

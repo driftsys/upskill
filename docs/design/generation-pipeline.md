@@ -1,8 +1,9 @@
 # Generation and installation
 
 This record describes the existing module boundaries. It does not extend
-implemented client support. See [ADR-0001](../adr/0001-multi-kind-compiler-architecture.md)
-and [ADR-0003](../adr/0003-generation-pipeline.md) for the architecture decisions.
+implemented client support. See
+[ADR-0001](../adr/0001-multi-kind-compiler-architecture.md) and
+[ADR-0003](../adr/0003-generation-pipeline.md) for the architecture decisions.
 
 The Rust crate provides both a library and CLI. `src/main.rs` and `src/cli.rs`
 provide the CLI surface and orchestration. Domain work belongs in library
@@ -19,25 +20,25 @@ modules; presentation stays at the CLI boundary.
 | Native integrations                         | `src/plugin.rs`, `src/mcp.rs`                          |
 | Author commands                             | `src/lint.rs`, `src/fmt.rs`, `src/scaffold.rs`         |
 
-The central flow is source content to parsed items to per-client output.
-Bundles compose items and native integrations. Generated content is copied to
-its target location; the lockfile records installed state. The
-[portable format](../specification/format-spec.md) owns field and layout details;
-this record does not duplicate those contracts.
+The central flow is source content to parsed items to per-client output. Bundles
+compose items and native integrations. Generated content is copied to its target
+location; the lockfile records installed state. The
+[portable format](../specification/format-spec.md) owns field and layout
+details; this record does not duplicate those contracts.
 
-Current content generators are Claude Code, Copilot and OpenCode. Generation
-and MCP target sets differ, as recorded in
+Current content generators are Claude Code, Copilot and OpenCode. Generation and
+MCP target sets differ, as recorded in
 [ADR-0012](../adr/0012-consumer-client-filtering.md).
-[ADR-0013](../adr/0013-agent-customization-targets.md) adds design commitments for
-Codex, Cursor and Gemini CLI; it does not establish implemented adapters.
+[ADR-0013](../adr/0013-agent-customization-targets.md) adds design commitments
+for Codex, Cursor and Gemini CLI; it does not establish implemented adapters.
 
 ## Pure legacy-state projection
 
-The public library boundary
-[`legacy::project_legacy`](../../src/legacy/mod.rs) accepts a borrowed typed
-`Lockfile` and returns an owned `LegacyProjection`. It has no scope-root input,
-I/O, state writer or CLI dispatch. [AD-0015](../adr/0015-pure-legacy-state-projection.md)
-records the choice of this intermediate boundary; the
+The public library boundary [`legacy::project_legacy`](../../src/legacy/mod.rs)
+accepts a borrowed typed `Lockfile` and returns an owned `LegacyProjection`. It
+has no scope-root input, I/O, state writer or CLI dispatch.
+[AD-0015](../adr/0015-pure-legacy-state-projection.md) records the choice of
+this intermediate boundary; the
 [specification](../specification/specification.md#41-pure-legacy-state-projection)
 owns its requirements.
 
@@ -63,23 +64,23 @@ remain separate from requested content selection.
 
 ### Historical clients and layout
 
-[`legacy::layout`](../../src/legacy/layout.rs) fixes the historical client set to
-Claude, Copilot and OpenCode. An empty recorded list expands to those three in
-that order. Explicit known clients retain first-occurrence order and produce one
-candidate each; unknown spellings produce diagnostics and remain in the cloned
-record. An unknown-only list produces no candidates.
+[`legacy::layout`](../../src/legacy/layout.rs) fixes the historical client set
+to Claude, Copilot and OpenCode. An empty recorded list expands to those three
+in that order. Explicit known clients retain first-occurrence order and produce
+one candidate each; unknown spellings produce diagnostics and remain in the
+cloned record. An unknown-only list produces no candidates.
 
 The nine kind/client path mappings use the installed alias. Current
 [`pipeline::output`](../../src/pipeline/output.rs) wrappers delegate to the same
 native `PathBuf` helpers through explicit current-client conversion. Those
 helpers retain raw-name behavior for existing pipeline callers. Only the
 projector validates names before converting paths to forward-slash strings:
-empty names, dot, dot-dot, slash, backslash, colon and control characters suppress
-candidates; spaces and Unicode remain representable.
+empty names, dot, dot-dot, slash, backslash, colon and control characters
+suppress candidates; spaces and Unicode remain representable.
 
-Each candidate carries a client, relative entrypoint and relative resource search
-base. Skills and OpenCode rules are directory-backed; flat entrypoints use a
-sibling name directory for resources. These paths are relative to a later
+Each candidate carries a client, relative entrypoint and relative resource
+search base. Skills and OpenCode rules are directory-backed; flat entrypoints
+use a sibling name directory for resources. These paths are relative to a later
 caller's established legacy scope root. They do not establish existence,
 containment or ownership, enumerate resources or permit recursive adoption.
 Malformed sources do not erase otherwise known layout facts. Bundles and

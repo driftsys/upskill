@@ -1,35 +1,63 @@
 # `upskill fmt` formats the source body — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `upskill fmt` canonicalize the markdown body of item files via the shared dprint pass (in addition to reordering YAML keys), and make `upskill lint` flag a non-canonical body with a new `body-format` warning.
+**Goal:** Make `upskill fmt` canonicalize the markdown body of item files via
+the shared dprint pass (in addition to reordering YAML keys), and make
+`upskill lint` flag a non-canonical body with a new `body-format` warning.
 
-**Architecture:** A single shared helper `fmt::canonical_body(frontmatter, body)` formats the combined `---\n{yaml}---\n{body}` string with `generate::format::format_markdown` (dprint treats the `---…---` block as opaque frontmatter — YAML content, comments, key order, and wrapping are preserved byte-for-byte; only the body is formatted and the seam is normalized to one blank line) and strips the frontmatter prefix back off, returning the canonical body region including its leading blank-line separator. `fmt` uses it to write; `lint` uses it to detect drift — so checker and fixer can never disagree. Bundles are pure YAML with no body and are unaffected.
+**Architecture:** A single shared helper
+`fmt::canonical_body(frontmatter, body)` formats the combined
+`---\n{yaml}---\n{body}` string with `generate::format::format_markdown` (dprint
+treats the `---…---` block as opaque frontmatter — YAML content, comments, key
+order, and wrapping are preserved byte-for-byte; only the body is formatted and
+the seam is normalized to one blank line) and strips the frontmatter prefix back
+off, returning the canonical body region including its leading blank-line
+separator. `fmt` uses it to write; `lint` uses it to detect drift — so checker
+and fixer can never disagree. Bundles are pure YAML with no body and are
+unaffected.
 
-**Tech Stack:** Rust (edition 2024), `dprint-plugin-markdown` `=0.21.1`, `anyhow`, `serde_yaml_ng`; integration tests with `assert_cmd` + `tempfile`.
+**Tech Stack:** Rust (edition 2024), `dprint-plugin-markdown` `=0.21.1`,
+`anyhow`, `serde_yaml_ng`; integration tests with `assert_cmd` + `tempfile`.
 
-**Reference spec:** [docs/wip/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
+**Reference spec:**
+[docs/wip/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
 
 ---
 
 ## Pre-flight (already verified during design — do not re-investigate)
 
-- `generate::assemble` does `body.trim_start_matches('\n')` then `---\n{fm}---\n\n{body}`. Feeding the combined string to `format_markdown` preserves the frontmatter region byte-for-byte and normalizes the seam to exactly one blank line.
-- dprint default config: `*` bullets → `-`, collapses multiple blank lines, strips a leading blank line from an isolated body.
-- All four fixture item bodies in `tests/fixtures/items/` are **already dprint-clean**, so `lint_clean_fixture_corpus_exits_zero` will keep passing.
-- The existing `body-h1` and `fence-lang` ATDD fixtures in `tests/cli_lint.rs` are already dprint-clean, so they will not gain a `body-format` finding.
-- `crate::generate::format::format_markdown` is already `pub` — no visibility change needed.
+- `generate::assemble` does `body.trim_start_matches('\n')` then
+  `---\n{fm}---\n\n{body}`. Feeding the combined string to `format_markdown`
+  preserves the frontmatter region byte-for-byte and normalizes the seam to
+  exactly one blank line.
+- dprint default config: `*` bullets → `-`, collapses multiple blank lines,
+  strips a leading blank line from an isolated body.
+- All four fixture item bodies in `tests/fixtures/items/` are **already
+  dprint-clean**, so `lint_clean_fixture_corpus_exits_zero` will keep passing.
+- The existing `body-h1` and `fence-lang` ATDD fixtures in `tests/cli_lint.rs`
+  are already dprint-clean, so they will not gain a `body-format` finding.
+- `crate::generate::format::format_markdown` is already `pub` — no visibility
+  change needed.
 
 ---
 
 ## File Structure
 
-- `src/fmt.rs` — add `pub(crate) fn canonical_body`, call it from `canonicalise_item`, update module doc. Unit tests in the same file's `#[cfg(test)] mod tests`.
-- `src/lint.rs` — add `fn check_body_format`, wire it into `check_file`, add the rule-table row in the module header. Unit tests in the same file.
+- `src/fmt.rs` — add `pub(crate) fn canonical_body`, call it from
+  `canonicalise_item`, update module doc. Unit tests in the same file's
+  `#[cfg(test)] mod tests`.
+- `src/lint.rs` — add `fn check_body_format`, wire it into `check_file`, add the
+  rule-table row in the module header. Unit tests in the same file.
 - `tests/cli_fmt.rs` — add one ATDD test; update the file header doc comment.
 - `tests/cli_lint.rs` — add ATDD tests for the warning and `--strict` promotion.
-- `docs/adr/0004-cli-surface.md` — replace the "`fmt` is frontmatter only" section.
-- `docs/commands.md` — update the `fmt` description, the `fmt` section prose, and the lint rule table.
+- `docs/adr/0004-cli-surface.md` — replace the "`fmt` is frontmatter only"
+  section.
+- `docs/commands.md` — update the `fmt` description, the `fmt` section prose,
+  and the lint rule table.
 - `docs/format-spec.md` — note body canonicalisation in §3.8.
 
 ---
@@ -38,12 +66,15 @@
 
 **Files:**
 
-- Modify: `src/fmt.rs` (function `canonicalise_item`; add `canonical_body`; replace one unit test)
+- Modify: `src/fmt.rs` (function `canonicalise_item`; add `canonical_body`;
+  replace one unit test)
 - Test: `src/fmt.rs` `#[cfg(test)] mod tests`
 
 - [ ] **Step 1: Replace the now-wrong unit test with a failing one**
 
-In `src/fmt.rs`, find the existing test `canonicalise_preserves_body_byte_for_byte` (it asserts the body is untouched — that contract is being removed) and replace the entire test function with:
+In `src/fmt.rs`, find the existing test
+`canonicalise_preserves_body_byte_for_byte` (it asserts the body is untouched —
+that contract is being removed) and replace the entire test function with:
 
 ```rust
 #[test]
@@ -73,8 +104,9 @@ fn canonicalise_formats_body() {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cargo test --lib fmt::tests::canonicalise_formats_body`
-Expected: FAIL — the current `canonicalise_item` returns the body verbatim, so `out` ends with `* one\n* two\n`.
+Run: `cargo test --lib fmt::tests::canonicalise_formats_body` Expected: FAIL —
+the current `canonicalise_item` returns the body verbatim, so `out` ends with
+`* one\n* two\n`.
 
 - [ ] **Step 3: Add the `canonical_body` helper**
 
@@ -107,7 +139,8 @@ pub(crate) fn canonical_body(frontmatter: &str, body: &str) -> Result<String> {
 
 - [ ] **Step 4: Call the helper from `canonicalise_item`**
 
-In `src/fmt.rs`, change the body of `canonicalise_item`. Replace this exact block:
+In `src/fmt.rs`, change the body of `canonicalise_item`. Replace this exact
+block:
 
 ```rust
     let reordered_yaml = reorder_yaml_keys(yaml_str, key_order);
@@ -136,13 +169,13 @@ with:
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cargo test --lib fmt::tests::canonicalise_formats_body`
-Expected: PASS.
+Run: `cargo test --lib fmt::tests::canonicalise_formats_body` Expected: PASS.
 
 - [ ] **Step 6: Run the whole fmt unit test module to catch regressions**
 
-Run: `cargo test --lib fmt::tests`
-Expected: PASS. (The existing `canonicalise_is_idempotent` and comment/wrapping tests must still pass — frontmatter handling is unchanged and their bodies are already clean.)
+Run: `cargo test --lib fmt::tests` Expected: PASS. (The existing
+`canonicalise_is_idempotent` and comment/wrapping tests must still pass —
+frontmatter handling is unchanged and their bodies are already clean.)
 
 - [ ] **Step 7: Commit**
 
@@ -233,10 +266,13 @@ In `src/fmt.rs` `mod tests`, after `canonicalise_formats_body`, add:
 
 - [ ] **Step 2: Run them**
 
-Run: `cargo test --lib fmt::tests`
-Expected: PASS for all three (the helper from Task 1 already produces this behavior; these lock it in).
+Run: `cargo test --lib fmt::tests` Expected: PASS for all three (the helper from
+Task 1 already produces this behavior; these lock it in).
 
-If `canonicalise_preserves_clean_body_seam` fails because dprint emits a slightly different clean form, fix the test's expected `raw` to match the canonical form rather than changing the implementation — dprint's output is the source of truth.
+If `canonicalise_preserves_clean_body_seam` fails because dprint emits a
+slightly different clean form, fix the test's expected `raw` to match the
+canonical form rather than changing the implementation — dprint's output is the
+source of truth.
 
 - [ ] **Step 3: Commit**
 
@@ -257,7 +293,8 @@ git commit -m "test(fmt): cover body seam preservation, idempotence, directive s
 
 - [ ] **Step 1: Write the failing ATDD test**
 
-In `tests/cli_fmt.rs`, after the existing `fmt_reorders_frontmatter_keys_canonically` test, add:
+In `tests/cli_fmt.rs`, after the existing
+`fmt_reorders_frontmatter_keys_canonically` test, add:
 
 ```rust
 #[test]
@@ -299,8 +336,9 @@ fn fmt_formats_markdown_body() {
 
 - [ ] **Step 2: Run it to verify it passes**
 
-Run: `cargo test --test cli_fmt fmt_formats_markdown_body`
-Expected: PASS (Task 1 already implemented the behavior; this is the acceptance-level proof through the real CLI).
+Run: `cargo test --test cli_fmt fmt_formats_markdown_body` Expected: PASS (Task
+1 already implemented the behavior; this is the acceptance-level proof through
+the real CLI).
 
 - [ ] **Step 3: Update the `tests/cli_fmt.rs` header doc comment**
 
@@ -386,7 +424,8 @@ with:
 
 - [ ] **Step 5: Update the `fmt` function doc comment**
 
-In `src/fmt.rs`, find the doc comment on `pub fn fmt` and replace this exact line:
+In `src/fmt.rs`, find the doc comment on `pub fn fmt` and replace this exact
+line:
 
 ```rust
 /// Files whose content was already canonical are left untouched
@@ -404,10 +443,11 @@ with:
 
 - [ ] **Step 6: Verify the existing key-order ATDD test still passes**
 
-The `fmt_reorders_frontmatter_keys_canonically` test asserts `after.contains("\n\n## Body\n\nUntouched.\n")`. Its body is already clean and uses one blank line after `---`, so it stays valid.
+The `fmt_reorders_frontmatter_keys_canonically` test asserts
+`after.contains("\n\n## Body\n\nUntouched.\n")`. Its body is already clean and
+uses one blank line after `---`, so it stays valid.
 
-Run: `cargo test --test cli_fmt`
-Expected: PASS (all tests).
+Run: `cargo test --test cli_fmt` Expected: PASS (all tests).
 
 - [ ] **Step 7: Commit**
 
@@ -422,7 +462,8 @@ git commit -m "test(fmt): ATDD for body formatting; update fmt docs"
 
 **Files:**
 
-- Modify: `src/lint.rs` (`check_file`; add `check_body_format`; rule-table header)
+- Modify: `src/lint.rs` (`check_file`; add `check_body_format`; rule-table
+  header)
 - Test: `src/lint.rs` `#[cfg(test)] mod tests`
 
 - [ ] **Step 1: Write failing unit tests**
@@ -474,7 +515,8 @@ In `src/lint.rs` `mod tests`, add:
 
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `cargo test --lib lint::tests::lint_flags_unformatted_body lint::tests::lint_strict_promotes_body_format_to_error`
+Run:
+`cargo test --lib lint::tests::lint_flags_unformatted_body lint::tests::lint_strict_promotes_body_format_to_error`
 Expected: FAIL — `body-format` does not exist yet, so `.expect(...)` panics.
 
 - [ ] **Step 3: Add the `check_body_format` function**
@@ -528,12 +570,16 @@ check_body_format(file, frontmatter, body, out);
 Ok(())
 ```
 
-(`raw` is the `String` already read at the top of `check_file`; `frontmatter::split` is already imported via `use crate::parse::frontmatter;`. For bundles, `body` is `""` so the check is a no-op regardless of `frontmatter`.)
+(`raw` is the `String` already read at the top of `check_file`;
+`frontmatter::split` is already imported via `use crate::parse::frontmatter;`.
+For bundles, `body` is `""` so the check is a no-op regardless of
+`frontmatter`.)
 
 - [ ] **Step 5: Run the unit tests to verify they pass**
 
-Run: `cargo test --lib lint::tests`
-Expected: PASS for the three new tests and all existing ones (existing `body-h1`/`fence-lang` test bodies are already dprint-clean).
+Run: `cargo test --lib lint::tests` Expected: PASS for the three new tests and
+all existing ones (existing `body-h1`/`fence-lang` test bodies are already
+dprint-clean).
 
 - [ ] **Step 6: Add the rule-table row in the module header**
 
@@ -640,13 +686,15 @@ fn lint_strict_fails_on_unformatted_body() {
 
 - [ ] **Step 2: Run them**
 
-Run: `cargo test --test cli_lint lint_flags_unformatted_body_as_warning lint_strict_fails_on_unformatted_body`
+Run:
+`cargo test --test cli_lint lint_flags_unformatted_body_as_warning lint_strict_fails_on_unformatted_body`
 Expected: PASS.
 
 - [ ] **Step 3: Run the whole lint ATDD suite to confirm no regressions**
 
-Run: `cargo test --test cli_lint`
-Expected: PASS — including `lint_clean_fixture_corpus_exits_zero` (fixture bodies are already dprint-clean).
+Run: `cargo test --test cli_lint` Expected: PASS — including
+`lint_clean_fixture_corpus_exits_zero` (fixture bodies are already
+dprint-clean).
 
 - [ ] **Step 4: Commit**
 
@@ -759,7 +807,8 @@ Files whose frontmatter and body are already canonical are left untouched
 
 - [ ] **Step 5: Update `docs/format-spec.md` §3.8**
 
-In `docs/format-spec.md`, find the `### 3.8 Frontmatter canonicalisation` section and replace this exact paragraph:
+In `docs/format-spec.md`, find the `### 3.8 Frontmatter canonicalisation`
+section and replace this exact paragraph:
 
 ```markdown
 An implementation MAY provide a formatting command (e.g., `upskill fmt`) that canonicalises SSOT
@@ -780,7 +829,9 @@ to a single blank line, so authored source matches generated output. A linter MA
 
 - [ ] **Step 6: Verify fixtures are still clean (guard the corpus assertion)**
 
-Build the binary and dry-run `fmt` against a copy of the fixtures to confirm nothing changes (they were verified clean during design; this guards against drift):
+Build the binary and dry-run `fmt` against a copy of the fixtures to confirm
+nothing changes (they were verified clean during design; this guards against
+drift):
 
 ```bash
 cargo build --quiet
@@ -790,7 +841,10 @@ cp -R tests/fixtures/items "$TMP/items"
 git --no-pager -C /dev/null diff --no-index tests/fixtures/items "$TMP/items" || true
 ```
 
-Expected: no differences reported. If any fixture body changed, copy the formatted version back into `tests/fixtures/items/...`, then run `cargo test --test generate_skills --test generate_rules --test generate_agents` and confirm the generation golden tests still pass before committing.
+Expected: no differences reported. If any fixture body changed, copy the
+formatted version back into `tests/fixtures/items/...`, then run
+`cargo test --test generate_skills --test generate_rules --test generate_agents`
+and confirm the generation golden tests still pass before committing.
 
 - [ ] **Step 7: Commit**
 
@@ -807,13 +861,13 @@ git commit -m "docs: fmt formats the body; add body-format lint rule"
 
 - [ ] **Step 1: Format everything**
 
-Run: `just fmt`
-Expected: success; review any reformatting it applies (commit it if so).
+Run: `just fmt` Expected: success; review any reformatting it applies (commit it
+if so).
 
 - [ ] **Step 2: Full verification**
 
-Run: `just verify`
-Expected: PASS — clippy clean (zero warnings), all tests green, docs tooling clean.
+Run: `just verify` Expected: PASS — clippy clean (zero warnings), all tests
+green, docs tooling clean.
 
 - [ ] **Step 3: Commit any formatting changes**
 
@@ -857,4 +911,5 @@ BODY
 )"
 ```
 
-Expected: PR created against `main`. Then fix any CI findings first, per AGENTS.md.
+Expected: PR created against `main`. Then fix any CI findings first, per
+AGENTS.md.

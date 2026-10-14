@@ -3,8 +3,8 @@
 Research date: **2026-10-11**. Status: official documentation and vendor-source
 inspection; **no Gemini CLI runtime testing**. Gemini CLI is a required future
 design target for upskill; implementation remains deferred. This note concerns
-the `google-gemini/gemini-cli` product only. It establishes no compatibility with
-Gemini Code Assist or Antigravity.
+the `google-gemini/gemini-cli` product only. It establishes no compatibility
+with Gemini Code Assist or Antigravity.
 
 The live documentation and `main` source are moving references, not a tested
 release contract. A future adapter must pin a supported release and validate its
@@ -55,12 +55,13 @@ documented direct equivalent here. [Context documentation][memory]
 
 ## 2. Skills
 
-A skill directory contains `SKILL.md` with YAML `name` and `description`, followed
-by instructions. Optional `scripts/`, `references/`, and `assets/` travel with the
-skill. Discovery precedence increases through built-in, extension, user, and
-workspace skills. User/workspace roots support both `.gemini/skills/` and
-`.agents/skills/`. The alias supports shared Agent Skills layout; it does not
-prove identical client activation behavior. [Authoring guide][creating-skills]
+A skill directory contains `SKILL.md` with YAML `name` and `description`,
+followed by instructions. Optional `scripts/`, `references/`, and `assets/`
+travel with the skill. Discovery precedence increases through built-in,
+extension, user, and workspace skills. User/workspace roots support both
+`.gemini/skills/` and `.agents/skills/`. The alias supports shared Agent Skills
+layout; it does not prove identical client activation behavior.
+[Authoring guide][creating-skills]
 
 `gemini skills install`, `link`, and `uninstall` manage content; installation
 defaults to user scope and supports `--scope workspace`. `/skills list`,
@@ -90,24 +91,25 @@ The [command reference][cli-commands] documents `/agents list`, `reload`,
 
 Source inspection finds strict Zod validation and snake-case `mcp_servers`,
 `http_url`, and `include_tools`, which conflict with the guide's `mcpServers`
-examples. Remote definitions use `kind: remote`, an agent-card URL or JSON,
-and authentication fields; they represent A2A endpoints rather than a portable
-local persona. [Loader source][agent-loader]
+examples. Remote definitions use `kind: remote`, an agent-card URL or JSON, and
+authentication fields; they represent A2A endpoints rather than a portable local
+persona. [Loader source][agent-loader]
 
 The inspected registry loads built-ins, project, user, then extensions and
 rejects duplicate names after the first registration. Project loading is
-trust-gated. This source-derived precedence requires release verification;
-even the nearby source comment describes overwriting instead. [Registry][agent-registry]
+trust-gated. This source-derived precedence requires release verification; even
+the nearby source comment describes overwriting instead.
+[Registry][agent-registry]
 
 ## 4. Plugins and extensions
 
 Gemini calls its native packages extensions. An extension root has
-`gemini-extension.json`; installations live under `~/.gemini/extensions`.
-The manifest interface requires `name` and `version`; optional members include
-`mcpServers`, `contextFileName`, `excludeTools`, `settings`, `themes`, `plan`, and
-`migratedTo`. `contextFileName` accepts a string or array in the inspected type.
-This interface is useful implementation evidence but is not a machine-loadable
-JSON Schema. [Manifest type][extension-type]
+`gemini-extension.json`; installations live under `~/.gemini/extensions`. The
+manifest interface requires `name` and `version`; optional members include
+`mcpServers`, `contextFileName`, `excludeTools`, `settings`, `themes`, `plan`,
+and `migratedTo`. `contextFileName` accepts a string or array in the inspected
+type. This interface is useful implementation evidence but is not a
+machine-loadable JSON Schema. [Manifest type][extension-type]
 
 `gemini extensions` provides `install`, `uninstall`, `update`, `new`, `link`,
 `enable`, and `disable`; enablement supports user/workspace scope. Installation
@@ -117,16 +119,16 @@ packages. [Extension reference][extensions]
 
 Manifest settings expose `name`, `description`, `envVar`, and `sensitive`, with
 sensitive values stored in the keychain. This lifecycle differs from merely
-copying an upskill bundle.
-[Extension reference][extensions]
+copying an upskill bundle. [Extension reference][extensions]
 
 ## 5. MCP
 
 `mcpServers` is a map in settings, with user/project scope and the shared
 configuration hierarchy. Servers use `command` for stdio, `url` for SSE, or
 `httpUrl` for streaming HTTP. Common options include `args`, `env`, `cwd`,
-`headers`, `timeout`, `includeTools`, `excludeTools`, `trust`, and authentication
-configuration. The settings JSON Schema supplies structural validation.
+`headers`, `timeout`, `includeTools`, `excludeTools`, `trust`, and
+authentication configuration. The settings JSON Schema supplies structural
+validation.
 
 `gemini mcp add`, `list`, and `remove` manage configuration; add/remove default
 to project scope. `enable`/`disable` control availability. `/mcp list` and
@@ -145,11 +147,12 @@ the protocol alone does not standardize installation configuration.
 Settings hold `hooks.<Event>[]`, each containing a matcher, optional
 `sequential`, and `hooks[]` command definitions. Command entries specify
 `type: command`, `command`, and optional `name`, `timeout`, `description`.
-Events cover tools, agent turns, models, sessions, notifications and compression.
-Scripts receive JSON on stdin and return JSON on stdout. Exit 0 processes the
-response; exit 2 blocks according to event semantics; other failures warn.
-Output fields such as `decision`, `continue`, `reason`, and
-`hookSpecificOutput` have event-dependent effects. [Hook reference][hook-reference]
+Events cover tools, agent turns, models, sessions, notifications and
+compression. Scripts receive JSON on stdin and return JSON on stdout. Exit 0
+processes the response; exit 2 blocks according to event semantics; other
+failures warn. Output fields such as `decision`, `continue`, `reason`, and
+`hookSpecificOutput` have event-dependent effects.
+[Hook reference][hook-reference]
 
 User/project settings and extensions supply hooks. `/hooks panel`,
 `enable-all`/`disable-all`, and named enable/disable operations manage them.
@@ -174,10 +177,10 @@ and `@{...}` injects file content. Shell execution is confirmation-sensitive.
 `/commands list` and `/commands reload` support discovery and refresh.
 [Command documentation][commands]
 
-There is no standalone command JSON Schema in the inspected inventory.
-Markdown prompt files from another client need a TOML wrapper and deliberate
-interpolation conversion. Arbitrary textual substitution could change
-execution behavior; treating these files as passive prose loses their semantics.
+There is no standalone command JSON Schema in the inspected inventory. Markdown
+prompt files from another client need a TOML wrapper and deliberate
+interpolation conversion. Arbitrary textual substitution could change execution
+behavior; treating these files as passive prose loses their semantics.
 
 ## 8. Execution policies
 

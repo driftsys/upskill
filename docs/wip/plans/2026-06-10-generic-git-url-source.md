@@ -2,25 +2,42 @@
 
 **Supersession notice (2026-10-12):** the
 [ADR-0011 persisted-state amendment](../../adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12)
-supersedes this document's rejection of historical GitLab lockfile labels.
-New user input still rejects the removed shorthands. The original design and
+supersedes this document's rejection of historical GitLab lockfile labels. New
+user input still rejects the removed shorthands. The original design and
 implementation steps below are retained as historical context.
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the GitLab-specific source machinery with a generic https git-URL source so any git host works, per the approved spec at `docs/wip/2026-06-10-generic-git-url-source-design.md`.
+**Goal:** Replace the GitLab-specific source machinery with a generic https
+git-URL source so any git host works, per the approved spec at
+`docs/wip/2026-06-10-generic-git-url-source-design.md`.
 
-**Architecture:** `InstallSource::Gitlab(GitlabRepo)` becomes `InstallSource::Git(GitRepo)` where `GitRepo` stores the bare https remote URL plus optional ref/subfolder. The `gitlab:` / `gitlab+<host>:` shorthands are deleted with a dedicated parse error pointing at the full-URL form. GitHub keeps its typed variant. Clone behavior (`shallow_clone`, auth via git config) is untouched — only URL construction changes.
+**Architecture:** `InstallSource::Gitlab(GitlabRepo)` becomes
+`InstallSource::Git(GitRepo)` where `GitRepo` stores the bare https remote URL
+plus optional ref/subfolder. The `gitlab:` / `gitlab+<host>:` shorthands are
+deleted with a dedicated parse error pointing at the full-URL form. GitHub keeps
+its typed variant. Clone behavior (`shallow_clone`, auth via git config) is
+untouched — only URL construction changes.
 
-**Tech Stack:** Rust edition 2024, `thiserror` (source.rs typed errors), `assert_cmd` + `predicates` + `tempfile` (integration tests). Worktree: `.claude/worktrees/refactor-generic-git-url-source`. All paths below are relative to the worktree root.
+**Tech Stack:** Rust edition 2024, `thiserror` (source.rs typed errors),
+`assert_cmd` + `predicates` + `tempfile` (integration tests). Worktree:
+`.claude/worktrees/refactor-generic-git-url-source`. All paths below are
+relative to the worktree root.
 
-**Verification baseline:** `just test` green before starting (branch tip `813173b`).
+**Verification baseline:** `just test` green before starting (branch tip
+`813173b`).
 
 ---
 
 ## Task 1: Core source-model swap (`GitRepo` replaces `GitlabRepo`)
 
-This is one atomic refactor — the enum change breaks every consumer, so the crate only compiles again at the end of this task. Tests are written first (ATDD integration test + rewritten unit tests = RED as compile errors and failures), then the implementation and consumer arms.
+This is one atomic refactor — the enum change breaks every consumer, so the
+crate only compiles again at the end of this task. Tests are written first (ATDD
+integration test + rewritten unit tests = RED as compile errors and failures),
+then the implementation and consumer arms.
 
 **Files:**
 
@@ -34,7 +51,8 @@ This is one atomic refactor — the enum change breaks every consumer, so the cr
 
 - [ ] **Step 1: Write the ATDD integration test (acceptance criterion 3)**
 
-Append to `tests/cli_exit_codes.rs` (file already has `mod common;`; add `use predicates::prelude::*;` below the existing `use` lines):
+Append to `tests/cli_exit_codes.rs` (file already has `mod common;`; add
+`use predicates::prelude::*;` below the existing `use` lines):
 
 ```rust
 #[test]
@@ -57,11 +75,23 @@ fn removed_gitlab_shorthand_exits_two_with_url_hint() {
 - [ ] **Step 2: Run the ATDD test to verify it fails**
 
 Run: `cargo test --test cli_exit_codes removed_gitlab_shorthand -- --nocapture`
-Expected: FAIL — exit code is currently 1 (the shorthand still parses, then the clone of `https://gitlab.com/team/skills.git` fails), and stderr does not contain the hint. If the sandbox has no network, the clone fails faster — the test still fails on the missing stderr hint.
+Expected: FAIL — exit code is currently 1 (the shorthand still parses, then the
+clone of `https://gitlab.com/team/skills.git` fails), and stderr does not
+contain the hint. If the sandbox has no network, the clone fails faster — the
+test still fails on the missing stderr hint.
 
 - [ ] **Step 3: Rewrite the GitLab unit tests in `src/source.rs`**
 
-Delete the test functions `parse_gitlab_prefix`, `parse_gitlab_prefix_with_ref`, `parse_gitlab_prefix_with_subfolder`, `parse_gitlab_url`, `parse_selfhosted_gitlab_url`, `parse_selfhosted_gitlab_with_port`, `parse_selfhosted_gitlab_subgroup`, `parse_selfhosted_gitlab_subgroup_with_ref_and_subfolder`, `parse_gitlab_prefix_subgroup`, `reject_gitlab_bare_project_without_namespace`, `label_roundtrip_gitlab_dot_com`, `label_roundtrip_gitlab_self_hosted`, `label_roundtrip_gitlab_self_hosted_subgroup`, `label_rejects_gitlab_plus_without_host` (currently `src/source.rs:504-633` and `674-717`). Keep `parse_github_url` and everything else. In their place add:
+Delete the test functions `parse_gitlab_prefix`, `parse_gitlab_prefix_with_ref`,
+`parse_gitlab_prefix_with_subfolder`, `parse_gitlab_url`,
+`parse_selfhosted_gitlab_url`, `parse_selfhosted_gitlab_with_port`,
+`parse_selfhosted_gitlab_subgroup`,
+`parse_selfhosted_gitlab_subgroup_with_ref_and_subfolder`,
+`parse_gitlab_prefix_subgroup`, `reject_gitlab_bare_project_without_namespace`,
+`label_roundtrip_gitlab_dot_com`, `label_roundtrip_gitlab_self_hosted`,
+`label_roundtrip_gitlab_self_hosted_subgroup`,
+`label_rejects_gitlab_plus_without_host` (currently `src/source.rs:504-633` and
+`674-717`). Keep `parse_github_url` and everything else. In their place add:
 
 ```rust
     // Generic git-URL source tests — any https host that is not github.com
@@ -233,7 +263,8 @@ pub struct GitRepo {
 
 Change the enum variant (line 26): `Gitlab(GitlabRepo)` → `Git(GitRepo)`.
 
-Replace the `Display` doc comment lines 33-36 and the `Gitlab` arm (lines 49-62):
+Replace the `Display` doc comment lines 33-36 and the `Gitlab` arm (lines
+49-62):
 
 ```rust
 /// - `github:<owner>/<name>[@<ref>][:<subfolder>]`
@@ -277,7 +308,8 @@ if source.starts_with("gitlab:") || source.starts_with("gitlab+") {
 }
 ```
 
-In `parse_install_source_label`, replace the two gitlab branches (lines 169-180) and update the doc comment list (lines 157-161) to match the new Display forms:
+In `parse_install_source_label`, replace the two gitlab branches (lines 169-180)
+and update the doc comment list (lines 157-161) to match the new Display forms:
 
 ```rust
 if let Some(rest) = label.strip_prefix("https://") {
@@ -288,7 +320,8 @@ if label.starts_with("gitlab:") || label.starts_with("gitlab+") {
 }
 ```
 
-Replace `parse_url_source`'s last line (line 198) and delete `parse_gitlab_source` (lines 201-244), adding in its place:
+Replace `parse_url_source`'s last line (line 198) and delete
+`parse_gitlab_source` (lines 201-244), adding in its place:
 
 ```rust
     // Any other https host is an opaque git remote.
@@ -336,14 +369,18 @@ fn parse_git_url(host: &str, path: &str) -> Result<GitRepo, SourceParseError> {
 }
 ```
 
-- [ ] **Step 5: Verify RED — crate fails to compile only at the known consumer sites**
+- [ ] **Step 5: Verify RED — crate fails to compile only at the known consumer
+      sites**
 
-Run: `cargo test --lib 2>&1 | grep -E "^error" | head -20`
-Expected: compile errors mentioning `Gitlab` in `src/pipeline/git.rs`, `src/index.rs`, `src/main.rs` (binary compiles separately — lib errors first), `src/pipeline/install.rs`, `src/pipeline/mod.rs`. No errors in other files.
+Run: `cargo test --lib 2>&1 | grep -E "^error" | head -20` Expected: compile
+errors mentioning `Gitlab` in `src/pipeline/git.rs`, `src/index.rs`,
+`src/main.rs` (binary compiles separately — lib errors first),
+`src/pipeline/install.rs`, `src/pipeline/mod.rs`. No errors in other files.
 
 - [ ] **Step 6: Update `src/pipeline/git.rs`**
 
-Replace the import (line 16): `use crate::source::{GitRepo, GithubRepo, InstallSource};`
+Replace the import (line 16):
+`use crate::source::{GitRepo, GithubRepo, InstallSource};`
 
 Update the `install_from_source` doc comment (lines 25-27):
 
@@ -354,7 +391,8 @@ Update the `install_from_source` doc comment (lines 25-27):
 ///   Gitea, …) works identically.
 ```
 
-Replace the `Gitlab` dispatch arm (line 40), `install_from_gitlab` (lines 60-74), and `gitlab_clone_url` (lines 80-82):
+Replace the `Gitlab` dispatch arm (line 40), `install_from_gitlab` (lines
+60-74), and `gitlab_clone_url` (lines 80-82):
 
 ```rust
 InstallSource::Git(repo) => install_from_git(repo, target, filter),
@@ -407,7 +445,8 @@ InstallSource::Git(repo) => {
 }
 ```
 
-Replace the two GitLab tests (`gitlab_clone_url_uses_repo_host`, `gitlab_clone_url_with_subgroups`, lines 174-218):
+Replace the two GitLab tests (`gitlab_clone_url_uses_repo_host`,
+`gitlab_clone_url_with_subgroups`, lines 174-218):
 
 ```rust
     #[test]
@@ -473,12 +512,16 @@ InstallSource::Git(r) => r.git_ref.clone(),
 InstallSource::Git(r) => r.git_ref.as_deref(),
 ```
 
-`src/pipeline/mod.rs:206` — in the doc comment, change "Github/Gitlab" to "Github/Git" so it reads: is pinned (Github/Git `git_ref`); local-path sources record `None`.
+`src/pipeline/mod.rs:206` — in the doc comment, change "Github/Gitlab" to
+"Github/Git" so it reads: is pinned (Github/Git `git_ref`); local-path sources
+record `None`.
 
 - [ ] **Step 8: Run the full test suite to verify GREEN**
 
-Run: `just test`
-Expected: PASS — all unit tests including the new `parse_git_url_*` / `label_roundtrip_git_*` tests, and the Step 1 ATDD test `removed_gitlab_shorthand_exits_two_with_url_hint` now passes (parse fails fast with exit 2 and the URL hint, no clone attempted).
+Run: `just test` Expected: PASS — all unit tests including the new
+`parse_git_url_*` / `label_roundtrip_git_*` tests, and the Step 1 ATDD test
+`removed_gitlab_shorthand_exits_two_with_url_hint` now passes (parse fails fast
+with exit 2 and the URL hint, no clone attempted).
 
 - [ ] **Step 9: Commit**
 
@@ -498,7 +541,9 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ## Task 2: Documentation sweep
 
-No code. Update every user-facing mention of the `gitlab:` shorthand and GitLab-specific URL support to the generic git-URL story. Keep ADRs untouched (historical record).
+No code. Update every user-facing mention of the `gitlab:` shorthand and
+GitLab-specific URL support to the generic git-URL story. Keep ADRs untouched
+(historical record).
 
 **Files:**
 
@@ -628,17 +673,25 @@ source: https://gitlab.com/mycompany/ai-skills
 
 - [ ] **Step 7: Update stale comments in `tests/pipeline_source.rs`**
 
-Lines 71-74: replace the comment naming `gitlab_clone_url_uses_repo_host` with the new test name (`git_clone_url_appends_dot_git`) and reword "GitLab dispatch" to "generic git-URL dispatch".
+Lines 71-74: replace the comment naming `gitlab_clone_url_uses_repo_host` with
+the new test name (`git_clone_url_appends_dot_git`) and reword "GitLab dispatch"
+to "generic git-URL dispatch".
 
-Lines 230-232: replace `` `github:` / `gitlab:` / `gitlab+host:` / `local:` prefixes `` with `` `github:` / `local:` prefixes and bare https URLs `` (the file:// caveat still holds — `file://` is not an accepted source form).
+Lines 230-232: replace
+`` `github:` / `gitlab:` / `gitlab+host:` / `local:` prefixes `` with
+`` `github:` / `local:` prefixes and bare https URLs `` (the file:// caveat
+still holds — `file://` is not an accepted source form).
 
 - [ ] **Step 8: Verify docs build and grep for leftovers**
 
-Run: `rg -in "gitlab" src/ tests/ AGENTS.md docs/commands.md docs/specification.md docs/recipes.md docs/format-spec.md docs/getting-started.md`
-Expected: matches only in (a) test/doc example hostnames like `gitlab.com`/`gitlabee.dt.renault.com` used as opaque hosts, (b) the `GitlabShorthandRemoved` error variant, its message, and its tests. No remaining `gitlab:` shorthand documentation.
+Run:
+`rg -in "gitlab" src/ tests/ AGENTS.md docs/commands.md docs/specification.md docs/recipes.md docs/format-spec.md docs/getting-started.md`
+Expected: matches only in (a) test/doc example hostnames like
+`gitlab.com`/`gitlabee.dt.renault.com` used as opaque hosts, (b) the
+`GitlabShorthandRemoved` error variant, its message, and its tests. No remaining
+`gitlab:` shorthand documentation.
 
-Run: `just book`
-Expected: mdBook builds with no errors.
+Run: `just book` Expected: mdBook builds with no errors.
 
 - [ ] **Step 9: Commit**
 
@@ -657,20 +710,26 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Format and full verify**
 
-Run: `just fmt && just verify`
-Expected: both exit 0, zero warnings (CI enforces `-D warnings`).
+Run: `just fmt && just verify` Expected: both exit 0, zero warnings (CI enforces
+`-D warnings`).
 
 - [ ] **Step 2: Check the spec's acceptance criteria**
 
 From `docs/wip/2026-06-10-generic-git-url-source-design.md`:
 
-1. Deep-URL install — covered by `parse_git_url_with_ref_and_subfolder` + the unchanged `install_from_git_url` file:// integration tests in `tests/pipeline_source.rs`.
-2. Host-agnostic — covered by `parse_git_url_bitbucket` + `git_clone_url_appends_dot_git`.
-3. `gitlab:` exits 2 with hint — covered by `removed_gitlab_shorthand_exits_two_with_url_hint`.
-4. Lockfile round-trip — covered by `label_roundtrip_git_minimal` / `label_roundtrip_git_full`.
+1. Deep-URL install — covered by `parse_git_url_with_ref_and_subfolder` + the
+   unchanged `install_from_git_url` file:// integration tests in
+   `tests/pipeline_source.rs`.
+2. Host-agnostic — covered by `parse_git_url_bitbucket` +
+   `git_clone_url_appends_dot_git`.
+3. `gitlab:` exits 2 with hint — covered by
+   `removed_gitlab_shorthand_exits_two_with_url_hint`.
+4. Lockfile round-trip — covered by `label_roundtrip_git_minimal` /
+   `label_roundtrip_git_full`.
 5. No GitLab-specific code paths — covered by the Task 2 Step 8 grep.
 
-Confirm each maps to a passing test or check; if any gap, add the missing test before proceeding.
+Confirm each maps to a passing test or check; if any gap, add the missing test
+before proceeding.
 
 - [ ] **Step 3: Commit any formatting fallout**
 
@@ -682,4 +741,5 @@ git add -A && git commit -m "chore: formatting
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
 
-After this task, the branch is ready for the finishing flow (sdd-gardening of `docs/wip/`, then PR per `superpowers:finishing-a-development-branch`).
+After this task, the branch is ready for the finishing flow (sdd-gardening of
+`docs/wip/`, then PR per `superpowers:finishing-a-development-branch`).

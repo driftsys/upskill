@@ -4,9 +4,9 @@ These files are research inputs. They are not wired into upskill's parser or
 generation pipeline, and no client was configured or run while collecting them.
 
 [manifest.json](manifest.json) records each schema's source URL, retrieval time,
-SHA-256 digest, size, publisher, and evidence classification. Git-hosted artifacts
-also record the source commit and blob identity. Original bytes are retained.
-The manifest is a provenance inventory, not an upskill schema.
+SHA-256 digest, size, publisher, and evidence classification. Git-hosted
+artifacts also record the source commit and blob identity. Original bytes are
+retained. The manifest is a provenance inventory, not an upskill schema.
 
 ## Inventory
 
@@ -28,13 +28,17 @@ client's native MCP configuration envelope.
 
 ## Reuse and attribution
 
-- Agent Plugins schemas: Apache-2.0; [licensing notice](licenses/agent-plugins-LICENSE.txt)
-  and [license text](licenses/agent-plugins-Apache-2.0.txt).
-- Codex source schemas: [upstream Apache-2.0 license](licenses/codex-LICENSE.txt).
-- SchemaStore schemas: [upstream Apache-2.0 license](licenses/schemastore-LICENSE.txt).
+- Agent Plugins schemas: Apache-2.0;
+  [licensing notice](licenses/agent-plugins-LICENSE.txt) and
+  [license text](licenses/agent-plugins-Apache-2.0.txt).
+- Codex source schemas:
+  [upstream Apache-2.0 license](licenses/codex-LICENSE.txt).
+- SchemaStore schemas:
+  [upstream Apache-2.0 license](licenses/schemastore-LICENSE.txt).
 - Gemini CLI source schema: [upstream license](licenses/gemini-cli-LICENSE.txt).
-- OpenCode source project: [upstream MIT license](licenses/opencode-LICENSE.txt).
-  The rolling schema's canonical source URL is retained in the manifest.
+- OpenCode source project:
+  [upstream MIT license](licenses/opencode-LICENSE.txt). The rolling schema's
+  canonical source URL is retained in the manifest.
 
 These snapshots do not relicense upstream material. No third-party schema is
 presented as authored or endorsed by upskill.
@@ -46,8 +50,8 @@ That does not establish that a particular client release accepts every field,
 that undocumented settings are supported, or that the runtime enforces a policy.
 Dynamic documentation and source `main` may lead released clients.
 
-Refresh snapshots deliberately and compare hashes and semantic differences.
-Do not fetch a rolling schema at install time and silently change generated
+Refresh snapshots deliberately and compare hashes and semantic differences. Do
+not fetch a rolling schema at install time and silently change generated
 behavior. Native validation, discovery, and runtime conformance checks belong in
 the subsequent implementation design.
 

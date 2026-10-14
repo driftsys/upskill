@@ -1,12 +1,23 @@
 # Windows Support Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `upskill` work on native Windows (CMD / PowerShell) by fixing the `HOME`-only env-var assumption, adding Windows to the CI test matrix, and updating the install docs.
+**Goal:** Make `upskill` work on native Windows (CMD / PowerShell) by fixing the
+`HOME`-only env-var assumption, adding Windows to the CI test matrix, and
+updating the install docs.
 
-**Architecture:** A single `home_dir()` helper in `src/source.rs` (the module already responsible for path parsing and tilde expansion) checks `HOME` first, then falls back to `USERPROFILE`. Both call sites (`src/source.rs` tilde expansion and `src/main.rs` global-scope resolution) are updated to use it. The function is exported from `lib.rs` so `main.rs` can call it without duplication. CI gains a `windows-latest` matrix entry on the `test` job.
+**Architecture:** A single `home_dir()` helper in `src/source.rs` (the module
+already responsible for path parsing and tilde expansion) checks `HOME` first,
+then falls back to `USERPROFILE`. Both call sites (`src/source.rs` tilde
+expansion and `src/main.rs` global-scope resolution) are updated to use it. The
+function is exported from `lib.rs` so `main.rs` can call it without duplication.
+CI gains a `windows-latest` matrix entry on the `test` job.
 
-**Tech Stack:** Rust std (`std::env`, `std::path`), GitHub Actions matrix strategy.
+**Tech Stack:** Rust std (`std::env`, `std::path`), GitHub Actions matrix
+strategy.
 
 ---
 
@@ -31,7 +42,8 @@
 
 ### Step 1.1: Write the failing unit tests
 
-Add the following test module at the bottom of `src/source.rs`, just before the final `}` that closes `mod tests`:
+Add the following test module at the bottom of `src/source.rs`, just before the
+final `}` that closes `mod tests`:
 
 ```rust
     #[cfg(test)]
@@ -112,7 +124,8 @@ Expected: compile error — `home_dir` is not yet defined.
 
 - [ ] **Step 1.3: Implement `home_dir()`**
 
-Add the following function to `src/source.rs`, right before `pub fn parse_install_source`:
+Add the following function to `src/source.rs`, right before
+`pub fn parse_install_source`:
 
 ```rust
 /// Resolve the running user's home directory.
@@ -135,7 +148,8 @@ cargo test home_dir
 
 Expected: 4 tests pass, 0 fail.
 
-- [ ] **Step 1.5: Update tilde expansion in `parse_install_source` to use `home_dir()`**
+- [ ] **Step 1.5: Update tilde expansion in `parse_install_source` to use
+      `home_dir()`**
 
 In `src/source.rs`, replace the block at lines 88–100 (the `~/` expansion):
 
@@ -180,7 +194,8 @@ if source == "~" || source.starts_with("~/") {
 cargo test
 ```
 
-Expected: all tests pass (the existing `parse_local_path_tilde_expands_home` tests still set `HOME` explicitly, so they continue to work).
+Expected: all tests pass (the existing `parse_local_path_tilde_expands_home`
+tests still set `HOME` explicitly, so they continue to work).
 
 - [ ] **Step 1.7: Commit**
 
@@ -254,7 +269,8 @@ use upskill::source::{InstallSource, home_dir, parse_install_source};
 
 - [ ] **Step 3.2: Update `install_target()` to use `home_dir()`**
 
-In `src/main.rs`, find `install_target` (around line 228) and replace the `Scope::Global` arm:
+In `src/main.rs`, find `install_target` (around line 228) and replace the
+`Scope::Global` arm:
 
 Old:
 
@@ -352,7 +368,8 @@ fn add_global_errors_clearly_when_neither_home_nor_userprofile_set() {
 }
 ```
 
-Also add `use predicates;` at the top of the file if not already present. Check the existing imports first — if `predicates` is not imported, add:
+Also add `use predicates;` at the top of the file if not already present. Check
+the existing imports first — if `predicates` is not imported, add:
 
 ```rust
 use predicates::str::ContainsPredicate;
@@ -364,7 +381,8 @@ Actually `assert_cmd` re-exports `predicates`, so the import is:
 use assert_cmd::prelude::*;  // if not already present
 ```
 
-Check the file — `assert_cmd::Command` is already imported. Use inline `predicates::str::contains(...)` which works without a `use` statement.
+Check the file — `assert_cmd::Command` is already imported. Use inline
+`predicates::str::contains(...)` which works without a `use` statement.
 
 - [ ] **Step 4.2: Run tests to verify they fail**
 
@@ -373,9 +391,14 @@ cargo test add_global_uses_userprofile
 cargo test add_global_errors_clearly
 ```
 
-Expected: `add_global_uses_userprofile_when_home_unset` FAILS (installs under nothing / exits non-zero before Task 3 is merged, but if running after Task 3 it should already pass). `add_global_errors_clearly_when_neither_home_nor_userprofile_set` passes once Task 3 is done.
+Expected: `add_global_uses_userprofile_when_home_unset` FAILS (installs under
+nothing / exits non-zero before Task 3 is merged, but if running after Task 3 it
+should already pass).
+`add_global_errors_clearly_when_neither_home_nor_userprofile_set` passes once
+Task 3 is done.
 
-> **Note:** Both tests should pass after Tasks 1–3 are complete. If running in order, run `cargo test` here and confirm both new tests pass.
+> **Note:** Both tests should pass after Tasks 1–3 are complete. If running in
+> order, run `cargo test` here and confirm both new tests pass.
 
 - [ ] **Step 4.3: Run all tests**
 
@@ -434,7 +457,8 @@ test:
     - run: cargo test
 ```
 
-(`fail-fast: false` lets both OS jobs complete so you see all failures at once rather than cancelling Windows when Ubuntu fails, or vice versa.)
+(`fail-fast: false` lets both OS jobs complete so you see all failures at once
+rather than cancelling Windows when Ubuntu fails, or vice versa.)
 
 - [ ] **Step 5.2: Verify the YAML is valid**
 
@@ -476,9 +500,9 @@ curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | 
 ```
 ````
 
-`UPSKILL_VERSION` pins a release tag (default: latest) and
-`UPSKILL_INSTALL_DIR` overrides the install location (default
-`$HOME/.local/bin`). Windows users run the same command inside WSL.
+`UPSKILL_VERSION` pins a release tag (default: latest) and `UPSKILL_INSTALL_DIR`
+overrides the install location (default `$HOME/.local/bin`). Windows users run
+the same command inside WSL.
 
 With a Rust toolchain instead:
 
@@ -503,9 +527,8 @@ New:
 curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
 ````
 
-`UPSKILL_VERSION` pins a release tag (default: latest) and
-`UPSKILL_INSTALL_DIR` overrides the install location (default
-`$HOME/.local/bin`).
+`UPSKILL_VERSION` pins a release tag (default: latest) and `UPSKILL_INSTALL_DIR`
+overrides the install location (default `$HOME/.local/bin`).
 
 **Windows (native — CMD / PowerShell):**
 
@@ -513,13 +536,12 @@ curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | 
 cargo install upskill
 ```
 
-Requires a [Rust toolchain](https://rustup.rs). The binary has no other
-runtime dependencies. `HOME` and `USERPROFILE` are both recognised as the
-global install root, so the standard Windows `USERPROFILE` variable works
-without any extra setup.
+Requires a [Rust toolchain](https://rustup.rs). The binary has no other runtime
+dependencies. `HOME` and `USERPROFILE` are both recognised as the global install
+root, so the standard Windows `USERPROFILE` variable works without any extra
+setup.
 
-**Windows (WSL):** use the Linux install command above inside your WSL
-terminal.
+**Windows (WSL):** use the Linux install command above inside your WSL terminal.
 
 Or download a pre-built binary directly from the releases page.
 

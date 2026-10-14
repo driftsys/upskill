@@ -19,4 +19,5 @@
 #   git std hook enable pre-commit
 #   git std hook disable pre-commit
 #
-! git diff --cached --check
+~ prim fmt --staged --exclude 'tests/fixtures/**'
+~ bash .githooks/format-staged-rust.sh *.rs

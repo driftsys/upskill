@@ -35,7 +35,8 @@ unknown filesystem.
 
 APFS preserves filename spelling while supporting normalization and case
 insensitivity. ext4 can select Unicode case-insensitive lookup per directory.
-See the [Apple APFS FAQ](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html)
+See the
+[Apple APFS FAQ](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html)
 and [Linux ext4 documentation](https://docs.kernel.org/admin-guide/ext4.html).
 Use a conservative relation instead of claiming that byte inequality proves
 distinctness. This intentionally rejects some valid case-sensitive or Unicode
@@ -58,11 +59,12 @@ impl DestinationSnapshot<'_> {
 }
 ```
 
-Export `DestinationSnapshot` from `filesystem`. Reuse `files::plan::FileLocation`,
-`ObservedFile` and `FileValue`. Existing regular files produce exact bytes and
-`Some(mode & 0o7777)`; absent destinations produce `None`. Sort observations by
-the existing exact location key: scope, raw root OsStr and portable path.
-Permutation of locations must not change the returned data or acceptance.
+Export `DestinationSnapshot` from `filesystem`. Reuse
+`files::plan::FileLocation`, `ObservedFile` and `FileValue`. Existing regular
+files produce exact bytes and `Some(mode & 0o7777)`; absent destinations produce
+`None`. Sort observations by the existing exact location key: scope, raw root
+OsStr and portable path. Permutation of locations must not change the returned
+data or acceptance.
 
 The snapshot borrows its qualified scope and privately owns retained evidence.
 It is opaque, non-Clone and nonserializable, with redacted Debug. Returning or
@@ -85,8 +87,8 @@ backslash, colon and control-character paths. Preserve native root paths without
 lossy conversion. Error display may use the existing contextual presentation.
 
 Qualify the pinned root with descriptor-based filesystem metadata. On Linux,
-accept the ext-family magic or tmpfs magic and require a returned statx mount ID.
-If the kernel cannot supply that evidence, return an explicit qualification
+accept the ext-family magic or tmpfs magic and require a returned statx mount
+ID. If the kernel cannot supply that evidence, return an explicit qualification
 error. On macOS, require the APFS filesystem name and retain filesystem identity
 and mount binding from fstatfs. Other operating systems remain unsupported.
 Every opened descendant must stay on the selected mount: Linux mount IDs must
@@ -100,16 +102,16 @@ Open each existing intermediate directory without following symlinks. Require
 the requested component's exact bytes to appear in descriptor-relative directory
 enumeration, so a case or normalization alias is rejected rather than silently
 adopted. Compare the selected entry and opened directory identities. Retain the
-opened directories to prevent inode reuse from imitating the original chain.
-Use close-on-exec descriptors throughout.
+opened directories to prevent inode reuse from imitating the original chain. Use
+close-on-exec descriptors throughout.
 
 Inspect the final entry without following symlinks before opening it; reject a
 known nonregular type before any file open. An existing final component must
-likewise have exact stored spelling, be opened
-without symlink following and be a regular file with link count exactly one.
-Reject directories, symlinks, hard links and special files. Nonblocking opening
-and type checks must prevent a FIFO or device fixture from hanging observation.
-Compare entry and open identities, qualify its mount and retain the file handle.
+likewise have exact stored spelling, be opened without symlink following and be
+a regular file with link count exactly one. Reject directories, symlinks, hard
+links and special files. Nonblocking opening and type checks must prevent a FIFO
+or device fixture from hanging observation. Compare entry and open identities,
+qualify its mount and retain the file handle.
 
 At the first missing component, retain the deepest existing directory and the
 entire unresolved suffix as absence evidence. Do not create directories or probe
@@ -130,25 +132,26 @@ ancestor/descendant pair. Compare components in order up to the shorter path:
 - Otherwise the components are distinct and the two paths cannot overlap.
 
 If every compared component may match, reject the pair. This catches case-only
-collisions, Unicode normalization/case uncertainty, aliases across root spellings
-or scope labels, and potential prefix conflicts below missing parents. Apply the
-rule to the whole supplied set, including existing files. It is a conservative
-rejection rule, not a claim that every rejected pair is filesystem-equivalent.
-For example, `a/x` and `b/y` are distinct; `a/X` and `a/x` conflict;
-`a/é` and `a/e` conflict; `a/é` and `b/e` are distinct. A single Unicode path
-remains eligible when its existing components have exact stored spellings.
+collisions, Unicode normalization/case uncertainty, aliases across root
+spellings or scope labels, and potential prefix conflicts below missing parents.
+Apply the rule to the whole supplied set, including existing files. It is a
+conservative rejection rule, not a claim that every rejected pair is
+filesystem-equivalent. For example, `a/x` and `b/y` are distinct; `a/X` and
+`a/x` conflict; `a/é` and `a/e` conflict; `a/é` and `b/e` are distinct. A single
+Unicode path remains eligible when its existing components have exact stored
+spellings.
 
 Also reject duplicate opened file identities as a physical backstop. Existing
-directory aliases introduced by mount traversal are excluded by mount checks.
-No permission to remove or replace anything follows from successful observation.
+directory aliases introduced by mount traversal are excluded by mount checks. No
+permission to remove or replace anything follows from successful observation.
 
 ## Capture and revalidation
 
 Capture the regular file through its retained handle. Require stable identity,
-type, link count, size, permission bits, modification time and change time across
-the read, and require the read byte count to match the sampled size. Do not use
-access time as a precondition: reads can update it. Capture failure returns no
-snapshot. File data may be binary; never decode or normalize it.
+type, link count, size, permission bits, modification time and change time
+across the read, and require the read byte count to match the sampled size. Do
+not use access time as a precondition: reads can update it. Capture failure
+returns no snapshot. File data may be binary; never decode or normalize it.
 
 Before returning, revalidate all selected root bindings, every directory chain,
 mount evidence and final entry identity or absence. Recheck captured file
@@ -156,15 +159,17 @@ metadata and exact bytes. `verify_unchanged()` repeats those checks against the
 retained evidence and exact observations; it never refreshes the snapshot into a
 new accepted state. Detect same-length byte edits even when modification time is
 restored, permission changes, identical-byte inode replacement, ancestor
-replacement, missing-to-present transitions and root-alias retargeting. Unrelated
-sibling edits do not invalidate a snapshot merely by changing directory times.
+replacement, missing-to-present transitions and root-alias retargeting.
+Unrelated sibling edits do not invalidate a snapshot merely by changing
+directory times.
 
 These are sampled observations under the same namespace assumptions as AD-0028.
 Pinned handles and revalidation do not freeze external writers, prevent hostile
 ancestor relocation between checks or form an operating-system security sandbox.
-A future executor must hold the writer guard, validate state/source authority and
-permission policy, recheck destination evidence immediately before each effect,
-and record interruptions. This API provides none of those effects or recovery.
+A future executor must hold the writer guard, validate state/source authority
+and permission policy, recheck destination evidence immediately before each
+effect, and record interruptions. This API provides none of those effects or
+recovery.
 
 Resource exhaustion and every non-not-found filesystem failure remain contextual
 errors. Retained handles close on drop and on every error path. No production
@@ -190,9 +195,10 @@ revalidation, missing-to-present verification, mount/profile rejection and
 descriptor close-on-exec. Use real temporary files for ordinary behavior and
 small private deterministic seams only where an otherwise unrepeatable check
 needs independent coverage. Do not replace the filesystem with a general mock.
-Tests must not change process-global cwd, touch developer HOME, mount filesystems
-or require elevated privileges. Any unexercised privileged mount behavior remains
-explicitly unswept rather than inferred from synthetic metadata.
+Tests must not change process-global cwd, touch developer HOME, mount
+filesystems or require elevated privileges. Any unexercised privileged mount
+behavior remains explicitly unswept rather than inferred from synthetic
+metadata.
 
 Run full repository verification, Rust 1.85 all-target checks, real local APFS
 tests and hosted Linux and Windows checks. Linux runtime qualification must be

@@ -1,12 +1,22 @@
 # Plugin Descriptor Modes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extend the bundle `plugins:` schema to support instructions-only and config-write descriptor variants alongside the existing auto-install mode.
+**Goal:** Extend the bundle `plugins:` schema to support instructions-only and
+config-write descriptor variants alongside the existing auto-install mode.
 
-**Architecture:** Each per-client plugin descriptor (`ClaudePluginDescriptor`, etc.) becomes a `#[serde(untagged)]` enum with variants discriminated by field presence. The pipeline gains match arms for the new variants. The lockfile gets a new `Instructions` status. opencode config-write reuses the `ancillary.rs` JSON-merge pattern.
+**Architecture:** Each per-client plugin descriptor (`ClaudePluginDescriptor`,
+etc.) becomes a `#[serde(untagged)]` enum with variants discriminated by field
+presence. The pipeline gains match arms for the new variants. The lockfile gets
+a new `Instructions` status. opencode config-write reuses the `ancillary.rs`
+JSON-merge pattern.
 
-**Tech Stack:** Rust (edition 2024), serde + serde_yaml_ng (untagged enums), serde_json (opencode.json manipulation), existing test infrastructure (tempfile, assert_cmd).
+**Tech Stack:** Rust (edition 2024), serde + serde_yaml_ng (untagged enums),
+serde_json (opencode.json manipulation), existing test infrastructure (tempfile,
+assert_cmd).
 
 **Spec:** `docs/wip/specs/2026-05-23-plugin-descriptor-modes-design.md`
 
@@ -36,7 +46,8 @@
 
 - [ ] **Step 1: Write tests for new descriptor variants parsing**
 
-Add tests at the bottom of `src/model/bundle.rs` (or in `src/parse/bundle.rs` where bundle tests live) that verify YAML parsing of all three forms:
+Add tests at the bottom of `src/model/bundle.rs` (or in `src/parse/bundle.rs`
+where bundle tests live) that verify YAML parsing of all three forms:
 
 ```rust
 #[test]
@@ -105,8 +116,8 @@ fn copilot_descriptor_parses_instructions_variant() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib -- descriptor_parses`
-Expected: FAIL — types are still structs, not enums.
+Run: `cargo test --lib -- descriptor_parses` Expected: FAIL — types are still
+structs, not enums.
 
 - [ ] **Step 3: Convert descriptor structs to untagged enums**
 
@@ -196,8 +207,7 @@ pub enum OpencodePluginDescriptor {
 
 - [ ] **Step 4: Run the new tests to verify they pass**
 
-Run: `cargo test --lib -- descriptor_parses`
-Expected: PASS — all 9 tests green.
+Run: `cargo test --lib -- descriptor_parses` Expected: PASS — all 9 tests green.
 
 - [ ] **Step 5: Commit**
 
@@ -219,7 +229,9 @@ Install variant (backward-compatible)."
 
 - Modify: `src/plugin.rs`
 
-After Task 1, the codebase won't compile because `plugin.rs` functions accept `&ClaudePluginDescriptor` (formerly a struct with `descriptor.source` etc.) and now it's an enum.
+After Task 1, the codebase won't compile because `plugin.rs` functions accept
+`&ClaudePluginDescriptor` (formerly a struct with `descriptor.source` etc.) and
+now it's an enum.
 
 - [ ] **Step 1: Add `ManualInstructions` variant to `PluginOutcome`**
 
@@ -241,7 +253,8 @@ pub enum PluginOutcome {
 }
 ```
 
-Update `is_success()` and `is_cli_not_found()` to NOT match `ManualInstructions`:
+Update `is_success()` and `is_cli_not_found()` to NOT match
+`ManualInstructions`:
 
 ```rust
 impl PluginOutcome {
@@ -262,9 +275,18 @@ impl PluginOutcome {
 
 - [ ] **Step 2: Update install function signatures**
 
-Change the install functions to accept the `Install` variant's fields directly (extracted by the caller in `pipeline.rs`). The function signatures stay the same since they already take `&ClaudePluginDescriptor` etc., but we need to document that callers must destructure the enum first. Actually, the cleanest path: keep functions taking the struct-like data via new helper structs or just match in pipeline.rs and pass the individual fields.
+Change the install functions to accept the `Install` variant's fields directly
+(extracted by the caller in `pipeline.rs`). The function signatures stay the
+same since they already take `&ClaudePluginDescriptor` etc., but we need to
+document that callers must destructure the enum first. Actually, the cleanest
+path: keep functions taking the struct-like data via new helper structs or just
+match in pipeline.rs and pass the individual fields.
 
-The install functions in `plugin.rs` already take the descriptor by reference. Since they now receive enums, update them to take the inner data. The simplest approach: keep the current function signatures but change them to accept the specific variant data. Since serde enums with named fields can't easily be borrowed as structs, convert the functions to accept field values directly:
+The install functions in `plugin.rs` already take the descriptor by reference.
+Since they now receive enums, update them to take the inner data. The simplest
+approach: keep the current function signatures but change them to accept the
+specific variant data. Since serde enums with named fields can't easily be
+borrowed as structs, convert the functions to accept field values directly:
 
 ```rust
 /// Install a Claude Code plugin via CLI.
@@ -315,17 +337,18 @@ pub fn install_copilot_plugin(source: &str, plugin: &str) -> PluginOutcome {
 }
 ```
 
-Similarly update uninstall functions to take `&str` args instead of the old struct fields.
+Similarly update uninstall functions to take `&str` args instead of the old
+struct fields.
 
 - [ ] **Step 3: Fix compilation errors**
 
-Run: `cargo check`
-Expected: Still fails in `pipeline.rs` (Task 3), `parse/bundle.rs` tests. That's expected — we'll fix those next.
+Run: `cargo check` Expected: Still fails in `pipeline.rs` (Task 3),
+`parse/bundle.rs` tests. That's expected — we'll fix those next.
 
 - [ ] **Step 4: Run plugin.rs unit tests**
 
-Run: `cargo test --lib plugin`
-Expected: PASS — the plugin module's own tests should pass (they test `run_command` directly, not the descriptors).
+Run: `cargo test --lib plugin` Expected: PASS — the plugin module's own tests
+should pass (they test `run_command` directly, not the descriptors).
 
 - [ ] **Step 5: Commit**
 
@@ -346,9 +369,11 @@ references. Adds ManualInstructions variant to PluginOutcome."
 
 - Modify: `src/pipeline.rs`
 
-- [ ] **Step 1: Update `install_plugins_from_bundles` to match on enum variants**
+- [ ] **Step 1: Update `install_plugins_from_bundles` to match on enum
+      variants**
 
-Replace the current body of `install_plugins_from_bundles` with enum-matching logic:
+Replace the current body of `install_plugins_from_bundles` with enum-matching
+logic:
 
 ```rust
 fn install_plugins_from_bundles(
@@ -575,8 +600,8 @@ match &plugin.status {
 
 - [ ] **Step 6: Verify compilation passes**
 
-Run: `cargo check`
-Expected: May still fail in `main.rs` or tests (will fix in subsequent tasks). Core library should compile.
+Run: `cargo check` Expected: May still fail in `main.rs` or tests (will fix in
+subsequent tasks). Core library should compile.
 
 - [ ] **Step 7: Commit**
 
@@ -621,8 +646,8 @@ fn instructions_plugin_roundtrips_through_save_and_load() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --lib -- instructions_plugin_roundtrips`
-Expected: FAIL — `PluginInstallStatus::Instructions` does not exist yet.
+Run: `cargo test --lib -- instructions_plugin_roundtrips` Expected: FAIL —
+`PluginInstallStatus::Instructions` does not exist yet.
 
 - [ ] **Step 3: Add Instructions variant**
 
@@ -643,8 +668,7 @@ pub enum PluginInstallStatus {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test --lib -- instructions_plugin_roundtrips`
-Expected: PASS
+Run: `cargo test --lib -- instructions_plugin_roundtrips` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -762,8 +786,8 @@ fn remove_opencode_plugin_uri_noop_when_absent() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib -- write_opencode_plugin_uri`
-Expected: FAIL — function does not exist.
+Run: `cargo test --lib -- write_opencode_plugin_uri` Expected: FAIL — function
+does not exist.
 
 - [ ] **Step 3: Implement `write_opencode_plugin_uri`**
 
@@ -875,8 +899,7 @@ pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> anyhow::Re
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --lib -- opencode_plugin_uri`
-Expected: PASS
+Run: `cargo test --lib -- opencode_plugin_uri` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -1003,7 +1026,8 @@ fn print_plugin_results(report: &InstallReport) {
 
 - [ ] **Step 2: Add `style::info` helper if it doesn't exist**
 
-Check if `style::info` exists. If not, add it alongside the existing `style::success` and `style::warn` functions:
+Check if `style::info` exists. If not, add it alongside the existing
+`style::success` and `style::warn` functions:
 
 ```rust
 pub fn info(text: &str) -> String {
@@ -1013,8 +1037,7 @@ pub fn info(text: &str) -> String {
 
 - [ ] **Step 3: Verify full compilation passes**
 
-Run: `cargo check`
-Expected: PASS (or fix remaining compilation issues).
+Run: `cargo check` Expected: PASS (or fix remaining compilation issues).
 
 - [ ] **Step 4: Commit**
 
@@ -1037,7 +1060,9 @@ and instructions URL. Config-write successes appear in the normal
 
 - [ ] **Step 1: Update existing plugin parsing tests to use enum matching**
 
-The existing tests in `src/parse/bundle.rs` (starting around line 389) access struct fields like `claude.source`, `claude.plugin`. These need to be updated to match the enum variants:
+The existing tests in `src/parse/bundle.rs` (starting around line 389) access
+struct fields like `claude.source`, `claude.plugin`. These need to be updated to
+match the enum variants:
 
 ```rust
 #[test]
@@ -1088,7 +1113,8 @@ fn load_parses_plugins_with_all_clients() {
 }
 ```
 
-- [ ] **Step 2: Add tests for instructions-only and config-write bundle parsing**
+- [ ] **Step 2: Add tests for instructions-only and config-write bundle
+      parsing**
 
 ```rust
 #[test]
@@ -1150,8 +1176,7 @@ plugins:
 
 - [ ] **Step 3: Run all bundle tests**
 
-Run: `cargo test --lib parse::bundle`
-Expected: PASS
+Run: `cargo test --lib parse::bundle` Expected: PASS
 
 - [ ] **Step 4: Commit**
 
@@ -1214,8 +1239,7 @@ for plugin in &plugins_to_remove {
 
 - [ ] **Step 2: Run compilation check**
 
-Run: `cargo check`
-Expected: PASS
+Run: `cargo check` Expected: PASS
 
 - [ ] **Step 3: Commit**
 
@@ -1237,8 +1261,8 @@ corresponding plugin_uri entries are removed from opencode.json."
 
 - [ ] **Step 1: Run the full test suite**
 
-Run: `cargo test`
-Expected: Some tests may fail due to the changed struct → enum in existing integration tests.
+Run: `cargo test` Expected: Some tests may fail due to the changed struct → enum
+in existing integration tests.
 
 - [ ] **Step 2: Fix any remaining failures**
 
@@ -1252,13 +1276,11 @@ Fix each by updating to use the new enum shapes.
 
 - [ ] **Step 3: Run full suite again**
 
-Run: `cargo test`
-Expected: ALL PASS
+Run: `cargo test` Expected: ALL PASS
 
 - [ ] **Step 4: Run lint**
 
-Run: `just lint`
-Expected: PASS (no warnings)
+Run: `just lint` Expected: PASS (no warnings)
 
 - [ ] **Step 5: Commit any fixes**
 
@@ -1348,8 +1370,7 @@ Replace the "MUST shell out" rule with:
 
 - [ ] **Step 4: Run `just fmt`**
 
-Run: `just fmt`
-Expected: Markdown formatting applied.
+Run: `just fmt` Expected: Markdown formatting applied.
 
 - [ ] **Step 5: Commit**
 
@@ -1369,10 +1390,9 @@ config-write mode."
 
 - [ ] **Step 1: Run `just verify`**
 
-Run: `just verify`
-Expected: ALL PASS (tests + lint + commit check)
+Run: `just verify` Expected: ALL PASS (tests + lint + commit check)
 
 - [ ] **Step 2: Review git log**
 
-Run: `git log --oneline -10`
-Expected: Clean commit history with conventional commit messages.
+Run: `git log --oneline -10` Expected: Clean commit history with conventional
+commit messages.

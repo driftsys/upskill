@@ -1,10 +1,12 @@
 # Strict captured source manifests
 
-This record describes the implemented [`source_manifest`](../../src/source_manifest.rs)
-library boundary. [Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests)
+This record describes the implemented
+[`source_manifest`](../../src/source_manifest.rs) library boundary.
+[Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests)
 owns its requirements. Capture observes source files; validation checks supplied
 values without I/O. Neither function participates in current command dispatch.
-[AD-0019](../adr/0019-separate-strict-source-capture.md) records that separation.
+[AD-0019](../adr/0019-separate-strict-source-capture.md) records that
+separation.
 
 ## Public interface and evidence
 
@@ -18,10 +20,10 @@ Callers can alter them, so consumers must validate supplied values.
 
 `validate_manifest` borrows the manifest without mutation or sorting. For each
 record it checks the shared ownership lexical-path rule, strict ascending path
-order and uniqueness, mode range, and exact byte digest, then checks the complete
-manifest digest. Invalid input returns contextual errors rather than a partial
-validated result. Ownership uses the same extracted crate-private path predicate
-at its original validation position with unchanged diagnostics.
+order and uniqueness, mode range, and exact byte digest, then checks the
+complete manifest digest. Invalid input returns contextual errors rather than a
+partial validated result. Ownership uses the same extracted crate-private path
+predicate at its original validation position with unchanged diagnostics.
 
 ## Observation and assembly
 
@@ -61,29 +63,31 @@ descriptor-relative containment or protection against concurrent replacement.
 Root ancestors can be symlinks. Lexical path checks do not qualify aliases, case
 collisions, reserved names or destination filesystem limits.
 
-Legacy hashing and discovery retain their existing runtime behavior and persisted
-digest meanings. No CLI, lockfile, source-schema or native-client activation is
-introduced. The separate [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+Legacy hashing and discovery retain their existing runtime behavior and
+persisted digest meanings. No CLI, lockfile, source-schema or native-client
+activation is introduced. The separate
+[pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
 is implemented for explicitly supplied complete file sets. The separate
-[captured item compiler](captured-item-compilation.md) derives complete per-client
-entrypoint and resource outputs from these captured values. Connecting compiled
-outputs to complete lifecycle desired sets, immutable Git revision evidence and
-lifecycle execution remain later work. Qualified scope roots, writer locking,
+[captured item compiler](captured-item-compilation.md) derives complete
+per-client entrypoint and resource outputs from these captured values.
+Connecting compiled outputs to complete lifecycle desired sets, immutable Git
+revision evidence and lifecycle execution remain later work. Qualified scope
+roots, writer locking,
 [destination observation](qualified-destination-observation.md) and
 [qualified source observation](qualified-source-observation.md) are implemented
 separately. Source snapshots retain revalidation evidence around this unchanged
-plain manifest format.
-The [mixed coordinator](mixed-owned-artifact-planning.md) now composes complete
-explicit file/contribution sets from supplied ownership and observations; it does
-not derive those lifecycle inputs from compiler outputs.
+plain manifest format. The [mixed coordinator](mixed-owned-artifact-planning.md)
+now composes complete explicit file/contribution sets from supplied ownership
+and observations; it does not derive those lifecycle inputs from compiler
+outputs.
 
 [`tests/source_manifests.rs`](../../tests/source_manifests.rs) pins literal file
 and manifest vectors, path/content/mode changes, complete inclusion, validation
 diagnostics and supported platform rejection fixtures. Private module tests pin
 fault propagation and read counts. Actual non-UTF-8 filesystem-name fixtures are
 limited to Unix excluding macOS: the development macOS filesystem rejected their
-creation, so a private pure path-conversion fixture covers rejection there.
-FIFO and socket tests do not claim device-entry or concurrent-containment
+creation, so a private pure path-conversion fixture covers rejection there. FIFO
+and socket tests do not claim device-entry or concurrent-containment
 qualification. Platform-gated tests describe coverage, not proof that each host
 has executed them.
 
@@ -94,6 +98,6 @@ The inactive [qualified source boundary](qualified-source-observation.md) adds
 only by shared reference. It retains complete directory topology and native
 descriptor evidence for later non-refreshing checks. Its canonical assembly
 shares the strict source digest implementation; the existing ambient
-`capture_source` behavior and freely mutable plain values remain unchanged.
-This implements source observation only. Hosted qualification, lifecycle effects,
+`capture_source` behavior and freely mutable plain values remain unchanged. This
+implements source observation only. Hosted qualification, lifecycle effects,
 permission policy, application and recovery remain separate gates.

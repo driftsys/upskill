@@ -1,14 +1,23 @@
 # Mixed Owned Artifact Planning Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development to implement this plan task-by-task.
+> Steps use checkbox syntax for tracking.
 
-**Goal:** Plan one complete installation containing instruction contributions and dedicated files without losing manual bytes, ownership bindings or physical evidence.
+**Goal:** Plan one complete installation containing instruction contributions
+and dedicated files without losing manual bytes, ownership bindings or physical
+evidence.
 
-**Architecture:** Validate the whole operation, partition complete changes and observations by artifact form, invoke the existing pure planners, then rebuild and validate one deterministic result. Reuse existing physical file DTOs; reject cross-form physical takeovers and affected ancestor topology before composition.
+**Architecture:** Validate the whole operation, partition complete changes and
+observations by artifact form, invoke the existing pure planners, then rebuild
+and validate one deterministic result. Reuse existing physical file DTOs; reject
+cross-form physical takeovers and affected ancestor topology before composition.
 
-**Tech Stack:** Rust edition 2024, Rust 1.85 minimum, existing standard-library and anyhow facilities; no new dependencies.
+**Tech Stack:** Rust edition 2024, Rust 1.85 minimum, existing standard-library
+and anyhow facilities; no new dependencies.
 
-**Spec:** [Mixed owned-artifact planning design](../specs/2026-10-12-mixed-owned-planning-design.md).
+**Spec:**
+[Mixed owned-artifact planning design](../specs/2026-10-12-mixed-owned-planning-design.md).
 
 ## Global Constraints
 
@@ -16,21 +25,29 @@
 - A Set is the complete desired set across both forms.
 - An empty complete set requires explicit Remove.
 - Locations use `(scope, raw root OsStr, portable relative path)` equality.
-- Existing shared-owner restrictions remain: reject any affected multi-owner record rather than infer missing reference associations.
+- Existing shared-owner restrictions remain: reject any affected multi-owner
+  record rather than infer missing reference associations.
 - Keep every affected physical action, including byte-identical no-ops.
 - Retain an empty aggregate after its last contribution is removed.
 - Any failure returns no successful combined plan.
-- No new dependencies, asynchronous runtime, native commands, source fetching, filesystem observation, lock, journal, schema-2 persistence, CLI selector or target qualification belongs to this slice.
+- No new dependencies, asynchronous runtime, native commands, source fetching,
+  filesystem observation, lock, journal, schema-2 persistence, CLI selector or
+  target qualification belongs to this slice.
 - This prerequisite does not complete M1-A2, M1-A3 or M1.
 - Only main.rs presents output. Preserve Rust 1.85 and zero warnings.
 
 ## Review Focus
 
-- A resource disappears from a complete mixed Set: delete every old dedicated file omitted from the new set, not only the first row.
-- An installation changes forms at distinct locations: retain stable binding checks even when one subplanner has no prior owner.
-- A contribution path is an ancestor of a dedicated path: reject the physical union even on removal-only operations.
-- An aggregate carries mode `Some(0o640)`: keep its exact mode through update, no-op and last-region removal.
-- Prior rows interleave forms and installations: preserve their order when rebuilding and append only genuinely new sorted rows.
+- A resource disappears from a complete mixed Set: delete every old dedicated
+  file omitted from the new set, not only the first row.
+- An installation changes forms at distinct locations: retain stable binding
+  checks even when one subplanner has no prior owner.
+- A contribution path is an ancestor of a dedicated path: reject the physical
+  union even on removal-only operations.
+- An aggregate carries mode `Some(0o640)`: keep its exact mode through update,
+  no-op and last-region removal.
+- Prior rows interleave forms and installations: preserve their order when
+  rebuilding and append only genuinely new sorted rows.
 
 ---
 
@@ -41,9 +58,13 @@
 - Create `src/operations/mod.rs` and `src/operations/plan.rs`.
 - Modify `src/lib.rs` to export `operations`.
 - Create `tests/operation_plans.rs` for public API acceptance examples.
-- Modify `docs/specification/specification.md`, `docs/book/commands.md`, `docs/wip/plans/2026-10-11-instructions-rules-m1.md` and the module map in `AGENTS.md` for the implemented boundary.
-- Modify only current successor paragraphs in `docs/archive/README.md` for debt #264, preserving historical quotations and totals.
-- Update this plan's own checkboxes. Leave all other WIP pairs untouched; gardening is controller-owned after task approval.
+- Modify `docs/specification/specification.md`, `docs/book/commands.md`,
+  `docs/wip/plans/2026-10-11-instructions-rules-m1.md` and the module map in
+  `AGENTS.md` for the implemented boundary.
+- Modify only current successor paragraphs in `docs/archive/README.md` for debt
+  #264, preserving historical quotations and totals.
+- Update this plan's own checkboxes. Leave all other WIP pairs untouched;
+  gardening is controller-owned after task approval.
 
 **Interfaces consumed:**
 
@@ -145,10 +166,12 @@ fn creates_mixed_installation_with_exact_manual_bytes_and_modes() {
 }
 ```
 
-Run `cargo test --test operation_plans creates_mixed_installation_with_exact_manual_bytes_and_modes -- --exact`.
+Run
+`cargo test --test operation_plans creates_mixed_installation_with_exact_manual_bytes_and_modes -- --exact`.
 Save actual missing-API compile RED. Do not call that an assertion failure.
 
-- [x] **Step 2: Add only DTOs/module exports and an empty-result stub, then record genuine assertion RED.**
+- [x] **Step 2: Add only DTOs/module exports and an empty-result stub, then
+      record genuine assertion RED.**
 
 `src/operations/mod.rs` contains `pub mod plan;`. Export `pub mod operations;`
 from lib.rs. Copy the exact enum declarations from the design and import their
@@ -229,7 +252,8 @@ Do not infer modes, delete aggregates, normalize roots, adopt equal-byte files,
 drop omitted old forms or silently retain shared affected ownership. Run
 `cargo test --test operation_plans` until the specified matrix is GREEN.
 
-- [x] **Step 5: Execute six meaningful semantic controls, restoring exact bytes.**
+- [x] **Step 5: Execute six meaningful semantic controls, restoring exact
+      bytes.**
 
 Mutate one production behavior at a time: retain omitted dedicated files; bypass
 global stable binding validation for disjoint-form changes; bypass cross-form
@@ -242,26 +266,29 @@ all controls, require the full focused suite GREEN and no production mutation.
 
 - [x] **Step 6: Update documentation and self-review the complete task diff.**
 
-Document the exact API, complete mixed Sets, cross-form safety boundary, aggregate
-mode evidence, deterministic ordering and remaining activation gates in the
-canonical specification. Add a brief library-only usage note, module-map entry
-and bounded M1 status. Refresh archive current successor prose for #264; preserve
-historical quotations, totals and unrelated WIP dispositions. No native/CLI/schema-2
-activation claim. Read every changed file against the spec before final gates.
+Document the exact API, complete mixed Sets, cross-form safety boundary,
+aggregate mode evidence, deterministic ordering and remaining activation gates
+in the canonical specification. Add a brief library-only usage note, module-map
+entry and bounded M1 status. Refresh archive current successor prose for #264;
+preserve historical quotations, totals and unrelated WIP dispositions. No
+native/CLI/schema-2 activation claim. Read every changed file against the spec
+before final gates.
 
 - [x] **Step 7: Run final gates once, commit and report.**
 
-Use `PATH=/tmp/upskill-captured-check-bin:/Users/sebastientasson/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin`
-for the test/gate processes; it contains required tools but excludes native agent
-CLIs invoked by legacy plugin tests. Use a task-specific CARGO_TARGET_DIR for
-mutations and final verification; no reviewer may contaminate that target.
+Use
+`PATH=/tmp/upskill-captured-check-bin:/Users/sebastientasson/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin`
+for the test/gate processes; it contains required tools but excludes native
+agent CLIs invoked by legacy plugin tests. Use a task-specific CARGO_TARGET_DIR
+for mutations and final verification; no reviewer may contaminate that target.
 
-Run focused regression suites `cargo test --test instruction_plans --test file_plans --test compile_items --test ownership_records`.
+Run focused regression suites
+`cargo test --test instruction_plans --test file_plans --test compile_items --test ownership_records`.
 Then run ordered `just fmt` and `just verify`, followed by
-`cargo +1.85.0 check --all-targets --locked` and `git diff --check`.
-Stage only owned files and commit `feat: compose mixed owned artifact plans`.
-Write full actual RED/GREEN/control/gate evidence, file scope, self-review and
-commit/clean status to the controller-specified report. No push, PR, gardening,
-nested agents or discretionary review; the controller supplies independent
-task/final/numbered review gates. An explicit automatic QUICK trigger is handled
-only as instructed, with no extra cycle over review fixes.
+`cargo +1.85.0 check --all-targets --locked` and `git diff --check`. Stage only
+owned files and commit `feat: compose mixed owned artifact plans`. Write full
+actual RED/GREEN/control/gate evidence, file scope, self-review and commit/clean
+status to the controller-specified report. No push, PR, gardening, nested agents
+or discretionary review; the controller supplies independent task/final/numbered
+review gates. An explicit automatic QUICK trigger is handled only as instructed,
+with no extra cycle over review fixes.

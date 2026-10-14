@@ -7,15 +7,14 @@ metadata:
   author: driftsys
 ---
 
-Author upskill `.bundle.yaml` manifests — the distribution unit for
-shipping related skills, rules, and agents together with their plugin
-dependencies.
+Author upskill `.bundle.yaml` manifests — the distribution unit for shipping
+related skills, rules, and agents together with their plugin dependencies.
 
 ## When to Use
 
 - Creating a new bundle to group related items for one-shot install
-- Adding `plugins:` declarations so `upskill doctor` can reconcile
-  client-native dependencies
+- Adding `plugins:` declarations so `upskill doctor` can reconcile client-native
+  dependencies
 - Declaring `requires:` dependencies between bundles
 - Debugging resolution failures (cycles, missing items, name collisions)
 - Converting a loose collection of skills into a distributable bundle
@@ -29,8 +28,7 @@ dependencies.
 
 ## Bundle YAML Schema
 
-File must be named `<name>.bundle.yaml` (pure YAML, no Markdown
-frontmatter).
+File must be named `<name>.bundle.yaml` (pure YAML, no Markdown frontmatter).
 
 ```yaml
 schema: 1 # required — always 1
@@ -81,16 +79,15 @@ metadata: # optional — freeform
 | No collision with item names  | Bundle `foo` + skill `foo/` → lint error    |
 
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
-don't have a skill directory also called `prompt-engineering/`. Use a
-distinct name for one of them (e.g., rename the skill to `upskill-prompt-design`).
+don't have a skill directory also called `prompt-engineering/`. Use a distinct
+name for one of them (e.g., rename the skill to `upskill-prompt-design`).
 
 ### Choosing the namespace prefix
 
-Every item name (skill, rule, agent) shares one flat per-client directory
-per kind, so two items with the same `(kind, name)` collide on disk when
-co-installed from different sources. Prefix every item name with a
-**namespace** to keep it globally unique. Pick the scope by how the content
-is distributed:
+Every item name (skill, rule, agent) shares one flat per-client directory per
+kind, so two items with the same `(kind, name)` collide on disk when
+co-installed from different sources. Prefix every item name with a **namespace**
+to keep it globally unique. Pick the scope by how the content is distributed:
 
 | Scope        | Prefix form             | Use when                                                                                                                                                      |
 | ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -111,8 +108,8 @@ Rules of thumb:
 
 ## Plugin Declarations
 
-Plugins declare client-native dependencies that `upskill doctor`
-reconciles after install.
+Plugins declare client-native dependencies that `upskill doctor` reconciles
+after install.
 
 ### Per-Client Fields
 
@@ -176,9 +173,9 @@ informational.
 
 ### Lockfile Recording
 
-When a plugin's CLI is not found, `upskill add` records it in the
-lockfile with `"status": "skipped"`. Pre-existing lockfiles without a
-`status` field default to `"installed"`.
+When a plugin's CLI is not found, `upskill add` records it in the lockfile with
+`"status": "skipped"`. Pre-existing lockfiles without a `status` field default
+to `"installed"`.
 
 ## The `requires` Dependency Graph
 
@@ -196,8 +193,7 @@ requires:
 - Topological (post-order): dependencies install before dependents
 - Cycles are a hard error
 - Missing requirements are a hard error
-- Item conflicts (two bundles declaring same `(kind, name)`) are a hard
-  error
+- Item conflicts (two bundles declaring same `(kind, name)`) are a hard error
 - Same name in different kinds is allowed (rule `shared` + skill `shared`)
 
 ## Validation Workflow
@@ -218,16 +214,16 @@ Common findings:
 
 `upskill new bundle` does not exist yet. Author manually:
 
-1. **Choose a name** — `[a-z0-9-]{1,64}`, distinct from any item in the
-   same registry
+1. **Choose a name** — `[a-z0-9-]{1,64}`, distinct from any item in the same
+   registry
 2. **Create the file** — `skills/<name>.bundle.yaml`
 3. **Fill required fields** — `schema: 1`, `name`, `description`, `items`
 4. **Add items** — list skill/rule/agent names that exist in the registry
 5. **Add plugins** (if any) — declare per-client plugin dependencies
 6. **Add requires** (if any) — declare bundle dependencies
 7. **Lint** — `upskill lint <dir> --strict`
-8. **Test install** — `upskill add ./<dir>/<name>.bundle.yaml --claude`
-   (or whichever clients you target)
+8. **Test install** — `upskill add ./<dir>/<name>.bundle.yaml --claude` (or
+   whichever clients you target)
 9. **Run doctor** — `upskill doctor` to verify plugin reconciliation
 
 ## Common Mistakes
@@ -243,9 +239,9 @@ Common findings:
 
 ## Honest Caveats
 
-This skill has not been through a RED-GREEN-REFACTOR evaluation cycle.
-It is reference documentation distilled from ADR-0007, ADR-0008, and
-the format-spec. Gaps may exist in edge-case coverage.
+This skill has not been through a RED-GREEN-REFACTOR evaluation cycle. It is
+reference documentation distilled from ADR-0007, ADR-0008, and the format-spec.
+Gaps may exist in edge-case coverage.
 
 ## You Are Done When
 

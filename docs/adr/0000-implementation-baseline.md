@@ -4,30 +4,27 @@
 
 ## Context
 
-ADR-0000 is the standing engineering reference for upskill: stack
-choices, module layout, code conventions, and testing strategy. It is
-distinct from the design-decision ADRs (0001–0005) — those record what
-to build and why, this records how the codebase is laid out and how to
-work in it.
+ADR-0000 is the standing engineering reference for upskill: stack choices,
+module layout, code conventions, and testing strategy. It is distinct from the
+design-decision ADRs (0001–0005) — those record what to build and why, this
+records how the codebase is laid out and how to work in it.
 
 Concern boundaries:
 
-- **ADR-0001** owns the strategic v0.2 redesign and dependency
-  philosophy.
+- **ADR-0001** owns the strategic v0.2 redesign and dependency philosophy.
 - **ADR-0002** owns the on-disk SSOT contract.
 - **ADR-0003** owns the SSOT-to-client generation pipeline behaviour.
 - **ADR-0004** owns the CLI verb surface.
 - **ADR-0005** owns ecosystem-interop deviations.
 
-This ADR does not duplicate those decisions; it points to where they
-land in code.
+This ADR does not duplicate those decisions; it points to where they land in
+code.
 
 ## 1. Stack
 
 ### 1.1 Language and edition
 
-Rust 2024 edition. MSRV: 1.85 (first stable release to support edition
-2024).
+Rust 2024 edition. MSRV: 1.85 (first stable release to support edition 2024).
 
 ### 1.2 Dependencies
 
@@ -45,16 +42,16 @@ Rust 2024 edition. MSRV: 1.85 (first stable release to support edition
 | `ureq`                   | 2         | HTTP client (skills.sh API).             |
 | `ctrlc`                  | 3.4       | SIGINT handler — exit 130 on Ctrl+C.     |
 
-The version pin on `dprint-plugin-markdown` is deliberate; bumps are
-gated on re-running golden-file fixtures so generated output stays
-byte-identical. See [ADR-0003](./0003-generation-pipeline.md).
+The version pin on `dprint-plugin-markdown` is deliberate; bumps are gated on
+re-running golden-file fixtures so generated output stays byte-identical. See
+[ADR-0003](./0003-generation-pipeline.md).
 
-**Deliberately excluded.** `tokio`, `reqwest` (no async needed; `ureq`
-is synchronous), `git2` (~5 MB binding — shell out to `git` instead),
-`dialoguer` (prompts are simple enough with raw stdin), `toml` (no
-config files yet). [ADR-0001](./0001-multi-kind-compiler-architecture.md)
-§3 admits the well-targeted parsing/formatting deps above; `git2` and
-async runtimes remain out.
+**Deliberately excluded.** `tokio`, `reqwest` (no async needed; `ureq` is
+synchronous), `git2` (~5 MB binding — shell out to `git` instead), `dialoguer`
+(prompts are simple enough with raw stdin), `toml` (no config files yet).
+[ADR-0001](./0001-multi-kind-compiler-architecture.md) §3 admits the
+well-targeted parsing/formatting deps above; `git2` and async runtimes remain
+out.
 
 ### 1.3 Build profile
 
@@ -67,14 +64,13 @@ strip = true
 panic = "abort"
 ```
 
-Target: ~3 MB static binary. `panic = "abort"` saves ~200 KB by
-removing unwind tables.
+Target: ~3 MB static binary. `panic = "abort"` saves ~200 KB by removing unwind
+tables.
 
 ### 1.4 Crate layout
 
-`upskill` is both a library (`lib.rs`) and a binary (`main.rs`). The
-library exposes every module so integration tests can call them
-directly.
+`upskill` is both a library (`lib.rs`) and a binary (`main.rs`). The library
+exposes every module so integration tests can call them directly.
 
 ## 2. Module structure
 
@@ -134,21 +130,19 @@ Cross-references:
 
 ## 3. Conventions
 
-- **Error handling.** `anyhow::Result<T>` with `.with_context()`
-  everywhere except `source.rs`, which uses `thiserror` for a typed
-  `SourceParseError` (callers branch on the error variant).
-- **`main.rs` is I/O orchestration only.** It calls library modules,
-  handles errors, and prints results. Business logic lives in the
-  library.
-- **Only `main.rs` writes to stdout/stderr.** Every other module
-  returns data structures or `Result<T>`; presentation belongs in
-  `main.rs`.
-- **Zero warnings.** Compiler, clippy, and docs tooling. `-D warnings`
-  is enforced in CI.
-- **Clippy `too_many_arguments`.** Group related flags into structs
-  (e.g. `AddContext`) when a function would exceed seven params.
-- **Comments only for the WHY of non-obvious logic.** Don't restate
-  what the code does.
+- **Error handling.** `anyhow::Result<T>` with `.with_context()` everywhere
+  except `source.rs`, which uses `thiserror` for a typed `SourceParseError`
+  (callers branch on the error variant).
+- **`main.rs` is I/O orchestration only.** It calls library modules, handles
+  errors, and prints results. Business logic lives in the library.
+- **Only `main.rs` writes to stdout/stderr.** Every other module returns data
+  structures or `Result<T>`; presentation belongs in `main.rs`.
+- **Zero warnings.** Compiler, clippy, and docs tooling. `-D warnings` is
+  enforced in CI.
+- **Clippy `too_many_arguments`.** Group related flags into structs (e.g.
+  `AddContext`) when a function would exceed seven params.
+- **Comments only for the WHY of non-obvious logic.** Don't restate what the
+  code does.
 
 ## 4. Testing strategy
 
@@ -158,20 +152,16 @@ Live alongside modules. Coverage focuses on pure logic:
 
 - `source.rs` — every format variant and every error.
 - `model/` — round-trip serde for each kind, schema-version handling.
-- `parse/frontmatter.rs` — delimiter edge cases, missing or malformed
-  YAML.
+- `parse/frontmatter.rs` — delimiter edge cases, missing or malformed YAML.
 - `parse/bundle.rs` — bundle file load + registry discovery.
-- `generate/{claude,copilot,opencode}.rs` — frontmatter mapping per
-  kind.
-- `generate/directives.rs` — conditional block parsing, negation,
-  nesting.
-- `generate/format.rs` — dprint idempotence on already-formatted
-  input.
-- `pipeline.rs` — install / remove / update / doctor / list against
-  in-memory lockfiles.
+- `generate/{claude,copilot,opencode}.rs` — frontmatter mapping per kind.
+- `generate/directives.rs` — conditional block parsing, negation, nesting.
+- `generate/format.rs` — dprint idempotence on already-formatted input.
+- `pipeline.rs` — install / remove / update / doctor / list against in-memory
+  lockfiles.
 - `lockfile.rs` — schema rejection, upsert/remove ordering.
-- `lint.rs`, `fmt.rs`, `scaffold.rs` — per-rule findings, canonical
-  round-trip, name validation.
+- `lint.rs`, `fmt.rs`, `scaffold.rs` — per-rule findings, canonical round-trip,
+  name validation.
 - `auth.rs`, `bundle.rs`, `ancillary.rs` — per-module logic.
 
 ### 4.2 Integration tests
@@ -205,10 +195,9 @@ tests/
 └── fixtures/               golden SSOT files and expected per-client output
 ```
 
-Pattern: `assert_cmd::Command::cargo_bin("upskill")` +
-`tempfile::TempDir`. When adding behaviour, prefer extending the
-matching file or creating a new `cli_<area>.rs` /
-`pipeline_<area>.rs` / `generate_<kind>.rs`.
+Pattern: `assert_cmd::Command::cargo_bin("upskill")` + `tempfile::TempDir`. When
+adding behaviour, prefer extending the matching file or creating a new
+`cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<kind>.rs`.
 
 ## 5. Build and verify
 
@@ -222,7 +211,6 @@ just verify      # commit check + build (run before opening a PR)
 just fmt         # cargo fmt + dprint fmt
 ```
 
-After `git clone` or `git worktree add`, run `./bootstrap` once. It
-installs `git-std` from `driftsys/git-std` and runs
-`git std bootstrap`. Release tagging (`just release`) uses
-`git std bump`.
+After `git clone` or `git worktree add`, run `./bootstrap` once. It installs
+`git-std` from `driftsys/git-std` and runs `git std bootstrap`. Release tagging
+(`just release`) uses `git std bump`.

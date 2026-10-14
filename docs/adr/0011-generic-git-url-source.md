@@ -42,15 +42,15 @@ behavior and the auth-via-git-config posture are untouched.
 
 ### What the `gitlab:` removal means in practice
 
-The `gitlab:` and `gitlab+<host>:` shorthands emit `SourceParseError::GitlabShorthandRemoved`
-(exit code 2) with a message pointing at the full-URL replacement. The original
-decision also rejected old lockfile labels. The dated amendment below supersedes
-that persisted-state policy only.
+The `gitlab:` and `gitlab+<host>:` shorthands emit
+`SourceParseError::GitlabShorthandRemoved` (exit code 2) with a message pointing
+at the full-URL replacement. The original decision also rejected old lockfile
+labels. The dated amendment below supersedes that persisted-state policy only.
 
 ### URL normalization
 
-A trailing `/` or `.git` on the input URL is stripped so browser-pasted URLs
-and bare-clone URLs normalize to one canonical label in the lockfile.
+A trailing `/` or `.git` on the input URL is stripped so browser-pasted URLs and
+bare-clone URLs normalize to one canonical label in the lockfile.
 
 ## Options considered
 
@@ -62,8 +62,8 @@ shorthand and lockfile label are worth keeping a second, typed code path.
 `github.com` remains `InstallSource::Github`. Rejected for now.
 
 **Accept ssh URLs directly.** The `@ref` and `:subfolder` suffix syntax clashes
-with the scp-style `git@host:path` syntax (the `:` separator is ambiguous).
-SSH reachability is already covered by git's `url.<ssh>.insteadOf` rewrites,
+with the scp-style `git@host:path` syntax (the `:` separator is ambiguous). SSH
+reachability is already covered by git's `url.<ssh>.insteadOf` rewrites,
 consistent with the auth-via-git-config design. Rejected.
 
 **`git+https://` scheme prefix.** upskill has exactly one https fetch strategy
@@ -73,12 +73,14 @@ browser-paste UX. Rejected.
 ## Consequences
 
 Any https git host works: GitLab (including self-hosted instances and subgroups
-at any depth), Bitbucket, Gitea, Codeberg, and plain git servers. The only
-input forms `add` accepts are:
+at any depth), Bitbucket, Gitea, Codeberg, and plain git servers. The only input
+forms `add` accepts are:
 
 - `owner/repo[@ref][:path]` — GitHub shorthand (unchanged)
-- `https://github.com/owner/repo[...]` — GitHub full URL (unchanged, funnels to `Github`)
-- `https://<any-other-host>/<path>[@<ref>][:<subfolder>]` — generic git remote (new)
+- `https://github.com/owner/repo[...]` — GitHub full URL (unchanged, funnels to
+  `Github`)
+- `https://<any-other-host>/<path>[@<ref>][:<subfolder>]` — generic git remote
+  (new)
 - `./path`, `/abs`, `~/path` — local paths (unchanged)
 
 At least one path segment after the host is required. Labels round-trip cleanly
@@ -86,10 +88,13 @@ through the lockfile.
 
 ## Satisfies
 
-- Acceptance criteria from `docs/wip/specs/2026-06-10-generic-git-url-source-design.md`
-- Implemented in: `src/source.rs` (`GitRepo`, `parse_git_url`, `GitlabShorthandRemoved`),
-  `src/pipeline/git.rs` (`git_clone_url`, `install_from_git`)
-- Tested by: `tests/cli_exit_codes.rs::removed_gitlab_shorthand_exits_two_with_url_hint`,
+- Acceptance criteria from
+  `docs/wip/specs/2026-06-10-generic-git-url-source-design.md`
+- Implemented in: `src/source.rs` (`GitRepo`, `parse_git_url`,
+  `GitlabShorthandRemoved`), `src/pipeline/git.rs` (`git_clone_url`,
+  `install_from_git`)
+- Tested by:
+  `tests/cli_exit_codes.rs::removed_gitlab_shorthand_exits_two_with_url_hint`,
   `src/source.rs::parse_git_url_*`, `src/pipeline/git.rs::git_clone_url_*`
 
 ## Amendment: persisted GitLab source labels (2026-10-12)
@@ -101,8 +106,8 @@ therefore decodes these historical labels into generic HTTPS git sources:
 - `gitlab:<namespace>/<repository>[@ref][:subfolder]` uses `gitlab.com`.
 - `gitlab+<hostname>:<namespace>/<repository>[@ref][:subfolder]` uses the
   recorded hostname, including nested namespaces.
-- `gitlab+<hostname>:<port>:<namespace>/<repository>[@ref][:subfolder]` uses
-  the recorded numeric HTTPS port. Both colons before the namespace are required.
+- `gitlab+<hostname>:<port>:<namespace>/<repository>[@ref][:subfolder]` uses the
+  recorded numeric HTTPS port. Both colons before the namespace are required.
 
 A hostname consists of non-empty dot-separated ASCII labels, each starting and
 ending with a letter or digit and containing only letters, digits and hyphens.
@@ -114,25 +119,26 @@ decimal digits and has a value from 1 through 65535. A second colon after the
 hostname or closing IPv6 bracket and before the first path slash identifies a
 port. Without that second delimiter, a numeric namespace remains a namespace:
 `gitlab+host:123/repo` means `https://host/123/repo`, while
-`gitlab+host:8443:org/repo` means `https://host:8443/org/repo`. Malformed authority
-or port delimiters require reconciliation; no remote is guessed.
-Every namespace and repository component, and any supplied ref or subfolder,
-must be non-empty.
+`gitlab+host:8443:org/repo` means `https://host:8443/org/repo`. Malformed
+authority or port delimiters require reconciliation; no remote is guessed. Every
+namespace and repository component, and any supplied ref or subfolder, must be
+non-empty.
 
 Conversion must round-trip through the existing modern label parser without
 changing the generic source, host, repository, ref or subfolder. Historical
 repository spellings ending in `.git` or `/`, and authorities that the modern
-parser specializes as GitHub sources, require explicit reconciliation instead
-of silent normalization or loss of a port. Unsupported or ambiguous state fails
+parser specializes as GitHub sources, require explicit reconciliation instead of
+silent normalization or loss of a port. Unsupported or ambiguous state fails
 before fetch with its lockfile label and guidance to reconcile a verified HTTPS
 URL, ref and subfolder. It remains inspectable with `list` and `doctor`.
 
 A successful applying `update` writes canonical HTTPS source labels for the
-items and bundles it reinstalls, including unchanged pinned content. `update
---dry-run`, `list` and `doctor` preserve lockfile and generated-output bytes.
-Alias, pinned ref, subfolder, bundle membership and unrelated item/plugin/MCP
-records retain their existing lifecycle behavior. Authentication still uses
-only git configuration, credential helpers and URL rewrites.
+items and bundles it reinstalls, including unchanged pinned content.
+`update
+--dry-run`, `list` and `doctor` preserve lockfile and generated-output
+bytes. Alias, pinned ref, subfolder, bundle membership and unrelated
+item/plugin/MCP records retain their existing lifecycle behavior. Authentication
+still uses only git configuration, credential helpers and URL rewrites.
 
 New `add` input is unchanged: `gitlab:` and `gitlab+` shorthands still exit 2
 with the full-HTTPS replacement hint. Modern HTTPS, GitHub and local parsing is

@@ -1,26 +1,53 @@
 # Coupling Redesign — Slice 1 (same-source) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reposition co-location as the "symmetric unit" primitive and add the directed-dependency tier: optional/relaxed item naming, `ignore` copy-scoping, and same-source `requires` auto-install — plus the lockfile/doctor bookkeeping that makes co-located units removable and orphaned dependencies visible.
+**Goal:** Reposition co-location as the "symmetric unit" primitive and add the
+directed-dependency tier: optional/relaxed item naming, `ignore` copy-scoping,
+and same-source `requires` auto-install — plus the lockfile/doctor bookkeeping
+that makes co-located units removable and orphaned dependencies visible.
 
-**Architecture:** SSOT models gain two stripped-from-output fields (`requires`, `ignore`) and an optional `name`. Item _identity_ becomes `(kind, effective-name)` where the effective name is the frontmatter `name` for rules/agents (may diverge from the folder) or the folder name for skills (Agent Skills standard mandate) and as a fallback. The install pipeline resolves the same-source `requires` transitive closure before conflict detection, copies resources minus `ignore` globs, and records co-location grouping + `required_by` provenance in the lockfile.
+**Architecture:** SSOT models gain two stripped-from-output fields (`requires`,
+`ignore`) and an optional `name`. Item _identity_ becomes
+`(kind, effective-name)` where the effective name is the frontmatter `name` for
+rules/agents (may diverge from the folder) or the folder name for skills (Agent
+Skills standard mandate) and as a fallback. The install pipeline resolves the
+same-source `requires` transitive closure before conflict detection, copies
+resources minus `ignore` globs, and records co-location grouping + `required_by`
+provenance in the lockfile.
 
-**Tech Stack:** Rust (edition 2024, MSRV 1.85), `serde` + `serde_yaml_ng`, `anyhow`, `assert_cmd` + `tempfile` for integration tests. No new dependencies (the `ignore` glob matcher is hand-rolled to protect the ~3 MB binary target).
+**Tech Stack:** Rust (edition 2024, MSRV 1.85), `serde` + `serde_yaml_ng`,
+`anyhow`, `assert_cmd` + `tempfile` for integration tests. No new dependencies
+(the `ignore` glob matcher is hand-rolled to protect the ~3 MB binary target).
 
-**Reference spec:** [docs/wip/specs/2026-06-03-coupling-redesign-design.md](../specs/2026-06-03-coupling-redesign-design.md)
+**Reference spec:**
+[docs/wip/specs/2026-06-03-coupling-redesign-design.md](../specs/2026-06-03-coupling-redesign-design.md)
 
-**Out of scope (Slice 2, separate plan):** cross-source `requires` resolution (`{ name, source }` fetched via `fetch_ssot`), cross-source cycle/conflict keyed by canonical source label. Slice 1 parses the `{ name, source }` form but errors clearly when asked to resolve one.
+**Out of scope (Slice 2, separate plan):** cross-source `requires` resolution
+(`{ name, source }` fetched via `fetch_ssot`), cross-source cycle/conflict keyed
+by canonical source label. Slice 1 parses the `{ name, source }` form but errors
+clearly when asked to resolve one.
 
 ---
 
 ## Conventions for every task
 
-- **Worktree:** all work happens in `.claude/worktrees/feat-coupling-redesign/` (branch `feat/coupling-redesign`, already bootstrapped, off `origin/main`). Use full worktree-prefixed absolute paths for every Write/Edit.
-- **TDD:** write the failing test, run it red, implement, run it green, commit. One Conventional Commit per task (or per sub-behavior).
-- **Test isolation (issue #193 — has bitten twice):** integration tests MUST use `tests/common::upskill_cmd(fake_home)` and create a `.git` marker dir in the project dir, or `upskill add` defaults to global `$HOME` scope and pollutes the real `~`. Inspect `tests/common/mod.rs` before writing the first integration test and follow the existing pattern.
+- **Worktree:** all work happens in `.claude/worktrees/feat-coupling-redesign/`
+  (branch `feat/coupling-redesign`, already bootstrapped, off `origin/main`).
+  Use full worktree-prefixed absolute paths for every Write/Edit.
+- **TDD:** write the failing test, run it red, implement, run it green, commit.
+  One Conventional Commit per task (or per sub-behavior).
+- **Test isolation (issue #193 — has bitten twice):** integration tests MUST use
+  `tests/common::upskill_cmd(fake_home)` and create a `.git` marker dir in the
+  project dir, or `upskill add` defaults to global `$HOME` scope and pollutes
+  the real `~`. Inspect `tests/common/mod.rs` before writing the first
+  integration test and follow the existing pattern.
 - **Before the PR:** `just fmt` then `just verify`. Squash-merge.
-- **Pre-1.0:** no back-compat shims. Lockfile field additions are additive (`#[serde(default)]`), no schema bump.
+- **Pre-1.0:** no back-compat shims. Lockfile field additions are additive
+  (`#[serde(default)]`), no schema bump.
 
 ---
 
@@ -35,12 +62,16 @@
 
 - Create: `src/model/requires.rs` — `ItemRequires` + `RequireRef`
 - Modify: `src/model/mod.rs` — re-export the new types
-- Modify: `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs` — `name: Option<String>`, add `requires`, `ignore`
+- Modify: `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs` —
+  `name: Option<String>`, add `requires`, `ignore`
 
 **Generation (Task 4):**
 
-- Modify: `src/generate/mod.rs` — `render_*` and `build_skill_frontmatter` take `name: &str`
-- Modify: `src/generate/claude.rs`, `src/generate/copilot.rs`, `src/generate/opencode.rs` — `rule_frontmatter`/`agent_frontmatter`/`skill_frontmatter` take `name: &str`
+- Modify: `src/generate/mod.rs` — `render_*` and `build_skill_frontmatter` take
+  `name: &str`
+- Modify: `src/generate/claude.rs`, `src/generate/copilot.rs`,
+  `src/generate/opencode.rs` —
+  `rule_frontmatter`/`agent_frontmatter`/`skill_frontmatter` take `name: &str`
 
 **Resources (Task 3):**
 
@@ -50,26 +81,32 @@
 
 **Naming + discovery (Task 4):**
 
-- Modify: `src/pipeline/discovery.rs` — `effective_name`, `probe_effective_name`, `scan_source_items` returns effective names
+- Modify: `src/pipeline/discovery.rs` — `effective_name`,
+  `probe_effective_name`, `scan_source_items` returns effective names
 - Modify: `src/pipeline/install.rs` — compute + use effective name
-- Modify: `src/lint.rs` — relax `check_name_matches_dir`; `parse_kind` returns `Option<String>` name
+- Modify: `src/lint.rs` — relax `check_name_matches_dir`; `parse_kind` returns
+  `Option<String>` name
 
 **Dependencies (Task 5):**
 
 - Modify: `src/pipeline/install.rs` — `resolve_requires_closure`
 - Modify: `src/pipeline/mod.rs` — wire closure into `install_with_lockfile`
-- Modify: `src/lockfile.rs` — `LockedItem.required_by`, `items_from_report` takes a provenance map
+- Modify: `src/lockfile.rs` — `LockedItem.required_by`, `items_from_report`
+  takes a provenance map
 
 **Grouping + lifecycle (Tasks 6, 7):**
 
 - Modify: `src/lockfile.rs` — `LockedItem.group`
 - Modify: `src/pipeline/install.rs` / `src/pipeline/mod.rs` — record `group`
-- Modify: `src/pipeline/lifecycle.rs` — `remove` acts on the co-located unit; `doctor` orphaned-dependency flag
-- Modify: `src/pipeline/report.rs` — `OrphanedDependency` + `DoctorReport.orphaned_dependencies`
+- Modify: `src/pipeline/lifecycle.rs` — `remove` acts on the co-located unit;
+  `doctor` orphaned-dependency flag
+- Modify: `src/pipeline/report.rs` — `OrphanedDependency` +
+  `DoctorReport.orphaned_dependencies`
 
 **Integration tests:**
 
-- Create/extend: `tests/cli_requires.rs`, `tests/generate_*` (strip), `tests/pipeline_*` (grouping, doctor)
+- Create/extend: `tests/cli_requires.rs`, `tests/generate_*` (strip),
+  `tests/pipeline_*` (grouping, doctor)
 
 ---
 
@@ -80,39 +117,72 @@
 - Create: `docs/adr/0009-coupling-tiers-and-dependencies.md`
 - Modify: `docs/format-spec.md`
 
-This task is documentation; its "test" is `just fmt` (markdownlint + dprint) passing and the internal links resolving. No Rust tests.
+This task is documentation; its "test" is `just fmt` (markdownlint + dprint)
+passing and the internal links resolving. No Rust tests.
 
 - [ ] **Step 1: Write ADR-0009**
 
-Create `docs/adr/0009-coupling-tiers-and-dependencies.md` following the structure of `docs/adr/0006-flat-item-layout.md` (Status / Context / Decision / Consequences / Alternatives considered / References). Content, drawn verbatim in substance from the design spec:
+Create `docs/adr/0009-coupling-tiers-and-dependencies.md` following the
+structure of `docs/adr/0006-flat-item-layout.md` (Status / Context / Decision /
+Consequences / Alternatives considered / References). Content, drawn verbatim in
+substance from the design spec:
 
 - **Status**: Proposed (2026-06-03). Amends ADR-0006.
-- **Context**: co-location is currently the only "install together" mechanism; the three failures (forced shared name, no copy scoping, ecosystem-invisible coupling). Reference the spec.
+- **Context**: co-location is currently the only "install together" mechanism;
+  the three failures (forced shared name, no copy scoping, ecosystem-invisible
+  coupling). Reference the spec.
 - **Decision**:
-  - Three coupling tiers (co-location = symmetric unit; `requires`/`preload-skills` = directed; bundles = curated). A mutual dependency is co-location, never mutual `requires` (cycle = error).
-  - Relaxed + optional naming: skill `name` optional → folder fallback, must match folder if present; rule/agent `name` from frontmatter, may diverge, folder is fallback + grouping key only; identity is `(kind, name)`, layout-independent; no lint diagnostic on rule/agent divergence.
-  - `requires` (per-entrypoint, hard, acyclic, resolved by `(kind, name)`, string-or-`{name,source}`); `preload-skills` implies `requires.skills`. `ignore` (subtractive copy scope).
-  - Cross-source contract (source reuses `add` DSL; conflict = same `(kind,name)` different source/ref is an error reusing §3.7; cycle keyed by `(canonical-source, kind, name)`; `required_by` provenance; removal never cascades; doctor flags orphaned deps). Note that cross-source _resolution_ ships in a follow-up.
-  - Inherent limit: co-located rules/agents are invisible to standard-only tooling; the cross-kind guarantee holds only inside upskill.
-- **Consequences** and **Alternatives considered**: lift the "Rejected" list from the design spec §4.
+  - Three coupling tiers (co-location = symmetric unit;
+    `requires`/`preload-skills` = directed; bundles = curated). A mutual
+    dependency is co-location, never mutual `requires` (cycle = error).
+  - Relaxed + optional naming: skill `name` optional → folder fallback, must
+    match folder if present; rule/agent `name` from frontmatter, may diverge,
+    folder is fallback + grouping key only; identity is `(kind, name)`,
+    layout-independent; no lint diagnostic on rule/agent divergence.
+  - `requires` (per-entrypoint, hard, acyclic, resolved by `(kind, name)`,
+    string-or-`{name,source}`); `preload-skills` implies `requires.skills`.
+    `ignore` (subtractive copy scope).
+  - Cross-source contract (source reuses `add` DSL; conflict = same
+    `(kind,name)` different source/ref is an error reusing §3.7; cycle keyed by
+    `(canonical-source, kind, name)`; `required_by` provenance; removal never
+    cascades; doctor flags orphaned deps). Note that cross-source _resolution_
+    ships in a follow-up.
+  - Inherent limit: co-located rules/agents are invisible to standard-only
+    tooling; the cross-kind guarantee holds only inside upskill.
+- **Consequences** and **Alternatives considered**: lift the "Rejected" list
+  from the design spec §4.
 - **References**: ADR-0006, format-spec, design spec.
 
 - [ ] **Step 2: Edit format-spec §2.1 — relaxed/optional naming**
 
-In `docs/format-spec.md` §2.1, replace the constraint "`<name>` MUST match the `name` field in every entrypoint within the directory" and the co-location "every entrypoint's `name:` field MUST equal the directory name" with:
+In `docs/format-spec.md` §2.1, replace the constraint "`<name>` MUST match the
+`name` field in every entrypoint within the directory" and the co-location
+"every entrypoint's `name:` field MUST equal the directory name" with:
 
-> - A `SKILL.md`'s `name` field, **when present**, MUST equal the directory name (Agent Skills standard). When absent, the effective skill name is the directory name.
-> - A `RULE.md`'s or `AGENT.md`'s `name` field, when present, is that item's identity and MAY differ from the directory name. When absent, the effective name is the directory name.
-> - Item identity is `(kind, effective-name)` and is independent of on-disk layout.
-> - A directory MAY hold independently-named kinds (e.g. a skill named after the directory plus a rule with its own name). The directory name is the co-location grouping key.
+> - A `SKILL.md`'s `name` field, **when present**, MUST equal the directory name
+>   (Agent Skills standard). When absent, the effective skill name is the
+>   directory name.
+> - A `RULE.md`'s or `AGENT.md`'s `name` field, when present, is that item's
+>   identity and MAY differ from the directory name. When absent, the effective
+>   name is the directory name.
+> - Item identity is `(kind, effective-name)` and is independent of on-disk
+>   layout.
+> - A directory MAY hold independently-named kinds (e.g. a skill named after the
+>   directory plus a rule with its own name). The directory name is the
+>   co-location grouping key.
 
-Keep the lowercase/hyphen/length constraints on the effective name. Keep the Agent Skills compatibility paragraph.
+Keep the lowercase/hyphen/length constraints on the effective name. Keep the
+Agent Skills compatibility paragraph.
 
 - [ ] **Step 3: Edit format-spec §2.4 — `ignore` copy scope**
 
 In §2.4, after the "Implementations MUST preserve supporting files" bullet, add:
 
-> An item MAY declare an `ignore` list in its frontmatter (§3.1) to exclude supporting files from the copy. Patterns are `.gitignore`-style and **subtractive only** (there is no allowlist form). A file matching any `ignore` pattern is not copied to client output. `ignore` itself is stripped from generated output.
+> An item MAY declare an `ignore` list in its frontmatter (§3.1) to exclude
+> supporting files from the copy. Patterns are `.gitignore`-style and
+> **subtractive only** (there is no allowlist form). A file matching any
+> `ignore` pattern is not copied to client output. `ignore` itself is stripped
+> from generated output.
 
 - [ ] **Step 4: Edit format-spec §3.1 — `requires` + `ignore` common fields**
 
@@ -123,23 +193,38 @@ Add two rows to the §3.1 common-fields table:
 | `requires` | map      | no       | Directed item dependencies (`rules`/`skills`/`agents`). See §3.7. Stripped from output. |
 | `ignore`   | string[] | no       | `.gitignore`-style subtractive copy-scope patterns (§2.4). Stripped from output.        |
 
-Add field semantics prose: each `requires.<kind>` entry is a bare name (same source) or a `{ name, source }` map (cross-source; `source` uses the `add` source DSL). Both `requires` and `ignore` are stripped from every client output (like `schema`, `metadata`, `license`).
+Add field semantics prose: each `requires.<kind>` entry is a bare name (same
+source) or a `{ name, source }` map (cross-source; `source` uses the `add`
+source DSL). Both `requires` and `ignore` are stripped from every client output
+(like `schema`, `metadata`, `license`).
 
 - [ ] **Step 5: Edit format-spec §3.4 — `preload-skills` implies `requires`**
 
-In §3.4, add to the `preload-skills` description: "Listing a skill in `preload-skills` also implies `requires.skills` for that skill (it is both required for install and preloaded at agent startup)."
+In §3.4, add to the `preload-skills` description: "Listing a skill in
+`preload-skills` also implies `requires.skills` for that skill (it is both
+required for install and preloaded at agent startup)."
 
 - [ ] **Step 6: Edit format-spec §3.7 — item `requires` cycle + conflict**
 
-Add a subsection "Item `requires` resolution" stating: installing an item implies installing its transitive `requires` closure; resolution is by `(kind, name)`; circular item `requires` MUST be rejected as an error; the same `(kind, name)` resolving to a different source or ref MUST be an error (the same rule already stated for bundle item conflicts). Note cross-source resolution is specified here but lands in a later release.
+Add a subsection "Item `requires` resolution" stating: installing an item
+implies installing its transitive `requires` closure; resolution is by
+`(kind, name)`; circular item `requires` MUST be rejected as an error; the same
+`(kind, name)` resolving to a different source or ref MUST be an error (the same
+rule already stated for bundle item conflicts). Note cross-source resolution is
+specified here but lands in a later release.
 
 - [ ] **Step 7: Edit format-spec §3.8 — canonical key order**
 
-Add `requires` and `ignore` to each item kind's key order (after `metadata`, before the passthrough blocks). Rule/Skill/Agent rows get `…, metadata, requires, ignore, claude, copilot, opencode, extras`. Bundle row unchanged.
+Add `requires` and `ignore` to each item kind's key order (after `metadata`,
+before the passthrough blocks). Rule/Skill/Agent rows get
+`…, metadata, requires, ignore, claude, copilot, opencode, extras`. Bundle row
+unchanged.
 
 - [ ] **Step 8: Edit format-spec §11 — mark multi-repo sources resolved**
 
-Change open-question 7 ("Multi-repo item sources") to RESOLVED, noting `requires` with a `source` locator (§3.7) defines the resolution contract; same-source resolution is implemented and cross-source resolution is staged.
+Change open-question 7 ("Multi-repo item sources") to RESOLVED, noting
+`requires` with a `source` locator (§3.7) defines the resolution contract;
+same-source resolution is implemented and cross-source resolution is staged.
 
 - [ ] **Step 9: Format and commit**
 
@@ -150,7 +235,8 @@ git add docs/adr/0009-coupling-tiers-and-dependencies.md docs/format-spec.md
 git commit -m "docs(adr): ADR-0009 coupling tiers + dependencies; format-spec edits"
 ```
 
-Expected: `just fmt` reports formatted/clean; commit succeeds (the `git std lint` commit-message hook passes for a Conventional Commit).
+Expected: `just fmt` reports formatted/clean; commit succeeds (the
+`git std lint` commit-message hook passes for a Conventional Commit).
 
 ---
 
@@ -160,10 +246,13 @@ Expected: `just fmt` reports formatted/clean; commit succeeds (the `git std lint
 
 - Create: `src/model/requires.rs`
 - Modify: `src/model/mod.rs`
-- Modify: `src/model/skill.rs:7-33`, `src/model/rule.rs:14-39`, `src/model/agent.rs:31-68`
-- Test: unit tests in `src/model/requires.rs` + `src/parse/frontmatter.rs`; integration strip test in `tests/`
+- Modify: `src/model/skill.rs:7-33`, `src/model/rule.rs:14-39`,
+  `src/model/agent.rs:31-68`
+- Test: unit tests in `src/model/requires.rs` + `src/parse/frontmatter.rs`;
+  integration strip test in `tests/`
 
-`name` stays `String` in this task — only `requires`/`ignore` are added, so the build and all generation stay green. Optional `name` is Task 4.
+`name` stays `String` in this task — only `requires`/`ignore` are added, so the
+build and all generation stay green. Optional `name` is Task 4.
 
 - [ ] **Step 1: Write the failing model test**
 
@@ -244,12 +333,13 @@ mod tests {
 
 - [ ] **Step 2: Run it red**
 
-Run: `cargo test -p upskill model::requires`
-Expected: FAIL to compile — module not declared in `src/model/mod.rs`.
+Run: `cargo test -p upskill model::requires` Expected: FAIL to compile — module
+not declared in `src/model/mod.rs`.
 
 - [ ] **Step 3: Declare and re-export the module**
 
-In `src/model/mod.rs`, add `pub mod requires;` (after `pub mod rule;`) and to the re-export block add:
+In `src/model/mod.rs`, add `pub mod requires;` (after `pub mod rule;`) and to
+the re-export block add:
 
 ```rust
 pub use requires::{ItemRequires, RequireRef};
@@ -257,12 +347,14 @@ pub use requires::{ItemRequires, RequireRef};
 
 - [ ] **Step 4: Run it green**
 
-Run: `cargo test -p upskill model::requires`
-Expected: PASS (2 tests).
+Run: `cargo test -p upskill model::requires` Expected: PASS (2 tests).
 
 - [ ] **Step 5: Add `requires` + `ignore` to the three item models**
 
-In each of `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs`, add these two fields immediately after the `metadata` field and before the passthrough blocks (`claude`/`copilot`/`opencode`). Add `ItemRequires` to the `use crate::model::...` import line in each file.
+In each of `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs`, add
+these two fields immediately after the `metadata` field and before the
+passthrough blocks (`claude`/`copilot`/`opencode`). Add `ItemRequires` to the
+`use crate::model::...` import line in each file.
 
 ```rust
 /// §3.7 directed dependencies. SSOT-only — stripped from output.
@@ -273,7 +365,8 @@ pub requires: crate::model::ItemRequires,
 pub ignore: Vec<String>,
 ```
 
-(Using the fully-qualified `crate::model::ItemRequires` avoids touching each file's `use` line if preferred; either form compiles.)
+(Using the fully-qualified `crate::model::ItemRequires` avoids touching each
+file's `use` line if preferred; either form compiles.)
 
 - [ ] **Step 6: Confirm fields land outside `extra` (round-trip test)**
 
@@ -303,12 +396,14 @@ fn requires_and_ignore_parse_into_typed_fields_not_extra() {
 }
 ```
 
-Run: `cargo test -p upskill requires_and_ignore_parse_into_typed_fields_not_extra`
+Run:
+`cargo test -p upskill requires_and_ignore_parse_into_typed_fields_not_extra`
 Expected: PASS.
 
 - [ ] **Step 7: Write the failing generation-strip integration test**
 
-Skills emit their `extra` map verbatim, so this guards the real regression. Add `tests/generate_strip_ssot_fields.rs`:
+Skills emit their `extra` map verbatim, so this guards the real regression. Add
+`tests/generate_strip_ssot_fields.rs`:
 
 ```rust
 use std::fs;
@@ -342,12 +437,15 @@ fn requires_and_ignore_are_stripped_from_skill_output() {
 }
 ```
 
-NOTE: adapt the `common::` helper calls to the actual `tests/common/mod.rs` surface (read it first). The behavioral asserts are what matter.
+NOTE: adapt the `common::` helper calls to the actual `tests/common/mod.rs`
+surface (read it first). The behavioral asserts are what matter.
 
 - [ ] **Step 8: Run it — verify it already passes**
 
-Run: `cargo test --test generate_strip_ssot_fields`
-Expected: PASS without any generation change — because the typed fields are not in `extra` and the builders never insert them. If it FAILS, the fields leaked into `extra` (revisit Step 5). This test is a regression guard, not a driver for new code.
+Run: `cargo test --test generate_strip_ssot_fields` Expected: PASS without any
+generation change — because the typed fields are not in `extra` and the builders
+never insert them. If it FAILS, the fields leaked into `extra` (revisit Step 5).
+This test is a regression guard, not a driver for new code.
 
 - [ ] **Step 9: Commit**
 
@@ -512,28 +610,32 @@ mod tests {
 
 - [ ] **Step 2: Run it red**
 
-Run: `cargo test -p upskill pipeline::ignore`
-Expected: FAIL — `mod ignore;` not declared.
+Run: `cargo test -p upskill pipeline::ignore` Expected: FAIL — `mod ignore;` not
+declared.
 
 - [ ] **Step 3: Declare the module**
 
-In `src/pipeline/mod.rs`, add `mod ignore;` alongside the other `mod` lines (around line 31-37).
+In `src/pipeline/mod.rs`, add `mod ignore;` alongside the other `mod` lines
+(around line 31-37).
 
 - [ ] **Step 4: Run it green**
 
-Run: `cargo test -p upskill pipeline::ignore`
-Expected: PASS (5 tests).
+Run: `cargo test -p upskill pipeline::ignore` Expected: PASS (5 tests).
 
 - [ ] **Step 5: Apply the filter in install**
 
-In `src/pipeline/install.rs`, the resource collection currently reads (around line 425-428):
+In `src/pipeline/install.rs`, the resource collection currently reads (around
+line 425-428):
 
 ```rust
 let source_hash = hash_item_dir(&dir);
 let resources = iter_item_resources(&dir);
 ```
 
-The `ignore` list lives on the parsed model. The parse happens inside the per-kind `match` (Step in Task 4 restructures this). For Task 3, capture the `ignore` list out of the match. Change the `match` block to also yield the `ignore` vec, e.g. extend the tuple it binds:
+The `ignore` list lives on the parsed model. The parse happens inside the
+per-kind `match` (Step in Task 4 restructures this). For Task 3, capture the
+`ignore` list out of the match. Change the `match` block to also yield the
+`ignore` vec, e.g. extend the tuple it binds:
 
 ```rust
         let (audience, ignore, renders): (Option<Vec<Audience>>, Vec<String>, Vec<(Client, String)>) =
@@ -554,11 +656,14 @@ The `ignore` list lives on the parsed model. The parse happens inside the per-ki
         let resources = super::ignore::filter_ignored(iter_item_resources(&dir), &ignore);
 ```
 
-Repeat the `ign = X.ignore.clone();` and the `(aud, ign, out)` return in all three arms (Rule binds `rule.ignore`, Agent binds `agent.ignore`).
+Repeat the `ign = X.ignore.clone();` and the `(aud, ign, out)` return in all
+three arms (Rule binds `rule.ignore`, Agent binds `agent.ignore`).
 
 - [ ] **Step 6: Write the failing install integration test**
 
-Add `tests/pipeline_ignore.rs` — install an item with a `scripts/**` ignore and assert the script is NOT copied while a non-ignored resource IS. Use the `tests/common` helpers (read `tests/common/mod.rs` first). Skeleton:
+Add `tests/pipeline_ignore.rs` — install an item with a `scripts/**` ignore and
+assert the script is NOT copied while a non-ignored resource IS. Use the
+`tests/common` helpers (read `tests/common/mod.rs` first). Skeleton:
 
 ```rust
 mod common;
@@ -583,8 +688,7 @@ fn ignored_resources_are_not_copied() {
 }
 ```
 
-Run: `cargo test --test pipeline_ignore`
-Expected: PASS (after Step 5).
+Run: `cargo test --test pipeline_ignore` Expected: PASS (after Step 5).
 
 - [ ] **Step 7: Commit**
 
@@ -601,18 +705,25 @@ git commit -m "feat(pipeline): subtractive ignore filter for item resources"
 
 **Files:**
 
-- Modify: `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs` — `name: Option<String>`
-- Modify: `src/generate/mod.rs:51-146` — `render_*` + `build_skill_frontmatter` take `name: &str`
-- Modify: `src/generate/claude.rs:9-49`, `src/generate/copilot.rs:9-46`, `src/generate/opencode.rs:10-52`
-- Modify: `src/pipeline/discovery.rs` — `effective_name`, `probe_effective_name`, `scan_source_items`
+- Modify: `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs` —
+  `name: Option<String>`
+- Modify: `src/generate/mod.rs:51-146` — `render_*` + `build_skill_frontmatter`
+  take `name: &str`
+- Modify: `src/generate/claude.rs:9-49`, `src/generate/copilot.rs:9-46`,
+  `src/generate/opencode.rs:10-52`
+- Modify: `src/pipeline/discovery.rs` — `effective_name`,
+  `probe_effective_name`, `scan_source_items`
 - Modify: `src/pipeline/install.rs` — compute + use effective name
 - Modify: `src/lint.rs:283`, `:331-372`, `parse_kind` — relax matching
 
-This is the largest task. The build only goes green at the end of Step 8, so commit once at the end.
+This is the largest task. The build only goes green at the end of Step 8, so
+commit once at the end.
 
 - [ ] **Step 1: Write the failing render test (effective name from folder)**
 
-Add to `src/generate/mod.rs` tests (create a `#[cfg(test)] mod tests` if absent) — but first the signature must change, so write the test against the target signature:
+Add to `src/generate/mod.rs` tests (create a `#[cfg(test)] mod tests` if absent)
+— but first the signature must change, so write the test against the target
+signature:
 
 ```rust
 #[cfg(test)]
@@ -649,12 +760,13 @@ mod name_tests {
 
 - [ ] **Step 2: Run it red**
 
-Run: `cargo test -p upskill name_tests`
-Expected: FAIL to compile — `render_rule` takes 3 args, `Rule.name` is `String`.
+Run: `cargo test -p upskill name_tests` Expected: FAIL to compile —
+`render_rule` takes 3 args, `Rule.name` is `String`.
 
 - [ ] **Step 3: Make `name` optional in the three models**
 
-In `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs`, change `pub name: String,` to:
+In `src/model/skill.rs`, `src/model/rule.rs`, `src/model/agent.rs`, change
+`pub name: String,` to:
 
 ```rust
 /// Effective name resolution is layout-dependent (§2.1): absent means
@@ -729,16 +841,26 @@ pub(crate) fn build_skill_frontmatter(
 
 In `src/generate/claude.rs`:
 
-- `skill_frontmatter(skill: &Skill, name: &str)` → `super::build_skill_frontmatter(skill, name, skill.claude.as_ref())`
-- `rule_frontmatter(rule: &Rule, name: &str)` → replace `Value::from(rule.name.clone())` with `Value::from(name.to_string())`
-- `agent_frontmatter(agent: &Agent, name: &str)` → replace `Value::from(agent.name.clone())` with `Value::from(name.to_string())`
+- `skill_frontmatter(skill: &Skill, name: &str)` →
+  `super::build_skill_frontmatter(skill, name, skill.claude.as_ref())`
+- `rule_frontmatter(rule: &Rule, name: &str)` → replace
+  `Value::from(rule.name.clone())` with `Value::from(name.to_string())`
+- `agent_frontmatter(agent: &Agent, name: &str)` → replace
+  `Value::from(agent.name.clone())` with `Value::from(name.to_string())`
 
-Apply the identical change in `src/generate/copilot.rs` (`skill_frontmatter`/`rule_frontmatter`/`agent_frontmatter`, each gains `name: &str`; the `rule.name`/`agent.name` reads become `name.to_string()`) and in `src/generate/opencode.rs` (same three functions; `rule.name`→`name`, `agent.name`→`name`). These are mechanical: every `X.name.clone()` in a frontmatter builder becomes `name.to_string()`, and `skill_frontmatter` forwards `name`.
+Apply the identical change in `src/generate/copilot.rs`
+(`skill_frontmatter`/`rule_frontmatter`/`agent_frontmatter`, each gains
+`name: &str`; the `rule.name`/`agent.name` reads become `name.to_string()`) and
+in `src/generate/opencode.rs` (same three functions; `rule.name`→`name`,
+`agent.name`→`name`). These are mechanical: every `X.name.clone()` in a
+frontmatter builder becomes `name.to_string()`, and `skill_frontmatter` forwards
+`name`.
 
 - [ ] **Step 6: Run the render test green**
 
-Run: `cargo test -p upskill name_tests`
-Expected: PASS. (Library may still fail to build until install.rs is updated — if so, temporarily this test still compiles within the crate; proceed to Step 7 and run after.)
+Run: `cargo test -p upskill name_tests` Expected: PASS. (Library may still fail
+to build until install.rs is updated — if so, temporarily this test still
+compiles within the crate; proceed to Step 7 and run after.)
 
 - [ ] **Step 7: Add the effective-name resolver + restructure install**
 
@@ -780,7 +902,8 @@ pub(super) fn probe_effective_name(entry_path: &std::path::Path, kind: ItemKind,
 }
 ```
 
-Update `scan_source_items` so each pushed pair uses the effective name (it currently pushes the folder name). For each detected entrypoint, compute:
+Update `scan_source_items` so each pushed pair uses the effective name (it
+currently pushes the folder name). For each detected entrypoint, compute:
 
 ```rust
 if path.join("SKILL.md").is_file() {
@@ -798,7 +921,10 @@ if path.join("AGENT.md").is_file() {
 
 Apply the same to the category-subdir branch.
 
-In `src/pipeline/install.rs` `install_items_of_kind`, rename the loop var `name` → `folder`, parse the model first, compute the effective name, filter on it, render with it, and use it for output path / resources / lockfile. The restructured loop body:
+In `src/pipeline/install.rs` `install_items_of_kind`, rename the loop var `name`
+→ `folder`, parse the model first, compute the effective name, filter on it,
+render with it, and use it for output path / resources / lockfile. The
+restructured loop body:
 
 ```rust
     for (folder, dir) in iter_item_dirs(source)? {
@@ -850,7 +976,8 @@ In `src/pipeline/install.rs` `install_items_of_kind`, rename the loop var `name`
     }
 ```
 
-Add the small `render_all` helper near the top of `install.rs` to avoid repeating the audience/render loop three times:
+Add the small `render_all` helper near the top of `install.rs` to avoid
+repeating the audience/render loop three times:
 
 ```rust
 /// Render one item for every targeted client, returning `(client, body)`
@@ -875,7 +1002,10 @@ fn render_all(
 }
 ```
 
-NOTE: the closure borrows the parsed model and `name` by reference; if the borrow checker objects to `name` moving into the tuple, clone `name` for the tuple and pass `&name` to `render_all`. Adjust as the compiler directs — the behavior (render per targeted client) is fixed.
+NOTE: the closure borrows the parsed model and `name` by reference; if the
+borrow checker objects to `name` moving into the tuple, clone `name` for the
+tuple and pass `&name` to `render_all`. Adjust as the compiler directs — the
+behavior (render per targeted client) is fixed.
 
 - [ ] **Step 8: Relax lint name-matching**
 
@@ -935,19 +1065,26 @@ fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: 
 
 - [ ] **Step 9: Build and run the full suite green**
 
-Run: `just assemble && cargo test -p upskill`
-Expected: PASS. Fix any remaining call sites the compiler flags (e.g. other `render_*` callers, the `lint.rs:741` test that asserted solo `name-matches-dir` for a rule — update or delete that test since rule divergence is now legal and silent).
+Run: `just assemble && cargo test -p upskill` Expected: PASS. Fix any remaining
+call sites the compiler flags (e.g. other `render_*` callers, the `lint.rs:741`
+test that asserted solo `name-matches-dir` for a rule — update or delete that
+test since rule divergence is now legal and silent).
 
 - [ ] **Step 10: Add the relaxed-naming integration tests**
 
 Add `tests/cli_relaxed_naming.rs`:
 
-- A skill folder with no `name:` → output at `.claude/skills/<folder>/SKILL.md` with `name: <folder>`.
-- A rule folder `stuff/` whose `RULE.md` has `name: security-baseline` → output at `.claude/rules/security-baseline.md` containing `name: security-baseline` (folder name `stuff` absent from output path).
-- `upskill lint` on a skill whose `name` ≠ folder → exits non-zero with the standard-mandate message.
+- A skill folder with no `name:` → output at `.claude/skills/<folder>/SKILL.md`
+  with `name: <folder>`.
+- A rule folder `stuff/` whose `RULE.md` has `name: security-baseline` → output
+  at `.claude/rules/security-baseline.md` containing `name: security-baseline`
+  (folder name `stuff` absent from output path).
+- `upskill lint` on a skill whose `name` ≠ folder → exits non-zero with the
+  standard-mandate message.
 - `upskill lint` on a rule whose `name` ≠ folder → exits zero (no finding).
 
-Use the `tests/common` helpers. Run: `cargo test --test cli_relaxed_naming` → PASS.
+Use the `tests/common` helpers. Run: `cargo test --test cli_relaxed_naming` →
+PASS.
 
 - [ ] **Step 11: Commit**
 
@@ -965,8 +1102,10 @@ git commit -m "feat(naming): optional + relaxed item naming with layout-independ
 **Files:**
 
 - Modify: `src/pipeline/install.rs` — `resolve_requires_closure`
-- Modify: `src/pipeline/mod.rs:139-349` — expand the install set before conflict detection; pass provenance to the lockfile
-- Modify: `src/lockfile.rs:37-59` — `LockedItem.required_by`; `items_from_report` signature
+- Modify: `src/pipeline/mod.rs:139-349` — expand the install set before conflict
+  detection; pass provenance to the lockfile
+- Modify: `src/lockfile.rs:37-59` — `LockedItem.required_by`;
+  `items_from_report` signature
 - Test: `src/pipeline/install.rs` unit tests + `tests/cli_requires.rs`
 
 - [ ] **Step 1: Write the failing closure unit test**
@@ -1025,12 +1164,14 @@ fn closure_errors_on_cross_source_entry() {
 
 - [ ] **Step 2: Run red**
 
-Run: `cargo test -p upskill closure_`
-Expected: FAIL — `resolve_requires_closure`, `DependencyClosure` undefined.
+Run: `cargo test -p upskill closure_` Expected: FAIL —
+`resolve_requires_closure`, `DependencyClosure` undefined.
 
 - [ ] **Step 3: Implement `resolve_requires_closure`**
 
-Add to `src/pipeline/install.rs`. It needs a `(kind, name) → (folder, entry_path)` index over the source (because a rule's name may diverge from its folder), built by scanning + probing:
+Add to `src/pipeline/install.rs`. It needs a
+`(kind, name) → (folder, entry_path)` index over the source (because a rule's
+name may diverge from its folder), built by scanning + probing:
 
 ```rust
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -1151,12 +1292,12 @@ pub(super) fn resolve_requires_closure(
 }
 ```
 
-(If `crate::bundle::ResolvedItems` does not derive `Default`, add `#[derive(Default)]` to it — confirm its definition in `src/bundle.rs` first.)
+(If `crate::bundle::ResolvedItems` does not derive `Default`, add
+`#[derive(Default)]` to it — confirm its definition in `src/bundle.rs` first.)
 
 - [ ] **Step 4: Run the closure tests green**
 
-Run: `cargo test -p upskill closure_`
-Expected: PASS (3 tests).
+Run: `cargo test -p upskill closure_` Expected: PASS (3 tests).
 
 - [ ] **Step 5: Add `required_by` to the lockfile**
 
@@ -1170,7 +1311,9 @@ In `src/lockfile.rs`, add to `LockedItem` (after `source_name`):
 pub required_by: Vec<String>,
 ```
 
-Update every `LockedItem { … }` literal in the crate (the `conflict.rs` test helper, `lockfile.rs` tests, `pipeline/mod.rs`) to add `required_by: vec![]` — the compiler lists them.
+Update every `LockedItem { … }` literal in the crate (the `conflict.rs` test
+helper, `lockfile.rs` tests, `pipeline/mod.rs`) to add `required_by: vec![]` —
+the compiler lists them.
 
 Change `items_from_report` to accept a provenance map and populate the field:
 
@@ -1200,7 +1343,9 @@ Update the `items_from_report` unit test to pass `&BTreeMap::new()`.
 
 - [ ] **Step 6: Wire the closure into `install_with_lockfile`**
 
-In `src/pipeline/mod.rs`, after `scan_source_items` and before conflict detection, expand the requested set through the closure (skip when the source is a bundle file — bundles already resolve their own items):
+In `src/pipeline/mod.rs`, after `scan_source_items` and before conflict
+detection, expand the requested set through the closure (skip when the source is
+a bundle file — bundles already resolve their own items):
 
 ```rust
 let requested: Vec<(ItemKind, String)> = if items.is_empty() {
@@ -1218,7 +1363,11 @@ let closure = if discovery::is_bundle_file(&local_source) {
 };
 ```
 
-Use `closure`'s `items` as the install filter, and feed `required_by` to the lockfile. Where the code currently branches on `items.is_empty()` to call `install_from_local_path(.., None)` vs `install_with_name_resolution_from_local`, replace with a single filtered install when a closure exists:
+Use `closure`'s `items` as the install filter, and feed `required_by` to the
+lockfile. Where the code currently branches on `items.is_empty()` to call
+`install_from_local_path(.., None)` vs
+`install_with_name_resolution_from_local`, replace with a single filtered
+install when a closure exists:
 
 ```rust
 let mut report = match &closure {
@@ -1227,7 +1376,9 @@ let mut report = match &closure {
 };
 ```
 
-(For the bundle-file branch the existing `install_bundle_file` dispatch inside `install_from_local_path` still runs.) Build the provenance map for the lockfile:
+(For the bundle-file branch the existing `install_bundle_file` dispatch inside
+`install_from_local_path` still runs.) Build the provenance map for the
+lockfile:
 
 ```rust
 let required_by: std::collections::BTreeMap<(ItemKind, String), Vec<String>> = closure
@@ -1240,17 +1391,25 @@ let required_by: std::collections::BTreeMap<(ItemKind, String), Vec<String>> = c
 
 and pass `&required_by` to `items_from_report`.
 
-Conflict detection: build `incoming` from `closure.items` (so a pulled dependency conflicting with an existing different-source install is also caught) instead of the current `scanned_items` filter. Keep the existing `--as`/alias handling intact for the directly-named items.
+Conflict detection: build `incoming` from `closure.items` (so a pulled
+dependency conflicting with an existing different-source install is also caught)
+instead of the current `scanned_items` filter. Keep the existing `--as`/alias
+handling intact for the directly-named items.
 
 - [ ] **Step 7: Add the requires integration test**
 
 Add `tests/cli_requires.rs`:
 
-- Registry with agent `code-review` (`requires.skills: [sarif]`) and skill `sarif`. `upskill add ./reg code-review --claude` installs BOTH; the lockfile records `sarif` with `required_by: ["agent:code-review"]`.
-- `preload-skills: [sarif]` on the agent (no explicit `requires`) also pulls `sarif`.
-- A cross-source `{ name, source }` requires entry → `upskill add` exits non-zero mentioning "cross-source".
+- Registry with agent `code-review` (`requires.skills: [sarif]`) and skill
+  `sarif`. `upskill add ./reg code-review --claude` installs BOTH; the lockfile
+  records `sarif` with `required_by: ["agent:code-review"]`.
+- `preload-skills: [sarif]` on the agent (no explicit `requires`) also pulls
+  `sarif`.
+- A cross-source `{ name, source }` requires entry → `upskill add` exits
+  non-zero mentioning "cross-source".
 
-Use `tests/common` helpers and read the lockfile JSON to assert `required_by`. Run: `cargo test --test cli_requires` → PASS.
+Use `tests/common` helpers and read the lockfile JSON to assert `required_by`.
+Run: `cargo test --test cli_requires` → PASS.
 
 - [ ] **Step 8: Commit**
 
@@ -1268,12 +1427,18 @@ git commit -m "feat(pipeline): same-source requires closure with required_by pro
 **Files:**
 
 - Modify: `src/lockfile.rs` — `LockedItem.group`
-- Modify: `src/pipeline/install.rs` / `src/pipeline/mod.rs` — record `group` (source folder)
-- Modify: `src/pipeline/lifecycle.rs:32-120` — `remove` acts on the co-located unit
+- Modify: `src/pipeline/install.rs` / `src/pipeline/mod.rs` — record `group`
+  (source folder)
+- Modify: `src/pipeline/lifecycle.rs:32-120` — `remove` acts on the co-located
+  unit
 
 - [ ] **Step 1: Write the failing removal integration test**
 
-Add `tests/cli_colocation_remove.rs`: a single folder `markspec-trace/` holding `SKILL.md` (`name: markspec-trace`) and `RULE.md` (`name: markspec-trace-syntax`). `upskill add ./reg --claude` installs both. `upskill remove markspec-trace` removes BOTH the skill and the co-located rule (same source + folder group), and the lockfile is empty afterwards.
+Add `tests/cli_colocation_remove.rs`: a single folder `markspec-trace/` holding
+`SKILL.md` (`name: markspec-trace`) and `RULE.md`
+(`name: markspec-trace-syntax`). `upskill add ./reg --claude` installs both.
+`upskill remove markspec-trace` removes BOTH the skill and the co-located rule
+(same source + folder group), and the lockfile is empty afterwards.
 
 ```rust
 mod common;
@@ -1298,7 +1463,8 @@ fn remove_acts_on_colocated_unit() {
 }
 ```
 
-Run: `cargo test --test cli_colocation_remove` → FAIL (only the named skill is removed).
+Run: `cargo test --test cli_colocation_remove` → FAIL (only the named skill is
+removed).
 
 - [ ] **Step 2: Add `group` to the lockfile**
 
@@ -1312,15 +1478,22 @@ In `src/lockfile.rs` `LockedItem`, add:
 pub group: Option<String>,
 ```
 
-Add `group: None` (or the folder) to every `LockedItem` literal the compiler flags.
+Add `group: None` (or the folder) to every `LockedItem` literal the compiler
+flags.
 
 - [ ] **Step 3: Thread the folder through install → report → lockfile**
 
-`InstalledItem` (in `report.rs`) needs the source folder. Add `pub group: Option<String>` to `InstalledItem`, set it in `install_items_of_kind` to `Some(folder.clone())`. In `items_from_report`, set `group` from the first report entry for each `(kind, name)` (capture it alongside the hash). Simplest: extend the dedupe loop to read `entry.group`.
+`InstalledItem` (in `report.rs`) needs the source folder. Add
+`pub group: Option<String>` to `InstalledItem`, set it in
+`install_items_of_kind` to `Some(folder.clone())`. In `items_from_report`, set
+`group` from the first report entry for each `(kind, name)` (capture it
+alongside the hash). Simplest: extend the dedupe loop to read `entry.group`.
 
 - [ ] **Step 4: Make `remove` expand to the unit**
 
-In `src/pipeline/lifecycle.rs` `remove`, after computing `to_remove` for `RemoveFilter::ByNames`, expand it to include every lockfile item sharing a `(source, group)` with a matched item:
+In `src/pipeline/lifecycle.rs` `remove`, after computing `to_remove` for
+`RemoveFilter::ByNames`, expand it to include every lockfile item sharing a
+`(source, group)` with a matched item:
 
 ```rust
 if let RemoveFilter::ByNames(_) = &filter {
@@ -1339,12 +1512,14 @@ if let RemoveFilter::ByNames(_) = &filter {
 }
 ```
 
-(Make `to_remove` `mut`. Keep the existing unknown-name error check on the _originally_ matched names, before expansion.)
+(Make `to_remove` `mut`. Keep the existing unknown-name error check on the
+_originally_ matched names, before expansion.)
 
 - [ ] **Step 5: Run green**
 
 Run: `cargo test --test cli_colocation_remove && cargo test -p upskill`
-Expected: PASS. Fix any `LockedItem`/`InstalledItem` literal sites the compiler flags.
+Expected: PASS. Fix any `LockedItem`/`InstalledItem` literal sites the compiler
+flags.
 
 - [ ] **Step 6: Commit**
 
@@ -1361,15 +1536,25 @@ git commit -m "feat(pipeline): track co-location group; remove acts on the unit"
 
 **Files:**
 
-- Modify: `src/pipeline/report.rs` — `OrphanedDependency` + `DoctorReport.orphaned_dependencies`
+- Modify: `src/pipeline/report.rs` — `OrphanedDependency` +
+  `DoctorReport.orphaned_dependencies`
 - Modify: `src/pipeline/lifecycle.rs:135-252` — populate it
-- Modify: `src/main.rs` — print the new bucket (find the existing doctor printer)
+- Modify: `src/main.rs` — print the new bucket (find the existing doctor
+  printer)
 
 - [ ] **Step 1: Write the failing doctor test**
 
-Add `tests/cli_doctor_orphan.rs`: install agent `code-review` + its required skill `sarif`; `upskill remove code-review` (the requirer) leaving `sarif` (whose `required_by: ["agent:code-review"]` now points at an absent item); `upskill doctor` reports `sarif` as an orphaned dependency. Assert via doctor's stdout (read `main.rs`'s doctor output format first). The orphaned-dependency bucket is **advisory** — like `skipped_plugins` it does NOT flip the exit code, so assert `doctor` still exits 0 but the message names `sarif`.
+Add `tests/cli_doctor_orphan.rs`: install agent `code-review` + its required
+skill `sarif`; `upskill remove code-review` (the requirer) leaving `sarif`
+(whose `required_by: ["agent:code-review"]` now points at an absent item);
+`upskill doctor` reports `sarif` as an orphaned dependency. Assert via doctor's
+stdout (read `main.rs`'s doctor output format first). The orphaned-dependency
+bucket is **advisory** — like `skipped_plugins` it does NOT flip the exit code,
+so assert `doctor` still exits 0 but the message names `sarif`.
 
-(Note: removing `code-review`, which is co-located only with itself, does not cascade to `sarif` because `sarif` lives in its own folder — §2.5 "removal never cascades". That is exactly the state doctor surfaces.)
+(Note: removing `code-review`, which is co-located only with itself, does not
+cascade to `sarif` because `sarif` lives in its own folder — §2.5 "removal never
+cascades". That is exactly the state doctor surfaces.)
 
 - [ ] **Step 2: Add the report type**
 
@@ -1395,11 +1580,15 @@ Add to `DoctorReport`:
 pub orphaned_dependencies: Vec<OrphanedDependency>,
 ```
 
-`is_clean()` is unchanged (the new bucket is informational, like `skipped_plugins`). Re-export `OrphanedDependency` from `pipeline/mod.rs` if `report::*` is re-exported (it is — line 45 `pub use report::*;`).
+`is_clean()` is unchanged (the new bucket is informational, like
+`skipped_plugins`). Re-export `OrphanedDependency` from `pipeline/mod.rs` if
+`report::*` is re-exported (it is — line 45 `pub use report::*;`).
 
 - [ ] **Step 3: Populate it in `doctor`**
 
-In `src/pipeline/lifecycle.rs` `doctor`, after the per-item loop, build the set of installed `(kind, name)` and flag any item whose `required_by` is non-empty and whose every requirer is absent:
+In `src/pipeline/lifecycle.rs` `doctor`, after the per-item loop, build the set
+of installed `(kind, name)` and flag any item whose `required_by` is non-empty
+and whose every requirer is absent:
 
 ```rust
 let installed: std::collections::BTreeSet<String> = lock.items.iter()
@@ -1422,19 +1611,22 @@ Import `OrphanedDependency` in the `use super::{…}` list.
 
 - [ ] **Step 4: Print the bucket in `main.rs`**
 
-Find the doctor-report printer in `src/main.rs` (search for `orphan_entries` / `skipped_plugins`). Add a section that, when `!report.orphaned_dependencies.is_empty()`, prints each as e.g.:
+Find the doctor-report printer in `src/main.rs` (search for `orphan_entries` /
+`skipped_plugins`). Add a section that, when
+`!report.orphaned_dependencies.is_empty()`, prints each as e.g.:
 
 ```text
 orphaned dependency: skill `sarif` (was required by agent:code-review, now absent)
   remove with `upskill remove sarif` if no longer needed
 ```
 
-Keep it under the advisory (non-failing) part of the output, matching how `skipped_plugins` is presented.
+Keep it under the advisory (non-failing) part of the output, matching how
+`skipped_plugins` is presented.
 
 - [ ] **Step 5: Run green**
 
-Run: `cargo test --test cli_doctor_orphan && cargo test -p upskill`
-Expected: PASS.
+Run: `cargo test --test cli_doctor_orphan && cargo test -p upskill` Expected:
+PASS.
 
 - [ ] **Step 6: Commit**
 
@@ -1457,7 +1649,8 @@ just fmt
 just verify
 ```
 
-Expected: clean — zero warnings (compiler + clippy), all tests pass, docs tooling clean.
+Expected: clean — zero warnings (compiler + clippy), all tests pass, docs
+tooling clean.
 
 - [ ] **Step 2: Open the PR**
 
@@ -1469,14 +1662,29 @@ gh pr create --base main --title "feat: coupling redesign slice 1 — optional n
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```
 
-- [ ] **Step 3: After opening — fix CI first, then review comments.** Per AGENTS.md: K0 findings fixed in-PR; K1/K2 tracked as debt issues.
+- [ ] **Step 3: After opening — fix CI first, then review comments.** Per
+      AGENTS.md: K0 findings fixed in-PR; K1/K2 tracked as debt issues.
 
 ---
 
 ## Self-review (completed by plan author)
 
-**Spec coverage:** §2.1 relaxed/optional naming → Tasks 1, 4. §2.2 three tiers → Tasks 1, 5 (+ co-location grouping Task 6). §2.3 `requires` → Tasks 1, 2, 5. §2.4 `ignore` → Tasks 1, 2, 3. §2.5 cross-source contract → Task 1 (doc) + Task 5 (errors on cross-source; resolution deferred to Slice 2 by design). §2.6 identity → Task 4. §3 inherent limit → Task 1 (ADR/spec). Lockfile `required_by` + group → Tasks 5, 6. doctor → Task 7. Strip-from-output → Task 2. **Slice 2 (cross-source resolution) is explicitly deferred to its own plan.**
+**Spec coverage:** §2.1 relaxed/optional naming → Tasks 1, 4. §2.2 three tiers →
+Tasks 1, 5 (+ co-location grouping Task 6). §2.3 `requires` → Tasks 1, 2, 5.
+§2.4 `ignore` → Tasks 1, 2, 3. §2.5 cross-source contract → Task 1 (doc) + Task
+5 (errors on cross-source; resolution deferred to Slice 2 by design). §2.6
+identity → Task 4. §3 inherent limit → Task 1 (ADR/spec). Lockfile
+`required_by` + group → Tasks 5, 6. doctor → Task 7. Strip-from-output → Task 2.
+**Slice 2 (cross-source resolution) is explicitly deferred to its own plan.**
 
-**Placeholder scan:** No "TBD"/"implement later". Two NOTE callouts (tests/common API surface; borrow-checker on `name`) point the executor at a real file to read rather than hiding work — the _behavior_ is fully specified in each.
+**Placeholder scan:** No "TBD"/"implement later". Two NOTE callouts
+(tests/common API surface; borrow-checker on `name`) point the executor at a
+real file to read rather than hiding work — the _behavior_ is fully specified in
+each.
 
-**Type consistency:** `effective_name`/`probe_effective_name` (discovery), `render_skill/rule/agent(item, name, body, client)`, `build_skill_frontmatter(skill, name, passthrough)`, `ItemRequires`/`RequireRef`, `DependencyClosure { items, required_by }`, `resolve_requires_closure(source, initial)`, `LockedItem.{required_by, group}`, `OrphanedDependency` — names used consistently across tasks.
+**Type consistency:** `effective_name`/`probe_effective_name` (discovery),
+`render_skill/rule/agent(item, name, body, client)`,
+`build_skill_frontmatter(skill, name, passthrough)`,
+`ItemRequires`/`RequireRef`, `DependencyClosure { items, required_by }`,
+`resolve_requires_closure(source, initial)`, `LockedItem.{required_by, group}`,
+`OrphanedDependency` — names used consistently across tasks.

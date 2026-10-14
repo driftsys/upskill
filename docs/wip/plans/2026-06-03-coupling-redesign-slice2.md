@@ -1,52 +1,114 @@
 # Coupling Redesign Slice 2 — Cross-Source `requires` Resolution Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make cross-source `requires` entries (`{ name, source }`) actually fetch, resolve, install, and record in the lockfile — additively on top of the merged Slice 1 same-source machinery.
+**Goal:** Make cross-source `requires` entries (`{ name, source }`) actually
+fetch, resolve, install, and record in the lockfile — additively on top of the
+merged Slice 1 same-source machinery.
 
-**Architecture:** Widen the dependency-closure resolver so it tracks a _per-item canonical source label_, fetches each distinct cross-source locator once (via `fetch_ssot`, cached by canonical label, with `TempDir` guards owned by the returned closure), detects cross-source cycles keyed by `(label, kind, name)` and same-`(kind,name)`-different-source conflicts, then installs each item from _its own_ fetched root and records each lockfile entry with _its own_ source/ref. The design (ADR-0009, design spec §2.5) is fixed — this plan only builds it.
+**Architecture:** Widen the dependency-closure resolver so it tracks a _per-item
+canonical source label_, fetches each distinct cross-source locator once (via
+`fetch_ssot`, cached by canonical label, with `TempDir` guards owned by the
+returned closure), detects cross-source cycles keyed by `(label, kind, name)`
+and same-`(kind,name)`-different-source conflicts, then installs each item from
+_its own_ fetched root and records each lockfile entry with _its own_
+source/ref. The design (ADR-0009, design spec §2.5) is fixed — this plan only
+builds it.
 
-**Tech Stack:** Rust (edition 2024, MSRV 1.85), `anyhow`, `serde`/`serde_json`, `tempfile`. No new dependencies. Tests use `assert_cmd` + `tempfile` + `tests/common::upskill_cmd`.
+**Tech Stack:** Rust (edition 2024, MSRV 1.85), `anyhow`, `serde`/`serde_json`,
+`tempfile`. No new dependencies. Tests use `assert_cmd` + `tempfile` +
+`tests/common::upskill_cmd`.
 
 ---
 
 ## Background: what Slice 1 built (already on `main`)
 
-- `src/model/requires.rs` — `RequireRef` (untagged `Name(String)` | `Detailed { name, source }`) with `.name()` / `.source() -> Option<&str>`; `ItemRequires { rules, skills, agents: Vec<RequireRef> }`.
-- `src/pipeline/install.rs` — `resolve_requires_closure(source: &Path, initial: &[(ItemKind,String)]) -> Result<DependencyClosure>`. `DependencyClosure { items: bundle::ResolvedItems, required_by: BTreeMap<(ItemKind,String), BTreeSet<String>> }`. DFS over `(kind,name)` within ONE source; cross-source entries **bail at `src/pipeline/install.rs:311-316`**. Helpers `index_source`, `read_item_requires`, `visit_requires`.
-- `src/pipeline/mod.rs` `install_with_lockfile` — fetches one source, builds `requested`, builds `closure` (skipped for bundle-file / name-resolution deferrals), runs conflict detection over the closure items, installs via one `install_from_local_path(&local_source, target, Some(&closure.items))`, records the lockfile via `items_from_report(report, &label, git_ref, &provenance, hash_for)`.
-- `src/lockfile.rs` — `LockedItem { kind, name, source, git_ref, hash, source_name, required_by, group }`; `items_from_report(report, source_label, git_ref, required_by, hash_for)`.
-- `src/pipeline/git.rs` — `fetch_ssot(&InstallSource) -> Result<(PathBuf, Option<TempDir>)>` (the auth/clone path; `LocalPath` returns the path with `None` guard).
-- `src/source.rs` — `parse_install_source(&str) -> Result<InstallSource, _>` parses the `add` DSL (`owner/repo@ref`, `https://…`, `gitlab:…`, `./path`, `/abs`). `InstallSource::Display` produces the canonical label (`github:owner/repo[@ref][:sub]`, `local:<path>`, …).
-- `src/conflict.rs` — `detect_conflicts(incoming: &[(ItemKind,String)], &Lockfile, incoming_source: &str) -> Vec<ItemConflict>`; same `(kind,name)` from a different source = conflict.
-- `src/pipeline/lifecycle.rs` `doctor` — advisory orphaned-dependency flag (item whose every `required_by` requirer is gone). Unchanged by Slice 2.
+- `src/model/requires.rs` — `RequireRef` (untagged `Name(String)` |
+  `Detailed { name, source }`) with `.name()` / `.source() -> Option<&str>`;
+  `ItemRequires { rules, skills, agents: Vec<RequireRef> }`.
+- `src/pipeline/install.rs` —
+  `resolve_requires_closure(source: &Path, initial: &[(ItemKind,String)]) -> Result<DependencyClosure>`.
+  `DependencyClosure { items: bundle::ResolvedItems, required_by: BTreeMap<(ItemKind,String), BTreeSet<String>> }`.
+  DFS over `(kind,name)` within ONE source; cross-source entries **bail at
+  `src/pipeline/install.rs:311-316`**. Helpers `index_source`,
+  `read_item_requires`, `visit_requires`.
+- `src/pipeline/mod.rs` `install_with_lockfile` — fetches one source, builds
+  `requested`, builds `closure` (skipped for bundle-file / name-resolution
+  deferrals), runs conflict detection over the closure items, installs via one
+  `install_from_local_path(&local_source, target, Some(&closure.items))`,
+  records the lockfile via
+  `items_from_report(report, &label, git_ref, &provenance, hash_for)`.
+- `src/lockfile.rs` —
+  `LockedItem { kind, name, source, git_ref, hash, source_name, required_by, group }`;
+  `items_from_report(report, source_label, git_ref, required_by, hash_for)`.
+- `src/pipeline/git.rs` —
+  `fetch_ssot(&InstallSource) -> Result<(PathBuf, Option<TempDir>)>` (the
+  auth/clone path; `LocalPath` returns the path with `None` guard).
+- `src/source.rs` — `parse_install_source(&str) -> Result<InstallSource, _>`
+  parses the `add` DSL (`owner/repo@ref`, `https://…`, `gitlab:…`, `./path`,
+  `/abs`). `InstallSource::Display` produces the canonical label
+  (`github:owner/repo[@ref][:sub]`, `local:<path>`, …).
+- `src/conflict.rs` —
+  `detect_conflicts(incoming: &[(ItemKind,String)], &Lockfile, incoming_source: &str) -> Vec<ItemConflict>`;
+  same `(kind,name)` from a different source = conflict.
+- `src/pipeline/lifecycle.rs` `doctor` — advisory orphaned-dependency flag (item
+  whose every `required_by` requirer is gone). Unchanged by Slice 2.
 
 ## File Structure (what this slice creates / modifies)
 
-- **Modify** `src/pipeline/install.rs` — the core change: replace the single-source `DependencyClosure` + `resolve_requires_closure` + `visit_requires` with a source-aware `Resolver` that fetches cross-source locators and tracks per-item source labels. (~150 lines changed, the bulk of the slice.)
-- **Modify** `src/pipeline/mod.rs` `install_with_lockfile` — consume the new closure: group conflict detection by source, install per-source, record per-item source/ref. Move the `git_ref` computation above the closure block.
-- **Modify** `src/lockfile.rs` — change `items_from_report` to take a per-item `source_for(kind, name) -> (String, Option<String>)` resolver instead of one `source_label` + `git_ref`. Update its one unit test.
-- **Create** `tests/cross_source_requires.rs` — ATDD integration coverage (happy path, transitive, conflict, cycle, doctor-orphan) using local-path "other sources".
-- **Modify** `docs/format-spec.md` §3.7 + §11 item 7 — flip cross-source from "lands in a later release" to implemented.
-- **Modify** `docs/adr/0009-coupling-tiers-and-dependencies.md` — flip the "Staging" bullet and the negative-consequence bullet to implemented.
+- **Modify** `src/pipeline/install.rs` — the core change: replace the
+  single-source `DependencyClosure` + `resolve_requires_closure` +
+  `visit_requires` with a source-aware `Resolver` that fetches cross-source
+  locators and tracks per-item source labels. (~150 lines changed, the bulk of
+  the slice.)
+- **Modify** `src/pipeline/mod.rs` `install_with_lockfile` — consume the new
+  closure: group conflict detection by source, install per-source, record
+  per-item source/ref. Move the `git_ref` computation above the closure block.
+- **Modify** `src/lockfile.rs` — change `items_from_report` to take a per-item
+  `source_for(kind, name) -> (String, Option<String>)` resolver instead of one
+  `source_label` + `git_ref`. Update its one unit test.
+- **Create** `tests/cross_source_requires.rs` — ATDD integration coverage (happy
+  path, transitive, conflict, cycle, doctor-orphan) using local-path "other
+  sources".
+- **Modify** `docs/format-spec.md` §3.7 + §11 item 7 — flip cross-source from
+  "lands in a later release" to implemented.
+- **Modify** `docs/adr/0009-coupling-tiers-and-dependencies.md` — flip the
+  "Staging" bullet and the negative-consequence bullet to implemented.
 
-> **Why local-path "other sources" for tests (not bare git repos):** the `requires` `source:` field uses the `add` DSL verbatim, which has **no `file://` form** — so a `requires` entry cannot point at a bare repo by URL. A local path (`/abs/...`) _is_ a valid DSL form, flows through `parse_install_source` → `InstallSource::LocalPath` → `fetch_ssot` (returns the path, `None` guard) → `index_source` → per-source install/record, exercising the entire cross-source path deterministically and offline. The git-clone arm of `fetch_ssot` is already covered by `tests/pipeline_source.rs`; cross-source calls the identical function.
+> **Why local-path "other sources" for tests (not bare git repos):** the
+> `requires` `source:` field uses the `add` DSL verbatim, which has **no
+> `file://` form** — so a `requires` entry cannot point at a bare repo by URL. A
+> local path (`/abs/...`) _is_ a valid DSL form, flows through
+> `parse_install_source` → `InstallSource::LocalPath` → `fetch_ssot` (returns
+> the path, `None` guard) → `index_source` → per-source install/record,
+> exercising the entire cross-source path deterministically and offline. The
+> git-clone arm of `fetch_ssot` is already covered by
+> `tests/pipeline_source.rs`; cross-source calls the identical function.
 
 ---
 
 ## Task 1: Source-aware dependency closure (the core refactor)
 
-This task rewrites the closure to span sources and rewires its two consumers (`mod.rs`, `lockfile.rs`) so the crate stays green. Unit tests in `install.rs` drive it.
+This task rewrites the closure to span sources and rewires its two consumers
+(`mod.rs`, `lockfile.rs`) so the crate stays green. Unit tests in `install.rs`
+drive it.
 
 **Files:**
 
-- Modify: `src/pipeline/install.rs` (closure types, `resolve_requires_closure`, `Resolver`, unit tests)
+- Modify: `src/pipeline/install.rs` (closure types, `resolve_requires_closure`,
+  `Resolver`, unit tests)
 - Modify: `src/pipeline/mod.rs` (`install_with_lockfile`)
 - Modify: `src/lockfile.rs` (`items_from_report` signature + its unit test)
 
 - [ ] **Step 1: Write the failing unit test for a cross-source pull**
 
-Add to the `#[cfg(test)] mod tests` block in `src/pipeline/install.rs` (the existing `write_item` helper already creates `<root>/<name>/<ENTRY>.md`). This test creates two source roots and asserts the closure resolves the dependency under the _other_ source's canonical label.
+Add to the `#[cfg(test)] mod tests` block in `src/pipeline/install.rs` (the
+existing `write_item` helper already creates `<root>/<name>/<ENTRY>.md`). This
+test creates two source roots and asserts the closure resolves the dependency
+under the _other_ source's canonical label.
 
 ```rust
 #[test]
@@ -100,11 +162,16 @@ fn closure_pulls_cross_source_dependency() {
 - [ ] **Step 2: Run it to confirm it fails to compile**
 
 Run: `cargo test -p upskill --lib closure_pulls_cross_source_dependency`
-Expected: FAIL — `resolve_requires_closure` takes 2 args not 4; no `item_source` / `by_source` fields. (Compile error is the expected failure.)
+Expected: FAIL — `resolve_requires_closure` takes 2 args not 4; no `item_source`
+/ `by_source` fields. (Compile error is the expected failure.)
 
 - [ ] **Step 3: Replace the closure types and resolver in `install.rs`**
 
-Replace the entire region from the `DependencyClosure` struct (line ~166) through the end of `visit_requires` (line ~335) with the source-aware implementation below. Also add the imports at the top of the file: in the existing `use crate::model::{...}` line keep it, and add `use crate::source::{InstallSource, parse_install_source};`.
+Replace the entire region from the `DependencyClosure` struct (line ~166)
+through the end of `visit_requires` (line ~335) with the source-aware
+implementation below. Also add the imports at the top of the file: in the
+existing `use crate::model::{...}` line keep it, and add
+`use crate::source::{InstallSource, parse_install_source};`.
 
 ```rust
 /// The transitive closure of items reached by expanding a requested set
@@ -383,9 +450,17 @@ pub(super) fn resolve_requires_closure(
 }
 ```
 
-- [ ] **Step 4: Update the existing `install.rs` closure unit tests to the new API**
+- [ ] **Step 4: Update the existing `install.rs` closure unit tests to the new
+      API**
 
-The three existing tests (`closure_pulls_same_source_dependency`, `closure_rejects_cycle`, `closure_folds_preload_skills`, `closure_skips_absent_preload_skill`) call the old 2-arg `resolve_requires_closure(src, &[...])` and assert on `closure.items`. Update each call to `resolve_requires_closure("local:test", src, None, &[...])` and replace `closure.items.contains(kind, name)` assertions with `closure.item_source.contains_key(&(kind, name.to_string()))`. Example for `closure_pulls_same_source_dependency`:
+The three existing tests (`closure_pulls_same_source_dependency`,
+`closure_rejects_cycle`, `closure_folds_preload_skills`,
+`closure_skips_absent_preload_skill`) call the old 2-arg
+`resolve_requires_closure(src, &[...])` and assert on `closure.items`. Update
+each call to `resolve_requires_closure("local:test", src, None, &[...])` and
+replace `closure.items.contains(kind, name)` assertions with
+`closure.item_source.contains_key(&(kind, name.to_string()))`. Example for
+`closure_pulls_same_source_dependency`:
 
 ```rust
 #[test]
@@ -413,11 +488,18 @@ fn closure_pulls_same_source_dependency() {
 }
 ```
 
-Apply the same call-signature change to `closure_rejects_cycle`, `closure_folds_preload_skills`, and `closure_skips_absent_preload_skill` (the latter two replace `closure.items.contains(...)` / `!closure.items.contains(...)` with `closure.item_source.contains_key(...)` / `!closure.item_source.contains_key(...)`).
+Apply the same call-signature change to `closure_rejects_cycle`,
+`closure_folds_preload_skills`, and `closure_skips_absent_preload_skill` (the
+latter two replace `closure.items.contains(...)` /
+`!closure.items.contains(...)` with `closure.item_source.contains_key(...)` /
+`!closure.item_source.contains_key(...)`).
 
-- [ ] **Step 5: Replace `closure_errors_on_cross_source_entry` with a not-found test**
+- [ ] **Step 5: Replace `closure_errors_on_cross_source_entry` with a not-found
+      test**
 
-Cross-source no longer bails as "not yet available". Replace that test with one asserting a cross-source dependency that is absent from its (existing-but-empty) source errors with "not found in source":
+Cross-source no longer bails as "not yet available". Replace that test with one
+asserting a cross-source dependency that is absent from its (existing-but-empty)
+source errors with "not found in source":
 
 ```rust
 #[test]
@@ -479,9 +561,11 @@ fn closure_rejects_cross_source_cycle() {
 }
 ```
 
-- [ ] **Step 7: Change `items_from_report` in `lockfile.rs` to a per-item source resolver**
+- [ ] **Step 7: Change `items_from_report` in `lockfile.rs` to a per-item source
+      resolver**
 
-Replace the signature and body so each item's source/ref is looked up per `(kind, name)`:
+Replace the signature and body so each item's source/ref is looked up per
+`(kind, name)`:
 
 ```rust
 pub fn items_from_report(
@@ -516,11 +600,14 @@ pub fn items_from_report(
 }
 ```
 
-Update the doc comment above it to describe `source_for` (per-item `(label, ref)` lookup — supports cross-source dependency-pulled items recording their own source).
+Update the doc comment above it to describe `source_for` (per-item
+`(label, ref)` lookup — supports cross-source dependency-pulled items recording
+their own source).
 
 - [ ] **Step 8: Update the `items_from_report` unit test in `lockfile.rs`**
 
-In `items_from_report_dedupes_per_kind_name`, change the call to pass a closure for `source_for`:
+In `items_from_report_dedupes_per_kind_name`, change the call to pass a closure
+for `source_for`:
 
 ```rust
 let items = items_from_report(
@@ -531,11 +618,18 @@ let items = items_from_report(
 );
 ```
 
-(The rest of the assertions are unchanged: `items[0].source == "local:./src"`, etc.)
+(The rest of the assertions are unchanged: `items[0].source == "local:./src"`,
+etc.)
 
-- [ ] **Step 9: Rewire `install_with_lockfile` in `mod.rs` — move `git_ref` up and rebuild the closure**
+- [ ] **Step 9: Rewire `install_with_lockfile` in `mod.rs` — move `git_ref` up
+      and rebuild the closure**
 
-In `src/pipeline/mod.rs`, **delete** the later `let git_ref = match source { ... };` block (currently ~line 342) and **insert** it just before the closure block (replacing the `// -- Same-source`requires`closure --` region's closure construction). The closure now needs `entry_label` (`&label`), `entry_root` (`&local_source`), and `entry_git_ref` (`git_ref`).
+In `src/pipeline/mod.rs`, **delete** the later
+`let git_ref = match source { ... };` block (currently ~line 342) and **insert**
+it just before the closure block (replacing the
+`// -- Same-source`requires`closure --` region's closure construction). The
+closure now needs `entry_label` (`&label`), `entry_root` (`&local_source`), and
+`entry_git_ref` (`git_ref`).
 
 Replace the closure construction (currently lines ~222-226) with:
 
@@ -559,7 +653,10 @@ let closure = if discovery::is_bundle_file(&local_source) || defer_to_name_resol
 
 - [ ] **Step 10: Rewire conflict detection in `mod.rs` to group by source**
 
-Replace the conflict-detection block (currently lines ~228-280, from `let mut lock = ...` through the `anyhow::bail!` on conflicts) with per-source grouping. Cross-source dependency items are never aliased; only entry-source items honor `--as`:
+Replace the conflict-detection block (currently lines ~228-280, from
+`let mut lock = ...` through the `anyhow::bail!` on conflicts) with per-source
+grouping. Cross-source dependency items are never aliased; only entry-source
+items honor `--as`:
 
 ```rust
 // -- Conflict detection (before any files are written) --
@@ -619,7 +716,10 @@ if !conflicts.is_empty() && !options.force {
 
 - [ ] **Step 11: Rewire the install branch in `mod.rs` to install per source**
 
-Replace the install block (currently lines ~282-292, `let mut report = if let Some(closure) ...`) with a per-source loop. Cross-source `TempDir` guards live in `closure.guards`, which stays in scope until the end of the function:
+Replace the install block (currently lines ~282-292,
+`let mut report = if let Some(closure) ...`) with a per-source loop.
+Cross-source `TempDir` guards live in `closure.guards`, which stays in scope
+until the end of the function:
 
 ```rust
 // -- Now proceed with generation (files are written here) --
@@ -643,7 +743,10 @@ let mut report = if let Some(closure) = &closure {
 
 - [ ] **Step 12: Rewire the lockfile recording in `mod.rs` to per-item source**
 
-The `provenance` map construction (from `closure.required_by`) is unchanged. Replace the `items_from_report` call (currently ~lines 364-367) and keep `hashes` as-is. Note the `git_ref` binding is now defined earlier (Step 9), so the bundle-recording code below it still works:
+The `provenance` map construction (from `closure.required_by`) is unchanged.
+Replace the `items_from_report` call (currently ~lines 364-367) and keep
+`hashes` as-is. Note the `git_ref` binding is now defined earlier (Step 9), so
+the bundle-recording code below it still works:
 
 ```rust
 let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
@@ -666,17 +769,24 @@ let new_items = crate::lockfile::items_from_report(
 );
 ```
 
-(Leave the `for mut item in new_items { ... lock.upsert(item); }` loop, the alias `source_name` fix-up, the bundle-recording loop using `label`/`git_ref`, and the plugin/ancillary tails unchanged.)
+(Leave the `for mut item in new_items { ... lock.upsert(item); }` loop, the
+alias `source_name` fix-up, the bundle-recording loop using `label`/`git_ref`,
+and the plugin/ancillary tails unchanged.)
 
 - [ ] **Step 13: Build and run all library unit tests**
 
-Run: `just assemble` then `cargo test -p upskill --lib`
-Expected: PASS — all `install.rs` closure tests (including the new `closure_pulls_cross_source_dependency`, `closure_rejects_cross_source_cycle`, `closure_errors_on_missing_cross_source_item`), the `lockfile.rs` `items_from_report_dedupes_per_kind_name`, and every pre-existing test compile and pass. Fix any borrow/type errors surfaced by the compiler before moving on.
+Run: `just assemble` then `cargo test -p upskill --lib` Expected: PASS — all
+`install.rs` closure tests (including the new
+`closure_pulls_cross_source_dependency`, `closure_rejects_cross_source_cycle`,
+`closure_errors_on_missing_cross_source_item`), the `lockfile.rs`
+`items_from_report_dedupes_per_kind_name`, and every pre-existing test compile
+and pass. Fix any borrow/type errors surfaced by the compiler before moving on.
 
 - [ ] **Step 14: Run the full existing test suite to confirm no regressions**
 
-Run: `just test`
-Expected: PASS — the Slice 1 integration tests (`cli_add`, `pipeline_*`, `generate_*`) still pass; same-source closure behavior is preserved.
+Run: `just test` Expected: PASS — the Slice 1 integration tests (`cli_add`,
+`pipeline_*`, `generate_*`) still pass; same-source closure behavior is
+preserved.
 
 - [ ] **Step 15: Commit**
 
@@ -695,7 +805,10 @@ git commit -m "feat(pipeline): resolve cross-source requires into a per-source i
 
 - [ ] **Step 1: Write the failing integration test**
 
-Create `tests/cross_source_requires.rs` with the shared helper plus the happy-path test. Local-path "other source" `source-b`; entry source `source-a` whose agent requires B's skill. Isolated fake `$HOME` + `.git` marker per issue #193.
+Create `tests/cross_source_requires.rs` with the shared helper plus the
+happy-path test. Local-path "other source" `source-b`; entry source `source-a`
+whose agent requires B's skill. Isolated fake `$HOME` + `.git` marker per issue
+#193.
 
 ```rust
 //! ATDD: cross-source `requires` resolution (ADR-0009 / format-spec §3.7).
@@ -793,8 +906,12 @@ fn cross_source_requires_pulls_and_records_dependency() {
 
 - [ ] **Step 2: Run it**
 
-Run: `cargo test --test cross_source_requires cross_source_requires_pulls_and_records_dependency`
-Expected: PASS (Task 1 already implemented the behavior). If the `.claude/skills/...` path assertion fails, confirm the skill output path via `src/pipeline/output.rs::output_path` and adjust the asserted path — do not change production code.
+Run:
+`cargo test --test cross_source_requires cross_source_requires_pulls_and_records_dependency`
+Expected: PASS (Task 1 already implemented the behavior). If the
+`.claude/skills/...` path assertion fails, confirm the skill output path via
+`src/pipeline/output.rs::output_path` and adjust the asserted path — do not
+change production code.
 
 - [ ] **Step 3: Commit**
 
@@ -813,7 +930,8 @@ git commit -m "test(pipeline): ATDD cross-source requires happy path"
 
 - [ ] **Step 1: Add the transitive test**
 
-A→B→C chain across three sources: agent in A requires skill in B; that skill requires a rule in C. All three install; each records its own source.
+A→B→C chain across three sources: agent in A requires skill in B; that skill
+requires a rule in C. All three install; each records its own source.
 
 ```rust
 #[test]
@@ -879,11 +997,14 @@ fn cross_source_requires_resolves_transitively() {
 }
 ```
 
-> Note: the rule output path varies per client; the lockfile assertion (`baseline.source` + `required_by`) is the authoritative check. Trim the final `||` assertion to the confirmed rule output path during execution if desired.
+> Note: the rule output path varies per client; the lockfile assertion
+> (`baseline.source` + `required_by`) is the authoritative check. Trim the final
+> `||` assertion to the confirmed rule output path during execution if desired.
 
 - [ ] **Step 2: Run it**
 
-Run: `cargo test --test cross_source_requires cross_source_requires_resolves_transitively`
+Run:
+`cargo test --test cross_source_requires cross_source_requires_resolves_transitively`
 Expected: PASS
 
 - [ ] **Step 3: Commit**
@@ -903,7 +1024,10 @@ git commit -m "test(pipeline): ATDD transitive cross-source closure"
 
 - [ ] **Step 1: Add the conflict test**
 
-Pre-install `sarif-formatting` from source C, then add source A (which pulls `sarif-formatting` from a _different_ source B). The closure-vs-lockfile conflict must abort with the existing "already installed" message and a non-zero exit.
+Pre-install `sarif-formatting` from source C, then add source A (which pulls
+`sarif-formatting` from a _different_ source B). The closure-vs-lockfile
+conflict must abort with the existing "already installed" message and a non-zero
+exit.
 
 ```rust
 #[test]
@@ -952,12 +1076,19 @@ fn cross_source_conflict_with_existing_install_errors() {
 }
 ```
 
-This test uses `predicates` (an `assert_cmd` companion already in the dev-dependency tree via `assert_cmd`). If `predicates` is not a direct dev-dependency, replace the `.stderr(...)` line with a manual check: capture `.get_output().stderr` and `assert!(String::from_utf8_lossy(...).contains("already installed"))` — but first try `predicates`, which `assert_cmd` re-exports patterns for.
+This test uses `predicates` (an `assert_cmd` companion already in the
+dev-dependency tree via `assert_cmd`). If `predicates` is not a direct
+dev-dependency, replace the `.stderr(...)` line with a manual check: capture
+`.get_output().stderr` and
+`assert!(String::from_utf8_lossy(...).contains("already installed"))` — but
+first try `predicates`, which `assert_cmd` re-exports patterns for.
 
 - [ ] **Step 2: Run it**
 
-Run: `cargo test --test cross_source_requires cross_source_conflict_with_existing_install_errors`
-Expected: PASS. If `predicates` is unavailable, switch to the manual stderr check described above and re-run.
+Run:
+`cargo test --test cross_source_requires cross_source_conflict_with_existing_install_errors`
+Expected: PASS. If `predicates` is unavailable, switch to the manual stderr
+check described above and re-run.
 
 - [ ] **Step 3: Commit**
 
@@ -976,7 +1107,8 @@ git commit -m "test(pipeline): ATDD cross-source conflict aborts"
 
 - [ ] **Step 1: Add the cycle test**
 
-A's rule `alpha` requires B's rule `beta` (cross), B's `beta` requires A's `alpha` (cross). `upskill add <A> alpha` must fail with "circular".
+A's rule `alpha` requires B's rule `beta` (cross), B's `beta` requires A's
+`alpha` (cross). `upskill add <A> alpha` must fail with "circular".
 
 ```rust
 #[test]
@@ -1043,7 +1175,9 @@ git commit -m "test(pipeline): ATDD cross-source cycle aborts"
 
 - [ ] **Step 1: Add the doctor-orphan test**
 
-Install A's `code-review` (pulls B's `sarif-formatting`). Remove `code-review` (no cascade). `doctor` must report `sarif-formatting` as an orphaned dependency (advisory; exit 0).
+Install A's `code-review` (pulls B's `sarif-formatting`). Remove `code-review`
+(no cascade). `doctor` must report `sarif-formatting` as an orphaned dependency
+(advisory; exit 0).
 
 ```rust
 #[test]
@@ -1103,17 +1237,22 @@ fn removing_requirer_leaves_cross_source_dependency_as_doctor_orphan() {
 }
 ```
 
-> During execution, confirm `main.rs`'s doctor presentation includes orphaned-dependency item names in stdout. If the wording differs (e.g. the name is only shown under an "orphaned dependencies" heading), keep the `contains("sarif-formatting")` check — it is robust to heading wording. Adjust only if doctor omits the name entirely.
+> During execution, confirm `main.rs`'s doctor presentation includes
+> orphaned-dependency item names in stdout. If the wording differs (e.g. the
+> name is only shown under an "orphaned dependencies" heading), keep the
+> `contains("sarif-formatting")` check — it is robust to heading wording. Adjust
+> only if doctor omits the name entirely.
 
 - [ ] **Step 2: Run it**
 
-Run: `cargo test --test cross_source_requires removing_requirer_leaves_cross_source_dependency_as_doctor_orphan`
+Run:
+`cargo test --test cross_source_requires removing_requirer_leaves_cross_source_dependency_as_doctor_orphan`
 Expected: PASS
 
 - [ ] **Step 3: Run the whole new test file**
 
-Run: `cargo test --test cross_source_requires`
-Expected: PASS — all six tests green.
+Run: `cargo test --test cross_source_requires` Expected: PASS — all six tests
+green.
 
 - [ ] **Step 4: Commit**
 
@@ -1129,11 +1268,13 @@ git commit -m "test(pipeline): ATDD doctor flags orphaned cross-source dependenc
 **Files:**
 
 - Modify: `docs/format-spec.md` (§3.7 item-requires resolution, §11 item 7)
-- Modify: `docs/adr/0009-coupling-tiers-and-dependencies.md` (Cross-source contract staging bullet + Consequences)
+- Modify: `docs/adr/0009-coupling-tiers-and-dependencies.md` (Cross-source
+  contract staging bullet + Consequences)
 
 - [ ] **Step 1: Update format-spec §3.7**
 
-In `docs/format-spec.md`, replace the trailing paragraph of "Item `requires` resolution" (currently lines ~692-696):
+In `docs/format-spec.md`, replace the trailing paragraph of "Item `requires`
+resolution" (currently lines ~692-696):
 
 Old:
 
@@ -1163,7 +1304,8 @@ solving.
 
 - [ ] **Step 2: Update format-spec §11 item 7**
 
-Replace the "Same-source resolution is implemented; cross-source resolution is staged to a later release." sentence (currently lines ~1047-1049) with:
+Replace the "Same-source resolution is implemented; cross-source resolution is
+staged to a later release." sentence (currently lines ~1047-1049) with:
 
 ```markdown
 `(canonical-source-label, kind, name)`. Both same-source and cross-source resolution are
@@ -1173,7 +1315,8 @@ implemented. See
 
 - [ ] **Step 3: Update ADR-0009 cross-source staging bullet**
 
-In `docs/adr/0009-coupling-tiers-and-dependencies.md`, replace the "Staging" bullet (currently lines ~115-116):
+In `docs/adr/0009-coupling-tiers-and-dependencies.md`, replace the "Staging"
+bullet (currently lines ~115-116):
 
 Old:
 
@@ -1192,7 +1335,8 @@ New:
 
 - [ ] **Step 4: Update ADR-0009 negative-consequences bullet**
 
-Replace the "Cross-source resolution is staged to a later release..." bullet (currently lines ~146-147) with:
+Replace the "Cross-source resolution is staged to a later release..." bullet
+(currently lines ~146-147) with:
 
 ```markdown
 - A cross-source closure fetches each distinct source once per resolution
@@ -1202,8 +1346,8 @@ Replace the "Cross-source resolution is staged to a later release..." bullet (cu
 
 - [ ] **Step 5: Format and lint the docs**
 
-Run: `just fmt`
-Expected: Markdown reflowed; no errors. Then `markdownlint` runs under `just lint` later.
+Run: `just fmt` Expected: Markdown reflowed; no errors. Then `markdownlint` runs
+under `just lint` later.
 
 - [ ] **Step 6: Commit**
 
@@ -1220,18 +1364,22 @@ git commit -m "docs: cross-source requires resolution is implemented (Slice 2)"
 
 - [ ] **Step 1: Format everything**
 
-Run: `just fmt`
-Expected: no changes needed (or only whitespace already committed).
+Run: `just fmt` Expected: no changes needed (or only whitespace already
+committed).
 
 - [ ] **Step 2: Full gate**
 
-Run: `just verify`
-Expected: PASS — `cargo clippy -- -D warnings` (zero warnings), `cargo fmt --check`, dprint, markdownlint, shellcheck, and the full test suite all green. Fix any clippy findings (watch for `too_many_arguments` on `Resolver::visit` — it takes `&mut self` + 2 args, so it is fine; and `clippy::type_complexity` on the closure maps — extract type aliases only if clippy flags them).
+Run: `just verify` Expected: PASS — `cargo clippy -- -D warnings` (zero
+warnings), `cargo fmt --check`, dprint, markdownlint, shellcheck, and the full
+test suite all green. Fix any clippy findings (watch for `too_many_arguments` on
+`Resolver::visit` — it takes `&mut self` + 2 args, so it is fine; and
+`clippy::type_complexity` on the closure maps — extract type aliases only if
+clippy flags them).
 
 - [ ] **Step 3: Confirm the cross-source seam no longer bails**
 
-Run: `grep -rn "not yet available" src/`
-Expected: no matches — the Slice 1 bail message is gone.
+Run: `grep -rn "not yet available" src/` Expected: no matches — the Slice 1 bail
+message is gone.
 
 - [ ] **Step 4: Commit any verification fixups, then hand off**
 
@@ -1242,7 +1390,8 @@ git add -A
 git commit -m "chore: satisfy verify gate for cross-source slice"
 ```
 
-Then proceed to `superpowers:finishing-a-development-branch` to open the PR (`just fmt` + `just verify` already green; one PR for the slice; squash-merge).
+Then proceed to `superpowers:finishing-a-development-branch` to open the PR
+(`just fmt` + `just verify` already green; one PR for the slice; squash-merge).
 
 ---
 
@@ -1250,17 +1399,36 @@ Then proceed to `superpowers:finishing-a-development-branch` to open the PR (`ju
 
 **Spec coverage (design spec §2.5 / ADR-0009 cross-source contract):**
 
-- `source` reuses the `add` DSL, parsed by `parse_install_source`, fetched by `fetch_ssot` → Task 1 Step 3 (`Resolver::ensure_source`).
-- Transitive closure spans sources → Task 1 (`visit` recurses across labels); Task 3 ATDD.
-- Cycle detection keyed `(canonical-source-label, kind, name)` → Task 1 (`on_path` keyed `(label, kind, name)`); Task 5 ATDD.
-- Conflict: same `(kind, name)` different source/ref is an error, reusing `conflict.rs` → Task 1 (`item_label` for in-closure clash) + Task 1 Step 10 (per-source `detect_conflicts` vs lockfile); Task 4 ATDD.
-- Dependency-pulled items recorded with own source + `required_by` → Task 1 Steps 7/12; Task 2 ATDD.
-- Removal never cascades; doctor flags orphan → no production change needed (Slice 1 doctor); Task 6 ATDD.
+- `source` reuses the `add` DSL, parsed by `parse_install_source`, fetched by
+  `fetch_ssot` → Task 1 Step 3 (`Resolver::ensure_source`).
+- Transitive closure spans sources → Task 1 (`visit` recurses across labels);
+  Task 3 ATDD.
+- Cycle detection keyed `(canonical-source-label, kind, name)` → Task 1
+  (`on_path` keyed `(label, kind, name)`); Task 5 ATDD.
+- Conflict: same `(kind, name)` different source/ref is an error, reusing
+  `conflict.rs` → Task 1 (`item_label` for in-closure clash) + Task 1 Step 10
+  (per-source `detect_conflicts` vs lockfile); Task 4 ATDD.
+- Dependency-pulled items recorded with own source + `required_by` → Task 1
+  Steps 7/12; Task 2 ATDD.
+- Removal never cascades; doctor flags orphan → no production change needed
+  (Slice 1 doctor); Task 6 ATDD.
 - No version solving / SAT → nothing added; documented in Task 7.
 - Docs flipped to implemented → Task 7.
 
-**Placeholder scan:** every code step shows complete code; commands list exact invocations + expected outcomes. No TBD/TODO.
+**Placeholder scan:** every code step shows complete code; commands list exact
+invocations + expected outcomes. No TBD/TODO.
 
-**Type consistency:** `DependencyClosure { by_source: BTreeMap<String, SourceInstall>, item_source: BTreeMap<(ItemKind,String), String>, required_by, guards }`, `SourceInstall { root, git_ref, items }`, `resolve_requires_closure(entry_label, entry_root, entry_git_ref, initial)`, and `items_from_report(report, source_for, required_by, hash_for)` are used identically across Tasks 1, 2-6 (assertions), and the rewired `mod.rs`. `Resolver::visit(label, node, requirer)` and `ensure_source(src_dsl)` signatures are self-consistent.
+**Type consistency:**
+`DependencyClosure { by_source: BTreeMap<String, SourceInstall>, item_source: BTreeMap<(ItemKind,String), String>, required_by, guards }`,
+`SourceInstall { root, git_ref, items }`,
+`resolve_requires_closure(entry_label, entry_root, entry_git_ref, initial)`, and
+`items_from_report(report, source_for, required_by, hash_for)` are used
+identically across Tasks 1, 2-6 (assertions), and the rewired `mod.rs`.
+`Resolver::visit(label, node, requirer)` and `ensure_source(src_dsl)` signatures
+are self-consistent.
 
-**Out-of-scope guardrails honored:** no version ranges/SAT, no auto-cascading removal, no path-based cross-source refs (always source-locator + name). Pre-1.0: the old single-source `DependencyClosure`/`resolve_requires_closure` shape is deleted outright (no back-compat); `items_from_report` signature changed in place.
+**Out-of-scope guardrails honored:** no version ranges/SAT, no auto-cascading
+removal, no path-based cross-source refs (always source-locator + name).
+Pre-1.0: the old single-source `DependencyClosure`/`resolve_requires_closure`
+shape is deleted outright (no back-compat); `items_from_report` signature
+changed in place.

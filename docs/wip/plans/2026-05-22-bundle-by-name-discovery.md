@@ -1,12 +1,21 @@
 # Bundle-by-name Discovery Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Allow `upskill add owner/repo bundle-name` to discover and install bundles by name, not just by full file path.
+**Goal:** Allow `upskill add owner/repo bundle-name` to discover and install
+bundles by name, not just by full file path.
 
-**Architecture:** Add a `find_bundle_by_name` helper that recursively searches a source directory for `<name>.bundle.yaml`. Wire it into `install_with_lockfile` so that when positional item names are provided and no items match, it falls back to bundle-by-name discovery. Add a lint rule that detects name collisions between bundles and items.
+**Architecture:** Add a `find_bundle_by_name` helper that recursively searches a
+source directory for `<name>.bundle.yaml`. Wire it into `install_with_lockfile`
+so that when positional item names are provided and no items match, it falls
+back to bundle-by-name discovery. Add a lint rule that detects name collisions
+between bundles and items.
 
-**Tech Stack:** Rust, existing `pipeline.rs` + `lint.rs` modules, existing `parse::bundle::discover` for recursive bundle walking.
+**Tech Stack:** Rust, existing `pipeline.rs` + `lint.rs` modules, existing
+`parse::bundle::discover` for recursive bundle walking.
 
 ---
 
@@ -65,8 +74,8 @@ fn find_bundle_by_name_skips_hidden_dirs() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib find_bundle_by_name`
-Expected: FAIL — `find_bundle_by_name` not found.
+Run: `cargo test --lib find_bundle_by_name` Expected: FAIL —
+`find_bundle_by_name` not found.
 
 - [ ] **Step 3: Implement `find_bundle_by_name`**
 
@@ -104,8 +113,7 @@ fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --lib find_bundle_by_name`
-Expected: 3 tests PASS.
+Run: `cargo test --lib find_bundle_by_name` Expected: 3 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -156,8 +164,8 @@ fn has_matching_items_true_for_rules_and_agents() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib has_matching_items`
-Expected: FAIL — function not defined.
+Run: `cargo test --lib has_matching_items` Expected: FAIL — function not
+defined.
 
 - [ ] **Step 3: Implement `has_matching_items`**
 
@@ -180,8 +188,7 @@ fn has_matching_items(source: &Path, name: &str) -> bool {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --lib has_matching_items`
-Expected: 3 tests PASS.
+Run: `cargo test --lib has_matching_items` Expected: 3 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -286,12 +293,14 @@ fn install_by_name_prefers_items_when_only_items_match() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --test pipeline_lockfile install_by_name`
-Expected: First test FAILS with "no matching items in source for: with-plugins".
+Run: `cargo test --test pipeline_lockfile install_by_name` Expected: First test
+FAILS with "no matching items in source for: with-plugins".
 
 - [ ] **Step 3: Implement bundle-by-name dispatch in `install_with_lockfile`**
 
-Modify the `install_with_lockfile` function in `src/pipeline.rs`. Replace the current logic between the item filter construction and the "no matching items" bail:
+Modify the `install_with_lockfile` function in `src/pipeline.rs`. Replace the
+current logic between the item filter construction and the "no matching items"
+bail:
 
 ```rust
 pub fn install_with_lockfile(
@@ -447,13 +456,13 @@ fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --test pipeline_lockfile install_by_name`
-Expected: 3 tests PASS.
+Run: `cargo test --test pipeline_lockfile install_by_name` Expected: 3 tests
+PASS.
 
 - [ ] **Step 5: Run full test suite**
 
-Run: `cargo test`
-Expected: All existing tests still pass (the empty-items path is unchanged).
+Run: `cargo test` Expected: All existing tests still pass (the empty-items path
+is unchanged).
 
 - [ ] **Step 6: Commit**
 
@@ -519,7 +528,8 @@ Expected: FAIL — no "name-collision" in output.
 
 In `src/lint.rs`, add a new check function and wire it into `lint()`:
 
-After `check_directives`, add a new cross-file check. Modify the `lint` function to call it after per-file checks complete:
+After `check_directives`, add a new cross-file check. Modify the `lint` function
+to call it after per-file checks complete:
 
 ```rust
 pub fn lint(paths: &[PathBuf], strict: bool) -> Result<LintReport> {
@@ -627,8 +637,8 @@ Expected: PASS.
 
 - [ ] **Step 5: Run full lint test suite**
 
-Run: `cargo test --test cli_lint`
-Expected: All lint tests pass (existing clean fixtures have no collisions).
+Run: `cargo test --test cli_lint` Expected: All lint tests pass (existing clean
+fixtures have no collisions).
 
 - [ ] **Step 6: Commit**
 
@@ -645,13 +655,11 @@ git commit -m "feat(lint): add name-collision rule for bundle-item name conflict
 
 - [ ] **Step 1: Run clippy**
 
-Run: `cargo clippy --all-targets -- -D warnings`
-Expected: No warnings.
+Run: `cargo clippy --all-targets -- -D warnings` Expected: No warnings.
 
 - [ ] **Step 2: Run full verification**
 
-Run: `just verify`
-Expected: All checks pass.
+Run: `just verify` Expected: All checks pass.
 
 - [ ] **Step 3: Fix any issues found**
 

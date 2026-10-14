@@ -1,12 +1,26 @@
 # Supporting Resources Copy Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `upskill add` copy an item's supporting resource files (everything in the item directory except the entrypoint and per-client override files) into each client's rendered output, per format-spec §2.4 / §9-#6 (fixes #199).
+**Goal:** Make `upskill add` copy an item's supporting resource files
+(everything in the item directory except the entrypoint and per-client override
+files) into each client's rendered output, per format-spec §2.4 / §9-#6 (fixes
+#199).
 
-**Architecture:** Enumerate non-entrypoint files per item; copy them into a per-item namespace directory in each client's output (`resource_base_path`). Directory-backed kinds (all skills, opencode rules) land resources beside their entrypoint with no body change. Flat kinds (Claude/Copilot rules, all agents) land resources in a sibling `<name>/` directory and have their entrypoint's relative resource links rewritten to prefix `<name>/`. Removal recomputes the same locations — no lockfile change. `--as` aliasing on resource-bearing items is guarded (deferred to debt).
+**Architecture:** Enumerate non-entrypoint files per item; copy them into a
+per-item namespace directory in each client's output (`resource_base_path`).
+Directory-backed kinds (all skills, opencode rules) land resources beside their
+entrypoint with no body change. Flat kinds (Claude/Copilot rules, all agents)
+land resources in a sibling `<name>/` directory and have their entrypoint's
+relative resource links rewritten to prefix `<name>/`. Removal recomputes the
+same locations — no lockfile change. `--as` aliasing on resource-bearing items
+is guarded (deferred to debt).
 
-**Tech Stack:** Rust 2024, `pulldown-cmark` 0.11 (link detection), `anyhow`, `assert_cmd` + `tempfile` (integration tests).
+**Tech Stack:** Rust 2024, `pulldown-cmark` 0.11 (link detection), `anyhow`,
+`assert_cmd` + `tempfile` (integration tests).
 
 **Spec:** `docs/wip/specs/2026-06-02-supporting-resources-design.md`
 
@@ -14,13 +28,17 @@
 
 ## File structure
 
-- `src/pipeline/discovery.rs` — add `iter_item_resources(dir)` (enumerate resources).
-- `src/pipeline/output.rs` — add `is_dir_backed`, `resource_base_path`, `copy_item_resources`; extend `remove_item_outputs`.
+- `src/pipeline/discovery.rs` — add `iter_item_resources(dir)` (enumerate
+  resources).
+- `src/pipeline/output.rs` — add `is_dir_backed`, `resource_base_path`,
+  `copy_item_resources`; extend `remove_item_outputs`.
 - `src/generate/link_rewrite.rs` — **new module**: `rewrite_resource_links`.
 - `src/generate/mod.rs` — register `pub mod link_rewrite;`.
-- `src/pipeline/install.rs` — wire resource copy + rewrite into `install_items_of_kind`.
+- `src/pipeline/install.rs` — wire resource copy + rewrite into
+  `install_items_of_kind`.
 - `src/pipeline/mod.rs` — `--as` pre-flight guard in `install_with_lockfile`.
-- `src/pipeline/lifecycle.rs` — route `remove` through the extended `remove_item_outputs`.
+- `src/pipeline/lifecycle.rs` — route `remove` through the extended
+  `remove_item_outputs`.
 - `tests/cli_resources.rs` — **new** integration tests.
 
 ---
@@ -34,7 +52,8 @@
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to the `#[cfg(test)] mod tests` block at the end of `src/pipeline/discovery.rs`:
+Add to the `#[cfg(test)] mod tests` block at the end of
+`src/pipeline/discovery.rs`:
 
 ```rust
     #[test]
@@ -70,8 +89,8 @@ Add to the `#[cfg(test)] mod tests` block at the end of `src/pipeline/discovery.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib iter_item_resources`
-Expected: FAIL — `cannot find function iter_item_resources`.
+Run: `cargo test --lib iter_item_resources` Expected: FAIL —
+`cannot find function iter_item_resources`.
 
 - [ ] **Step 3: Implement `iter_item_resources`**
 
@@ -137,8 +156,7 @@ fn is_override_file(fname: &str) -> bool {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --lib iter_item_resources`
-Expected: PASS (2 tests).
+Run: `cargo test --lib iter_item_resources` Expected: PASS (2 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -234,8 +252,8 @@ Add to the `#[cfg(test)] mod tests` block in `src/pipeline/output.rs`:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --lib --package upskill output::tests`
-Expected: FAIL — `is_dir_backed` / `resource_base_path` / `copy_item_resources` not found.
+Run: `cargo test --lib --package upskill output::tests` Expected: FAIL —
+`is_dir_backed` / `resource_base_path` / `copy_item_resources` not found.
 
 - [ ] **Step 3: Implement the helpers**
 
@@ -312,8 +330,8 @@ pub(super) fn copy_item_resources(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test --lib --package upskill output::tests`
-Expected: PASS (existing + 4 new tests).
+Run: `cargo test --lib --package upskill output::tests` Expected: PASS
+(existing + 4 new tests).
 
 - [ ] **Step 5: Commit**
 
@@ -334,7 +352,8 @@ git commit -m "feat(pipeline): resource base paths and copy helper (#199)"
 
 - [ ] **Step 1: Register the module**
 
-In `src/generate/mod.rs`, add to the module declarations near the top (alongside `pub mod directives;` etc.):
+In `src/generate/mod.rs`, add to the module declarations near the top (alongside
+`pub mod directives;` etc.):
 
 ```rust
 pub mod link_rewrite;
@@ -342,7 +361,8 @@ pub mod link_rewrite;
 
 - [ ] **Step 2: Write the failing table test**
 
-Create `src/generate/link_rewrite.rs` with this content (impl stub returns input unchanged so the file compiles and the test fails on assertions):
+Create `src/generate/link_rewrite.rs` with this content (impl stub returns input
+unchanged so the file compiles and the test fails on assertions):
 
 ````rust
 //! Rewrite relative resource links in a rendered flat-kind body so they
@@ -482,12 +502,13 @@ mod tests {
 
 - [ ] **Step 3: Run the test to verify it fails**
 
-Run: `cargo test --lib --package upskill link_rewrite`
-Expected: FAIL — every test panics on `todo!`.
+Run: `cargo test --lib --package upskill link_rewrite` Expected: FAIL — every
+test panics on `todo!`.
 
 - [ ] **Step 4: Implement `rewrite_resource_links`**
 
-Replace the stub `rewrite_resource_links` (and its `use` lines) in `src/generate/link_rewrite.rs` with:
+Replace the stub `rewrite_resource_links` (and its `use` lines) in
+`src/generate/link_rewrite.rs` with:
 
 ```rust
 use anyhow::Result;
@@ -596,12 +617,14 @@ fn has_scheme(s: &str) -> bool {
 }
 ```
 
-> Note: field names `def.dest` / `def.span` follow pulldown-cmark 0.11's `RefDef`. If a minor API mismatch surfaces, adjust to the crate's actual field names — the logic is unchanged.
+> Note: field names `def.dest` / `def.span` follow pulldown-cmark 0.11's
+> `RefDef`. If a minor API mismatch surfaces, adjust to the crate's actual field
+> names — the logic is unchanged.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cargo test --lib --package upskill link_rewrite`
-Expected: PASS (14 tests).
+Run: `cargo test --lib --package upskill link_rewrite` Expected: PASS (14
+tests).
 
 - [ ] **Step 6: Commit**
 
@@ -621,7 +644,8 @@ git commit -m "feat(generate): rewrite relative resource links for flat kinds (#
 
 - [ ] **Step 1: Extend the imports**
 
-In `src/pipeline/install.rs`, update the `use super::output::...` line and discovery import:
+In `src/pipeline/install.rs`, update the `use super::output::...` line and
+discovery import:
 
 ```rust
 use super::discovery::{
@@ -635,7 +659,10 @@ use super::output::{
 
 - [ ] **Step 2: Wire enumeration, rewrite, and copy into the write loop**
 
-In `install_items_of_kind`, replace the block from `let source_hash = hash_item_dir(&dir);` through the `for (client, rendered) in &renders { ... }` loop (currently `src/pipeline/install.rs:423-440`) with:
+In `install_items_of_kind`, replace the block from
+`let source_hash = hash_item_dir(&dir);` through the
+`for (client, rendered) in &renders { ... }` loop (currently
+`src/pipeline/install.rs:423-440`) with:
 
 ```rust
         let source_hash = hash_item_dir(&dir);
@@ -674,13 +701,14 @@ In `install_items_of_kind`, replace the block from `let source_hash = hash_item_
 
 - [ ] **Step 3: Build to verify it compiles**
 
-Run: `just assemble`
-Expected: compiles with zero warnings.
+Run: `just assemble` Expected: compiles with zero warnings.
 
 - [ ] **Step 4: Run the existing pipeline + generate suites (no regressions)**
 
-Run: `cargo test --test pipeline_local --test pipeline_source --test generate_skills --test generate_rules --test generate_agents`
-Expected: PASS (resourceless fixtures are unaffected — `copied` is empty, so no rewrite and no copy).
+Run:
+`cargo test --test pipeline_local --test pipeline_source --test generate_skills --test generate_rules --test generate_agents`
+Expected: PASS (resourceless fixtures are unaffected — `copied` is empty, so no
+rewrite and no copy).
 
 - [ ] **Step 5: Commit**
 
@@ -728,7 +756,8 @@ Add to `src/pipeline/output.rs` tests:
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cargo test --lib --package upskill remove_item_outputs_deletes_flat_kind_resource_dir`
+Run:
+`cargo test --lib --package upskill remove_item_outputs_deletes_flat_kind_resource_dir`
 Expected: FAIL — `.claude/rules/demo` still exists.
 
 - [ ] **Step 3: Extend `remove_item_outputs`**
@@ -767,7 +796,9 @@ pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
 
 - [ ] **Step 4: Route `lifecycle::remove` through `remove_item_outputs`**
 
-In `src/pipeline/lifecycle.rs`, replace the per-entry loop body (currently the `for client in ALL_CLIENTS { ... }` inner block plus `lock.remove(...)` at `src/pipeline/lifecycle.rs:65-85`) with:
+In `src/pipeline/lifecycle.rs`, replace the per-entry loop body (currently the
+`for client in ALL_CLIENTS { ... }` inner block plus `lock.remove(...)` at
+`src/pipeline/lifecycle.rs:65-85`) with:
 
 ```rust
 let mut report = RemoveReport::default();
@@ -794,8 +825,10 @@ for entry in &to_remove {
 
 - [ ] **Step 5: Run the unit test and the lockfile suite**
 
-Run: `cargo test --lib --package upskill remove_item_outputs_deletes_flat_kind_resource_dir && cargo test --test pipeline_lockfile`
-Expected: PASS (new unit test passes; existing remove/lockfile tests still pass — entrypoint-level `deleted_files` reporting is preserved).
+Run:
+`cargo test --lib --package upskill remove_item_outputs_deletes_flat_kind_resource_dir && cargo test --test pipeline_lockfile`
+Expected: PASS (new unit test passes; existing remove/lockfile tests still pass
+— entrypoint-level `deleted_files` reporting is preserved).
 
 - [ ] **Step 6: Commit**
 
@@ -810,12 +843,15 @@ git commit -m "fix(pipeline): delete resource trees on remove and update-orphan 
 
 **Files:**
 
-- Modify: `src/pipeline/mod.rs` (`install_with_lockfile`, pre-flight section ~line 167)
+- Modify: `src/pipeline/mod.rs` (`install_with_lockfile`, pre-flight section
+  ~line 167)
 - Test: covered by integration Task 7 (scenario 10).
 
 - [ ] **Step 1: Add the pre-flight guard**
 
-In `src/pipeline/mod.rs`, inside `install_with_lockfile`, immediately after the `// -- Validate bare --as with multi-item source --` block (before `// -- Conflict detection`), insert:
+In `src/pipeline/mod.rs`, inside `install_with_lockfile`, immediately after the
+`// -- Validate bare --as with multi-item source --` block (before
+`// -- Conflict detection`), insert:
 
 ```rust
 // -- Guard: aliasing an item that ships supporting resources is not yet
@@ -841,8 +877,8 @@ if !options.aliases.is_empty() {
 
 - [ ] **Step 2: Build to verify it compiles**
 
-Run: `just assemble`
-Expected: compiles (note `discovery::iter_item_dirs` and `iter_item_resources` are `pub(super)`, visible from the parent `mod.rs`).
+Run: `just assemble` Expected: compiles (note `discovery::iter_item_dirs` and
+`iter_item_resources` are `pub(super)`, visible from the parent `mod.rs`).
 
 - [ ] **Step 3: Commit**
 
@@ -859,7 +895,9 @@ git commit -m "feat(pipeline): guard --as against resource-bearing items (#199)"
 
 - Create: `tests/cli_resources.rs`
 
-These build the SSOT source inline in a tempdir (matching the existing inline-tempdir test style) so they do not perturb the shared `tests/fixtures/items/` golden corpus.
+These build the SSOT source inline in a tempdir (matching the existing
+inline-tempdir test style) so they do not perturb the shared
+`tests/fixtures/items/` golden corpus.
 
 - [ ] **Step 1: Write the integration tests**
 
@@ -1127,19 +1165,22 @@ fn alias_on_resource_item_is_rejected() {
 }
 ```
 
-> The `predicates` crate is already a dev-dependency via `assert_cmd`; if a direct import is needed, add `predicates` to `[dev-dependencies]` (check `Cargo.toml` first — `cli_add.rs` already uses it).
+> The `predicates` crate is already a dev-dependency via `assert_cmd`; if a
+> direct import is needed, add `predicates` to `[dev-dependencies]` (check
+> `Cargo.toml` first — `cli_add.rs` already uses it).
 
 - [ ] **Step 2: Run the integration suite**
 
-Run: `cargo test --test cli_resources`
-Expected: PASS (8 tests).
+Run: `cargo test --test cli_resources` Expected: PASS (8 tests).
 
 - [ ] **Step 3: Verify the re-add idempotence holds under dprint (§7.4)**
 
-The `readd_is_idempotent` test already asserts byte-identical re-render. Additionally confirm a rewritten flat-kind body is dprint-clean by running the formatter check:
+The `readd_is_idempotent` test already asserts byte-identical re-render.
+Additionally confirm a rewritten flat-kind body is dprint-clean by running the
+formatter check:
 
-Run: `cargo test --test cli_resources && just lint`
-Expected: PASS — no formatting drift on generated output.
+Run: `cargo test --test cli_resources && just lint` Expected: PASS — no
+formatting drift on generated output.
 
 - [ ] **Step 4: Commit**
 
@@ -1218,12 +1259,12 @@ fn bundle_install_copies_resources() {
 }
 ```
 
-> If the local bundle source syntax differs, mirror the form used in `tests/pipeline_source.rs` for a local `:bundle.yaml` source.
+> If the local bundle source syntax differs, mirror the form used in
+> `tests/pipeline_source.rs` for a local `:bundle.yaml` source.
 
 - [ ] **Step 2: Run the suite**
 
-Run: `cargo test --test cli_resources`
-Expected: PASS (10 tests total).
+Run: `cargo test --test cli_resources` Expected: PASS (10 tests total).
 
 - [ ] **Step 3: Commit**
 
@@ -1242,7 +1283,8 @@ git commit -m "test(cli): multi-kind and bundle resource coverage (#199)"
 
 - [ ] **Step 1: Document the behavior**
 
-Add a short note to `docs/commands.md` under `upskill add` (match the surrounding prose style):
+Add a short note to `docs/commands.md` under `upskill add` (match the
+surrounding prose style):
 
 ```markdown
 Supporting files in an item directory (anything besides the entrypoint and
@@ -1273,12 +1315,14 @@ Implement relocation: move \`resource_base_path(kind, client, <orig>)\` to
 Add coverage in \`tests/cli_resources.rs\`."
 ```
 
-Record the returned issue number and update the guard message in `src/pipeline/mod.rs` to reference it (`(see #<n>)`), then re-commit that one line.
+Record the returned issue number and update the guard message in
+`src/pipeline/mod.rs` to reference it (`(see #<n>)`), then re-commit that one
+line.
 
 - [ ] **Step 3: Format, then run the full gate**
 
-Run: `just fmt && just verify`
-Expected: PASS — all tests, clippy with `-D warnings`, fmt check, docs tooling clean.
+Run: `just fmt && just verify` Expected: PASS — all tests, clippy with
+`-D warnings`, fmt check, docs tooling clean.
 
 - [ ] **Step 4: Commit any formatting changes and open the PR**
 
@@ -1315,6 +1359,17 @@ EOF
 
 ## Self-review
 
-- **Spec coverage:** placement table → Tasks 2/4; rewrite (all cases) → Task 3; copy fidelity / exec bit → Task 2 (`fs::copy`) asserted in Task 7; exclusions → Task 1; removal → Task 5; update reconciliation → Task 7; alias guard → Tasks 6/7; collisions (none by construction) → no task needed; multi-kind + bundle + audience + idempotency → Tasks 7/8; §7.4 → Task 7 Step 3.
-- **Type consistency:** `rewrite_resource_links(&str, &str, &HashSet<PathBuf>) -> Result<String>`, `is_dir_backed(ItemKind, Client) -> bool`, `resource_base_path(ItemKind, Client, &str) -> PathBuf`, `copy_item_resources(&Path, &Path, ItemKind, Client, &str, &[PathBuf]) -> Result<()>`, `iter_item_resources(&Path) -> Vec<PathBuf>` — used identically across tasks.
-- **Placeholders:** none — every code step is complete. The two `>` notes (pulldown `RefDef` field names; local bundle-source syntax) are verification reminders, not missing code.
+- **Spec coverage:** placement table → Tasks 2/4; rewrite (all cases) → Task 3;
+  copy fidelity / exec bit → Task 2 (`fs::copy`) asserted in Task 7; exclusions
+  → Task 1; removal → Task 5; update reconciliation → Task 7; alias guard →
+  Tasks 6/7; collisions (none by construction) → no task needed; multi-kind +
+  bundle + audience + idempotency → Tasks 7/8; §7.4 → Task 7 Step 3.
+- **Type consistency:**
+  `rewrite_resource_links(&str, &str, &HashSet<PathBuf>) -> Result<String>`,
+  `is_dir_backed(ItemKind, Client) -> bool`,
+  `resource_base_path(ItemKind, Client, &str) -> PathBuf`,
+  `copy_item_resources(&Path, &Path, ItemKind, Client, &str, &[PathBuf]) -> Result<()>`,
+  `iter_item_resources(&Path) -> Vec<PathBuf>` — used identically across tasks.
+- **Placeholders:** none — every code step is complete. The two `>` notes
+  (pulldown `RefDef` field names; local bundle-source syntax) are verification
+  reminders, not missing code.

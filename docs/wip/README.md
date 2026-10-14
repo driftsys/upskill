@@ -6,30 +6,31 @@ none of the 25 migrated documents was classified as completed merely by moving
 it. Their bodies can contain historical commands, paths and assumptions.
 
 New task designs belong in `specs/`, and their implementation plans in `plans/`.
-For existing work, check its issue, implementation, tests and ADR before selecting
-it for execution or archival. Pair relationships and missing design references
-must be reconciled as part of that feature's review.
+For existing work, check its issue, implementation, tests and ADR before
+selecting it for execution or archival. Pair relationships and missing design
+references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
 - [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md)
-  — AC-00 target capabilities, ownership, installation planning, migrations,
-  and permission preservation; proposed contracts with explicit evidence gates.
+  — AC-00 target capabilities, ownership, installation planning, migrations, and
+  permission preservation; proposed contracts with explicit evidence gates.
 
 - [Agent customization delivery roadmap](specs/2026-10-11-agent-customization-roadmap.md)
   — Claude Code, Copilot, and Codex first; instructions, skills, subagents, MCP,
-  marketplaces/plugins, hooks, and permissions. Proposed sequencing and acceptance
-  gates; no implementation claim.
+  marketplaces/plugins, hooks, and permissions. Proposed sequencing and
+  acceptance gates; no implementation claim.
 
 ## Reconciliation inventory
 
 The maintainer of each affected feature owns its reconciliation. Until evidence
 is recorded, the document remains here. Known starting points are generic Git
 URLs ([ADR-0011](../adr/0011-generic-git-url-source.md)), coupling
-([ADR-0009](../adr/0009-coupling-tiers-and-dependencies.md), still Proposed), and
-MCP ([ADR-0010](../adr/0010-mcp-config-write.md)). The plugin descriptor plan's
-referenced design is missing; recover provenance before interpreting it as a
-complete pair. Windows support also has no matching design in this inventory.
+([ADR-0009](../adr/0009-coupling-tiers-and-dependencies.md), still Proposed),
+and MCP ([ADR-0010](../adr/0010-mcp-config-write.md)). The plugin descriptor
+plan's referenced design is missing; recover provenance before interpreting it
+as a complete pair. Windows support also has no matching design in this
+inventory.
 
 | Document                                                                                             | Disposition            |
 | ---------------------------------------------------------------------------------------------------- | ---------------------- |
@@ -67,6 +68,7 @@ then move only the completed feature's raw working documents into
 [archive](../archive/README.md), with links to the delivery evidence and durable
 successors. Unrelated or uncertain work stays here.
 
-The [agent customization research](../technotes/2026-10-11-agent-customization/README.md)
+The
+[agent customization research](../technotes/2026-10-11-agent-customization/README.md)
 is maintained as an informative technote at the user's request. Its open design
 questions do not change the status of accepted ADR-0013.

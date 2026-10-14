@@ -24,6 +24,7 @@ locations. Continue supporting separately owned regions in one aggregate.
 Changing shared regions needs later authoritative per-owner association. The
 restriction avoids inventing evidence and does not drop unrelated ownership.
 
-Satisfies: [Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
-Related: [planner design](../design/owned-instruction-planning.md).
-Rationale: [archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).
+Satisfies:
+[Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
+Related: [planner design](../design/owned-instruction-planning.md). Rationale:
+[archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).

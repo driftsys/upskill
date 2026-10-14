@@ -1,10 +1,10 @@
 # Upskill conventions
 
 The [portable format](./format-spec.md) is intentionally tool-agnostic: it
-defines what any conforming consumer must accept, but leaves many choices
-open (which path holds items, where bundles live, etc.). This page records
-the specific conventions the **upskill project itself** follows when
-authoring and consuming registries, so that:
+defines what any conforming consumer must accept, but leaves many choices open
+(which path holds items, where bundles live, etc.). This page records the
+specific conventions the **upskill project itself** follows when authoring and
+consuming registries, so that:
 
 - `upskill new <kind> <name>` drops items directly where they belong.
 - Examples in this book, in fixtures, and in the `driftsys/skills` source
@@ -14,13 +14,13 @@ authoring and consuming registries, so that:
 
 These conventions are **non-normative**: a registry that deviates is still
 conforming, and the upskill CLI MUST accept it. They exist to keep
-upskill-aligned registries legible to each other and to give new authors
-a default that just works.
+upskill-aligned registries legible to each other and to give new authors a
+default that just works.
 
 ## Conventional layout
 
-The root folder of an upskill source registry is **`skills/`**. Items and
-bundle files sit together under it, flat:
+The root folder of an upskill source registry is **`skills/`**. Items and bundle
+files sit together under it, flat:
 
 ```text
 <source-registry-root>/
@@ -40,24 +40,22 @@ bundle files sit together under it, flat:
 
 Why this shape:
 
-- **Single discovery root.** Anyone cloning the registry sees SSOT content
-  in one place; no frontmatter scan needed to find items.
-- **Flat bundle placement.** Bundles sit next to the items they reference,
-  so `requires:` and `items:` lists are visually adjacent to their
-  targets.
-- **Matches `upskill new`.** Running `upskill new <kind> <name>` from
-  inside `skills/` produces `skills/<name>/<KIND>.md` with no follow-up
-  moves.
-- **Holds all three kinds.** Despite the directory name, `skills/` carries
-  rules and agents as well. Kind is determined by the entrypoint filename
-  ([format-spec §2.1](./format-spec.md#21-item-directory-structure)), not
-  by the parent directory.
+- **Single discovery root.** Anyone cloning the registry sees SSOT content in
+  one place; no frontmatter scan needed to find items.
+- **Flat bundle placement.** Bundles sit next to the items they reference, so
+  `requires:` and `items:` lists are visually adjacent to their targets.
+- **Matches `upskill new`.** Running `upskill new <kind> <name>` from inside
+  `skills/` produces `skills/<name>/<KIND>.md` with no follow-up moves.
+- **Holds all three kinds.** Despite the directory name, `skills/` carries rules
+  and agents as well. Kind is determined by the entrypoint filename
+  ([format-spec §2.1](./format-spec.md#21-item-directory-structure)), not by the
+  parent directory.
 
 ### When bundles outgrow the flat layout
 
-Once a registry holds enough bundles that `*.bundle.yaml` files start to
-drown out the item directories in a single `ls`, move the bundles into a
-sibling `bundles/` subdirectory:
+Once a registry holds enough bundles that `*.bundle.yaml` files start to drown
+out the item directories in a single `ls`, move the bundles into a sibling
+`bundles/` subdirectory:
 
 ```text
 <source-registry-root>/
@@ -74,25 +72,25 @@ sibling `bundles/` subdirectory:
         └── AGENT.md
 ```
 
-This trades visual adjacency between a bundle and the items it lists for
-a clean separation between manifests and content. Rough heuristic: stick
-with the flat layout until scanning `skills/` for an item becomes harder
-than scanning it for a bundle.
+This trades visual adjacency between a bundle and the items it lists for a clean
+separation between manifests and content. Rough heuristic: stick with the flat
+layout until scanning `skills/` for an item becomes harder than scanning it for
+a bundle.
 
 `upskill` discovers bundles by scanning for the `.bundle.yaml` suffix
-([format-spec §2.2](./format-spec.md#22-bundle-files)) and is indifferent
-to which of these two sub-layouts the registry uses.
+([format-spec §2.2](./format-spec.md#22-bundle-files)) and is indifferent to
+which of these two sub-layouts the registry uses.
 
 ## Item naming
 
-Item names are **namespace-prefixed** so they stay globally unique within
-each per-client flat directory (`.claude/skills/<name>/`, `.claude/rules/<name>.md`,
+Item names are **namespace-prefixed** so they stay globally unique within each
+per-client flat directory (`.claude/skills/<name>/`, `.claude/rules/<name>.md`,
 etc.). Two items with the same `(kind, name)` would otherwise collide on disk
 when co-installed from different sources.
 
-Default to **repo/org scope** (`<org>-<descriptor>`); switch to **bundle
-scope** (`<bundle>-<descriptor>`) when one org ships multiple bundles that
-could reuse generic descriptors. This repo uses the `upskill-` prefix — e.g.
+Default to **repo/org scope** (`<org>-<descriptor>`); switch to **bundle scope**
+(`<bundle>-<descriptor>`) when one org ships multiple bundles that could reuse
+generic descriptors. This repo uses the `upskill-` prefix — e.g.
 `upskill-writing-rules`, `upskill-prompt-design`. See the
 `upskill-writing-bundles` skill for the full decision rule.
 
@@ -105,22 +103,22 @@ upskill new rule license-checks   # → skills/license-checks/RULE.md
 upskill new agent security-review # → skills/security-review/AGENT.md
 ```
 
-Bundles are plain `*.bundle.yaml` files you create alongside the items —
-there is no scaffolder for them; copy the
-[format-spec §3.7](./format-spec.md#37-bundle-schema) example as a
-starting point.
+Bundles are plain `*.bundle.yaml` files you create alongside the items — there
+is no scaffolder for them; copy the
+[format-spec §3.7](./format-spec.md#37-bundle-schema) example as a starting
+point.
 
 ## What these conventions do not change
 
 - **Portable format conformance.** `<item-root>` and `<bundle-root>` are
-  MAY-level in the format spec. A registry that uses `content/` or
-  `skills-src/` instead of `skills/` is still conforming.
+  MAY-level in the format spec. A registry that uses `content/` or `skills-src/`
+  instead of `skills/` is still conforming.
 - **Generation output.** Consumer-side paths (`.claude/skills/<name>/...`,
   `.github/skills/...`, `.agents/skills/...`) are unrelated to source-side
   layout. They are specified in
   [format-spec §7](./format-spec.md#7-generation-client-specific-output).
-- **The `.agents/` reservation.** Source registries SHOULD NOT use
-  `.agents/` as their item root, to prevent confusion with the
-  consumer-side opencode canonical-store path
-  ([format-spec §7.3](./format-spec.md#73-opencode)). This applies whether
-  the registry follows the upskill conventional layout or any other.
+- **The `.agents/` reservation.** Source registries SHOULD NOT use `.agents/` as
+  their item root, to prevent confusion with the consumer-side opencode
+  canonical-store path ([format-spec §7.3](./format-spec.md#73-opencode)). This
+  applies whether the registry follows the upskill conventional layout or any
+  other.

@@ -4,17 +4,17 @@ Evidence date: **2026-10-11**. Upskill baseline: `ae31bb5` (0.8.1).
 
 This pack collects current documentation, schemas, and compatibility questions
 for the next upskill design. It covers existing and proposed customization
-categories; research coverage is not a declaration of implemented support.
-No coding-client sessions, plugin installations, hook executions, or MCP
+categories; research coverage is not a declaration of implemented support. No
+coding-client sessions, plugin installations, hook executions, or MCP
 connections were used to verify behavior.
 
 ## Agreed direction
 
 **Agent customization** is the umbrella term. Bundles remain the composition
-mechanism for installing related items, including instructions plus skills.
-The design must consider Claude Code, GitHub Copilot, OpenCode, Codex, Cursor,
-and Gemini CLI. Codex is an intended implementation target; Cursor and Gemini
-CLI implementation is deferred.
+mechanism for installing related items, including instructions plus skills. The
+design must consider Claude Code, GitHub Copilot, OpenCode, Codex, Cursor, and
+Gemini CLI. Codex is an intended implementation target; Cursor and Gemini CLI
+implementation is deferred.
 
 This support commitment is recorded in accepted
 [ADR-0013](../../adr/0013-agent-customization-targets.md).
@@ -56,24 +56,27 @@ not loaded by upskill at runtime.
 1. **Shared discovery creates cross-client exposure.** Several clients read
    `.agents/skills` and compatibility directories. Existing OpenCode-specialized
    output can be consumed by another client. Define ownership and compatibility
-   before sharing generated paths. See [Codex](codex.md) and [Cursor](cursor.md).
-2. **Tool restrictions cannot disappear during translation.** Copilot distinguishes
-   omitted, empty, and populated tool lists. Existing upskill drops some mapped
-   capabilities and can emit an unrestricted agent. See [Copilot](copilot.md).
+   before sharing generated paths. See [Codex](codex.md) and
+   [Cursor](cursor.md).
+2. **Tool restrictions cannot disappear during translation.** Copilot
+   distinguishes omitted, empty, and populated tool lists. Existing upskill
+   drops some mapped capabilities and can emit an unrestricted agent. See
+   [Copilot](copilot.md).
 3. **Scope changes paths and semantics.** Replacing the output root with `$HOME`
    does not establish user-scope discovery. Local state does not automatically
    reach cloud sessions. Each adapter needs explicit scope and surface support.
-4. **Packaging changes behavior.** Standalone agents and plugin agents can accept
-   different fields. Portable Agent Plugins currently standardizes skills and
-   MCP, while other content uses client extensions. See [Claude](claude-code.md)
-   and [shared standards](standards.md).
+4. **Packaging changes behavior.** Standalone agents and plugin agents can
+   accept different fields. Portable Agent Plugins currently standardizes skills
+   and MCP, while other content uses client extensions. See
+   [Claude](claude-code.md) and [shared standards](standards.md).
 5. **Schema validity is narrower than compatibility.** Discovery, precedence,
    permissions, trust, and execution must be verified against the selected
    release. Golden output and parsing checks cannot establish those properties.
-6. **Documentation conflicts need explicit disposition.** OpenCode V2 documentation
-   and the advertised schema differ. Gemini examples and native parsers differ.
-   Preserve the evidence and select a tested contract during design rather than
-   silently normalizing it. See [OpenCode](opencode.md) and [Gemini](gemini-cli.md).
+6. **Documentation conflicts need explicit disposition.** OpenCode V2
+   documentation and the advertised schema differ. Gemini examples and native
+   parsers differ. Preserve the evidence and select a tested contract during
+   design rather than silently normalizing it. See [OpenCode](opencode.md) and
+   [Gemini](gemini-cli.md).
 
 ## Corrections to the preliminary conversation review
 
@@ -96,9 +99,9 @@ findings, not changes to installed integrations.
 [The RIDL comparison and refactor proposal](documentation-refactor.md) examines
 working documents, the published book, durable specifications and design,
 technical notes, decisions, and archives. It proposes a lifecycle for upskill's
-existing documentation and this research pack. The resulting refactor places this pack in `docs/technotes/`, as requested,
-and records the disposition in the comparison. Older plans remain in WIP pending
-reconciliation.
+existing documentation and this research pack. The resulting refactor places
+this pack in `docs/technotes/`, as requested, and records the disposition in the
+comparison. Older plans remain in WIP pending reconciliation.
 
 ## Verification and limits
 

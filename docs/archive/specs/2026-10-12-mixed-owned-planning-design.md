@@ -1,9 +1,9 @@
 # Mixed owned-artifact planning
 
-Date: 2026-10-12. Status: Proposed implementation contract.
-Base: `d886873` (PR #262).
-Authority: [operational lifecycle design](2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 delivery plan](../plans/2026-10-11-instructions-rules-m1.md).
+Date: 2026-10-12. Status: Proposed implementation contract. Base: `d886873` (PR
+#262). Authority:
+[operational lifecycle design](2026-10-12-m1-owned-lifecycle-design.md) and
+[M1 delivery plan](../plans/2026-10-11-instructions-rules-m1.md).
 
 ## Intent
 
@@ -16,9 +16,10 @@ supplied file evidence. It does not connect the compiler to native adapters or
 activate installation effects.
 
 The user delegated routine design decisions and the continuing delivery loop.
-Success means deterministic complete records and individual physical file actions,
-or an error without a successful partial plan. Filesystem qualification, reference
-authority, state, execution and native support remain separate gates.
+Success means deterministic complete records and individual physical file
+actions, or an error without a successful partial plan. Filesystem
+qualification, reference authority, state, execution and native support remain
+separate gates.
 
 ## Alternatives
 
@@ -69,31 +70,34 @@ exact optional before/after values. The API performs no I/O or input mutation.
 
 Validate all prior ownership records before partitioning. Each installation has
 exactly one explicit change; reject duplicates, unknown removals and empty Set
-values. A Set is the complete desired set across both forms. Omitting a previously
-owned form removes that form through its planner; it never silently retains stale
-files or contributions. An empty complete set requires explicit Remove.
+values. A Set is the complete desired set across both forms. Omitting a
+previously owned form removes that form through its planner; it never silently
+retains stale files or contributions. An empty complete set requires explicit
+Remove.
 
-An existing installation retains its source, item kind, source name and installed
-alias. Its source revision may change, consistently across all desired records.
-Check this binding against the full prior set, including when the old and desired
-forms have no overlap. Existing shared-owner restrictions remain: reject any
-affected multi-owner record rather than infer missing reference associations.
-Untouched shared records survive unchanged.
+An existing installation retains its source, item kind, source name and
+installed alias. Its source revision may change, consistently across all desired
+records. Check this binding against the full prior set, including when the old
+and desired forms have no overlap. Existing shared-owner restrictions remain:
+reject any affected multi-owner record rather than infer missing reference
+associations. Untouched shared records survive unchanged.
 
-Partition prior rows by form only after global validation. Produce a Set for each
-form with nonempty desired values. When an installation previously owned that
-form but no longer desires it, produce its Remove. When it never owned the absent
-form, produce no change for that form. A global Remove reaches every previously
-owned form. Preserve the original prior-row order within each partition.
+Partition prior rows by form only after global validation. Produce a Set for
+each form with nonempty desired values. When an installation previously owned
+that form but no longer desires it, produce its Remove. When it never owned the
+absent form, produce no change for that form. A global Remove reaches every
+previously owned form. Preserve the original prior-row order within each
+partition.
 
 ## Locations and evidence
 
 Locations use `(scope, raw root OsStr, portable relative path)` equality. They
 do not normalize roots or prove containment, host equivalence or realizability.
-Validate supplied observation roots, relative paths and optional permission bits.
-Require exactly one observation per affected physical location, including no-ops,
-and reject duplicates, missing observations and extras. Affected locations include
-every old row belonging to a changed installation and every desired location.
+Validate supplied observation roots, relative paths and optional permission
+bits. Require exactly one observation per affected physical location, including
+no-ops, and reject duplicates, missing observations and extras. Affected
+locations include every old row belonging to a changed installation and every
+desired location.
 
 A physical location cannot participate in both instruction and dedicated-file
 forms anywhere in the union of prior and desired state. Reject even an explicit
@@ -110,8 +114,8 @@ from `ab`; compare scopes and raw roots exactly.
 Partition observations by the validated physical form. Dedicated observations
 reach the existing whole-file planner with bytes and modes intact. Instruction
 observations reach the existing aggregate planner as exact optional bytes; the
-coordinator retains their optional modes separately for physical actions. Invalid
-UTF-8 in an affected aggregate remains a conflict.
+coordinator retains their optional modes separately for physical actions.
+Invalid UTF-8 in an affected aggregate remains a conflict.
 
 ## Combined result
 
@@ -120,20 +124,22 @@ and manual bytes using those existing implementations. Reassemble records in
 original prior-row order, replacing retained record identities at their former
 positions; remove absent identities. Append new records sorted by exact location
 and selector, with whole-file records distinguished from contribution selectors.
-Validate the final combined ownership records, including owner revision coherence.
+Validate the final combined ownership records, including owner revision
+coherence.
 
-Keep every affected physical action, including byte-identical no-ops. Sort actions
-by exact location and reject duplicate action locations. Whole-file actions retain
-the underlying exact before/after values, including optional modes. Aggregate
-actions use the exact observed before value and the editor's after bytes. Preserve
-the observed aggregate mode; an absent aggregate receives after mode `None`.
-Retain an empty aggregate after its last contribution is removed. No deletion or
-permission authority follows from these supplied values.
+Keep every affected physical action, including byte-identical no-ops. Sort
+actions by exact location and reject duplicate action locations. Whole-file
+actions retain the underlying exact before/after values, including optional
+modes. Aggregate actions use the exact observed before value and the editor's
+after bytes. Preserve the observed aggregate mode; an absent aggregate receives
+after mode `None`. Retain an empty aggregate after its last contribution is
+removed. No deletion or permission authority follows from these supplied values.
 
 Any failure returns no successful combined plan. The first version may return
 the first contextual conflict; collecting all operation diagnostics remains a
-lifecycle activation gate. Inputs and results are owned values without serialized
-execution authority, state writes, source provenance or native-success claims.
+lifecycle activation gate. Inputs and results are owned values without
+serialized execution authority, state writes, source provenance or
+native-success claims.
 
 ## Acceptance examples
 
@@ -152,16 +158,17 @@ execution authority, state writes, source provenance or native-success claims.
 
 ## Delivery and remaining gates
 
-Use an isolated worktree, acceptance-first integration tests, focused implementation,
-actual semantic controls, task/final reviews, ordered formatting/verification,
-hosted Linux/Windows checks and the two numbered PR reviews. Keep code, tests and
-documentation together. Record durable decisions and garden only this completed
-design/plan pair. Refresh current archive successor wording for debt #264 while
-preserving explicitly historical closeout quotations and totals.
+Use an isolated worktree, acceptance-first integration tests, focused
+implementation, actual semantic controls, task/final reviews, ordered
+formatting/verification, hosted Linux/Windows checks and the two numbered PR
+reviews. Keep code, tests and documentation together. Record durable decisions
+and garden only this completed design/plan pair. Refresh current archive
+successor wording for debt #264 while preserving explicitly historical closeout
+quotations and totals.
 
 No new dependencies, asynchronous runtime, native commands, source fetching,
-filesystem observation, lock, journal, schema-2 persistence, CLI selector or target
-qualification belongs to this slice. Complete reference graphs, per-owner consumer
-association, source/target adapters, immutable source evidence, filesystem safety,
-permission policy and apply/recovery remain required before activation. This
-prerequisite does not complete M1-A2, M1-A3 or M1.
+filesystem observation, lock, journal, schema-2 persistence, CLI selector or
+target qualification belongs to this slice. Complete reference graphs, per-owner
+consumer association, source/target adapters, immutable source evidence,
+filesystem safety, permission policy and apply/recovery remain required before
+activation. This prerequisite does not complete M1-A2, M1-A3 or M1.

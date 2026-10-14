@@ -1,9 +1,9 @@
 # Agent customization foundation design
 
-Date: 2026-10-11. Status: **Proposed**.
-Roadmap: [AC-00 / M0](2026-10-11-agent-customization-roadmap.md).
-Code baseline: `b866f5e`. This document specifies future behavior; it does not
-claim implementation, accepted ADR changes, or native conformance.
+Date: 2026-10-11. Status: **Proposed**. Roadmap:
+[AC-00 / M0](2026-10-11-agent-customization-roadmap.md). Code baseline:
+`b866f5e`. This document specifies future behavior; it does not claim
+implementation, accepted ADR changes, or native conformance.
 
 ## Purpose and boundaries
 
@@ -37,22 +37,23 @@ installer, marketplace hosting service, or runtime adapter SDK is introduced.
 - `src/model/common.rs` rejects unsupported source schema versions; this is a
   useful compatibility boundary for future required semantics.
 
-These are reasons for explicit contracts rather than a wholesale rewrite of
-the pipeline. Existing reports, source parsing, fetch, and pure renderers remain
+These are reasons for explicit contracts rather than a wholesale rewrite of the
+pipeline. Existing reports, source parsing, fetch, and pure renderers remain
 useful and should be adapted incrementally.
 
 ## 1. Target identity and compatibility
 
 ### Native target profiles
 
-A target profile identifies **family + surface + contract revision**. Installation
-context supplies project/user scope, OS, resolved roots, and an optional observed
-client version. These are separate values: changing scope changes discovery,
-not the identity of an item; one family can expose incompatible surfaces.
+A target profile identifies **family + surface + contract revision**.
+Installation context supplies project/user scope, OS, resolved roots, and an
+optional observed client version. These are separate values: changing scope
+changes discovery, not the identity of an item; one family can expose
+incompatible surfaces.
 
 Initial internal surface identifiers are `claude.cli`, `copilot.cli`,
-`copilot.vscode-local`, `codex.cli`, `codex.ide`, and `opencode.cli`.
-Future `cursor.editor`, `cursor.cli`, and `gemini.cli` profiles remain design-only.
+`copilot.vscode-local`, `codex.cli`, `codex.ide`, and `opencode.cli`. Future
+`cursor.editor`, `cursor.cli`, and `gemini.cli` profiles remain design-only.
 They are internal contract identifiers, not new CLI spelling promises.
 
 Each profile records:
@@ -68,11 +69,11 @@ Each profile records:
 
 Profiles ship with upskill. Installation does not download schemas or accept a
 new vendor contract automatically. A detected version outside the tested range
-produces an unverified-version diagnostic. Content generation may use an explicit
-profile without a locally installed client; it cannot report native discovery
-as verified. Native execution operations require the profile's version checks.
-Permission-sensitive operations cannot bypass compatibility validation by
-selecting an unknown version or passing a generic force option.
+produces an unverified-version diagnostic. Content generation may use an
+explicit profile without a locally installed client; it cannot report native
+discovery as verified. Native execution operations require the profile's version
+checks. Permission-sensitive operations cannot bypass compatibility validation
+by selecting an unknown version or passing a generic force option.
 
 ### Capability results
 
@@ -106,11 +107,11 @@ permissive formats.
 
 ### Version evidence for this proposal
 
-Read-only local probes on 2026-10-11 returned Claude Code **2.1.287**, Copilot CLI
-**1.0.95**, Codex CLI **0.162.1**, and VS Code **1.141.0** on macOS arm64.
+Read-only local probes on 2026-10-11 returned Claude Code **2.1.287**, Copilot
+CLI **1.0.95**, Codex CLI **0.162.1**, and VS Code **1.141.0** on macOS arm64.
 Commands: `claude --version`, `copilot --version`, `codex --version`, and
-`code --version`. VS Code emitted an Electron codesign diagnostic before returning
-its version. No discovery or behavior test followed these probes.
+`code --version`. VS Code emitted an Electron codesign diagnostic before
+returning its version. No discovery or behavior test followed these probes.
 
 These are candidate validation versions, not minimum supported versions or
 release promises. The Copilot extension and Codex IDE versions still need to be
@@ -121,22 +122,22 @@ remain the contract inventory, not substitutes for those tests.
 
 ### F-A implementation boundary
 
-F-A adds stable family/surface identities and a pure capability validator.
-The validator requires a declaration for the exact surface and field, rejects
-unknown or incompatible required behavior, and permits warning-only omission
-for fields classified as cosmetic in code. The existing default selection is
-stored as the original four surfaces. Codex has an identity but no selectable
-CLI flag, output renderer, or installation lifecycle yet; those start in M1.
-F-A does not populate native version ranges, discovery evidence, OS/scope
-combinations, or runtime conformance results. Those remain gates for the
-category adapters and release qualification.
+F-A adds stable family/surface identities and a pure capability validator. The
+validator requires a declaration for the exact surface and field, rejects
+unknown or incompatible required behavior, and permits warning-only omission for
+fields classified as cosmetic in code. The existing default selection is stored
+as the original four surfaces. Codex has an identity but no selectable CLI flag,
+output renderer, or installation lifecycle yet; those start in M1. F-A does not
+populate native version ranges, discovery evidence, OS/scope combinations, or
+runtime conformance results. Those remain gates for the category adapters and
+release qualification.
 
 ## 2. Consumer selection and author targeting
 
 Keep existing boolean selectors and config precedence. Add `--codex` and config
 `clients: [codex]` in M1; this selects local Codex CLI configuration. Codex IDE
-is a companion conformance surface for shared files, not an assumed clone of
-CLI behavior. `--vscode` means Copilot VS Code Local, not Agent Host or cloud.
+is a companion conformance surface for shared files, not an assumed clone of CLI
+behavior. `--vscode` means Copilot VS Code Local, not Agent Host or cloud.
 
 Freeze the no-selection default to the currently shipped set: Claude, Copilot
 CLI, VS Code Local, and OpenCode. Codex requires explicit selection initially.
@@ -152,20 +153,20 @@ still require distinct validation before deduplicating a shared output.
 Record **requested surfaces** and **effective artifact consumers** separately.
 For update, resolve selection in this order: invocation flags, project config
 `clients`, global config `clients`, then the installation's recorded requested
-selection. A saved config selection therefore overrides installation history,
-as in ADR-0012. “Bare update preserves selection” means no flags and no configured
+selection. A saved config selection therefore overrides installation history, as
+in ADR-0012. “Bare update preserves selection” means no flags and no configured
 client selection. Preserve the existing empty-list-as-default behavior; an empty
 effective config list is not an explicit selection override. Legacy unresolved
-history uses the migration rules below rather than the latest default set.
-These operation-level choices do not change the user's saved preferences.
-Diagnostics and removal use recorded ownership;
-they do not reinterpret the latest global preference as install history.
+history uses the migration rules below rather than the latest default set. These
+operation-level choices do not change the user's saved preferences. Diagnostics
+and removal use recorded ownership; they do not reinterpret the latest global
+preference as install history.
 
 ## 3. Artifact ownership
 
-An artifact is identified by its destination scope/root plus path and, for shared
-files, a stable owned selector. Artifact identity is independent of the client
-requesting it. Each artifact records its consuming surfaces and owners.
+An artifact is identified by its destination scope/root plus path and, for
+shared files, a stable owned selector. Artifact identity is independent of the
+client requesting it. Each artifact records its consuming surfaces and owners.
 
 An owner is an installed source + item kind/name + install identity. Retain the
 source name separately from aliases. Bundle membership, dependency edges, and
@@ -189,8 +190,8 @@ M0 does not add a generic force-adoption switch.
 Shared files require syntax-aware edits for JSON, JSONC, and TOML. The first
 implementation only adds the editor needed by M1's Markdown aggregates; later
 adapters introduce their editors after dependency review. If an editor cannot
-preserve a file's unrelated content, report a conflict rather than serialize
-the whole file and discard user formatting/comments. Array selectors use native
+preserve a file's unrelated content, report a conflict rather than serialize the
+whole file and discard user formatting/comments. Array selectors use native
 identity or tracked contributions, never a stored numeric position alone.
 
 ### Shared discovery
@@ -198,8 +199,8 @@ identity or tracked contributions, never a stored numeric position alone.
 Resolve destinations before deduplication. Two selected surfaces may share an
 artifact only if their rendered bytes, resources, and behavioral requirements
 are compatible. Equal bytes alone do not prove equal runtime interpretation.
-Otherwise use verified client-specific locations where possible, or stop with
-a conflict requiring an author/consumer choice.
+Otherwise use verified client-specific locations where possible, or stop with a
+conflict requiring an author/consumer choice.
 
 Selection controls upskill's writes; it cannot stop an unselected client from
 discovering a native shared directory. Preview must identify known incidental
@@ -227,27 +228,28 @@ preconditions, permission changes, diagnostics, and expected state transitions.
 It is not a user-editable script or an arbitrary shell command list.
 
 Action forms are file write/remove, contribution/key edit, resource copy/remove,
-and a typed native operation with explicit arguments. Renderers return artifacts;
-they do not run commands or write files. Native operations keep the existing
-shellout approach, subject to the relevant accepted integration ADRs. Never
-execute bundle-provided installers or scripts while constructing a plan.
+and a typed native operation with explicit arguments. Renderers return
+artifacts; they do not run commands or write files. Native operations keep the
+existing shellout approach, subject to the relevant accepted integration ADRs.
+Never execute bundle-provided installers or scripts while constructing a plan.
 
 Execution sequence:
 
 1. Resolve source content and dependencies. Preview may fetch into a temporary
-   directory, as current update preview does; it may not change client installation
-   state, authenticate, launch MCP servers, or execute hooks.
+   directory, as current update preview does; it may not change client
+   installation state, authenticate, launch MCP servers, or execute hooks.
 2. Validate required capabilities and aggregate all destination conflicts.
-3. Build deterministic actions and show any loss of coverage or change of access.
-4. Acquire the scope's single-writer lock and recheck source, lockfile, destination
-   hashes, and relevant native inventory. A changed precondition requires a new
-   plan; never apply a stale preview.
+3. Build deterministic actions and show any loss of coverage or change of
+   access.
+4. Acquire the scope's single-writer lock and recheck source, lockfile,
+   destination hashes, and relevant native inventory. A changed precondition
+   requires a new plan; never apply a stale preview.
 5. Apply actions, checkpoint outcomes, and commit state. Use atomic per-file
    replacement where supported and preserve file permissions. Atomicity of one
    file is not a claim of a transaction over several files or external CLIs.
 
-Recheck an action's destination preconditions immediately before applying it.
-If a later action conflicts, stop and report the already-applied actions through
+Recheck an action's destination preconditions immediately before applying it. If
+a later action conflicts, stop and report the already-applied actions through
 the journal. The writer lock coordinates upskill processes; it cannot make an
 uncooperative external editor participate in a cross-file transaction.
 
@@ -269,9 +271,9 @@ affected action has a verified inverse.
 ### Outcomes and observation
 
 Track configured files, native registration, enablement, trust, authentication,
-and successful runtime use separately. A native CLI exit code alone cannot
-prove discovery or enforcement. Missing CLI, skipped, failed, pending trust,
-and unknown outcomes remain visible.
+and successful runtime use separately. A native CLI exit code alone cannot prove
+discovery or enforcement. Missing CLI, skipped, failed, pending trust, and
+unknown outcomes remain visible.
 
 `doctor` remains non-mutating and does not connect to servers or run hooks.
 Offline checks compare owned artifacts and state; native inventory queries are
@@ -282,34 +284,37 @@ structured reports; `main.rs` formats them.
 ## 5. State and source migrations
 
 Introduce **lockfile schema 2** with explicit installation roots, requested
-surfaces, item/bundle references, owned artifact records, and operation outcomes.
-Schema 1 remains readable. Schema 2 writing begins only once content lifecycle
-can preserve these records on add, update, remove, list, and doctor. Integration
-entries not yet migrated retain a tagged legacy representation and cannot be
-silently omitted during save.
+surfaces, item/bundle references, owned artifact records, and operation
+outcomes. Schema 1 remains readable. Schema 2 writing begins only once content
+lifecycle can preserve these records on add, update, remove, list, and doctor.
+Integration entries not yet migrated retain a tagged legacy representation and
+cannot be silently omitted during save.
 
-Source schema and lockfile schema evolve independently. Keep source schema 1
-for currently defined content. New required semantics that an old reader could
+Source schema and lockfile schema evolve independently. Keep source schema 1 for
+currently defined content. New required semantics that an old reader could
 ignore must use a higher source schema and fail on unsupported readers. Decide
-the concrete hook/policy grammar in their category designs; M0 does not introduce
-speculative fields that schema-1 tools would silently discard.
+the concrete hook/policy grammar in their category designs; M0 does not
+introduce speculative fields that schema-1 tools would silently discard.
 
 Migration rules:
 
 1. Parse legacy source labels before the modern source parser rejects them;
    normalize only unambiguous historical forms, preserving host, ref, and path.
    Ambiguous input receives an actionable diagnostic rather than a guessed URL.
-   This includes the case tracked in [#236](https://github.com/driftsys/upskill/issues/236).
+   This includes the case tracked in
+   [#236](https://github.com/driftsys/upskill/issues/236).
 2. Expand schema-1 empty item clients to the original three generation clients,
    never to newly introduced targets. Mark requested surfaces as unresolved when
-   CLI versus VS Code selection cannot be recovered. Preserve recorded MCP/plugin
-   targets as separate facts; do not infer permission to expand or prune them.
+   CLI versus VS Code selection cannot be recovered. Preserve recorded
+   MCP/plugin targets as separate facts; do not infer permission to expand or
+   prune them.
 3. Reconstruct candidate artifact paths from the legacy contract. Missing paths
    remain missing. Source hashes do not count as generated-byte ownership proof.
-   Only adopt artifacts matching reproducible legacy output and a verified source
-   revision; otherwise preserve them and require explicit reconciliation.
+   Only adopt artifacts matching reproducible legacy output and a verified
+   source revision; otherwise preserve them and require explicit reconciliation.
 4. Old ancillary files remain user-owned. Never claim ownership of an entire
-   existing `AGENTS.md`, `CLAUDE.md`, settings file, or native config by filename.
+   existing `AGENTS.md`, `CLAUDE.md`, settings file, or native config by
+   filename.
 5. Preview migration and conflicts before writes. Pure list/doctor reads do not
    rewrite a lockfile. Ambiguous state blocks only operations needing that
    missing ownership/selection fact; it remains inspectable.
@@ -322,31 +327,33 @@ Target narrowing removes unchanged owned content contributions with no remaining
 consumers. For MCP/plugin operations, retain the existing explicit-removal
 behavior until M4/M5 provide ownership-aware reconciliation. Report retained
 integrations in preview and doctor; do not silently declare narrowing complete.
-This is the proposed disposition of [#244](https://github.com/driftsys/upskill/issues/244)
-for the foundation, with an ADR-0010/0012 clarification before implementation.
-Removing a reference never authorizes deletion of a shared marketplace or an
-installation that existed before upskill.
+This is the proposed disposition of
+[#244](https://github.com/driftsys/upskill/issues/244) for the foundation, with
+an ADR-0010/0012 clarification before implementation. Removing a reference never
+authorizes deletion of a shared marketplace or an installation that existed
+before upskill.
 
 ## 6. Permission preservation from the first slice
 
 Represent the following independently in validation and plans: prose guidance,
-tool exposure, execution authorization, approval behavior, and filesystem/network
-boundaries. Native restrictions on skills, agents, MCP, plugins, and hooks are
-subject to this contract before M7 adds general policy management.
+tool exposure, execution authorization, approval behavior, and
+filesystem/network boundaries. Native restrictions on skills, agents, MCP,
+plugins, and hooks are subject to this contract before M7 adds general policy
+management.
 
 An omitted tool list inherits; an explicit empty list grants no exposure; a
 nonempty list requests the stated set. Each adapter must prove that mapping for
 the relevant field rather than applying these meanings to arbitrary fields with
-similar names. Never silently drop an unknown tool or convert a restriction
-into an omitted native field. A stronger restriction is still a behavioral
-change and needs an explicit author alternative, not automatic substitution.
+similar names. Never silently drop an unknown tool or convert a restriction into
+an omitted native field. A stronger restriction is still a behavioral change and
+needs an explicit author alternative, not automatic substitution.
 
 Show permission deltas as unchanged, narrowed, broadened, or unknown, with
 native source and scope. Unknown is not safe-by-default evidence. Applying a
-broadened or unknown policy requires explicit acceptance of that plan; unattended
-operations fail with a diagnostic unless a category-specific authorization
-contract has been defined. Existing content-only installs do not gain a generic
-interactive approval ceremony.
+broadened or unknown policy requires explicit acceptance of that plan;
+unattended operations fail with a diagnostic unless a category-specific
+authorization contract has been defined. Existing content-only installs do not
+gain a generic interactive approval ceremony.
 
 Do not distribute saved personal approvals, disable native hook trust, change
 managed constraints, or report prose as sandbox enforcement. Keep references to
@@ -382,11 +389,11 @@ Tests touching client homes use the repository's fake-home harness.
 | F17 | Plugin supplies an already-present item: ownership conflict or verified sharing, never two untracked copies                         |
 | F18 | Broadening/unknown policy delta without explicit authorization: unattended apply stops and emits no secret values                   |
 
-Native conformance fixtures must additionally demonstrate discovery and effective
-restrictions. Their absence keeps a profile unverified even if every deterministic
-test above passes. Record contracts for both Cursor and Gemini against the
-artifact model: native rule/command formats, extension packaging, hook events,
-and policy files must fit without pretending their adapters exist.
+Native conformance fixtures must additionally demonstrate discovery and
+effective restrictions. Their absence keeps a profile unverified even if every
+deterministic test above passes. Record contracts for both Cursor and Gemini
+against the artifact model: native rule/command formats, extension packaging,
+hook events, and policy files must fit without pretending their adapters exist.
 
 ## 8. Incremental implementation boundaries
 
@@ -402,10 +409,10 @@ integration path in the first PR.
 | F-E   | M1 adapters and native qualification; then M2–M7 category plans                                              | Remaining applicable fixtures and native evidence        |
 
 These are design boundaries, not independently approved executable plans. F-B,
-F-C, and F-D must land behind an inactive path until a complete content lifecycle
-uses them; a release must not mix ownership-aware installation with legacy
-recursive removal. Do not expose Codex selection before its first supported
-instruction artifact and lifecycle are available together.
+F-C, and F-D must land behind an inactive path until a complete content
+lifecycle uses them; a release must not mix ownership-aware installation with
+legacy recursive removal. Do not expose Codex selection before its first
+supported instruction artifact and lifecycle are available together.
 
 Before implementation, prepare a bounded plan for F-A, select the initial native
 profile test versions, and propose ADR amendments for default selection and

@@ -1,30 +1,46 @@
 # Owned Instruction Planning Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development to implement this plan task-by-task.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Plan complete installation-owner contribution changes without losing manual bytes, untouched owners or exact before-state preconditions.
+**Goal:** Plan complete installation-owner contribution changes without losing
+manual bytes, untouched owners or exact before-state preconditions.
 
-**Architecture:** Add a pure planner beside the existing aggregate editor. Reuse one private span validator for verified body inspection and reconciliation, group caller-supplied observations by exact lexical location, and retain the complete resulting ownership set. No effects are enabled.
+**Architecture:** Add a pure planner beside the existing aggregate editor. Reuse
+one private span validator for verified body inspection and reconciliation,
+group caller-supplied observations by exact lexical location, and retain the
+complete resulting ownership set. No effects are enabled.
 
-**Tech Stack:** Existing Rust 2024 crate, `anyhow`, current ownership/editor APIs; Rust 1.85; no new dependencies.
+**Tech Stack:** Existing Rust 2024 crate, `anyhow`, current ownership/editor
+APIs; Rust 1.85; no new dependencies.
 
-**Spec:** [Owned instruction operation planning](../specs/2026-10-12-owned-instruction-planning-design.md).
-The [operational direction](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md) remains active future work.
+**Spec:**
+[Owned instruction operation planning](../specs/2026-10-12-owned-instruction-planning-design.md).
+The
+[operational direction](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+remains active future work.
 
 ## Global Constraints
 
 - Preserve Rust 1.85 and the synchronous/static-binary constraints.
-- Add no dependencies, CLI changes, codecs, schema-2 writes or native operations.
+- Add no dependencies, CLI changes, codecs, schema-2 writes or native
+  operations.
 - Only main.rs writes to stdout/stderr; planner and reader perform no I/O.
 - Preserve existing aggregate editor behavior and unrelated worktrees/edits.
 
 ## Review Focus
 
-- Consumer unions do not reveal each owner's selection: affected multi-owner contributions must conflict; unrelated shared records survive.
-- Removing an early region changes later separator context: returned metadata must support subsequent removal restoring literal manual bytes.
-- Ownership-only/no-op edits still need stale-plan protection: file plans retain exact observed before bytes.
-- An ID belongs to one source/item/alias binding: set cannot reinterpret that binding; recorded revision may change.
-- Empty or malformed desired data must not erase prior state: reject empty sets, invalid records and selector takeover; no partial plan escapes.
+- Consumer unions do not reveal each owner's selection: affected multi-owner
+  contributions must conflict; unrelated shared records survive.
+- Removing an early region changes later separator context: returned metadata
+  must support subsequent removal restoring literal manual bytes.
+- Ownership-only/no-op edits still need stale-plan protection: file plans retain
+  exact observed before bytes.
+- An ID belongs to one source/item/alias binding: set cannot reinterpret that
+  binding; recorded revision may change.
+- Empty or malformed desired data must not erase prior state: reject empty sets,
+  invalid records and selector takeover; no partial plan escapes.
 
 ---
 
@@ -32,14 +48,21 @@ The [operational direction](../../wip/specs/2026-10-12-m1-owned-lifecycle-design
 
 **Files:**
 
-- Create: `src/instructions/plan.rs` — public pure operation planner and its DTOs.
-- Modify: `src/instructions/mod.rs` — module export and accurate module description.
-- Modify: `src/instructions/aggregate.rs` — shared private span validation and public verified body reader; retain current reconciliation semantics.
+- Create: `src/instructions/plan.rs` — public pure operation planner and its
+  DTOs.
+- Modify: `src/instructions/mod.rs` — module export and accurate module
+  description.
+- Modify: `src/instructions/aggregate.rs` — shared private span validation and
+  public verified body reader; retain current reconciliation semantics.
 - Create: `tests/instruction_plans.rs` — public planner acceptance tests.
-- Modify: `tests/instruction_contributions.rs` — reader acceptance/regression tests.
-- Modify: `docs/specification/specification.md` — describe implemented pure planning contract and limits.
-- Modify: `docs/book/commands.md` — library prerequisite only; current commands/state unchanged.
-- Modify: `docs/wip/plans/2026-10-11-instructions-rules-m1.md` — scoped progress and remaining activation work.
+- Modify: `tests/instruction_contributions.rs` — reader acceptance/regression
+  tests.
+- Modify: `docs/specification/specification.md` — describe implemented pure
+  planning contract and limits.
+- Modify: `docs/book/commands.md` — library prerequisite only; current
+  commands/state unchanged.
+- Modify: `docs/wip/plans/2026-10-11-instructions-rules-m1.md` — scoped progress
+  and remaining activation work.
 - Modify: this plan's task checkboxes only.
 - Write ignored report/logs under this plan's SDD workspace.
 
@@ -98,9 +121,10 @@ pub fn inspect_owned(
 ```
 
 The caller resolves direct/bundle references and native compatibility before
-supplying changes. This planner does not establish those facts or infer reference
-counts. Set replaces one owner's complete contribution set, not the whole input
-ownership vector. An absent file is distinct from an existing empty file.
+supplying changes. This planner does not establish those facts or infer
+reference counts. Set replaces one owner's complete contribution set, not the
+whole input ownership vector. An absent file is distinct from an existing empty
+file.
 
 - [x] **Step 1: Write acceptance tests before production changes.**
 
@@ -206,33 +230,36 @@ validation used by reconciliation. Reuse focused existing fixtures where useful.
 
 - [x] **Step 2: Establish compile RED then behavioral assertion RED.**
 
-Completion qualification: compile RED preceded implementation, but valid behavioral
-assertion RED occurred after an implementation draft. Initial overlapping runs and
-an invalid test enum variant prevented the intended sequence. The draft was saved,
-minimal stubs produced valid assertion failures, and the draft was restored with
-byte comparisons. Subsequent semantic mutations and independent task review
-validated current behavior. This checked step records completed validation,
-not compliance with the original RED-before-implementation order.
+Completion qualification: compile RED preceded implementation, but valid
+behavioral assertion RED occurred after an implementation draft. Initial
+overlapping runs and an invalid test enum variant prevented the intended
+sequence. The draft was saved, minimal stubs produced valid assertion failures,
+and the draft was restored with byte comparisons. Subsequent semantic mutations
+and independent task review validated current behavior. This checked step
+records completed validation, not compliance with the original
+RED-before-implementation order.
 
 Run `cargo test --test instruction_plans` before defining the module; save the
 expected missing API compile failure. Introduce only the DTOs, module export and
 minimal signatures; a stub returning unchanged prior records and no file plans
 is sufficient to compile. Run focused tests again and save actual assertion
-failures for owner/new-region plans and the no-op precondition. Compiler failures
-are not behavioral RED evidence. Tests must be meaningful before full code.
+failures for owner/new-region plans and the no-op precondition. Compiler
+failures are not behavioral RED evidence. Tests must be meaningful before full
+code.
 
 - [x] **Step 3: Implement shared inspection and pure planning.**
 
 In `aggregate.rs`, extract current span/marker verification into one private
 helper returning sorted verified spans. Keep `find_owned_span` hash/separator
 checks. Store its already-computed body start on `OwnedSpan`; use that and
-`end_marker_start` to read exact Markdown. Reject overlaps before returning spans.
-Both public entrypoints use this helper; keep reconciliation's existing desired
-validation order and existing output behavior. The reader constructs real
-`Contribution` values from verified body slices, never reparses markers separately.
+`end_marker_start` to read exact Markdown. Reject overlaps before returning
+spans. Both public entrypoints use this helper; keep reconciliation's existing
+desired validation order and existing output behavior. The reader constructs
+real `Contribution` values from verified body slices, never reparses markers
+separately.
 
-In `plan.rs`, use the public DTOs above and focused private functions. A complete
-native key helper can be written as:
+In `plan.rs`, use the public DTOs above and focused private functions. A
+complete native key helper can be written as:
 
 ```rust
 use std::ffi::OsString;
@@ -245,14 +272,15 @@ fn location_key(location: &InstructionLocation) -> LocationKey {
 
 Implement in this order:
 
-1. Validate prior artifacts. Index IDs and their bindings; validate unique changes
-   and known removals. Compare existing set binding fields explicitly, allowing
-   revision to change. Set with no contributions is an error.
+1. Validate prior artifacts. Index IDs and their bindings; validate unique
+   changes and known removals. Compare existing set binding fields explicitly,
+   allowing revision to change. Set with no contributions is an error.
 2. Derive affected locations from every prior record involving a changed ID and
-   every desired location. A prior whole file at an affected location fails. A multi-owner
-   region fails only when one of its owners is changed; an untouched multi-owner
-   region at the same aggregate location is retained. Index observations and require exact equality of their location key set
-   with the affected set. No filesystem access or canonicalization.
+   every desired location. A prior whole file at an affected location fails. A
+   multi-owner region fails only when one of its owners is changed; an untouched
+   multi-owner region at the same aggregate location is retained. Index
+   observations and require exact equality of their location key set with the
+   affected set. No filesystem access or canonicalization.
 3. At each affected location decode exact observed UTF-8 (`None` starts empty
    only when no prior region exists). Collect all prior contribution records at
    that location, and inspect verified bodies. Retain bodies/ownership outside
@@ -269,7 +297,8 @@ Implement in this order:
 
 Do not return partial plans on any error. Add contextual errors naming the
 installation, path or selector involved. Validate desired data even if it could
-otherwise be optimized out; no idempotence fast path may bypass ownership checks.
+otherwise be optimized out; no idempotence fast path may bypass ownership
+checks.
 
 - [x] **Step 4: Run focused GREEN and semantic negative controls.**
 
@@ -280,25 +309,27 @@ literal three-operation acceptance test; it must fail the owner/body assertion.
 Separately replace planned before bytes with `None`; the exact no-op-before test
 must fail. Restore production byte-for-byte in `finally` and confirm with `cmp`.
 Save command, exit status and intended assertion excerpt; exclude any accidental
-compiler failures from semantic RED evidence. Re-run focused GREEN after restore.
+compiler failures from semantic RED evidence. Re-run focused GREEN after
+restore.
 
 - [x] **Step 5: Update canonical docs and M1 progress.**
 
-Document the pure public planner, supplied-observation limit, single-owner affected
-region restriction, untouched owner preservation, shared body reader, exact
-before bytes and empty aggregate retention. Explain that complete reference-graph,
-per-owner consumer association, source/filesystem evidence, whole-file/resource
-plans, state/lifecycle and transactional execution remain pending. Add links to
-the bounded plan and operational design from the M1 plan. Do not claim CLI/Codex
-support or change source/lockfile formats. Operational design is active WIP and
-must not be archived when this bounded pair is later completed.
+Document the pure public planner, supplied-observation limit, single-owner
+affected region restriction, untouched owner preservation, shared body reader,
+exact before bytes and empty aggregate retention. Explain that complete
+reference-graph, per-owner consumer association, source/filesystem evidence,
+whole-file/resource plans, state/lifecycle and transactional execution remain
+pending. Add links to the bounded plan and operational design from the M1 plan.
+Do not claim CLI/Codex support or change source/lockfile formats. Operational
+design is active WIP and must not be archived when this bounded pair is later
+completed.
 
 - [x] **Step 6: Verify, self-review, commit and report.**
 
 Run ordered `just fmt` then `just verify`, followed by
 `cargo +1.85.0 check --locked --all-targets`. Full access permits existing tool
-caches and loopback integration tests; do not supply `sandbox_permissions`.
-Run `git diff --check`. Self-review each acceptance row, shared validator/editor
+caches and loopback integration tests; do not supply `sandbox_permissions`. Run
+`git diff --check`. Self-review each acceptance row, shared validator/editor
 reuse and input immutability. Commit only task-owned files with
 `feat: plan owned instruction contribution changes`. Write full report beside
 the task brief: scope, exact commit, RED/GREEN/mutation commands and excerpts,

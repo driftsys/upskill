@@ -4,18 +4,18 @@ AD-0024
 
 ## Context
 
-Lifecycle planning needs complete generated entrypoint and resource sets from the
-same captured source bytes. Current rule, skill and agent rendering must remain
-available before general lifecycle activation.
+Lifecycle planning needs complete generated entrypoint and resource sets from
+the same captured source bytes. Current rule, skill and agent rendering must
+remain available before general lifecycle activation.
 
 ## Options
 
 The working design considered invoking the filesystem installer into a temporary
 directory, rewriting generation and resource handling as a new target adapter
 framework, and compiling one captured item through existing pure renderers and
-historical layouts. The installer would reread mutable sources, introduce effects
-and inherit recursive cleanup. A new adapter framework would combine rendering
-compatibility work with native target qualification.
+historical layouts. The installer would reread mutable sources, introduce
+effects and inherit recursive cleanup. A new adapter framework would combine
+rendering compatibility work with native target qualification.
 
 ## Decision
 
@@ -36,6 +36,9 @@ surfaces and required semantics. Source identity does not establish authenticity
 or generated-content identity. Audience exclusion grants no deletion authority.
 Changing native identity under aliases requires a later explicit adapter choice.
 
-Satisfies: [Specification §4.5](../specification/specification.md#45-captured-item-compilation).
-Related: [compiler design](../design/captured-item-compilation.md), [AD-0019](0019-separate-strict-source-capture.md), [AD-0021](0021-pure-file-planning.md).
-Rationale: [archived spec](../archive/specs/2026-10-12-captured-item-compilation-design.md).
+Satisfies:
+[Specification §4.5](../specification/specification.md#45-captured-item-compilation).
+Related: [compiler design](../design/captured-item-compilation.md),
+[AD-0019](0019-separate-strict-source-capture.md),
+[AD-0021](0021-pure-file-planning.md). Rationale:
+[archived spec](../archive/specs/2026-10-12-captured-item-compilation-design.md).

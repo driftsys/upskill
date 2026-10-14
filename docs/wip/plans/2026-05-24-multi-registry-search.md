@@ -1,11 +1,12 @@
 # Multi-Registry Search Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
-> (recommended) or superpowers:executing-plans to implement this plan task-by-task.
-> Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extend `upskill search` to query configured git-based registries via
-a local index with HEAD-based cache invalidation.
+**Goal:** Extend `upskill search` to query configured git-based registries via a
+local index with HEAD-based cache invalidation.
 
 **Architecture:** New `config.rs` module loads `~/.config/upskill/config.yaml`
 (+ project `.upskill/config.yaml`), new `index.rs` module handles
@@ -68,8 +69,7 @@ registries:
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test config::tests --lib`
-Expected: FAIL — module doesn't exist
+Run: `cargo test config::tests --lib` Expected: FAIL — module doesn't exist
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -116,8 +116,7 @@ pub mod config;
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cargo test config::tests --lib`
-Expected: PASS (3 tests)
+Run: `cargo test config::tests --lib` Expected: PASS (3 tests)
 
 - [ ] **Step 6: Commit**
 
@@ -169,8 +168,8 @@ fn load_config_returns_default_when_no_files() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test config::tests --lib`
-Expected: FAIL — `merge_configs` and `load_config` not defined
+Run: `cargo test config::tests --lib` Expected: FAIL — `merge_configs` and
+`load_config` not defined
 
 - [ ] **Step 3: Write implementation**
 
@@ -220,8 +219,7 @@ fn load_layer(path: &Path) -> Result<Config> {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test config::tests --lib`
-Expected: PASS (5 tests)
+Run: `cargo test config::tests --lib` Expected: PASS (5 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -280,8 +278,7 @@ mod tests {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test index::tests --lib`
-Expected: FAIL — module doesn't exist
+Run: `cargo test index::tests --lib` Expected: FAIL — module doesn't exist
 
 - [ ] **Step 3: Write implementation**
 
@@ -372,8 +369,7 @@ pub mod index;
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cargo test index::tests --lib`
-Expected: PASS (2 tests)
+Run: `cargo test index::tests --lib` Expected: PASS (2 tests)
 
 - [ ] **Step 6: Commit**
 
@@ -424,8 +420,7 @@ fn is_stale_when_head_differs() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test index::tests --lib`
-Expected: FAIL — functions not defined
+Run: `cargo test index::tests --lib` Expected: FAIL — functions not defined
 
 - [ ] **Step 3: Write implementation**
 
@@ -471,8 +466,7 @@ pub fn is_stale(index: &RegistryIndex, current_head: &str) -> bool {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test index::tests --lib`
-Expected: PASS (5 tests total)
+Run: `cargo test index::tests --lib` Expected: PASS (5 tests total)
 
 - [ ] **Step 5: Commit**
 
@@ -528,8 +522,8 @@ fn scan_registry_finds_items() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test index::tests::scan_registry_finds_items --lib`
-Expected: FAIL — `scan_registry` not defined
+Run: `cargo test index::tests::scan_registry_finds_items --lib` Expected: FAIL —
+`scan_registry` not defined
 
 - [ ] **Step 3: Write implementation**
 
@@ -622,8 +616,7 @@ fn extract_description(content: &str) -> String {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test index::tests --lib`
-Expected: PASS (6 tests total)
+Run: `cargo test index::tests --lib` Expected: PASS (6 tests total)
 
 - [ ] **Step 5: Commit**
 
@@ -670,8 +663,8 @@ fn build_index_for_local_path() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test index::tests::build_index_for_local_path --lib`
-Expected: FAIL — `build_index` not defined
+Run: `cargo test index::tests::build_index_for_local_path --lib` Expected: FAIL
+— `build_index` not defined
 
 - [ ] **Step 3: Write implementation**
 
@@ -768,8 +761,7 @@ fn chrono_now() -> String {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test index::tests --lib`
-Expected: PASS (7 tests total)
+Run: `cargo test index::tests --lib` Expected: PASS (7 tests total)
 
 - [ ] **Step 5: Commit**
 
@@ -820,10 +812,10 @@ fn ensure_fresh_uses_cache_when_head_matches() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it passes** (this test validates existing primitives)
+- [ ] **Step 2: Run test to verify it passes** (this test validates existing
+      primitives)
 
-Run: `cargo test index::tests::ensure_fresh_uses_cache --lib`
-Expected: PASS
+Run: `cargo test index::tests::ensure_fresh_uses_cache --lib` Expected: PASS
 
 - [ ] **Step 3: Write the orchestrator function**
 
@@ -886,8 +878,7 @@ pub fn ensure_fresh(entry: &RegistryEntry) -> Result<RegistryIndex> {
 
 - [ ] **Step 4: Run all index tests**
 
-Run: `cargo test index::tests --lib`
-Expected: PASS
+Run: `cargo test index::tests --lib` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -952,8 +943,8 @@ fn search_index_matches_name_and_description() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test search::tests::search_index_matches --lib`
-Expected: FAIL — `search_index` not defined
+Run: `cargo test search::tests::search_index_matches --lib` Expected: FAIL —
+`search_index` not defined
 
 - [ ] **Step 3: Write implementation**
 
@@ -1004,8 +995,7 @@ pub fn search_index(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cargo test search::tests --lib`
-Expected: PASS
+Run: `cargo test search::tests --lib` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -1052,8 +1042,7 @@ fn search_accepts_kind_flag() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_search search_accepts`
-Expected: FAIL — unknown flag
+Run: `cargo test --test cli_search search_accepts` Expected: FAIL — unknown flag
 
 - [ ] **Step 3: Add flags to cli.rs**
 
@@ -1177,8 +1166,7 @@ fn run_search_registry(query: &str, entry: &upskill::config::RegistryEntry, kind
 
 - [ ] **Step 5: Run integration tests**
 
-Run: `cargo test --test cli_search`
-Expected: PASS
+Run: `cargo test --test cli_search` Expected: PASS
 
 - [ ] **Step 6: Commit**
 
@@ -1224,8 +1212,8 @@ fn index_with_no_registries_configured() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_search index_clear`
-Expected: FAIL — unknown subcommand
+Run: `cargo test --test cli_search index_clear` Expected: FAIL — unknown
+subcommand
 
 - [ ] **Step 3: Add subcommand to cli.rs**
 
@@ -1341,8 +1329,7 @@ pub fn cache_dir() -> PathBuf {
 
 - [ ] **Step 6: Run integration tests**
 
-Run: `cargo test --test cli_search`
-Expected: PASS
+Run: `cargo test --test cli_search` Expected: PASS
 
 - [ ] **Step 7: Commit**
 
@@ -1363,24 +1350,27 @@ git commit -m "feat(cli): add 'upskill index' subcommand"
 
 - [ ] **Step 1: Add `index` command to commands.md**
 
-Add a section documenting `upskill index [--registry <name>] [--clear]` with examples.
+Add a section documenting `upskill index [--registry <name>] [--clear]` with
+examples.
 
-- [ ] **Step 2: Add `--registry` and `--kind` flags to `search` section in commands.md**
+- [ ] **Step 2: Add `--registry` and `--kind` flags to `search` section in
+      commands.md**
 
 Update the existing search documentation.
 
 - [ ] **Step 3: Add config file documentation to getting-started.md**
 
-Document `~/.config/upskill/config.yaml` with the `registries:` key and an example.
+Document `~/.config/upskill/config.yaml` with the `registries:` key and an
+example.
 
 - [ ] **Step 4: Update specification.md**
 
-Add `config.yaml` to the environment/files table. Add `index` to the command table.
+Add `config.yaml` to the environment/files table. Add `index` to the command
+table.
 
 - [ ] **Step 5: Run `just lint` to verify docs**
 
-Run: `just lint`
-Expected: PASS
+Run: `just lint` Expected: PASS
 
 - [ ] **Step 6: Commit**
 
@@ -1395,13 +1385,11 @@ git commit -m "docs: multi-registry search, index command, config file"
 
 - [ ] **Step 1: Run full test suite**
 
-Run: `just check`
-Expected: PASS (all tests, lint, format)
+Run: `just check` Expected: PASS (all tests, lint, format)
 
 - [ ] **Step 2: Run `just verify`**
 
-Run: `just verify`
-Expected: PASS
+Run: `just verify` Expected: PASS
 
 - [ ] **Step 3: Manual smoke test**
 

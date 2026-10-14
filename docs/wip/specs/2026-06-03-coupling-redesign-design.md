@@ -1,18 +1,19 @@
 # Design — co-location → dependency redesign
 
-**Date**: 2026-06-03
-**Status**: Approved (brainstorming output) — implementation pending
-**Amends**: [ADR-0006](../../adr/0006-flat-item-layout.md)
-**Will produce**: ADR-0009 + `format-spec.md` edits + two implementation slices
+**Date**: 2026-06-03 **Status**: Approved (brainstorming output) —
+implementation pending **Amends**:
+[ADR-0006](../../adr/0006-flat-item-layout.md) **Will produce**: ADR-0009 +
+`format-spec.md` edits + two implementation slices
 
 ---
 
 ## 1. Problem
 
 Co-location — multiple entrypoints in one folder sharing the directory name
-([format-spec §2.1](../../format-spec.md), [ADR-0006](../../adr/0006-flat-item-layout.md))
-— is currently the only way to "install a rule + skill + agent together."
-Using it for that purpose causes three failures:
+([format-spec §2.1](../../format-spec.md),
+[ADR-0006](../../adr/0006-flat-item-layout.md)) — is currently the only way to
+"install a rule + skill + agent together." Using it for that purpose causes
+three failures:
 
 - **Forced shared name.** All co-located kinds must share the folder name, even
   when their natural identities differ.
@@ -43,8 +44,8 @@ set), **never** by mutual `requires` (which would be a cycle = error).
 ### 2.2 Name resolution — relaxed + optional naming
 
 The model field `name` becomes optional for `Skill`, `Rule`, and `Agent`
-(`name: String` → `name: Option<String>`). The **effective name** is resolved
-at discovery/parse time:
+(`name: String` → `name: Option<String>`). The **effective name** is resolved at
+discovery/parse time:
 
 | Kind             | `name` present in frontmatter                                                | `name` absent                |
 | ---------------- | ---------------------------------------------------------------------------- | ---------------------------- |
@@ -86,8 +87,8 @@ requires:
 - **`preload-skills`** (agent) = `requires.skills` **plus** the Claude-Code
   runtime `skills:` emission. Preload implies require.
 - **Same-source resolution** (decided): a same-source `requires` entry resolves
-  by `(kind, name)` against the **same already-fetched registry root** the
-  entry item came from (reusing `has_matching_items` / `iter_item_dirs`), then
+  by `(kind, name)` against the **same already-fetched registry root** the entry
+  item came from (reusing `has_matching_items` / `iter_item_dirs`), then
   auto-installs it. No second fetch. This mirrors how bundle `items` already
   resolve.
 
@@ -107,8 +108,8 @@ Filters the result of `iter_item_resources` before the copy step.
 ### 2.5 Cross-source resolution (contract fixed now; slice 2)
 
 - `source` reuses the `add` DSL verbatim (`owner/repo@ref`, https, `gitlab:`,
-  local), parsed by `source.rs` (`InstallSource`), fetched by `fetch_ssot`
-  (same auth path).
+  local), parsed by `source.rs` (`InstallSource`), fetched by `fetch_ssot` (same
+  auth path).
 - The transitive closure MAY span sources.
 - **Cycle detection** keyed by `(canonical-source-label, kind, name)`.
 - **Conflict policy:** the same `(kind, name)` resolving to a different
@@ -124,16 +125,16 @@ Filters the result of `iter_item_resources` before the copy step.
 
 `(kind, name)`, never a path. On `add`: name = the positional argument
 (`upskill add owner/repo code-review`); `:path` is only "where to scan"; `@ref`
-is the version. Cross-source = source-locator + name, never a foreign
-filesystem path.
+is the version. Cross-source = source-locator + name, never a foreign filesystem
+path.
 
 ## 3. Inherent limit (document, do not fix)
 
-Co-located rules/agents are invisible to standard-only tooling (the Agent
-Skills standard has no concept of rules or agents). The "install
-together" / cross-kind-coupling guarantee holds **only inside upskill** and
-cannot survive a round-trip through the standard ecosystem. This is a property
-of the standard, not a defect to engineer around.
+Co-located rules/agents are invisible to standard-only tooling (the Agent Skills
+standard has no concept of rules or agents). The "install together" /
+cross-kind-coupling guarantee holds **only inside upskill** and cannot survive a
+round-trip through the standard ecosystem. This is a property of the standard,
+not a defect to engineer around.
 
 ## 4. Rejected alternatives (do not revisit)
 
@@ -173,8 +174,8 @@ of the standard, not a defect to engineer around.
   `license`).
 - `src/lockfile.rs` — add folder-group membership + `required_by` provenance to
   `LockedItem`.
-- `src/pipeline/lifecycle.rs` — `doctor` orphaned-dependency flag; `remove`
-  acts on the folder-group unit.
+- `src/pipeline/lifecycle.rs` — `doctor` orphaned-dependency flag; `remove` acts
+  on the folder-group unit.
 - `src/conflict.rs` — reuse for cross-source `(kind, name)` conflict (slice 2).
 - `src/lint.rs` — relax `check_name_matches_dir`: skill keeps the match rule;
   rule/agent name is free; folder is fallback when name is absent.
@@ -182,8 +183,8 @@ of the standard, not a defect to engineer around.
 ## 6. Deliverables & staging
 
 1. **ADR-0009** amending ADR-0006: repositioning + relaxed/optional naming +
-   three-tier model + `requires`/`ignore` + cross-source + conflict/cycle +
-   the inherent-limit note. (Produced in Slice 1's PR.)
+   three-tier model + `requires`/`ignore` + cross-source + conflict/cycle + the
+   inherent-limit note. (Produced in Slice 1's PR.)
 2. **format-spec edits**: §2.1 (optional/relaxed naming for skill vs
    rule/agent), §2.4 (`ignore` copy-scope), §3.1 (`requires` + `ignore` common
    fields), §3.4 (`preload-skills` implies `requires`), §3.7 (item-`requires`
