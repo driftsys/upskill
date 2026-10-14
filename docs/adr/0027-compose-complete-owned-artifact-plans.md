@@ -12,11 +12,11 @@ physical safety across their combined locations.
 ## Options
 
 The accepted design considered a pure coordinator over both reviewed planners,
-independent caller-side invocation and concatenation, and replacing both planners
-with one implementation. Independent concatenation leaves omitted forms,
-cross-form bindings and collisions to every caller. Replacing the planners
-rewrites reviewed editing and evidence behavior before lifecycle integration
-requires that cost.
+independent caller-side invocation and concatenation, and replacing both
+planners with one implementation. Independent concatenation leaves omitted
+forms, cross-form bindings and collisions to every caller. Replacing the
+planners rewrites reviewed editing and evidence behavior before lifecycle
+integration requires that cost.
 
 ## Decision
 
@@ -38,5 +38,9 @@ The coordinator adds crate-internal coupling to the file planner's validator.
 Its supplied values establish no source, filesystem, permission or execution
 authority; compiler integration and lifecycle activation remain separate work.
 
-Satisfies: [Specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans).
-Related: [mixed planning design](../design/mixed-owned-artifact-planning.md), [AD-0016](0016-pure-instruction-planning.md), [AD-0021](0021-pure-file-planning.md), [AD-0024](0024-pure-captured-item-compilation.md).
+Satisfies:
+[Specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans).
+Related: [mixed planning design](../design/mixed-owned-artifact-planning.md),
+[AD-0016](0016-pure-instruction-planning.md),
+[AD-0021](0021-pure-file-planning.md),
+[AD-0024](0024-pure-captured-item-compilation.md).

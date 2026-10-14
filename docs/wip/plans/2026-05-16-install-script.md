@@ -1,12 +1,26 @@
 # install.sh + Release Workflow Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a `curl … | sh` install path for `upskill` backed by a GitHub Releases workflow that builds a 4-target prebuilt-binary matrix.
+**Goal:** Ship a `curl … | sh` install path for `upskill` backed by a GitHub
+Releases workflow that builds a 4-target prebuilt-binary matrix.
 
-**Architecture:** A POSIX `install.sh` at the repo root detects OS/arch, downloads the matching `.tar.gz` from GitHub Releases (using the `releases/latest/download` redirect, or a pinned tag via `UPSKILL_VERSION`), verifies a sha256 sidecar, and installs the binary to `$HOME/.local/bin`. A tag-triggered `release.yml` builds `x86_64`/`aarch64` for Linux (musl, static) and macOS, archives each, writes checksums, and publishes them with `softprops/action-gh-release`. Windows is covered via WSL (Linux path) — no native Windows artifact.
+**Architecture:** A POSIX `install.sh` at the repo root detects OS/arch,
+downloads the matching `.tar.gz` from GitHub Releases (using the
+`releases/latest/download` redirect, or a pinned tag via `UPSKILL_VERSION`),
+verifies a sha256 sidecar, and installs the binary to `$HOME/.local/bin`. A
+tag-triggered `release.yml` builds `x86_64`/`aarch64` for Linux (musl, static)
+and macOS, archives each, writes checksums, and publishes them with
+`softprops/action-gh-release`. Windows is covered via WSL (Linux path) — no
+native Windows artifact.
 
-**Tech Stack:** POSIX `sh`, `shellcheck`, GitHub Actions (`dtolnay/rust-toolchain`, `taiki-e/install-action` for `cross`, `softprops/action-gh-release`), Rust integration tests (`assert_cmd` + `predicates` + `tempfile`).
+**Tech Stack:** POSIX `sh`, `shellcheck`, GitHub Actions
+(`dtolnay/rust-toolchain`, `taiki-e/install-action` for `cross`,
+`softprops/action-gh-release`), Rust integration tests (`assert_cmd` +
+`predicates` + `tempfile`).
 
 Spec: `docs/wip/specs/2026-05-16-install-script-design.md`
 
@@ -29,8 +43,8 @@ Spec: `docs/wip/specs/2026-05-16-install-script-design.md`
 
 ## Task 0: Tooling — ensure `shellcheck` is available
 
-`shellcheck` is not installed in the dev environment but is required by the
-new `lint` step and CI. Install it once before doing script work.
+`shellcheck` is not installed in the dev environment but is required by the new
+`lint` step and CI. Install it once before doing script work.
 
 **Files:** none.
 
@@ -60,8 +74,8 @@ No commit (environment-only change).
 
 ## Task 1: ATDD tests for `install.sh`
 
-Write the acceptance tests first. They will fail because `install.sh` does
-not exist yet.
+Write the acceptance tests first. They will fail because `install.sh` does not
+exist yet.
 
 **Files:**
 
@@ -130,8 +144,8 @@ cargo test --test cli_install
 ```
 
 Expected: FAIL — both tests error because `sh` cannot open `install.sh`
-(`No such file or directory`), so the commands do not succeed / do not emit
-the expected output.
+(`No such file or directory`), so the commands do not succeed / do not emit the
+expected output.
 
 - [ ] **Step 3: Commit**
 
@@ -338,9 +352,8 @@ lint:
 
 - [ ] **Step 2: Add a `shellcheck` job to CI and add it to the gate**
 
-In `.github/workflows/ci.yml`, add this job immediately after the `convco`
-job and before the `ci` job (2-space job-key indentation, matching the
-other jobs):
+In `.github/workflows/ci.yml`, add this job immediately after the `convco` job
+and before the `ci` job (2-space job-key indentation, matching the other jobs):
 
 ```yaml
 shellcheck:
@@ -371,7 +384,8 @@ Run:
 just lint
 ```
 
-Expected: exit 0 (clippy, fmt, dprint, markdownlint, and `shellcheck install.sh` all pass).
+Expected: exit 0 (clippy, fmt, dprint, markdownlint, and `shellcheck install.sh`
+all pass).
 
 - [ ] **Step 4: Validate the CI YAML parses**
 
@@ -537,13 +551,13 @@ curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | 
 cargo install upskill
 ```
 
-The blank line and the `# Install everything from a source repo …` content
-that already follow `cargo install upskill` stay exactly as they are.
+The blank line and the `# Install everything from a source repo …` content that
+already follow `cargo install upskill` stay exactly as they are.
 
 - [ ] **Step 2: Update getting-started install section**
 
-In `docs/getting-started.md`, replace this exact block (it is the entire
-current `## Install` section, lines 3-11):
+In `docs/getting-started.md`, replace this exact block (it is the entire current
+`## Install` section, lines 3-11):
 
 ````text
 ## Install
@@ -650,13 +664,13 @@ investigate and fix any failure on PR #135.
 
 ## Notes for the implementer
 
-- The release workflow only runs on `v*` tag pushes / manual dispatch; it
-  will **not** run on the PR. Its correctness is verified by the first real
+- The release workflow only runs on `v*` tag pushes / manual dispatch; it will
+  **not** run on the PR. Its correctness is verified by the first real
   `just release` (out of scope for this PR) — within this PR, the YAML-parse
   check in Task 4 Step 2 is the gate.
 - `install.sh`'s download/verify/install path needs a published release to
-  exercise end-to-end; the ATDD tests deliberately cover only the offline
-  paths (`--help`, unsupported platform) so they need no network.
+  exercise end-to-end; the ATDD tests deliberately cover only the offline paths
+  (`--help`, unsupported platform) so they need no network.
 - `cross` (Task 4) runs the aarch64-musl build in a Docker container;
   `ubuntu-latest` runners provide Docker. `shasum -a 256` exists on both
   `ubuntu-latest` and `macos-latest`, so the packaging step is uniform.

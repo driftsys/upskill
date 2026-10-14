@@ -18,6 +18,7 @@ See [Contributing](../CONTRIBUTING.md#documentation-lifecycle) for document
 transitions and verification. Moving a document does not approve its contents,
 change an ADR's status, or establish that a feature has shipped.
 
-Current planning: [agent customization delivery roadmap](wip/specs/2026-10-11-agent-customization-roadmap.md)
+Current planning:
+[agent customization delivery roadmap](wip/specs/2026-10-11-agent-customization-roadmap.md)
 for Claude Code, Copilot, and Codex. This is a proposal, separate from the
 implemented contracts in the book and specifications.

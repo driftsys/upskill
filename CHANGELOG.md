@@ -52,11 +52,11 @@
 
 ### BREAKING CHANGES
 
-- GITHUB_TOKEN / GH_TOKEN / GITLAB_TOKEN / GL_TOKEN and the
-  `gh auth token` / `glab auth token` fallbacks are no longer read. Private
-  repositories now authenticate through git's own configuration (credential
-  helper, insteadOf, or SSH), the same as a manual `git clone`. CI relying
-  on an env-var token must configure git credentials instead.
+- GITHUB_TOKEN / GH_TOKEN / GITLAB_TOKEN / GL_TOKEN and the `gh auth token` /
+  `glab auth token` fallbacks are no longer read. Private repositories now
+  authenticate through git's own configuration (credential helper, insteadOf, or
+  SSH), the same as a manual `git clone`. CI relying on an env-var token must
+  configure git credentials instead.
 
 [0.8.0]: https://github.com/driftsys/upskill/compare/v0.7.8...v0.8.0
 [96c473a]: https://github.com/driftsys/upskill/commit/96c473a
@@ -437,51 +437,36 @@
 
 * feat(plugin): add src/plugin.rs client CLI shellout module
 
-New
-module implementing the plugin install/uninstall surface per
-ADR-0008. Shells
-out to native client CLIs:
+New module implementing the plugin install/uninstall surface per ADR-0008.
+Shells out to native client CLIs:
 
-- claude plugin marketplace add + claude plugin
-  install --scope
+- claude plugin marketplace add + claude plugin install --scope
 - code --install-extension / --uninstall-extension
-- opencode
-  plugin / plugin remove
+- opencode plugin / plugin remove
 
 Key design:
 
-- PluginOutcome enum: Success |
-  CliNotFound | Failed
-- PluginScope enum: Project | User (maps to claude
-  --scope flag)
-- is_cli_available() presence detection via
-  ErrorKind::NotFound
+- PluginOutcome enum: Success | CliNotFound | Failed
+- PluginScope enum: Project | User (maps to claude --scope flag)
+- is_cli_available() presence detection via ErrorKind::NotFound
 - No new dependencies (std::process::Command only)
-- Never
-  writes to stdout/stderr (presentation in main.rs)
+- Never writes to stdout/stderr (presentation in main.rs)
 
 Tests cover:
 
-- Scope flag
-  mapping
+- Scope flag mapping
 - CLI availability detection (true for sh, false for nonexistent)
 - CliNotFound path for all three clients
-- Success/failure outcome from
-  run_command (true/false binaries)
+- Success/failure outcome from run_command (true/false binaries)
 - Predicate methods on PluginOutcome, 149
 
 * feat(pipeline): wire plugin install into install_with_lockfile
 
-Add
-LockedPlugin struct to lockfile schema with upsert/remove methods.
-Wire plugin
-shellout into install_with_lockfile via
-install_plugins_from_bundles
-orchestrator. Only successful installs are
-recorded in the lockfile;
-CLI-not-found and failures are reported to
-the user via structured
-PluginResult entries., [#150]
+Add LockedPlugin struct to lockfile schema with upsert/remove methods. Wire
+plugin shellout into install_with_lockfile via install_plugins_from_bundles
+orchestrator. Only successful installs are recorded in the lockfile;
+CLI-not-found and failures are reported to the user via structured PluginResult
+entries., [#150]
 
 - **bundle:** add plugins: map to Bundle schema with typed descriptors ([#154])
   ([8b6deeb]), closes [#148]
@@ -582,13 +567,10 @@ PluginResult entries., [#150]
 - strike §4.2, simplify lockfile to one shape in two locations ([94efa95]),
   closes 110.
 
-Following the `npx skills` reference model: the lockfile is the
-same
-shape (`.upskill-lock.json`, `schema: 1`) regardless of scope. It
-just
-lives in `<cwd>/` for project scope or `$HOME/` for global scope. No
-need
-for a separate `~/.upskill/installed.json` aggregator.
+Following the `npx skills` reference model: the lockfile is the same shape
+(`.upskill-lock.json`, `schema: 1`) regardless of scope. It just lives in
+`<cwd>/` for project scope or `$HOME/` for global scope. No need for a separate
+`~/.upskill/installed.json` aggregator.
 
 ### Features
 
@@ -605,138 +587,96 @@ for a separate `~/.upskill/installed.json` aggregator.
 
 clig.dev §Help findings:
 
-- **Bug-report URL** —
-  top-level `upskill --help` now ends with a
+- **Bug-report URL** — top-level `upskill --help` now ends with a
   `DOCUMENTATION:` and `REPORT
   BUGS:` block via clap's `after_help`.
-- **Examples per subcommand** — every
-  subcommand's `--help` now shows
-  an `EXAMPLES:` section with 2–6
-  representative invocations. Covers
+- **Examples per subcommand** — every subcommand's `--help` now shows an
+  `EXAMPLES:` section with 2–6 representative invocations. Covers
 
   add/remove/update/list/doctor/search/lint/fmt/new.
-- **ADR refs out of help
-  text** — five doc comments referenced
-  ADR-0003/0004 or `format-spec §`.
-  End users don't have those
-  documents loaded; trimmed to user-facing prose.
-  ADRs remain the
-  source of truth in `docs/adr/` for contributors.
-- **style:** color output with clig.dev disable chain ([7aa1608]), closes
-  108.
+- **ADR refs out of help text** — five doc comments referenced ADR-0003/0004 or
+  `format-spec §`. End users don't have those documents loaded; trimmed to
+  user-facing prose. ADRs remain the source of truth in `docs/adr/` for
+  contributors.
+- **style:** color output with clig.dev disable chain ([7aa1608]), closes 108.
 
-Adds the universal palette and the five-signal disable chain promised
-by
-spec §6.2 / §6.3. Previously `NO_COLOR` was listed in the spec but
-no
-color logic existed at all — the test asserting it gave false
-confidence.
+Adds the universal palette and the five-signal disable chain promised by spec
+§6.2 / §6.3. Previously `NO_COLOR` was listed in the spec but no color logic
+existed at all — the test asserting it gave false confidence.
 
 ## Color crate
 
-`colored = "3"` — one new dep, idiomatic API.
-Auto-detects TTY via the
-crate's defaults; the disable chain wraps that with
-explicit overrides.
+`colored = "3"` — one new dep, idiomatic API. Auto-detects TTY via the crate's
+defaults; the disable chain wraps that with explicit overrides.
 
 ## Disable chain (clig.dev)
 
-In `src/style.rs::init()`,
-applied in order:
+In `src/style.rs::init()`, applied in order:
 
 1. `--no-color` flag (CLI)
-2. `NO_COLOR` env var
-   (non-empty)
+2. `NO_COLOR` env var (non-empty)
 3. `UPSKILL_NO_COLOR` env var (app-specific override)
 4.
 
-`TERM=dumb`
-5. `!isatty(target)` — handled by `colored`
-defaults
+`TERM=dumb` 5. `!isatty(target)` — handled by `colored` defaults
 
-`FORCE_COLOR` (or `CLICOLOR_FORCE`) re-enables color even when
-piped.
+`FORCE_COLOR` (or `CLICOLOR_FORCE`) re-enables color even when piped.
 
 ## Universal palette
 
 Applied across all 9 commands' output:
 
-- **red
-  bold** — error labels, missing outputs in `doctor`, error
-  severity in
+- **red bold** — error labels, missing outputs in `doctor`, error severity in
   `lint`
-- **yellow** — warnings, `would change` in `update --dry-run`,
-  `formatted:` in `fmt`, hash drift in `doctor`
-- **green** — `Installed`,
-  `Removed`, `updated`, `scaffolded`, `doctor: clean`
-- **dim/gray** —
-  secondary info: source labels, kind labels, paths, descriptions, orphan
-  reasons
-- **bold** — primary identifiers: item names, file paths, bundle
-  names
+- **yellow** — warnings, `would change` in `update --dry-run`, `formatted:` in
+  `fmt`, hash drift in `doctor`
+- **green** — `Installed`, `Removed`, `updated`, `scaffolded`, `doctor: clean`
+- **dim/gray** — secondary info: source labels, kind labels, paths,
+  descriptions, orphan reasons
+- **bold** — primary identifiers: item names, file paths, bundle names
 
 ## Centralised error printing
 
-New `print_error(...)` and
-`print_error_chain(...)` helpers replace 18
-direct `eprintln!("error: ...")`
-sites with a uniform red-bold label
-shape, while keeping the same plain text
-under disable.
+New `print_error(...)` and `print_error_chain(...)` helpers replace 18 direct
+`eprintln!("error: ...")` sites with a uniform red-bold label shape, while
+keeping the same plain text under disable.
 
 ## Tests
 
-- 6 unit tests in `src/style.rs` exhaustively cover
-  the disable chain
-  with env var precedence (`NO_COLOR`, `UPSKILL_NO_COLOR`,
-  `TERM=dumb`, `FORCE_COLOR`, empty-`NO_COLOR`-doesn't-disable).
-- 6 ATDD tests
-  in `tests/cli_ci_mode.rs` (was the misleading
-  single-test file) pin the
-  contract through the actual binary:
+- 6 unit tests in `src/style.rs` exhaustively cover the disable chain with env
+  var precedence (`NO_COLOR`, `UPSKILL_NO_COLOR`, `TERM=dumb`, `FORCE_COLOR`,
+  empty-`NO_COLOR`-doesn't-disable).
+- 6 ATDD tests in `tests/cli_ci_mode.rs` (was the misleading single-test file)
+  pin the contract through the actual binary:
   - `NO_COLOR` env strips ANSI
   -
   `--no-color` flag strips ANSI
   - `UPSKILL_NO_COLOR` strips ANSI
   -
   `TERM=dumb` strips ANSI
-  - piped output strips ANSI by default (no FORCE
-    override)
+  - piped output strips ANSI by default (no FORCE override)
   - `FORCE_COLOR=1` re-enables ANSI even when piped
 - **scope:** -p/--project flag, auto-fallback, positive --global tests
   ([ff92224]), closes 109.
 
-Completes the partial `--global` implementation.
-Before: `-g` was wired
-to `install_target(global: bool)` but no positive
-integration test
-proved it wrote to `$HOME`. Behind: spec §2.1 promised
-auto-fallback
-to global when `cwd` is not in a git repo, and `-p/--project` as
-an
-explicit override (parity with `npx skills update -p`). Neither
-was
-implemented.
+Completes the partial `--global` implementation. Before: `-g` was wired to
+`install_target(global: bool)` but no positive integration test proved it wrote
+to `$HOME`. Behind: spec §2.1 promised auto-fallback to global when `cwd` is not
+in a git repo, and `-p/--project` as an explicit override (parity with
+`npx skills update -p`). Neither was implemented.
 
 - **cli:** --version flag and HTTPS_PROXY support in search ([f607955]), closes
   [#106], #107.
 
-`--version` / `-V` now prints `upskill <version>` to stdout and
-exits 0, via clap's `#[command(version)]` reading the package version.
-Two
-integration tests pin the contract.
+`--version` / `-V` now prints `upskill <version>` to stdout and exits 0, via
+clap's `#[command(version)]` reading the package version. Two integration tests
+pin the contract.
 
-`search` now configures `ureq` with
-`HTTPS_PROXY` (or lowercase
-`https_proxy`) so corporate users can reach
-skills.sh through their
-proxy. `git`/`gh`/`glab` already honor proxy env vars
-implicitly; this
-closes the gap for the only `ureq` call site. NO_PROXY host
-bypass is
-not implemented — corporate users with host-specific exclusions
-should
-configure that at the system level.
+`search` now configures `ureq` with `HTTPS_PROXY` (or lowercase `https_proxy`)
+so corporate users can reach skills.sh through their proxy. `git`/`gh`/`glab`
+already honor proxy env vars implicitly; this closes the gap for the only `ureq`
+call site. NO_PROXY host bypass is not implemented — corporate users with
+host-specific exclusions should configure that at the system level.
 
 [0.3.1]: https://github.com/driftsys/upskill/compare/v0.3.0...v0.3.1
 [94efa95]: https://github.com/driftsys/upskill/commit/94efa95

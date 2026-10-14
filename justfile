@@ -13,14 +13,15 @@ test:
 lint:
     cargo clippy -- -D warnings
     cargo fmt -- --check
-    dprint check
-    npx markdownlint-cli '**/*.md' --ignore node_modules
-    shellcheck install.sh bootstrap
-
-# Fast pre-push sanity check; CI runs tests and Clippy.
-sanity:
-    cargo fmt -- --check
+    prim fmt --check --exclude 'tests/fixtures/**'
     prim lint .
+    shellcheck install.sh bootstrap
+    python3 scripts/test-precommit-hook.py
+
+# Pre-push checks: changed-file hygiene, Clippy, and type checking.
+sanity:
+    prim lint --since "$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || printf 'origin/main')"
+    cargo clippy --all-targets -- -D warnings
     cargo check --all-targets --locked
 
 # Run all checks (test + lint)
@@ -35,8 +36,7 @@ verify: check build
 # Format Rust and Markdown
 fmt:
     cargo fmt
-    dprint fmt
-    npx markdownlint-cli '**/*.md' --ignore node_modules --fix
+    prim fmt --exclude 'tests/fixtures/**'
 
 # Generate and open rustdoc
 doc:

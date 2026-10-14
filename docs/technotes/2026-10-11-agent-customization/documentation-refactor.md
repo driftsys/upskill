@@ -11,8 +11,8 @@ the first-class agent research. The implementation separates book sources,
 canonical specifications, design, WIP and archive navigation; retains ADR IDs;
 and adds a documentation check to local verification and PR CI. The 25 older
 working documents remain pending reconciliation in WIP. No historical feature
-was bulk-archived. The original proposal below remains dated audit evidence;
-its suggested WIP home for research is superseded by the user's technotes choice.
+was bulk-archived. The original proposal below remains dated audit evidence; its
+suggested WIP home for research is superseded by the user's technotes choice.
 
 ## Evidence and scope
 
@@ -21,10 +21,10 @@ RIDL remote `main` was verified with `gh api repos/driftsys/ridl/commits/main`:
 was read from that git object, excluding untracked working notes. Upskill was
 inspected at `ae31bb5c31e2210b9a1dae16348ec839eb661bbd` in the
 `research-agent-customization` worktree, plus the new, uncommitted research pack
-and ADR-0013 added during this session.
-Remote freshness is established only for RIDL at inspection time. This audit
-inspects instructions and automation; it does not claim either repository's
-checks were executed or that every old plan has been implemented.
+and ADR-0013 added during this session. Remote freshness is established only for
+RIDL at inspection time. This audit inspects instructions and automation; it
+does not claim either repository's checks were executed or that every old plan
+has been implemented.
 
 Source references below identify repository paths and lines at those revisions.
 The RIDL and upskill revision links are immutable:
@@ -45,15 +45,17 @@ RIDL separates a document's authority from its audience and lifecycle:
 | `docs/archive/`       | Superseded references and completed working memory, retained for provenance. The index explains what each document became and any remaining work.                                                             |
 | `docs/book/`          | Published reader documentation about the system as built, with explicit labels for specified but unimplemented behavior.                                                                                      |
 
-These definitions are explicit in RIDL `docs/{specification,design,technotes,
-wip,archive}/README.md:1-9`, `docs/decisions/README.md:1-4`, and
-`AGENTS.md:43-45,275-295`. They are more useful than reproducing directory names
-alone. In particular, correcting an inaccurate as-built design record is
-different from approving a change to a normative requirement.
+These definitions are explicit in RIDL
+`docs/{specification,design,technotes,
+wip,archive}/README.md:1-9`,
+`docs/decisions/README.md:1-4`, and `AGENTS.md:43-45,275-295`. They are more
+useful than reproducing directory names alone. In particular, correcting an
+inaccurate as-built design record is different from approving a change to a
+normative requirement.
 
 The book is a publication view. `book.toml:6` sets `src = "docs/book"`;
-`docs/book/SUMMARY.md:3-25` owns navigation. Eight reference chapters include the
-canonical specification sources rather than duplicate them: for example,
+`docs/book/SUMMARY.md:3-25` owns navigation. Eight reference chapters include
+the canonical specification sources rather than duplicate them: for example,
 `docs/book/reference/typl.md:1-6` adds implementation status and includes the
 typl reference. There is **no tracked `docs/book/README.md`** at this revision;
 the root README, SUMMARY and reading guide provide that navigation.
@@ -68,9 +70,9 @@ in WIP. Dates and checked task boxes alone do not establish completion.
 There are limitations worth preserving in the comparison. The WIP index admits
 that `family-general-form.md` is effectively normative through ADR citations
 despite its folder: ratification was deliberately left unresolved
-(`docs/wip/README.md:68-77`). Also, `book.toml:3` still says five languages while
-`AGENTS.md:3-7` says four. Directory classification and passing checks cannot
-eliminate semantic drift by themselves.
+(`docs/wip/README.md:68-77`). Also, `book.toml:3` still says five languages
+while `AGENTS.md:3-7` says four. Directory classification and passing checks
+cannot eliminate semantic drift by themselves.
 
 ## Rules, automation and coverage limits
 
@@ -100,8 +102,8 @@ Actual enforcement includes:
 CI runs the four documentation checks in its book job and requires aggregate
 success before publishing (`.github/workflows/ci.yml:159-183,320-369`). No
 empty-WIP, ratification or automatic gardening gate was found in the inspected
-tracked workflow, justfile or Claude session hook. The hook provisions tools;
-it does not promote documents. Gardening remains an evidence-driven editorial
+tracked workflow, justfile or Claude session hook. The hook provisions tools; it
+does not promote documents. Gardening remains an evidence-driven editorial
 process, not an automatic consequence of CI success.
 
 The separately installed `sdd-gardening` skill was read as workflow background,
@@ -122,18 +124,20 @@ and links, not just the visible table of contents.
 
 The 25 files in `docs/superpowers/` comprise 12 specs and 13 plans, without a
 directory lifecycle index. Their headers use Draft, Approved, implementation
-pending, or no status. These are historical claims requiring reconciliation.
-For example, the generic Git URL design says implementation planning is pending
-(`docs/superpowers/specs/2026-06-10-generic-git-url-source-design.md:3-6`), while
-an Accepted ADR and `GitRepo` implementation exist
+pending, or no status. These are historical claims requiring reconciliation. For
+example, the generic Git URL design says implementation planning is pending
+(`docs/superpowers/specs/2026-06-10-generic-git-url-source-design.md:3-6`),
+while an Accepted ADR and `GitRepo` implementation exist
 (`docs/adr/0011-generic-git-url-source.md:3,20-34`; `src/source.rs:15-27`). Its
-plan also cites a nonexistent WIP path (`docs/superpowers/plans/
-2026-06-10-generic-git-url-source.md:5`). This is an archive candidate requiring
-completion evidence, not a declaration that every acceptance criterion passed.
+plan also cites a nonexistent WIP path
+(`docs/superpowers/plans/
+2026-06-10-generic-git-url-source.md:5`). This is an
+archive candidate requiring completion evidence, not a declaration that every
+acceptance criterion passed.
 
-Authority needs review independently of movement: `docs/format-spec.md:3-5`
-says Draft, and ADR-0009 remains Proposed despite dependency implementation and
-tests (`docs/adr/0009-coupling-tiers-and-dependencies.md:3`;
+Authority needs review independently of movement: `docs/format-spec.md:3-5` says
+Draft, and ADR-0009 remains Proposed despite dependency implementation and tests
+(`docs/adr/0009-coupling-tiers-and-dependencies.md:3`;
 `tests/cli_requires.rs:25,100,153`). Migration must not silently ratify either.
 AGENTS' ADR inventory stops at 0005 although the index reaches 0012
 (`AGENTS.md:98`; `docs/adr/README.md:5-17`).
@@ -141,10 +145,10 @@ AGENTS' ADR inventory stops at 0005 although the index reaches 0012
 Upskill requires docs alongside implementation and `just fmt`/`just verify`
 before PRs (`AGENTS.md:238-249`; `CONTRIBUTING.md:64-70`). However, the current
 `verify` dependency chain has no book or link check (`justfile:12-33,49-55`).
-The separate Pages workflow builds only on matching pushes to main, while the
-PR workflow has no mdBook job (`.github/workflows/pages.yml:3-9,29-42`;
-`.github/workflows/ci.yml:12-85`). These are pre-merge coverage gaps, not evidence
-that today's book fails.
+The separate Pages workflow builds only on matching pushes to main, while the PR
+workflow has no mdBook job (`.github/workflows/pages.yml:3-9,29-42`;
+`.github/workflows/ci.yml:12-85`). These are pre-merge coverage gaps, not
+evidence that today's book fails.
 
 ## Recommended destination map
 
@@ -170,34 +174,35 @@ readers by purpose. Avoid filling empty directories merely for symmetry.
 
 For the Superpowers backlog, keep unknown or partial work active and labelled.
 Pair generic Git URL work with ADR-0011 for the first bounded reconciliation;
-review coupling slices together with ADR-0009, and MCP work with ADR-0010.
-The MCP v2 document explicitly scopes a documentation-only deliverable
+review coupling slices together with ADR-0009, and MCP work with ADR-0010. The
+MCP v2 document explicitly scopes a documentation-only deliverable
 (`docs/superpowers/specs/2026-06-03-mcp-v2-convention-design.md:9-11`), so its
 evidence is the delivered recipe/skill and their validation, not an invented
 Rust implementation requirement. A plan without its referenced design, such as
-the plugin descriptor plan's missing spec (`2026-05-23-plugin-descriptor-modes.md:11`),
-needs provenance recovery or an explicit gap, not a fabricated replacement.
+the plugin descriptor plan's missing spec
+(`2026-05-23-plugin-descriptor-modes.md:11`), needs provenance recovery or an
+explicit gap, not a fabricated replacement.
 
 An archive disposition should name the delivered or superseding commit/PR,
-relevant implementation and tests, reconciled durable records, residual work
-and its owner/tracker. Preserve raw reasoning and record link repairs or dated
+relevant implementation and tests, reconciled durable records, residual work and
+its owner/tracker. Preserve raw reasoning and record link repairs or dated
 corrections in the archive index. Extract unfinished scope into active WIP with
 provenance before archiving its completed predecessor. Neither age, approval,
 checkboxes nor an existing ADR substitutes for this evidence.
 
 ## The new research pack
 
-The six target reports, standards comparison, design inputs and schema
-snapshots are research evidence for the detailed design still to be decided.
-The new Accepted ADR-0013 already records the six target families, intended
-Codex implementation and deferred Cursor/Gemini CLI implementation
+The six target reports, standards comparison, design inputs and schema snapshots
+are research evidence for the detailed design still to be decided. The new
+Accepted ADR-0013 already records the six target families, intended Codex
+implementation and deferred Cursor/Gemini CLI implementation
 (`docs/adr/0013-agent-customization-targets.md:3,24-33`). Preserve that decision
-in the ADR home; do not demote it to WIP or reopen it during migration.
-The research pack's current headers
-already distinguish research from supported behavior (`design-inputs.md:3-13`;
-`schemas/README.md:3-9`). Under RIDL's pattern, WIP research is the appropriate
-home while decisions are open. The installed gardening skill's feature-pair
-workflow does not authorize automatically archiving this independent directory.
+in the ADR home; do not demote it to WIP or reopen it during migration. The
+research pack's current headers already distinguish research from supported
+behavior (`design-inputs.md:3-13`; `schemas/README.md:3-9`). Under RIDL's
+pattern, WIP research is the appropriate home while decisions are open. The
+installed gardening skill's feature-pair workflow does not authorize
+automatically archiving this independent directory.
 
 Keep reports, `schemas/manifest.json`, schema bytes and licenses together so
 relative links and provenance remain meaningful. Vendor contracts are external
@@ -214,8 +219,8 @@ Proposed AGENTS guidance would explain where a task starts: specifications and
 accepted ADRs for contracts, code/tests plus design records for implementation,
 WIP for unresolved decisions, and the book for supported user behavior. It would
 describe feature-scoped gardening after validation and require explicit handling
-of residual work. This is a description of future guidance, not an applied
-rule or a request to empty WIP. README would provide a compact documentation map;
+of residual work. This is a description of future guidance, not an applied rule
+or a request to empty WIP. README would provide a compact documentation map;
 CONTRIBUTING would explain transitions and the actual documentation checks.
 
 1. **Inventory before movement.** Add the documentation map and a disposition

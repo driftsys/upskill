@@ -2,16 +2,16 @@
 
 ## Summary
 
-Extend `upskill search` to query configured git-based registries in addition
-to skills.sh. Introduce a general config file and a local index cache with
+Extend `upskill search` to query configured git-based registries in addition to
+skills.sh. Introduce a general config file and a local index cache with
 HEAD-based invalidation for fast, offline-capable discovery.
 
 ## Motivation
 
 Users with corporate registries (or well-known public repos like Anthropic,
-Microsoft) cannot discover content via `upskill search` today — it only
-queries skills.sh. They must know the exact `owner/repo:path` to install.
-Multi-registry search closes this gap.
+Microsoft) cannot discover content via `upskill search` today — it only queries
+skills.sh. They must know the exact `owner/repo:path` to install. Multi-registry
+search closes this gap.
 
 ## Design
 
@@ -94,8 +94,8 @@ No persistent clone storage — only the index JSON persists.
 
 **Local-path registries:** When `source` is a local path (`./`, `../`, `/`,
 `~/`), skip the clone entirely — scan the directory in place. No HEAD check;
-always re-scan (local FS is fast). Still write an index file for consistency
-but without a `head` field.
+always re-scan (local FS is fast). Still write an index file for consistency but
+without a `head` field.
 
 ### 3. Search UX
 
@@ -184,8 +184,8 @@ upskill search <query> [--registry <name>] [--kind <kind>] [--limit N]
 upskill index [--registry <name>] [--clear]
 ```
 
-**Dependencies:** None new. Uses `serde_yaml_ng` (config), `serde_json`
-(index), git shell-out (clone/ls-remote via existing `fetch.rs` patterns).
+**Dependencies:** None new. Uses `serde_yaml_ng` (config), `serde_json` (index),
+git shell-out (clone/ls-remote via existing `fetch.rs` patterns).
 
 ### 6. Out of Scope
 

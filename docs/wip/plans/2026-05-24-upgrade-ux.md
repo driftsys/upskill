@@ -1,10 +1,17 @@
 # Upgrade UX Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `upskill update` auto-remove orphaned items, clean output before regenerating, and prompt before applying destructive changes.
+**Goal:** Make `upskill update` auto-remove orphaned items, clean output before
+regenerating, and prompt before applying destructive changes.
 
-**Architecture:** Three changes to the update pipeline: (1) detect items in lockfile that no longer exist in the fetched source and remove them, (2) delete per-client output files before regenerating to prevent stale file accumulation, (3) show a summary and confirm interactively before applying.
+**Architecture:** Three changes to the update pipeline: (1) detect items in
+lockfile that no longer exist in the fetched source and remove them, (2) delete
+per-client output files before regenerating to prevent stale file accumulation,
+(3) show a summary and confirm interactively before applying.
 
 **Tech Stack:** Rust, clap 4, anyhow, serde_json, std::io::IsTerminal
 
@@ -48,8 +55,8 @@ pub enum UpdateStatus {
 
 - [ ] **Step 2: Verify it compiles**
 
-Run: `cargo check`
-Expected: warnings about unmatched variants in `main.rs` pattern matches (non-exhaustive), but compilation succeeds.
+Run: `cargo check` Expected: warnings about unmatched variants in `main.rs`
+pattern matches (non-exhaustive), but compilation succeeds.
 
 - [ ] **Step 3: Commit**
 
@@ -80,7 +87,8 @@ yes: bool,
 
 - [ ] **Step 2: Update the destructure in `main.rs`**
 
-In `src/main.rs`, change the `Update` match arm (around line 60-64) to destructure `yes`:
+In `src/main.rs`, change the `Update` match arm (around line 60-64) to
+destructure `yes`:
 
 ```rust
 Commands::Update {
@@ -102,8 +110,7 @@ fn run_update(names: &[String], dry_run: bool, yes: bool, global: bool, project:
 
 - [ ] **Step 4: Verify it compiles**
 
-Run: `cargo check`
-Expected: warning about unused `yes` parameter, no errors.
+Run: `cargo check` Expected: warning about unused `yes` parameter, no errors.
 
 - [ ] **Step 5: Commit**
 
@@ -196,16 +203,22 @@ fn update_dry_run_reports_would_remove_without_deleting() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --test cli_update update_removes_orphaned_item update_dry_run_reports_would_remove`
+Run:
+`cargo test --test cli_update update_removes_orphaned_item update_dry_run_reports_would_remove`
 Expected: FAIL (no `removed` / `would remove` in output)
 
 - [ ] **Step 3: Implement orphan detection in `update()`**
 
-In `src/pipeline.rs`, modify the `update()` function. After fetching the source and computing hashes, detect entries that are no longer in the source:
+In `src/pipeline.rs`, modify the `update()` function. After fetching the source
+and computing hashes, detect entries that are no longer in the source:
 
-Replace the inner loop body for both `Apply` and `DryRun` modes. The key change: after computing `new_hashes` (in DryRun) or `new_hashes` from the install report (in Apply), check if the entry's `(kind, name)` is absent from the discovered items.
+Replace the inner loop body for both `Apply` and `DryRun` modes. The key change:
+after computing `new_hashes` (in DryRun) or `new_hashes` from the install report
+(in Apply), check if the entry's `(kind, name)` is absent from the discovered
+items.
 
-In the `DryRun` branch (starting at line 1166), replace the `for entry in &source_entries` loop:
+In the `DryRun` branch (starting at line 1166), replace the
+`for entry in &source_entries` loop:
 
 ```rust
 UpdateMode::DryRun => {
@@ -243,7 +256,8 @@ UpdateMode::DryRun => {
 }
 ```
 
-In the `Apply` branch (starting at line 1137), replace the `for entry in &source_entries` loop:
+In the `Apply` branch (starting at line 1137), replace the
+`for entry in &source_entries` loop:
 
 ```rust
 UpdateMode::Apply => {
@@ -294,7 +308,8 @@ UpdateMode::Apply => {
 
 - [ ] **Step 4: Add `remove_item_outputs` helper**
 
-Add this helper function in `src/pipeline.rs` (near the existing `output_path` function):
+Add this helper function in `src/pipeline.rs` (near the existing `output_path`
+function):
 
 ```rust
 /// Delete all per-client output files for an item. Best-effort: ignores
@@ -313,9 +328,11 @@ fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
 }
 ```
 
-- [ ] **Step 5: Update `print_update_report` in `main.rs` to handle new variants**
+- [ ] **Step 5: Update `print_update_report` in `main.rs` to handle new
+      variants**
 
-In `src/main.rs`, in the `print_update_report` function, add arms for the new variants:
+In `src/main.rs`, in the `print_update_report` function, add arms for the new
+variants:
 
 ```rust
 UpdateStatus::Removed => style::error("removed — no longer in source"),
@@ -336,8 +353,8 @@ let changes = report
 
 - [ ] **Step 6: Run tests**
 
-Run: `cargo test --test cli_update`
-Expected: all tests pass, including the two new ones.
+Run: `cargo test --test cli_update` Expected: all tests pass, including the two
+new ones.
 
 - [ ] **Step 7: Commit**
 
@@ -352,7 +369,8 @@ git commit -m "feat: auto-remove orphaned items during update"
 
 **Files:**
 
-- Modify: `src/pipeline.rs` — the per-kind install loops (around lines 1534–1549, 1577–1592, 1620–1635)
+- Modify: `src/pipeline.rs` — the per-kind install loops (around lines
+  1534–1549, 1577–1592, 1620–1635)
 - Test: `tests/cli_update.rs`
 
 - [ ] **Step 1: Write failing test — stale output file removed on update**
@@ -398,14 +416,19 @@ fn update_removes_stale_output_file_from_previous_generation() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_update update_removes_stale_output`
-Expected: FAIL (stale file still exists)
+Run: `cargo test --test cli_update update_removes_stale_output` Expected: FAIL
+(stale file still exists)
 
 - [ ] **Step 3: Add clean step before writing output**
 
-In `src/pipeline.rs`, in the skill install loop (around line 1534), before writing output for each item, clean the parent directory. The cleanest approach is to call `remove_item_outputs` before the per-client render loop for each item:
+In `src/pipeline.rs`, in the skill install loop (around line 1534), before
+writing output for each item, clean the parent directory. The cleanest approach
+is to call `remove_item_outputs` before the per-client render loop for each
+item:
 
-Find the skill loop (starts around line 1523 with `let entry_path = dir.join("SKILL.md");`). Before the `for client in ALL_CLIENTS` loop at line 1534, insert:
+Find the skill loop (starts around line 1523 with
+`let entry_path = dir.join("SKILL.md");`). Before the
+`for client in ALL_CLIENTS` loop at line 1534, insert:
 
 ```rust
 // Clean previous output to prevent stale files from lingering
@@ -413,7 +436,8 @@ Find the skill loop (starts around line 1523 with `let entry_path = dir.join("SK
 remove_item_outputs(target, ItemKind::Skill, &name);
 ```
 
-Do the same for the rule loop (before the `for client in ALL_CLIENTS` around line 1577):
+Do the same for the rule loop (before the `for client in ALL_CLIENTS` around
+line 1577):
 
 ```rust
 remove_item_outputs(target, ItemKind::Rule, &name);
@@ -427,13 +451,12 @@ remove_item_outputs(target, ItemKind::Agent, &name);
 
 - [ ] **Step 4: Run tests**
 
-Run: `cargo test --test cli_update`
-Expected: all tests pass including the new one.
+Run: `cargo test --test cli_update` Expected: all tests pass including the new
+one.
 
 - [ ] **Step 5: Run full test suite to check for regressions**
 
-Run: `cargo test`
-Expected: all tests pass.
+Run: `cargo test` Expected: all tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -452,7 +475,8 @@ git commit -m "feat: clean output before regenerating to prevent stale files"
 - Modify: `src/pipeline.rs` — split update into plan + apply phases
 - Test: `tests/cli_update.rs`
 
-- [ ] **Step 1: Write failing test — update without --yes prompts (non-TTY auto-proceeds)**
+- [ ] **Step 1: Write failing test — update without --yes prompts (non-TTY
+      auto-proceeds)**
 
 Append to `tests/cli_update.rs`:
 
@@ -488,9 +512,12 @@ fn update_without_yes_proceeds_in_non_tty() {
 }
 ```
 
-- [ ] **Step 2: Refactor `update()` to support a two-phase plan-then-apply pattern**
+- [ ] **Step 2: Refactor `update()` to support a two-phase plan-then-apply
+      pattern**
 
-The confirmation prompt needs to show the plan before applying. The cleanest approach: `update()` already computes the report. We change the flow in `main.rs` so that:
+The confirmation prompt needs to show the plan before applying. The cleanest
+approach: `update()` already computes the report. We change the flow in
+`main.rs` so that:
 
 1. First call `update()` with `DryRun` to get the plan.
 2. If nothing to do → print and exit.
@@ -632,17 +659,19 @@ fn confirm_update() -> bool {
 
 - [ ] **Step 4: Run tests**
 
-Run: `cargo test --test cli_update`
-Expected: all tests pass. The existing tests pass `--yes` or run in non-TTY (test harness), so they proceed without blocking.
+Run: `cargo test --test cli_update` Expected: all tests pass. The existing tests
+pass `--yes` or run in non-TTY (test harness), so they proceed without blocking.
 
 - [ ] **Step 5: Fix existing tests that don't pass `--yes`**
 
-The existing tests (`update_no_change_reports_up_to_date`, `update_after_ssot_mutation_rewrites_outputs_and_lockfile_hash`) run in non-TTY so `confirm_update()` returns `true`. They should still pass. If any fail, add `--yes` to their args.
+The existing tests (`update_no_change_reports_up_to_date`,
+`update_after_ssot_mutation_rewrites_outputs_and_lockfile_hash`) run in non-TTY
+so `confirm_update()` returns `true`. They should still pass. If any fail, add
+`--yes` to their args.
 
 - [ ] **Step 6: Run full test suite**
 
-Run: `cargo test`
-Expected: all pass.
+Run: `cargo test` Expected: all pass.
 
 - [ ] **Step 7: Commit**
 
@@ -665,13 +694,11 @@ Run: `just fmt`
 
 - [ ] **Step 2: Lint**
 
-Run: `just lint`
-Expected: no warnings, no errors.
+Run: `just lint` Expected: no warnings, no errors.
 
 - [ ] **Step 3: Full verification**
 
-Run: `just verify`
-Expected: all checks pass.
+Run: `just verify` Expected: all checks pass.
 
 - [ ] **Step 4: Final commit if formatting changed anything**
 

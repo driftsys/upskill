@@ -1,16 +1,17 @@
 # Design: MCP local-install convention (v2 — docs only)
 
-**Date**: 2026-06-03
-**Status**: Approved (brainstorming)
-**Builds on**: v1 MCP support ([spec](2026-06-03-mcp-support-design.md), [ADR-0010](../../adr/0010-mcp-config-write.md), PR #218)
+**Date**: 2026-06-03 **Status**: Approved (brainstorming) **Builds on**: v1 MCP
+support ([spec](2026-06-03-mcp-support-design.md),
+[ADR-0010](../../adr/0010-mcp-config-write.md), PR #218)
 
 ## TL;DR for a cold-start executor
 
-**This is a documentation-only deliverable. No Rust. No new upskill capability.**
-v2 is an _authoring convention_ that already works on v1 + existing
-rule/skill/agent/bundle primitives. Ship exactly two content edits:
+**This is a documentation-only deliverable. No Rust. No new upskill
+capability.** v2 is an _authoring convention_ that already works on v1 +
+existing rule/skill/agent/bundle primitives. Ship exactly two content edits:
 
-1. A recipe in `docs/recipes.md` — _"Shipping an MCP that needs a local install."_
+1. A recipe in `docs/recipes.md` — _"Shipping an MCP that needs a local
+   install."_
 2. A short subsection in `skills/prompt-distilling/SKILL.md` — _"Provisioning an
    MCP server"_ — naming the placement decision and linking to the recipe.
 
@@ -24,17 +25,19 @@ auto-injected skill-body "preflight," and a generic install agent. We
 pressure-tested all of it and dropped it:
 
 - **upskill cannot trigger/dispatch a subagent.** It is a ~3 MB CLI with no LLM
-  and no agent runtime. Only the _client's_ model (e.g. Claude Code) can dispatch
-  a subagent. upskill's only lever is producing content the model reads. So any
-  "auto-install" mechanism reduces to _content the model acts on_ — which authors
-  can write directly.
-- **No auto-injection needed.** The trigger line ("if the MCP is missing, run its
-  installer agent") can be authored in the skill body. upskill auto-injecting it
-  would be optional sugar, not a requirement — so it is out of scope.
+  and no agent runtime. Only the _client's_ model (e.g. Claude Code) can
+  dispatch a subagent. upskill's only lever is producing content the model
+  reads. So any "auto-install" mechanism reduces to _content the model acts on_
+  — which authors can write directly.
+- **No auto-injection needed.** The trigger line ("if the MCP is missing, run
+  its installer agent") can be authored in the skill body. upskill
+  auto-injecting it would be optional sugar, not a requirement — so it is out of
+  scope.
 - **Per-MCP installer agent, not a generic one.** Bare-binary install is too
   heterogeneous for a declarative matrix or a generic agent guessing from hints.
-  A per-MCP `<name>-mcp-installer` _agent_ lets the author encode the exact recipe
-  in prose. That is just `agent` SSOT content — already a first-class kind.
+  A per-MCP `<name>-mcp-installer` _agent_ lets the author encode the exact
+  recipe in prose. That is just `agent` SSOT content — already a first-class
+  kind.
 - **MCP stays a v1 bundle descriptor.** No MCP-as-a-kind, no `requires.mcps`, no
   migration. Keeping v1 as-is is a deliberate decision.
 
@@ -53,22 +56,25 @@ must be installed/verified on the consumer machine.
      `local: { command, args }`. **No installer needed** — the launcher
      self-fetches on first run. State this prominently: most local servers need
      nothing.
-   - Local server that is a **bare binary** with no launcher → `local: { command:
+   - Local server that is a **bare binary** with no launcher →
+     `local: { command:
      <binary>, … }`, and proceed to step 2.
-2. **Author a per-MCP installer agent** `<name>-mcp-installer` (an `agent` item).
-   Its system prompt is the install recipe for that one server: detect the OS,
-   check the version (`<binary> --version` ≥ X), install via the right channel
-   (`brew install …` / download+chmod / `cargo install …`), and run any one-time
-   setup. Scaffold a stub with `upskill new agent <name>-mcp-installer`.
+2. **Author a per-MCP installer agent** `<name>-mcp-installer` (an `agent`
+   item). Its system prompt is the install recipe for that one server: detect
+   the OS, check the version (`<binary> --version` ≥ X), install via the right
+   channel (`brew install …` / download+chmod / `cargo install …`), and run any
+   one-time setup. Scaffold a stub with
+   `upskill new agent <name>-mcp-installer`.
    - Give it a narrow tool surface (it needs `Bash`).
-   - Its body should be explicit that it must obtain user approval before running
-     install commands (the client's permission prompts are the real gate).
-3. **Add the trigger to the consuming skill.** In the skill that teaches using the
-   MCP, add one authored line near the top, e.g.:
+   - Its body should be explicit that it must obtain user approval before
+     running install commands (the client's permission prompts are the real
+     gate).
+3. **Add the trigger to the consuming skill.** In the skill that teaches using
+   the MCP, add one authored line near the top, e.g.:
    > If the `<name>` MCP server is not responding (a tool call fails because the
    > server/binary is missing), dispatch the `<name>-mcp-installer` agent to
-   > install it, then retry.
-   > This is plain authored prose — upskill injects nothing.
+   > install it, then retry. This is plain authored prose — upskill injects
+   > nothing.
 4. **Bundle the three together** so they install as a unit:
 
    ```yaml
@@ -111,8 +117,9 @@ Add a recipe section _"Shipping an MCP that needs a local install."_ Structure:
   format-spec section.
 
 Match the existing recipe style in `docs/recipes.md` (read a sibling recipe for
-heading level, voice, and code-fence conventions). If `docs/recipes.md` is in the
-mdBook `SUMMARY.md`, no new entry is needed (it is an in-page section); confirm.
+heading level, voice, and code-fence conventions). If `docs/recipes.md` is in
+the mdBook `SUMMARY.md`, no new entry is needed (it is an in-page section);
+confirm.
 
 ## Deliverable 2 — `skills/prompt-distilling/SKILL.md` subsection
 
@@ -130,9 +137,9 @@ Add a short subsection — _"Provisioning an MCP server"_ — that frames the
 Keep it brief — prompt-distilling is about _where behavior lives_, so this is a
 placement rule plus a pointer, not a tutorial. Follow `writing-skills`: this is
 SSOT content; after editing, run `upskill lint` (and `just fmt`) on the skill.
-An optional one-line cross-reference may be added to `skills/prompt-design/SKILL.md`
-(the framework entry point) pointing at the distilling subsection — author's
-discretion.
+An optional one-line cross-reference may be added to
+`skills/prompt-design/SKILL.md` (the framework entry point) pointing at the
+distilling subsection — author's discretion.
 
 ## Out of scope (explicitly)
 

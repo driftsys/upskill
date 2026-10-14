@@ -1,13 +1,12 @@
 # driftsys prompt-engineering meta-skills
 
-This directory is the source registry for the v0.1 draft set of
-meta-skills for the driftsys prompt-engineering discipline, managed via
-upskill.
+This directory is the source registry for the v0.1 draft set of meta-skills for
+the driftsys prompt-engineering discipline, managed via upskill.
 
 ## Layout
 
-The directory follows the upskill conventional source-registry layout
-(items and bundles flat under `skills/`; see
+The directory follows the upskill conventional source-registry layout (items and
+bundles flat under `skills/`; see
 <https://driftsys.github.io/upskill/conventions.html>):
 
 ```text
@@ -34,28 +33,28 @@ skills/
 ## Status
 
 All skills are v0.1.0 except `upskill-prompt-distilling` (v0.3.0, renamed from
-`picking-the-layer`) and `upskill-cli` (v0.2.0, rewritten against the
-real CLI surface). None have yet been through their own
-RED-GREEN-REFACTOR cycle. Each carries an "Honest caveats" section
-flagging this.
+`picking-the-layer`) and `upskill-cli` (v0.2.0, rewritten against the real CLI
+surface). None have yet been through their own RED-GREEN-REFACTOR cycle. Each
+carries an "Honest caveats" section flagging this.
 
 ## Not yet present
 
-- `writing-skills` — to be vendored from `obra/superpowers` (MIT).
-  Tracked in [driftsys/upskill#146](https://github.com/driftsys/upskill/issues/146).
-  Until it lands, skill authoring methodology is deferred to the
-  upstream superpowers source; the handoff tables in the other skills
-  reference `writing-skills` as a forward pointer.
+- `writing-skills` — to be vendored from `obra/superpowers` (MIT). Tracked in
+  [driftsys/upskill#146](https://github.com/driftsys/upskill/issues/146). Until
+  it lands, skill authoring methodology is deferred to the upstream superpowers
+  source; the handoff tables in the other skills reference `writing-skills` as a
+  forward pointer.
 
 ## Install
 
-This bundle pairs with [`obra/superpowers`](https://github.com/obra/superpowers).
-Install both for the full stack:
+This bundle pairs with
+[`obra/superpowers`](https://github.com/obra/superpowers). Install both for the
+full stack:
 
 - **superpowers** — engineering discipline (TDD, debugging, brainstorming,
   plans, code review, worktrees).
-- **prompt-engineering** (this bundle) — authoring discipline for durable
-  agent content (rules, skills, agents).
+- **prompt-engineering** (this bundle) — authoring discipline for durable agent
+  content (rules, skills, agents).
 
 ### 1. Install superpowers
 
@@ -82,15 +81,15 @@ directory as a local source registry):
 upskill add ./skills/prompt-engineering.bundle.yaml
 ```
 
-Or, once published, from the canonical source (using the `:subfolder`
-syntax to point at the bundle file inside the repo):
+Or, once published, from the canonical source (using the `:subfolder` syntax to
+point at the bundle file inside the repo):
 
 ```bash
 upskill add driftsys/skills:skills/prompt-engineering.bundle.yaml
 ```
 
-To install one item without the rest of the bundle, point at the
-registry directory and pass the item name as a filter:
+To install one item without the rest of the bundle, point at the registry
+directory and pass the item name as a filter:
 
 ```bash
 upskill add ./skills upskill-prompt-design   # just the umbrella skill
@@ -101,18 +100,19 @@ See `upskill-cli/SKILL.md` for the full lifecycle.
 ## Recommended adoption sequence
 
 1. Vendor `writing-skills` from superpowers.
-2. Run `upskill-evaluating-prompts`' methodology against `upskill-prompt-distilling`
-   (most-activated skill) to validate the meta-skill methodology.
+2. Run `upskill-evaluating-prompts`' methodology against
+   `upskill-prompt-distilling` (most-activated skill) to validate the meta-skill
+   methodology.
 3. Iterate based on findings.
 4. Roll out to pilot team(s).
 5. Iterate based on real authoring use.
 
 ## Out of scope here
 
-- General one-shot prompting guidance (belongs in engineering
-  onboarding documentation, not in the framework)
-- MCP server authoring (separate repo's authoring process; see
-  `mcp-builder` from `anthropics/skills`)
+- General one-shot prompting guidance (belongs in engineering onboarding
+  documentation, not in the framework)
+- MCP server authoring (separate repo's authoring process; see `mcp-builder`
+  from `anthropics/skills`)
 - RAG corpus management (lives behind specific MCP tools)
-- Domain-specific skills (Android, IVI, Rust cluster) — these meta-skills
-  help authors create those domain skills
+- Domain-specific skills (Android, IVI, Rust cluster) — these meta-skills help
+  authors create those domain skills

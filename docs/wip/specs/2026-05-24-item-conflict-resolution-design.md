@@ -1,8 +1,7 @@
 # Item Conflict Resolution & Source Locking
 
-**Date**: 2026-05-24
-**Status**: Draft
-**Scope**: `upskill add`, bundle install, lockfile, alias mechanism
+**Date**: 2026-05-24 **Status**: Draft **Scope**: `upskill add`, bundle install,
+lockfile, alias mechanism
 
 ---
 
@@ -11,33 +10,37 @@
 When two source registries publish items with the same `(kind, name)`, consumers
 hit conflicts with no graceful resolution path. Today:
 
-- Direct `upskill add` silently overwrites an existing item from a different source.
-- Bundle resolution hard-errors on `(kind, name)` duplicates within the dependency
-  graph, but offers no resolution mechanism.
-- There is no way to keep two items with the same short name from different sources.
+- Direct `upskill add` silently overwrites an existing item from a different
+  source.
+- Bundle resolution hard-errors on `(kind, name)` duplicates within the
+  dependency graph, but offers no resolution mechanism.
+- There is no way to keep two items with the same short name from different
+  sources.
 
 This leads to accidental overrides, unintended shadowing, and poor DX when
 composing content from multiple registries.
 
 ## Design Principles
 
-1. **Short names are the only user-facing handle.** Agents trigger skills by short
-   name; users type `/skill-name`. No namespaces, scopes, or qualified IDs in
-   daily usage.
-2. **Locked by default.** Once an item is installed, its `(kind, name)` is bound to
-   its source. Replacement from a different source requires explicit opt-in.
+1. **Short names are the only user-facing handle.** Agents trigger skills by
+   short name; users type `/skill-name`. No namespaces, scopes, or qualified IDs
+   in daily usage.
+2. **Locked by default.** Once an item is installed, its `(kind, name)` is bound
+   to its source. Replacement from a different source requires explicit opt-in.
 3. **Deterministic behavior.** No interactive prompts — errors are clear and
    actionable, with flags to resolve. Works identically in CI and local.
-4. **Aliases for coexistence.** When two items with the same upstream name are both
-   needed, one is installed under an alias.
+4. **Aliases for coexistence.** When two items with the same upstream name are
+   both needed, one is installed under an alias.
 
 ## Design
 
 ### 1. Source Affinity (Implicit Locking)
 
-Every `LockedItem` in `.upskill-lock.json` already records a `source` field. This
-field becomes the lock: any subsequent `upskill add` that would write a `(kind,
-name)` already present in the lockfile from a **different source** is an error.
+Every `LockedItem` in `.upskill-lock.json` already records a `source` field.
+This field becomes the lock: any subsequent `upskill add` that would write a
+`(kind,
+name)` already present in the lockfile from a **different source** is an
+error.
 
 No new lockfile fields are needed for locking. The existing `source` field is
 sufficient.
@@ -47,8 +50,8 @@ sufficient.
 On `upskill add <source>`, after resolving which items the source provides:
 
 1. For each resolved `(kind, name)`, check the lockfile.
-2. If the `(kind, name)` exists and `source` matches → this is an **update**, proceed
-   normally.
+2. If the `(kind, name)` exists and `source` matches → this is an **update**,
+   proceed normally.
 3. If the `(kind, name)` exists and `source` differs → **conflict error**.
 
 Error message:
@@ -100,8 +103,8 @@ When `--as` is used, the lockfile records the original source name so that
 
 - `source_name` (optional, string): the item's name in the source registry. Only
   present when it differs from `name` (i.e., when aliased).
-- `upskill update` uses `source_name` (falling back to `name`) to locate the SSOT
-  file in the source.
+- `upskill update` uses `source_name` (falling back to `name`) to locate the
+  SSOT file in the source.
 
 Schema remains `1` — this is an additive, backwards-compatible field.
 

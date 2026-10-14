@@ -1,8 +1,7 @@
 # Design: Comment-Preserving `upskill fmt`
 
-**Issue:** [#169](https://github.com/driftsys/upskill/issues/169)
-**Date:** 2026-05-23
-**Status:** Approved
+**Issue:** [#169](https://github.com/driftsys/upskill/issues/169) **Date:**
+2026-05-23 **Status:** Approved
 
 ## Problem
 
@@ -10,30 +9,31 @@
 (`from_str → struct → to_string`). This silently destroys:
 
 1. **Comments** in `.bundle.yaml` files and frontmatter
-2. **Author formatting** — especially hand-wrapped `description` lines
-   at 80 chars
+2. **Author formatting** — especially hand-wrapped `description` lines at 80
+   chars
 
-The silent stripping causes empty commits in pre-commit hooks and data
-loss without warning.
+The silent stripping causes empty commits in pre-commit hooks and data loss
+without warning.
 
 ## Solution
 
 Replace the serde round-trip with **line-level block reordering**:
 
-1. Split the YAML into top-level key blocks (each key + preceding
-   comments + indented children)
+1. Split the YAML into top-level key blocks (each key + preceding comments +
+   indented children)
 2. Reorder blocks by canonical struct field order
 3. Validate the result by parsing through serde (safety net — no write)
 4. Write only if the reordered text differs from the original
 
-This preserves comments, inline formatting, and author wrapping while
-still enforcing canonical key order.
+This preserves comments, inline formatting, and author wrapping while still
+enforcing canonical key order.
 
 ## Canonical Key Orders
 
 Derived from the Rust model struct field declarations:
 
-**Bundle** (`schema → name → description → license → items → requires →
+**Bundle**
+(`schema → name → description → license → items → requires →
 plugins → metadata → extras`):
 
 ```rust
@@ -43,7 +43,8 @@ const BUNDLE_KEY_ORDER: &[&str] = &[
 ];
 ```
 
-**Skill** (`schema → name → description → audience → license →
+**Skill**
+(`schema → name → description → audience → license →
 metadata → claude → copilot → opencode → extras`):
 
 ```rust
@@ -53,7 +54,8 @@ const SKILL_KEY_ORDER: &[&str] = &[
 ];
 ```
 
-**Rule** (`schema → name → description → audience → license → scope →
+**Rule**
+(`schema → name → description → audience → license → scope →
 metadata → claude → copilot → opencode → extras`):
 
 ```rust
@@ -63,7 +65,8 @@ const RULE_KEY_ORDER: &[&str] = &[
 ];
 ```
 
-**Agent** (`schema → name → description → audience → license → mode →
+**Agent**
+(`schema → name → description → audience → license → mode →
 model → tools → preload-skills → metadata → claude → copilot →
 opencode → extras`):
 
@@ -103,8 +106,8 @@ Output: reordered YAML string with comments/formatting preserved
 
 - **Preamble comments** (before the first key): stay at the top
 - **Trailing comments** (after the last block): stay at the bottom
-- **Blank lines between blocks**: preserved within each block; one
-  blank line between blocks in output (normalize inter-block spacing)
+- **Blank lines between blocks**: preserved within each block; one blank line
+  between blocks in output (normalize inter-block spacing)
 - **File already in canonical order**: no change (idempotent)
 
 ## Frontmatter Handling
@@ -118,9 +121,9 @@ For items (SKILL.md, RULE.md, AGENT.md):
 
 ## dprint YAML Plugin
 
-Add `dprint-plugin-yaml` to the external `dprint.json` config for
-cosmetic YAML normalization (indentation, trailing whitespace) on
-`.bundle.yaml` files. dprint preserves comments.
+Add `dprint-plugin-yaml` to the external `dprint.json` config for cosmetic YAML
+normalization (indentation, trailing whitespace) on `.bundle.yaml` files. dprint
+preserves comments.
 
 ```json
 {
@@ -133,9 +136,9 @@ cosmetic YAML normalization (indentation, trailing whitespace) on
 }
 ```
 
-`just fmt` runs `dprint fmt` (handles both Markdown and YAML) then
-`upskill fmt` (handles key ordering). Order matters: dprint normalizes
-cosmetics first, then upskill reorders keys.
+`just fmt` runs `dprint fmt` (handles both Markdown and YAML) then `upskill fmt`
+(handles key ordering). Order matters: dprint normalizes cosmetics first, then
+upskill reorders keys.
 
 ## What Changes
 
@@ -164,8 +167,7 @@ cosmetics first, then upskill reorders keys.
 ### Integration tests (existing `cli_fmt.rs`)
 
 - `fmt_preserves_bundle_comments`: bundle with comments → no stripping
-- `fmt_preserves_frontmatter_wrapping`: 80-char wrapped description
-  survives
+- `fmt_preserves_frontmatter_wrapping`: 80-char wrapped description survives
 
 ## Non-Goals
 
@@ -175,7 +177,7 @@ cosmetics first, then upskill reorders keys.
 
 ## Risks
 
-- **Low:** Literal/folded block scalars with unindented continuation
-  → mitigated by serde validation after reorder
-- **Low:** Unusual YAML constructs (anchors, tags) → our format-spec
-  doesn't use them; serde validation catches breakage
+- **Low:** Literal/folded block scalars with unindented continuation → mitigated
+  by serde validation after reorder
+- **Low:** Unusual YAML constructs (anchors, tags) → our format-spec doesn't use
+  them; serde validation catches breakage

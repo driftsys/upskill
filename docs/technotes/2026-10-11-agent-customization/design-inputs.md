@@ -13,10 +13,10 @@ architecture questions below remain open.
 - Include Claude Code, GitHub Copilot, OpenCode, Codex, Cursor, and Gemini CLI
   in the design.
 - Codex is an intended implementation target.
-- Cursor and Gemini CLI are required design targets; their implementation
-  is deferred. Research coverage does not imply upskill support.
-- Preserve bundles for installing coherent collections such as instructions
-  plus skills, including dependencies and native integrations.
+- Cursor and Gemini CLI are required design targets; their implementation is
+  deferred. Research coverage does not imply upskill support.
+- Preserve bundles for installing coherent collections such as instructions plus
+  skills, including dependencies and native integrations.
 
 ## Category coverage
 
@@ -55,14 +55,15 @@ owning item or package; they do not automatically require separate item kinds.
    merged configuration entries, and native package installations.
 7. Define scope-aware paths and migration from old paths, including stale
    generated output and shared-directory collisions.
-8. Preserve the common content core while validating target extensions.
-   Model aliases and skill preloading require explicit target semantics.
+8. Preserve the common content core while validating target extensions. Model
+   aliases and skill preloading require explicit target semantics.
 9. Define bundle composition across content and integrations, with duplicate
    detection and provenance when a native plugin provides overlapping items.
 10. Specify lifecycle evidence: installed configuration, native discovery,
     enablement, and successful execution are different states.
-11. Record which schema or documented contract each adapter supports. Timestamped
-    research is evidence, not an automatic dependency on every upstream change.
+11. Record which schema or documented contract each adapter supports.
+    Timestamped research is evidence, not an automatic dependency on every
+    upstream change.
 12. Choose native discovery and semantic checks for conformance. Golden outputs
     alone cannot establish that a client loads or enforces generated content.
 

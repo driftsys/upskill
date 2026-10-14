@@ -3,7 +3,7 @@
 # Each line is a command run during the pre-commit hook.
 # Prefix controls behavior:
 #
-#   !  check     run command, block commit on failure
+#   !  required  run command, block commit on failure
 #   ~  fix       auto-format staged files and re-stage (pre-commit only)
 #                uses a stash dance to safely isolate staged content
 #   ?  advisory  run command, never block commit
@@ -19,4 +19,4 @@
 #   git std hook enable pre-commit
 #   git std hook disable pre-commit
 #
-! git diff --cached --check
+! python3 .githooks/format-staged.py

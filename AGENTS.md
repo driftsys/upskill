@@ -5,19 +5,19 @@ Instructions for AI coding agents working in this repository.
 ## Project
 
 upskill is a Rust CLI for authoring and distributing AI-assistance content
-(rules, skills, agents) across multiple AI coding clients (Claude Code,
-Copilot, opencode) from a single source of truth. The central abstraction is
+(rules, skills, agents) across multiple AI coding clients (Claude Code, Copilot,
+opencode) from a single source of truth. The central abstraction is
 **generation** — SSOT in, per-client output out.
 
-**v0.2.0 shipped.** The redesign around the SSOT-to-client generation
-pipeline is complete and released. See
-[ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the
-umbrella decision and the rest of `docs/adr/` for concern-specific design.
+**v0.2.0 shipped.** The redesign around the SSOT-to-client generation pipeline
+is complete and released. See
+[ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the umbrella
+decision and the rest of `docs/adr/` for concern-specific design.
 
-**Design priority**: single static binary, ~3 MB target. No Node.js, no npm,
-no async runtime, no `git2` (shell out to `git` instead). Other deps are
-admitted on a case-by-case basis — see ADR-0001 §3 (dependency philosophy
-relaxed for `serde_yaml_ng`, `pulldown-cmark`, `dprint-plugin-markdown`).
+**Design priority**: single static binary, ~3 MB target. No Node.js, no npm, no
+async runtime, no `git2` (shell out to `git` instead). Other deps are admitted
+on a case-by-case basis — see ADR-0001 §3 (dependency philosophy relaxed for
+`serde_yaml_ng`, `pulldown-cmark`, `dprint-plugin-markdown`).
 
 ## Stack
 
@@ -32,11 +32,11 @@ relaxed for `serde_yaml_ng`, `pulldown-cmark`, `dprint-plugin-markdown`).
 - **Linux/macOS dependency**: `rustix` `=1.1.4` with the `fs` feature for
   qualified scope roots and writer locking; see
   [AD-0028](docs/adr/0028-lock-qualified-scope-directories.md).
-- **Out**: `tokio`, `reqwest` (no async, `ureq` is sync), `git2` (~5 MB —
-  shell out to `git`), `dialoguer` (raw stdin is enough). Don't add these
-  without a strong reason recorded in an ADR.
-- **Release profile**: `opt-level = "z"`, `lto`, `codegen-units = 1`,
-  `strip`, `panic = "abort"`.
+- **Out**: `tokio`, `reqwest` (no async, `ureq` is sync), `git2` (~5 MB — shell
+  out to `git`), `dialoguer` (raw stdin is enough). Don't add these without a
+  strong reason recorded in an ADR.
+- **Release profile**: `opt-level = "z"`, `lto`, `codegen-units = 1`, `strip`,
+  `panic = "abort"`.
 
 ## Build commands
 
@@ -96,18 +96,21 @@ src/
 └── lockfile.rs          .upskill-lock.json (`schema: 1`) read/write
 ```
 
-Documentation map: [docs/README.md](docs/README.md). The published mdBook
-source is `docs/book/`; specifications are included from their canonical files.
-Working specs and plans are in `docs/wip/`; research is in `docs/technotes/`.
+Documentation map: [docs/README.md](docs/README.md). The published mdBook source
+is `docs/book/`; specifications are included from their canonical files. Working
+specs and plans are in `docs/wip/`; research is in `docs/technotes/`.
 
 Core docs (published at <https://driftsys.github.io/upskill/>):
 
 - `docs/book/intro.md` — book entrypoint
-- `docs/book/getting-started.md` / `docs/book/commands.md` / `docs/book/recipes.md` — user guide
-- `docs/book/conventions.md` — upskill conventions, including the recommended `skills/` layout
+- `docs/book/getting-started.md` / `docs/book/commands.md` /
+  `docs/book/recipes.md` — user guide
+- `docs/book/conventions.md` — upskill conventions, including the recommended
+  `skills/` layout
 - `docs/specification/specification.md` — upskill specification
 - `docs/specification/format-spec.md` — portable on-disk content format
-- `docs/adr/` — architecture decisions; [the index](docs/adr/README.md) lists all records
+- `docs/adr/` — architecture decisions; [the index](docs/adr/README.md) lists
+  all records
 
 ### Key conventions
 
@@ -117,20 +120,20 @@ Core docs (published at <https://driftsys.github.io/upskill/>):
   unsupported behavior from successful representation.
 - **`main.rs` only does I/O orchestration** — call modules, handle errors, print
   results. Business logic lives in the library modules.
-- **Only `main.rs` writes to stdout/stderr.** Every other module returns
-  data structures or `Result<T>`; presentation belongs in `main.rs`.
+- **Only `main.rs` writes to stdout/stderr.** Every other module returns data
+  structures or `Result<T>`; presentation belongs in `main.rs`.
 - **Zero warnings policy** — compiler, clippy, and docs tooling. `-D warnings`
   is enforced in CI.
-- **Clippy `too_many_arguments`** — group related flags into structs
-  (e.g. `AddContext`) when a function would exceed 7 params.
+- **Clippy `too_many_arguments`** — group related flags into structs (e.g.
+  `AddContext`) when a function would exceed 7 params.
 
 ### Install layout
 
-Per-item generated output, copy only (no symlinks). One lockfile
-shape (`.upskill-lock.json`, `schema: 1`) in two possible locations:
-`<cwd>/` (project scope, committed) or `$HOME/` (global scope, not
-committed). Per-client output paths and ancillary files (`CLAUDE.md`,
-`.vscode/settings.json`, `opencode.json`) are specified in
+Per-item generated output, copy only (no symlinks). One lockfile shape
+(`.upskill-lock.json`, `schema: 1`) in two possible locations: `<cwd>/` (project
+scope, committed) or `$HOME/` (global scope, not committed). Per-client output
+paths and ancillary files (`CLAUDE.md`, `.vscode/settings.json`,
+`opencode.json`) are specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/specification/format-spec.md).
 
@@ -151,9 +154,9 @@ committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 
 upskill never injects credentials into clone URLs. Clones use the bare
 `https://<host>/...` URL and rely entirely on git's own configuration —
-credential helpers (keychain, manager), `url.<base>.insteadOf` rewrites,
-and SSH. There are no token env vars or `gh` / `glab` CLI fallbacks;
-configure git the way you would for any manual `git clone`.
+credential helpers (keychain, manager), `url.<base>.insteadOf` rewrites, and
+SSH. There are no token env vars or `gh` / `glab` CLI fallbacks; configure git
+the way you would for any manual `git clone`.
 
 ### Exit codes
 
@@ -171,12 +174,13 @@ configure git the way you would for any manual `git clone`.
   hash computation, env-var precedence, fetch with subfolder, etc.
 - **Integration tests** live in `tests/` as `cli_*.rs` files and use
   `assert_cmd` + `tempfile`. Construct the binary through
-  `common::upskill_cmd(&fake_home)` — never a raw `Command::cargo_bin("upskill")`.
-  The harness points `HOME`/`USERPROFILE` at a tempdir so a stray global-scope
-  write can't land in the developer's real `$HOME` (`add` defaults to global
-  outside a git repo). `tests/cli_test_harness_guard.rs` enforces this; a file
-  that must control `HOME` itself opts out with an
-  `upskill-allow-raw-cargo-bin: <reason>` comment. Pattern:
+  `common::upskill_cmd(&fake_home)` — never a raw
+  `Command::cargo_bin("upskill")`. The harness points `HOME`/`USERPROFILE` at a
+  tempdir so a stray global-scope write can't land in the developer's real
+  `$HOME` (`add` defaults to global outside a git repo).
+  `tests/cli_test_harness_guard.rs` enforces this; a file that must control
+  `HOME` itself opts out with an `upskill-allow-raw-cargo-bin: <reason>`
+  comment. Pattern:
 
   ```rust
   mod common;
@@ -198,51 +202,93 @@ configure git the way you would for any manual `git clone`.
     `generate_agents`. Golden fixtures in `tests/fixtures/`.
   - **Harness:** `tests/common/mod.rs` (`upskill_cmd`) and
     `cli_test_harness_guard` (enforces the fake-`$HOME` convention).
-  - When adding behavior, prefer extending the matching file or creating
-    a new `cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<area>.rs`.
+  - When adding behavior, prefer extending the matching file or creating a new
+    `cli_<area>.rs` / `pipeline_<area>.rs` / `generate_<area>.rs`.
 
 ### Available skills
 
-Skills provide specialized instructions and workflows for specific tasks.
-Use the skill tool to load a skill when a task matches its description.
+Skills provide specialized instructions and workflows for specific tasks. Use
+the skill tool to load a skill when a task matches its description.
 
 <available_skills>
 <skill>
 <name>upskill-evaluating-prompts</name>
-<description>Use when setting up the RED-GREEN-REFACTOR cycle for a rule, skill, or subagent — i.e., when the `writing-*` skills tell you to "run a failing test first." Trigger when authoring meta-skills, when validating that an existing rule/skill/subagent actually shapes behavior, or when auditing whether a skill activates correctly. Do NOT trigger for content authoring itself — see upskill-writing-rules, writing-skills, upskill-writing-subagents.</description>
+<description>Use when setting up the RED-GREEN-REFACTOR cycle for a rule, skill,
+or subagent — i.e., when the `writing-*` skills tell you to "run a failing test
+first." Trigger when authoring meta-skills, when validating that an existing
+rule/skill/subagent actually shapes behavior, or when auditing whether a skill
+activates correctly. Do NOT trigger for content authoring itself — see
+upskill-writing-rules, writing-skills, upskill-writing-subagents.</description>
 <location>skills/upskill-evaluating-prompts/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-prompt-design</name>
-<description>Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, upskill-writing-subagents, or upskill-cli.</description>
+<description>Use as the entry point to the upskill framework's
+prompt-engineering discipline. Trigger when someone is new to the framework,
+when an author is not sure which meta-skill to activate, when reviewing how a
+team is using rules/skills/subagents, or when cross-cutting concerns
+(portability across clients, classification, token economics, composition
+patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance —
+that is an onboarding concern outside the framework. Do NOT trigger for specific
+authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules,
+writing-skills, upskill-writing-subagents, or upskill-cli.</description>
 <location>skills/upskill-prompt-design/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-prompt-distilling</name>
-<description>Use BEFORE authoring any rule, skill, or subagent. Trigger when someone says "we should encode X", "the agent keeps forgetting Y", "let's add a rule for Z", or any variant where new behavior needs to live somewhere in the framework. Also trigger when reviewing existing content that is misbehaving — wrong-layer placement is a common silent root cause. Do NOT trigger for refining content already correctly placed; hand off to upskill-writing-rules, writing-skills, or upskill-writing-subagents.</description>
+<description>Use BEFORE authoring any rule, skill, or subagent. Trigger when
+someone says "we should encode X", "the agent keeps forgetting Y", "let's add a
+rule for Z", or any variant where new behavior needs to live somewhere in the
+framework. Also trigger when reviewing existing content that is misbehaving —
+wrong-layer placement is a common silent root cause. Do NOT trigger for refining
+content already correctly placed; hand off to upskill-writing-rules,
+writing-skills, or upskill-writing-subagents.</description>
 <location>skills/upskill-prompt-distilling/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-cli</name>
-<description>Use when working in an upskill-consumer repo and needing to add, modify, vendor, audit, or remove installed content (rules, skills, agents, bundles). Trigger when `upskill lint` or `upskill doctor` reports issues. Trigger when adding a third-party bundle or updating one from upstream. Trigger when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale or wrong. Do NOT trigger for actual authoring decisions — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, or upskill-writing-subagents. Do NOT trigger for cosmetic typo fixes in skill bodies; raw edits to source registry files plus `upskill lint` are sufficient.</description>
+<description>Use when working in an upskill-consumer repo and needing to add,
+modify, vendor, audit, or remove installed content (rules, skills, agents,
+bundles). Trigger when `upskill lint` or `upskill doctor` reports issues.
+Trigger when adding a third-party bundle or updating one from upstream. Trigger
+when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale
+or wrong. Do NOT trigger for actual authoring decisions — hand off to
+upskill-prompt-distilling, upskill-writing-rules, writing-skills, or
+upskill-writing-subagents. Do NOT trigger for cosmetic typo fixes in skill
+bodies; raw edits to source registry files plus `upskill lint` are
+sufficient.</description>
 <location>skills/upskill-cli/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-writing-rules</name>
-<description>Use when adding or editing rules in CLAUDE.md, AGENTS.md, or any always-loaded instructions file. Trigger when authoring repo conventions, invariants, or behavioral guardrails. Also trigger when an existing rule is being violated despite being present — that means the rule needs refactoring, not the agent. Do NOT trigger for skill or subagent authoring; see writing-skills and upskill-writing-subagents.</description>
+<description>Use when adding or editing rules in CLAUDE.md, AGENTS.md, or any
+always-loaded instructions file. Trigger when authoring repo conventions,
+invariants, or behavioral guardrails. Also trigger when an existing rule is
+being violated despite being present — that means the rule needs refactoring,
+not the agent. Do NOT trigger for skill or subagent authoring; see
+writing-skills and upskill-writing-subagents.</description>
 <location>skills/upskill-writing-rules/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-writing-bundles</name>
-<description>Use when authoring or editing upskill .bundle.yaml manifests — declaring items, plugins, requires dependencies, naming conventions, or troubleshooting bundle resolution errors. Also use when adding plugin install declarations for client CLIs (Claude Code, Copilot, VS Code, opencode).</description>
+<description>Use when authoring or editing upskill .bundle.yaml manifests —
+declaring items, plugins, requires dependencies, naming conventions, or
+troubleshooting bundle resolution errors. Also use when adding plugin install
+declarations for client CLIs (Claude Code, Copilot, VS Code,
+opencode).</description>
 <location>skills/upskill-writing-bundles/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-writing-subagents</name>
-<description>Use when designing a new subagent or modifying an existing one's system prompt, tool surface, or return contract. Trigger when the parent is observed doing work inline that should be delegated, OR when a subagent is observed dumping raw output, OR when subagent scope is drifting. Also trigger when designing managed/project-scoped/user-global subagent tiers with different permission models. Do NOT trigger for skill or rule authoring; see writing-skills and upskill-writing-rules.</description>
+<description>Use when designing a new subagent or modifying an existing one's
+system prompt, tool surface, or return contract. Trigger when the parent is
+observed doing work inline that should be delegated, OR when a subagent is
+observed dumping raw output, OR when subagent scope is drifting. Also trigger
+when designing managed/project-scoped/user-global subagent tiers with different
+permission models. Do NOT trigger for skill or rule authoring; see
+writing-skills and upskill-writing-rules.</description>
 <location>skills/upskill-writing-subagents/SKILL.md</location>
-</skill>
-</available_skills>
+</skill> </available_skills>
 
 ## Workflow
 
@@ -276,8 +322,8 @@ Agent-specific rules:
 - Keep code, tests, and docs in the same PR.
 - Use Conventional Commits (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
 - Before opening a PR, run `just fmt` then `just verify`.
-- After opening a PR, fix CI issues first, then respond to review comments on the
-  PR.
+- After opening a PR, fix CI issues first, then respond to review comments on
+  the PR.
 - Fix critical findings immediately.
 - Track non-critical follow-up work as debt in a story.
 

@@ -1,10 +1,18 @@
 # Item Conflict Resolution & Source Locking — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Prevent accidental item overrides from different sources by making items locked to their source by default, with `--force` and `--as` flags to resolve conflicts.
+**Goal:** Prevent accidental item overrides from different sources by making
+items locked to their source by default, with `--force` and `--as` flags to
+resolve conflicts.
 
-**Architecture:** Add conflict detection in `install_with_lockfile` (before writing), extend `LockedItem` with optional `source_name`, add `--force` and `--as` CLI flags, extend bundle install with `--exclude` and bundle-aware `--as`.
+**Architecture:** Add conflict detection in `install_with_lockfile` (before
+writing), extend `LockedItem` with optional `source_name`, add `--force` and
+`--as` CLI flags, extend bundle install with `--exclude` and bundle-aware
+`--as`.
 
 **Tech Stack:** Rust, clap 4 (derive), anyhow, serde
 
@@ -53,8 +61,8 @@ fn locked_item_omits_source_name_when_none() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test locked_item_serializes_source_name`
-Expected: FAIL — `source_name` field doesn't exist
+Run: `cargo test locked_item_serializes_source_name` Expected: FAIL —
+`source_name` field doesn't exist
 
 - [ ] **Step 3: Add `source_name` field to `LockedItem`**
 
@@ -77,8 +85,7 @@ Add `source_name: None` to:
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cargo test`
-Expected: All pass
+Run: `cargo test` Expected: All pass
 
 - [ ] **Step 6: Commit**
 
@@ -150,8 +157,7 @@ fn run_add(source: &str, items: &[String], global: bool, project: bool, force: b
 
 - [ ] **Step 3: Verify it compiles**
 
-Run: `cargo build`
-Expected: Compiles (unused params warning is fine for now)
+Run: `cargo build` Expected: Compiles (unused params warning is fine for now)
 
 - [ ] **Step 4: Commit**
 
@@ -306,8 +312,7 @@ Add `pub mod conflict;` to `src/lib.rs`.
 
 - [ ] **Step 3: Run tests to verify they pass**
 
-Run: `cargo test conflict`
-Expected: All 4 tests pass
+Run: `cargo test conflict` Expected: All 4 tests pass
 
 - [ ] **Step 4: Commit**
 
@@ -432,8 +437,13 @@ fn add_from_same_source_succeeds_without_force() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cargo test --test cli_conflict`
-Expected: `add_from_different_source_errors_without_force` passes (currently succeeds, should fail) — actually this will PASS currently because there's no conflict detection. We need the test to assert failure. Let me correct: currently `upskill add ./source` succeeds even with a conflicting lockfile entry, so `add_from_different_source_errors_without_force` will FAIL (it expects failure but gets success).
+Run: `cargo test --test cli_conflict` Expected:
+`add_from_different_source_errors_without_force` passes (currently succeeds,
+should fail) — actually this will PASS currently because there's no conflict
+detection. We need the test to assert failure. Let me correct: currently
+`upskill add ./source` succeeds even with a conflicting lockfile entry, so
+`add_from_different_source_errors_without_force` will FAIL (it expects failure
+but gets success).
 
 - [ ] **Step 3: Add `AddContext` struct and modify pipeline**
 
@@ -551,13 +561,12 @@ fn parse_alias_args(args: &[String]) -> Vec<(String, String)> {
 
 - [ ] **Step 5: Run integration tests**
 
-Run: `cargo test --test cli_conflict`
-Expected: All 3 tests pass
+Run: `cargo test --test cli_conflict` Expected: All 3 tests pass
 
 - [ ] **Step 6: Run full test suite**
 
-Run: `cargo test`
-Expected: All pass (existing tests need `AddOptions::default()` added to calls)
+Run: `cargo test` Expected: All pass (existing tests need
+`AddOptions::default()` added to calls)
 
 - [ ] **Step 7: Commit**
 
@@ -608,12 +617,12 @@ fn add_with_alias_installs_under_alternate_name() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_conflict add_with_alias`
-Expected: FAIL
+Run: `cargo test --test cli_conflict add_with_alias` Expected: FAIL
 
 - [ ] **Step 3: Implement alias renaming in pipeline**
 
-In `install_with_lockfile`, after conflict detection and before lockfile write, rename items that match aliases:
+In `install_with_lockfile`, after conflict detection and before lockfile write,
+rename items that match aliases:
 
 ```rust
 // -- Apply aliases --
@@ -656,12 +665,13 @@ And in the lockfile write section, set `source_name` when aliased:
     }).collect();
 ```
 
-Note: The full implementation will need to regenerate client outputs with the alias name. This requires passing the alias through to `install_from_source` or renaming output files post-generation.
+Note: The full implementation will need to regenerate client outputs with the
+alias name. This requires passing the alias through to `install_from_source` or
+renaming output files post-generation.
 
 - [ ] **Step 4: Run tests**
 
-Run: `cargo test --test cli_conflict`
-Expected: All pass
+Run: `cargo test --test cli_conflict` Expected: All pass
 
 - [ ] **Step 5: Commit**
 
@@ -716,12 +726,13 @@ fn add_with_exclude_skips_named_item() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_conflict add_with_exclude`
-Expected: FAIL (skill-b is installed)
+Run: `cargo test --test cli_conflict add_with_exclude` Expected: FAIL (skill-b
+is installed)
 
 - [ ] **Step 3: Implement exclude filtering**
 
-In `install_with_lockfile`, after the install but before lockfile write, filter out excluded items:
+In `install_with_lockfile`, after the install but before lockfile write, filter
+out excluded items:
 
 ```rust
 // -- Apply excludes --
@@ -734,17 +745,17 @@ if !options.excludes.is_empty() {
 }
 ```
 
-The `remove_generated_outputs` helper deletes per-client files that were just written for excluded items. Alternatively, filter BEFORE generation by passing excludes into `install_from_source`.
+The `remove_generated_outputs` helper deletes per-client files that were just
+written for excluded items. Alternatively, filter BEFORE generation by passing
+excludes into `install_from_source`.
 
 - [ ] **Step 4: Run tests**
 
-Run: `cargo test --test cli_conflict`
-Expected: All pass
+Run: `cargo test --test cli_conflict` Expected: All pass
 
 - [ ] **Step 5: Run full test suite**
 
-Run: `cargo test`
-Expected: All pass
+Run: `cargo test` Expected: All pass
 
 - [ ] **Step 6: Commit**
 
@@ -811,12 +822,13 @@ fn update_uses_source_name_for_aliased_items() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test --test cli_conflict update_uses_source_name`
-Expected: FAIL — update looks for `my-alias` in source, doesn't find it
+Run: `cargo test --test cli_conflict update_uses_source_name` Expected: FAIL —
+update looks for `my-alias` in source, doesn't find it
 
 - [ ] **Step 3: Modify `update` to use `source_name`**
 
-In the `update` function in `src/pipeline.rs`, when fetching SSOT for a locked item, use `source_name` if present:
+In the `update` function in `src/pipeline.rs`, when fetching SSOT for a locked
+item, use `source_name` if present:
 
 ```rust
 let ssot_name = item.source_name.as_deref().unwrap_or(&item.name);
@@ -827,13 +839,11 @@ And when regenerating, use `item.name` (the alias) as the output name.
 
 - [ ] **Step 4: Run tests**
 
-Run: `cargo test --test cli_conflict`
-Expected: All pass
+Run: `cargo test --test cli_conflict` Expected: All pass
 
 - [ ] **Step 5: Run full test suite**
 
-Run: `cargo test`
-Expected: All pass
+Run: `cargo test` Expected: All pass
 
 - [ ] **Step 6: Commit**
 
@@ -852,13 +862,11 @@ git commit -m "feat(update): use source_name to fetch aliased items correctly"
 
 - [ ] **Step 1: Run full test suite**
 
-Run: `just test`
-Expected: All pass
+Run: `just test` Expected: All pass
 
 - [ ] **Step 2: Run lints**
 
-Run: `just lint`
-Expected: No warnings
+Run: `just lint` Expected: No warnings
 
 - [ ] **Step 3: Format**
 
@@ -866,8 +874,7 @@ Run: `just fmt`
 
 - [ ] **Step 4: Run full verify**
 
-Run: `just verify`
-Expected: Clean
+Run: `just verify` Expected: Clean
 
 - [ ] **Step 5: Final commit (if fmt changed anything)**
 

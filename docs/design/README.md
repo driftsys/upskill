@@ -18,18 +18,20 @@ may be recorded here before implementation when their status is explicit.
 
 - [Qualified scope roots and advisory writer locking](qualified-scope-locking.md)
 
-- [Qualified destination observation](qualified-destination-observation.md)
-  — implemented with APFS and hosted Linux evidence; hosted Windows unsupported
+- [Qualified destination observation](qualified-destination-observation.md) —
+  implemented with APFS and hosted Linux evidence; hosted Windows unsupported
   boundary checked, Windows qualification pending.
 
-- [Qualified source observation](qualified-source-observation.md)
-  — implemented as an inactive read-only library capability; hosted Linux and
-  Windows scope/compile checks passed at `a393263` on 2026-10-13. Final-head hosted
+- [Qualified source observation](qualified-source-observation.md) — implemented
+  as an inactive read-only library capability; hosted Linux and Windows
+  scope/compile checks passed at `a393263` on 2026-10-13. Final-head hosted
   checks, new Windows source-method runtime coverage and lifecycle integration
   remain pending.
 
-- [Explicit file permission selection](file-permission-policy.md)
-  — implemented as an inactive pure supplied-value policy; qualified file effects remain pending.
+- [Explicit file permission selection](file-permission-policy.md) — implemented
+  as an inactive pure supplied-value policy; qualified file effects remain
+  pending.
 
-- [File recovery checkpoint model](file-recovery-model.md)
-  — implemented as an inactive pure supplied-classification API; qualified recovery and effects remain pending.
+- [File recovery checkpoint model](file-recovery-model.md) — implemented as an
+  inactive pure supplied-classification API; qualified recovery and effects
+  remain pending.

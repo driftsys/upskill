@@ -23,6 +23,7 @@ remains.
 A later executor may retain an empty file. This avoids deleting a potentially
 user-owned aggregate without evidence of file ownership.
 
-Satisfies: [Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
-Related: [planner design](../design/owned-instruction-planning.md).
-Rationale: [archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).
+Satisfies:
+[Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
+Related: [planner design](../design/owned-instruction-planning.md). Rationale:
+[archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).

@@ -1,43 +1,44 @@
 # Design: copy item supporting resources into rendered output (#199)
 
-**Date**: 2026-06-02
-**Issue**: [#199](https://github.com/driftsys/upskill/issues/199) — `bug(add)`: item
+**Date**: 2026-06-02 **Issue**:
+[#199](https://github.com/driftsys/upskill/issues/199) — `bug(add)`: item
 supporting resources (sibling files) are not copied into rendered output
 **Status**: Approved (brainstorming)
 
 ## Problem
 
 `upskill add` renders only an item's **entrypoint** (`SKILL.md` / `RULE.md` /
-`AGENT.md`) and silently drops every other file in the item directory. Any skill,
-rule, or agent that ships a helper script or reference file is delivered broken —
-the entrypoint body references a file that was never installed.
+`AGENT.md`) and silently drops every other file in the item directory. Any
+skill, rule, or agent that ships a helper script or reference file is delivered
+broken — the entrypoint body references a file that was never installed.
 
 This violates the portable format specification, which is unambiguous:
 
-- **format-spec §2.4**: "Implementations MUST preserve supporting files and their
-  directory structure during generation (copy them alongside the generated
+- **format-spec §2.4**: "Implementations MUST preserve supporting files and
+  their directory structure during generation (copy them alongside the generated
   entrypoint into the client-expected location)."
 - **format-spec §9 (Conformance #6)**: "It preserves supporting files from item
   directories in generated output per §2.4."
 
-So this is a **conformance bug**, not a feature request. The motivating real case
-is a _rule_: the metapowers `working-memory-lifecycle` rule ships a `wip-gate.sh`
-CI script that never reaches consumers.
+So this is a **conformance bug**, not a feature request. The motivating real
+case is a _rule_: the metapowers `working-memory-lifecycle` rule ships a
+`wip-gate.sh` CI script that never reaches consumers.
 
 ### Root cause
 
 The install path reads only the entrypoint file and never enumerates the item
-directory. In `pipeline.rs`, `install_skills` / `install_rules` / `install_agents`
-each do `dir.join("SKILL.md")` (etc.), parse its frontmatter, render, and write —
-with no `fs::read_dir(dir)` of the item directory. There is no code path that
-copies non-entrypoint files.
+directory. In `pipeline.rs`, `install_skills` / `install_rules` /
+`install_agents` each do `dir.join("SKILL.md")` (etc.), parse its frontmatter,
+render, and write — with no `fs::read_dir(dir)` of the item directory. There is
+no code path that copies non-entrypoint files.
 
 ## Prior art considered
 
-- **Anthropic Agent Skills** (agentskills.io) — a skill _is_ a folder; `SKILL.md`
-  plus optional `scripts/`, `references/`, `assets/` travel together verbatim,
-  referenced by relative markdown links. No static analysis: the directory is the
-  unit of distribution. Our format-spec §2.4 is modelled directly on this.
+- **Anthropic Agent Skills** (agentskills.io) — a skill _is_ a folder;
+  `SKILL.md` plus optional `scripts/`, `references/`, `assets/` travel together
+  verbatim, referenced by relative markdown links. No static analysis: the
+  directory is the unit of distribution. Our format-spec §2.4 is modelled
+  directly on this.
 - **Vercel / Next.js Output File Tracing** (`@vercel/nft`) — static analysis of
   `import`/`require`/`fs` to compute the exact closure of referenced files, with
   `outputFileTracingIncludes/Excludes` escape hatches. Powerful, but built for a
@@ -71,39 +72,41 @@ where `<tree>` is the resource's path relative to the source item directory
 **Two layout families:**
 
 - **Directory-backed kinds** — every skill, and opencode rules — already render
-  their entrypoint _inside_ a `<name>/` directory. Resources land beside it and the
-  body's relative links (`./scripts/gate.sh`) resolve unchanged. **No rewrite.**
-- **Flat kinds** — Claude/Copilot rules and all agents — render their entrypoint as
-  a single flat file (`<name>.md`) with no directory. Resources go into a sibling
-  namespace directory `<name>/`, and the entrypoint body's relative resource links
-  are **rewritten** to prefix `<name>/`. The flat file `<name>.md` and the sibling
-  `<name>/` directory coexist without conflict.
+  their entrypoint _inside_ a `<name>/` directory. Resources land beside it and
+  the body's relative links (`./scripts/gate.sh`) resolve unchanged. **No
+  rewrite.**
+- **Flat kinds** — Claude/Copilot rules and all agents — render their entrypoint
+  as a single flat file (`<name>.md`) with no directory. Resources go into a
+  sibling namespace directory `<name>/`, and the entrypoint body's relative
+  resource links are **rewritten** to prefix `<name>/`. The flat file
+  `<name>.md` and the sibling `<name>/` directory coexist without conflict.
 
 ### Collisions — eliminated by construction
 
-Because every resource tree is namespaced by the item's `<name>` within its output
-directory, and item names are unique per kind, two items can never write the same
-resource path. No collision detection, no clobbering, no warn/error policy needed.
+Because every resource tree is namespaced by the item's `<name>` within its
+output directory, and item names are unique per kind, two items can never write
+the same resource path. No collision detection, no clobbering, no warn/error
+policy needed.
 
 ### Body link rewrite (flat kinds only)
 
-The rewrite runs **only** for a flat-kind item that actually ships resources. It is
-deliberately narrow.
+The rewrite runs **only** for a flat-kind item that actually ships resources. It
+is deliberately narrow.
 
 - Parse the rendered body with **pulldown-cmark** (already a dependency) so that
   link/image destinations are identified structurally and **code spans / fenced
   code blocks are never modified**.
-- Rewrite a destination **only if** it is a relative path that resolves, relative
-  to the source item directory, to a file that was actually copied. Prefix such
-  destinations with `<name>/`.
+- Rewrite a destination **only if** it is a relative path that resolves,
+  relative to the source item directory, to a file that was actually copied.
+  Prefix such destinations with `<name>/`.
 - **Leave untouched:** absolute URLs (`http:`, `https:`, `mailto:` …), absolute
-  filesystem paths, bare fragments (`#section`), and any `../`-prefixed target that
-  escapes the item directory.
+  filesystem paths, bare fragments (`#section`), and any `../`-prefixed target
+  that escapes the item directory.
 - **Preserve** a trailing `#fragment` and any `"title"` suffix on the link;
   rewrite only the path portion.
 
-Ordering: the rewrite is applied to the resolved body **before** the final dprint
-formatting pass, so output stays idempotent under the formatter (§7.4).
+Ordering: the rewrite is applied to the resolved body **before** the final
+dprint formatting pass, so output stays idempotent under the formatter (§7.4).
 
 ### Excluded from copying
 
@@ -118,8 +121,8 @@ sub-directory structure preserved. (Override files are matched by the
 
 ### Copy fidelity
 
-Resources are content, not generated markdown: they are copied verbatim and
-MUST NOT pass through dprint or any markdown transform — including resource files
+Resources are content, not generated markdown: they are copied verbatim and MUST
+NOT pass through dprint or any markdown transform — including resource files
 that happen to be `.md` (e.g. `references/patterns.md`). On Unix the copy MUST
 preserve the file mode, so a `scripts/gate.sh` arrives **executable**; a script
 delivered without its execute bit is as broken as one not delivered at all.
@@ -128,27 +131,28 @@ delivered without its execute bit is as broken as one not delivered at all.
 
 - **No lockfile change.** Resource output locations are **recomputed** from
   `(kind, client, name)` via the same `pipeline/output.rs` path module that
-  `install` uses — the codebase's established "install and remove stay in lockstep
-  through one path-mapping function" pattern. `remove` (and `update`'s orphan path)
-  delete the item's resource base directory (`remove_dir_all`) in addition to the
-  entrypoint file, then prune now-empty parents. Deterministic, no per-item
-  resource list to persist.
-- `hash_item_dir` already hashes the entire source item directory (all files), so
-  `update` / `doctor` SSOT-drift detection already accounts for resource changes;
-  no change needed there.
-- **Known limitation (out of scope):** `doctor` checks only entrypoint outputs for
-  presence, so a manually-deleted **output** resource file is not flagged. SSOT
-  drift (the common case) is still caught by the hash. Tracked as debt.
+  `install` uses — the codebase's established "install and remove stay in
+  lockstep through one path-mapping function" pattern. `remove` (and `update`'s
+  orphan path) delete the item's resource base directory (`remove_dir_all`) in
+  addition to the entrypoint file, then prune now-empty parents. Deterministic,
+  no per-item resource list to persist.
+- `hash_item_dir` already hashes the entire source item directory (all files),
+  so `update` / `doctor` SSOT-drift detection already accounts for resource
+  changes; no change needed there.
+- **Known limitation (out of scope):** `doctor` checks only entrypoint outputs
+  for presence, so a manually-deleted **output** resource file is not flagged.
+  SSOT drift (the common case) is still caught by the hash. Tracked as debt.
 
 ### Aliasing (`--as`) — deferred
 
-`upskill add --as <alias>` renames an item's entrypoint output. With resources now
-in a per-item namespace, a correct alias must also relocate the `<name>/` resource
-directory and re-prefix the rewritten links — a non-trivial extension the #199
-motivating case does not need. This PR adds a **pre-flight guard**: when `--as`
-targets an item that ships resources, `add` aborts before writing with a clear
-message, and the relocation work is tracked as a separate debt issue. Non-aliased
-installs (the overwhelming majority, including all bundle installs) are unaffected.
+`upskill add --as <alias>` renames an item's entrypoint output. With resources
+now in a per-item namespace, a correct alias must also relocate the `<name>/`
+resource directory and re-prefix the rewritten links — a non-trivial extension
+the #199 motivating case does not need. This PR adds a **pre-flight guard**:
+when `--as` targets an item that ships resources, `add` aborts before writing
+with a clear message, and the relocation work is tracked as a separate debt
+issue. Non-aliased installs (the overwhelming majority, including all bundle
+installs) are unaffected.
 
 ## Components touched
 
@@ -156,17 +160,19 @@ installs (the overwhelming majority, including all bundle installs) are unaffect
   non-entrypoint, non-override files under an item directory (relative paths,
   recursive).
 - `src/pipeline/output.rs` — new `is_dir_backed(kind, client)`,
-  `resource_base_path(kind, client, name)`, and a `copy_item_resources(...)` helper;
-  extend `remove_item_outputs` to delete the resource base directory.
-- `src/generate/link_rewrite.rs` — new module: `rewrite_resource_links(rendered,
-  name, copied_set)` using `pulldown-cmark` offset scanning. Pure transform.
-- `src/pipeline/install.rs` — `install_items_of_kind`: enumerate resources once per
-  item, apply the rewrite for flat kinds, write entrypoint, copy resources per
-  client.
-- `src/pipeline/mod.rs` — `install_with_lockfile` pre-flight: guard `--as` against
-  resource-bearing items.
-- `src/pipeline/lifecycle.rs` — `remove` deletes resource base dirs (route through
-  the extended `remove_item_outputs`).
+  `resource_base_path(kind, client, name)`, and a `copy_item_resources(...)`
+  helper; extend `remove_item_outputs` to delete the resource base directory.
+- `src/generate/link_rewrite.rs` — new module:
+  `rewrite_resource_links(rendered,
+  name, copied_set)` using `pulldown-cmark`
+  offset scanning. Pure transform.
+- `src/pipeline/install.rs` — `install_items_of_kind`: enumerate resources once
+  per item, apply the rewrite for flat kinds, write entrypoint, copy resources
+  per client.
+- `src/pipeline/mod.rs` — `install_with_lockfile` pre-flight: guard `--as`
+  against resource-bearing items.
+- `src/pipeline/lifecycle.rs` — `remove` deletes resource base dirs (route
+  through the extended `remove_item_outputs`).
 
 No `lockfile.rs` change — resource locations are recomputed from
 `(kind, client, name)`.
@@ -174,15 +180,17 @@ No `lockfile.rs` change — resource locations are recomputed from
 ## Testing (ATDD → TDD)
 
 Acceptance criteria are the §2.4 / §9-#6 conformance contract. Tests are written
-**first** (failing), then the implementation makes them pass. The link-rewrite is
-the highest-risk unit and gets the densest coverage.
+**first** (failing), then the implementation makes them pass. The link-rewrite
+is the highest-risk unit and gets the densest coverage.
 
 ### Unit (TDD) — the rewrite is exhaustively table-tested
 
-**Link rewrite** (`generate/`) — a single table test feeding `(body, copied-set,
+**Link rewrite** (`generate/`) — a single table test feeding
+`(body, copied-set,
 name) → expected body`, one row per case:
 
-_Rewritten_ (relative path resolving to a copied resource, prefixed with `<name>/`):
+_Rewritten_ (relative path resolving to a copied resource, prefixed with
+`<name>/`):
 
 - inline link `[t](./scripts/gate.sh)`
 - inline link without `./` → `[t](scripts/gate.sh)`
@@ -199,16 +207,18 @@ _Left untouched_:
 - bare fragment `#section`
 - `../escapes/out.sh` (target escapes the item directory)
 - a relative link whose target was **not** copied (e.g. points at a sibling item
-  or a nonexistent file) — only resolving-to-a-copied-resource links are rewritten
-- a link string appearing inside an **inline code span** `` `./scripts/gate.sh` ``
+  or a nonexistent file) — only resolving-to-a-copied-resource links are
+  rewritten
+- a link string appearing inside an **inline code span**
+  `` `./scripts/gate.sh` ``
 - a link string appearing inside a **fenced code block**
 
 _Properties_:
 
 - **idempotency** — rewriting an already-rewritten body is a no-op (no
   double-prefix)
-- **no-resources fast path** — body returned byte-identical when the copied set is
-  empty (and the pass is skipped entirely)
+- **no-resources fast path** — body returned byte-identical when the copied set
+  is empty (and the pass is skipped entirely)
 
 **Resource enumeration** (`pipeline.rs`):
 
@@ -225,18 +235,19 @@ rule, all agents) returns the sibling `<name>/` namespace dir.
 
 ### Integration (ATDD, `tests/`) — observable CLI behavior
 
-Add fixtures under `tests/fixtures/` for one skill, one rule, and one agent, each
-shipping `scripts/<x>.sh` + `references/notes.md`, plus a body that links them.
+Add fixtures under `tests/fixtures/` for one skill, one rule, and one agent,
+each shipping `scripts/<x>.sh` + `references/notes.md`, plus a body that links
+them.
 
 1. **Skill, all clients** — files land at `.../skills/<name>/scripts/<x>.sh` and
    `.../references/notes.md`; body unchanged; `scripts/<x>.sh` is executable.
-2. **Rule, motivating case** — for Claude: `.claude/rules/<name>.md` flat **and**
-   `.claude/rules/<name>/scripts/gate.sh`, body link rewritten to
+2. **Rule, motivating case** — for Claude: `.claude/rules/<name>.md` flat
+   **and** `.claude/rules/<name>/scripts/gate.sh`, body link rewritten to
    `./<name>/scripts/gate.sh`; for Copilot the analogous
-   `.github/instructions/<name>/…`; for opencode `.agents/rules/<name>/scripts/gate.sh`
-   with the body **un**rewritten.
-3. **Agent, all clients** — namespaced copy + rewrite for Claude/Copilot/opencode
-   (all flat).
+   `.github/instructions/<name>/…`; for opencode
+   `.agents/rules/<name>/scripts/gate.sh` with the body **un**rewritten.
+3. **Agent, all clients** — namespaced copy + rewrite for
+   Claude/Copilot/opencode (all flat).
 4. **`audience` scoping** — an item targeting only `claude` copies resources for
    Claude and for no other client.
 5. **Co-located multi-kind item** (§2.1, `SKILL.md` + `AGENT.md` sharing
@@ -249,10 +260,10 @@ shipping `scripts/<x>.sh` + `references/notes.md`, plus a body that links them.
 8. **`remove`** — deletes the resource tree and prunes the now-empty namespace
    directory; `doctor` reports clean afterward.
 9. **`update` reconciliation** — adding a resource file in source then `update`
-   copies it; deleting a resource in source then `update` removes the stale output
-   file (guarding the #196-class "stale output" failure mode).
-10. **`--as` guard** — `add ./src --as alt` on a resource-bearing item aborts with
-    the documented message and writes nothing; the same item without `--as`
+   copies it; deleting a resource in source then `update` removes the stale
+   output file (guarding the #196-class "stale output" failure mode).
+10. **`--as` guard** — `add ./src --as alt` on a resource-bearing item aborts
+    with the documented message and writes nothing; the same item without `--as`
     installs normally.
 
 ### Formatting guarantee (§7.4)
@@ -268,9 +279,9 @@ rewritten bodies, and verbatim resource contents are diffable in review.
 
 ## Out of scope
 
-- Static link-graph tracing (Vercel-style) — not needed; copy-the-tree is the spec
-  model.
-- Changing client entrypoint output paths (rules stay flat per §7) — only resource
-  placement is added.
+- Static link-graph tracing (Vercel-style) — not needed; copy-the-tree is the
+  spec model.
+- Changing client entrypoint output paths (rules stay flat per §7) — only
+  resource placement is added.
 - Validating that body links actually point at existing resources (lint concern,
   separate follow-up).

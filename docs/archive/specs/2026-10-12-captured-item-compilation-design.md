@@ -7,8 +7,8 @@ Status: proposed bounded implementation prerequisite. This does not activate the
 
 Produce complete, deterministic generation outputs from one validated captured
 item directory. Parsing, rendering and resource selection consume the same
-captured bytes. The compiler never rereads a source path or writes output.
-This prepares source-derived inputs for the existing whole-file planner without
+captured bytes. The compiler never rereads a source path or writes output. This
+prepares source-derived inputs for the existing whole-file planner without
 claiming source authenticity, filesystem qualification or ownership.
 
 The user delegated routine design and delivery decisions for the customization
@@ -107,13 +107,14 @@ semantics, preserving deterministic order. Exclusion from output never removes
 that file from the captured source identity.
 
 The format defines body overrides, but the current installer does not apply
-them. This slice must not silently claim that semantics is implemented: reject
-a top-level override for the requested kind and an audience-included requested
+them. This slice must not silently claim that semantics is implemented: reject a
+top-level override for the requested kind and an audience-included requested
 client, with a contextual unsupported-override error. Ignore patterns cannot
 suppress that error. Overrides for other kinds or non-emitted clients remain
-classified source inputs and are excluded from resources. Unknown client suffixes
-remain resources under the existing classification policy. A later task can
-implement the specified override precedence with its own compatibility tests.
+classified source inputs and are excluded from resources. Unknown client
+suffixes remain resources under the existing classification policy. A later task
+can implement the specified override precedence with its own compatibility
+tests.
 
 ## Rendering and output
 
@@ -146,10 +147,11 @@ immutable Git revision. An error returns no successful partial compilation.
 ## Integration and compatibility
 
 Use Rust 1.85, synchronous existing dependencies and no library output to stdout
-or stderr. Expose only the narrow existing pure helpers needed for shared naming,
-resource classification and ignore filtering within the crate; preserve their
-behavior and tests. Reuse existing historical layout and link-rewrite functions.
-Do not route the current installer through the new compiler in this task.
+or stderr. Expose only the narrow existing pure helpers needed for shared
+naming, resource classification and ignore filtering within the crate; preserve
+their behavior and tests. Reuse existing historical layout and link-rewrite
+functions. Do not route the current installer through the new compiler in this
+task.
 
 Registry/bundle discovery, dependency closure, aliases across installations,
 typed target surfaces, new adapter semantics, native registrations and ancillary
@@ -163,8 +165,9 @@ that configuration was installed.
   pairs, with resources alongside directory-backed and flat outputs.
 - Exact empty/binary/Unicode resource bytes, modes and ordering survive; ignored
   and reserved top-level files are omitted while nested equivalents remain.
-- Source/frontmatter/folder/alias identity differences and both alias link passes
-  are pinned by independent expected output, including already-namespaced links.
+- Source/frontmatter/folder/alias identity differences and both alias link
+  passes are pinned by independent expected output, including already-namespaced
+  links.
 - Audience exclusions and reordered explicit selections are deterministic and
   never imply deletion. Invalid/duplicate/empty selections fail.
 - Tampered digest, invalid manifest order/path/mode, impossible source topology,
@@ -178,8 +181,9 @@ that configuration was installed.
   or modes, bypassed ignore filtering and skipped alias re-prefixing. Restore
   production exactly, then rerun focused tests.
 
-Run ordered `just fmt`, `just verify`, and Rust 1.85 all-targets checking. Obtain
-task and branch reviews, full PR review and hosted Linux/Windows CI before merge.
-This prerequisite completes neither M1-A2 nor M1-A3. Mixed instruction/file
-composition, qualified filesystem observation, locking, apply/recovery, combined
-state, all lifecycle adapters and native Codex activation remain pending.
+Run ordered `just fmt`, `just verify`, and Rust 1.85 all-targets checking.
+Obtain task and branch reviews, full PR review and hosted Linux/Windows CI
+before merge. This prerequisite completes neither M1-A2 nor M1-A3. Mixed
+instruction/file composition, qualified filesystem observation, locking,
+apply/recovery, combined state, all lifecycle adapters and native Codex
+activation remain pending.

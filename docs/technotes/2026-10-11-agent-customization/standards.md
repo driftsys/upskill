@@ -7,9 +7,9 @@ upskill format specification or a declaration of implemented support.
 
 The user selected **agent customization** as the umbrella term.
 
-- **Customization item**: a unit of content or configuration that upskill
-  can author, generate, install, or reference. This is working terminology,
-  not a decision to make every category a new top-level SSOT kind.
+- **Customization item**: a unit of content or configuration that upskill can
+  author, generate, install, or reference. This is working terminology, not a
+  decision to make every category a new top-level SSOT kind.
 - **Bundle**: upskill's composition and dependency manifest, which can install
   related instructions, skills, agents, and native integrations together.
 - **Plugin / extension**: a target-native distribution package. A bundle may
@@ -24,16 +24,16 @@ The user selected **agent customization** as the umbrella term.
 The [Agent Skills specification](https://agentskills.io/specification) defines
 `SKILL.md` with YAML frontmatter and Markdown, plus optional supporting files.
 The standard fields are required `name` and `description`, and optional
-`license`, `compatibility`, `metadata`, and experimental `allowed-tools`.
-The name must match its containing directory; field lengths and naming rules
-are specified. Clients can add extensions, but those extensions do not become
+`license`, `compatibility`, `metadata`, and experimental `allowed-tools`. The
+name must match its containing directory; field lengths and naming rules are
+specified. Clients can add extensions, but those extensions do not become
 portable merely because the source parser preserves them.
 
 The specification links a reference validator, invoked as
-`skills-ref validate <skill-directory>`. No canonical standalone JSON Schema
-is published on the specification page inspected for this research. Record
-this as a documentation and reference-validator contract, not as proof that
-no schema exists anywhere.
+`skills-ref validate <skill-directory>`. No canonical standalone JSON Schema is
+published on the specification page inspected for this research. Record this as
+a documentation and reference-validator contract, not as proof that no schema
+exists anywhere.
 
 ## Agent Plugins
 
@@ -46,11 +46,11 @@ client responsibilities.
 
 The standard provides separate manifest and MCP JSON Schemas. Schema validity
 does not establish all operational requirements; the specification takes
-precedence when they conflict. In particular, filesystem containment,
-component discovery, and failure handling need checks beyond parsing.
+precedence when they conflict. In particular, filesystem containment, component
+discovery, and failure handling need checks beyond parsing.
 
-The [schema index](https://agent-plugins.org/schemas) identifies canonical schema
-URLs. Local copies are preserved unchanged:
+The [schema index](https://agent-plugins.org/schemas) identifies canonical
+schema URLs. Local copies are preserved unchanged:
 
 - [Plugin manifest schema](schemas/agent-plugins-1.0.0-plugin.schema.json).
 - [Plugin MCP configuration schema](schemas/agent-plugins-1.0.0-mcp.schema.json).
@@ -70,10 +70,11 @@ authored by upskill.
 
 ## Model Context Protocol
 
-The [MCP schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)
+The
+[MCP schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema)
 describes wire messages and protocol types. The `latest` URL resolved to this
-dated version when inspected. This is distinct from the configuration file
-used by a coding client to launch or connect to a server.
+dated version when inspected. This is distinct from the configuration file used
+by a coding client to launch or connect to a server.
 
 For design purposes, keep three contracts separate:
 
@@ -96,5 +97,5 @@ Each target report distinguishes these evidence levels:
 - **Unresolved**: conflicting documentation or an artifact that could not be
   retrieved. This does not mean unsupported.
 
-Runtime support claims in this pack come from documentation or inspected
-source. No client sessions, hooks, plugin installs, or MCP servers were run.
+Runtime support claims in this pack come from documentation or inspected source.
+No client sessions, hooks, plugin installs, or MCP servers were run.
