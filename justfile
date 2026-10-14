@@ -13,9 +13,10 @@ test:
 lint:
     cargo clippy -- -D warnings
     cargo fmt -- --check
+    prim fmt --check --exclude 'tests/fixtures/**'
     prim lint .
-    shellcheck install.sh bootstrap .githooks/format-staged-rust.sh
-    python3 scripts/test-format-staged-rust.py
+    shellcheck install.sh bootstrap
+    python3 scripts/test-precommit-hook.py
 
 # Pre-push checks: changed-file hygiene, Clippy, and type checking.
 sanity:

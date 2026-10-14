@@ -19,7 +19,6 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt -- --check
-      - run: python3 scripts/test-format-staged-rust.py
 
   clippy:
     name: Clippy
@@ -61,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
-      - run: shellcheck install.sh bootstrap .githooks/format-staged-rust.sh
+      - run: shellcheck install.sh bootstrap
 
   repository-tools:
     name: Repository tools
@@ -77,6 +76,10 @@ jobs:
           ./bootstrap
       - name: Check repository hygiene
         run: prim lint .
+      - name: Check repository formatting
+        run: prim fmt --check --exclude 'tests/fixtures/**'
+      - name: Test staged pre-commit formatting
+        run: python3 scripts/test-precommit-hook.py
       - name: Check commit messages
         if: github.event_name == 'pull_request'
         run: git std lint --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
