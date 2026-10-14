@@ -46,10 +46,10 @@ class PreCommitHookTests(unittest.TestCase):
             )
             (repo / "notes" / "image.bin").write_bytes(b"\x00\x01binary fixture\xff")
             (repo / "notes" / "nul-valid-utf8.md").write_bytes(
-                b"# NUL markdown\n\nline  \n\x00"
+                b"# NUL seed\n"
             )
             (repo / "notes" / "invalid-utf8.md").write_bytes(
-                b"# Invalid UTF-8 \xff\n"
+                b"# Invalid UTF-8 seed\n"
             )
             self.git(repo, "add", ".")
             self.git(repo, "commit", "--quiet", "-m", "test: seed hook fixture")
@@ -110,6 +110,9 @@ class PreCommitHookTests(unittest.TestCase):
             staged_paths_before = self.git_output(
                 repo, "diff", "--cached", "--name-only", "--no-renames", "-z"
             )
+            staged_path_set = staged_paths_before.split("\0")
+            self.assertIn("notes/nul-valid-utf8.md", staged_path_set)
+            self.assertIn("notes/invalid-utf8.md", staged_path_set)
             lib_index_before = self.index_blob_bytes(repo, "src/lib.rs")
             result = subprocess.run(
                 ["git", "std", "hook", "run", "pre-commit", "--"],
