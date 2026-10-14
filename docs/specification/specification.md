@@ -929,6 +929,40 @@ recovery, state persistence and lifecycle activation remain pending; M1-A2,
 M1-A3 and M1 remain incomplete. See [AD-0031](../adr/0031-select-explicit-file-permissions.md)
 and the [permission design](../design/file-permission-policy.md).
 
+### 4.11 Ordered recovery checkpoint model
+
+`operations::recovery::plan_recovery(&[RecoveryAction])` is an inactive pure
+library API. Supplied File and State actions contain Queued/Pending/Done
+checkpoints and Before/After/Both/Neither relations to exact expected values.
+Exactly one State must be final. Empty inputs reject; state-only operations are
+valid. The complete checkpoint order must match `Done* Pending? Queued*` before
+observations are classified. Structural errors identify the required State
+condition or invalid position.
+
+Done requires After or Both; Pending accepts Before, After or Both; Queued
+requires Before or Both. Every observation is checked, including the suffix.
+The first conflict returns Reconcile with its index and both prefixes.
+`recorded_prefix` preserves the count of leading Done checkpoints even when
+contradicted. `verified_post_prefix` counts consecutive leading Done post-state
+observations, extended through one Pending After or Both, and stops at the first
+mismatch. Queued never extends it.
+
+When all actions are Done, Complete includes the final State. Otherwise Ready
+returns one step at the first unfinished index and both prefix counts. Pending
+Before and Queued Before propose Apply; Pending After or Both proposes
+Acknowledge; Queued Both proposes CheckpointOnly. Apply carries no physical write
+authority, and the function changes no checkpoint. Public model types derive
+Debug, Clone, Copy, PartialEq and Eq.
+
+Supplied classifications are not evidence capabilities. The API performs no
+I/O, serialization, journal reading, qualification or effects. Qualified
+producers, physical identity and metadata checks, source/state binding,
+credential-free reconstruction, durable receipts, checkpoint persistence and
+file application remain subsequent contracts. No lifecycle caller or actual
+recovery is activated; M1-A2, M1-A3 and M1 remain incomplete. See
+[AD-0032](../adr/0032-model-recovery-checkpoints-before-effects.md) and the
+[recovery model](../design/file-recovery-model.md) for a public API example.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

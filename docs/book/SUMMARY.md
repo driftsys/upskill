@@ -24,3 +24,6 @@
 - [Source observation decision](../adr/0030-capture-qualified-source-evidence.md)
 - [Explicit file permission selection](../design/file-permission-policy.md)
 - [File permission selection decision](../adr/0031-select-explicit-file-permissions.md)
+
+- [File recovery checkpoint model](../design/file-recovery-model.md)
+- [Recovery checkpoint decision](../adr/0032-model-recovery-checkpoints-before-effects.md)

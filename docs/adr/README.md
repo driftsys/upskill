@@ -66,3 +66,7 @@ records the implemented library boundary and its documented alternatives.
 ## Explicit file permission selection
 
 - [AD-0031 — Select explicit file permissions before file effects](0031-select-explicit-file-permissions.md)
+
+## Ordered recovery checkpoints
+
+- [AD-0032 — Model recovery checkpoints before file effects](0032-model-recovery-checkpoints-before-effects.md)
