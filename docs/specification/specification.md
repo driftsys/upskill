@@ -348,11 +348,12 @@ native compatibility first. The separate pure whole-file planner is implemented
 in [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 [§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
 resource outputs. The complete mixed coordinator is implemented in
-[§4.6](#46-mixed-owned-artifact-operation-plans). Complete reference-graph
-authority, per-owner consumer association, connecting compiled outputs to
-complete lifecycle desired sets, state/lifecycle integration and transactional
-execution remain pending. This prerequisite changes no CLI behavior, source
-format or lockfile format and enables no native client support.
+[§4.6](#46-mixed-owned-artifact-operation-plans). Planner integration of the
+implemented reference-graph authority and per-owner consumer associations,
+connecting compiled outputs to complete lifecycle desired sets, state/lifecycle
+integration and transactional execution remain pending. This prerequisite
+changes no CLI behavior, source format or lockfile format and enables no native
+client support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -697,10 +698,10 @@ rather than all diagnostics.
 This library prerequisite activates no CLI selector, native adapter, source
 fetch, filesystem observation, lock, journal, schema-2 persistence or execution.
 Connecting the captured compiler to complete lifecycle desired sets remains
-pending, along with complete reference authority, per-owner consumer
-associations, immutable source evidence, target qualification, filesystem
-safety, physical permission application and metadata qualification, writer
-locking, durable state and apply/recovery. Pure
+pending, along with planner integration of the implemented reference authority
+and per-owner consumer associations, immutable source evidence, target
+qualification, filesystem safety, physical permission application and metadata
+qualification, writer locking, durable state and apply/recovery. Pure
 [permission selection](../design/file-permission-policy.md) is implemented as a
 separate inactive supplied-value capability. It does not complete M1-A2, M1-A3
 or M1. The public declarations are in
@@ -1042,6 +1043,27 @@ durability. Hosted Linux/macOS qualification remains pending, so gate 4, M1-A2,
 M1-A3 and M1 are not declared complete. See
 [AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and the
 [qualified execution design](../design/qualified-file-execution.md).
+
+### 4.13 Combined lifecycle state foundation
+
+The opt-in `lifecycle::state` library validates a schema-2 installation and
+reference graph without I/O. Direct references root the graph; bundle members
+and dependencies must resolve, be reachable and contain no dependency cycle.
+Installations retain requested surfaces even when no artifact is generated.
+Duplicate identities and inconsistent source revision evidence are rejected.
+Artifact owners and roots must match authoritative installations. Explicit
+per-owner consumer associations must match every artifact selector exactly;
+their union must equal the artifact consumers. The strict schema-2 codec
+validates before parsing results are returned and before serialization. It emits
+deterministic pretty JSON with one trailing newline without mutating input.
+Typed schema-1 projection creates no owners and preserves historical rows,
+labels and statuses in their original order; exact JSON bytes and unknown legacy
+fields require the later migration backup.
+
+This library does not change `lockfile::CURRENT_SCHEMA`, command dispatch or
+production lockfiles. It does not establish filesystem ownership or native
+support. See
+[combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md).
 
 ## 5. Source format and authentication
 

@@ -106,10 +106,11 @@ execution.
 The [captured compiler](captured-item-compilation.md) already derives complete
 per-client resource and entrypoint outputs. Connecting those outputs to
 lifecycle ownership, roots, consumers and destination observations remains
-pending. Complete reference authority, per-owner consumer associations,
-immutable source evidence, source/target adapters, target and filesystem
-qualification, writer locking, durable state and physical apply/recovery remain
-separate gates. The pure
+pending. The [combined-state library](combined-lifecycle-state.md) now validates
+reference authority and per-owner consumer associations. Integrating those
+records, immutable source evidence, source/target adapters, target and
+filesystem qualification, writer locking, durable state and physical
+apply/recovery remain separate gates. The pure
 [permission-selection policy](file-permission-policy.md) is implemented;
 [qualified file execution and recovery](qualified-file-execution.md) consume
 selected modes as an opt-in library capability. Combined lifecycle integration

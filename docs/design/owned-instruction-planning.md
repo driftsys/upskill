@@ -84,12 +84,14 @@ Qualified scope roots, writer locking,
 [destination observation](qualified-destination-observation.md) and
 [qualified source observation](qualified-source-observation.md) are implemented
 as separate inactive capabilities. Final-head hosted source qualification
-remains required. Complete reference-graph authority, per-owner consumer
-association, integrating qualified source evidence and compiled outputs into
-complete lifecycle desired sets and combined state integration remain pending.
-The opt-in [qualified file executor and recovery](qualified-file-execution.md)
-are implemented separately; hosted final-head qualification remains required.
-The implemented [mixed coordinator](mixed-owned-artifact-planning.md) composes
+remains required. The [combined-state validator](combined-lifecycle-state.md)
+provides reference-graph authority and explicit per-owner consumer associations.
+Planner integration of those associations, integrating qualified source evidence
+and compiled outputs into complete lifecycle desired sets, and connecting the
+combined state to lifecycle operations remain pending. The opt-in
+[qualified file executor and recovery](qualified-file-execution.md) are
+implemented separately; hosted final-head qualification remains required. The
+implemented [mixed coordinator](mixed-owned-artifact-planning.md) composes
 complete explicit sets across both forms; neither individual planner authorizes
 partial application of a mixed installation. Current commands, lockfile/source
 formats and native client support are unchanged.
@@ -100,3 +102,7 @@ consumer propagation, lexical scope/root identity and row ordering.
 [`tests/instruction_contributions.rs`](../../tests/instruction_contributions.rs)
 covers the shared reader and editor validation. These tests establish the pure
 boundary, without native discovery or filesystem execution claims.
+
+The opt-in [combined-state validator](combined-lifecycle-state.md) now checks
+reference authority and explicit per-owner consumer associations. Connecting
+this state to lifecycle planning remains pending.

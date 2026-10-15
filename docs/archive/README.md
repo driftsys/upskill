@@ -410,3 +410,28 @@ M1-A2, M1-A3 and M1 remain incomplete. All 54 inherited WIP/raw archive files,
 including 34 foreign WIP files, retain their original bytes and disposition. The
 broader application draft remains separate and unchanged. This entry resolves
 only the assigned pair.
+
+## Gate 5 combined lifecycle state
+
+Source path: `docs/wip/plans/2026-10-15-m1-gate5-combined-state.md`. The
+[archived plan](plans/2026-10-15-m1-gate5-combined-state.md) retains its
+original bytes, including historical unchecked task boxes. Only this completed
+pure state slice is archived. Its broader
+[Gate 5 specification](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
+remains active, as explicitly required by the approved slice-completion scope.
+All other WIP retains its prior disposition.
+
+Durable successors:
+[specification §4.13](../specification/specification.md#413-combined-lifecycle-state-foundation)
+and [combined lifecycle state design](../design/combined-lifecycle-state.md).
+The [validation record](../technotes/2026-10-15-m1-gate5-state-validation.md)
+records local checks, independent review and omission-control evidence.
+Implementation through `490b8e29a27040dac8172dfc5b4f582991029f56` passed full
+verification and locked Rust 1.85 checking; subsequent changes strengthened
+tests. Final native/hosted CI, PR review and merge remain separate gates. These
+are local slice records and make no merge claim.
+
+Compiler-to-desired-set reconciliation and shared-owner lifecycle planning,
+exact original-JSON first-write backup, guarded executor/recovery integration,
+and observational list/doctor/preview adapters remain unfinished. Commands still
+use schema 1; this slice does not complete Gate 5 or activate M1.
