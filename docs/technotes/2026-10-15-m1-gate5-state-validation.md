@@ -14,7 +14,7 @@ schema 1. No migration backup, application or recovery is invoked by this slice.
 
 ## Local evidence
 
-- Acceptance tests: 30 cases in `tests/lifecycle_state.rs` passed.
+- Acceptance tests: 33 cases in `tests/lifecycle_state.rs` passed.
 - Graph controls: omitting ID syntax, duplicate installation ID, endpoint,
   duplicate edge and delegated artifact-shape checks made their targeted tests
   fail.
@@ -23,7 +23,7 @@ schema 1. No migration backup, application or recovery is invoked by this slice.
   contribution selectors made their targeted tests fail.
 - Codec controls: reversing legacy arrays, dropping scope/root/selector sorting
   keys, and emitting compact JSON made their targeted tests fail.
-- All 16 controls failed through test assertions, not compilation errors. Each
+- All 22 controls failed through test assertions, not compilation errors. Each
   temporary production change was restored byte-for-byte before the green run.
 - `just fmt`, `just verify` and `cargo +1.85.0 check --all-targets --locked`
   passed for the implementation. Final slice delivery repeats verification after
@@ -48,6 +48,23 @@ legacy-projection tests. The later two codec acceptance cases and stronger
 fixtures were quick-review fixes, verified by the targeted controls and the
 final repository checks; they were outside that independent review target. No
 additional review of fixes is claimed.
+
+## PR review follow-up
+
+PR #295 full pass 1 reviewed
+`a5e28b816a3f4a2db435753564a7cd1204f9e93c..b3e2fa71f1a9b947d8bac4027f5145bee3889ab4`
+with compliance, tests, docs and independent bug seats. Production validation
+was correct; the review confirmed two Major/S test gaps: accepting a consumer
+association superset, and treating source revision as part of installation
+identity. Two Minor/S findings covered nonempty bundle-revision retention and
+stale reference-authority status wording. All four were fixed in this slice.
+
+Six additional controls make the consumer-superset, revision/selection-identity,
+bundle-revision retention, valid ID alphabet and hexadecimal digit fixtures fail
+when their intended behavior is omitted. Production sources were restored
+exactly. Positive fixtures also cover uppercase/digit/underscore identifiers and
+digit-containing manifest hashes. Final pass 2 and hosted checks are delivery
+gates on the follow-up head; this record does not substitute for their ledgers.
 
 ## Decisions and limits
 

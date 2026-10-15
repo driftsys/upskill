@@ -891,6 +891,7 @@ fn git_evidence_and_bundle_dependencies_survive_codec_round_trip() {
         resolved_revision: revision.into(),
         manifest_sha256: "c".repeat(64),
     };
+    value.bundles[0].source_revision = Some("bundle-pinned-revision".into());
     value.references.push(Reference::BundleDependency {
         bundle_id: "first".into(),
         dependency_id: "second".into(),
@@ -899,4 +900,63 @@ fn git_evidence_and_bundle_dependencies_survive_codec_round_trip() {
         parse_state(&serialize_state(&value).unwrap()).unwrap(),
         value
     );
+}
+
+#[test]
+fn rejects_association_superset_of_artifact_consumers() {
+    rejects_owned(|s| {
+        s.installations[0].requested.push(TargetSurface::CopilotCli);
+        s.owner_consumers[0]
+            .consumers
+            .push(TargetSurface::CopilotCli);
+    });
+}
+
+#[test]
+fn revisions_and_requested_surfaces_do_not_split_installation_identity() {
+    let mut value = state();
+    let first_revision = "0123456789abcdef0123456789abcdef01234567";
+    let second_revision = "89abcdef0123456789abcdef0123456789abcdef";
+    value.installations[0].owner.source = "https://example.test/rules.git".into();
+    value.installations[0].owner.source_revision = Some(first_revision.into());
+    value.installations[0].source_evidence = SourceEvidence::Git {
+        resolved_revision: first_revision.into(),
+        manifest_sha256: "a".repeat(64),
+    };
+    let mut second = value.installations[0].clone();
+    second.owner.installation_id = "rule-b".into();
+    second.owner.source_revision = Some(second_revision.into());
+    second.source_evidence = SourceEvidence::Git {
+        resolved_revision: second_revision.into(),
+        manifest_sha256: "b".repeat(64),
+    };
+    value.installations.push(second);
+    value.references.push(Reference::DirectInstallation {
+        installation_id: "rule-b".into(),
+    });
+    assert!(validate_state(&value).is_err());
+    value.installations[1].owner.source_revision = Some(first_revision.into());
+    value.installations[1].source_evidence = value.installations[0].source_evidence.clone();
+    value.installations[1].requested = vec![TargetSurface::CopilotCli];
+    assert!(validate_state(&value).is_err());
+}
+
+#[test]
+fn accepts_uppercase_digits_underscores_and_hex_digit_evidence() {
+    let mut value = state();
+    value.bundles = vec![bundle("Bundle_2")];
+    value.installations[0].owner.installation_id = "Rule_A1".into();
+    value.installations[0].source_evidence = SourceEvidence::Local {
+        manifest_sha256: "0123456789abcdef".repeat(4),
+    };
+    value.references = vec![
+        Reference::DirectBundle {
+            bundle_id: "Bundle_2".into(),
+        },
+        Reference::BundleInstallation {
+            bundle_id: "Bundle_2".into(),
+            installation_id: "Rule_A1".into(),
+        },
+    ];
+    validate_state(&value).unwrap();
 }

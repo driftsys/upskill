@@ -348,11 +348,12 @@ native compatibility first. The separate pure whole-file planner is implemented
 in [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 [§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
 resource outputs. The complete mixed coordinator is implemented in
-[§4.6](#46-mixed-owned-artifact-operation-plans). Complete reference-graph
-authority, planner integration of per-owner consumer associations, connecting
-compiled outputs to complete lifecycle desired sets, state/lifecycle integration
-and transactional execution remain pending. This prerequisite changes no CLI
-behavior, source format or lockfile format and enables no native client support.
+[§4.6](#46-mixed-owned-artifact-operation-plans). Planner integration of the
+implemented reference-graph authority and per-owner consumer associations,
+connecting compiled outputs to complete lifecycle desired sets, state/lifecycle
+integration and transactional execution remain pending. This prerequisite
+changes no CLI behavior, source format or lockfile format and enables no native
+client support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -697,8 +698,8 @@ rather than all diagnostics.
 This library prerequisite activates no CLI selector, native adapter, source
 fetch, filesystem observation, lock, journal, schema-2 persistence or execution.
 Connecting the captured compiler to complete lifecycle desired sets remains
-pending, along with complete reference authority, planner integration of
-per-owner consumer associations, immutable source evidence, target
+pending, along with planner integration of the implemented reference authority
+and per-owner consumer associations, immutable source evidence, target
 qualification, filesystem safety, physical permission application and metadata
 qualification, writer locking, durable state and apply/recovery. Pure
 [permission selection](../design/file-permission-policy.md) is implemented as a
