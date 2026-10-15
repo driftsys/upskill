@@ -142,8 +142,10 @@ and supplied before-state observations. It preserves untouched ownership,
 requires exact byte/hash and optional-mode evidence, rejects unowned
 destinations and affected shared/contribution records, and enumerates only
 individual file changes. The observations remain unqualified. Lifecycle
-desired-set integration, destination qualification, durable state,
-executor/recovery and Codex activation remain pending. The complete mixed
+desired-set integration, combined durable state and Codex activation remain
+pending. Qualified destination observation and opt-in
+[execution/recovery](../../design/qualified-file-execution.md) are implemented
+separately; final-head hosted qualification remains required. The complete mixed
 coordinator is described below. Existing commands, lockfiles and native behavior
 are unchanged; this does not complete M1-A2, M1-A3 or M1.
 
@@ -186,6 +188,15 @@ remove, list and doctor before schema-2 writes can be enabled with exact
 schema-1 backup and the M1-A3 containment, preflight, writer-lock and
 recoverable journal boundary. These prerequisites do not complete M1-A2 or
 provide schema-2 support.
+
+The [gate-4 qualified executor](../../design/qualified-file-execution.md) now
+provides opt-in file application, strict desired-payload journals and forward
+recovery under the matching scope writer guard. Local full tests, process
+termination checkpoints and the Rust 1.85 all-target check passed for the
+candidate implementation. Hosted Linux/macOS qualification remains pending; gate
+4 is not complete. The schema-2 lifecycle integration gate and native Codex gate
+remain separate, and M1-A2, M1-A3 and M1 remain incomplete. This executor does
+not activate the current schema-1 commands or adopt legacy ownership.
 
 ### M1-B: Project and user unconditional instructions
 
@@ -230,3 +241,6 @@ to permissions; hooks, MCP, skills, agents, and marketplace operations keep
 their later milestones. No automatic execution of source scripts is part of
 instruction installation. Existing bridge files and unmarked legacy output
 remain user-owned until explicit migration evidence proves otherwise.
+
+Validation results and tested source identities are retained in the
+[gate-4 evidence record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).

@@ -27,3 +27,5 @@
 
 - [File recovery checkpoint model](../design/file-recovery-model.md)
 - [Recovery checkpoint decision](../adr/0032-model-recovery-checkpoints-before-effects.md)
+- [Qualified file execution and recovery](../design/qualified-file-execution.md)
+- [Qualified file execution decision](../adr/0033-qualified-file-execution-and-journals.md)

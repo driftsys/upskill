@@ -86,12 +86,13 @@ Qualified scope roots, writer locking,
 as separate inactive capabilities. Final-head hosted source qualification
 remains required. Complete reference-graph authority, per-owner consumer
 association, integrating qualified source evidence and compiled outputs into
-complete lifecycle desired sets, state integration, recovery and execution
-remain pending. The implemented
-[mixed coordinator](mixed-owned-artifact-planning.md) composes complete explicit
-sets across both forms; neither individual planner authorizes partial
-application of a mixed installation. Current commands, lockfile/source formats
-and native client support are unchanged.
+complete lifecycle desired sets and combined state integration remain pending.
+The opt-in [qualified file executor and recovery](qualified-file-execution.md)
+are implemented separately; hosted final-head qualification remains required.
+The implemented [mixed coordinator](mixed-owned-artifact-planning.md) composes
+complete explicit sets across both forms; neither individual planner authorizes
+partial application of a mixed installation. Current commands, lockfile/source
+formats and native client support are unchanged.
 
 [`tests/instruction_plans.rs`](../../tests/instruction_plans.rs) covers owner
 retention, complete replacements and moves, exact preconditions, conflicts,

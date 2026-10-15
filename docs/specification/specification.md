@@ -946,9 +946,10 @@ values and selected bits convey no source authenticity, ownership, physical
 qualification or execution authority. Future writers must separately qualify
 owner/group, ACLs, extended metadata, containment and atomic replacement and
 persist actual resulting mode evidence. This API changes no compiler output,
-planner validation, CLI behavior or lockfile schema. File application, journal,
-recovery, state persistence and lifecycle activation remain pending; M1-A2,
-M1-A3 and M1 remain incomplete. See
+planner validation, CLI behavior or lockfile schema. The opt-in executor in
+§4.12 supplies file application, journals and recovery. Combined lifecycle
+state, activation and hosted qualification remain pending; M1-A2, M1-A3 and M1
+remain incomplete. See
 [AD-0031](../adr/0031-select-explicit-file-permissions.md) and the
 [permission design](../design/file-permission-policy.md).
 
@@ -978,13 +979,69 @@ write authority, and the function changes no checkpoint. Public model types
 derive Debug, Clone, Copy, PartialEq and Eq.
 
 Supplied classifications are not evidence capabilities. The API performs no I/O,
-serialization, journal reading, qualification or effects. Qualified producers,
-physical identity and metadata checks, source/state binding, credential-free
-reconstruction, durable receipts, checkpoint persistence and file application
-remain subsequent contracts. No lifecycle caller or actual recovery is
-activated; M1-A2, M1-A3 and M1 remain incomplete. See
+serialization, journal reading, qualification or effects. The opt-in executor in
+§4.12 supplies qualified file application, receipts and recovery using this
+model. No lifecycle caller or schema-2 writes are activated; M1-A2, M1-A3 and M1
+remain incomplete. See
 [AD-0032](../adr/0032-model-recovery-checkpoints-before-effects.md) and the
 [recovery model](../design/file-recovery-model.md) for a public API example.
+
+### 4.12 Qualified file execution and recovery
+
+`filesystem::ExecutionRequest` supplies a complete ordered sequence of
+`PlannedFile` values and one distinct final State file that remains present. Its
+effect-free validator rejects invalid or cross-scope paths, duplicate or
+ancestor destinations, reserved journal paths, unknown/special permission bits,
+changed existing ordinary modes, and new-file modes other than selected 0o600 or
+0o700. The caller remains responsible for ownership and complete planning.
+
+`QualifiedScope::apply_operation` requires its matching live writer guard and
+verifies all supplied source snapshots and exact destination preconditions
+before the first output effect. `recover_operation` requires the same authority
+and uses validated persisted payloads without fetching sources. Both are opt-in
+library methods; current CLI commands and schema-1 lockfiles do not use them.
+Unsupported operating systems reject explicitly. Supported Linux/macOS paths
+retain the existing qualification requirements.
+
+Effects replace files through exclusive sibling staging, file sync, atomic
+rename and parent-directory sync, or unlink individual planned files and sync
+their parents. Rechecks precede each effect. Unchanged files retain identity;
+directories, extra files and empty shared aggregates are retained. Existing
+ordinary modes are preserved. Replacement verifies unchanged UID/GID. ACLs,
+special bits, Darwin file flags and unsupported extended attributes reject;
+Darwin provenance is allowed only with an equal value on prior and staged files.
+
+The private `<scope-root>/.upskill/state/` store binds root and directory
+identities. Its directory is 0o700 and private files are 0o600. The root and
+store parent must not allow group/other writes. Strict execution-journal schema
+1 records the complete ordered actions, before/after digests, lengths and modes,
+bound desired payloads, final State, generations and Queued/Pending/Done
+receipts. Invalid paths, unsupported records, payload changes and mismatched
+storage bindings reject without output effects. This journal schema does not
+activate a new lifecycle lockfile schema.
+
+Desired payloads are synced before initial journal publication. Each generation
+uses staged-file sync, atomic publication and directory sync. Persist Pending
+before each effect, sync and reobserve its post-state, then persist Done. A
+Pending post-state is resynced, including its parent directory, before recovery
+acknowledges it; it is not rewritten. A Queued post-state or unexpected value
+requires reconciliation. No-op actions use receipt-only checkpoints. Final State
+uses the same protocol. Reports distinguish the recorded Done prefix from the
+currently verified post-state prefix.
+
+Completed cleanup is durably marked before removing validated payloads. The
+completed journal is removed last; conflicting or unknown files are preserved.
+Read-only observation creates no execution artifacts. Recovery with no published
+operation performs no output work. Interrupted initial setup may retain private
+orphan files rather than deleting content without established authority.
+
+Advisory locking coordinates cooperating writers, not all external edits;
+rechecks cannot exclude every namespace race. Operations are not atomic across
+files. Process interruption coverage does not establish hardware power-loss
+durability. Hosted Linux/macOS qualification remains pending, so gate 4, M1-A2,
+M1-A3 and M1 are not declared complete. See
+[AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and the
+[qualified execution design](../design/qualified-file-execution.md).
 
 ## 5. Source format and authentication
 

@@ -29,9 +29,12 @@ may be recorded here before implementation when their status is explicit.
   remain pending.
 
 - [Explicit file permission selection](file-permission-policy.md) — implemented
-  as an inactive pure supplied-value policy; qualified file effects remain
-  pending.
+  as an inactive pure supplied-value policy, consumed by the opt-in file
+  executor.
 
 - [File recovery checkpoint model](file-recovery-model.md) — implemented as an
-  inactive pure supplied-classification API; qualified recovery and effects
-  remain pending.
+  inactive pure supplied-classification API, consumed by durable file recovery.
+
+- [Qualified file execution and durable recovery](qualified-file-execution.md) —
+  implemented as an opt-in library capability; hosted Linux/macOS qualification
+  and combined lifecycle integration remain pending.

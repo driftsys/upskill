@@ -105,6 +105,15 @@ impl QualifiedScope {
 }
 
 impl ScopeWriterGuard<'_> {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(in crate::filesystem) fn require_scope(&self, scope: &QualifiedScope) -> Result<()> {
+        anyhow::ensure!(
+            std::ptr::eq(self.scope, scope),
+            "writer guard belongs to a different qualified scope"
+        );
+        self.verify_binding()
+    }
+
     /// Revalidate the scope binding while retaining writer exclusion.
     pub fn verify_binding(&self) -> Result<()> {
         self.scope.verify_binding()
@@ -114,6 +123,42 @@ impl ScopeWriterGuard<'_> {
 #[cfg(all(test, not(any(target_os = "linux", target_os = "macos"))))]
 mod unsupported_tests {
     use super::QualifiedScope;
+    #[test]
+    fn execution_and_recovery_return_explicit_unsupported_errors() {
+        use crate::files::plan::{FileLocation, PlannedFile};
+        use crate::filesystem::execution::ExecutionRequest;
+        use crate::ownership::{InstallationRoot, OwnershipScope};
+        let scope = QualifiedScope { _unsupported: () };
+        let guard = super::ScopeWriterGuard { scope: &scope };
+        let request = ExecutionRequest {
+            files: vec![],
+            state: PlannedFile {
+                location: FileLocation {
+                    root: InstallationRoot {
+                        scope: OwnershipScope::Project,
+                        path: std::env::temp_dir(),
+                    },
+                    path: "state".into(),
+                },
+                before: None,
+                after: None,
+            },
+        };
+        assert!(
+            scope
+                .apply_operation(&guard, &[], request)
+                .unwrap_err()
+                .to_string()
+                .contains("unsupported")
+        );
+        assert!(
+            scope
+                .recover_operation(&guard)
+                .unwrap_err()
+                .to_string()
+                .contains("unsupported")
+        );
+    }
 
     #[test]
     fn source_observation_returns_explicit_unsupported_error() {

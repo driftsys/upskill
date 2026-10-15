@@ -111,8 +111,9 @@ immutable source evidence, source/target adapters, target and filesystem
 qualification, writer locking, durable state and physical apply/recovery remain
 separate gates. The pure
 [permission-selection policy](file-permission-policy.md) is implemented;
-physical permission application and qualified integration remain pending (debt
-#278). The API may return the first contextual conflict; complete diagnostic
-aggregation remains an activation gate. No CLI selector, native support,
-schema-2 persistence or installation effects are activated. M1-A2, M1-A3 and M1
-remain incomplete.
+[qualified file execution and recovery](qualified-file-execution.md) consume
+selected modes as an opt-in library capability. Combined lifecycle integration
+and hosted qualification remain pending. The API may return the first contextual
+conflict; complete diagnostic aggregation remains an activation gate. No CLI
+selector, native support, schema-2 persistence or installation effects are
+activated. M1-A2, M1-A3 and M1 remain incomplete.

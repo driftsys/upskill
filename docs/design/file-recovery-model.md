@@ -56,8 +56,9 @@ and the
 [literal acceptance cases](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs).
 
 Apply is a proposed logical step, not permission to write. The function changes
-no checkpoint and skips no action. Before another application decision, a future
-caller must obtain fresh qualified facts and advance its durable checkpoint.
+no checkpoint and skips no action. The opt-in
+[qualified executor](qualified-file-execution.md) obtains fresh qualified facts
+and advances durable checkpoints before another application decision.
 
 ## Evidence and remaining contracts
 
@@ -67,14 +68,12 @@ whole-suffix validation, first-conflict selection, distinct prefixes and final
 State handling. Independent compiled semantic controls establish that these
 assertions detect omitted guards and altered decisions.
 
-This API performs no I/O, serialization, journal reading, byte comparison,
-locking or effects. Qualified observers and journal producers must establish
-actual file identities, containment, exact values, source availability and
-source/state bindings. Credential-free reconstruction, durable receipt format,
-checkpoint persistence, owner/group, ACLs, extended metadata and physical
-application remain unresolved subsequent contracts. The implemented
-[permission-selection policy](file-permission-policy.md) is a separate
-prerequisite; physical permission application and lifecycle integration remain
-pending. No actual recovery or M1 completion is claimed; M1-A2, M1-A3 and M1
-remain incomplete. See
+This pure API performs no I/O, serialization, journal reading, byte comparison,
+locking or effects. The opt-in [qualified executor](qualified-file-execution.md)
+supplies physical observations, private desired payloads, durable receipts and
+file application in the restricted metadata envelope recorded by
+[AD-0033](../adr/0033-qualified-file-execution-and-journals.md). The
+[permission-selection policy](file-permission-policy.md) remains separate.
+Hosted executor qualification, lifecycle state integration and activation are
+pending; M1-A2, M1-A3 and M1 remain incomplete. See
 [AD-0032](../adr/0032-model-recovery-checkpoints-before-effects.md).

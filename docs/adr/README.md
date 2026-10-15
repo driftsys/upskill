@@ -75,3 +75,7 @@ records its separate digest encoding.
 ## Ordered recovery checkpoints
 
 - [AD-0032 — Model recovery checkpoints before file effects](0032-model-recovery-checkpoints-before-effects.md)
+
+## Qualified file execution
+
+- [AD-0033 — Qualified file execution with durable forward recovery](0033-qualified-file-execution-and-journals.md)
