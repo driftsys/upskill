@@ -651,6 +651,7 @@ fn new_node_payloads_preserve_requested_surfaces_evidence_and_revisions() {
     let s = diamond();
     let mut git = item("new-git");
     git.owner.source = "https://github.com/example/registry".into();
+    git.owner.installed_name = "chosen-git-alias".into();
     git.owner.source_revision = Some("a".repeat(40));
     git.requested = vec![
         upskill::target::TargetSurface::CodexCli,

@@ -315,7 +315,8 @@ fn isolated_plugin_test(test: &str) -> bool {
         .current_dir(tmp.path())
         .timeout(std::time::Duration::from_secs(30))
         .assert()
-        .success();
+        .success()
+        .stdout(predicates::str::contains(format!("test {test} ... ok")));
     true
 }
 
@@ -676,7 +677,7 @@ fn doctor_installed_plugin_cli_not_found_is_not_reported_as_missing() {
     // missing_plugins — it cannot determine the actual state.
     let tmp = tempfile::tempdir().unwrap();
     let mut lock = Lockfile::new();
-    // "nonexistent-client-xyz" will never be on PATH.
+    // The child PATH excludes the VS Code CLI.
     lock.upsert_plugin(LockedPlugin {
         name: "some-plugin".into(),
         client: "vscode".into(),

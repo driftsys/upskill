@@ -80,3 +80,10 @@ parent-created temporary path. Removing either override failed that assertion
 under an inherited temporary home. These two controls raise the cumulative count
 to 18. The timeout is configured in the harness; normal passing fixtures do not
 exercise its expiration.
+
+Final numbered review required proof that the intended child test completed. The
+harness now checks its successful test-result line; selecting a nonexistent
+filter failed the parent assertion. A distinct new installed alias also exposed
+alias normalization in a separate control. Both assertions failed with exit101,
+and sources were restored. The cumulative control count is20. These final review
+fixes receive verification without a third numbered review cycle.
