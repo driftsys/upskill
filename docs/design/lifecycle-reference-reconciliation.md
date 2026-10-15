@@ -71,8 +71,9 @@ The complete prior state is validated, including artifact ownership/consumer
 associations and tagged legacy schema. Graph reconciliation never mutates those
 prior values and does not reconstruct them in its graph-only result.
 
-Shared-owner artifact reconciliation, instruction adapters, selected legacy
-conflict aggregation and complete add/update/remove plans remain task 2b work.
+The separate [removal planner](lifecycle-reference-removal.md) reconciles
+shared-owner retirement. Shared add/update, instruction adapters, selected
+legacy conflict aggregation and complete add/update plans remain task 2b work.
 Existing mixed and instruction planners keep their affected multi-owner
 rejection. Guarded lifecycle backup/application/recovery, observational adapters
 and native activation remain separate gates. This boundary alone does not

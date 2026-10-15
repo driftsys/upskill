@@ -94,8 +94,10 @@ records local checks and the limits of the independent review.
 This producer validates each installation in a minimal direct-reference graph;
 it does not reconcile the authoritative graph across the batch or establish
 cross-request installation-identity consistency beyond duplicate ID rejection.
-Reference reconciliation, shared owners and per-owner consumers, selected legacy
-conflicts, instruction contribution adapters, existing destinations and complete
-add/update/remove planning remain task 2b. The mixed planner's affected
+Separate [reference reconciliation](lifecycle-reference-reconciliation.md) and
+[removal planning](lifecycle-reference-removal.md) now establish graph retention
+and shared-owner retirement with authoritative per-owner consumers. Selected
+legacy conflicts, instruction contribution adapters, existing destinations and
+complete add/update planning remain task 2b. The mixed planner's affected
 multi-owner rejection remains intact. Guarded backup/application/recovery,
 observational adapters and native activation remain separate tasks.

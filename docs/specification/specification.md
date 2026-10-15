@@ -348,11 +348,12 @@ native compatibility first. The separate pure whole-file planner is implemented
 in [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 [§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
 resource outputs. The complete mixed coordinator is implemented in
-[§4.6](#46-mixed-owned-artifact-operation-plans). Planner integration of the
-implemented reference-graph authority and per-owner consumer associations,
-integrating the captured-rule desired sets (§4.14) with state/lifecycle and
-transactional execution remain pending. This prerequisite changes no CLI
-behavior, source format or lockfile format and enables no native client support.
+[§4.6](#46-mixed-owned-artifact-operation-plans). Reference-graph authority and
+per-owner consumer associations now support removal planning (§4.16).
+Integrating captured-rule desired sets (§4.14) with complete add/update
+planning, state persistence and transactional execution remain pending. This
+prerequisite changes no CLI behavior, source format or lockfile format and
+enables no native client support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
