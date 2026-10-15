@@ -224,3 +224,66 @@ a194ac3a50173331ff7122200d5d9220b5831e7cc1090035b41588ba2add149c  src/filesystem
 69411bb6538c17945d4c5e44aa813c58bd295d3c41211f63022e959e97a35f3f  src/filesystem/execution/run_tests.rs
 262ef9f579163f5d1716f4bcdad171b383e244014d17874238befe637a2498c7  src/filesystem/execution/journal_tests.rs
 ```
+
+## Explicit invocation and hosted evidence
+
+The following local invocations were rerun against
+`878cf68cdc5e4bd986a5b8d7c25098bafef474cf`, capturing their argument vectors,
+exit codes and output. The MSRV check used the separate scratch target
+directory.
+
+```json
+[
+  {
+    "argv": [
+      "rustup",
+      "run",
+      "1.85.0",
+      "rustc",
+      "--version"
+    ],
+    "exit": 0,
+    "output": "rustc 1.85.0 (4d91de4e4 2025-02-17)\n"
+  },
+  {
+    "argv": [
+      "cargo",
+      "+1.85.0",
+      "check",
+      "--all-targets",
+      "--locked"
+    ],
+    "exit": 0,
+    "output": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s\n"
+  },
+  {
+    "argv": [
+      "cargo",
+      "clippy",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit": 0,
+    "output": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.20s\n"
+  }
+]
+```
+
+[Hosted run 38695731881](https://github.com/driftsys/upskill/actions/runs/38695731881)
+checked that same head: aggregate CI, Linux/macOS/Windows tests, Clippy, MSRV,
+formatting, repository tools, ShellCheck and documentation passed.
+[Earlier run 38693183137](https://github.com/driftsys/upskill/actions/runs/38693183137)
+checked `f416549277b29efca590ee00b5992c035346ccf0`: its three platform test jobs
+and MSRV passed, but Linux Clippy and aggregate CI failed. These run links
+support the earlier hosted-outcome statements.
+
+The repair quick review found a remaining coverage limit: injected publication
+sync tests replace the production syscall. They pin adapter invocation,
+descriptor identity, ordering and error propagation, while direct observation of
+the normal syscall path requires separate platform tracing infrastructure. This
+is a test evidence gap, not an observed omission in production.
+
+[Debt #294](https://github.com/driftsys/upskill/issues/294) tracks the direct
+syscall evidence gap as Major/Large under the user's deferral policy.
