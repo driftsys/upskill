@@ -69,10 +69,10 @@ activation is introduced. The separate
 [pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
 is implemented for explicitly supplied complete file sets. The separate
 [captured item compiler](captured-item-compilation.md) derives complete
-per-client entrypoint and resource outputs from these captured values.
-Connecting compiled outputs to complete lifecycle desired sets, immutable Git
-revision evidence and lifecycle execution remain later work. Qualified scope
-roots, writer locking,
+per-client entrypoint and resource outputs from these captured values. The
+inactive [captured-rule desired-set producer](captured-rule-desired-sets.md)
+binds complete rule outputs. Lifecycle reconciliation, immutable Git revision
+evidence and execution remain later work. Qualified scope roots, writer locking,
 [destination observation](qualified-destination-observation.md) and
 [qualified source observation](qualified-source-observation.md) are implemented
 separately. Source snapshots retain revalidation evidence around this unchanged

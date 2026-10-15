@@ -93,16 +93,17 @@ The [captured item compiler](captured-item-compilation.md) already derives
 complete per-client resource and entrypoint outputs from validated captured
 sources. The [mixed coordinator](mixed-owned-artifact-planning.md) composes
 complete explicit file/contribution sets; neither individual planner authorizes
-partial application of a mixed installation. Connecting compiled outputs to
-complete lifecycle desired sets and reviewed adapters remains pending. Qualified
-scope roots, writer locking,
-[destination observation](qualified-destination-observation.md) and
-[qualified source observation](qualified-source-observation.md) are implemented
-as separate inactive capabilities, including conservative destination overlap
-rejection and descriptor-relative source and destination observation. Final-head
-hosted source qualification remains required. Integrating qualified source
-evidence into the lifecycle, combined durable state and Codex activation remain
-pending. Pure [permission selection](file-permission-policy.md) and opt-in
+partial application of a mixed installation. Captured-rule desired sets are
+implemented in [captured-rule desired sets](captured-rule-desired-sets.md);
+lifecycle planning and reviewed adapters remain pending. Qualified scope roots,
+writer locking, [destination observation](qualified-destination-observation.md)
+and [qualified source observation](qualified-source-observation.md) are
+implemented as separate inactive capabilities, including conservative
+destination overlap rejection and descriptor-relative source and destination
+observation. Final-head hosted source qualification remains required.
+Integrating qualified source evidence into the lifecycle, combined durable state
+and Codex activation remain pending. Pure
+[permission selection](file-permission-policy.md) and opt-in
 [qualified file execution and recovery](qualified-file-execution.md) are
 implemented as separate library capabilities. This prerequisite leaves current
 commands, schema-1 lockfiles and native client behavior unchanged and does not

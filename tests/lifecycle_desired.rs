@@ -507,3 +507,208 @@ fn raw_root_scope_and_spelling_are_retained_without_writes() {
     );
     assert!(!tmp.path().join("absent").exists());
 }
+
+fn blocked(
+    outcome: upskill::lifecycle::desired::DesiredSetsOutcome,
+) -> Vec<upskill::lifecycle::desired::DesiredSetDiagnostic> {
+    match outcome {
+        upskill::lifecycle::desired::DesiredSetsOutcome::Blocked(diagnostics) => diagnostics,
+        other => panic!("expected complete batch rejection, got {other:?}"),
+    }
+}
+
+#[test]
+fn batch_reports_independent_conflicts_without_a_ready_subset() {
+    use upskill::lifecycle::desired::compile_rule_desired_sets;
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let good = installation(&source, &[TargetSurface::ClaudeCli]);
+    let mut bad_binding = good.clone();
+    bad_binding.owner.installation_id = "bad-binding".into();
+    let mut bad_capture = source.clone();
+    bad_capture.files[0].bytes.push(0);
+    let mut bad_source = good.clone();
+    bad_source.owner.installation_id = "bad-source".into();
+    let before = (
+        good.clone(),
+        bad_binding.clone(),
+        bad_source.clone(),
+        bad_capture.clone(),
+        bindings.clone(),
+    );
+    let requests = [
+        request(&good, &source, &bindings),
+        request(&bad_binding, &source, &[]),
+        request(&bad_source, &bad_capture, &bindings),
+    ];
+    let diagnostics = blocked(compile_rule_desired_sets(&requests));
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(diagnostics[0].request_indices, [1]);
+    assert_eq!(diagnostics[0].installation_ids, ["bad-binding"]);
+    assert!(diagnostics[0].message.contains("consumers"));
+    assert_eq!(diagnostics[1].request_indices, [2]);
+    assert_eq!(diagnostics[1].installation_ids, ["bad-source"]);
+    assert!(diagnostics[1].message.contains("captured source"));
+    assert_eq!(diagnostics, blocked(compile_rule_desired_sets(&requests)));
+    assert_eq!(
+        (good, bad_binding, bad_source, bad_capture, bindings),
+        before
+    );
+}
+
+#[test]
+fn batch_rejects_equal_byte_collisions_and_ancestor_topology() {
+    use upskill::lifecycle::desired::compile_rule_desired_sets;
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let bindings = [binding(Client::OpenCode, &[TargetSurface::OpenCodeCli])];
+    let first = installation(&source, &[TargetSurface::OpenCodeCli]);
+    let mut second = first.clone();
+    second.owner.installation_id = "second".into();
+    let equal = blocked(compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&second, &source, &bindings),
+    ]));
+    assert_eq!(equal.len(), 1);
+    assert_eq!(equal[0].request_indices, [0, 1]);
+    assert_eq!(equal[0].installation_ids, ["rule-source", "second"]);
+    assert!(equal[0].message.contains(".agents/rules/source/RULE.md"));
+    // A resource under alias source.md descends from the other Claude entrypoint.
+    let descendant = synthetic(&[("RULE.md", RULE, None), ("child", b"resource", None)]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let mut first = first.clone();
+    first.requested = vec![TargetSurface::ClaudeCli];
+    second.requested = vec![TargetSurface::ClaudeCli];
+    second.owner.installed_name = "source.md".into();
+    second.source_evidence = SourceEvidence::Local {
+        manifest_sha256: descendant.content_sha256.clone(),
+    };
+    let topology = blocked(compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&second, &descendant, &bindings),
+    ]));
+    assert!(
+        topology
+            .iter()
+            .any(|diagnostic| diagnostic.message.contains("source.md/child"))
+    );
+    assert!(
+        topology
+            .iter()
+            .all(|diagnostic| diagnostic.request_indices == [0, 1])
+    );
+}
+
+#[test]
+fn batch_preserves_disjoint_roots_and_scopes() {
+    use upskill::lifecycle::desired::{DesiredSetsOutcome, compile_rule_desired_sets};
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let first = installation(&source, &[TargetSurface::ClaudeCli]);
+    let mut items = vec![first.clone(), first.clone(), first.clone(), first.clone()];
+    for (index, item) in items.iter_mut().enumerate() {
+        item.owner.installation_id = format!("item-{index}");
+    }
+    items[1].root.path.push(".");
+    items[2].root.scope = OwnershipScope::User;
+    items[3].owner.installed_name = "different".into();
+    let requests: Vec<_> = items
+        .iter()
+        .map(|item| request(item, &source, &bindings))
+        .collect();
+    let DesiredSetsOutcome::Ready(sets) = compile_rule_desired_sets(&requests) else {
+        panic!("disjoint lexical locations rejected")
+    };
+    assert_eq!(
+        sets.iter()
+            .map(|set| set.installation.clone())
+            .collect::<Vec<_>>(),
+        items
+    );
+    assert_ne!(
+        sets[0].installation.root.path.as_os_str(),
+        sets[1].installation.root.path.as_os_str()
+    );
+    assert!(
+        matches!(compile_rule_desired_sets(&[]), DesiredSetsOutcome::Ready(sets) if sets.is_empty())
+    );
+}
+
+#[test]
+fn batch_rejects_duplicate_ids_before_returning_sets() {
+    use upskill::lifecycle::desired::compile_rule_desired_sets;
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let first = installation(&source, &[TargetSurface::ClaudeCli]);
+    let mut second = first.clone();
+    second.root.path.push("other");
+    let diagnostics = blocked(compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&second, &source, &bindings),
+    ]));
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].request_indices, [0, 1]);
+    assert_eq!(
+        diagnostics[0].installation_ids,
+        ["rule-source", "rule-source"]
+    );
+    assert!(diagnostics[0].message.contains("duplicate installation"));
+}
+
+#[test]
+fn excluded_copilot_consumers_are_complete_and_sorted() {
+    let source = synthetic(&[(
+        "RULE.md",
+        b"---\nschema: 1\nname: source\ndescription: demo\naudience: [claude]\n---\n\n# Demo\n",
+        None,
+    )]);
+    for consumers in [
+        vec![TargetSurface::CopilotVscodeLocal],
+        vec![TargetSurface::CopilotVscodeLocal, TargetSurface::CopilotCli],
+    ] {
+        let item = installation(&source, &consumers);
+        let bindings = [binding(Client::Copilot, &consumers)];
+        let result = compile_rule_desired_set(request(&item, &source, &bindings)).unwrap();
+        let mut expected = consumers;
+        expected.sort_by_key(|surface| surface.name());
+        assert_eq!(result.audience_excluded, expected);
+        assert!(result.artifacts.is_empty());
+        assert_eq!(result.installation, item);
+    }
+}
+
+#[test]
+fn undeclared_rule_name_uses_supplied_folder() {
+    let source = synthetic(&[(
+        "RULE.md",
+        b"---\nschema: 1\ndescription: demo\n---\n\n# Demo\n",
+        None,
+    )]);
+    let mut item = installation(&source, &[TargetSurface::ClaudeCli]);
+    item.owner.source_name = "fallback-name".into();
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let mut input = request(&item, &source, &bindings);
+    input.folder_name = "fallback-name";
+    let result = compile_rule_desired_set(input).unwrap();
+    assert_eq!(
+        file(&result.artifacts[0]).value.bytes,
+        b"---\nname: fallback-name\ndescription: demo\n---\n\n# Demo\n"
+    );
+    assert_eq!(result.installation, item);
+}
+
+#[test]
+fn opencode_resources_keep_exact_bytes_modes_and_consumers() {
+    let source = synthetic(&[
+        ("RULE.md", RULE, None),
+        ("refs/data.bin", &[0, 255, 17], Some(0o755)),
+    ]);
+    let item = installation(&source, &[TargetSurface::OpenCodeCli]);
+    let bindings = [binding(Client::OpenCode, &[TargetSurface::OpenCodeCli])];
+    let result = compile_rule_desired_set(request(&item, &source, &bindings)).unwrap();
+    assert_eq!(result.artifacts.len(), 2);
+    let resource = file(&result.artifacts[1]);
+    assert_eq!(resource.location.path, ".agents/rules/source/refs/data.bin");
+    assert_eq!(resource.value.bytes, [0, 255, 17]);
+    assert_eq!(resource.value.mode, Some(0o755));
+    assert_eq!(resource.consumers, [TargetSurface::OpenCodeCli]);
+}

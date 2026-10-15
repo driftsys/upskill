@@ -63,3 +63,20 @@ selection, instruction contributions or existing destinations. The mixed
 planner's affected multi-owner rejection remains intact. Combined lifecycle
 planning, guarded backup/application/recovery, observational adapters and native
 activation remain separate tasks.
+
+## Complete batch preflight
+
+`compile_rule_desired_sets` compiles every independent request and returns
+either `Ready` with all sets in input order or `Blocked` with contextual
+diagnostics. There is no successful subset in a blocked outcome. An empty batch
+is ready with no sets. Compilation reports one error per failed request, without
+claiming all errors within that rule.
+
+Duplicate installation IDs conflict even at disjoint roots. Successful requests
+also conflict when selected file paths are equal or ancestors of one another
+under the same scope and raw root spelling. Equal bytes do not establish a
+shared-owner contract. Different raw roots or scopes remain separate at this
+lexical boundary; physical aliases and case equivalence need later
+qualification. Diagnostics contain both request indices and installation IDs and
+sort by indices, then message. This boundary does not reconcile existing state
+or references.

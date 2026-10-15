@@ -1,6 +1,9 @@
 //! Complete captured rule outputs bound to explicit installation consumers.
 //!
 //! These pure values establish no ownership, containment or native conformance.
+mod batch;
+pub use batch::{DesiredSetDiagnostic, DesiredSetsOutcome, compile_rule_desired_sets};
+
 use crate::compile::item::{ItemCompileRequest, compile_item};
 use crate::files::plan::{DesiredFile, FileLocation, FileValue};
 use crate::generate::Client;
