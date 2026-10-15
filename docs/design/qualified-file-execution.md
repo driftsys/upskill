@@ -106,8 +106,10 @@ An effectful action follows this order:
 4. Reobserve the complete action sequence and publish Done through the recovery
    acknowledgement path.
 
-Each recovery iteration qualifies observations for the whole sequence before
-asking the pure recovery planner for a step. Pending Before permits application;
+Each recovery iteration qualifies observations and metadata for the whole
+sequence before asking the pure recovery planner for a step. This includes Done
+and unchanged Queued actions, existing parents, and destination UID/GID, before
+any effect, receipt advancement or cleanup. Pending Before permits application;
 Pending After or Both permits acknowledgement. Acknowledgement resyncs the
 observed file, when present, and its parent directory before Done, covering an
 interruption or error after the namespace effect but before its sync. Queued

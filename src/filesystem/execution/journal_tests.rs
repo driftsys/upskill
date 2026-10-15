@@ -203,3 +203,24 @@ fn store_and_journal_aliases_reject_and_preserve_targets() {
         assert!(!tmp.path().join(".upskill-lock.json").exists());
     }
 }
+#[test]
+fn cleanup_rejects_identical_payload_replacement_inode() {
+    let (tmp, scope, request) = fixture();
+    let mut journal = Journal::create(&scope, &request).unwrap();
+    journal.record(0, Receipt::Done).unwrap();
+    let path = tmp
+        .path()
+        .join(".upskill/state")
+        .join(&journal.disk.actions[0].payload.as_ref().unwrap().name);
+    let held = std::fs::File::open(&path).unwrap();
+    let original = held.metadata().unwrap().ino();
+    std::fs::remove_file(&path).unwrap();
+    std::fs::write(&path, b"state").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let replacement = std::fs::metadata(&path).unwrap().ino();
+    assert_ne!(original, replacement);
+    assert!(journal.cleanup().is_err());
+    assert_eq!(std::fs::metadata(&path).unwrap().ino(), replacement);
+    assert_eq!(std::fs::read(&path).unwrap(), b"state");
+    assert!(tmp.path().join(".upskill/state/operation.json").exists());
+}

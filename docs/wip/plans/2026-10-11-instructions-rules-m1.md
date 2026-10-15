@@ -142,8 +142,10 @@ and supplied before-state observations. It preserves untouched ownership,
 requires exact byte/hash and optional-mode evidence, rejects unowned
 destinations and affected shared/contribution records, and enumerates only
 individual file changes. The observations remain unqualified. Lifecycle
-desired-set integration, destination qualification, durable state,
-executor/recovery and Codex activation remain pending. The complete mixed
+desired-set integration, combined durable state and Codex activation remain
+pending. Qualified destination observation and opt-in
+[execution/recovery](../../design/qualified-file-execution.md) are implemented
+separately; final-head hosted qualification remains required. The complete mixed
 coordinator is described below. Existing commands, lockfiles and native behavior
 are unchanged; this does not complete M1-A2, M1-A3 or M1.
 

@@ -44,7 +44,7 @@ impl QualifiedScope {
             );
         }
         for action in &actions {
-            backend::qualify_metadata(self, action)?;
+            backend::qualify_metadata(self, &action.location)?;
         }
         snapshot.verify_unchanged()?;
         for source in sources {
@@ -100,6 +100,9 @@ fn drive(
             .collect();
         let observations =
             backend::observe(scope, &locations).with_context(qualification_context)?;
+        for location in &locations {
+            backend::qualify_metadata(scope, location).with_context(qualification_context)?;
+        }
         let steps: Vec<_> = journal
             .disk
             .actions

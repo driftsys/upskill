@@ -14,6 +14,12 @@ use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
 type Identity = (u64, u64);
+#[cfg(test)]
+type PublicationSyncHook = Box<dyn FnMut(&File, usize) -> Result<()>>;
+#[cfg(test)]
+thread_local! {
+    pub(super) static TEST_PUBLICATION_SYNC: std::cell::RefCell<Option<PublicationSyncHook>> = std::cell::RefCell::new(None);
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Evidence {
@@ -286,9 +292,22 @@ impl<'a> Store<'a> {
         super::checkpoint("before_journal_rename", generation)?;
         renameat(&self.dir, temp.as_str(), &self.dir, "operation.json")?;
         super::checkpoint("after_journal_rename", generation)?;
-        self.dir.sync_all()?;
+        self.sync_publication(generation)?;
         super::checkpoint("after_journal_sync", generation)?;
         self.verify()?;
+        Ok(())
+    }
+    fn sync_publication(&self, generation: usize) -> Result<()> {
+        #[cfg(test)]
+        if let Some(result) = TEST_PUBLICATION_SYNC.with(|hook| {
+            hook.borrow_mut()
+                .as_mut()
+                .map(|sync| sync(&self.dir, generation))
+        }) {
+            return result;
+        }
+        let _ = generation;
+        self.dir.sync_all()?;
         Ok(())
     }
 }

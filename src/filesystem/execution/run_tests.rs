@@ -409,3 +409,131 @@ fn recovery_sync_failures_do_not_publish_done() {
         }
     }
 }
+#[test]
+fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
+    for phase in ["later-queued", "done", "queued-both", "pending-after"] {
+        let (tmp, scope, mut request) = fixture();
+        for action in &mut request.files {
+            let path = tmp.path().join(&action.location.path);
+            std::fs::write(&path, b"old").unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+            action.before = Some(FileValue {
+                bytes: b"old".to_vec(),
+                mode: Some(0o600),
+            });
+        }
+        if phase == "queued-both" {
+            request.files[0].after = request.files[0].before.clone();
+        }
+        let guard = scope.try_lock_writer().unwrap();
+        let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
+        if phase != "queued-both" {
+            journal
+                .record(0, super::super::journal::Receipt::Pending)
+                .unwrap();
+        }
+        if phase == "done" || phase == "pending-after" {
+            super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
+        }
+        if phase == "done" {
+            journal
+                .record(0, super::super::journal::Receipt::Done)
+                .unwrap();
+        }
+        let target = tmp
+            .path()
+            .join(if phase == "later-queued" { "b" } else { "a" });
+        let file = std::fs::File::open(&target).unwrap();
+        #[cfg(target_os = "linux")]
+        let name = "user.upskill-recovery";
+        #[cfg(target_os = "macos")]
+        let name = "upskill-recovery";
+        rustix::fs::fsetxattr(&file, name, b"manual", rustix::fs::XattrFlags::empty()).unwrap();
+        let before_a = std::fs::read(tmp.path().join("a")).unwrap();
+        let before_journal =
+            std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap();
+        assert!(scope.recover_operation(&guard).is_err(), "{phase}");
+        assert_eq!(
+            std::fs::read(tmp.path().join("a")).unwrap(),
+            before_a,
+            "{phase}: earlier output changed"
+        );
+        assert_eq!(std::fs::read(tmp.path().join("b")).unwrap(), b"old");
+        assert_eq!(
+            std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap(),
+            before_journal,
+            "{phase}: receipt advanced"
+        );
+        let mut value = [0u8; 64];
+        let length = rustix::fs::fgetxattr(&file, name, &mut value[..]).unwrap();
+        assert_eq!(&value[..length], b"manual");
+        assert!(!tmp.path().join("state").exists());
+    }
+}
+#[test]
+fn journal_publication_sync_precedes_output_and_receipt_progress() {
+    use std::os::unix::fs::MetadataExt;
+    for failure in [Some(0usize), Some(1), Some(2), None] {
+        let (tmp, scope, request) = fixture();
+        let guard = scope.try_lock_writer().unwrap();
+        let store = tmp.path().join(".upskill/state");
+        let events = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let observed = events.clone();
+        super::super::TEST_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move |point, index| {
+                match point {
+                    "after_journal_rename" => observed.borrow_mut().push(("rename", index)),
+                    "after_journal_sync" => {
+                        assert_eq!(observed.borrow().last(), Some(&("sync", index)))
+                    }
+                    "before_effect" => {
+                        assert_eq!(observed.borrow().last(), Some(&("sync", 2 * index + 1)))
+                    }
+                    _ => {}
+                }
+                Ok(())
+            }))
+        });
+        let synchronized = events.clone();
+        super::super::journal::TEST_PUBLICATION_SYNC.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move |file, generation| {
+                let expected = std::fs::metadata(&store)?;
+                let actual = file.metadata()?;
+                assert_eq!(
+                    (actual.dev(), actual.ino()),
+                    (expected.dev(), expected.ino())
+                );
+                assert_eq!(synchronized.borrow().last(), Some(&("rename", generation)));
+                synchronized.borrow_mut().push(("sync", generation));
+                if failure == Some(generation) {
+                    anyhow::bail!("injected publication directory sync failure");
+                }
+                file.sync_all()?;
+                Ok(())
+            }))
+        });
+        let result = scope.apply_operation(&guard, &[], request);
+        super::super::journal::TEST_PUBLICATION_SYNC.with(|hook| *hook.borrow_mut() = None);
+        super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+        if let Some(generation) = failure {
+            assert!(result.is_err());
+            assert_eq!(tmp.path().join("a").exists(), generation == 2);
+            assert!(!tmp.path().join("b").exists());
+            assert!(!tmp.path().join("state").exists());
+            let journal = super::super::journal::Journal::load(&scope)
+                .unwrap()
+                .unwrap();
+            assert_eq!(journal.disk.generation, generation as u64);
+            assert_eq!(
+                journal.disk.actions[0].receipt,
+                match generation {
+                    0 => super::super::journal::Receipt::Queued,
+                    1 => super::super::journal::Receipt::Pending,
+                    _ => super::super::journal::Receipt::Done,
+                }
+            );
+        } else {
+            assert_eq!(result.unwrap().outcome, ExecutionOutcome::Complete);
+        }
+    }
+}

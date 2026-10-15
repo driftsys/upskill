@@ -150,3 +150,77 @@ metadata was retained:
   }
 ]
 ```
+
+## Full PR pass 1 repairs
+
+The fixed review target was `f416549277b29efca590ee00b5992c035346ccf0`. Pass 1
+retained three Major findings: publication-directory sync coverage (S), cleanup
+payload inode coverage (S), and full recovery metadata qualification (M). Minor
+stale status wording (S) and the hosted Linux `never_loop` lint failure (S) were
+repaired in the same pass. No new deferred issue was needed.
+
+Recovery now qualifies every destination's metadata, existing parents and
+UID/GID before selecting any effect, receipt advancement or cleanup, including
+Done and unchanged Queued actions. The regression covers a later Queued file,
+Done, Queued-Both and Pending-After files with unsupported metadata, asserting
+that outputs and receipts remain unchanged. Publication tests verify the state
+directory descriptor, rename-before-sync and sync-before-output order, and
+failures during initial, Pending and Done publication. Cleanup tests retain a
+held inode, replace the payload with identical bytes and mode, then require
+rejection and replacement preservation.
+
+`just fmt`, `just verify` (1037 passed, 1 ignored), all-target Clippy, and
+`cargo +1.85.0 check --all-targets --locked` passed locally after these repairs.
+The explicitly selected compiler reported `rustc 1.85.0 (4d91de4e4 2025-02-17)`.
+Hosted final-head validation and PR pass 2 remain pending at this recording
+point.
+
+The earlier hosted target passed Linux/macOS/Windows tests and MSRV but failed
+Linux Clippy; that failed run does not qualify the repaired head. The Linux fix
+separates rejection of any xattr from Darwin's permitted-attribute loop.
+
+Retained control metadata for the three regression repairs follows. Each mutant
+failed its focused test at runtime; source restoration hashes identify the
+restored pre-formatting contents at the time of each experiment.
+
+```json
+[
+  {
+    "control": "journal-sync",
+    "file": "src/filesystem/execution/journal.rs",
+    "removed": "self.sync_publication(generation)?;",
+    "replacement": "/* control: publication directory sync omitted */",
+    "test": "journal_publication_sync_precedes_output_and_receipt_progress",
+    "exit": 101,
+    "restored_sha256": "99e1b5f6fb9e01076ac5c73f97e5e906e4c55251ba4cac579d9c0d4aa9fe0f95"
+  },
+  {
+    "control": "cleanup-inode",
+    "file": "src/filesystem/execution/journal.rs",
+    "removed": "id == payload.identity && after.matches(&value)",
+    "replacement": "after.matches(&value)",
+    "test": "cleanup_rejects_identical_payload_replacement_inode",
+    "exit": 101,
+    "restored_sha256": "99e1b5f6fb9e01076ac5c73f97e5e906e4c55251ba4cac579d9c0d4aa9fe0f95"
+  },
+  {
+    "control": "recovery-metadata",
+    "file": "src/filesystem/execution/run.rs",
+    "removed": "        for location in &locations {\n            backend::qualify_metadata(scope, location).with_context(qualification_context)?;\n        }\n",
+    "replacement": "",
+    "test": "recovery_qualifies_metadata_for_every_receipt_before_progress",
+    "exit": 101,
+    "restored_sha256": "5adf77ba782be63854da77c2db06f1edb199d8f146079d2047d7321fea37cb05"
+  }
+]
+```
+
+Tested repaired source identities after formatting:
+
+```text
+fb3f01cae57e9d34710f557a653c27aa5aa3f1279a8f1c40cc0f79816c96cf6a  src/filesystem/execution/backend.rs
+a194ac3a50173331ff7122200d5d9220b5831e7cc1090035b41588ba2add149c  src/filesystem/execution/journal.rs
+5adf77ba782be63854da77c2db06f1edb199d8f146079d2047d7321fea37cb05  src/filesystem/execution/run.rs
+69411bb6538c17945d4c5e44aa813c58bd295d3c41211f63022e959e97a35f3f  src/filesystem/execution/run_tests.rs
+262ef9f579163f5d1716f4bcdad171b383e244014d17874238befe637a2498c7  src/filesystem/execution/journal_tests.rs
+```

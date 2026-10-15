@@ -37,6 +37,14 @@ pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
         .context("extended metadata cannot be qualified")?;
     #[allow(unused_mut)]
     let mut attributes = Vec::new();
+    #[cfg(target_os = "linux")]
+    ensure!(
+        buffer[..length]
+            .split(|b| *b == 0)
+            .all(|name| name.is_empty()),
+        "extended attributes are unsupported for execution"
+    );
+    #[cfg(target_os = "macos")]
     for name in buffer[..length]
         .split(|b| *b == 0)
         .filter(|v| !v.is_empty())
@@ -52,11 +60,6 @@ pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
             value.truncate(length);
             attributes.push((name.to_vec(), value));
         }
-        #[cfg(target_os = "linux")]
-        {
-            let _ = name;
-            anyhow::bail!("extended attributes are unsupported for execution");
-        }
     }
     #[cfg(target_os = "macos")]
     {
@@ -68,12 +71,12 @@ pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
     }
     Ok(attributes)
 }
-pub(super) fn qualify_metadata(scope: &QualifiedScope, action: &PlannedFile) -> Result<()> {
-    let snapshot = scope.observe_destinations(std::slice::from_ref(&action.location))?;
+pub(super) fn qualify_metadata(scope: &QualifiedScope, location: &FileLocation) -> Result<()> {
+    let snapshot = scope.observe_destinations(std::slice::from_ref(location))?;
     let mut dir = scope.reopen_directory()?;
     let mount = Mount::of(&dir, Mount::queries())?;
     require_plain_metadata(&dir)?;
-    let parts: Vec<_> = action.location.path.split('/').collect();
+    let parts: Vec<_> = location.path.split('/').collect();
     for part in &parts[..parts.len() - 1] {
         let next = match directory(&dir, part) {
             Ok(next) => next,
@@ -90,7 +93,7 @@ pub(super) fn qualify_metadata(scope: &QualifiedScope, action: &PlannedFile) -> 
         dir = next;
     }
     if snapshot.observations()[0].value.is_some() {
-        let (dir, name) = parent(scope, &action.location, false)?;
+        let (dir, name) = parent(scope, location, false)?;
         let file = File::from(openat(
             &dir,
             name.as_str(),
@@ -204,7 +207,7 @@ fn apply_named(
     token: &str,
     index: usize,
 ) -> Result<()> {
-    qualify_metadata(scope, action)?;
+    qualify_metadata(scope, &action.location)?;
     let locations = [action.location.clone()];
     let before = scope.observe_destinations(&locations)?;
     ensure!(
