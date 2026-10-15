@@ -11,7 +11,11 @@ and the implemented interfaces in the
 Implementation and initial tests span `ff4671f..9228cc1`. The focused suite had
 16 passing acceptance tests at `9228cc1`; subsequent test-only quick-review
 fixes strengthened payload, topology and diagnostic assertions and brought it to
-18 passing tests without production changes.
+18 passing tests without production changes. Subsequent PR-review coverage adds
+independent empty-extra-binding rejection, all incompatible supported
+family/surface pairs and audience-excluded Codex rejection, bringing the suite
+to 20 passing tests. Three additional assertion-failing controls cover those
+checks; all 19 controls were restored before green runs.
 
 Full `cargo test`, `just verify` and the locked Rust 1.85 all-target check
 passed for the implementation. The restored focused suite passed 18 tests after

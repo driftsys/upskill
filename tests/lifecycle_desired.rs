@@ -835,3 +835,53 @@ fn batch_retains_distinct_payloads_and_empty_excluded_sets() {
     );
     assert!(failed[0].message.contains("duplicate installation"));
 }
+
+#[test]
+fn empty_additional_compiler_binding_is_rejected() {
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    for (client, consumer, empty_client) in [
+        (Client::Claude, TargetSurface::ClaudeCli, Client::Copilot),
+        (Client::Claude, TargetSurface::ClaudeCli, Client::OpenCode),
+        (Client::Copilot, TargetSurface::CopilotCli, Client::Claude),
+    ] {
+        let item = installation(&source, &[consumer]);
+        let bindings = [binding(client, &[consumer]), binding(empty_client, &[])];
+        let error = compile_rule_desired_set(request(&item, &source, &bindings)).unwrap_err();
+        assert!(format!("{error:#}").contains("requires explicit consumers"));
+    }
+}
+
+#[test]
+fn compiler_surface_mapping_rejects_every_incompatible_family() {
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    for (client, consumer) in [
+        (Client::Claude, TargetSurface::CopilotCli),
+        (Client::Claude, TargetSurface::CopilotVscodeLocal),
+        (Client::Claude, TargetSurface::OpenCodeCli),
+        (Client::Copilot, TargetSurface::ClaudeCli),
+        (Client::Copilot, TargetSurface::OpenCodeCli),
+        (Client::OpenCode, TargetSurface::ClaudeCli),
+        (Client::OpenCode, TargetSurface::CopilotCli),
+        (Client::OpenCode, TargetSurface::CopilotVscodeLocal),
+    ] {
+        let item = installation(&source, &[consumer]);
+        let bindings = [binding(client, &[consumer])];
+        let error = compile_rule_desired_set(request(&item, &source, &bindings)).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("incompatible"),
+            "{client:?} and {consumer:?}"
+        );
+    }
+    let excluded = synthetic(&[(
+        "RULE.md",
+        b"---\nschema: 1\nname: source\ndescription: demo\naudience: [claude]\n---\n\n# Demo\n",
+        None,
+    )]);
+    for consumer in [TargetSurface::CodexCli, TargetSurface::CodexIde] {
+        let item = installation(&excluded, &[consumer]);
+        let error = compile_rule_desired_set(request(&item, &excluded, &[])).unwrap_err();
+        let message = format!("{error:#}");
+        assert!(message.contains("unsupported compiler surface"));
+        assert!(message.contains(consumer.name()));
+    }
+}

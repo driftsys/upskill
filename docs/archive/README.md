@@ -81,11 +81,13 @@ is implemented for explicit complete file sets. The
 [captured item compiler](../specification/specification.md#45-captured-item-compilation)
 derives complete per-client entrypoint/resource outputs, and the
 [mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
-composes explicit complete file/contribution sets. Connecting compiler outputs
-to lifecycle desired sets, qualified source/destination evidence, durable state
-and transactional execution remain pending. The operational lifecycle design and
-M1 plan remain active; the whole-file planning pair is archived in its own entry
-below.
+composes explicit complete file/contribution sets. The
+[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+producer binds rule outputs to explicit roots and consumers. Integration with
+lifecycle reconciliation and planning, qualified source/destination evidence,
+durable state and transactional execution remain pending. The operational
+lifecycle design and M1 plan remain active; the whole-file planning pair is
+archived in its own entry below.
 
 ## Strict captured source manifests
 
@@ -128,11 +130,13 @@ is implemented for explicit complete file sets. The
 [captured item compiler](../specification/specification.md#45-captured-item-compilation)
 derives complete per-client entrypoint/resource outputs, and the
 [mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
-composes explicit complete file/contribution sets. Compiler-to-lifecycle desired
-sets, immutable Git evidence, source stabilization, qualified observation,
-destination qualification, state/execution and Codex activation remain pending.
-The source-manifest platform evidence above is retained as recorded; the
-whole-file planning pair is archived in its own entry below.
+composes explicit complete file/contribution sets. The
+[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+producer is implemented. Lifecycle reconciliation and planning, immutable Git
+evidence, source stabilization, qualified observation, destination
+qualification, state/execution and Codex activation remain pending. The
+source-manifest platform evidence above is retained as recorded; the whole-file
+planning pair is archived in its own entry below.
 
 ## Owned whole-file operation planning
 
@@ -168,12 +172,14 @@ The
 [captured item compiler](../specification/specification.md#45-captured-item-compilation)
 derives complete entrypoint/resource sets, and the
 [mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
-composes explicit complete file/contribution sets. Connecting compiler outputs
-to lifecycle desired sets, qualified source/destination observation, filesystem
-equivalence/containment, writer locking, permission policy, durable state,
-apply/recovery and Codex activation remain pending. This prerequisite does not
-complete M1-A2, M1-A3 or M1. Other WIP retains its prior disposition; this entry
-resolves only the exact named pair.
+composes explicit complete file/contribution sets. The
+[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+producer binds rule outputs to explicit roots and consumers. Integration with
+lifecycle reconciliation and planning, qualified source/destination observation,
+filesystem equivalence/containment, writer locking, permission policy, durable
+state, apply/recovery and Codex activation remain pending. This prerequisite
+does not complete M1-A2, M1-A3 or M1. Other WIP retains its prior disposition;
+this entry resolves only the exact named pair.
 
 ## Captured item compilation
 
@@ -204,11 +210,13 @@ Durable successors:
 The pure producer now derives complete generation entrypoint/resource sets from
 captured values. The
 [mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
-composes explicit complete file/contribution sets. Connecting compiled outputs
-to complete lifecycle desired sets and ownership, qualified source/destination
-observation, writer locking, destination permission policy, durable state,
-apply/recovery and native Codex activation remain pending. Active matching body
-overrides are explicitly rejected pending precedence implementation. The
+composes explicit complete file/contribution sets. The
+[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+producer binds complete rule outputs. Integration with ownership and lifecycle
+planning, qualified source/destination observation, writer locking, destination
+permission policy, durable state, apply/recovery and native Codex activation
+remain pending. Active matching body overrides are explicitly rejected pending
+precedence implementation. The
 [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active;
 this prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
