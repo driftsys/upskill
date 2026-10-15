@@ -168,6 +168,13 @@ pub fn reconcile_references(
             dependency_id,
         } => retained_bundles.contains(bundle_id) && retained_bundles.contains(dependency_id),
     });
+    ensure!(
+        changes
+            .add_references
+            .iter()
+            .all(|edge| references.contains(edge)),
+        "added reference is unreachable"
+    );
     let mut ordered_items = Vec::new();
     for old in &prior.installations {
         if let Some(item) = installations.remove(&old.owner.installation_id) {

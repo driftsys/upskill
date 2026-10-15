@@ -1104,11 +1104,12 @@ direct roots and transitive bundle edges retain nodes; empty output or
 artifact/consumer count does not remove a referenced installation.
 
 All supplied nodes and edges are validated before iterative pruning, including
-unreachable dangling edges and cycles. Explicit upserts must remain reachable.
-Duplicate, absent, already-existing or overlapping reference edits conflict.
-Existing installation IDs cannot change source/kind/name/alias or scope/raw
-root; existing bundle IDs retain source/name. Valid evidence/revision and
-requested surface updates remain subject to later complete artifact planning.
+unreachable dangling edges and cycles. Explicit upserts and added references
+must survive reconciliation; otherwise the request is rejected. Duplicate,
+absent, already-existing or overlapping reference edits conflict. Existing
+installation IDs cannot change source/kind/name/alias or scope/raw root;
+existing bundle IDs retain source/name. Valid evidence/revision and requested
+surface updates remain subject to later complete artifact planning.
 
 Surviving rows retain order; new nodes and references append in ID/enum order.
 Removed IDs follow prior order. Graph results contain neither artifacts nor the

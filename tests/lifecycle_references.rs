@@ -552,3 +552,92 @@ fn internal_edge_removal_preserves_roots_and_other_paths() {
     assert!(result.removed_bundle_ids.is_empty());
     assert_eq!(result.removed_installation_ids, ["shared"]);
 }
+
+#[test]
+fn reachable_duplicate_upserts_are_rejected() {
+    let s = diamond();
+    for changes in [
+        GraphChanges {
+            installations: vec![s.installations[0].clone(), s.installations[0].clone()],
+            ..Default::default()
+        },
+        GraphChanges {
+            bundles: vec![s.bundles[0].clone(), s.bundles[0].clone()],
+            ..Default::default()
+        },
+    ] {
+        let before = s.clone();
+        let edits = changes.clone();
+        let error = reconcile_references(&s, &changes).unwrap_err().to_string();
+        assert!(error.contains("duplicate"), "{error}");
+        assert_eq!(s, before);
+        assert_eq!(changes, edits);
+    }
+}
+
+#[test]
+fn explicit_edges_from_detached_bundles_are_rejected() {
+    let s = diamond();
+    for edge in [member("left", "shared"), dependency("left", "right")] {
+        let error = reconcile_references(
+            &s,
+            &GraphChanges {
+                remove_references: vec![root("left")],
+                add_references: vec![edge],
+                ..Default::default()
+            },
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("added reference is unreachable"), "{error}");
+    }
+}
+
+#[test]
+fn installation_root_does_not_retain_same_named_bundle() {
+    let mut s = empty();
+    s.installations = vec![item("same")];
+    s.bundles = vec![bundle("same")];
+    s.references = vec![root("same"), member("same", "same"), direct("same")];
+    let result = reconcile_references(
+        &s,
+        &GraphChanges {
+            remove_references: vec![root("same")],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(result.installations, s.installations);
+    assert!(result.bundles.is_empty());
+    assert_eq!(result.references, vec![direct("same")]);
+    assert_eq!(result.removed_bundle_ids, ["same"]);
+}
+
+#[test]
+fn prior_order_and_new_internal_edge_order_are_stable() {
+    let mut s = empty();
+    s.installations = vec![item("z"), item("a"), item("m")];
+    s.bundles = vec![bundle("z"), bundle("a")];
+    s.references = vec![direct("z"), direct("a"), direct("m"), root("z"), root("a")];
+    let mut changes = GraphChanges {
+        add_references: vec![dependency("z", "a"), member("z", "m"), member("a", "z")],
+        ..Default::default()
+    };
+    let result = reconcile_references(&s, &changes).unwrap();
+    assert_eq!(result.installations, s.installations);
+    let mut expected = s.references.clone();
+    expected.extend([member("a", "z"), member("z", "m"), dependency("z", "a")]);
+    assert_eq!(result.references, expected);
+    changes.add_references.reverse();
+    assert_eq!(result, reconcile_references(&s, &changes).unwrap());
+    let removed = reconcile_references(
+        &s,
+        &GraphChanges {
+            remove_references: vec![direct("a"), direct("z")],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(removed.removed_installation_ids, ["z", "a"]);
+    assert_eq!(removed.installations, vec![item("m")]);
+}

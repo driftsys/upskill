@@ -109,8 +109,8 @@ pub fn reconcile_references(
       reachability.
 - [ ] Traverse actual direct roots with iterative queues and indexed outgoing
       edges. Remove unreachable prior nodes and their outgoing references.
-      Reject any explicitly upserted node that is unreachable in the result.
-      Validate the final graph again without synthetic roots.
+      Reject any explicitly upserted node or added reference that would be
+      pruned. Validate the final graph again without synthetic roots.
 - [ ] Write `direct_and_bundle_references_are_independent` and
       `referenced_empty_installation_is_retained`; assert literal IDs and edges,
       not reference counts derived from ownership.

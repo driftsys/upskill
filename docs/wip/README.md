@@ -12,10 +12,6 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
-- [Gate 5 reference reconciliation](plans/2026-10-16-m1-gate5-reference-reconciliation.md)
-  — task 2b's first bounded delivery, following #296 merged as `b01a67d`.
-  Shared-owner reconciliation and complete lifecycle planning follow separately.
-
 - [Gate 5 combined lifecycle](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
   — active umbrella. The pure
   [combined-state slice](../design/combined-lifecycle-state.md) is implemented;
@@ -28,6 +24,13 @@ references must be reconciled as part of that feature's review.
   [plan is archived](../archive/plans/2026-10-15-m1-gate5-rule-desired-sets.md)
   with
   [local validation evidence](../technotes/2026-10-15-m1-gate5-desired-validation.md).
+  The pure
+  [reference reconciliation slice](../design/lifecycle-reference-reconciliation.md)
+  is implemented as task 2b's first bounded delivery, following #296
+  (`b01a67d`); its
+  [plan is archived](../archive/plans/2026-10-16-m1-gate5-reference-reconciliation.md)
+  with
+  [local validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md).
   Shared-owner reconciliation and complete lifecycle planning (task 2b), guarded
   backup/application/recovery and observational adapters remain pending. Gate 5
   remains incomplete; production activation remains Gate 6.

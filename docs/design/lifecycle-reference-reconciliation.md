@@ -5,6 +5,21 @@ It consumes a validated `CombinedState` and explicit `GraphChanges`, and returns
 `ReconciledGraph`. It performs no I/O, source fetch, ownership adoption,
 migration, backup, application or schema-2 production write.
 
+## Interfaces and components
+
+The public [reconciliation module](../../src/lifecycle/reconcile/mod.rs) exposes
+`GraphChanges`, which carries node upserts and exact edge edits, and
+`ReconciledGraph`, which carries surviving graph records and removed IDs. The
+private [reachability traversal](../../src/lifecycle/reconcile/reachability.rs)
+indexes bundle dependencies and memberships and follows direct roots using an
+iterative queue. It keeps installation and bundle reachability separate even
+when IDs have the same spelling.
+
+The boundary reuses the combined-state validator and whole-file binding checks.
+Validation-only graph values omit artifacts, consumer associations and legacy
+state after the complete prior state has been validated. Those temporary values
+do not replace the complete state or grant authority to apply effects.
+
 ## Authority and retention
 
 Only `DirectInstallation`, `DirectBundle`, `BundleInstallation` and
@@ -39,9 +54,9 @@ Every supplied node and edge is validated before reachability pruning. Private
 validation-only direct roots allow the existing state validator to check all
 candidate nodes, dangling edges and cycles without treating intentional detaches
 as unreachable-state errors. Those roots never escape or participate in actual
-retention. Explicitly upserted nodes must be reachable in the result;
-conflicting update-and-final-detach requests fail rather than silently discard
-updates.
+retention. Explicitly upserted nodes and added references must survive in the
+result; conflicting update-and-final-detach requests fail rather than silently
+discard updates.
 
 Iterative traversal uses indexed dependency and membership edges. Unreachable
 prior nodes and their outgoing edges are removed. Surviving prior nodes and
@@ -62,3 +77,13 @@ Existing mixed and instruction planners keep their affected multi-owner
 rejection. Guarded lifecycle backup/application/recovery, observational adapters
 and native activation remain separate gates. This boundary alone does not
 complete task 2b, Gate 5, M1 or the updater prerequisite.
+
+## Trace
+
+Requirements are recorded in
+[specification §4.15](../specification/specification.md#415-authoritative-lifecycle-reference-reconciliation).
+The [public acceptance suite](../../tests/lifecycle_references.rs) establishes
+retention, edit rejection, binding immutability, deterministic output and input
+preservation.
+[Validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md)
+records local checks and their limits.
