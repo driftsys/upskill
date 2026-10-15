@@ -187,6 +187,15 @@ schema-1 backup and the M1-A3 containment, preflight, writer-lock and
 recoverable journal boundary. These prerequisites do not complete M1-A2 or
 provide schema-2 support.
 
+The [gate-4 qualified executor](../../design/qualified-file-execution.md) now
+provides opt-in file application, strict desired-payload journals and forward
+recovery under the matching scope writer guard. Local full tests, process
+termination checkpoints and the Rust 1.85 all-target check passed for the
+candidate implementation. Hosted Linux/macOS qualification remains pending; gate
+4 is not complete. The schema-2 lifecycle integration gate and native Codex gate
+remain separate, and M1-A2, M1-A3 and M1 remain incomplete. This executor does
+not activate the current schema-1 commands or adopt legacy ownership.
+
 ### M1-B: Project and user unconditional instructions
 
 - Start with CLI examples: `--codex` opt-in, no-selection unchanged; add two

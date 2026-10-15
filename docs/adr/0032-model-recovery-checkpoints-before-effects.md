@@ -45,12 +45,14 @@ observation validation prevents a later conflict from being hidden by an earlier
 next step.
 
 Apply conveys no write authority. Producers must qualify physical identities,
-exact values, containment, source/state bindings and source availability.
-Credential-free reconstruction, durable receipts, checkpoint persistence,
-owner/group, ACLs, extended metadata and physical application remain subsequent
-contracts. No lifecycle caller, journal or actual recovery is activated; M1-A2,
-M1-A3 and M1 remain incomplete. Literal acceptance cases and independent
-compiled semantic controls pin both action roles and ordering boundaries.
+exact values, containment, source/state bindings and source availability. The
+opt-in executor in [AD-0033](0033-qualified-file-execution-and-journals.md)
+supplies desired-payload reconstruction, durable receipts, checkpoint
+persistence and physical effects within a restricted metadata envelope. No
+lifecycle caller or schema-2 writes are activated; hosted executor
+qualification, M1-A2, M1-A3 and M1 remain incomplete. Literal acceptance cases
+and independent compiled semantic controls pin both action roles and ordering
+boundaries.
 
 Satisfies:
 [specification §4.11](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#411-ordered-recovery-checkpoint-model).

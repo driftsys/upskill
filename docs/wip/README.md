@@ -12,6 +12,11 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
+  — opt-in library implementation and durable records; hosted Linux/macOS
+  qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope
+  and plan are archived with links to durable successors.
+
 - [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md)
   — AC-00 target capabilities, ownership, installation planning, migrations, and
   permission preservation; proposed contracts with explicit evidence gates.

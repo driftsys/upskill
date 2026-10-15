@@ -15,10 +15,10 @@ and special bits are never copied. Supplied modes outside 0o0000..=0o7777 reject
 even when selection would not use them.
 
 This is a supplied-value policy, with no I/O or process-umask input. It grants
-no ownership, containment, metadata-preservation or execution authority.
-Owner/group, ACLs, extended metadata and atomic replacement still require
-separate qualified writer decisions. The compiler, planners and current CLI
-remain unchanged. File application, recovery, state persistence and lifecycle
+no ownership, containment, metadata-preservation or execution authority. The
+separate [qualified executor](qualified-file-execution.md) enforces a restricted
+owner/group and metadata envelope before atomic replacement. The compiler,
+planners and current CLI remain unchanged. Lifecycle state persistence and
 activation remain pending.
 
 ## Public interface and examples
@@ -59,6 +59,7 @@ clock.
 
 See
 [specification 4.10](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#410-explicit-file-permission-selection)
-and [AD-0031](../adr/0031-select-explicit-file-permissions.md). Metadata and
-qualified writer work remains required before applying selected bits; M1-A2,
-M1-A3 and M1 remain incomplete.
+and [AD-0031](../adr/0031-select-explicit-file-permissions.md). The opt-in
+executor applies selected bits only after qualification; hosted executor
+qualification and lifecycle integration remain required. M1-A2, M1-A3 and M1
+remain incomplete.

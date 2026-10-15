@@ -1,0 +1,261 @@
+use super::*;
+use crate::files::plan::{FileLocation, FileValue, PlannedFile};
+use crate::ownership::{InstallationRoot, OwnershipScope};
+use std::os::unix::fs::PermissionsExt;
+#[test]
+fn execution_types_are_exported_at_filesystem_boundary() {
+    let _: Option<crate::filesystem::ExecutionRequest> = None;
+    let _: Option<crate::filesystem::ExecutionReport> = None;
+    let _ = crate::filesystem::ExecutionOutcome::Complete;
+}
+fn fixture() -> (tempfile::TempDir, QualifiedScope, ExecutionRequest) {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: tmp.path().into(),
+    };
+    let scope = QualifiedScope::open(&root).unwrap();
+    let action = |name: &str| PlannedFile {
+        location: FileLocation {
+            root: root.clone(),
+            path: name.into(),
+        },
+        before: None,
+        after: Some(FileValue {
+            bytes: name.as_bytes().to_vec(),
+            mode: Some(0o600),
+        }),
+    };
+    (
+        tmp,
+        scope,
+        ExecutionRequest {
+            files: vec![action("a"), action("b")],
+            state: action("state"),
+        },
+    )
+}
+#[test]
+fn applies_complete_operation_and_final_state() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    let report = scope.apply_operation(&guard, &[], request).unwrap();
+    assert_eq!(report.outcome, ExecutionOutcome::Complete);
+    assert_eq!(report.recorded_prefix, 3);
+    assert_eq!(report.verified_post_prefix, 3);
+    for path in ["a", "b", "state"] {
+        assert_eq!(
+            std::fs::read(tmp.path().join(path)).unwrap(),
+            path.as_bytes()
+        );
+    }
+    assert!(scope.recover_operation(&guard).unwrap().is_none());
+}
+#[test]
+fn all_preconditions_checked_before_first_output() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    std::fs::write(tmp.path().join("b"), b"manual").unwrap();
+    std::fs::set_permissions(tmp.path().join("b"), std::fs::Permissions::from_mode(0o600)).unwrap();
+    assert!(scope.apply_operation(&guard, &[], request).is_err());
+    assert!(!tmp.path().join("a").exists());
+    assert!(!tmp.path().join(".upskill").exists());
+}
+#[test]
+fn absent_destinations_qualify_existing_parent_metadata_before_outputs() {
+    for target in ["nested/b", "nested/missing/b"] {
+        let (tmp, scope, mut request) = fixture();
+        request.files[1].location.path = target.into();
+        let path = tmp.path().join("nested");
+        std::fs::create_dir(&path).unwrap();
+        let dir = std::fs::File::open(&path).unwrap();
+        #[cfg(target_os = "linux")]
+        let name = "user.manual";
+        #[cfg(target_os = "macos")]
+        let name = "com.example.manual";
+        rustix::fs::fsetxattr(&dir, name, b"manual", rustix::fs::XattrFlags::empty()).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        assert!(scope.apply_operation(&guard, &[], request).is_err());
+        assert!(
+            !tmp.path().join("a").exists(),
+            "first output was applied before parent qualification"
+        );
+        assert!(
+            !tmp.path().join(".upskill").exists(),
+            "intent was published before parent qualification"
+        );
+        assert!(!path.join("missing").exists());
+    }
+}
+#[test]
+fn foreign_guard_rejects() {
+    let (tmp, scope, request) = fixture();
+    let (_other, foreign, _) = fixture();
+    let guard = foreign.try_lock_writer().unwrap();
+    assert!(scope.apply_operation(&guard, &[], request).is_err());
+    assert!(!tmp.path().join("a").exists());
+}
+#[test]
+fn source_changed_after_plan_rejects() {
+    let (tmp, scope, request) = fixture();
+    let source = tempfile::tempdir().unwrap();
+    std::fs::write(source.path().join("body"), b"old").unwrap();
+    let source_root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: source.path().into(),
+    };
+    let source_scope = QualifiedScope::open(&source_root).unwrap();
+    let snapshot = source_scope.observe_source_tree().unwrap();
+    std::fs::write(source.path().join("body"), b"new").unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    assert!(
+        scope
+            .apply_operation(&guard, &[&snapshot], request)
+            .is_err()
+    );
+    assert!(!tmp.path().join(".upskill").exists());
+}
+#[test]
+fn state_only_and_noop_operations_complete() {
+    let (tmp, scope, mut request) = fixture();
+    request.files.clear();
+    let guard = scope.try_lock_writer().unwrap();
+    scope.apply_operation(&guard, &[], request.clone()).unwrap();
+    request.state.before = request.state.after.clone();
+    assert_eq!(
+        scope
+            .apply_operation(&guard, &[], request)
+            .unwrap()
+            .recorded_prefix,
+        1
+    );
+    assert_eq!(std::fs::read(tmp.path().join("state")).unwrap(), b"state");
+}
+#[test]
+fn observation_sorting_does_not_change_action_order() {
+    let (tmp, scope, mut request) = fixture();
+    request.files[0].location.path = "z".into();
+    request.state.location.path = ".upskill-lock.json".into();
+    let guard = scope.try_lock_writer().unwrap();
+    assert_eq!(
+        scope.apply_operation(&guard, &[], request).unwrap().outcome,
+        ExecutionOutcome::Complete
+    );
+    assert_eq!(std::fs::read(tmp.path().join("z")).unwrap(), b"a");
+    assert_eq!(
+        std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        b"state"
+    );
+}
+#[test]
+fn later_edit_preserves_applied_prefix() {
+    let (tmp, scope, request) = fixture();
+    let path = tmp.path().join("b");
+    super::super::TEST_HOOK.with(|hook| {
+        *hook.borrow_mut() = Some(Box::new(move |point, index| {
+            if point == "after_done" && index == 0 {
+                std::fs::write(&path, b"manual")?;
+                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+            }
+            Ok(())
+        }))
+    });
+    let guard = scope.try_lock_writer().unwrap();
+    let report = scope.apply_operation(&guard, &[], request).unwrap();
+    super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+    assert_eq!(report.outcome, ExecutionOutcome::Reconcile { index: 1 });
+    assert_eq!(report.recorded_prefix, 1);
+    assert_eq!(report.verified_post_prefix, 1);
+    assert_eq!(std::fs::read(tmp.path().join("a")).unwrap(), b"a");
+    assert_eq!(std::fs::read(tmp.path().join("b")).unwrap(), b"manual");
+    assert!(!tmp.path().join("state").exists());
+}
+#[test]
+fn later_alias_error_reports_durable_prefix_and_preserves_alias() {
+    let (tmp, scope, request) = fixture();
+    let path = tmp.path().join("b");
+    super::super::TEST_HOOK.with(|hook| {
+        *hook.borrow_mut() = Some(Box::new(move |point, index| {
+            if point == "after_done" && index == 0 {
+                std::os::unix::fs::symlink("a", &path)?;
+            }
+            Ok(())
+        }))
+    });
+    let guard = scope.try_lock_writer().unwrap();
+    let error = scope.apply_operation(&guard, &[], request).unwrap_err();
+    super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+    let message = format!("{error:#}");
+    assert!(message.contains("recorded prefix 1"), "{message}");
+    assert!(
+        message.contains("verified post-state prefix 0"),
+        "{message}"
+    );
+    assert_eq!(
+        std::fs::read_link(tmp.path().join("b")).unwrap(),
+        std::path::Path::new("a")
+    );
+    assert_eq!(std::fs::read(tmp.path().join("a")).unwrap(), b"a");
+    assert!(!tmp.path().join("state").exists());
+}
+#[test]
+fn queued_poststate_requires_reconciliation() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    let _j = super::super::journal::Journal::create(&scope, &request).unwrap();
+    super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
+    let report = scope.recover_operation(&guard).unwrap().unwrap();
+    assert_eq!(report.outcome, ExecutionOutcome::Reconcile { index: 0 });
+    assert_eq!(report.recorded_prefix, 0);
+    assert_eq!(std::fs::read(tmp.path().join("a")).unwrap(), b"a");
+    assert!(!tmp.path().join("b").exists());
+}
+#[test]
+fn failed_effect_sync_is_resynchronized_before_receipt() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    super::super::TEST_HOOK.with(|hook| {
+        *hook.borrow_mut() = Some(Box::new(|point, index| {
+            if point == "after_effect" && index == 0 {
+                anyhow::bail!("injected failure before directory sync");
+            }
+            Ok(())
+        }))
+    });
+    assert!(scope.apply_operation(&guard, &[], request).is_err());
+    let inode =
+        std::os::unix::fs::MetadataExt::ino(&std::fs::metadata(tmp.path().join("a")).unwrap());
+    let synced = std::rc::Rc::new(std::cell::Cell::new(false));
+    let observed = synced.clone();
+    super::super::TEST_HOOK.with(|hook| {
+        *hook.borrow_mut() = Some(Box::new(move |point, index| {
+            if point == "after_ack_sync" && index == 0 {
+                observed.set(true);
+            }
+            Ok(())
+        }))
+    });
+    let report = scope.recover_operation(&guard).unwrap().unwrap();
+    super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+    assert!(
+        synced.get(),
+        "observed post-state was acknowledged without syncing its file and directory"
+    );
+    assert_eq!(report.outcome, ExecutionOutcome::Complete);
+    assert_eq!(
+        std::os::unix::fs::MetadataExt::ino(&std::fs::metadata(tmp.path().join("a")).unwrap()),
+        inode
+    );
+}
+#[test]
+fn readonly_recovery_and_unsafe_root_create_no_storage() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    assert!(scope.recover_operation(&guard).unwrap().is_none());
+    assert!(!tmp.path().join(".upskill").exists());
+    std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o777)).unwrap();
+    assert!(scope.apply_operation(&guard, &[], request).is_err());
+    assert!(!tmp.path().join(".upskill").exists());
+    assert!(!tmp.path().join("a").exists());
+    std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+}
