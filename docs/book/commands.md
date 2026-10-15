@@ -20,11 +20,11 @@ a source-registry repo).
 
 The library's strict source-manifest capture supplies values to the implemented
 pure item compiler, which derives complete per-client entrypoint and resource
-outputs. Connecting compiled outputs to complete lifecycle desired sets remains
-pending. Current commands keep their existing discovery, hashing and persistence
-behavior; they do not invoke capture or activate the owned lifecycle. Captured
-bytes do not establish source authenticity, an atomic snapshot or qualified
-filesystem containment. See the
+outputs. The inactive captured-rule desired-set producer is implemented;
+lifecycle reconciliation remains pending. Current commands keep their existing
+discovery, hashing and persistence behavior; they do not invoke capture or
+activate the owned lifecycle. Captured bytes do not establish source
+authenticity, an atomic snapshot or qualified filesystem containment. See the
 [strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
 
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
@@ -48,9 +48,9 @@ instruction contributions, or explicit Remove. Callers supply ownership and
 exactly one observation per affected location. The combined result preserves
 manual bytes, aggregate modes, no-op actions and interleaved prior record order;
 cross-form collisions and affected ancestor paths conflict. Current commands do
-not invoke this coordinator. Compiler-to-lifecycle desired sets, qualified
-source/destination evidence, state, execution and native activation remain
-separate work. See the
+not invoke this coordinator. Integration of captured-rule desired sets with
+lifecycle planning, qualified source/destination evidence, state, execution and
+native activation remain separate work. See the
 [mixed owned-artifact planning specification](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans).
 
 ## Global flags
@@ -456,7 +456,7 @@ Qualified scope roots, writer locking, destination observation and
 are implemented as separate inactive library capabilities. Final-head hosted
 source qualification remains required. Reference resolution, planner integration
 of per-owner consumer associations, integrating qualified source evidence and
-compiled outputs into complete lifecycle desired sets, state integration and
+captured-rule desired sets with lifecycle planning, state integration and
 transactional execution remain pending. The separate
 [mixed coordinator](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file and contribution sets; current commands and

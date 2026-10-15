@@ -350,10 +350,9 @@ in [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 resource outputs. The complete mixed coordinator is implemented in
 [§4.6](#46-mixed-owned-artifact-operation-plans). Planner integration of the
 implemented reference-graph authority and per-owner consumer associations,
-connecting compiled outputs to complete lifecycle desired sets, state/lifecycle
-integration and transactional execution remain pending. This prerequisite
-changes no CLI behavior, source format or lockfile format and enables no native
-client support.
+integrating the captured-rule desired sets (§4.14) with state/lifecycle and
+transactional execution remain pending. This prerequisite changes no CLI
+behavior, source format or lockfile format and enables no native client support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -369,7 +368,8 @@ This supplies the captured values consumed by the implemented
 [item compiler](#45-captured-item-compilation) to derive complete per-client
 entrypoint and resource outputs. The pure planner for explicitly supplied
 whole-file sets is implemented in [§4.4](#44-owned-whole-file-operation-plans).
-Connecting compiled outputs to complete lifecycle desired sets remains pending.
+Captured-rule desired sets are implemented in §4.14; lifecycle reconciliation
+remains pending.
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
@@ -408,11 +408,11 @@ Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. Immutable Git
-evidence, compiler-to-lifecycle desired-set integration, lifecycle state and
-execution, and Codex activation remain pending. Qualified scope roots and writer
-locking (§4.7) and the inactive destination observation boundary (§4.8) are
-implemented separately. Qualified source snapshots (§4.9) add retained source
-evidence without changing this freely mutable value interface.
+evidence, integration of captured-rule desired sets (§4.14) with lifecycle state
+and execution, and Codex activation remain pending. Qualified scope roots and
+writer locking (§4.7) and the inactive destination observation boundary (§4.8)
+are implemented separately. Qualified source snapshots (§4.9) add retained
+source evidence without changing this freely mutable value interface.
 
 See the
 [source manifest design](https://github.com/driftsys/upskill/blob/main/docs/design/strict-source-manifests.md)
@@ -516,8 +516,8 @@ new rows append in lexical order. The final record set is validated before
 return. Any failure returns no successful partial plan.
 
 This prerequisite leaves existing commands, CLI flags, lockfile persistence and
-native-client behavior unchanged. Connecting compiled captured item outputs to
-complete lifecycle desired sets, qualified observation, destination
+native-client behavior unchanged. Integrating captured-rule desired sets (§4.14)
+with lifecycle planning, qualified observation, destination
 equivalence/containment, writer locking, permission policy, durable state,
 apply/recovery and Codex activation remain pending. The mixed coordinator in
 [§4.6](#46-mixed-owned-artifact-operation-plans) composes complete sets across
@@ -697,11 +697,11 @@ rather than all diagnostics.
 
 This library prerequisite activates no CLI selector, native adapter, source
 fetch, filesystem observation, lock, journal, schema-2 persistence or execution.
-Connecting the captured compiler to complete lifecycle desired sets remains
-pending, along with planner integration of the implemented reference authority
-and per-owner consumer associations, immutable source evidence, target
-qualification, filesystem safety, physical permission application and metadata
-qualification, writer locking, durable state and apply/recovery. Pure
+Captured-rule desired sets are implemented in §4.14. Remaining work includes
+planner integration of the implemented reference authority and per-owner
+consumer associations, immutable source evidence, target qualification,
+filesystem safety, physical permission application and metadata qualification,
+writer locking, durable state and apply/recovery. Pure
 [permission selection](../design/file-permission-policy.md) is implemented as a
 separate inactive supplied-value capability. It does not complete M1-A2, M1-A3
 or M1. The public declarations are in
@@ -1064,6 +1064,36 @@ This library does not change `lockfile::CURRENT_SCHEMA`, command dispatch or
 production lockfiles. It does not establish filesystem ownership or native
 support. See
 [combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md).
+
+### 4.14 Captured rule desired sets
+
+The opt-in `lifecycle::desired::compile_rule_desired_set` API validates a
+complete captured rule source and its explicit installation/source/consumer
+binding, then projects every existing compiler output into a complete desired
+file set. Exact bytes, resource modes, aliases, raw roots and explicit consumers
+survive. Requested surfaces remain recorded after audience exclusion, including
+when the desired set is empty. Empty output is not an installation removal.
+
+Consumers must exactly account for requested surfaces and match the explicitly
+selected Claude, Copilot or OpenCode compiler family. No Codex binding or native
+conformance claim is introduced. Active scoped OpenCode output is rejected
+rather than silently losing nonempty SSOT `scope.paths`.
+
+These are pure supplied-value results with no I/O, ownership adoption, lockfile
+rewrite or production command activation. Physical qualification, permission
+selection, reference/shared-owner reconciliation and application remain
+separate. See
+[captured rule desired sets](https://github.com/driftsys/upskill/blob/main/docs/design/captured-rule-desired-sets.md).
+
+`compile_rule_desired_sets` returns all complete sets in request order only when
+all requests compile and pass preflight. Otherwise `Blocked` contains contextual
+request-index/installation-ID diagnostics and no successful subset. Duplicate
+installation IDs and equal or ancestor/descendant selected paths under the same
+scope and raw root spelling conflict, including equal bytes. Diagnostics sort by
+request indices then message. Empty input returns `Ready([])`. Different raw
+roots and scopes remain separate; physical aliases and case equivalence require
+later qualification. Each failed compilation contributes one contextual error
+rather than exhaustive diagnostics within that rule.
 
 ## 5. Source format and authentication
 
