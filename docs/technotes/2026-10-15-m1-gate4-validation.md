@@ -32,9 +32,10 @@ retain existing 0644/0755 modes as well as private modes.
 
 ## Executed semantic controls
 
-Each control modified only the named behavior temporarily, ran a focused test,
-and restored the exact source in a `finally` block. Each failed an assertion
-with exit 101; none was counted solely from a compile failure.
+The retained logs show compilation followed by runtime test failures for the
+controls below, including assertion failures and unwrap panics. They do not
+retain the inline runner, mutation patches, restoration steps or process exit
+codes; those details cannot be independently established from these artifacts.
 
 | Removed or weakened behavior                             | Regression that rejected it                             |
 | -------------------------------------------------------- | ------------------------------------------------------- |
@@ -108,4 +109,44 @@ ff3218881645c570fb08fdb92c7d82374aa3919eecbbfc33cfb97c4b403d4479  triage-control
 e3d61eca85e0a40973d7534b547acd1d2855fa15f9810157e394b6c5caa516b6  triage-control-mode-conflict.log
 4af809215df5545c35633cb5bfea0c68221b307755e63d306961b2f85aa26e06  triage-control-owner.log
 5282a5c0a11c5334afdceb3be148a3df63869827455153213b0ad321cf183921  triage-control-guard.log
+```
+
+## Final sync-test refinement
+
+After `0f44f1128d09fa17754a9e9df2b575624a79545f`, the sync regression was
+expanded to inspect device/inode identity for the output file and its nested
+parent. A separate deletion case checks that only the parent directory is
+synced, and that a failed directory sync retains Pending. Both cases check sync
+ordering before Done. The evidence wording above was narrowed to the artifacts
+retained for the earlier controls.
+
+The refined candidate passed `just fmt`, `just verify` (1034 passed, one ignored
+subprocess entrypoint) and the Rust 1.85 all-target check locally. The source
+manifest above identifies the earlier candidate; the changed test file now has
+the following SHA-256:
+
+```text
+b8d67533b6c4b20392da2b56dea4e3b3d0dd25768ed147f3712437ebb4220f9b  src/filesystem/execution/run_tests.rs
+```
+
+Two additional controls were executed and their patch/result/restoration
+metadata was retained:
+
+```json
+[
+  {
+    "name": "wrong-descriptor",
+    "old": "sync_recovery(&file, \"file\")?;",
+    "replacement": "sync_recovery(&dir, \"file\")?;",
+    "exit": 101,
+    "restored_sha256": "ee69bcd977c3f113629e885383b421ead5b3732fb44771fc767f2afcb05912d5"
+  },
+  {
+    "name": "deletion-sync",
+    "old": "sync_recovery(&dir, \"directory\")?;",
+    "replacement": "if expected.is_some() { sync_recovery(&dir, \"directory\")?; }",
+    "exit": 101,
+    "restored_sha256": "ee69bcd977c3f113629e885383b421ead5b3732fb44771fc767f2afcb05912d5"
+  }
+]
 ```

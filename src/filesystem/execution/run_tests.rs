@@ -299,59 +299,113 @@ fn mode_only_edit_requires_reconciliation_without_repair() {
 }
 #[test]
 fn recovery_sync_failures_do_not_publish_done() {
-    for failure in [Some("file"), Some("directory"), None] {
-        let (_tmp, scope, request) = fixture();
-        let guard = scope.try_lock_writer().unwrap();
-        let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
-        journal
-            .record(0, super::super::journal::Receipt::Pending)
-            .unwrap();
-        super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
-        let calls = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
-        let recorded = calls.clone();
-        super::super::backend::TEST_SYNC.with(|hook| {
-            *hook.borrow_mut() = Some(Box::new(move |file, kind| {
-                recorded.borrow_mut().push(kind);
-                if failure == Some(kind) {
-                    anyhow::bail!("injected {kind} sync failure");
-                }
-                file.sync_all()?;
-                Ok(())
-            }))
-        });
-        let ordered = calls.clone();
-        super::super::TEST_HOOK.with(|hook| {
-            *hook.borrow_mut() = Some(Box::new(move |point, index| {
-                if point == "before_done" && index == 0 {
-                    assert_eq!(*ordered.borrow(), vec!["file", "directory"]);
-                }
-                Ok(())
-            }))
-        });
-        let result = scope.recover_operation(&guard);
-        super::super::backend::TEST_SYNC.with(|hook| *hook.borrow_mut() = None);
-        super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
-        if failure.is_some() {
-            assert!(result.is_err());
-            assert_eq!(
-                super::super::journal::Journal::load(&scope)
-                    .unwrap()
-                    .unwrap()
-                    .disk
-                    .actions[0]
-                    .receipt,
-                super::super::journal::Receipt::Pending
-            );
-            assert_eq!(
-                *calls.borrow(),
-                if failure == Some("file") {
-                    vec!["file"]
-                } else {
-                    vec!["file", "directory"]
-                }
-            );
-        } else {
-            assert_eq!(result.unwrap().unwrap().outcome, ExecutionOutcome::Complete);
+    use std::os::unix::fs::MetadataExt;
+    for deletion in [false, true] {
+        for failure in [Some("file"), Some("directory"), None] {
+            if deletion && failure == Some("file") {
+                continue;
+            }
+            let (tmp, scope, mut request) = fixture();
+            request.files[0].location.path = "nested/a".into();
+            let parent = tmp.path().join("nested");
+            std::fs::create_dir(&parent).unwrap();
+            let path = parent.join("a");
+            if deletion {
+                std::fs::write(&path, b"old").unwrap();
+                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+                request.files[0].before = Some(FileValue {
+                    bytes: b"old".to_vec(),
+                    mode: Some(0o600),
+                });
+                request.files[0].after = None;
+            }
+            let guard = scope.try_lock_writer().unwrap();
+            let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
+            journal
+                .record(0, super::super::journal::Receipt::Pending)
+                .unwrap();
+            super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
+            let identity = |path: &std::path::Path| {
+                let m = std::fs::metadata(path).unwrap();
+                (m.dev(), m.ino())
+            };
+            let parent_identity = identity(&parent);
+            assert_ne!(parent_identity, identity(tmp.path()));
+            let file_identity = if deletion {
+                None
+            } else {
+                Some(identity(&path))
+            };
+            let calls = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+            let validating = std::rc::Rc::new(std::cell::Cell::new(true));
+            let active = validating.clone();
+            let recorded = calls.clone();
+            super::super::backend::TEST_SYNC.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move |file, kind| {
+                    if active.get() {
+                        let metadata = file.metadata()?;
+                        let expected = match kind {
+                            "file" => file_identity.expect("deletion must not sync a file"),
+                            "directory" => parent_identity,
+                            _ => panic!("unexpected sync kind"),
+                        };
+                        assert_eq!(
+                            (metadata.dev(), metadata.ino()),
+                            expected,
+                            "wrong {kind} sync descriptor"
+                        );
+                        recorded.borrow_mut().push(kind);
+                        if failure == Some(kind) {
+                            anyhow::bail!("injected {kind} sync failure");
+                        }
+                    }
+                    file.sync_all()?;
+                    Ok(())
+                }))
+            });
+            let ordered = calls.clone();
+            let expected_calls = if deletion {
+                vec!["directory"]
+            } else {
+                vec!["file", "directory"]
+            };
+            let expected = expected_calls.clone();
+            super::super::TEST_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move |point, index| {
+                    if point == "before_done" && index == 0 {
+                        assert_eq!(*ordered.borrow(), expected);
+                        validating.set(false);
+                    }
+                    Ok(())
+                }))
+            });
+            let result = scope.recover_operation(&guard);
+            super::super::backend::TEST_SYNC.with(|hook| *hook.borrow_mut() = None);
+            super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+            if failure.is_some() {
+                assert!(result.is_err());
+                assert_eq!(
+                    super::super::journal::Journal::load(&scope)
+                        .unwrap()
+                        .unwrap()
+                        .disk
+                        .actions[0]
+                        .receipt,
+                    super::super::journal::Receipt::Pending
+                );
+                assert_eq!(
+                    *calls.borrow(),
+                    if failure == Some("file") {
+                        vec!["file"]
+                    } else {
+                        expected_calls
+                    }
+                );
+            } else {
+                assert_eq!(result.unwrap().unwrap().outcome, ExecutionOutcome::Complete);
+                assert_eq!(*calls.borrow(), expected_calls);
+            }
+            assert_eq!(path.exists(), !deletion);
         }
     }
 }
