@@ -288,8 +288,32 @@ fn install_preserves_existing_claude_bridge() {
 
 /// Stage `tests/fixtures/items` + `tests/fixtures/bundles` into a registry
 /// (like `cli_bundle_install` does), then install the `with-plugins` bundle
-/// via the library function. Since the test environment doesn't have
-/// `claude`/`code`/`opencode` on PATH, plugins should be warn-skipped.
+/// via the library function inside an isolated child with no native client CLI
+/// on PATH. Plugins must be warn-skipped without external registrations.
+// Run library plugin tests in a child process so PATH/HOME isolation is local
+// to that test and cannot race other parallel Rust tests.
+fn isolated_plugin_test(test: &str) -> bool {
+    if std::env::var("UPSKILL_PIPELINE_PLUGIN_TEST").as_deref() == Ok(test) {
+        return false;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let empty_path = tmp.path().join("empty-path");
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&empty_path).unwrap();
+    fs::create_dir_all(&home).unwrap();
+    assert_cmd::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", test, "--nocapture"])
+        .env("UPSKILL_PIPELINE_PLUGIN_TEST", test)
+        .env("PATH", &empty_path)
+        .env("HOME", &home)
+        .env("USERPROFILE", &home)
+        .current_dir(tmp.path())
+        .timeout(std::time::Duration::from_secs(30))
+        .assert()
+        .success();
+    true
+}
+
 fn stage_registry(root: &Path) {
     let items = format!("{FIXTURES}/items");
     let bundles = format!("{FIXTURES}/bundles");
@@ -299,6 +323,9 @@ fn stage_registry(root: &Path) {
 
 #[test]
 fn bundle_with_plugins_produces_plugin_results() {
+    if isolated_plugin_test("bundle_with_plugins_produces_plugin_results") {
+        return;
+    }
     let tmp = tempfile::tempdir().unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
@@ -322,10 +349,13 @@ fn bundle_with_plugins_produces_plugin_results() {
         "expected 3 plugin results (claude + copilot + vscode)"
     );
 
-    // Each result carries structured data regardless of success/failure.
-    // On developer machines some CLIs may be present and succeed; in CI
-    // they are typically absent. The invariant is that the attempt was
-    // made and the result is well-formed.
+    // Results are deterministic even when the developer has native CLIs.
+    assert!(
+        report
+            .plugin_results
+            .iter()
+            .all(|result| result.outcome.is_cli_not_found())
+    );
     for pr in &report.plugin_results {
         assert!(!pr.name.is_empty(), "plugin result should carry a name");
         assert!(!pr.client.is_empty(), "plugin result should carry a client");
@@ -338,14 +368,15 @@ fn bundle_with_plugins_produces_plugin_results() {
 
 #[test]
 fn cli_not_found_plugins_recorded_as_skipped_in_lockfile() {
+    if isolated_plugin_test("cli_not_found_plugins_recorded_as_skipped_in_lockfile") {
+        return;
+    }
     // CliNotFound outcomes (warn-skip) must be recorded in the lockfile with
     // status "skipped" so doctor can surface them. Failed outcomes are NOT
     // recorded (only transient — the CLI is present but misbehaving).
     //
-    // This test is environment-independent: on a machine with no CLIs every
-    // outcome is CliNotFound; on a machine that has code/claude the outcome
-    // may be Failed instead (install attempted but rejected).  Either way the
-    // invariant must hold: #CliNotFound outcomes == #Skipped in lockfile.
+    // The child excludes real native CLIs. Every outcome must be CliNotFound,
+    // and each must be persisted as Skipped.
     let tmp = tempfile::tempdir().unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
@@ -387,6 +418,8 @@ fn cli_not_found_plugins_recorded_as_skipped_in_lockfile() {
         .filter(|p| p.status == PluginInstallStatus::Installed)
         .count();
 
+    assert_eq!(cli_not_found_count, 3);
+    assert_eq!(success_count, 0);
     assert_eq!(
         cli_not_found_count, skipped_count,
         "each CliNotFound outcome must produce exactly one Skipped lockfile entry \
@@ -414,6 +447,9 @@ fn cli_not_found_plugins_recorded_as_skipped_in_lockfile() {
 
 #[test]
 fn plugin_results_carry_correct_metadata() {
+    if isolated_plugin_test("plugin_results_carry_correct_metadata") {
+        return;
+    }
     let tmp = tempfile::tempdir().unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
@@ -479,6 +515,9 @@ fn plugin_results_carry_correct_metadata() {
 
 #[test]
 fn install_by_name_discovers_bundle_when_no_item_matches() {
+    if isolated_plugin_test("install_by_name_discovers_bundle_when_no_item_matches") {
+        return;
+    }
     let tmp = tempfile::tempdir().unwrap();
     let registry = tmp.path().join("registry");
     let target = tmp.path().join("target");
@@ -624,6 +663,9 @@ fn doctor_skipped_plugins_do_not_cause_is_clean_false() {
 
 #[test]
 fn doctor_installed_plugin_cli_not_found_is_not_reported_as_missing() {
+    if isolated_plugin_test("doctor_installed_plugin_cli_not_found_is_not_reported_as_missing") {
+        return;
+    }
     // When a plugin is recorded as Installed but the client CLI is gone,
     // we cannot verify the install state.  Doctor should NOT add it to
     // missing_plugins — it cannot determine the actual state.
@@ -640,21 +682,8 @@ fn doctor_installed_plugin_cli_not_found_is_not_reported_as_missing() {
     });
     lock.save(tmp.path()).expect("save");
 
-    // Run with a PATH that has no `code` binary.
-    let original_path = std::env::var("PATH").unwrap_or_default();
-    // Use only /usr/bin to ensure `code` is not found.
-    let report = {
-        // We cannot easily strip PATH in a library call, so we rely on
-        // the test environment not having `code` installed.
-        // In CI and typical dev machines without VS Code CLI, this holds.
-        // If `code` is installed, the test verifies we don't crash.
-        drop(original_path);
-        doctor(tmp.path()).expect("doctor")
-    };
-
-    // Whether code is on PATH or not, missing_plugins should reflect reality.
-    // The key invariant: the call does not panic or error.
-    let _ = report; // outcome depends on env — just verify no crash/error
+    let report = doctor(tmp.path()).expect("doctor");
+    assert!(report.missing_plugins.is_empty());
 }
 
 #[test]

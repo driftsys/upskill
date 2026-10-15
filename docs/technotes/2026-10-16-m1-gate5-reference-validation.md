@@ -62,3 +62,15 @@ Local checks establish no hosted platform qualification, PR merge, native
 activation, task 2b completion, Gate 5/6 completion or M1 completion. Delivery
 head review and hosted checks remain separate gates. Final verification after
 gardening and the ordering example remains a delivery gate.
+
+## Deterministic plugin test isolation
+
+A later full verification run exposed inherited library plugin tests invoking
+installed Claude/Copilot CLIs and network subprocesses. The owned test process
+and its descendants were stopped; that interrupted run is diagnostic only. Five
+plugin/doctor tests now execute in isolated current-executable child processes
+with an empty PATH, temporary HOME/USERPROFILE and a 30-second bound. The
+17-test pipeline lockfile suite passed in 0.16 seconds. A local stand-in CLI
+control verified that the isolated test never invoked the stand-ins; removing
+PATH isolation invoked them and failed the intended assertion. Production plugin
+orchestration did not change. This control brings the cumulative count to 16.

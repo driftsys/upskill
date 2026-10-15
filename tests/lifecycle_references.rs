@@ -645,3 +645,41 @@ fn prior_order_and_new_internal_edge_order_are_stable() {
     assert_eq!(removed.removed_installation_ids, ["z", "a"]);
     assert_eq!(removed.installations, vec![item("m")]);
 }
+
+#[test]
+fn new_node_payloads_preserve_requested_surfaces_evidence_and_revisions() {
+    let s = diamond();
+    let mut git = item("new-git");
+    git.owner.source = "https://github.com/example/registry".into();
+    git.owner.source_revision = Some("a".repeat(40));
+    git.requested = vec![
+        upskill::target::TargetSurface::CodexCli,
+        upskill::target::TargetSurface::OpenCodeCli,
+    ];
+    git.source_evidence = SourceEvidence::Git {
+        resolved_revision: "a".repeat(40),
+        manifest_sha256: "b".repeat(64),
+    };
+    let mut local = item("new-local");
+    local.requested = vec![upskill::target::TargetSurface::CopilotCli];
+    local.source_evidence = SourceEvidence::Local {
+        manifest_sha256: "c".repeat(64),
+    };
+    let mut new_bundle = bundle("new-bundle");
+    new_bundle.source_revision = Some("release-v2".into());
+    let changes = GraphChanges {
+        installations: vec![local.clone(), git.clone()],
+        bundles: vec![new_bundle.clone()],
+        add_references: vec![direct("new-local"), root("new-bundle"), direct("new-git")],
+        ..Default::default()
+    };
+    let before = (s.clone(), changes.clone());
+    let result = reconcile_references(&s, &changes).unwrap();
+    let mut expected = s.installations.clone();
+    expected.extend([git, local]);
+    assert_eq!(result.installations, expected);
+    let mut expected = s.bundles.clone();
+    expected.push(new_bundle);
+    assert_eq!(result.bundles, expected);
+    assert_eq!((s, changes), before);
+}
