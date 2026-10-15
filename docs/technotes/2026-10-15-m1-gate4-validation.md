@@ -227,10 +227,10 @@ a194ac3a50173331ff7122200d5d9220b5831e7cc1090035b41588ba2add149c  src/filesystem
 
 ## Explicit invocation and hosted evidence
 
-The following local invocations were rerun against
-`878cf68cdc5e4bd986a5b8d7c25098bafef474cf`, capturing their argument vectors,
-exit codes and output. The MSRV check used the separate scratch target
-directory.
+The retained local invocation records contain the argument vectors, exit codes
+and output below. They do not record the working directory, revision or target
+directory environment. Use the hosted run references below for checks tied to an
+exact revision.
 
 ```json
 [
