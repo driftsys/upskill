@@ -74,3 +74,9 @@ with an empty PATH, temporary HOME/USERPROFILE and a 30-second bound. The
 control verified that the isolated test never invoked the stand-ins; removing
 PATH isolation invoked them and failed the intended assertion. Production plugin
 orchestration did not change. This control brings the cumulative count to 16.
+
+The child also asserts HOME and USERPROFILE against an independently passed
+parent-created temporary path. Removing either override failed that assertion
+under an inherited temporary home. These two controls raise the cumulative count
+to 18. The timeout is configured in the harness; normal passing fixtures do not
+exercise its expiration.

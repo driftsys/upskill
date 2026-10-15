@@ -294,6 +294,10 @@ fn install_preserves_existing_claude_bridge() {
 // to that test and cannot race other parallel Rust tests.
 fn isolated_plugin_test(test: &str) -> bool {
     if std::env::var("UPSKILL_PIPELINE_PLUGIN_TEST").as_deref() == Ok(test) {
+        let expected = std::env::var_os("UPSKILL_PIPELINE_PLUGIN_HOME")
+            .expect("parent must supply isolated home evidence");
+        assert_eq!(std::env::var_os("HOME"), Some(expected.clone()));
+        assert_eq!(std::env::var_os("USERPROFILE"), Some(expected));
         return false;
     }
     let tmp = tempfile::tempdir().unwrap();
@@ -304,6 +308,7 @@ fn isolated_plugin_test(test: &str) -> bool {
     assert_cmd::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", test, "--nocapture"])
         .env("UPSKILL_PIPELINE_PLUGIN_TEST", test)
+        .env("UPSKILL_PIPELINE_PLUGIN_HOME", &home)
         .env("PATH", &empty_path)
         .env("HOME", &home)
         .env("USERPROFILE", &home)
