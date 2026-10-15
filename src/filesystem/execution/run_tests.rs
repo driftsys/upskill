@@ -411,7 +411,13 @@ fn recovery_sync_failures_do_not_publish_done() {
 }
 #[test]
 fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
-    for phase in ["later-queued", "done", "queued-both", "pending-after"] {
+    for phase in [
+        "later-queued",
+        "done",
+        "queued-both",
+        "pending-after",
+        "all-done",
+    ] {
         let (tmp, scope, mut request) = fixture();
         for action in &mut request.files {
             let path = tmp.path().join(&action.location.path);
@@ -427,18 +433,35 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         }
         let guard = scope.try_lock_writer().unwrap();
         let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
-        if phase != "queued-both" {
-            journal
-                .record(0, super::super::journal::Receipt::Pending)
-                .unwrap();
-        }
-        if phase == "done" || phase == "pending-after" {
-            super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
-        }
-        if phase == "done" {
-            journal
-                .record(0, super::super::journal::Receipt::Done)
-                .unwrap();
+        if phase == "all-done" {
+            for (index, action) in request
+                .files
+                .iter()
+                .chain(std::iter::once(&request.state))
+                .enumerate()
+            {
+                journal
+                    .record(index, super::super::journal::Receipt::Pending)
+                    .unwrap();
+                super::super::backend::apply(&scope, action, index).unwrap();
+                journal
+                    .record(index, super::super::journal::Receipt::Done)
+                    .unwrap();
+            }
+        } else {
+            if phase != "queued-both" {
+                journal
+                    .record(0, super::super::journal::Receipt::Pending)
+                    .unwrap();
+            }
+            if phase == "done" || phase == "pending-after" {
+                super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
+            }
+            if phase == "done" {
+                journal
+                    .record(0, super::super::journal::Receipt::Done)
+                    .unwrap();
+            }
         }
         let target = tmp
             .path()
@@ -450,6 +473,8 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         let name = "upskill-recovery";
         rustix::fs::fsetxattr(&file, name, b"manual", rustix::fs::XattrFlags::empty()).unwrap();
         let before_a = std::fs::read(tmp.path().join("a")).unwrap();
+        let before_b = std::fs::read(tmp.path().join("b")).unwrap();
+        let before_state = std::fs::read(tmp.path().join("state")).ok();
         let before_journal =
             std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap();
         assert!(scope.recover_operation(&guard).is_err(), "{phase}");
@@ -458,7 +483,7 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
             before_a,
             "{phase}: earlier output changed"
         );
-        assert_eq!(std::fs::read(tmp.path().join("b")).unwrap(), b"old");
+        assert_eq!(std::fs::read(tmp.path().join("b")).unwrap(), before_b);
         assert_eq!(
             std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap(),
             before_journal,
@@ -467,7 +492,18 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         let mut value = [0u8; 64];
         let length = rustix::fs::fgetxattr(&file, name, &mut value[..]).unwrap();
         assert_eq!(&value[..length], b"manual");
-        assert!(!tmp.path().join("state").exists());
+        assert_eq!(std::fs::read(tmp.path().join("state")).ok(), before_state);
+        for action in &journal.disk.actions {
+            if let Some(payload) = &action.payload {
+                assert!(
+                    tmp.path()
+                        .join(".upskill/state")
+                        .join(&payload.name)
+                        .is_file(),
+                    "{phase}: payload removed"
+                );
+            }
+        }
     }
 }
 #[test]
