@@ -435,3 +435,30 @@ Compiler-to-desired-set reconciliation and shared-owner lifecycle planning,
 exact original-JSON first-write backup, guarded executor/recovery integration,
 and observational list/doctor/preview adapters remain unfinished. Commands still
 use schema 1; this slice does not complete Gate 5 or activate M1.
+
+## Gate 5 captured rule desired sets
+
+Source path: `docs/wip/plans/2026-10-15-m1-gate5-rule-desired-sets.md`. The
+[archived plan](plans/2026-10-15-m1-gate5-rule-desired-sets.md) preserves its
+exact original bytes, including historical unchecked boxes and its historical
+relative spec link. The active umbrella remains at
+`docs/wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md`. The approved
+completion scope archives only this completed task 2a plan; all other WIP
+retains its prior inventory and disposition.
+
+Durable successors:
+[specification §4.14](../specification/specification.md#414-captured-rule-desired-sets),
+[desired-set design](../design/captured-rule-desired-sets.md) and the
+[validation note](../technotes/2026-10-15-m1-gate5-desired-validation.md).
+Implementation through `9228cc1` passed full local verification and locked Rust
+1.85 all-target checking. Subsequent test-only quick-review fixes passed the
+18-test focused suite with exact production restoration. Sixteen assertion
+controls and the independent review of `ff4671f..9228cc1` are documented in the
+validation note. Final checks after gardening and hosted CI remain delivery
+gates; this entry makes no merge claim.
+
+Task 2b still owns authoritative reference and cross-request identity
+reconciliation, shared owners and per-owner consumers, selected legacy
+conflicts, instruction contribution adapters and complete add/update/remove
+planning. Guarded backup/application/recovery and observational adapters follow.
+Commands remain on schema 1; Gate 5, M1 and native activation remain incomplete.

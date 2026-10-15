@@ -56,14 +56,6 @@ Files are ordered by their portable relative path and consumers by surface name.
 Repeated paths within an installation conflict. These lexical checks do not
 resolve symlinks, aliases, case equivalence or physical containment.
 
-## Remaining lifecycle boundary
-
-This producer does not reconcile existing references, shared owners, legacy
-selection, instruction contributions or existing destinations. The mixed
-planner's affected multi-owner rejection remains intact. Combined lifecycle
-planning, guarded backup/application/recovery, observational adapters and native
-activation remain separate tasks.
-
 ## Complete batch preflight
 
 `compile_rule_desired_sets` compiles every independent request and returns
@@ -80,3 +72,30 @@ lexical boundary; physical aliases and case equivalence need later
 qualification. Diagnostics contain both request indices and installation IDs and
 sort by indices, then message. This boundary does not reconcile existing state
 or references.
+
+## Interfaces and acceptance evidence
+
+The [single-rule producer](../../src/lifecycle/desired/mod.rs) defines
+`CompilerBinding`, `RuleDesiredSetRequest` and `DesiredInstallationSet`. The
+[batch boundary](../../src/lifecycle/desired/batch.rs) exposes
+`DesiredSetDiagnostic`, `DesiredSetsOutcome` and `compile_rule_desired_sets`.
+These supplied-value interfaces neither serialize plans nor authorize effects.
+
+The [public acceptance tests](../../tests/lifecycle_desired.rs) compare literal
+paths, binary resource bytes, modes and checked-in renderer goldens. They cover
+source identity and fallback names, exact requested and excluded consumers,
+OpenCode scope refusal, raw root retention, complete ordered batch payloads,
+component-boundary topology, duplicate IDs and contextual diagnostic ordering.
+The [validation note](../technotes/2026-10-15-m1-gate5-desired-validation.md)
+records local checks and the limits of the independent review.
+
+## Remaining lifecycle boundary
+
+This producer validates each installation in a minimal direct-reference graph;
+it does not reconcile the authoritative graph across the batch or establish
+cross-request installation-identity consistency beyond duplicate ID rejection.
+Reference reconciliation, shared owners and per-owner consumers, selected legacy
+conflicts, instruction contribution adapters, existing destinations and complete
+add/update/remove planning remain task 2b. The mixed planner's affected
+multi-owner rejection remains intact. Guarded backup/application/recovery,
+observational adapters and native activation remain separate tasks.
