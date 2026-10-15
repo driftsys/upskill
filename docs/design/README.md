@@ -47,3 +47,6 @@ may be recorded here before implementation when their status is explicit.
 
 - [Lifecycle reference reconciliation](lifecycle-reference-reconciliation.md) —
   explicit graph edits and retention before ownership effects.
+
+- [Lifecycle reference removal](lifecycle-reference-removal.md) — inactive
+  reference-driven shared-owner retirement and supplied-evidence file plans.

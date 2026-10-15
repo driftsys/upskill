@@ -1178,3 +1178,29 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
   [Recipes](https://driftsys.github.io/upskill/recipes.html)
 - Agent Skills open standard: <https://agentskills.io>
 - skills.sh ecosystem: <https://skills.sh>
+
+### 4.16 Reference-driven shared-owner removal planning
+
+The inactive `lifecycle::retire::plan_reference_removal` API accepts complete
+combined state, exact reference removals and supplied file observations. It
+reconciles graph retention first, then retires rule installations whose final
+reference ended. Unsupported owned kinds cannot retire through this boundary;
+unselected kinds and tagged legacy rows remain unchanged.
+
+Surviving artifact owners retain their order. Consumers are recomputed from
+surviving per-owner associations. Every affected physical location requires one
+exact observation, including metadata-only changes. Invalid, duplicate, missing
+or extraneous evidence and affected topology overlaps conflict. Whole-file
+hash/mode changes and edited or malformed owned instruction regions conflict
+before returning a plan.
+
+Whole files remain unchanged while an owner survives and are individually
+removed after final-owner retirement. Each affected aggregate is edited once,
+retaining manual bytes, surviving bodies and the observed valid mode. Empty
+aggregates remain present. Region metadata is updated and the complete final
+state is validated. Referenced empty installations survive; empty retired
+installations need no file action.
+
+This pure boundary grants no qualified execution or native compatibility claim.
+Add/update sharing, guarded application, recovery and production schema-2
+activation remain later work.

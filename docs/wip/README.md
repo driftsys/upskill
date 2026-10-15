@@ -49,6 +49,12 @@ references must be reconciled as part of that feature's review.
   marketplaces/plugins, hooks, and permissions. Proposed sequencing and
   acceptance gates; no implementation claim.
 
+## Current removal-planner slice
+
+[Shared-owner retirement plan](plans/2026-10-16-m1-gate5-retirement.md)
+implements the next bounded Gate 5 prerequisite; no activation or Gate 5
+completion claim.
+
 ## Reconciliation inventory
 
 The maintainer of each affected feature owns its reconciliation. Until evidence
