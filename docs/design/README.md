@@ -44,3 +44,6 @@ may be recorded here before implementation when their status is explicit.
 
 - [Captured rule desired sets](captured-rule-desired-sets.md): opt-in complete
   compiler outputs bound to explicit installation consumers.
+
+- [Lifecycle reference reconciliation](lifecycle-reference-reconciliation.md) —
+  explicit graph edits and retention before ownership effects.
