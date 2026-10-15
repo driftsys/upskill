@@ -38,3 +38,6 @@ may be recorded here before implementation when their status is explicit.
 - [Qualified file execution and durable recovery](qualified-file-execution.md) —
   implemented as an opt-in library capability; hosted Linux/macOS qualification
   and combined lifecycle integration remain pending.
+
+- [Combined lifecycle state](combined-lifecycle-state.md): opt-in reference
+  authority; production commands remain on schema 1.

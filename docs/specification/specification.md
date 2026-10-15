@@ -1043,6 +1043,18 @@ M1-A3 and M1 are not declared complete. See
 [AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and the
 [qualified execution design](../design/qualified-file-execution.md).
 
+### 4.13 Combined lifecycle state foundation
+
+The opt-in `lifecycle::state` library validates a schema-2 installation and
+reference graph without I/O. Direct references root the graph; bundle members
+and dependencies must resolve, be reachable and contain no dependency cycle.
+Installations retain requested surfaces even when no artifact is generated.
+Duplicate identities and inconsistent source revision evidence are rejected.
+
+This library does not change `lockfile::CURRENT_SCHEMA`, command dispatch or
+production lockfiles. It does not establish filesystem ownership or native
+support. See [combined lifecycle state](../design/combined-lifecycle-state.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

@@ -12,6 +12,11 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Gate 5 combined lifecycle](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
+  — scope accepted for planning;
+  [combined-state plan](plans/2026-10-15-m1-gate5-combined-state.md). Production
+  activation remains Gate 6.
+
 - [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
   — opt-in library implementation and durable records; hosted Linux/macOS
   qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope
