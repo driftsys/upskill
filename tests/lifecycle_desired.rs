@@ -582,6 +582,14 @@ fn batch_rejects_equal_byte_collisions_and_ancestor_topology() {
     second.source_evidence = SourceEvidence::Local {
         manifest_sha256: descendant.content_sha256.clone(),
     };
+    let reverse = blocked(compile_rule_desired_sets(&[
+        request(&second, &descendant, &bindings),
+        request(&first, &source, &bindings),
+    ]));
+    assert_eq!(reverse.len(), 1);
+    assert_eq!(reverse[0].request_indices, [0, 1]);
+    assert_eq!(reverse[0].installation_ids, ["second", "rule-source"]);
+    assert!(reverse[0].message.contains("source.md/child"));
     let topology = blocked(compile_rule_desired_sets(&[
         request(&first, &source, &bindings),
         request(&second, &descendant, &bindings),
@@ -624,6 +632,25 @@ fn batch_preserves_disjoint_roots_and_scopes() {
             .collect::<Vec<_>>(),
         items
     );
+    for (index, set) in sets.iter().enumerate() {
+        assert_eq!(set.artifacts.len(), 1);
+        let output = file(&set.artifacts[0]);
+        assert_eq!(
+            output.location.path,
+            if index == 3 {
+                ".claude/rules/different.md"
+            } else {
+                ".claude/rules/source.md"
+            }
+        );
+        assert_eq!(
+            output.value.bytes,
+            b"---\nname: source\ndescription: demo\n---\n\n# Demo\n"
+        );
+        assert_eq!(output.value.mode, None);
+        assert_eq!(output.consumers, [TargetSurface::ClaudeCli]);
+        assert!(set.audience_excluded.is_empty());
+    }
     assert_ne!(
         sets[0].installation.root.path.as_os_str(),
         sets[1].installation.root.path.as_os_str()
@@ -711,4 +738,100 @@ fn opencode_resources_keep_exact_bytes_modes_and_consumers() {
     assert_eq!(resource.value.bytes, [0, 255, 17]);
     assert_eq!(resource.value.mode, Some(0o755));
     assert_eq!(resource.consumers, [TargetSurface::OpenCodeCli]);
+}
+
+#[test]
+fn batch_diagnostics_sort_indices_before_message() {
+    use upskill::lifecycle::desired::compile_rule_desired_sets;
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let item = installation(&source, &[TargetSurface::ClaudeCli]);
+    let input = request(&item, &source, &bindings);
+    let diagnostics = blocked(compile_rule_desired_sets(&[input, input, input]));
+    assert_eq!(diagnostics.len(), 6);
+    assert_eq!(
+        diagnostics
+            .iter()
+            .map(|d| d.request_indices.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            vec![0, 1],
+            vec![0, 1],
+            vec![0, 2],
+            vec![0, 2],
+            vec![1, 2],
+            vec![1, 2]
+        ]
+    );
+    for pair in diagnostics.chunks_exact(2) {
+        assert!(pair[0].message.contains("duplicate installation"));
+        assert!(pair[1].message.contains("selected output paths"));
+        assert_eq!(pair[0].installation_ids, ["rule-source", "rule-source"]);
+    }
+}
+
+#[test]
+fn batch_retains_distinct_payloads_and_empty_excluded_sets() {
+    use upskill::lifecycle::desired::{DesiredSetsOutcome, compile_rule_desired_sets};
+    let source = synthetic(&[("RULE.md", RULE, None)]);
+    let changed = synthetic(&[(
+        "RULE.md",
+        b"---\nschema: 1\nname: source\ndescription: different\n---\n\n# Other\n",
+        None,
+    )]);
+    let excluded = synthetic(&[(
+        "RULE.md",
+        b"---\nschema: 1\nname: source\ndescription: demo\naudience: [copilot]\n---\n\n# Demo\n",
+        None,
+    )]);
+    let bindings = [binding(Client::Claude, &[TargetSurface::ClaudeCli])];
+    let first = installation(&source, &[TargetSurface::ClaudeCli]);
+    let mut second = installation(&changed, &[TargetSurface::ClaudeCli]);
+    second.owner.installation_id = "second".into();
+    second.owner.installed_name = "source.md2".into();
+    let mut third = installation(&excluded, &[TargetSurface::ClaudeCli]);
+    third.owner.installation_id = "excluded".into();
+    let DesiredSetsOutcome::Ready(sets) = compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&second, &changed, &bindings),
+        request(&third, &excluded, &bindings),
+    ]) else {
+        panic!("disjoint payloads or excluded installation rejected")
+    };
+    assert_eq!(sets.len(), 3);
+    assert_eq!(
+        file(&sets[0].artifacts[0]).value.bytes,
+        b"---\nname: source\ndescription: demo\n---\n\n# Demo\n"
+    );
+    assert_eq!(
+        file(&sets[1].artifacts[0]).value.bytes,
+        b"---\nname: source\ndescription: different\n---\n\n# Other\n"
+    );
+    assert_eq!(
+        file(&sets[1].artifacts[0]).location.path,
+        ".claude/rules/source.md2.md"
+    );
+    assert_eq!(sets[2].installation, third);
+    assert!(sets[2].artifacts.is_empty());
+    assert_eq!(sets[2].audience_excluded, [TargetSurface::ClaudeCli]);
+    second.owner.installed_name = "source".into();
+    let collision = blocked(compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&second, &changed, &bindings),
+    ]));
+    assert_eq!(collision.len(), 1);
+    assert_eq!(collision[0].request_indices, [0, 1]);
+    assert!(collision[0].message.contains("source.md"));
+    let failed = blocked(compile_rule_desired_sets(&[
+        request(&first, &source, &bindings),
+        request(&first, &source, &[]),
+    ]));
+    assert_eq!(
+        failed
+            .iter()
+            .map(|d| d.request_indices.clone())
+            .collect::<Vec<_>>(),
+        [vec![0, 1], vec![1]]
+    );
+    assert!(failed[0].message.contains("duplicate installation"));
 }
