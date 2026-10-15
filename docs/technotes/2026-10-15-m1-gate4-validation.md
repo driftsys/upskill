@@ -272,8 +272,9 @@ exact revision.
 ```
 
 [Hosted run 38695731881](https://github.com/driftsys/upskill/actions/runs/38695731881)
-checked that same head: aggregate CI, Linux/macOS/Windows tests, Clippy, MSRV,
-formatting, repository tools, ShellCheck and documentation passed.
+checked commit `878cf68cdc5e4bd986a5b8d7c25098bafef474cf`: aggregate CI,
+Linux/macOS/Windows tests, Clippy, MSRV, formatting, repository tools,
+ShellCheck and documentation passed.
 [Earlier run 38693183137](https://github.com/driftsys/upskill/actions/runs/38693183137)
 checked `f416549277b29efca590ee00b5992c035346ccf0`: its three platform test jobs
 and MSRV passed, but Linux Clippy and aggregate CI failed. These run links
