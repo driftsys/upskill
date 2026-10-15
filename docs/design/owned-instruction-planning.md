@@ -84,10 +84,11 @@ Qualified scope roots, writer locking,
 [destination observation](qualified-destination-observation.md) and
 [qualified source observation](qualified-source-observation.md) are implemented
 as separate inactive capabilities. Final-head hosted source qualification
-remains required. Complete reference-graph authority, planner integration of
-per-owner consumer associations, integrating qualified source evidence and
-compiled outputs into complete lifecycle desired sets and combined state
-integration remain pending. The opt-in
+remains required. The [combined-state validator](combined-lifecycle-state.md)
+provides reference-graph authority and explicit per-owner consumer associations.
+Planner integration of those associations, integrating qualified source evidence
+and compiled outputs into complete lifecycle desired sets, and connecting the
+combined state to lifecycle operations remain pending. The opt-in
 [qualified file executor and recovery](qualified-file-execution.md) are
 implemented separately; hosted final-head qualification remains required. The
 implemented [mixed coordinator](mixed-owned-artifact-planning.md) composes

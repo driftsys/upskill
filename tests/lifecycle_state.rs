@@ -494,7 +494,8 @@ fn legacy_state() -> upskill::lockfile::Lockfile {
         group: Some("skills/a".into()),
         clients: vec!["unknown".into()],
     };
-    legacy.items = vec![item.clone(), item.clone(), item];
+    legacy.items = vec![item.clone(), item.clone(), item.clone(), item];
+    legacy.items[3].name = "a-distinct".into();
     legacy.items[1].source = "malformed::label@".into();
     legacy.items[1].hash = None;
     legacy.items[1].git_ref = None;
@@ -506,7 +507,9 @@ fn legacy_state() -> upskill::lockfile::Lockfile {
         git_ref: Some("main".into()),
         items: vec!["z-alias".into(), "a".into(), "z-alias".into()],
     };
-    legacy.bundles = vec![bundle.clone(), bundle];
+    legacy.bundles = vec![bundle.clone(), bundle.clone(), bundle.clone(), bundle];
+    legacy.bundles[1].name = "a-bundle".into();
+    legacy.bundles[3].name = "c-bundle".into();
     for status in [
         PluginInstallStatus::Skipped,
         PluginInstallStatus::Instructions,
@@ -556,6 +559,7 @@ fn round_trip_preserves_legacy_rows_labels_and_statuses() {
     assert_eq!(parsed.owner_consumers, owned.owner_consumers);
     assert_eq!(upskill::lockfile::CURRENT_SCHEMA, 1);
     assert!(text.ends_with('\n') && !text.ends_with("\n\n"));
+    assert!(text.starts_with("{\n  \"schema\": 2,\n"));
     let mut bad = before;
     bad.schema = 2;
     assert!(project_legacy(&bad).is_err());
@@ -795,4 +799,104 @@ fn contribution_selectors_keep_distinct_consumer_sets() {
     value.owner_consumers[0].consumers = vec![TargetSurface::CopilotCli];
     value.owner_consumers[1].consumers = vec![TargetSurface::ClaudeCli];
     assert!(validate_state(&value).is_err());
+}
+
+#[test]
+fn canonical_codec_orders_roots_scopes_and_contribution_selectors() {
+    use upskill::instructions::aggregate::OwnedContribution;
+    use upskill::lifecycle::state::{parse_state, project_legacy, serialize_state};
+    use upskill::ownership::ArtifactContent;
+    let mut value = project_legacy(&upskill::lockfile::Lockfile::new()).unwrap();
+    value.legacy = None;
+    for (scope, suffix, owner_id) in [
+        (OwnershipScope::User, "a", "a-owner"),
+        (OwnershipScope::Project, "z", "m-owner"),
+        (OwnershipScope::Project, "a", "z-owner"),
+    ] {
+        let mut item = installation();
+        item.root.scope = scope;
+        item.root.path = root().path.join(suffix);
+        item.owner.installation_id = owner_id.into();
+        for id in ["z-region", "a-region"] {
+            let mut artifact = owned_state().artifacts.remove(0);
+            artifact.root = item.root.clone();
+            artifact.path = "AGENTS.md".into();
+            artifact.owners = vec![item.owner.clone()];
+            artifact.content = ArtifactContent::MarkdownContribution {
+                contribution: OwnedContribution {
+                    id: id.into(),
+                    content_sha256: "b".repeat(64),
+                    leading_newlines: 1,
+                    preceding_newlines: 3,
+                },
+            };
+            let mut association = owned_state().owner_consumers.remove(0);
+            association.root = item.root.clone();
+            association.path = artifact.path.clone();
+            association.contribution_id = Some(id.into());
+            association.installation_id = owner_id.into();
+            value.artifacts.push(artifact);
+            value.owner_consumers.push(association);
+        }
+        value.references.push(Reference::DirectInstallation {
+            installation_id: owner_id.into(),
+        });
+        value.installations.push(item);
+    }
+    let serialized = serialize_state(&value).unwrap();
+    let mut reversed = value.clone();
+    reversed.artifacts.reverse();
+    reversed.owner_consumers.reverse();
+    assert_eq!(serialize_state(&reversed).unwrap(), serialized);
+    let canonical = parse_state(&serialized).unwrap();
+    let artifact_order: Vec<_> = canonical
+        .artifacts
+        .iter()
+        .map(|a| match &a.content {
+            ArtifactContent::MarkdownContribution { contribution } => (
+                a.owners[0].installation_id.as_str(),
+                contribution.id.as_str(),
+            ),
+            _ => panic!("expected contribution"),
+        })
+        .collect();
+    let expected = vec![
+        ("z-owner", "a-region"),
+        ("z-owner", "z-region"),
+        ("m-owner", "a-region"),
+        ("m-owner", "z-region"),
+        ("a-owner", "a-region"),
+        ("a-owner", "z-region"),
+    ];
+    assert_eq!(artifact_order, expected);
+    assert_eq!(
+        canonical
+            .owner_consumers
+            .iter()
+            .map(|a| (
+                a.installation_id.as_str(),
+                a.contribution_id.as_deref().unwrap()
+            ))
+            .collect::<Vec<_>>(),
+        expected
+    );
+}
+#[test]
+fn git_evidence_and_bundle_dependencies_survive_codec_round_trip() {
+    use upskill::lifecycle::state::{parse_state, serialize_state};
+    let mut value = state();
+    let revision = "0123456789abcdef0123456789abcdef01234567";
+    value.installations[0].owner.source_revision = Some(revision.into());
+    value.installations[0].source_evidence = SourceEvidence::Git {
+        resolved_revision: revision.into(),
+        manifest_sha256: "c".repeat(64),
+    };
+    value.references.push(Reference::BundleDependency {
+        bundle_id: "first".into(),
+        dependency_id: "second".into(),
+    });
+    assert_eq!(
+        parse_state(&serialize_state(&value).unwrap()).unwrap(),
+        value
+    );
 }

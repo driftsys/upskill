@@ -87,6 +87,7 @@ src/
 │                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
 ├── legacy/              Pure legacy projection and frozen historical layout
+├── lifecycle/           Opt-in combined state, reference and owner-consumer validation
 ├── bundle.rs            Bundle dependency resolution
 ├── lint.rs              Author command — validate SSOT against the format spec
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
