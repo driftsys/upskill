@@ -505,13 +505,14 @@ Durable successors:
 [specification §4.16](../specification/specification.md#416-reference-driven-shared-owner-removal-planning),
 [removal design](../design/lifecycle-reference-removal.md) and
 [validation note](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
-Implementation through `b5c9537` passed full local verification and locked Rust
-1.85 checking with 11 acceptance examples. Independent implementation review
-found no production defects. Subsequent review corrections strengthened the
-focused suite to 15 passing tests; 16 assertion-failing controls established
-independent coverage with exact production restoration. One symmetrical legacy
-fixture attempt is excluded. Final checks after gardening, hosted delivery and
-PR review remain separate gates; this entry makes no merge claim.
+Original local implementation `b5c9537`, rebased as `911915d`, passed full local
+verification and locked Rust 1.85 checking with 11 acceptance examples.
+Independent implementation review found no production defects. Subsequent review
+corrections strengthened the focused suite to 15 passing tests; 16
+assertion-failing controls established independent coverage with exact
+production restoration. One symmetrical legacy fixture attempt is excluded.
+Final checks after gardening, hosted delivery and PR review remain separate
+gates; this entry makes no merge claim.
 
 This pure rule-only removal API preserves surviving shared owners and their
 consumer union, validates affected supplied observations and returns complete

@@ -41,11 +41,13 @@ control logs, command-exit receipts and `final-implementation-review.md`. The
 excluded symmetrical attempt is marked as a reconstructed diagnostic in
 `review-controls-initial-diagnostic.json`; its original stdout was overwritten.
 Incomplete runs are not completion evidence. Independent implementation review
-of `e3f0146..b5c9537` found no production defects. Its misplaced specification
-section was corrected; quick review strengthened tests and corrected scoped
-documentation. The later focused run passed all 15 tests after the 16 valid
-controls and exact production-source restoration. Final formatting, full
-verification and MSRV checking after gardening remain delivery gates, as do
+of `e3f0146..b5c9537` found no production defects. The implementation was
+rebased as `911915d`; production and acceptance bytes were preserved from
+`69cf8f7` to `eeaa8b8`, with hashes in `rebase-preservation.json`. Its misplaced
+specification section was corrected; quick review strengthened tests and
+corrected scoped documentation. The later focused run passed all 15 tests after
+the 16 valid controls and exact production-source restoration. Final formatting,
+full verification and MSRV checking after gardening remain delivery gates, as do
 hosted checks and PR review. No merge or native target qualification follows
 from this local evidence.
 

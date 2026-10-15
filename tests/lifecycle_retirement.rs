@@ -121,7 +121,8 @@ fn reject(state: &CombinedState, remove: &[Reference], observations: &[ObservedF
 fn shared_whole_file_survives_until_final_owner_retires() {
     let (state, observed) = shared(false);
     let before = (state.clone(), observed.clone());
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
     validate_state(&result.state).unwrap();
     assert_eq!(
         result.state.installations,
@@ -142,8 +143,12 @@ fn shared_whole_file_survives_until_final_owner_retires() {
     assert_eq!(result.files.len(), 1);
     assert_eq!(result.files[0].before, observed.value);
     assert_eq!(result.files[0].after, observed.value);
-    let final_plan =
-        plan_reference_removal(&result.state, &[direct("b")], &[observed.clone()]).unwrap();
+    let final_plan = plan_reference_removal(
+        &result.state,
+        &[direct("b")],
+        std::slice::from_ref(&observed),
+    )
+    .unwrap();
     assert!(final_plan.state.artifacts.is_empty());
     assert!(final_plan.state.owner_consumers.is_empty());
     assert_eq!(final_plan.files.len(), 1);
@@ -155,7 +160,8 @@ fn shared_whole_file_survives_until_final_owner_retires() {
 #[test]
 fn shared_region_retains_content_and_empty_aggregate_stays_present() {
     let (state, observed) = shared(true);
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
     assert_eq!(result.files[0].after, observed.value);
     assert_eq!(
         result.state.artifacts[0].consumers,
@@ -165,8 +171,12 @@ fn shared_region_retains_content_and_empty_aggregate_stays_present() {
         result.state.artifacts[0].owners,
         vec![state.installations[1].owner.clone()]
     );
-    let final_plan =
-        plan_reference_removal(&result.state, &[direct("b")], &[observed.clone()]).unwrap();
+    let final_plan = plan_reference_removal(
+        &result.state,
+        &[direct("b")],
+        std::slice::from_ref(&observed),
+    )
+    .unwrap();
     assert_eq!(
         final_plan.files[0].after,
         Some(FileValue {
@@ -272,7 +282,9 @@ fn unsupported_owned_kind_blocks_retirement_but_survives_disjoint_work() {
         state.references.push(direct("skill"));
         validate_state(&state).unwrap();
         assert!(reject(&state, &[direct("skill")], &[]).contains("unsupported"));
-        let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+        let result =
+            plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed))
+                .unwrap();
         assert!(result.state.installations.contains(&state.installations[2]));
     }
 }
@@ -319,8 +331,12 @@ fn multiple_regions_retire_in_one_file_without_touching_manual_or_retained_regio
         });
     }
     validate_state(&state).unwrap();
-    let result =
-        plan_reference_removal(&state, &[direct("b"), direct("a")], &[observed.clone()]).unwrap();
+    let result = plan_reference_removal(
+        &state,
+        &[direct("b"), direct("a")],
+        std::slice::from_ref(&observed),
+    )
+    .unwrap();
     assert_eq!(result.files.len(), 1);
     assert_eq!(result.files[0].before, observed.value);
     assert_eq!(result.files[0].after, Some(FileValue { bytes: b"Manual prefix\n\n<!-- upskill:begin c -->\nC\n<!-- upskill:end c -->\nManual suffix\n".to_vec(), mode: Some(0o640) }));
@@ -337,7 +353,7 @@ fn multiple_regions_retire_in_one_file_without_touching_manual_or_retained_regio
     assert_eq!(
         aggregate::inspect_owned(
             std::str::from_utf8(&after.bytes).unwrap(),
-            &[contribution.clone()]
+            std::slice::from_ref(contribution)
         )
         .unwrap(),
         vec![Contribution::new("c", "C\n")]
@@ -398,7 +414,8 @@ fn retained_bundle_path_delays_retirement_and_preserves_legacy_rows() {
     assert_eq!(first.state.owner_consumers, state.owner_consumers);
     assert_eq!(first.state.legacy, state.legacy);
     assert!(first.files.is_empty());
-    let second = plan_reference_removal(&first.state, &[right], &[observed.clone()]).unwrap();
+    let second =
+        plan_reference_removal(&first.state, &[right], std::slice::from_ref(&observed)).unwrap();
     assert_eq!(second.state.legacy, state.legacy);
     assert_eq!(
         second.state.artifacts[0].owners,
@@ -432,7 +449,8 @@ fn manual_edits_and_observed_aggregate_mode_are_preserved() {
         .replace("Manual", "Locally edited manual text")
         .into_bytes();
     observed.value.as_mut().unwrap().mode = Some(0o600);
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
     assert_eq!(result.files[0].after, observed.value);
     let mut malformed = observed;
     malformed
@@ -463,7 +481,8 @@ fn overlapping_consumer_associations_and_absent_mode_remain_precise() {
     *mode = None;
     observed.value.as_mut().unwrap().mode = None;
     validate_state(&state).unwrap();
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
     assert_eq!(
         result.state.artifacts[0].consumers,
         state.artifacts[0].consumers
@@ -622,7 +641,8 @@ fn same_named_regions_at_other_locations_do_not_retain_retired_content() {
         consumers: vec![TargetSurface::ClaudeCli],
     });
     validate_state(&state).unwrap();
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
     assert_eq!(result.state.artifacts, vec![other]);
     assert_eq!(
         result.files,
@@ -691,8 +711,12 @@ fn scope_raw_root_and_association_order_are_preserved() {
     }
     state.owner_consumers.reverse();
     validate_state(&state).unwrap();
-    let partial =
-        plan_reference_removal(&state, &[direct("z-owner")], &[observations[0].clone()]).unwrap();
+    let partial = plan_reference_removal(
+        &state,
+        &[direct("z-owner")],
+        std::slice::from_ref(&observations[0]),
+    )
+    .unwrap();
     assert_eq!(partial.state.owner_consumers, state.owner_consumers[..3]);
     assert_eq!(partial.state.artifacts, state.artifacts[1..]);
     let result = plan_reference_removal(&state, &state.references, &observations).unwrap();
