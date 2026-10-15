@@ -219,3 +219,263 @@ fn rejects_same_installation_identity_under_two_ids() {
         });
     });
 }
+
+fn owned_state() -> CombinedState {
+    use upskill::lifecycle::state::OwnerConsumers;
+    use upskill::ownership::{ArtifactContent, OwnedArtifact};
+    let mut value = state();
+    value.artifacts.push(OwnedArtifact {
+        root: root(),
+        path: "rules/a.md".into(),
+        content: ArtifactContent::File {
+            content_sha256: "b".repeat(64),
+            mode: Some(0o644),
+        },
+        owners: vec![value.installations[0].owner.clone()],
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    value.owner_consumers.push(OwnerConsumers {
+        root: root(),
+        path: "rules/a.md".into(),
+        contribution_id: None,
+        installation_id: "rule-a".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    value
+}
+fn rejects_owned(mutator: impl FnOnce(&mut CombinedState)) {
+    let mut value = owned_state();
+    mutator(&mut value);
+    let before = value.clone();
+    assert!(validate_state(&value).is_err(), "accepted {value:?}");
+    assert_eq!(value, before);
+}
+#[test]
+fn rejects_artifact_owner_binding_drift() {
+    rejects_owned(|s| s.artifacts[0].owners[0].source_revision = Some("different".into()));
+    rejects_owned(|s| s.artifacts[0].owners[0].installed_name = "different".into());
+    rejects_owned(|s| s.artifacts[0].owners[0].source = "other/source".into());
+    rejects_owned(|s| s.artifacts[0].owners[0].kind = ItemKind::Skill);
+    rejects_owned(|s| s.artifacts[0].owners[0].source_name = "different".into());
+    rejects_owned(|s| s.artifacts[0].owners[0].installation_id = "unknown".into());
+    rejects_owned(|s| s.artifacts[0].root.path = s.artifacts[0].root.path.join("different"));
+    rejects_owned(|s| s.artifacts[0].root.scope = OwnershipScope::User);
+    rejects_owned(|s| {
+        s.artifacts[0].root.path = s.artifacts[0].root.path.join(".");
+        s.owner_consumers[0].root = s.artifacts[0].root.clone();
+    });
+}
+#[test]
+fn requires_exact_per_owner_consumer_union() {
+    validate_state(&owned_state()).unwrap();
+    rejects_owned(|s| s.owner_consumers.clear());
+    rejects_owned(|s| s.owner_consumers.push(s.owner_consumers[0].clone()));
+    rejects_owned(|s| s.owner_consumers[0].path = "other.md".into());
+    rejects_owned(|s| s.owner_consumers[0].contribution_id = Some("absent".into()));
+    rejects_owned(|s| s.owner_consumers[0].installation_id = "unknown".into());
+    rejects_owned(|s| s.owner_consumers[0].root.scope = OwnershipScope::User);
+    rejects_owned(|s| s.owner_consumers[0].root.path = s.owner_consumers[0].root.path.join("."));
+    rejects_owned(|s| s.owner_consumers[0].consumers.clear());
+    rejects_owned(|s| {
+        s.owner_consumers[0]
+            .consumers
+            .push(TargetSurface::ClaudeCli)
+    });
+    rejects_owned(|s| s.owner_consumers[0].consumers.push(TargetSurface::CodexCli));
+    rejects_owned(|s| s.artifacts[0].consumers.push(TargetSurface::CodexCli));
+    rejects_owned(|s| {
+        s.installations[0].requested.push(TargetSurface::CopilotCli);
+        s.owner_consumers[0].consumers = vec![TargetSurface::CopilotCli];
+    });
+}
+#[test]
+fn keeps_independent_consumers_for_shared_artifact_owners() {
+    let mut value = owned_state();
+    let mut second = installation();
+    second.owner.installation_id = "rule-b".into();
+    second.owner.source_name = "b".into();
+    second.owner.installed_name = "b".into();
+    second.requested = vec![TargetSurface::CopilotCli];
+    value.artifacts[0].owners.push(second.owner.clone());
+    value.artifacts[0].consumers.push(TargetSurface::CopilotCli);
+    let mut association = value.owner_consumers[0].clone();
+    association.installation_id = "rule-b".into();
+    association.consumers = vec![TargetSurface::CopilotCli];
+    value.owner_consumers.push(association);
+    value.installations.push(second);
+    value.references.push(Reference::DirectInstallation {
+        installation_id: "rule-b".into(),
+    });
+    let before = value.clone();
+    validate_state(&value).unwrap();
+    assert_eq!(value, before);
+    value.owner_consumers[1].consumers = vec![TargetSurface::ClaudeCli];
+    assert!(validate_state(&value).is_err());
+}
+#[test]
+fn keeps_root_scope_and_contribution_selectors_distinct() {
+    use upskill::instructions::aggregate::OwnedContribution;
+    use upskill::ownership::ArtifactContent;
+    let mut value = owned_state();
+    value.artifacts[0].path = "AGENTS.md".into();
+    value.owner_consumers[0].path = "AGENTS.md".into();
+    for id in ["first", "second"] {
+        let mut artifact = value.artifacts[0].clone();
+        artifact.content = ArtifactContent::MarkdownContribution {
+            contribution: OwnedContribution {
+                id: id.into(),
+                content_sha256: "b".repeat(64),
+                leading_newlines: 1,
+                preceding_newlines: 3,
+            },
+        };
+        let mut association = value.owner_consumers[0].clone();
+        association.contribution_id = Some(id.into());
+        value.artifacts.push(artifact);
+        value.owner_consumers.push(association);
+    }
+    value.artifacts.remove(0);
+    value.owner_consumers.remove(0);
+    validate_state(&value).unwrap();
+    let mut second = installation();
+    second.owner.installation_id = "rule-b".into();
+    second.root.scope = OwnershipScope::User;
+    let mut artifact = value.artifacts[0].clone();
+    artifact.root = second.root.clone();
+    artifact.owners = vec![second.owner.clone()];
+    let mut association = value.owner_consumers[0].clone();
+    association.root = second.root.clone();
+    association.installation_id = "rule-b".into();
+    value.installations.push(second);
+    value.references.push(Reference::DirectInstallation {
+        installation_id: "rule-b".into(),
+    });
+    value.artifacts.push(artifact);
+    value.owner_consumers.push(association);
+    validate_state(&value).unwrap();
+    value.owner_consumers.pop();
+    assert!(validate_state(&value).is_err());
+}
+
+#[test]
+fn validates_id_syntax_with_consistent_reference_endpoints() {
+    for invalid in ["", "bad/id", "with space", "é"] {
+        let mut value = state();
+        value.bundles.clear();
+        value.installations[0].owner.installation_id = invalid.into();
+        value.references = vec![Reference::DirectInstallation {
+            installation_id: invalid.into(),
+        }];
+        assert!(
+            validate_state(&value).is_err(),
+            "invalid installation ID: {invalid:?}"
+        );
+        value.installations.clear();
+        value.bundles = vec![bundle(invalid)];
+        value.references = vec![Reference::DirectBundle {
+            bundle_id: invalid.into(),
+        }];
+        assert!(
+            validate_state(&value).is_err(),
+            "invalid bundle ID: {invalid:?}"
+        );
+    }
+}
+#[test]
+fn duplicate_ids_cannot_hide_behind_distinct_installation_identities() {
+    rejects(|s| {
+        let mut item = s.installations[0].clone();
+        item.owner.installed_name = "distinct-alias".into();
+        s.installations.push(item);
+    });
+}
+#[test]
+fn validates_endpoints_even_when_reachability_counts_balance() {
+    let mut value = state();
+    value.bundles.clear();
+    value.references = vec![Reference::DirectInstallation {
+        installation_id: "unknown".into(),
+    }];
+    assert!(validate_state(&value).is_err());
+    value.installations.clear();
+    value.bundles = vec![bundle("real")];
+    value.references = vec![Reference::DirectBundle {
+        bundle_id: "unknown".into(),
+    }];
+    assert!(validate_state(&value).is_err());
+    value.installations = vec![installation()];
+    value.references = vec![
+        Reference::DirectBundle {
+            bundle_id: "real".into(),
+        },
+        Reference::BundleInstallation {
+            bundle_id: "real".into(),
+            installation_id: "unknown".into(),
+        },
+    ];
+    assert!(validate_state(&value).is_err());
+}
+#[test]
+fn rejects_duplicate_edges_of_every_kind() {
+    let mut value = state();
+    value.references.push(Reference::DirectInstallation {
+        installation_id: "rule-a".into(),
+    });
+    value.references.push(Reference::BundleDependency {
+        bundle_id: "first".into(),
+        dependency_id: "second".into(),
+    });
+    validate_state(&value).unwrap();
+    for reference in value.references.clone() {
+        let mut duplicate = value.clone();
+        duplicate.references.push(reference);
+        assert!(validate_state(&duplicate).is_err());
+    }
+}
+#[test]
+fn validates_artifact_shape_and_retained_legacy_schema() {
+    rejects_owned(|s| {
+        s.artifacts[0].content = upskill::ownership::ArtifactContent::File {
+            content_sha256: "z".repeat(64),
+            mode: Some(0o644),
+        }
+    });
+    rejects_owned(|s| {
+        s.artifacts[0].content = upskill::ownership::ArtifactContent::File {
+            content_sha256: "b".repeat(64),
+            mode: Some(0o10000),
+        }
+    });
+    rejects(|s| {
+        s.installations[0].source_evidence = SourceEvidence::Local {
+            manifest_sha256: "z".repeat(64),
+        }
+    });
+    rejects(|s| {
+        let mut legacy = upskill::lockfile::Lockfile::new();
+        legacy.schema = 2;
+        s.legacy = Some(legacy);
+    });
+}
+#[test]
+fn installation_identity_distinguishes_all_binding_fields_and_typed_ids() {
+    for field in 0..6 {
+        let mut value = state();
+        let mut item = installation();
+        item.owner.installation_id = "first".into();
+        match field {
+            0 => item.owner.source = "different-source".into(),
+            1 => item.owner.kind = ItemKind::Agent,
+            2 => item.owner.source_name = "different-name".into(),
+            3 => item.owner.installed_name = "different-alias".into(),
+            4 => item.root.path = item.root.path.join("different"),
+            5 => item.root.scope = OwnershipScope::User,
+            _ => unreachable!(),
+        }
+        value.installations.push(item);
+        value.references.push(Reference::DirectInstallation {
+            installation_id: "first".into(),
+        });
+        validate_state(&value).unwrap();
+    }
+}

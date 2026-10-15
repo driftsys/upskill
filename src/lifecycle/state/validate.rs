@@ -188,5 +188,6 @@ pub fn validate_state(state: &CombinedState) -> Result<()> {
         bail!("retained legacy state requires schema 1");
     }
     crate::ownership::validate_artifacts(&state.artifacts)?;
+    super::associations::validate_associations(state, &installations)?;
     Ok(())
 }

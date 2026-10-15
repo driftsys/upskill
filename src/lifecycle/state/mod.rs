@@ -3,6 +3,7 @@ use crate::lockfile::Lockfile;
 use crate::ownership::{ArtifactOwner, InstallationRoot, OwnedArtifact};
 use crate::target::TargetSurface;
 use serde::{Deserialize, Serialize};
+mod associations;
 mod validate;
 pub use validate::validate_state;
 

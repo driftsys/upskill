@@ -1050,6 +1050,9 @@ reference graph without I/O. Direct references root the graph; bundle members
 and dependencies must resolve, be reachable and contain no dependency cycle.
 Installations retain requested surfaces even when no artifact is generated.
 Duplicate identities and inconsistent source revision evidence are rejected.
+Artifact owners and roots must match authoritative installations. Explicit
+per-owner consumer associations must match every artifact selector exactly;
+their union must equal the artifact consumers.
 
 This library does not change `lockfile::CURRENT_SCHEMA`, command dispatch or
 production lockfiles. It does not establish filesystem ownership or native

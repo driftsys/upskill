@@ -28,3 +28,17 @@ raw spellings; they establish no filesystem equivalence or containment.
 This foundation is separate from command activation, source resolution, compiler
 reconciliation, migration backup, application and recovery. Gate 5 requires all
 lifecycle slices; Gate 6 supplies target qualification and activation.
+
+## Owners and consumers
+
+Every artifact owner must exactly match its authoritative installation,
+including revision and alias. Artifact roots must match the installation scope
+and raw root spelling. Existing artifact validation still rejects ambiguous
+whole-file/contribution locations and malformed content metadata.
+
+Each artifact selector and owner has exactly one explicit consumer association.
+Whole files use no contribution selector; Markdown regions use their recorded
+contribution ID. Associations must name existing owners, contain unique nonempty
+surfaces within that owner's requested selection, and have no surplus entries.
+The union of these associations equals the artifact consumer set exactly.
+Validation never infers individual consumers from that union.
