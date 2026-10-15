@@ -411,12 +411,15 @@ fn recovery_sync_failures_do_not_publish_done() {
 }
 #[test]
 fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
+    use std::os::unix::fs::MetadataExt;
     for phase in [
         "later-queued",
         "done",
         "queued-both",
         "pending-after",
-        "all-done",
+        "all-done-a",
+        "all-done-b",
+        "all-done-state",
     ] {
         let (tmp, scope, mut request) = fixture();
         for action in &mut request.files {
@@ -433,7 +436,7 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         }
         let guard = scope.try_lock_writer().unwrap();
         let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
-        if phase == "all-done" {
+        if phase.starts_with("all-done-") {
             for (index, action) in request
                 .files
                 .iter()
@@ -463,9 +466,11 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
                     .unwrap();
             }
         }
-        let target = tmp
-            .path()
-            .join(if phase == "later-queued" { "b" } else { "a" });
+        let target = tmp.path().join(
+            phase
+                .strip_prefix("all-done-")
+                .unwrap_or(if phase == "later-queued" { "b" } else { "a" }),
+        );
         let file = std::fs::File::open(&target).unwrap();
         #[cfg(target_os = "linux")]
         let name = "user.upskill-recovery";
@@ -477,6 +482,19 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         let before_state = std::fs::read(tmp.path().join("state")).ok();
         let before_journal =
             std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap();
+        let payloads: Vec<_> = journal
+            .disk
+            .actions
+            .iter()
+            .filter_map(|action| action.payload.as_ref())
+            .map(|payload| {
+                let path = tmp.path().join(".upskill/state").join(&payload.name);
+                let held = std::fs::File::open(&path).unwrap();
+                let metadata = held.metadata().unwrap();
+                let bytes = std::fs::read(&path).unwrap();
+                (path, held, bytes, (metadata.dev(), metadata.ino()))
+            })
+            .collect();
         assert!(scope.recover_operation(&guard).is_err(), "{phase}");
         assert_eq!(
             std::fs::read(tmp.path().join("a")).unwrap(),
@@ -493,16 +511,22 @@ fn recovery_qualifies_metadata_for_every_receipt_before_progress() {
         let length = rustix::fs::fgetxattr(&file, name, &mut value[..]).unwrap();
         assert_eq!(&value[..length], b"manual");
         assert_eq!(std::fs::read(tmp.path().join("state")).ok(), before_state);
-        for action in &journal.disk.actions {
-            if let Some(payload) = &action.payload {
-                assert!(
-                    tmp.path()
-                        .join(".upskill/state")
-                        .join(&payload.name)
-                        .is_file(),
-                    "{phase}: payload removed"
-                );
-            }
+        for (path, _held, bytes, identity) in payloads {
+            let metadata = std::fs::symlink_metadata(&path).unwrap();
+            assert!(
+                metadata.file_type().is_file(),
+                "{phase}: payload type changed"
+            );
+            assert_eq!(
+                (metadata.dev(), metadata.ino()),
+                identity,
+                "{phase}: payload identity changed"
+            );
+            assert_eq!(
+                std::fs::read(&path).unwrap(),
+                bytes,
+                "{phase}: payload bytes changed"
+            );
         }
     }
 }
