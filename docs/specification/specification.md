@@ -1065,6 +1065,26 @@ production lockfiles. It does not establish filesystem ownership or native
 support. See
 [combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md).
 
+### 4.14 Captured rule desired sets
+
+The opt-in `lifecycle::desired::compile_rule_desired_set` API validates a
+complete captured rule source and its explicit installation/source/consumer
+binding, then projects every existing compiler output into a complete desired
+file set. Exact bytes, resource modes, aliases, raw roots and explicit consumers
+survive. Requested surfaces remain recorded after audience exclusion, including
+when the desired set is empty. Empty output is not an installation removal.
+
+Consumers must exactly account for requested surfaces and match the explicitly
+selected Claude, Copilot or OpenCode compiler family. No Codex binding or native
+conformance claim is introduced. Active scoped OpenCode output is rejected
+rather than silently losing nonempty SSOT `scope.paths`.
+
+These are pure supplied-value results with no I/O, ownership adoption, lockfile
+rewrite or production command activation. Physical qualification, permission
+selection, reference/shared-owner reconciliation and application remain
+separate. See
+[captured rule desired sets](https://github.com/driftsys/upskill/blob/main/docs/design/captured-rule-desired-sets.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

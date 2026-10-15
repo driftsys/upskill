@@ -41,3 +41,6 @@ may be recorded here before implementation when their status is explicit.
 
 - [Combined lifecycle state](combined-lifecycle-state.md): opt-in reference
   authority; production commands remain on schema 1.
+
+- [Captured rule desired sets](captured-rule-desired-sets.md): opt-in complete
+  compiler outputs bound to explicit installation consumers.

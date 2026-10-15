@@ -12,15 +12,20 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Gate 5 captured rule desired sets](plans/2026-10-15-m1-gate5-rule-desired-sets.md)
+  — next bounded task 2a; plan prepared for review after combined state merged
+  in #295.
+
 - [Gate 5 combined lifecycle](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
   — active umbrella. The pure
   [combined-state slice](../design/combined-lifecycle-state.md) is implemented;
   its [plan is archived](../archive/plans/2026-10-15-m1-gate5-combined-state.md)
   with
   [validation evidence](../technotes/2026-10-15-m1-gate5-state-validation.md).
+  The combined-state slice merged in #295 with hosted checks passing.
   Compiler/planner integration, guarded backup/application/recovery and
-  observational adapters remain pending, as does final hosted qualification.
-  Gate 5 remains incomplete; production activation remains Gate 6.
+  observational adapters remain pending. Gate 5 remains incomplete; production
+  activation remains Gate 6.
 
 - [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
   — opt-in library implementation and durable records; hosted Linux/macOS
