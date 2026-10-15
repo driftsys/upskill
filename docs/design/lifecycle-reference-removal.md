@@ -4,7 +4,10 @@ The opt-in `lifecycle::retire::plan_reference_removal` boundary connects
 [reference reconciliation](lifecycle-reference-reconciliation.md) to complete
 shared-owner retirement. It accepts validated combined state, exact reference
 removals, and caller-supplied file observations. It returns complete combined
-state and individual `PlannedFile` values without I/O or input mutation.
+state and individual `PlannedFile` values without I/O or input mutation. The
+public `ReferenceRemovalPlan` contains `state: CombinedState` and
+`files: Vec<PlannedFile>`; the function takes borrowed prior state, a slice of
+exact `Reference` removals and a slice of `ObservedFile` values.
 
 ## Retention and ownership
 
@@ -21,6 +24,8 @@ For each retained artifact, owner order is preserved and consumers are the union
 of surviving authoritative per-owner associations, in prior consumer order. No
 equality of rendered bytes is used to establish new sharing. Final combined
 state validation includes graph, ownership, associations and tagged legacy.
+Retained artifact and association rows keep their prior order. Tagged legacy
+rows retain their order, duplicate entries and historical source labels exactly.
 
 ## File evidence and effects
 
@@ -28,7 +33,10 @@ Each affected physical location requires exactly one present observation,
 including shared-owner changes whose bytes are unchanged. Location identity uses
 exact scope and raw root spelling. Duplicate, missing, extraneous, malformed and
 invalid-mode observations conflict. Ancestor/descendant artifact paths involving
-an affected location conflict.
+an affected location conflict, including conflicts with untouched artifacts.
+Actions are ordered by scope, raw root and relative path and retain the complete
+observed destination and before-value. A conflict at any location returns an
+error without exposing a partial plan.
 
 Whole-file hashes and recorded modes must match the observation. A surviving
 owner retains the observed file unchanged; final-owner retirement emits an
@@ -50,6 +58,12 @@ conservative multi-owner rejection.
 
 ## Components
 
-- `src/lifecycle/retire/mod.rs`: graph-driven state and per-owner retirement.
-- `src/lifecycle/retire/files.rs`: location evidence and aggregate/file actions.
-- `tests/lifecycle_retirement.rs`: public acceptance examples.
+- [Retirement boundary](../../src/lifecycle/retire/mod.rs): graph-driven state
+  and per-owner retirement.
+- [File planning](../../src/lifecycle/retire/files.rs): location evidence and
+  aggregate/file actions.
+- [Acceptance examples](../../tests/lifecycle_retirement.rs): public contract
+  coverage.
+
+Satisfies:
+[specification §4.16](../specification/specification.md#416-reference-driven-shared-owner-removal-planning).

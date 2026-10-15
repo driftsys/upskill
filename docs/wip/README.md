@@ -31,7 +31,12 @@ references must be reconciled as part of that feature's review.
   [plan is archived](../archive/plans/2026-10-16-m1-gate5-reference-reconciliation.md)
   with
   [local validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md).
-  Shared-owner reconciliation and complete lifecycle planning (task 2b), guarded
+  The removal-only
+  [shared-owner retirement slice](../design/lifecycle-reference-removal.md) is
+  implemented; its
+  [plan is archived](../archive/plans/2026-10-16-m1-gate5-retirement.md) with
+  [local validation evidence](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
+  Shared add/update and complete lifecycle planning (task 2b), guarded
   backup/application/recovery and observational adapters remain pending. Gate 5
   remains incomplete; production activation remains Gate 6.
 
@@ -48,12 +53,6 @@ references must be reconciled as part of that feature's review.
   — Claude Code, Copilot, and Codex first; instructions, skills, subagents, MCP,
   marketplaces/plugins, hooks, and permissions. Proposed sequencing and
   acceptance gates; no implementation claim.
-
-## Current removal-planner slice
-
-[Shared-owner retirement plan](plans/2026-10-16-m1-gate5-retirement.md)
-implements the next bounded Gate 5 prerequisite; no activation or Gate 5
-completion claim.
 
 ## Reconciliation inventory
 

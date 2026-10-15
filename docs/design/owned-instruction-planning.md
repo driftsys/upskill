@@ -104,5 +104,6 @@ covers the shared reader and editor validation. These tests establish the pure
 boundary, without native discovery or filesystem execution claims.
 
 The opt-in [combined-state validator](combined-lifecycle-state.md) now checks
-reference authority and explicit per-owner consumer associations. Connecting
-this state to lifecycle planning remains pending.
+reference authority and explicit per-owner consumer associations.
+Reference-driven removal planning now connects this state to shared-owner
+retirement. Add/update planning and guarded execution remain pending.

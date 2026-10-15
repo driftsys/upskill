@@ -485,4 +485,5 @@ Mode.
 The opt-in
 [combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md)
 now checks reference authority and explicit per-owner consumer associations.
-Connecting this state to lifecycle planning remains pending.
+Reference-driven removal planning now connects this state to shared-owner
+retirement. Add/update planning and guarded execution remain pending.

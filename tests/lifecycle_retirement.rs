@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use upskill::files::plan::{FileLocation, FileValue, ObservedFile};
+use upskill::files::plan::{FileLocation, FileValue, ObservedFile, PlannedFile};
 use upskill::instructions::aggregate::{self, Contribution};
 use upskill::lifecycle::retire::plan_reference_removal;
 use upskill::lifecycle::state::{
@@ -225,6 +225,9 @@ fn metadata_only_retirement_requires_unchanged_owned_evidence() {
         wrong.location.path = "other".into();
         assert!(!reject(&state, &[direct("a")], &[wrong]).is_empty());
         let mut wrong = observed.clone();
+        wrong.location.root.scope = OwnershipScope::User;
+        assert!(!reject(&state, &[direct("a")], &[wrong]).is_empty());
+        let mut wrong = observed.clone();
         wrong.location.root.path.push(".");
         assert!(!reject(&state, &[direct("a")], &[wrong]).is_empty());
         let mut invalid = observed.clone();
@@ -260,16 +263,18 @@ fn empty_installations_and_noop_graph_edits_do_not_invent_file_actions() {
 
 #[test]
 fn unsupported_owned_kind_blocks_retirement_but_survives_disjoint_work() {
-    let (mut state, observed) = shared(false);
-    state
-        .installations
-        .push(installation("skill", TargetSurface::CodexCli));
-    state.installations.last_mut().unwrap().owner.kind = ItemKind::Skill;
-    state.references.push(direct("skill"));
-    validate_state(&state).unwrap();
-    assert!(reject(&state, &[direct("skill")], &[]).contains("unsupported"));
-    let result = plan_reference_removal(&state, &[direct("a")], &[observed]).unwrap();
-    assert!(result.state.installations.contains(&state.installations[2]));
+    for kind in [ItemKind::Skill, ItemKind::Agent] {
+        let (mut state, observed) = shared(false);
+        state
+            .installations
+            .push(installation("skill", TargetSurface::CodexCli));
+        state.installations.last_mut().unwrap().owner.kind = kind;
+        state.references.push(direct("skill"));
+        validate_state(&state).unwrap();
+        assert!(reject(&state, &[direct("skill")], &[]).contains("unsupported"));
+        let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+        assert!(result.state.installations.contains(&state.installations[2]));
+    }
 }
 
 #[test]
@@ -378,7 +383,10 @@ fn retained_bundle_path_delays_retirement_and_preserves_legacy_rows() {
     });
     let legacy_json = serde_json::json!({"kind":"rule","name":"old","source":"malformed old source label","required_by":[]});
     let row: upskill::lockfile::LockedItem = serde_json::from_value(legacy_json).unwrap();
-    state.legacy.as_mut().unwrap().items = vec![row.clone(), row];
+    let mut other = row.clone();
+    other.name = "different legacy item".into();
+    other.source = "another untouched source".into();
+    state.legacy.as_mut().unwrap().items = vec![row.clone(), row, other];
     let left = Reference::DirectBundle {
         bundle_id: "left".into(),
     };
@@ -485,4 +493,136 @@ fn later_file_conflict_returns_no_partial_plan() {
     other.location.path = "z.bin".into();
     other.value.as_mut().unwrap().bytes.push(1);
     assert!(reject(&state, &[direct("a"), direct("b")], &[observed, other]).contains("bytes"));
+}
+
+#[test]
+fn affected_paths_conflict_with_untouched_ancestors_and_descendants() {
+    for retire_child in [false, true] {
+        let (mut state, mut observed) = shared(false);
+        state.artifacts[0].owners = vec![state.installations[0].owner.clone()];
+        state.artifacts[0].consumers = vec![TargetSurface::CodexCli];
+        state
+            .owner_consumers
+            .retain(|row| row.installation_id == "a");
+        let mut child = state.artifacts[0].clone();
+        child.path.push_str("/child");
+        child.owners = vec![state.installations[1].owner.clone()];
+        child.consumers = vec![TargetSurface::ClaudeCli];
+        state.artifacts.push(child.clone());
+        state.owner_consumers.push(OwnerConsumers {
+            root: root(),
+            path: child.path.clone(),
+            contribution_id: None,
+            installation_id: "b".into(),
+            consumers: vec![TargetSurface::ClaudeCli],
+        });
+        validate_state(&state).unwrap();
+        if retire_child {
+            observed.location.path = child.path;
+        }
+        let id = if retire_child { "b" } else { "a" };
+        assert!(reject(&state, &[direct(id)], &[observed]).contains("topology"));
+    }
+}
+
+#[test]
+fn complete_actions_keep_destinations_and_retained_artifact_order() {
+    let (mut state, prototype) = shared(false);
+    let original = state.artifacts[0].clone();
+    let original_associations = state.owner_consumers.clone();
+    state.artifacts.clear();
+    state.owner_consumers.clear();
+    let mut observations = Vec::new();
+    for path in ["z.bin", "a.bin", "m.bin"] {
+        let mut row = original.clone();
+        row.path = path.into();
+        state.artifacts.push(row);
+        for association in &original_associations {
+            let mut association = association.clone();
+            association.path = path.into();
+            state.owner_consumers.push(association);
+        }
+        let mut observation = prototype.clone();
+        observation.location.path = path.into();
+        observations.push(observation);
+    }
+    let partial = plan_reference_removal(&state, &[direct("a")], &observations).unwrap();
+    let mut expected_artifacts = state.artifacts.clone();
+    for row in &mut expected_artifacts {
+        row.owners.remove(0);
+        row.consumers = vec![TargetSurface::ClaudeCli];
+    }
+    assert_eq!(partial.state.artifacts, expected_artifacts);
+    let final_plan =
+        plan_reference_removal(&state, &[direct("a"), direct("b")], &observations).unwrap();
+    let expected: Vec<_> = ["a.bin", "m.bin", "z.bin"]
+        .into_iter()
+        .map(|path| {
+            let observation = observations
+                .iter()
+                .find(|o| o.location.path == path)
+                .unwrap();
+            PlannedFile {
+                location: observation.location.clone(),
+                before: observation.value.clone(),
+                after: None,
+            }
+        })
+        .collect();
+    assert_eq!(final_plan.files, expected);
+    let expected: Vec<_> = expected
+        .into_iter()
+        .map(|mut file| {
+            file.after = file.before.clone();
+            file
+        })
+        .collect();
+    assert_eq!(partial.files, expected);
+}
+
+#[test]
+fn same_named_regions_at_other_locations_do_not_retain_retired_content() {
+    let (mut state, observed) = shared(true);
+    state.artifacts[0].owners = vec![state.installations[0].owner.clone()];
+    state.artifacts[0].consumers = vec![TargetSurface::CodexCli];
+    state
+        .owner_consumers
+        .retain(|row| row.installation_id == "a");
+    let edit = aggregate::reconcile(
+        "Other manual\n",
+        &[],
+        &[Contribution::new("shared", "Other body\n")],
+    )
+    .unwrap();
+    let other = OwnedArtifact {
+        root: root(),
+        path: "other.md".into(),
+        content: ArtifactContent::MarkdownContribution {
+            contribution: edit.owned[0].clone(),
+        },
+        owners: vec![state.installations[1].owner.clone()],
+        consumers: vec![TargetSurface::ClaudeCli],
+    };
+    state.artifacts.push(other.clone());
+    state.owner_consumers.push(OwnerConsumers {
+        root: root(),
+        path: "other.md".into(),
+        contribution_id: Some("shared".into()),
+        installation_id: "b".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    validate_state(&state).unwrap();
+    let result = plan_reference_removal(&state, &[direct("a")], &[observed.clone()]).unwrap();
+    assert_eq!(result.state.artifacts, vec![other]);
+    assert_eq!(
+        result.files,
+        vec![PlannedFile {
+            location: observed.location,
+            before: observed.value,
+            after: Some(FileValue {
+                bytes: b"Manual\n".to_vec(),
+                mode: Some(0o640)
+            })
+        }]
+    );
 }
