@@ -4,6 +4,8 @@ use crate::ownership::{ArtifactOwner, InstallationRoot, OwnedArtifact};
 use crate::target::TargetSurface;
 use serde::{Deserialize, Serialize};
 mod associations;
+mod codec;
+pub use codec::{parse_state, project_legacy, serialize_state};
 mod validate;
 pub use validate::validate_state;
 

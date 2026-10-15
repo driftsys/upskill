@@ -42,3 +42,26 @@ contribution ID. Associations must name existing owners, contain unique nonempty
 surfaces within that owner's requested selection, and have no surplus entries.
 The union of these associations equals the artifact consumer set exactly.
 Validation never infers individual consumers from that union.
+
+## Codec and retained legacy data
+
+`parse_state` and `serialize_state` both validate the complete envelope.
+Schema-2 records reject unknown fields. Encoding sorts owned graph records,
+selectors, owners and consumer lists in a cloned value and emits pretty JSON
+with one trailing newline. It does not change the supplied state.
+
+`project_legacy` requires schema 1 and retains its typed `Lockfile` snapshot in
+`legacy`, with an empty owned graph. Legacy arrays, duplicate rows, labels,
+recorded refs, optional fields and integration statuses keep their original
+values and order. They are unresolved historical data, never ownership evidence.
+Unknown original JSON fields and serialization bytes are outside this typed
+projection. The applying lifecycle must preserve them in an exact first-write
+backup; this pure slice does not create that backup. The text codec accepts
+UTF-8 `&str`; future byte-loading callers must reject invalid UTF-8 explicitly.
+
+An empty envelope has `schema: 2`, empty `installations`, `bundles`,
+`references`, `artifacts` and `owner_consumers` arrays, and `legacy: null`. New
+references are tagged as `direct-installation`, `direct-bundle`,
+`bundle-installation` or `bundle-dependency`; source evidence is tagged `git` or
+`local`. Legacy fields keep their existing schema-1 names rather than being
+normalized to new tags.
