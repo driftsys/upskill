@@ -9,6 +9,23 @@ use std::io::{Read, Seek, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
 type ExtendedMetadata = Vec<(Vec<u8>, Vec<u8>)>;
+#[cfg(test)]
+type SyncHook = Box<dyn FnMut(&File, &'static str) -> Result<()>>;
+#[cfg(test)]
+thread_local! {
+    pub(super) static TEST_SYNC: std::cell::RefCell<Option<SyncHook>> = std::cell::RefCell::new(None);
+}
+fn sync_recovery(file: &File, kind: &'static str) -> Result<()> {
+    #[cfg(test)]
+    if let Some(result) =
+        TEST_SYNC.with(|hook| hook.borrow_mut().as_mut().map(|sync| sync(file, kind)))
+    {
+        return result;
+    }
+    let _ = kind;
+    file.sync_all()?;
+    Ok(())
+}
 pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
     let metadata = file.metadata()?;
     ensure!(
@@ -173,9 +190,9 @@ pub(super) fn sync_post(
             Mode::empty(),
         )?);
         require_plain_metadata(&file)?;
-        file.sync_all()?;
+        sync_recovery(&file, "file")?;
     }
-    dir.sync_all()?;
+    sync_recovery(&dir, "directory")?;
     snapshot.verify_unchanged()
 }
 pub(super) fn apply(scope: &QualifiedScope, action: &PlannedFile, index: usize) -> Result<()> {

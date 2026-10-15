@@ -130,3 +130,32 @@ fn acl_metadata_is_rejected_before_replacement() {
     assert!(apply(&scope, &action, 0).is_err());
     assert_eq!(std::fs::read(path).unwrap(), b"new");
 }
+
+#[test]
+fn new_executable_and_existing_ordinary_modes_are_exact() {
+    for mode in [0o700, 0o644, 0o755] {
+        let (tmp, scope, mut action) = fixture();
+        if mode == 0o700 {
+            action.after.as_mut().unwrap().mode = Some(mode);
+        } else {
+            apply(&scope, &action, 0).unwrap();
+            std::fs::set_permissions(
+                tmp.path().join("nested/a"),
+                std::fs::Permissions::from_mode(mode),
+            )
+            .unwrap();
+            action.before = action.after.clone();
+            action.before.as_mut().unwrap().mode = Some(mode);
+            action.after.as_mut().unwrap().mode = Some(mode);
+            action.after.as_mut().unwrap().bytes = b"changed".to_vec();
+        }
+        apply(&scope, &action, 0).unwrap();
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("nested/a"))
+                .unwrap()
+                .mode()
+                & 0o7777,
+            mode
+        );
+    }
+}

@@ -259,3 +259,99 @@ fn readonly_recovery_and_unsafe_root_create_no_storage() {
     assert!(!tmp.path().join("a").exists());
     std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
 }
+
+#[test]
+fn recovery_requires_matching_guard() {
+    let (tmp, scope, request) = fixture();
+    super::super::journal::Journal::create(&scope, &request).unwrap();
+    let (_other, foreign, _) = fixture();
+    let guard = foreign.try_lock_writer().unwrap();
+    assert!(scope.recover_operation(&guard).is_err());
+    assert!(!tmp.path().join("a").exists());
+    assert!(tmp.path().join(".upskill/state/operation.json").exists());
+}
+#[test]
+fn mode_only_edit_requires_reconciliation_without_repair() {
+    let (tmp, scope, request) = fixture();
+    let guard = scope.try_lock_writer().unwrap();
+    super::super::TEST_HOOK.with(|hook| {
+        *hook.borrow_mut() = Some(Box::new(|point, index| {
+            if point == "after_done" && index == 0 {
+                anyhow::bail!("stop after first receipt");
+            }
+            Ok(())
+        }))
+    });
+    assert!(scope.apply_operation(&guard, &[], request).is_err());
+    super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+    std::fs::set_permissions(tmp.path().join("a"), std::fs::Permissions::from_mode(0o644)).unwrap();
+    let report = scope.recover_operation(&guard).unwrap().unwrap();
+    assert_eq!(report.outcome, ExecutionOutcome::Reconcile { index: 0 });
+    assert_eq!(report.recorded_prefix, 1);
+    assert_eq!(report.verified_post_prefix, 0);
+    assert_eq!(
+        std::os::unix::fs::MetadataExt::mode(&std::fs::metadata(tmp.path().join("a")).unwrap())
+            & 0o7777,
+        0o644
+    );
+    assert_eq!(std::fs::read(tmp.path().join("a")).unwrap(), b"a");
+    assert!(!tmp.path().join("b").exists());
+}
+#[test]
+fn recovery_sync_failures_do_not_publish_done() {
+    for failure in [Some("file"), Some("directory"), None] {
+        let (_tmp, scope, request) = fixture();
+        let guard = scope.try_lock_writer().unwrap();
+        let mut journal = super::super::journal::Journal::create(&scope, &request).unwrap();
+        journal
+            .record(0, super::super::journal::Receipt::Pending)
+            .unwrap();
+        super::super::backend::apply(&scope, &request.files[0], 0).unwrap();
+        let calls = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let recorded = calls.clone();
+        super::super::backend::TEST_SYNC.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move |file, kind| {
+                recorded.borrow_mut().push(kind);
+                if failure == Some(kind) {
+                    anyhow::bail!("injected {kind} sync failure");
+                }
+                file.sync_all()?;
+                Ok(())
+            }))
+        });
+        let ordered = calls.clone();
+        super::super::TEST_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move |point, index| {
+                if point == "before_done" && index == 0 {
+                    assert_eq!(*ordered.borrow(), vec!["file", "directory"]);
+                }
+                Ok(())
+            }))
+        });
+        let result = scope.recover_operation(&guard);
+        super::super::backend::TEST_SYNC.with(|hook| *hook.borrow_mut() = None);
+        super::super::TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+        if failure.is_some() {
+            assert!(result.is_err());
+            assert_eq!(
+                super::super::journal::Journal::load(&scope)
+                    .unwrap()
+                    .unwrap()
+                    .disk
+                    .actions[0]
+                    .receipt,
+                super::super::journal::Receipt::Pending
+            );
+            assert_eq!(
+                *calls.borrow(),
+                if failure == Some("file") {
+                    vec!["file"]
+                } else {
+                    vec!["file", "directory"]
+                }
+            );
+        } else {
+            assert_eq!(result.unwrap().unwrap().outcome, ExecutionOutcome::Complete);
+        }
+    }
+}

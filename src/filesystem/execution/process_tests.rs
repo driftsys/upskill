@@ -17,19 +17,27 @@ fn root(path: &std::path::Path) -> InstallationRoot {
     }
 }
 fn request(path: &std::path::Path) -> ExecutionRequest {
-    let action = |name: &str, before: &[u8], after: Option<&[u8]>| PlannedFile {
-        location: FileLocation {
-            root: root(path),
-            path: name.into(),
-        },
-        before: Some(FileValue {
-            bytes: before.into(),
-            mode: Some(0o600),
-        }),
-        after: after.map(|v| FileValue {
-            bytes: v.into(),
-            mode: Some(0o600),
-        }),
+    let action = |name: &str, before: &[u8], after: Option<&[u8]>| {
+        let mode = match name {
+            "z" => 0o755,
+            "b" => 0o644,
+            "noop" => 0o700,
+            _ => 0o600,
+        };
+        PlannedFile {
+            location: FileLocation {
+                root: root(path),
+                path: name.into(),
+            },
+            before: Some(FileValue {
+                bytes: before.into(),
+                mode: Some(mode),
+            }),
+            after: after.map(|v| FileValue {
+                bytes: v.into(),
+                mode: Some(mode),
+            }),
+        }
     };
     ExecutionRequest {
         files: vec![
@@ -53,7 +61,11 @@ fn setup() -> tempfile::TempDir {
     {
         let path = tmp.path().join(&action.location.path);
         std::fs::write(&path, &action.before.as_ref().unwrap().bytes).unwrap();
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        std::fs::set_permissions(
+            path,
+            std::fs::Permissions::from_mode(action.before.as_ref().unwrap().mode.unwrap()),
+        )
+        .unwrap();
     }
     tmp
 }
@@ -137,7 +149,10 @@ fn finish(tmp: &tempfile::TempDir) -> ExecutionReport {
         let path = tmp.path().join(&action.location.path);
         if let Some(value) = &action.after {
             assert_eq!(std::fs::read(&path).unwrap(), value.bytes);
-            assert_eq!(std::fs::metadata(&path).unwrap().mode() & 0o7777, 0o600);
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().mode() & 0o7777,
+                value.mode.unwrap()
+            );
         } else {
             assert!(!path.exists());
         }

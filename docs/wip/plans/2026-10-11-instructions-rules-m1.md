@@ -239,3 +239,6 @@ to permissions; hooks, MCP, skills, agents, and marketplace operations keep
 their later milestones. No automatic execution of source scripts is part of
 instruction installation. Existing bridge files and unmarked legacy output
 remain user-owned until explicit migration evidence proves otherwise.
+
+Validation results and tested source identities are retained in the
+[gate-4 evidence record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).

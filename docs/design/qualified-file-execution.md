@@ -155,3 +155,6 @@ qualification remain separate work.
 
 See [AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and
 [specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#412-qualified-file-execution-and-recovery).
+
+Validation results and tested source identities are retained in the
+[gate-4 evidence record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).

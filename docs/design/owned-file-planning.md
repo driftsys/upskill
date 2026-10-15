@@ -101,9 +101,9 @@ scope roots, writer locking,
 as separate inactive capabilities, including conservative destination overlap
 rejection and descriptor-relative source and destination observation. Final-head
 hosted source qualification remains required. Integrating qualified source
-evidence into the lifecycle, physical permission application and metadata
-qualification, durable state, apply/recovery and Codex activation remain
-pending. Pure [permission selection](file-permission-policy.md) is implemented
-as a separate inactive supplied-value capability. This prerequisite leaves
-current commands, schema-1 lockfiles and native client behavior unchanged and
-does not complete M1-A2, M1-A3 or M1.
+evidence into the lifecycle, combined durable state and Codex activation remain
+pending. Pure [permission selection](file-permission-policy.md) and opt-in
+[qualified file execution and recovery](qualified-file-execution.md) are
+implemented as separate library capabilities. This prerequisite leaves current
+commands, schema-1 lockfiles and native client behavior unchanged and does not
+complete M1-A2, M1-A3 or M1.

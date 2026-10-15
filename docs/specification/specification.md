@@ -946,9 +946,10 @@ values and selected bits convey no source authenticity, ownership, physical
 qualification or execution authority. Future writers must separately qualify
 owner/group, ACLs, extended metadata, containment and atomic replacement and
 persist actual resulting mode evidence. This API changes no compiler output,
-planner validation, CLI behavior or lockfile schema. File application, journal,
-recovery, state persistence and lifecycle activation remain pending; M1-A2,
-M1-A3 and M1 remain incomplete. See
+planner validation, CLI behavior or lockfile schema. The opt-in executor in
+§4.12 supplies file application, journals and recovery. Combined lifecycle
+state, activation and hosted qualification remain pending; M1-A2, M1-A3 and M1
+remain incomplete. See
 [AD-0031](../adr/0031-select-explicit-file-permissions.md) and the
 [permission design](../design/file-permission-policy.md).
 
