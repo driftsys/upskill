@@ -579,17 +579,21 @@ fn reachable_duplicate_upserts_are_rejected() {
 fn explicit_edges_from_detached_bundles_are_rejected() {
     let s = diamond();
     for edge in [member("left", "shared"), dependency("left", "right")] {
-        let error = reconcile_references(
-            &s,
-            &GraphChanges {
-                remove_references: vec![root("left")],
-                add_references: vec![edge],
-                ..Default::default()
-            },
-        )
-        .unwrap_err()
-        .to_string();
-        assert!(error.contains("added reference is unreachable"), "{error}");
+        for additions in [
+            vec![edge.clone()],
+            vec![member("right", "shared"), edge.clone()],
+            vec![edge.clone(), member("right", "shared")],
+        ] {
+            let error = reject(
+                &s,
+                &GraphChanges {
+                    remove_references: vec![root("left")],
+                    add_references: additions,
+                    ..Default::default()
+                },
+            );
+            assert!(error.contains("added reference is unreachable"), "{error}");
+        }
     }
 }
 

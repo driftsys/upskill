@@ -26,10 +26,12 @@ unreachable upsert rejection, duplicate edge edits and prior state validation.
 Sources were restored before green verification. Missing-interface failure
 preceded implementation.
 
-Four later controls independently removed the installation duplicate guard,
+Five later controls independently removed the installation duplicate guard,
 bundle duplicate guard and added-edge survival check, and made an installation
-root retain the same-named bundle. Each failed an intended acceptance assertion
-with exit code 101. Exact source bytes were restored after those controls.
+root retain the same-named bundle. A mixed-batch control checked only the first
+added edge; both addition orders now reject discarded work. Each failed an
+intended acceptance assertion with exit code 101. Exact source bytes were
+restored after those controls.
 
 `just fmt`, full `just verify` and `cargo +1.85.0 check --all-targets --locked`
 passed for the initial delivery. Full `just verify` passed again after final
