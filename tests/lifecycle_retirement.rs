@@ -533,9 +533,18 @@ fn complete_actions_keep_destinations_and_retained_artifact_order() {
     state.artifacts.clear();
     state.owner_consumers.clear();
     let mut observations = Vec::new();
-    for path in ["z.bin", "a.bin", "m.bin"] {
+    for (index, path) in ["z.bin", "a.bin", "m.bin"].into_iter().enumerate() {
         let mut row = original.clone();
         row.path = path.into();
+        let bytes = vec![index as u8, 255 - index as u8];
+        let mode = Some([0o600, 0o640, 0o755][index]);
+        row.content = ArtifactContent::File {
+            content_sha256: Sha256::digest(&bytes)
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+            mode,
+        };
         state.artifacts.push(row);
         for association in &original_associations {
             let mut association = association.clone();
@@ -544,6 +553,7 @@ fn complete_actions_keep_destinations_and_retained_artifact_order() {
         }
         let mut observation = prototype.clone();
         observation.location.path = path.into();
+        observation.value = Some(FileValue { bytes, mode });
         observations.push(observation);
     }
     let partial = plan_reference_removal(&state, &[direct("a")], &observations).unwrap();
@@ -625,4 +635,74 @@ fn same_named_regions_at_other_locations_do_not_retain_retired_content() {
             })
         }]
     );
+}
+
+#[test]
+fn scope_raw_root_and_association_order_are_preserved() {
+    let (mut state, _) = shared(false);
+    state.installations.clear();
+    state.references.clear();
+    state.artifacts.clear();
+    state.owner_consumers.clear();
+    let cases = [
+        ("z-owner", OwnershipScope::Project, "z", "z.bin"),
+        ("dot-owner", OwnershipScope::Project, "a/.", "a.bin"),
+        ("user-owner", OwnershipScope::User, "a", "a.bin"),
+        ("plain-owner", OwnershipScope::Project, "a", "zz.bin"),
+    ];
+    let mut observations = Vec::new();
+    for (index, (id, scope, suffix, path)) in cases.into_iter().enumerate() {
+        let mut installed = installation(id, TargetSurface::ClaudeCli);
+        installed.root.scope = scope;
+        installed.root.path.push(suffix);
+        let value = FileValue {
+            bytes: id.as_bytes().to_vec(),
+            mode: Some([0o600, 0o640, 0o644, 0o755][index]),
+        };
+        state.artifacts.push(OwnedArtifact {
+            root: installed.root.clone(),
+            path: path.into(),
+            content: ArtifactContent::File {
+                content_sha256: Sha256::digest(&value.bytes)
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect(),
+                mode: value.mode,
+            },
+            owners: vec![installed.owner.clone()],
+            consumers: installed.requested.clone(),
+        });
+        state.owner_consumers.push(OwnerConsumers {
+            root: installed.root.clone(),
+            path: path.into(),
+            contribution_id: None,
+            installation_id: id.into(),
+            consumers: installed.requested.clone(),
+        });
+        observations.push(ObservedFile {
+            location: FileLocation {
+                root: installed.root.clone(),
+                path: path.into(),
+            },
+            value: Some(value),
+        });
+        state.installations.push(installed);
+        state.references.push(direct(id));
+    }
+    state.owner_consumers.reverse();
+    validate_state(&state).unwrap();
+    let partial =
+        plan_reference_removal(&state, &[direct("z-owner")], &[observations[0].clone()]).unwrap();
+    assert_eq!(partial.state.owner_consumers, state.owner_consumers[..3]);
+    assert_eq!(partial.state.artifacts, state.artifacts[1..]);
+    let result = plan_reference_removal(&state, &state.references, &observations).unwrap();
+    let expected: Vec<_> = [3, 1, 0, 2]
+        .into_iter()
+        .map(|index| PlannedFile {
+            location: observations[index].location.clone(),
+            before: observations[index].value.clone(),
+            after: None,
+        })
+        .collect();
+    assert_eq!(result.files, expected);
 }

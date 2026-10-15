@@ -86,10 +86,10 @@ Qualified scope roots, writer locking,
 as separate inactive capabilities. Final-head hosted source qualification
 remains required. The [combined-state validator](combined-lifecycle-state.md)
 provides reference-graph authority and explicit per-owner consumer associations.
-Planner integration of those associations, integrating qualified source evidence
-and compiled outputs into complete lifecycle desired sets, and connecting the
-combined state to lifecycle operations remain pending. The opt-in
-[qualified file executor and recovery](qualified-file-execution.md) are
+Removal planning integrates those associations and returns complete combined
+state. Integrating qualified source evidence and compiled outputs with complete
+add/update planning, persistence and guarded application remain pending. The
+opt-in [qualified file executor and recovery](qualified-file-execution.md) are
 implemented separately; hosted final-head qualification remains required. The
 implemented [mixed coordinator](mixed-owned-artifact-planning.md) composes
 complete explicit sets across both forms; neither individual planner authorizes

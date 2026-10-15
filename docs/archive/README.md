@@ -508,7 +508,7 @@ Durable successors:
 Implementation through `b5c9537` passed full local verification and locked Rust
 1.85 checking with 11 acceptance examples. Independent implementation review
 found no production defects. Subsequent review corrections strengthened the
-focused suite to 14 passing tests; 13 assertion-failing controls established
+focused suite to 15 passing tests; 16 assertion-failing controls established
 independent coverage with exact production restoration. One symmetrical legacy
 fixture attempt is excluded. Final checks after gardening, hosted delivery and
 PR review remain separate gates; this entry makes no merge claim.
