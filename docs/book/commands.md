@@ -454,10 +454,11 @@ derives complete per-client entrypoint and resource outputs from captured bytes.
 Qualified scope roots, writer locking, destination observation and
 [source observation](https://driftsys.github.io/upskill/specification.html#49-qualified-source-tree-observations)
 are implemented as separate inactive library capabilities. Final-head hosted
-source qualification remains required. Reference resolution, planner integration
-of per-owner consumer associations, integrating qualified source evidence and
-captured-rule desired sets with lifecycle planning, state integration and
-transactional execution remain pending. The separate
+source qualification remains required. Reference resolution and per-owner
+association integration now support removal planning. Integrating qualified
+source evidence and captured-rule desired sets with complete add/update
+planning, state persistence and transactional execution remain pending. The
+separate
 [mixed coordinator](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file and contribution sets; current commands and
 schema-1 persistence are unchanged.
@@ -485,4 +486,5 @@ Mode.
 The opt-in
 [combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md)
 now checks reference authority and explicit per-owner consumer associations.
-Connecting this state to lifecycle planning remains pending.
+Reference-driven removal planning now connects this state to shared-owner
+retirement. Add/update planning and guarded execution remain pending.

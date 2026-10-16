@@ -31,7 +31,12 @@ references must be reconciled as part of that feature's review.
   [plan is archived](../archive/plans/2026-10-16-m1-gate5-reference-reconciliation.md)
   with
   [local validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md).
-  Shared-owner reconciliation and complete lifecycle planning (task 2b), guarded
+  The removal-only
+  [shared-owner retirement slice](../design/lifecycle-reference-removal.md) is
+  implemented; its
+  [plan is archived](../archive/plans/2026-10-16-m1-gate5-retirement.md) with
+  [local validation evidence](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
+  Shared add/update and complete lifecycle planning (task 2b), guarded
   backup/application/recovery and observational adapters remain pending. Gate 5
   remains incomplete; production activation remains Gate 6.
 

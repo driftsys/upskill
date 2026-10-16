@@ -348,11 +348,12 @@ native compatibility first. The separate pure whole-file planner is implemented
 in [§4.4](#44-owned-whole-file-operation-plans); captured compilation in
 [§4.5](#45-captured-item-compilation) derives complete per-client entrypoint and
 resource outputs. The complete mixed coordinator is implemented in
-[§4.6](#46-mixed-owned-artifact-operation-plans). Planner integration of the
-implemented reference-graph authority and per-owner consumer associations,
-integrating the captured-rule desired sets (§4.14) with state/lifecycle and
-transactional execution remain pending. This prerequisite changes no CLI
-behavior, source format or lockfile format and enables no native client support.
+[§4.6](#46-mixed-owned-artifact-operation-plans). Reference-graph authority and
+per-owner consumer associations now support removal planning (§4.16).
+Integrating captured-rule desired sets (§4.14) with complete add/update
+planning, state persistence and transactional execution remain pending. This
+prerequisite changes no CLI behavior, source format or lockfile format and
+enables no native client support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/design/owned-instruction-planning.md)
@@ -697,11 +698,11 @@ rather than all diagnostics.
 
 This library prerequisite activates no CLI selector, native adapter, source
 fetch, filesystem observation, lock, journal, schema-2 persistence or execution.
-Captured-rule desired sets are implemented in §4.14. Remaining work includes
-planner integration of the implemented reference authority and per-owner
-consumer associations, immutable source evidence, target qualification,
-filesystem safety, physical permission application and metadata qualification,
-writer locking, durable state and apply/recovery. Pure
+Captured-rule desired sets are implemented in §4.14; reference authority and
+per-owner associations support removal planning in §4.16. Complete add/update
+integration with immutable source evidence, source/target adapters, qualified
+observations, permission/metadata policy, writer locking, guarded persistence
+and apply/recovery remains later lifecycle work. Pure
 [permission selection](../design/file-permission-policy.md) is implemented as a
 separate inactive supplied-value capability. It does not complete M1-A2, M1-A3
 or M1. The public declarations are in
@@ -1118,6 +1119,32 @@ reconciliation must preserve tagged legacy data and unrelated owners, then
 validate the complete final combined state. No CLI or schema-1 behavior changes.
 See
 [lifecycle reference reconciliation](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-reference-reconciliation.md).
+
+### 4.16 Reference-driven shared-owner removal planning
+
+The inactive `lifecycle::retire::plan_reference_removal` API accepts complete
+combined state, exact reference removals and supplied file observations. It
+reconciles graph retention first, then retires rule installations whose final
+reference ended. Unsupported owned kinds cannot retire through this boundary;
+unselected kinds and tagged legacy rows remain unchanged.
+
+Surviving artifact owners retain their order. Consumers are recomputed from
+surviving per-owner associations. Every affected physical location requires one
+exact observation, including metadata-only changes. Invalid, duplicate, missing
+or extraneous evidence and affected topology overlaps conflict. Whole-file
+hash/mode changes and edited or malformed owned instruction regions conflict
+before returning a plan.
+
+Whole files remain unchanged while an owner survives and are individually
+removed after final-owner retirement. Each affected aggregate is edited once,
+retaining manual bytes, surviving bodies and the observed valid mode. Empty
+aggregates remain present. Region metadata is updated and the complete final
+state is validated. Referenced empty installations survive; empty retired
+installations need no file action.
+
+This pure boundary grants no qualified execution or native compatibility claim.
+Add/update sharing, guarded application, recovery and production schema-2
+activation remain later work.
 
 ## 5. Source format and authentication
 

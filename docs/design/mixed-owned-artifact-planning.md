@@ -107,14 +107,16 @@ The [captured compiler](captured-item-compilation.md) already derives complete
 per-client resource and entrypoint outputs. Connecting those outputs to
 lifecycle ownership, roots, consumers and destination observations remains
 pending. The [combined-state library](combined-lifecycle-state.md) now validates
-reference authority and per-owner consumer associations. Integrating those
-records, immutable source evidence, source/target adapters, target and
-filesystem qualification, writer locking, durable state and physical
-apply/recovery remain separate gates. The pure
-[permission-selection policy](file-permission-policy.md) is implemented;
+reference authority and per-owner consumer associations. The separate
+[removal planner](lifecycle-reference-removal.md) integrates those records for
+shared-owner retirement. Complete add/update planning, integration of immutable
+source evidence and source/target adapters, qualification, writer locking,
+guarded durable state and physical apply/recovery remain later lifecycle gates.
+The pure [permission-selection policy](file-permission-policy.md) is
+implemented;
 [qualified file execution and recovery](qualified-file-execution.md) consume
-selected modes as an opt-in library capability. Combined lifecycle integration
-and hosted qualification remain pending. The API may return the first contextual
+selected modes as an opt-in library capability. Complete lifecycle integration
+and native qualification remain pending. The API may return the first contextual
 conflict; complete diagnostic aggregation remains an activation gate. No CLI
 selector, native support, schema-2 persistence or installation effects are
 activated. M1-A2, M1-A3 and M1 remain incomplete.
