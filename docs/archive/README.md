@@ -583,3 +583,26 @@ aggregation, source/scoped selectors, CLI precedence, instruction adapters,
 guarded first-write backup, execution/recovery and observational adapters remain
 unfinished. Production commands and schema 1 remain unchanged; Gate 5, M1 and
 native activation remain incomplete.
+
+## Per-owner recorded contracts
+
+Source paths: `docs/wip/specs/2026-10-16-m1-owner-contracts.md` and
+`docs/wip/plans/2026-10-16-m1-owner-contracts.md`. PR #301 implements the
+bounded inactive contract boundary; the parent implementation commit is
+`d809fe2f10d221874fdf0af8c7cc5636ad40adf1`. This entry does not claim a merge.
+
+The archived [spec](specs/2026-10-16-m1-owner-contracts.md) retains its original
+bytes. The [plan](plans/2026-10-16-m1-owner-contracts.md) corrects its umbrella
+reference after relocation. Its
+[original raw bytes](../technotes/evidence/2026-10-16-m1-owner-contracts/original-archived-plan.md.gz)
+remain available as compressed provenance; the evidence manifest records their
+uncompressed digest. Other active and future WIP retains its existing
+disposition.
+
+Durable successors:
+[specification §4.19](../specification/specification.md#419-per-owner-recorded-contract-evidence),
+[design](../design/lifecycle-owner-contracts.md),
+[AD-0034](../adr/0034-record-explicit-owner-contracts.md), and
+[validation evidence](../technotes/2026-10-16-m1-owner-contracts-validation.md).
+Shared reconciliation, production activation and native qualification remain
+pending.

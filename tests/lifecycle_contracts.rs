@@ -590,3 +590,265 @@ fn replacement_preserves_prior_contract_positions() {
         vec![s.owner_contracts[0].clone(), c]
     );
 }
+
+#[test]
+fn unchanged_owner_cannot_gain_previously_absent_proof() {
+    let mut s = single();
+    let b = s.owner_contracts.pop().unwrap();
+    let sets = [desired(b"a")];
+    let sel = Selection::Names(vec!["a".into()]);
+    let contracts = [b];
+    let request = UpsertRequest {
+        selection: Some(&sel),
+        sets: &sets,
+        bundles: &[],
+        add_references: &[],
+        remove_references: &[],
+        contracts: &contracts,
+    };
+    assert!(plan_upsert(&s, request, &[observation("a.md", b"a")]).is_err());
+}
+
+#[test]
+fn no_op_selected_update_clears_omitted_proof() {
+    let s = single();
+    let sets = [desired(b"a")];
+    let sel = Selection::Names(vec!["a".into()]);
+    let request = UpsertRequest {
+        selection: Some(&sel),
+        sets: &sets,
+        bundles: &[],
+        add_references: &[],
+        remove_references: &[],
+        contracts: &[],
+    };
+    let UpsertOutcome::Ready(p) = plan_upsert(&s, request, &[observation("a.md", b"a")]).unwrap()
+    else {
+        panic!("unexpected blocker")
+    };
+    assert_eq!(p.state.owner_contracts, vec![s.owner_contracts[1].clone()]);
+    assert_eq!(p.state.artifacts, s.artifacts);
+}
+
+#[test]
+fn agreement_reports_recorded_owner_order_and_validates_whole_state() {
+    let mut s = evidenced();
+    s.artifacts[0].owners.reverse();
+    s.owner_contracts.clear();
+    let ContractAgreement::Blocked(rows) = check(&s) else {
+        panic!("missing proof accepted")
+    };
+    assert_eq!(
+        rows.iter()
+            .map(|r| r.installation_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["b", "a"]
+    );
+    s = evidenced();
+    s.artifacts[0].owners.reverse();
+    s.owner_contracts[0].profiles[0].contract_revision = 2;
+    assert_eq!(
+        check(&s),
+        ContractAgreement::Blocked(vec![upskill::lifecycle::contracts::ContractConflict {
+            installation_id: "a".into(),
+            issue: ContractIssue::TargetProfilesMismatch {
+                reference_installation_id: "b".into()
+            }
+        }])
+    );
+    s.owner_contracts[0].content = ContractContent::File {
+        content_sha256: hash(b"invalid"),
+        mode: Some(0o640),
+    };
+    assert!(check_contract_agreement(&s, &root(), "same.md", None).is_err());
+    s = evidenced();
+    s.references.push(direct("unknown"));
+    assert!(check_contract_agreement(&s, &root(), "same.md", None).is_err());
+}
+
+#[test]
+fn agreement_query_requires_exact_scope_and_raw_root() {
+    let s = evidenced();
+    let mut wrong = root();
+    wrong.scope = OwnershipScope::User;
+    assert!(check_contract_agreement(&s, &wrong, "same.md", None).is_err());
+    wrong = root();
+    wrong.path = wrong.path.join(".");
+    assert!(check_contract_agreement(&s, &wrong, "same.md", None).is_err());
+}
+
+#[test]
+fn previously_absent_evidence_appends_in_full_identity_order() {
+    let mut s = single();
+    s.owner_contracts.remove(0);
+    let mut set = desired(b"a");
+    let DesiredArtifact::File(template) = set.artifacts[0].clone() else {
+        unreachable!()
+    };
+    for path in ["z.md", "c.md"] {
+        let mut file = template.clone();
+        file.location.path = path.into();
+        set.artifacts.push(DesiredArtifact::File(file));
+    }
+    let sets = [set];
+    let contracts = [
+        contract("a", "z.md", b"a"),
+        contract("a", "c.md", b"a"),
+        contract("a", "a.md", b"a"),
+    ];
+    let sel = Selection::Names(vec!["a".into()]);
+    let request = UpsertRequest {
+        selection: Some(&sel),
+        sets: &sets,
+        bundles: &[],
+        add_references: &[],
+        remove_references: &[],
+        contracts: &contracts,
+    };
+    let observations = [
+        observation("a.md", b"a"),
+        ObservedFile {
+            location: FileLocation {
+                root: root(),
+                path: "z.md".into(),
+            },
+            value: None,
+        },
+        ObservedFile {
+            location: FileLocation {
+                root: root(),
+                path: "c.md".into(),
+            },
+            value: None,
+        },
+    ];
+    let UpsertOutcome::Ready(p) = plan_upsert(&s, request, &observations).unwrap() else {
+        panic!("unexpected blocker")
+    };
+    assert_eq!(
+        p.state.owner_contracts,
+        vec![
+            s.owner_contracts[0].clone(),
+            contracts[2].clone(),
+            contracts[1].clone(),
+            contracts[0].clone()
+        ]
+    );
+}
+
+#[test]
+fn graph_retirement_clears_proof_without_a_desired_set() {
+    let s = single();
+    let sel = Selection::Names(vec!["a".into()]);
+    let remove = [direct("a")];
+    let request = UpsertRequest {
+        selection: Some(&sel),
+        sets: &[],
+        bundles: &[],
+        add_references: &[],
+        remove_references: &remove,
+        contracts: &[],
+    };
+    let UpsertOutcome::Ready(p) = plan_upsert(&s, request, &[observation("a.md", b"a")]).unwrap()
+    else {
+        panic!("unexpected blocker")
+    };
+    assert_eq!(p.state.owner_contracts, vec![s.owner_contracts[1].clone()]);
+}
+
+#[test]
+fn nested_contract_fields_reject_unknown_keys() {
+    let json = serialize_state(&evidenced()).unwrap();
+    for profile in [false, true] {
+        let mut v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        if profile {
+            v["owner_contracts"][0]["profiles"][0]["unknown"] = true.into();
+        } else {
+            v["owner_contracts"][0]["content"]["unknown"] = true.into();
+        }
+        assert!(parse_state(&v.to_string()).is_err());
+    }
+}
+
+#[test]
+fn canonical_contract_order_uses_path_before_owner() {
+    let mut s = single();
+    s.artifacts[0].path = "z.md".into();
+    s.owner_consumers[0].path = "z.md".into();
+    s.owner_contracts[0].path = "z.md".into();
+    let v: serde_json::Value = serde_json::from_str(&serialize_state(&s).unwrap()).unwrap();
+    assert_eq!(v["owner_contracts"][0]["installation_id"], "b");
+    assert_eq!(v["owner_contracts"][0]["path"], "b.md");
+}
+
+#[test]
+fn codec_preserves_every_contract_and_profile() {
+    let mut s = evidenced();
+    for i in &mut s.installations {
+        i.requested.push(TargetSurface::CopilotCli);
+    }
+    for a in &mut s.owner_consumers {
+        a.consumers.push(TargetSurface::CopilotCli);
+    }
+    s.artifacts[0].consumers.push(TargetSurface::CopilotCli);
+    for c in &mut s.owner_contracts {
+        c.profiles.push(profile(TargetSurface::CopilotCli, 9));
+    }
+    let decoded = parse_state(&serialize_state(&s).unwrap()).unwrap();
+    assert_eq!(decoded.owner_contracts, s.owner_contracts);
+}
+
+#[test]
+fn git_capture_digest_binds_contract_without_implying_authenticity() {
+    let mut s = evidenced();
+    let revision = "1".repeat(40);
+    s.installations[0].owner.source_revision = Some(revision.clone());
+    s.installations[0].source_evidence = SourceEvidence::Git {
+        resolved_revision: revision,
+        manifest_sha256: "a".repeat(64),
+    };
+    s.artifacts[0].owners[0] = s.installations[0].owner.clone();
+    assert_eq!(check(&s), ContractAgreement::Matching);
+    s.owner_contracts[0].source_manifest_sha256 = "b".repeat(64);
+    assert!(check_contract_agreement(&s, &root(), "same.md", None).is_err());
+}
+
+#[test]
+fn missing_first_owner_does_not_hide_later_source_and_profile_conflicts() {
+    let mut s = evidenced();
+    s.installations.push(item("c"));
+    s.references.push(direct("c"));
+    s.artifacts[0].owners.insert(0, item("c").owner);
+    let mut row = s.owner_consumers[0].clone();
+    row.installation_id = "c".into();
+    s.owner_consumers.push(row);
+    s.installations[1].source_evidence = SourceEvidence::Local {
+        manifest_sha256: "b".repeat(64),
+    };
+    s.owner_contracts[1].source_manifest_sha256 = "b".repeat(64);
+    s.owner_contracts[1].profiles[0].contract_revision = 2;
+    let ContractAgreement::Blocked(rows) = check(&s) else {
+        panic!("partial diagnostics accepted")
+    };
+    assert_eq!(
+        rows,
+        vec![
+            upskill::lifecycle::contracts::ContractConflict {
+                installation_id: "c".into(),
+                issue: ContractIssue::MissingEvidence
+            },
+            upskill::lifecycle::contracts::ContractConflict {
+                installation_id: "b".into(),
+                issue: ContractIssue::SourceManifestMismatch {
+                    reference_installation_id: "a".into()
+                }
+            },
+            upskill::lifecycle::contracts::ContractConflict {
+                installation_id: "b".into(),
+                issue: ContractIssue::TargetProfilesMismatch {
+                    reference_installation_id: "a".into()
+                }
+            },
+        ]
+    );
+}

@@ -1,0 +1,263 @@
+{
+  "parent_commit": "d809fe2f10d221874fdf0af8c7cc5636ad40adf1",
+  "source_sha256": "265078e251e7c390ca906b1906a4b6a84b32acaef758ffba931f06105d4e9b38",
+  "tests_sha256": "a704a7988bca86066a7c64793a63e2e70f8c199d0d150177a90d65a804441548",
+  "entries": [
+    {
+      "artifact": "red.log.gz",
+      "uncompressed_sha256": "ea2bd3596d64fb36b7d11207acfe6118f3d95b17df579cf0a354c9a70128d0bd",
+      "uncompressed_bytes": 22588
+    },
+    {
+      "artifact": "verify-baseline.log.gz",
+      "uncompressed_sha256": "2989b3f9e0d202d9c09c939f085132facb73e7282b58e139aeea5c69cc79facb",
+      "uncompressed_bytes": 97408
+    },
+    {
+      "artifact": "fix-green.log.gz",
+      "uncompressed_sha256": "e8cce740a5ec25ed02e52ed865718001a6d0761d8df3475bc0e9960f8c95fbc1",
+      "uncompressed_bytes": 2278
+    },
+    {
+      "artifact": "fmt-final.log.gz",
+      "uncompressed_sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+      "uncompressed_bytes": 49
+    },
+    {
+      "artifact": "sanity-final.log.gz",
+      "uncompressed_sha256": "e539cc7a62f0321b42d034b0332b88cb5965184af8906c559f64053e73e31d28",
+      "uncompressed_bytes": 586
+    },
+    {
+      "artifact": "verify-final.log.gz",
+      "uncompressed_sha256": "7869b63a4933b877f8ea5e54150e879454695c68b99f0abc5a11c4b20222f7e9",
+      "uncompressed_bytes": 98371
+    },
+    {
+      "artifact": "msrv-final.log.gz",
+      "uncompressed_sha256": "4444a220edffe0ad746f0f019e2438a27e66a6f82c778de886ac57031dd8713f",
+      "uncompressed_bytes": 194
+    },
+    {
+      "artifact": "controls.py.gz",
+      "uncompressed_sha256": "5fd0b7a545fcc37e2cf1366bd7fc035958bf75ed3ea305a45bb835799e1c20ad",
+      "uncompressed_bytes": 1567
+    },
+    {
+      "artifact": "review-controls.py.gz",
+      "uncompressed_sha256": "1aee87d8df0db9c1046e8d2329c3777b234642f15d3eafb98a4389673c532d72",
+      "uncompressed_bytes": 1335
+    },
+    {
+      "artifact": "propagation-controls.py.gz",
+      "uncompressed_sha256": "8b7adf32bbbbd690c625b8540beadd23b127c3149f9c6de7db7a747e914e1e99",
+      "uncompressed_bytes": 1413
+    },
+    {
+      "artifact": "pending-controls.py.gz",
+      "uncompressed_sha256": "d1ee9208c02b8592a8c9707ebfe6577ae5c78a1985da75f3c892b5d91fb0806e",
+      "uncompressed_bytes": 3216
+    },
+    {
+      "artifact": "review-control-receipts.json.gz",
+      "uncompressed_sha256": "0097f46bc58624721a8dcfa0de65a46bab95533b623e0d3c453c76cb4dc1e352",
+      "uncompressed_bytes": 4047
+    },
+    {
+      "artifact": "control-canonical-contracts.log.gz",
+      "uncompressed_sha256": "112cdadcc05a6f252a90e2b7a8fa7a4e615e7d56f5ce591fd5c8db3545b2901f",
+      "uncompressed_bytes": 1015
+    },
+    {
+      "artifact": "control-codec-complete.log.gz",
+      "uncompressed_sha256": "ea6bef90749624e5159c1e2e26c57072aa05aae19f3e6e85f7ec0d3dc7518db0",
+      "uncompressed_bytes": 2573
+    },
+    {
+      "artifact": "control-codec-path-order.log.gz",
+      "uncompressed_sha256": "0db32dd30e6480aa4dd5b113d9f918b0e583b91906e7ab72908f0013ad5a24a2",
+      "uncompressed_bytes": 939
+    },
+    {
+      "artifact": "control-content-strict.log.gz",
+      "uncompressed_sha256": "301bdc749efb43b0a3872d01876ae7a1de9601fa067a4eb28fd7bad1a24b9137",
+      "uncompressed_bytes": 909
+    },
+    {
+      "artifact": "control-content.log.gz",
+      "uncompressed_sha256": "870093094dfbca47724e8dcc56971bdae72e5b244b9c61dc59f9501350a7d528",
+      "uncompressed_bytes": 1748
+    },
+    {
+      "artifact": "control-diagnostic-order.log.gz",
+      "uncompressed_sha256": "996ea31db18a60448c4fa4b3211029e0e7f9f9379b54f97b6b6f0f3efdba1c0f",
+      "uncompressed_bytes": 1013
+    },
+    {
+      "artifact": "control-missing.log.gz",
+      "uncompressed_sha256": "40c56d78ac87b28d1df1850ed99bed3027d27822e8afec5ee87dd651b717ccb9",
+      "uncompressed_bytes": 937
+    },
+    {
+      "artifact": "control-new-evidence.log.gz",
+      "uncompressed_sha256": "083fad49fb49207201f81637311e68a3034b59b63086133b6f48ec03dcc47908",
+      "uncompressed_bytes": 3410
+    },
+    {
+      "artifact": "control-no-op-omission.log.gz",
+      "uncompressed_sha256": "c38e6480880a92077e41c7cab1498c768ef25baf50bb7f77337417f02fe18555",
+      "uncompressed_bytes": 2372
+    },
+    {
+      "artifact": "control-partial-missing.log.gz",
+      "uncompressed_sha256": "4462b0a25fda79ef7cbbae7769da36d58129bc57cb5147ac9b016c8376c3dfb5",
+      "uncompressed_bytes": 1041
+    },
+    {
+      "artifact": "control-preserve-order.log.gz",
+      "uncompressed_sha256": "a96c4ebc0fdc638cb5555a6cd7b29ce92ff418babdc20e3c7a9e4fcd4245261e",
+      "uncompressed_bytes": 2877
+    },
+    {
+      "artifact": "control-profile-strict.log.gz",
+      "uncompressed_sha256": "878183709ccac1b849066f81bf8b552f8caa13138dd05a1e60ba0d04195365b0",
+      "uncompressed_bytes": 909
+    },
+    {
+      "artifact": "control-profile.log.gz",
+      "uncompressed_sha256": "8c48afce4f66cad37628b803b21a670865a2b5d0726d8a2e92600c37b2e5d8cd",
+      "uncompressed_bytes": 987
+    },
+    {
+      "artifact": "control-query-raw-root.log.gz",
+      "uncompressed_sha256": "0e41248e7da182ad7198dcfa871885858aa2d0a1b075c9b2679c63c3464e0888",
+      "uncompressed_bytes": 963
+    },
+    {
+      "artifact": "control-query-scope.log.gz",
+      "uncompressed_sha256": "bb973093c2da904cdf1d455a581eb5222bce3eda8ca2b76355348e68a65ecd6d",
+      "uncompressed_bytes": 963
+    },
+    {
+      "artifact": "control-retained-proof.log.gz",
+      "uncompressed_sha256": "8fcd3ad2fcb82314c0477b9cec446a33ff91b3f516b13c333a14920f9fd9c3e6",
+      "uncompressed_bytes": 1487
+    },
+    {
+      "artifact": "control-retired-proof.log.gz",
+      "uncompressed_sha256": "d1c995799726ac96e41d43cb353389cd2205071718be89020358d580909a40db",
+      "uncompressed_bytes": 1031
+    },
+    {
+      "artifact": "control-revision.log.gz",
+      "uncompressed_sha256": "990223c07a9911002c162f70839da3789afec97119a8127e7aa385a63f3cc235",
+      "uncompressed_bytes": 1377
+    },
+    {
+      "artifact": "control-rule-only.log.gz",
+      "uncompressed_sha256": "c7dc55d2c21df308ebf825c576b74ebb21cdd0047872f38fc1f9bb605fa0f796",
+      "uncompressed_bytes": 1326
+    },
+    {
+      "artifact": "control-selected-omission.log.gz",
+      "uncompressed_sha256": "ba913b654209723ab968778e51e5c1daeeea24c843aaceed7b173e9704608a46",
+      "uncompressed_bytes": 1072
+    },
+    {
+      "artifact": "control-source.log.gz",
+      "uncompressed_sha256": "4f2ca6c5fdb11513afddba2ee23dc0aea46b909a88569814d4c27b5d62fcc66b",
+      "uncompressed_bytes": 936
+    },
+    {
+      "artifact": "control-source_binding.log.gz",
+      "uncompressed_sha256": "32f500883ab45886fa8f33023e3d87df9ebebc912f66624d6d575b8eee5dc4fa",
+      "uncompressed_bytes": 1501
+    },
+    {
+      "artifact": "control-surface-membership.log.gz",
+      "uncompressed_sha256": "ab3ef14338c3665c312e153db8433dcee2dc54ee4783f64b924b45d1e592ea8a",
+      "uncompressed_bytes": 1000
+    },
+    {
+      "artifact": "control-unchanged-owner.log.gz",
+      "uncompressed_sha256": "4f3f6cdcc0a174dd394428a74ffca8c704e6338f2f4a5635d4b293340d2011fe",
+      "uncompressed_bytes": 972
+    },
+    {
+      "artifact": "control-upsert-retirement.log.gz",
+      "uncompressed_sha256": "b06d3cbe0b3af7b3c9d6024676b3896e6bf9f7b81e8c9456534699f3124f025d",
+      "uncompressed_bytes": 1034
+    },
+    {
+      "artifact": "control-whole-state.log.gz",
+      "uncompressed_sha256": "08044b4af863d533982a8422c1b95560817506ee221c5ef62dc6fa6e488625e9",
+      "uncompressed_bytes": 1431
+    },
+    {
+      "artifact": "control-codec-complete.patch.txt.gz",
+      "uncompressed_sha256": "218335f8576cdb75187a53b77531d8b5f4ea451745719a4d3b9afbae16a76d5b",
+      "uncompressed_bytes": 356
+    },
+    {
+      "artifact": "control-codec-path-order.patch.txt.gz",
+      "uncompressed_sha256": "1428421513d16e1bc060b3c16efa30e3ea7d63bd6b1e652811edd24a4ed721ab",
+      "uncompressed_bytes": 375
+    },
+    {
+      "artifact": "control-content-strict.patch.txt.gz",
+      "uncompressed_sha256": "aaf36b27869c417027609586b53648fedd407ee9326e885aec0abc4f6d528f16",
+      "uncompressed_bytes": 376
+    },
+    {
+      "artifact": "control-diagnostic-order.patch.txt.gz",
+      "uncompressed_sha256": "1b7dd054431bddb466a4db35a48ac2c4cdc5f44428e773d1232e1b62a218c854",
+      "uncompressed_bytes": 588
+    },
+    {
+      "artifact": "control-new-evidence.patch.txt.gz",
+      "uncompressed_sha256": "47e3a20cb2f2f523d48746ace6fe50723f4930a50abe35626501f15ddc37b1f2",
+      "uncompressed_bytes": 298
+    },
+    {
+      "artifact": "control-no-op-omission.patch.txt.gz",
+      "uncompressed_sha256": "c911a3b6f5a7bcf51a66653cae75159c9ec4426305d07db281a348813127733a",
+      "uncompressed_bytes": 435
+    },
+    {
+      "artifact": "control-profile-strict.patch.txt.gz",
+      "uncompressed_sha256": "0cf29f2a1755c8a25e4c0639ffe6bde97ae1520fe0df936de05fa6bbcef373ab",
+      "uncompressed_bytes": 299
+    },
+    {
+      "artifact": "control-query-raw-root.patch.txt.gz",
+      "uncompressed_sha256": "03e06906b715bed8fe543cc7a5915b9ff43e05f0fd53386226957ff77a871c2d",
+      "uncompressed_bytes": 361
+    },
+    {
+      "artifact": "control-query-scope.patch.txt.gz",
+      "uncompressed_sha256": "e718b59aa1278f472153bf9d2a2be024684789bec6164f83e38f9ff2360c7ace",
+      "uncompressed_bytes": 362
+    },
+    {
+      "artifact": "control-unchanged-owner.patch.txt.gz",
+      "uncompressed_sha256": "c73c4d2b2bf305dda1913705dcfd4ffc75acaadda32a6fd12398361d4dbfc1fe",
+      "uncompressed_bytes": 360
+    },
+    {
+      "artifact": "control-upsert-retirement.patch.txt.gz",
+      "uncompressed_sha256": "ead5a70b3d5350df85b4f1b7a646bd55679030e744bc031d240a52ca20114a0b",
+      "uncompressed_bytes": 558
+    },
+    {
+      "artifact": "control-whole-state.patch.txt.gz",
+      "uncompressed_sha256": "ffe8209355bc7bb1f2207daed718f2d04871725c9ea7cbc71287263976d4801d",
+      "uncompressed_bytes": 267
+    },
+    {
+      "artifact": "original-archived-plan.md.gz",
+      "uncompressed_sha256": "8bea18ca274ad1fb16e8140445028ccf014bc029bed0de5df297415869eb877b",
+      "uncompressed_bytes": 3819
+    }
+  ],
+  "limits": "Historical first fourteen controls precede the final test additions. Later twelve controls include exact restoration receipts and patch artifacts. Logs are captured dispatcher output, not native-client or independently authenticated execution evidence."
+}

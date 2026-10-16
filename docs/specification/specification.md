@@ -1226,11 +1226,11 @@ order is immaterial. Equal bytes and differing consumer subsets do not suffice.
 
 Upsert receives the complete explicit contract subset for changed installations;
 omitted changed evidence becomes unknown. Untouched rows survive exactly,
-replacement identities retain their positions and new rows append in identity
-order. Evidence for unchanged installations rejects. Complete resulting state
-validation precedes successful planning. Empty desired outputs and reference
-graph retirement remove only associated retired evidence; surviving shared
-owners retain their contracts.
+replacement identities preserve relative order among surviving rows and new rows
+append in identity order. Evidence for unchanged installations rejects. Complete
+resulting state validation precedes successful planning. Empty desired outputs
+and reference graph retirement remove only associated retired evidence;
+surviving shared owners retain their contracts.
 
 This inactive supplied-value boundary grants no shared-mutation, native,
 filesystem or source-authenticity authority. Existing affected multi-owner

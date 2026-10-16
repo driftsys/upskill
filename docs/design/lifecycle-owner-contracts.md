@@ -50,10 +50,11 @@ ownership or execution authority.
 
 `UpsertRequest.contracts` supplies the complete explicit evidence subset for
 changed installations. Omitted changed rows become unknown. Untouched rows
-retain their values and positions; replaced identities retain prior positions;
-new rows append in identity order. Supplied evidence for unchanged installations
-and duplicate rows reject. The complete resulting state is validated before a
-plan is returned, so stale or invalid proof exposes no partial plan.
+retain their values and relative order; replacements occupy corresponding
+surviving positions after removals. New rows append in identity order. Supplied
+evidence for unchanged installations and duplicate rows reject. The complete
+resulting state is validated before a plan is returned, so stale or invalid
+proof exposes no partial plan.
 
 Empty desired sets remove output evidence while retaining referenced
 installation history. Graph retirement removes retired installations' contracts.

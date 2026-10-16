@@ -14,7 +14,7 @@ existing writer and sharing rejections remain.
 **Tech Stack:** Rust 2024, Rust 1.85, existing serde/anyhow only.
 
 **Spec:** ../specs/2026-10-16-m1-owner-contracts.md;
-../specs/2026-10-15-m1-gate5-lifecycle-integration.md.
+../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md.
 
 ## Global constraints
 
