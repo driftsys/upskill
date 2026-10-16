@@ -537,7 +537,7 @@ Durable successors:
 [specification §4.17](../specification/specification.md#417-captured-lifecycle-selection-preflight),
 [selection design](../design/lifecycle-selection.md) and
 [validation note](../technotes/2026-10-16-m1-gate5-selection-validation.md). The
-20 public acceptance examples passed locally, and 22 controls failed their
+20 public acceptance examples passed locally, and 23 controls failed their
 intended assertions with exact source restoration. Full local verification and
 locked Rust 1.85 checking passed. Independent review and hosted delivery remain
 separate gates; this entry makes no merge claim.

@@ -94,6 +94,32 @@ fn blocked(s: &CombinedState, request: Selection) -> (SelectedNodes, Vec<D>) {
         other => panic!("expected blocked, got {other:?}"),
     }
 }
+fn unrelated_legacy() -> Lockfile {
+    let mut legacy = Lockfile::new();
+    legacy.items.push(legacy_item("unrelated-item"));
+    legacy.bundles.push(LockedBundle {
+        name: "unrelated-bundle".into(),
+        source: "?".into(),
+        git_ref: None,
+        items: vec![],
+    });
+    legacy.plugins.push(LockedPlugin {
+        name: "unrelated-plugin".into(),
+        client: "unknown".into(),
+        identifier: "other-id".into(),
+        scope: None,
+        bundle: "unrelated-parent".into(),
+        status: PluginInstallStatus::Skipped,
+    });
+    legacy.mcps.push(LockedMcp {
+        name: "unrelated-mcp".into(),
+        client: "unknown".into(),
+        scope: None,
+        bundle: "unrelated-parent".into(),
+        status: McpInstallStatus::Skipped,
+    });
+    legacy
+}
 #[test]
 fn all_owned_selection_preserves_prior_order_and_empty_installations() {
     let s = state();
@@ -704,7 +730,8 @@ fn sparse_legacy_item_selection_retains_original_indices_and_order() {
 }
 #[test]
 fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
-    let s = state();
+    let mut s = state();
+    s.legacy = Some(unrelated_legacy());
     let values = [
         "*",
         "a*",
@@ -729,14 +756,14 @@ fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
     );
 
     for value in values {
-        let mut captured = state();
+        let mut captured = s.clone();
         captured.installations[0].owner.installed_name = value.into();
         assert_eq!(
             select_owned_nodes(&captured, &names(&[value])).unwrap(),
             O::Ready(selected(&["z"], &[])),
             "installed literal {value:?}"
         );
-        let mut captured = state();
+        let mut captured = s.clone();
         captured.bundles[0].name = value.into();
         assert_eq!(
             select_owned_nodes(&captured, &names(&[value])).unwrap(),
@@ -744,8 +771,8 @@ fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
             "bundle literal {value:?}"
         );
         for (is_mcp, by_bundle) in [(false, false), (false, true), (true, false), (true, true)] {
-            let mut captured = state();
-            let mut l = Lockfile::new();
+            let mut captured = s.clone();
+            let mut l = unrelated_legacy();
             let (name, bundle) = if by_bundle {
                 ("native-entry", value)
             } else {
@@ -759,7 +786,7 @@ fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
                     bundle: bundle.into(),
                     status: McpInstallStatus::Skipped,
                 });
-                LegacyRow::Mcp(0)
+                LegacyRow::Mcp(1)
             } else {
                 l.plugins.push(LockedPlugin {
                     name: name.into(),
@@ -769,7 +796,7 @@ fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
                     bundle: bundle.into(),
                     status: PluginInstallStatus::Skipped,
                 });
-                LegacyRow::Plugin(0)
+                LegacyRow::Plugin(1)
             };
             captured.legacy = Some(l);
             assert_eq!(

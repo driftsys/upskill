@@ -87,3 +87,11 @@ and sorting legacy item entries by name while preserving their indices.
 total is22 controls, with unchanged production source. No third numbered review
 cycle is required; final fix verification and exact-head hosted checks remain
 gates.
+
+The final commit quick review found that one-row native fixtures could mask
+native-only wildcard expansion. Positive and negative literal fixtures now carry
+unrelated legacy items, bundles, plugins and MCPs. Exact native selections
+retain original index1 and exclude the unrelated rows. A native-only wildcard
+control assertion-failed; `native-wildcard-control.json` records exit101 and
+restored source hash. There are20 public tests and23 assertion-failing controls
+in total, with unchanged production source.
