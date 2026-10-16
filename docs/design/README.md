@@ -50,3 +50,7 @@ may be recorded here before implementation when their status is explicit.
 
 - [Lifecycle reference removal](lifecycle-reference-removal.md) — inactive
   reference-driven shared-owner retirement and supplied-evidence file plans.
+
+- [Captured lifecycle selection preflight](lifecycle-selection.md) — inactive
+  pure all/literal-name preflight; complete lifecycle orchestration remains
+  pending.
