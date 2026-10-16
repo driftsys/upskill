@@ -270,24 +270,46 @@ fn remove_by_source_in_non_tty_does_not_prompt_and_proceeds() {
 
 #[test]
 fn add_against_unreachable_github_emits_progress_line_to_stderr() {
-    // We can't really clone in CI, but we can check that the "Cloning"
-    // progress line is emitted to stderr before the failure. The clone
-    // fails fast (DNS / port-1) and we just inspect captured stderr.
+    // Only file transport is permitted; failure must come from a missing local
+    // repository while retaining the original GitHub progress label.
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
-
-    let assert = common::upskill_cmd(&home)
+    let mut cmd = common::upskill_cmd(&home);
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    let assert = cmd
         .current_dir(tmp.path())
-        // Bogus repo on a private TLD. git resolution fails instantly.
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", home.join("empty-gitconfig"))
+        .env("GIT_CONFIG_COUNT", "2")
+        .env(
+            "GIT_CONFIG_KEY_0",
+            format!(
+                "url.file://{}/.insteadOf",
+                tmp.path().join("missing-repository").display()
+            ),
+        )
+        .env("GIT_CONFIG_VALUE_0", "https://github.com/")
+        .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_1", "always")
+        .env("GIT_ALLOW_PROTOCOL", "file")
         .env("GIT_TERMINAL_PROMPT", "0")
+        .timeout(std::time::Duration::from_secs(30))
         .args(["add", "no-such-owner-12345/no-such-repo-12345"])
         .assert()
         .failure();
     let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
     assert!(
         stderr.contains("Cloning") && stderr.contains("github:"),
-        "expected `Cloning github:...` line on stderr, got: {stderr}"
+        "expected GitHub progress label: {stderr}"
+    );
+    assert!(
+        stderr.contains("missing-repository"),
+        "expected missing local repository failure: {stderr}"
     );
 }

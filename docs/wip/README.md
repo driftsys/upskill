@@ -24,9 +24,16 @@ references must be reconciled as part of that feature's review.
   [plan is archived](../archive/plans/2026-10-15-m1-gate5-rule-desired-sets.md)
   with
   [local validation evidence](../technotes/2026-10-15-m1-gate5-desired-validation.md).
-  Reference/shared-owner reconciliation and complete lifecycle planning (task
-  2b), guarded backup/application/recovery and observational adapters remain
-  pending. Gate 5 remains incomplete; production activation remains Gate 6.
+  The pure
+  [reference reconciliation slice](../design/lifecycle-reference-reconciliation.md)
+  is implemented as task 2b's first bounded delivery, following #296
+  (`b01a67d`); its
+  [plan is archived](../archive/plans/2026-10-16-m1-gate5-reference-reconciliation.md)
+  with
+  [local validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md).
+  Shared-owner reconciliation and complete lifecycle planning (task 2b), guarded
+  backup/application/recovery and observational adapters remain pending. Gate 5
+  remains incomplete; production activation remains Gate 6.
 
 - [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
   — opt-in library implementation and durable records; hosted Linux/macOS

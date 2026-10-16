@@ -1095,6 +1095,30 @@ roots and scopes remain separate; physical aliases and case equivalence require
 later qualification. Each failed compilation contributes one contextual error
 rather than exhaustive diagnostics within that rule.
 
+### 4.15 Authoritative lifecycle reference reconciliation
+
+The inactive `lifecycle::reconcile::reconcile_references` API accepts validated
+combined state and explicit installation/bundle upserts plus reference edits. It
+returns graph records and removed IDs without I/O or input mutation. Only actual
+direct roots and transitive bundle edges retain nodes; empty output or
+artifact/consumer count does not remove a referenced installation.
+
+All supplied nodes and edges are validated before iterative pruning, including
+unreachable dangling edges and cycles. Explicit upserts and added references
+must survive reconciliation; otherwise the request is rejected. Duplicate,
+absent, already-existing or overlapping reference edits conflict. Existing
+installation IDs cannot change source/kind/name/alias or scope/raw root;
+existing bundle IDs retain source/name. Valid evidence/revision and requested
+surface updates remain subject to later complete artifact planning.
+
+Surviving rows retain order; new nodes and references append in ID/enum order.
+Removed IDs follow prior order. Graph results contain neither artifacts nor the
+legacy snapshot and do not authorize deletion or state persistence. Later
+reconciliation must preserve tagged legacy data and unrelated owners, then
+validate the complete final combined state. No CLI or schema-1 behavior changes.
+See
+[lifecycle reference reconciliation](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-reference-reconciliation.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

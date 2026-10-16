@@ -470,3 +470,21 @@ reconciliation, shared owners and per-owner consumers, selected legacy
 conflicts, instruction contribution adapters and complete add/update/remove
 planning. Guarded backup/application/recovery and observational adapters follow.
 Commands remain on schema 1; Gate 5, M1 and native activation remain incomplete.
+
+## Gate 5 authoritative reference reconciliation
+
+Source path: `docs/wip/plans/2026-10-16-m1-gate5-reference-reconciliation.md`.
+The [archived plan](plans/2026-10-16-m1-gate5-reference-reconciliation.md)
+retains its historical relative scope link and unchecked boxes. Its current
+scope is the active
+[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md).
+Only this completed graph slice is archived; shared-owner lifecycle planning,
+guarded backup/recovery and observational adapters remain unfinished.
+
+Durable successors are
+[specification §4.15](../specification/specification.md#415-authoritative-lifecycle-reference-reconciliation),
+the [reference design](../design/lifecycle-reference-reconciliation.md) and
+[validation note](../technotes/2026-10-16-m1-gate5-reference-validation.md).
+Implementation through `4bfc357` passed local full verification, locked Rust
+1.85 checking and hosted CI. These checks do not establish native activation,
+Gate 5 completion or a PR merge. Commands remain on schema 1.
