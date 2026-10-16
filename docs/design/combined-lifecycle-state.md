@@ -10,14 +10,15 @@ exposes the records and public functions.
 ## Public records and validation
 
 `CombinedState` holds the schema number, installations, bundles, references,
-owned artifacts, per-owner consumers and optional typed legacy snapshot. An
-`Installation` reuses `ArtifactOwner` and `InstallationRoot`, and records its
-complete requested target surfaces and `SourceEvidence`. A `BundleNode` records
-its ID, source, name and optional source revision. `Reference` distinguishes
-direct installations, direct bundles, bundle membership and bundle dependencies.
-`OwnerConsumers` binds an installation ID to a root, relative path, optional
-contribution selector and explicit consumers. Existing ownership, target and
-schema-1 types retain their wire representations. No new dependency is required.
+owned artifacts, per-owner consumers, optional owner contracts and an optional
+typed legacy snapshot. An `Installation` reuses `ArtifactOwner` and
+`InstallationRoot`, and records its complete requested target surfaces and
+`SourceEvidence`. A `BundleNode` records its ID, source, name and optional
+source revision. `Reference` distinguishes direct installations, direct bundles,
+bundle membership and bundle dependencies. `OwnerConsumers` binds an
+installation ID to a root, relative path, optional contribution selector and
+explicit consumers. Existing ownership, target and schema-1 types retain their
+wire representations. No new dependency is required.
 
 [`validate_state`](../../src/lifecycle/state/validate.rs) checks the complete
 envelope and reuses `ownership::validate_artifacts` for artifact shape.
@@ -78,7 +79,9 @@ Whole files use no contribution selector; Markdown regions use their recorded
 contribution ID. Associations must name existing owners, contain unique nonempty
 surfaces within that owner's requested selection, and have no surplus entries.
 The union of these associations equals the artifact consumer set exactly.
-Validation never infers individual consumers from that union.
+Validation never infers individual consumers from that union. Optional
+[owner contracts](lifecycle-owner-contracts.md) bind explicit source, normalized
+content and revision evidence to these associations; absent rows stay unknown.
 
 ## Codec and retained legacy data
 
@@ -119,7 +122,8 @@ This completes the pure state slice. Separate
 [captured desired-set production](captured-rule-desired-sets.md),
 [reference reconciliation](lifecycle-reference-reconciliation.md) and
 [shared-owner removal planning](lifecycle-reference-removal.md) are implemented.
-Complete add/update planning, exact original-JSON backup, guarded application,
-checkpoint recovery integration and observational lifecycle adapters remain
-later work. Native and complete lifecycle qualification remain required; this
-record does not declare Gate 5 or M1 complete.
+Complete single-owner [upsert planning](lifecycle-upsert.md) is also
+implemented. Shared add/update reconciliation, exact original-JSON backup,
+guarded application, checkpoint recovery integration and observational lifecycle
+adapters remain later work. Native and complete lifecycle qualification remain
+required; this record does not declare Gate 5 or M1 complete.

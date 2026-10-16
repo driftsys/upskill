@@ -94,6 +94,9 @@ pub fn plan_reference_removal(
             })
         });
     }
+    state
+        .owner_contracts
+        .retain(|c| !retired.contains(c.installation_id.as_str()));
     let files = files::plan(prior, &mut state, &affected, observations)?;
     super::state::validate_state(&state)?;
     Ok(ReferenceRemovalPlan { state, files })

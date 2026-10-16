@@ -9,3 +9,5 @@ pub mod retire;
 pub mod selection;
 
 pub mod upsert;
+
+pub mod contracts;

@@ -15,3 +15,6 @@ Accepted choices belong in [ADRs](../adr/README.md); contracts belong in
 Keep schema bytes, licenses and provenance manifests together. Update dated
 research explicitly or add a successor note when upstream contracts change.
 These files are not part of the published book or runtime dependencies.
+
+- [Per-owner contract validation, 2026-10-16](2026-10-16-m1-owner-contracts-validation.md):
+  supplied-value examples, fault controls and qualification limits.

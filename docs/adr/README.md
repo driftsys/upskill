@@ -79,3 +79,5 @@ records its separate digest encoding.
 ## Qualified file execution
 
 - [AD-0033 — Qualified file execution with durable forward recovery](0033-qualified-file-execution-and-journals.md)
+
+- [AD-0034 — Record explicit per-owner contract evidence](0034-record-explicit-owner-contracts.md)

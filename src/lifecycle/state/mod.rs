@@ -18,6 +18,8 @@ pub struct CombinedState {
     pub references: Vec<Reference>,
     pub artifacts: Vec<OwnedArtifact>,
     pub owner_consumers: Vec<OwnerConsumers>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owner_contracts: Vec<super::contracts::OwnerContract>,
     pub legacy: Option<Lockfile>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

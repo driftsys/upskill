@@ -1197,9 +1197,48 @@ planner's preservation contract.
 
 This inactive pure boundary provides no source authenticity, qualified
 filesystem or native authority. Full diagnostic aggregation, shared add/update
-contracts, CLI precedence, backup/execution/recovery and observational adapters
-remain pending. Production schema and commands stay unchanged. See the
+reconciliation, CLI precedence, backup/execution/recovery and observational
+adapters remain pending. Production schema and commands stay unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md).
+
+### 4.19 Per-owner recorded contract evidence
+
+The opt-in combined state accepts optional explicit rule-owner contracts.
+Missing historical evidence stays unknown, is omitted when empty and gains no
+inferred revision; schema-1 projection produces no contracts. Each row binds
+exact scope, raw root, path, optional contribution selector and installation ID
+to captured source evidence, normalized artifact content and complete
+consumer/revision pairs. File content includes hash and optional mode;
+instruction content includes its body hash without aggregate whitespace
+bookkeeping.
+
+Every present row must match an authoritative owner-consumer association,
+installation source evidence and owned artifact. Duplicate/orphan identities,
+inexact bindings or consumer coverage, duplicate/empty profiles and zero
+revisions reject. Unknown serialized fields reject. Deterministic encoding sorts
+contracts and profiles without changing the supplied state.
+
+Agreement validates the whole state and selects an exact artifact identity.
+Unknown identities error. It reports missing evidence and source/profile
+conflicts in artifact-owner order. Matching requires all owners' full source
+manifest digests and complete surface/revision maps to agree; profile vector
+order is immaterial. Equal bytes and differing consumer subsets do not suffice.
+
+Upsert receives the complete explicit contract subset for changed installations;
+omitted changed evidence becomes unknown. Untouched rows survive exactly,
+replacement identities retain their positions and new rows append in identity
+order. Evidence for unchanged installations rejects. Complete resulting state
+validation precedes successful planning. Empty desired outputs and reference
+graph retirement remove only associated retired evidence; surviving shared
+owners retain their contracts.
+
+This inactive supplied-value boundary grants no shared-mutation, native,
+filesystem or source-authenticity authority. Existing affected multi-owner
+rejection remains. Production commands and schema 1 are unchanged; Gate 5
+remains incomplete. See the
+[owner-contract design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-owner-contracts.md)
+and
+[AD-0034](https://github.com/driftsys/upskill/blob/main/docs/adr/0034-record-explicit-owner-contracts.md).
 
 ## 5. Source format and authentication
 

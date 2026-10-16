@@ -56,4 +56,9 @@ may be recorded here before implementation when their status is explicit.
   pending.
 
 - [Complete lifecycle upsert planning](lifecycle-upsert.md) — inactive complete
-  single-owner sets and graph integration; new shared contracts remain pending.
+  single-owner sets and graph integration; shared reconciliation remains
+  pending.
+
+- [Per-owner recorded contract evidence](lifecycle-owner-contracts.md) —
+  inactive supplied evidence and conservative agreement; shared mutation remains
+  blocked.

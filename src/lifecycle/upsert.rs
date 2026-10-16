@@ -16,6 +16,8 @@ use std::ffi::OsString;
 #[derive(Debug, Clone, Copy)]
 pub struct UpsertRequest<'a> {
     pub selection: Option<&'a Selection>,
+    /// Complete explicit evidence subset for changed owners; omitted rows become unknown.
+    pub contracts: &'a [super::contracts::OwnerContract],
     pub sets: &'a [DesiredInstallationSet],
     pub bundles: &'a [BundleNode],
     pub add_references: &'a [Reference],
@@ -355,7 +357,30 @@ pub fn plan_upsert(
         }
     }
     owner_consumers.extend(associations.into_values());
+    let mut supplied_contracts = BTreeMap::new();
+    for contract in request.contracts {
+        ensure!(
+            changed.contains(&contract.installation_id),
+            "contract evidence affects an unchanged installation"
+        );
+        ensure!(
+            supplied_contracts
+                .insert(super::contracts::key(contract), contract.clone())
+                .is_none(),
+            "duplicate supplied owner contract"
+        );
+    }
+    let mut owner_contracts = Vec::new();
+    for old in &prior.owner_contracts {
+        if !changed.contains(&old.installation_id) {
+            owner_contracts.push(old.clone());
+        } else if let Some(contract) = supplied_contracts.remove(&super::contracts::key(old)) {
+            owner_contracts.push(contract);
+        }
+    }
+    owner_contracts.extend(supplied_contracts.into_values());
     let state = CombinedState {
+        owner_contracts,
         schema: prior.schema,
         installations: graph.installations,
         bundles: graph.bundles,
