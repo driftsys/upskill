@@ -56,11 +56,11 @@ retain history without any file action.
 
 The coordinator rebuilds changed per-owner consumer associations from the
 complete sets. Untouched rows retain order and values. Replaced association
-identities retain their old positions; new rows append in lexical scope, raw
-root, path, optional contribution ID and installation ID order. Final combined
-state validation checks graph, artifact ownership and exact consumer unions.
-Tagged legacy snapshots remain unchanged, including duplicate and malformed rows
-and native statuses.
+identities retain relative order among surviving rows; new rows append in
+lexical scope, raw root, path, optional contribution ID and installation ID
+order. Final combined state validation checks graph, artifact ownership and
+exact consumer unions. Tagged legacy snapshots remain unchanged, including
+duplicate and malformed rows and native statuses.
 
 ## Destination evidence and sharing
 

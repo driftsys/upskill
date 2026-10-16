@@ -794,8 +794,16 @@ fn codec_preserves_every_contract_and_profile() {
     for c in &mut s.owner_contracts {
         c.profiles.push(profile(TargetSurface::CopilotCli, 9));
     }
+    s.owner_contracts[1].profiles[1].contract_revision = 17;
+    s.installations[1].source_evidence = SourceEvidence::Local {
+        manifest_sha256: "b".repeat(64),
+    };
+    s.owner_contracts[1].source_manifest_sha256 = "b".repeat(64);
+    let expected_agreement = check(&s);
+    assert!(matches!(expected_agreement, ContractAgreement::Blocked(_)));
     let decoded = parse_state(&serialize_state(&s).unwrap()).unwrap();
     assert_eq!(decoded.owner_contracts, s.owner_contracts);
+    assert_eq!(check(&decoded), expected_agreement);
 }
 
 #[test]
@@ -850,5 +858,183 @@ fn missing_first_owner_does_not_hide_later_source_and_profile_conflicts() {
                 }
             },
         ]
+    );
+}
+
+#[test]
+fn agreement_rejects_invalid_evidence_on_unrelated_artifact() {
+    let mut s = single();
+    s.owner_contracts[1].content = ContractContent::File {
+        content_sha256: hash(b"invalid"),
+        mode: Some(0o640),
+    };
+    assert!(check_contract_agreement(&s, &root(), "a.md", None).is_err());
+}
+
+#[test]
+fn instruction_contracts_roundtrip_completely_and_reject_unknown_content() {
+    use upskill::instructions::aggregate::{self, Contribution};
+    let edit = aggregate::reconcile("", &[], &[Contribution::new("shared", "Shared\n")]).unwrap();
+    let mut s = evidenced();
+    s.artifacts[0].path = "AGENTS.md".into();
+    s.artifacts[0].content = ArtifactContent::MarkdownContribution {
+        contribution: edit.owned[0].clone(),
+    };
+    for a in &mut s.owner_consumers {
+        a.path = "AGENTS.md".into();
+        a.contribution_id = Some("shared".into());
+    }
+    for c in &mut s.owner_contracts {
+        c.path = "AGENTS.md".into();
+        c.contribution_id = Some("shared".into());
+        c.content = ContractContent::Instruction {
+            content_sha256: edit.owned[0].content_sha256.clone(),
+        };
+    }
+    let encoded = serialize_state(&s).unwrap();
+    assert_eq!(
+        parse_state(&encoded).unwrap().owner_contracts,
+        s.owner_contracts
+    );
+    let mut v: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+    v["owner_contracts"][0]["content"]["unknown"] = true.into();
+    assert!(parse_state(&v.to_string()).is_err());
+}
+
+#[test]
+fn canonical_contract_order_covers_scope_root_path_selector_and_owner() {
+    use upskill::instructions::aggregate::OwnedContribution;
+    let mut s = state();
+    s.installations.clear();
+    s.references.clear();
+    s.artifacts.clear();
+    s.owner_consumers.clear();
+    let cases = [
+        ("a", OwnershipScope::User, "a", "A.md", None),
+        ("b", OwnershipScope::Project, "z", "A.md", None),
+        ("c", OwnershipScope::Project, "a", "Z.md", None),
+        ("d", OwnershipScope::Project, "a", "A.md", Some("z")),
+        ("e", OwnershipScope::Project, "a", "A.md", Some("a")),
+        ("f", OwnershipScope::Project, "a", "A.md", Some("a")),
+    ];
+    for (id, scope, suffix, path, selector) in cases {
+        let location = InstallationRoot {
+            scope,
+            path: root().path.join(suffix),
+        };
+        let mut i = item(id);
+        i.root = location.clone();
+        let content = match selector {
+            None => ArtifactContent::File {
+                content_sha256: hash(b"body"),
+                mode: Some(0o640),
+            },
+            Some(id) => ArtifactContent::MarkdownContribution {
+                contribution: OwnedContribution {
+                    id: id.into(),
+                    content_sha256: hash(b"body"),
+                    leading_newlines: 0,
+                    preceding_newlines: 0,
+                },
+            },
+        };
+        if let Some(a) = s
+            .artifacts
+            .iter_mut()
+            .find(|a| a.root == location && a.path == path && a.content == content)
+        {
+            a.owners.push(i.owner.clone());
+        } else {
+            s.artifacts.push(OwnedArtifact {
+                root: location.clone(),
+                path: path.into(),
+                content,
+                owners: vec![i.owner.clone()],
+                consumers: vec![TargetSurface::ClaudeCli],
+            });
+        }
+        s.owner_consumers.push(OwnerConsumers {
+            root: location.clone(),
+            path: path.into(),
+            contribution_id: selector.map(str::to_owned),
+            installation_id: id.into(),
+            consumers: vec![TargetSurface::ClaudeCli],
+        });
+        let mut c = contract(id, path, b"body");
+        c.root = location;
+        c.contribution_id = selector.map(str::to_owned);
+        if selector.is_some() {
+            c.content = ContractContent::Instruction {
+                content_sha256: hash(b"body"),
+            };
+        }
+        s.owner_contracts.push(c);
+        s.references.push(direct(id));
+        s.installations.push(i);
+    }
+    s.owner_contracts.reverse();
+    let encoded = serialize_state(&s).unwrap();
+    let decoded = parse_state(&encoded).unwrap();
+    assert_eq!(
+        decoded
+            .owner_contracts
+            .iter()
+            .map(|c| c.installation_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["e", "f", "d", "c", "b", "a"]
+    );
+}
+
+#[test]
+fn removal_preserves_noncanonical_survivor_and_replacement_order() {
+    let mut s = single();
+    let c = item("c");
+    s.installations.push(c.clone());
+    s.references.push(direct("c"));
+    s.artifacts.push(OwnedArtifact {
+        root: root(),
+        path: "c.md".into(),
+        content: ArtifactContent::File {
+            content_sha256: hash(b"c"),
+            mode: Some(0o640),
+        },
+        owners: vec![c.owner],
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    s.owner_consumers.push(OwnerConsumers {
+        root: root(),
+        path: "c.md".into(),
+        contribution_id: None,
+        installation_id: "c".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    s.owner_contracts = vec![
+        contract("c", "c.md", b"c"),
+        s.owner_contracts[1].clone(),
+        s.owner_contracts[0].clone(),
+    ];
+    let sel = Selection::Names(vec!["a".into(), "c".into()]);
+    let sets = [desired(b"next")];
+    let contracts = [contract("a", "a.md", b"next")];
+    let remove = [direct("c")];
+    let request = UpsertRequest {
+        selection: Some(&sel),
+        sets: &sets,
+        bundles: &[],
+        add_references: &[],
+        remove_references: &remove,
+        contracts: &contracts,
+    };
+    let UpsertOutcome::Ready(p) = plan_upsert(
+        &s,
+        request,
+        &[observation("a.md", b"a"), observation("c.md", b"c")],
+    )
+    .unwrap() else {
+        panic!("unexpected blocker")
+    };
+    assert_eq!(
+        p.state.owner_contracts,
+        vec![s.owner_contracts[1].clone(), contracts[0].clone()]
     );
 }

@@ -2,38 +2,40 @@
 
 The initial implementation at `d809fe2f10d221874fdf0af8c7cc5636ad40adf1` had 16
 passing public examples and 1,191 passing Rust tests across 74 result groups.
-The review fixes add eleven examples, giving 27 in
-[the contract suite](../../tests/lifecycle_contracts.rs). The complete captured
-reports and mutation recipes are retained as compressed files alongside a
+The review fixes add fifteen examples, giving 31 in
+[the contract suite](../../tests/lifecycle_contracts.rs). Captured reports and
+control recipes are retained as compressed files alongside a
 [content-addressed manifest](evidence/2026-10-16-m1-owner-contracts/manifest.json).
-The manifest identifies the parent commit and exact production/test source
-hashes; the later snapshot includes the uncommitted review fixes at capture
-time. These are dispatcher-captured reports, not independently authenticated
-execution.
+It identifies the parent commit and exact production/test source hashes. The
+later snapshot includes uncommitted review fixes at capture time. These are
+dispatcher-captured reports, not independently authenticated execution.
 
 ## Examples and controls
 
-The initial RED contained 27 missing-interface compiler errors; it is
-compilation evidence, not an assertion control. The first ten passing examples
-expanded to sixteen before review. An empty-output fixture initially failed
-requested-surface accounting and was corrected to record its Claude audience
-exclusion explicitly.
+The initial RED contained 27 missing-interface compiler errors. This is
+compilation evidence, not an assertion control.
 
 Examples cover historical absence, exact source/content/profile bindings,
-complete codec preservation and ordering, unknown nested fields, exact query
-roots, all-owner diagnostics with nonlexical owner order, Git capture binding,
-instruction layout independence, no-op omitted-proof clearing, previously absent
-evidence insertion and ordering, unchanged-owner rejection without duplicate
-masking, graph retirement, and retained shared proof.
+complete file/instruction codec preservation and identity ordering, unknown
+nested fields, exact query roots, nonlexical all-owner diagnostics, Git capture
+binding, instruction layout independence, no-op omitted-proof clearing, new
+evidence insertion, unchanged-owner rejection without duplicate masking, graph
+retirement, and shared proof and relative order surviving removal.
 
-Fourteen initial fault controls and twelve review-fix controls reached failing
-assertions. The original recipes and output are retained; the twelve later
-controls also retain exact patches and before/after source-hash receipts. Each
-source was restored after its control. The controls exercise missing proof,
-source/profile/content binding, revisions, exact surfaces, rule-only evidence,
-propagation, ordering, complete codec preservation, whole-state agreement
-validation, exact query roots and nested strict decoding. This is targeted fault
-coverage, not exhaustive mutation qualification.
+The unified retained `all-controls.py.gz` recipe reruns 33 assertion-failing
+controls against the captured source and test hashes, including the previously
+missing surface-membership recipe. Every run retains its exact patch, output,
+source path and before/after restoration hashes in
+`all-control-receipts.json.gz`. The two surface-membership runs deliberately
+repeat the same guard. Earlier recipes and reports remain historical context;
+the unified recipe supplies the current reproducible set.
+
+Controls cover missing proof, source/profile/content binding, revisions, exact
+surfaces, rule-only evidence, propagation, ordering, distinct per-owner profile
+preservation, complete file/instruction codec preservation, unrelated invalid
+contract evidence, whole-state validation, exact query roots and strict
+decoding. This is targeted fault coverage, not exhaustive mutation
+qualification.
 
 ## Reading the retained evidence
 
@@ -45,10 +47,10 @@ gzip -dc docs/technotes/evidence/2026-10-16-m1-owner-contracts/verify-final.log.
 
 The manifest gives SHA-256 hashes and byte lengths of the uncompressed files.
 `verify-baseline.log.gz` retains the initial implementation run;
-`verify-final.log.gz` retains the review-fix run. Formatting, sanity and Rust
-1.85 all-target checks have separate reports. Control recipes are historical
-execution inputs; use a disposable isolated checkout when reproducing their
-source edits.
+`verify-final.log.gz` retains the final review-fix run. Formatting, sanity and
+Rust 1.85 all-target checks have separate reports. Reproduce control source
+edits only in a disposable isolated checkout. Manifest integrity was checked at
+capture; this delivery does not add a permanent evidence-integrity CI gate.
 
 ## Limits
 
