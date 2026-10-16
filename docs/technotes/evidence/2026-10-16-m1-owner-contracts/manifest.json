@@ -50,8 +50,8 @@
     },
     {
       "artifact": "msrv-final.log.gz",
-      "uncompressed_sha256": "f7d51686a63b7f0e31e1b378b1979f9aad69a8af8df5234d35942a38c808a3de",
-      "uncompressed_bytes": 194
+      "uncompressed_sha256": "a56e27d4d121cd655420ce379e9e0a1660f9a375c71a5f182619d9fdce70ab31",
+      "uncompressed_bytes": 506
     },
     {
       "artifact": "controls.py.gz",

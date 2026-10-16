@@ -24,11 +24,12 @@ retirement, and shared proof and relative order surviving removal.
 
 The unified retained `all-controls.py.gz` recipe reruns 33 assertion-failing
 controls against the captured source and test hashes, including the previously
-missing surface-membership recipe. Every run retains its exact patch, output,
-source path and before/after restoration hashes in
-`all-control-receipts.json.gz`. The two surface-membership runs deliberately
-repeat the same guard. Earlier recipes and reports remain historical context;
-the unified recipe supplies the current reproducible set.
+missing surface-membership recipe. Each run retains separate patch and output
+files listed in the manifest. `all-control-receipts.json.gz` records the source
+path, test identity and before/after restoration hashes. The two
+surface-membership runs deliberately repeat the same guard. Earlier recipes and
+reports remain historical context; the unified recipe supplies the current
+reproducible set.
 
 Controls cover missing proof, source/profile/content binding, revisions, exact
 surfaces, rule-only evidence, propagation, ordering, distinct per-owner profile
@@ -49,8 +50,16 @@ The manifest gives SHA-256 hashes and byte lengths of the uncompressed files.
 `verify-baseline.log.gz` retains the initial implementation run;
 `verify-final.log.gz` retains the final review-fix run. Formatting, sanity and
 Rust 1.85 all-target checks have separate reports. Reproduce control source
-edits only in a disposable isolated checkout. Manifest integrity was checked at
-capture; this delivery does not add a permanent evidence-integrity CI gate.
+edits only in a disposable isolated checkout. Create the output directory before
+running the recipe from that checkout's repository root:
+
+```bash
+mkdir -p .superpowers/sdd/2026-10-16-m1-owner-contracts
+gzip -dc docs/technotes/evidence/2026-10-16-m1-owner-contracts/all-controls.py.gz | python3 -
+```
+
+Manifest integrity was checked at capture; this delivery does not add a
+permanent evidence-integrity CI gate.
 
 ## Limits
 
