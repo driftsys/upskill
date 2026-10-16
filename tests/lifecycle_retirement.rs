@@ -908,13 +908,39 @@ fn consumer_union_is_isolated_between_retained_regions_at_one_location() {
 
 #[test]
 fn final_owner_deletion_rejects_changed_recorded_mode() {
-    for mode in [None, Some(0o640)] {
+    for (mode, observed_mode, accepted) in [
+        (None, None, true),
+        (Some(0o640), Some(0o640), true),
+        (None, Some(0o600), false),
+        (Some(0o640), None, false),
+        (Some(0o640), Some(0o600), false),
+    ] {
         let (mut state, mut observed) = shared(false);
         let ArtifactContent::File { mode: recorded, .. } = &mut state.artifacts[0].content else {
             unreachable!()
         };
         *recorded = mode;
-        observed.value.as_mut().unwrap().mode = Some(0o600);
-        assert!(reject(&state, &[direct("a"), direct("b")], &[observed]).contains("mode"));
+        observed.value.as_mut().unwrap().mode = observed_mode;
+        for remove in [vec![direct("a")], vec![direct("a"), direct("b")]] {
+            if accepted {
+                let result =
+                    plan_reference_removal(&state, &remove, std::slice::from_ref(&observed))
+                        .unwrap();
+                assert_eq!(
+                    result.files,
+                    vec![PlannedFile {
+                        location: observed.location.clone(),
+                        before: observed.value.clone(),
+                        after: if remove.len() == 1 {
+                            observed.value.clone()
+                        } else {
+                            None
+                        }
+                    }]
+                );
+            } else {
+                assert!(reject(&state, &remove, std::slice::from_ref(&observed)).contains("mode"));
+            }
+        }
     }
 }

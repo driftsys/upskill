@@ -70,5 +70,5 @@ on final-owner deletion. It also covers invalid UTF-8 outside a region,
 unsupported owned kinds with populated artifacts, and absent aggregate modes.
 Six independent controls disabled those checks and each failed an intended
 assertion. Source bytes were restored; `pr-pass1-controls.json` records hashes.
-The cumulative assertion-control count is22. Related live documentation now
+The cumulative assertion-control count is23. Related live documentation now
 distinguishes implemented removal planning from remaining add/update work.
