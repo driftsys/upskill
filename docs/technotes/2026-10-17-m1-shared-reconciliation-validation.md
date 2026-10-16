@@ -67,6 +67,10 @@ physical file ownership grouped by selector, and verifies missing/mode file and
 absent/invalid-UTF-8 instruction diagnostics. Retained extraction checks exact
 scope, raw root, selector and cause across equal paths in distinct roots/scopes.
 
+Retained diagnostics exclude owners and selectors from unrelated files in the
+same scope and root. Removing relative-path isolation assertion-fails; original
+source bytes are restored before the final gates.
+
 ## Limits
 
 These examples use supplied capture and destination values. They establish no

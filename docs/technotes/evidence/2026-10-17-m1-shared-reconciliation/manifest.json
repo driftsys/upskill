@@ -1,11 +1,11 @@
 {
-  "capture_base_head": "f2795eb463a64185d911f5790c884ddf4b870c85",
+  "capture_base_head": "d23807398c46f02314cbabc36267a9a35ad9a596",
   "source_capture": "working tree at capture before commit; hashes identify the source bytes",
   "files": [
     {
       "path": "progress.md.gz",
-      "sha256": "e3a3a648a92dbc2581b8501a1927458f93c29cb34cadf2bd2d1b95a5b478af33",
-      "uncompressed_sha256": "2fe1836a71d9dadc9c1eeaa2ba3b8cbbc92172ce1a3dad9b54d40b59df8370dc"
+      "sha256": "887310d8938bc74b4e705bec1646de0f42640fbfb091c5fdc4808339a551e6ef",
+      "uncompressed_sha256": "5f0ad0af72eb0a483da2ae5ccca7c3c77ffab32eef9fd73b22b9eebb88a8860e"
     },
     {
       "path": "producer-controls.py.gz",
@@ -208,6 +208,36 @@
       "uncompressed_sha256": "cbff1a3cdadd6d3a446c4c8d5bba849a55b389889f1bbaa20b2f0b14c5d126f5"
     },
     {
+      "path": "path-isolation-green.log.gz",
+      "sha256": "809c7b7d4d9dcd999cb24f7c97639fab209dccbfa8c5d18397647ba3d58802f7",
+      "uncompressed_sha256": "c5c73aa3fc29d9c13e8ae38a15e2fd2b0e9307b60d5097f98a89cacd41db7913"
+    },
+    {
+      "path": "path-isolation-control.log.gz",
+      "sha256": "7d333afd31c0a420bffd1174b8549a54b6e0385e08cc7e57abeb35362b0232ee",
+      "uncompressed_sha256": "c8837014f0cbc1824995ea1a173efb35011483e626aaa1543ea039590d1aaee8"
+    },
+    {
+      "path": "path-isolation-final-green.log.gz",
+      "sha256": "198258e31acd5deb6d675db977d1b875cc9c8cd1b807b37c7e88af0c18705071",
+      "uncompressed_sha256": "e192d1ef5d897426f3c6e9082ce71765203327c6a4ab5e79295cfcfef0f1268b"
+    },
+    {
+      "path": "verify-ready.log.gz",
+      "sha256": "ee63a1b1d16b835035c264bb56593096a339d2bc96885ac6dcd992bbff0ba309",
+      "uncompressed_sha256": "9164f42ccc932b82d241e418e372b0206bee4bc6dedd6d7348f4616c73edfdef"
+    },
+    {
+      "path": "sanity-ready.log.gz",
+      "sha256": "eed8b58ca95a35c0c7686e87262fe09cf8e5b42954a6a05fa3dfcd5f87baed29",
+      "uncompressed_sha256": "c288939bdacf3a9e2c61074249e2081633e49b3ff497213c788c8e637422dce8"
+    },
+    {
+      "path": "msrv-ready.log.gz",
+      "sha256": "4ba924fa562cc2d818ebca17cf306c885e67cda7eb3c0450e824c2009a590da3",
+      "uncompressed_sha256": "d5b66ea4d5a9c099995716a4c44af60d75e507748328db4ee20e4f66eb2bd8ba"
+    },
+    {
       "path": "pass1-control-diagnostic-owner-filter.log.gz",
       "sha256": "cee6cb4ee749b32316ecff402e89c8639a16b339f3a62708213d65b9fbf79424",
       "uncompressed_sha256": "fdfea4ba1eaeaf4888990379ceeb8a315958b5df0b789689d9a14108f21af266"
@@ -343,7 +373,7 @@
     "src/lifecycle/sharing/physical.rs": "a061e94d9e84b48b4be525f4aec06fac22ca0e922fe5e36173d6da070624b968",
     "src/lifecycle/sharing/mod.rs": "12bf286d432ad5fa67dd69d7fa4ba6d2d3096a49052353f15c03489db7bc4d3e",
     "src/lifecycle/sharing/artifacts.rs": "591d8150e254fdebd7c108067d2cfba5d2254e1f00b6d9ef36bc476f9acb025d",
-    "tests/lifecycle_sharing.rs": "40d5a374ee7753982153665c099218d9f023add01b1b021325d37e2ad145a78e",
+    "tests/lifecycle_sharing.rs": "e7c14ef2fdc350c2f3bb4b05afa77ccc7418c36c3f664658d7bd0840de96ebf5",
     "tests/lifecycle_contract_producer.rs": "aab264e8409f39d677c6d23bb5a055e327d91451fb0a77261951237cc0879b3b",
     "src/instructions/plan.rs": "5f2e91fa1bf26914673621a91ff1760f217c106c2e0066acb7c003e040254b44"
   }

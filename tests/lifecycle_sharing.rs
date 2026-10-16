@@ -606,6 +606,27 @@ fn unchanged_shared_instruction_neighbors_keep_unknown_contracts() {
         s.owner_consumers
             .push(association(id, "AGENTS.md", Some("neighbor")));
     }
+    let other = aggregate::reconcile(
+        "Other manual\n",
+        &[],
+        &[Contribution::new("unrelated", "Other body\n")],
+    )
+    .unwrap();
+    s.artifacts.push(OwnedArtifact {
+        root: root(),
+        path: "OTHER.md".into(),
+        content: ArtifactContent::MarkdownContribution {
+            contribution: other.owned[0].clone(),
+        },
+        owners: vec![item("f").owner, item("e").owner],
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    for id in ["e", "f"] {
+        s.installations.push(item(id));
+        s.references.push(direct(id));
+        s.owner_consumers
+            .push(association(id, "OTHER.md", Some("unrelated")));
+    }
     validate_state(&s).unwrap();
     let sets = [instruction("a", "New\n"), instruction("b", "New\n")];
     let c = proofs(&sets);
@@ -617,10 +638,12 @@ fn unchanged_shared_instruction_neighbors_keep_unknown_contracts() {
     ));
     assert_eq!(p.state.owner_contracts.len(), 2);
     assert_eq!(p.state.artifacts[1].owners, s.artifacts[1].owners);
+    assert_eq!(p.state.artifacts[2], s.artifacts[2]);
     let records = p
         .state
         .artifacts
         .iter()
+        .filter(|a| a.path == "AGENTS.md")
         .map(|a| {
             let ArtifactContent::MarkdownContribution { contribution } = &a.content else {
                 unreachable!()
@@ -649,6 +672,12 @@ fn unchanged_shared_instruction_neighbors_keep_unknown_contracts() {
     )
     .unwrap_err();
     let message = format!("{error:#}");
+    assert!(
+        !message.contains("OTHER.md")
+            && !message.contains("unrelated")
+            && !message.contains("owners [e, f]"),
+        "{message}"
+    );
     assert!(
         message.contains("selector Some(\"neighbor\") owners [c, d]"),
         "{message}"
