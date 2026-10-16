@@ -1,6 +1,6 @@
 # Gate 5 selection validation — 2026-10-16
 
-The 15 local public acceptance tests and full local verification passed. This
+The 17 local public acceptance tests and full local verification passed. This
 note records only observed checks; hosted checks and independent review remain
 separate delivery gates.
 
@@ -26,8 +26,9 @@ Eight independent controls each failed an intended assertion (exit 101): ignored
 legacy rows, hidden native bundle associations, ignored name ambiguity, ignored
 unsupported kinds, omitted complete-state validation, reordered candidates,
 omitted bundle closure and ignored unknown names. `controls.json` records each
-focused test and restored SHA-256. Exact source bytes were restored after every
-experiment; the earlier fixture compile failure is excluded from this count.
+focused test and restored SHA-256. Each mutation used the original source
+baseline; exact source bytes were restored after the experiments; the earlier
+fixture compile failure is excluded from this count.
 
 Additional acceptance examples cover populated unsupported kinds and a bundle
 diamond selected together with an explicit member; complete candidates remain
@@ -44,3 +45,18 @@ formatter failure occurred while the archive index was being edited. Those runs
 are diagnostic, not successful verification evidence. Independent
 implementation/PR review and hosted checks remain separate gates. No native
 qualification claim is made.
+
+## Commit-review coverage corrections
+
+The independent implementation review found no actionable production defects.
+The commit quick review identified a Major/S plugin-association fixture gap and
+Minor/S standalone/deep bundle selection, diagnostic ordering and original-index
+gaps. These small coverage fixes produce17 passing public tests. Seven
+additional controls each failed an intended assertion: plugin own-name
+substitution for its declaring bundle, upward selection expansion, shallow
+installation closure, reversed unsupported diagnostics, and overwritten
+bundle/plugin/MCP indices. `review-controls.json` records these results and
+exact restored source hash. The cumulative total is15 assertion-failing
+controls. Production source is unchanged. The restoration-frequency wording
+above was corrected to match the original control procedure. Final delivery
+verification follows these review corrections.

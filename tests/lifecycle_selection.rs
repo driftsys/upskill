@@ -367,7 +367,7 @@ fn transitive_bundle_selection_reports_historical_native_associations_once() {
     });
     let mut l = Lockfile::new();
     l.plugins.push(LockedPlugin {
-        name: "dependency".into(),
+        name: "distinct-plugin".into(),
         client: "unknown".into(),
         identifier: "id".into(),
         scope: None,
@@ -405,6 +405,22 @@ fn transitive_bundle_selection_reports_historical_native_associations_once() {
                 D::LegacyRow(LegacyRow::Mcp(0))
             ]
         )
+    );
+    assert_eq!(
+        blocked(&s, names(&["distinct-plugin"])).1,
+        vec![D::LegacyRow(LegacyRow::Plugin(0))]
+    );
+    s.legacy.as_mut().unwrap().plugins[0].name = "dependency".into();
+    assert_eq!(
+        blocked(&s, names(&["dependency"])).1,
+        vec![
+            D::AmbiguousName {
+                name: "dependency".into(),
+                matches: 3
+            },
+            D::LegacyRow(LegacyRow::Plugin(0)),
+            D::LegacyRow(LegacyRow::Mcp(0))
+        ]
     );
     assert_eq!(
         select_owned_nodes(&s, &names(&["a"])).unwrap(),
@@ -522,8 +538,92 @@ fn bundle_diamond_and_explicit_member_selection_deduplicate_nodes() {
         bundle_id: "leaf".into(),
         installation_id: "z".into(),
     });
+    s.references.push(Reference::BundleInstallation {
+        bundle_id: "bundle-z".into(),
+        installation_id: "a".into(),
+    });
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["bundle"])).unwrap(),
+        O::Ready(selected(
+            &["z", "a"],
+            &["bundle-z", "right", "left", "leaf"]
+        ))
+    );
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["z"])).unwrap(),
+        O::Ready(selected(&["z"], &[]))
+    );
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["left"])).unwrap(),
+        O::Ready(selected(&["z"], &["left", "leaf"]))
+    );
     assert_eq!(
         select_owned_nodes(&s, &names(&["bundle", "z", "left"])).unwrap(),
-        O::Ready(selected(&["z"], &["bundle-z", "right", "left", "leaf"]))
+        O::Ready(selected(
+            &["z", "a"],
+            &["bundle-z", "right", "left", "leaf"]
+        ))
+    );
+}
+#[test]
+fn multiple_unsupported_diagnostics_retain_prior_order() {
+    let mut s = state();
+    s.installations[0].owner.kind = ItemKind::Skill;
+    s.installations[1].owner.kind = ItemKind::Agent;
+    assert_eq!(
+        blocked(&s, names(&["a", "z"])),
+        (
+            selected(&["z", "a"], &[]),
+            vec![
+                D::UnsupportedInstallation {
+                    installation_id: "z".into(),
+                    kind: ItemKind::Skill
+                },
+                D::UnsupportedInstallation {
+                    installation_id: "a".into(),
+                    kind: ItemKind::Agent
+                }
+            ]
+        )
+    );
+}
+#[test]
+fn selected_legacy_rows_keep_nonzero_original_category_indices() {
+    let mut s = state();
+    let mut l = Lockfile::new();
+    for i in 0..2 {
+        l.bundles.push(LockedBundle {
+            name: format!("bundle-{i}"),
+            source: "?".into(),
+            git_ref: None,
+            items: vec![],
+        });
+        l.plugins.push(LockedPlugin {
+            name: format!("plugin-{i}"),
+            client: "unknown".into(),
+            identifier: format!("id-{i}"),
+            scope: None,
+            bundle: format!("historical-{i}"),
+            status: PluginInstallStatus::Skipped,
+        });
+        l.mcps.push(LockedMcp {
+            name: format!("mcp-{i}"),
+            client: "unknown".into(),
+            scope: None,
+            bundle: format!("historical-{i}"),
+            status: McpInstallStatus::Skipped,
+        });
+    }
+    s.legacy = Some(l);
+    assert_eq!(
+        blocked(&s, names(&["mcp-1", "plugin-1", "bundle-1"])),
+        (
+            selected(&[], &[]),
+            vec![
+                D::LegacyRow(LegacyRow::Bundle(1)),
+                D::LegacyRow(LegacyRow::Plugin(1)),
+                D::LegacyRow(LegacyRow::Mcp(1))
+            ]
+        )
     );
 }
