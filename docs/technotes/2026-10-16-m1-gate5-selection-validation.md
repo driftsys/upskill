@@ -73,3 +73,17 @@ and prefix stripping. `pass1-controls.json` records each result and exact
 restored source hash. The cumulative total is20 controls; production source is
 unchanged. Full delivery verification and the final numbered fix-diff review
 follow.
+
+## Final review corrections
+
+Pass2's Minor/S positive-literal finding and the commit quick review's sparse
+item-order gap were fixed together. The existing20 tests now include stored
+syntax-bearing aliases, owned bundle names, native names and native declaring
+bundle labels, selecting their exact identities while excluding plain unrelated
+nodes. Sparse selected items have reversed lexical names at original indices1/3.
+Two further controls assertion-failed: rejecting punctuation-bearing requests
+and sorting legacy item entries by name while preserving their indices.
+`pass2-controls.json` records results and source restoration. The cumulative
+total is22 controls, with unchanged production source. No third numbered review
+cycle is required; final fix verification and exact-head hosted checks remain
+gates.

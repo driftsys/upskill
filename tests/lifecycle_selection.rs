@@ -682,17 +682,17 @@ fn literal_case_distinctions_hold_for_owned_and_native_names_and_bundle_labels()
 fn sparse_legacy_item_selection_retains_original_indices_and_order() {
     let mut s = state();
     let mut l = Lockfile::new();
-    l.items = ["old-zero", "wanted", "unselected", "wanted-two"]
+    l.items = ["old-zero", "z-wanted", "unselected", "a-wanted"]
         .into_iter()
         .map(legacy_item)
         .collect();
     s.legacy = Some(l);
     assert_eq!(
-        blocked(&s, names(&["wanted"])),
+        blocked(&s, names(&["z-wanted"])),
         (selected(&[], &[]), vec![D::LegacyRow(LegacyRow::Item(1))])
     );
     assert_eq!(
-        blocked(&s, names(&["wanted-two", "wanted"])),
+        blocked(&s, names(&["a-wanted", "z-wanted"])),
         (
             selected(&[], &[]),
             vec![
@@ -727,4 +727,56 @@ fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
                 .collect()
         )
     );
+
+    for value in values {
+        let mut captured = state();
+        captured.installations[0].owner.installed_name = value.into();
+        assert_eq!(
+            select_owned_nodes(&captured, &names(&[value])).unwrap(),
+            O::Ready(selected(&["z"], &[])),
+            "installed literal {value:?}"
+        );
+        let mut captured = state();
+        captured.bundles[0].name = value.into();
+        assert_eq!(
+            select_owned_nodes(&captured, &names(&[value])).unwrap(),
+            O::Ready(selected(&[], &["bundle-z"])),
+            "bundle literal {value:?}"
+        );
+        for (is_mcp, by_bundle) in [(false, false), (false, true), (true, false), (true, true)] {
+            let mut captured = state();
+            let mut l = Lockfile::new();
+            let (name, bundle) = if by_bundle {
+                ("native-entry", value)
+            } else {
+                (value, "historical")
+            };
+            let row = if is_mcp {
+                l.mcps.push(LockedMcp {
+                    name: name.into(),
+                    client: "unknown".into(),
+                    scope: None,
+                    bundle: bundle.into(),
+                    status: McpInstallStatus::Skipped,
+                });
+                LegacyRow::Mcp(0)
+            } else {
+                l.plugins.push(LockedPlugin {
+                    name: name.into(),
+                    client: "unknown".into(),
+                    identifier: "id".into(),
+                    scope: None,
+                    bundle: bundle.into(),
+                    status: PluginInstallStatus::Skipped,
+                });
+                LegacyRow::Plugin(0)
+            };
+            captured.legacy = Some(l);
+            assert_eq!(
+                blocked(&captured, names(&[value])),
+                (selected(&[], &[]), vec![D::LegacyRow(row)]),
+                "native literal {value:?}, MCP={is_mcp}, bundle={by_bundle}"
+            );
+        }
+    }
 }
