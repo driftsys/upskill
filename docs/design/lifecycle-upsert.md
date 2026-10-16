@@ -103,15 +103,17 @@ contract evidence. Adding an owner cannot silently change retained content.
 Desired file bytes and modes or instruction bodies at one identity must agree.
 Real immutable owner bindings are checked before physical projection.
 
-After candidate whole-state validation, every affected artifact with multiple
-final owners requires complete matching contracts for all final owners. Full
-source-manifest digests and complete surface/revision maps must agree. Missing
-unselected evidence blocks the operation. Selected owners may replace unknown
-history with complete newly supplied evidence; no default revision is inferred.
-Single-owner results do not require invented proof. Retirement removes only the
-released owners' proof; a release leaving multiple owners still requires their
-agreement, while release to one owner or no owner needs no missing-proof
-invention. Unaffected shared neighbors may retain unknown evidence.
+After candidate whole-state validation, every affected artifact receiving
+desired output with multiple final owners requires complete matching contracts
+for all final owners. Full source-manifest digests and complete surface/revision
+maps must agree. Missing unselected evidence blocks the operation. Selected
+owners may replace unknown history with complete newly supplied evidence; no
+default revision is inferred. Single-owner results do not require invented
+proof. Retirement removes only the released owners' proof. A pure release with
+no desired value at that identity retains all surviving owners and evidence
+unchanged, including unknown proof, without requiring agreement. Physical
+observations remain mandatory. Unaffected shared neighbors may retain unknown
+evidence.
 
 ## Private physical projection
 
@@ -133,9 +135,11 @@ an empty aggregate file.
 The projection maps only normalized content and instruction layout metadata back
 to the real candidate rows, requiring exact identity count and content
 agreement. Internal owner identities never enter returned state, contracts or
-references. Final complete validation precedes return. Errors expose no partial
-plan and inputs remain unchanged. This projection supplies no execution,
-source-authenticity, physical-containment or native authority.
+references or public error messages. Physical errors translate private owner
+contexts into real owner lists while preserving location and cause text. Final
+complete validation precedes return. Errors expose no partial plan and inputs
+remain unchanged. This projection supplies no execution, source-authenticity,
+physical-containment or native authority.
 
 ## Remaining Gate 5 work
 

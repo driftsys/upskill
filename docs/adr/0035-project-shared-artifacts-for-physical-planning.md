@@ -17,11 +17,11 @@ Other alternatives were not documented.
 ## Decision
 
 Validate real immutable bindings, complete candidate state and matching evidence
-for affected multi-owner artifacts before projecting one deterministic private
-owner per logical artifact identity. Call the existing mixed planner with that
-projection. Require exact result identities and normalized content agreement,
-then map only physical content and instruction layout metadata back onto real
-candidate owners. Validate the complete state again before returning.
+for affected desired multi-owner artifacts before projecting one deterministic
+private owner per logical artifact identity. Call the existing mixed planner
+with that projection. Require exact result identities and normalized content
+agreement, then map only physical content and instruction layout metadata back
+onto real candidate owners. Validate the complete state again before returning.
 
 ## Consequences
 
@@ -36,3 +36,7 @@ Satisfies:
 Related:
 [shared upsert design](../design/lifecycle-upsert.md#private-physical-projection),
 [AD-0034](0034-record-explicit-owner-contracts.md).
+
+Pure owner release with no desired value at an identity preserves untouched
+survivors and their unknown evidence without requiring agreement. Supplied
+physical observations and all physical checks still apply.

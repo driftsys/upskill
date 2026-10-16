@@ -616,9 +616,10 @@ Source paths: `docs/wip/specs/2026-10-17-m1-shared-reconciliation.md` and
 
 The contracted producer starts at `c9f453042c954ab2698942c4cbe4e2ee4878ba13`;
 shared planning and acceptance examples were reconciled from the stable working
-implementation supplied by the dispatcher. The dispatcher reports 1,231 passing
-Rust tests, twenty-five focused examples, Rust 1.85 and sanity exit 0. This is
-local completion evidence, not a claim of merge or hosted qualification.
+implementation supplied by the dispatcher. The dispatcher reports 1,237 passing
+Rust tests, thirty-one focused examples, Rust 1.85 and sanity exit 0; see the
+[execution evidence](../technotes/evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
+This is local completion evidence, not a claim of merge or hosted qualification.
 
 Durable successors:
 [specification §4.20](../specification/specification.md#420-explicit-shared-output-reconciliation),

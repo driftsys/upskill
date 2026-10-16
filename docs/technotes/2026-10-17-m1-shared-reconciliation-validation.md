@@ -27,7 +27,7 @@ distinct raw roots/scopes.
 
 ## Reported checks and controls
 
-The dispatcher reports 1,235 passing tests in the full Rust suite, twenty-nine
+The dispatcher reports 1,237 passing tests in the full Rust suite, thirty-one
 passing focused examples, locked Rust 1.85 all-target checking and sanity exit 0
 for the implementation including review test additions. These reports are
 supplied delivery evidence, not independently authenticated execution by this
@@ -45,6 +45,17 @@ redundant controls are not counted as detected faults; exact byte equality
 remains a conservative guard beyond digest comparison. Additional controls for
 discarded layout metadata, skipped new-sharing agreement checks and collapsed
 raw roots/scopes assertion-failed. Source edits were restored.
+
+Execution logs, assertion controls and restored source hashes are retained in
+the
+[evidence manifest](evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
+The gzip artifacts can be inspected with `gzip -dc <file>`. The manifest hashes
+identify captured bytes; they do not authenticate an independent execution.
+
+Whole-branch review regressions cover proof-free release from three owners to
+two for both artifact forms, and real-owner diagnostics for malformed
+instruction bodies and edited files. Both cases failed before the production
+fixes.
 
 ## Limits
 

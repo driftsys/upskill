@@ -7,7 +7,8 @@ AD-0034
 Combined lifecycle state records authoritative ownership and consumers, but
 historical rows contain no adapter revisions. Equal rendered bytes cannot prove
 shared source semantics or target compatibility. The separate shared-upsert
-boundary needs explicit evidence for every affected final multi-owner artifact.
+boundary needs explicit evidence for every affected desired multi-owner
+artifact.
 
 ## Options
 
@@ -35,12 +36,16 @@ conservatively block. Callers must resubmit evidence for changed installations,
 including no-op output updates. The separate shared-upsert boundary consumes
 matching agreement after validating real candidate ownership. Complete selected
 requalification can replace unknown historical evidence; unselected missing
-proof blocks affected multi-owner results. Agreement alone does not authorize
-shared mutation, qualify native behavior or establish source authenticity and
-physical identity.
+proof blocks affected desired multi-owner results. Agreement alone does not
+authorize shared mutation, qualify native behavior or establish source
+authenticity and physical identity.
 
 Satisfies:
 [specification §4.19](../specification/specification.md#419-per-owner-recorded-contract-evidence).
 Related: [owner-contract design](../design/lifecycle-owner-contracts.md),
 [combined lifecycle state](../design/combined-lifecycle-state.md),
 [lifecycle upsert](../design/lifecycle-upsert.md).
+
+Pure owner release with no desired value at an identity preserves untouched
+survivors and their unknown evidence without requiring agreement. Supplied
+physical observations and all physical checks still apply.

@@ -1262,13 +1262,14 @@ identities append in key order. Immutable real-owner bindings remain enforced.
 Conflicting desired bytes, modes or instruction bodies reject. Untouched owners
 cannot implicitly acquire changed content or inferred proof.
 
-Every affected artifact with multiple final owners requires complete valid
-contracts with exact source-manifest and complete surface/revision-map
-agreement. Unknown unselected evidence blocks; complete newly supplied evidence
-may replace unknown selected history. Single-owner plans require no invented
-evidence. Retirement removes released owners' evidence while retaining surviving
-history; release to one or no owner does not require inventing missing
-contracts.
+Every affected artifact receiving desired output with multiple final owners
+requires complete valid contracts with exact source-manifest and complete
+surface/revision-map agreement. Unknown unselected evidence blocks; complete
+newly supplied evidence may replace unknown selected history. Single-owner plans
+require no invented evidence. Retirement removes released owners' evidence while
+retaining surviving history. Pure owner release with no desired value at the
+identity preserves surviving content, associations and evidence unchanged,
+without requiring missing contracts, even when multiple owners remain.
 
 Private per-artifact projection reuses the mixed physical planner after real
 ownership and agreement validation. Exact supplied observations are required for
@@ -1278,8 +1279,9 @@ observed modes; unchanged shared neighbors may retain unknown body proof while
 aggregate layout metadata refreshes. Final contribution removal keeps an empty
 aggregate. Only reconciled content metadata maps back onto authoritative real
 owners; internal projection identities never escape to state, contracts or
-references. Complete final validation precedes return and failures expose no
-partial plan.
+references or error diagnostics. Physical errors name authoritative real owners
+and preserve actionable location/cause text. Complete final validation precedes
+return and failures expose no partial plan.
 
 Inputs remain unchanged. This supplied-value path grants no filesystem
 containment, source authenticity, native behavior or execution authority.

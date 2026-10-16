@@ -71,7 +71,10 @@ pub(crate) fn plan(
     validate_state(candidate)?;
     for a in &candidate.artifacts {
         let identity = owned_key(a);
-        if rebuilt.affected.contains(&identity) && a.owners.len() > 1 {
+        // Without a desired value at this identity, rebuilding only releases
+        // changed owners; all surviving owners and their evidence are untouched.
+        let release_only = !rebuilt.desired.contains_key(&identity);
+        if rebuilt.affected.contains(&identity) && a.owners.len() > 1 && !release_only {
             ensure!(
                 check_contract_agreement(candidate, &a.root, &a.path, identity.3.as_deref())?
                     == ContractAgreement::Matching,

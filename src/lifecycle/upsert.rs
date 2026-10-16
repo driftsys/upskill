@@ -198,7 +198,8 @@ pub fn plan_upsert(
 /// Plan complete shared replacements using explicit matching owner contracts.
 ///
 /// This opt-in pure boundary grants no native or filesystem qualification.
-/// Missing retained evidence blocks affected multi-owner outputs.
+/// Missing retained evidence blocks desired multi-owner outputs; pure owner release
+/// preserves untouched survivors without requalification.
 pub fn plan_shared_upsert(
     prior: &CombinedState,
     request: UpsertRequest<'_>,

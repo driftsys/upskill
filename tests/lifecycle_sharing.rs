@@ -902,6 +902,7 @@ fn mixed_new_artifacts_are_ordered_by_raw_identity() {
             unreachable!()
         };
         f.location.path = "aaa.md".into();
+        f.value.bytes = b"extra".to_vec();
         set.artifacts.push(extra);
     }
     let c = proofs(&sets);
@@ -924,6 +925,28 @@ fn mixed_new_artifacts_are_ordered_by_raw_identity() {
         vec!["AGENTS.md", "aaa.md", "shared.md"]
     );
     assert_eq!(p.files.len(), 3);
+    let aggregate =
+        aggregate::reconcile("", &[], &[Contribution::new("shared", "Body\n")]).unwrap();
+    for (action, (path, bytes, mode)) in p.files.iter().zip([
+        ("AGENTS.md", aggregate.content.as_bytes(), None),
+        ("aaa.md", &b"extra"[..], Some(0o640)),
+        ("shared.md", &b"same"[..], Some(0o640)),
+    ]) {
+        assert_eq!(action.location.root.scope, root().scope);
+        assert_eq!(
+            action.location.root.path.as_os_str(),
+            root().path.as_os_str()
+        );
+        assert_eq!(action.location.path, path);
+        assert_eq!(action.before, None);
+        assert_eq!(
+            action.after,
+            Some(FileValue {
+                bytes: bytes.to_vec(),
+                mode
+            })
+        );
+    }
     for a in &p.state.artifacts {
         assert_eq!(
             a.owners
@@ -959,8 +982,116 @@ fn raw_roots_and_scopes_keep_equal_relative_paths_distinct() {
         ));
         assert_eq!(p.state.artifacts.len(), 2);
         assert_eq!(p.files.len(), 2);
+        for (action, set) in p.files.iter().zip(&sets) {
+            assert_eq!(action.location.root.scope, set.installation.root.scope);
+            assert_eq!(
+                action.location.root.path.as_os_str(),
+                set.installation.root.path.as_os_str()
+            );
+            assert_eq!(action.location.path, "shared.md");
+            assert_eq!(action.before, None);
+            assert_eq!(action.after.as_ref().unwrap().mode, Some(0o640));
+        }
         assert_eq!(p.files[0].after.as_ref().unwrap().bytes, b"left");
         assert_eq!(p.files[1].after.as_ref().unwrap().bytes, b"right");
         assert!(p.state.artifacts.iter().all(|a| a.owners.len() == 1));
     }
+}
+
+#[test]
+fn pure_release_to_multiple_unknown_owners_preserves_file_and_instruction_history() {
+    for instruction_form in [false, true] {
+        let (mut s, obs) = if instruction_form {
+            shared_instructions()
+        } else {
+            (shared(), observed("shared.md", Some(b"old")))
+        };
+        s.owner_contracts.clear();
+        s.installations.push(item("c"));
+        s.references.push(direct("c"));
+        s.artifacts[0].owners.push(item("c").owner);
+        s.owner_consumers.push(association(
+            "c",
+            if instruction_form {
+                "AGENTS.md"
+            } else {
+                "shared.md"
+            },
+            if instruction_form {
+                Some("shared")
+            } else {
+                None
+            },
+        ));
+        validate_state(&s).unwrap();
+        let mut release = if instruction_form {
+            instruction("a", "")
+        } else {
+            set("a", b"")
+        };
+        release.artifacts.clear();
+        release.audience_excluded = vec![TargetSurface::ClaudeCli];
+        let a = Selection::Names(vec!["a".into()]);
+        let p = ready(plan_shared_upsert(
+            &s,
+            request(&[release], &[], Some(&a), &[], &[]),
+            std::slice::from_ref(&obs),
+        ));
+        assert_eq!(ids(&p.state), vec!["b", "c"]);
+        assert_eq!(p.state.artifacts[0].content, s.artifacts[0].content);
+        assert_eq!(p.files[0].after, obs.value);
+        assert_eq!(p.state.installations, s.installations);
+        assert_eq!(p.state.references, s.references);
+        assert_eq!(
+            p.state.owner_consumers,
+            s.owner_consumers
+                .iter()
+                .filter(|r| r.installation_id != "a")
+                .cloned()
+                .collect::<Vec<_>>()
+        );
+        assert!(p.state.owner_contracts.is_empty());
+    }
+}
+
+#[test]
+fn physical_failures_name_real_owners_and_locations() {
+    let s = empty();
+    let sets = [
+        instruction("a", "No newline"),
+        instruction("b", "No newline"),
+    ];
+    let c = proofs(&sets);
+    let refs = [direct("a"), direct("b")];
+    let error = plan_shared_upsert(
+        &s,
+        request(&sets, &c, None, &refs, &[]),
+        &[observed("AGENTS.md", None)],
+    )
+    .unwrap_err();
+    let message = format!("{error:#}");
+    assert!(!message.contains("physical_"), "{message}");
+    assert!(message.contains("owners [a, b]"), "{message}");
+    assert!(
+        message.contains("AGENTS.md") && message.contains("newline"),
+        "{message}"
+    );
+    let s = shared();
+    let sets = [set("a", b"old"), set("b", b"old")];
+    let c = proofs(&sets);
+    let all = Selection::All;
+    let error = plan_shared_upsert(
+        &s,
+        request(&sets, &c, Some(&all), &[], &[]),
+        &[observed("shared.md", Some(b"edited"))],
+    )
+    .unwrap_err();
+    let message = format!("{error:#}");
+    assert!(!message.contains("physical_"), "{message}");
+    assert!(
+        message.contains("owners [a, b]")
+            && message.contains("shared.md")
+            && message.contains("bytes changed"),
+        "{message}"
+    );
 }

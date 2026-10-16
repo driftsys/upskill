@@ -76,7 +76,8 @@ pub(super) fn plan(
             });
         }
     }
-    let planned = plan_owned_artifacts(&projected, &changes, observations)?;
+    let planned = plan_owned_artifacts(&projected, &changes, observations)
+        .map_err(|error| real_diagnostic(error, &tokens, prior, candidate))?;
     let mut mapped = BTreeMap::new();
     for row in planned.artifacts {
         ensure!(
@@ -159,4 +160,45 @@ fn retained_value(
             })
         }
     })
+}
+
+// The lower planner uses private installation IDs in its error context. Render
+// those contexts with authoritative real owners before the chain crosses this API.
+fn real_diagnostic(
+    error: anyhow::Error,
+    tokens: &BTreeMap<Key, ArtifactOwner>,
+    prior: &CombinedState,
+    candidate: &CombinedState,
+) -> anyhow::Error {
+    let mut message = format!("{error:#}");
+    for (key, token) in tokens {
+        let names: BTreeSet<_> = prior
+            .artifacts
+            .iter()
+            .chain(&candidate.artifacts)
+            .filter(|a| owned_key(a) == *key)
+            .flat_map(|a| a.owners.iter().map(|o| o.installation_id.as_str()))
+            .collect();
+        let replacement = format!(
+            "artifact owners [{}]",
+            names.into_iter().collect::<Vec<_>>().join(", ")
+        );
+        let needle = format!("installation {}", token.installation_id);
+        let mut offset = 0;
+        while let Some(relative) = message[offset..].find(&needle) {
+            let start = offset + relative;
+            let end = start + needle.len();
+            if message
+                .as_bytes()
+                .get(end)
+                .is_some_and(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+            {
+                offset = end;
+                continue;
+            }
+            message.replace_range(start..end, &replacement);
+            offset = start + replacement.len();
+        }
+    }
+    anyhow::anyhow!(message)
 }
