@@ -1,6 +1,6 @@
 # Gate 5 selection validation — 2026-10-16
 
-The 17 local public acceptance tests and full local verification passed. This
+The 20 local public acceptance tests and full local verification passed. This
 note records only observed checks; hosted checks and independent review remain
 separate delivery gates.
 
@@ -60,3 +60,16 @@ exact restored source hash. The cumulative total is15 assertion-failing
 controls. Production source is unchanged. The restoration-frequency wording
 above was corrected to match the original control procedure. Final delivery
 verification follows these review corrections.
+
+## PR pass1 corrections
+
+Pass1 found three Minor/S gaps: two stale remaining-work descriptions, literal
+case sensitivity, and sparse original legacy item indices. All were fixed. New
+syntax probes also assert that wildcard and source/scope/kind-style names remain
+literal unknown names. The focused suite now has20 passing tests. Five added
+controls assertion-failed (exit101): case-folded direct matching, case-folded
+native bundle association, renumbered selected legacy items, wildcard expansion
+and prefix stripping. `pass1-controls.json` records each result and exact
+restored source hash. The cumulative total is20 controls; production source is
+unchanged. Full delivery verification and the final numbered fix-diff review
+follow.

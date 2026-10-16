@@ -72,12 +72,14 @@ associations and tagged legacy schema. Graph reconciliation never mutates those
 prior values and does not reconstruct them in its graph-only result.
 
 The separate [removal planner](lifecycle-reference-removal.md) reconciles
-shared-owner retirement. Shared add/update, instruction adapters, selected
-legacy conflict aggregation and complete add/update plans remain task 2b work.
-Existing mixed and instruction planners keep their affected multi-owner
-rejection. Guarded lifecycle backup/application/recovery, observational adapters
-and native activation remain separate gates. This boundary alone does not
-complete task 2b, Gate 5, M1 or the updater prerequisite.
+shared-owner retirement. The pure [selection preflight](lifecycle-selection.md)
+aggregates selected legacy and native conflicts for all/literal-name requests.
+Source/scoped selectors and CLI precedence, shared add/update, instruction
+adapters and complete add/update plans remain task 2b work. Existing mixed and
+instruction planners keep their affected multi-owner rejection. Guarded
+lifecycle backup/application/recovery, observational adapters and native
+activation remain separate gates. This boundary alone does not complete task 2b,
+Gate 5, M1 or the updater prerequisite.
 
 ## Trace
 

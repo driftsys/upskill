@@ -627,3 +627,104 @@ fn selected_legacy_rows_keep_nonzero_original_category_indices() {
         )
     );
 }
+#[test]
+fn literal_case_distinctions_hold_for_owned_and_native_names_and_bundle_labels() {
+    let mut s = state();
+    s.installations[0].owner.installed_name = "a".into();
+    s.installations[1].owner.installed_name = "A".into();
+    s.bundles[0].name = "Pack".into();
+    let mut l = Lockfile::new();
+    for (name, bundle) in [("Native", "Group"), ("Other", "pack")] {
+        l.plugins.push(LockedPlugin {
+            name: name.into(),
+            client: "unknown".into(),
+            identifier: name.into(),
+            scope: None,
+            bundle: bundle.into(),
+            status: PluginInstallStatus::Skipped,
+        });
+    }
+    l.mcps.push(LockedMcp {
+        name: "native".into(),
+        client: "unknown".into(),
+        scope: None,
+        bundle: "group".into(),
+        status: McpInstallStatus::Skipped,
+    });
+    s.legacy = Some(l);
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["a"])).unwrap(),
+        O::Ready(selected(&["z"], &[]))
+    );
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["A"])).unwrap(),
+        O::Ready(selected(&["a"], &[]))
+    );
+    for (name, row) in [
+        ("Native", LegacyRow::Plugin(0)),
+        ("native", LegacyRow::Mcp(0)),
+        ("Group", LegacyRow::Plugin(0)),
+        ("group", LegacyRow::Mcp(0)),
+        ("pack", LegacyRow::Plugin(1)),
+    ] {
+        assert_eq!(blocked(&s, names(&[name])).1, vec![D::LegacyRow(row)]);
+    }
+    assert_eq!(
+        select_owned_nodes(&s, &names(&["Pack"])).unwrap(),
+        O::Ready(selected(&[], &["bundle-z"]))
+    );
+    assert_eq!(
+        blocked(&s, names(&["PACK"])).1,
+        vec![D::UnknownName("PACK".into())]
+    );
+}
+#[test]
+fn sparse_legacy_item_selection_retains_original_indices_and_order() {
+    let mut s = state();
+    let mut l = Lockfile::new();
+    l.items = ["old-zero", "wanted", "unselected", "wanted-two"]
+        .into_iter()
+        .map(legacy_item)
+        .collect();
+    s.legacy = Some(l);
+    assert_eq!(
+        blocked(&s, names(&["wanted"])),
+        (selected(&[], &[]), vec![D::LegacyRow(LegacyRow::Item(1))])
+    );
+    assert_eq!(
+        blocked(&s, names(&["wanted-two", "wanted"])),
+        (
+            selected(&[], &[]),
+            vec![
+                D::LegacyRow(LegacyRow::Item(1)),
+                D::LegacyRow(LegacyRow::Item(3))
+            ]
+        )
+    );
+}
+#[test]
+fn literal_requests_do_not_expand_globs_or_strip_source_scope_kind_syntax() {
+    let s = state();
+    let values = [
+        "*",
+        "a*",
+        "?",
+        "rule:a",
+        "source:a",
+        "project:a",
+        "./a:a",
+        "a@main",
+    ];
+    let mut expected_names = values.to_vec();
+    expected_names.sort();
+    assert_eq!(
+        blocked(&s, names(&values)),
+        (
+            selected(&[], &[]),
+            expected_names
+                .into_iter()
+                .map(|name| D::UnknownName(name.into()))
+                .collect()
+        )
+    );
+}
