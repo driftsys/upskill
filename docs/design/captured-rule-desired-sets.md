@@ -56,6 +56,28 @@ Files are ordered by their portable relative path and consumers by surface name.
 Repeated paths within an installation conflict. These lexical checks do not
 resolve symlinks, aliases, case equivalence or physical containment.
 
+## Explicit contract production
+
+`compile_rule_desired_set_with_contracts` accepts the same captured compilation
+request plus explicit `TargetProfile` values and returns `ContractedDesiredSet`
+containing the unchanged desired set and per-artifact owner contracts. Profiles
+must exactly cover requested surfaces, be unique, match the surface's family and
+carry nonzero revisions. The producer never obtains revisions from defaults.
+
+Compilation reuses `compile_rule_desired_set`, including source identity,
+alias/resource handling and audience filtering. Each generated file contract
+binds the exact root/path/installation, captured source-manifest digest,
+rendered byte hash, optional mode and only that output's consumers with supplied
+revisions. Consumer profiles sort by surface name. Audience exclusions create no
+artifact contracts, including an empty desired set. Instruction compilation
+remains separate work. The original single and batch producers keep their
+existing behavior and shared-path rejections.
+
+The [contract producer](../../src/lifecycle/desired/contracts.rs) and
+[acceptance examples](../../tests/lifecycle_contract_producer.rs) cover explicit
+profile validation and exact captured bindings. These are recorded supplied
+contracts, not native qualification.
+
 ## Complete batch preflight
 
 `compile_rule_desired_sets` compiles every independent request and returns
@@ -101,8 +123,10 @@ and shared-owner retirement with authoritative per-owner consumers. Pure
 conflicts for all/literal-name requests. The pure
 [single-owner upsert coordinator](lifecycle-upsert.md) now joins complete sets,
 selected graph changes and supplied destination observations. Source/scoped
-selectors and CLI precedence, instruction compiler adapters, shared add/update
-contracts and complete lifecycle integration remain task 2b. The mixed planner's
-affected multi-owner rejection remains intact. Guarded
+selectors and CLI precedence, instruction compiler adapters and complete
+lifecycle integration remain task 2b.
+[Explicit shared upsert](lifecycle-upsert.md#explicit-shared-upsert) now
+consumes recorded agreement through a separate inactive path. The mixed
+planner's affected multi-owner rejection remains intact. Guarded
 backup/application/recovery, observational adapters and native activation remain
 separate tasks.

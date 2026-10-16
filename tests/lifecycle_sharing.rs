@@ -819,3 +819,148 @@ fn retained_instruction_release_preserves_body_and_real_evidence() {
     assert_eq!(p.files[0].after, obs.value);
     assert!(p.state.owner_contracts.is_empty());
 }
+
+#[test]
+fn updated_instruction_state_supports_exact_later_retirement() {
+    let (s, obs) = shared_instructions();
+    let sets = [instruction("a", "New\n"), instruction("b", "New\n")];
+    let c = proofs(&sets);
+    let all = Selection::All;
+    let first = ready(plan_shared_upsert(
+        &s,
+        request(&sets, &c, Some(&all), &[], &[]),
+        &[obs],
+    ));
+    let next_observation = ObservedFile {
+        location: first.files[0].location.clone(),
+        value: first.files[0].after.clone(),
+    };
+    let second = ready(plan_shared_upsert(
+        &first.state,
+        request(&[], &[], Some(&all), &[], &[direct("a"), direct("b")]),
+        &[next_observation],
+    ));
+    assert_eq!(
+        second.files[0].after,
+        Some(FileValue {
+            bytes: b"Manual\n".to_vec(),
+            mode: Some(0o640)
+        })
+    );
+}
+
+#[test]
+fn new_shared_identity_requires_complete_matching_contracts() {
+    let s = empty();
+    let sets = [set("a", b"same"), set("b", b"same")];
+    let good = proofs(&sets);
+    let refs = [direct("a"), direct("b")];
+    let obs = [observed("shared.md", None)];
+    for c in [&[][..], &good[..1]] {
+        assert!(plan_shared_upsert(&s, request(&sets, c, None, &refs, &[]), &obs).is_err());
+    }
+    let mut different_source = sets.clone();
+    different_source[1].installation.source_evidence = SourceEvidence::Local {
+        manifest_sha256: "b".repeat(64),
+    };
+    assert!(
+        plan_shared_upsert(
+            &s,
+            request(
+                &different_source,
+                &proofs(&different_source),
+                None,
+                &refs,
+                &[]
+            ),
+            &obs
+        )
+        .is_err()
+    );
+    let mut different_profile = good;
+    different_profile[1].profiles[0].contract_revision = 8;
+    assert!(
+        plan_shared_upsert(
+            &s,
+            request(&sets, &different_profile, None, &refs, &[]),
+            &obs
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn mixed_new_artifacts_are_ordered_by_raw_identity() {
+    let s = empty();
+    let mut sets = [set("a", b"same"), set("b", b"same")];
+    for (index, set) in sets.iter_mut().enumerate() {
+        let id = if index == 0 { "a" } else { "b" };
+        set.artifacts
+            .push(instruction(id, "Body\n").artifacts.remove(0));
+        let mut extra = set.artifacts[0].clone();
+        let DesiredArtifact::File(f) = &mut extra else {
+            unreachable!()
+        };
+        f.location.path = "aaa.md".into();
+        set.artifacts.push(extra);
+    }
+    let c = proofs(&sets);
+    let refs = [direct("a"), direct("b")];
+    let p = ready(plan_shared_upsert(
+        &s,
+        request(&sets, &c, None, &refs, &[]),
+        &[
+            observed("shared.md", None),
+            observed("AGENTS.md", None),
+            observed("aaa.md", None),
+        ],
+    ));
+    assert_eq!(
+        p.state
+            .artifacts
+            .iter()
+            .map(|a| a.path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["AGENTS.md", "aaa.md", "shared.md"]
+    );
+    assert_eq!(p.files.len(), 3);
+    for a in &p.state.artifacts {
+        assert_eq!(
+            a.owners
+                .iter()
+                .map(|o| o.installation_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+    }
+}
+
+#[test]
+fn raw_roots_and_scopes_keep_equal_relative_paths_distinct() {
+    for dimension in 0..2 {
+        let s = empty();
+        let mut sets = [set("a", b"left"), set("b", b"right")];
+        if dimension == 0 {
+            sets[1].installation.root.path = root().path.join(".");
+        } else {
+            sets[1].installation.root.scope = OwnershipScope::User;
+        }
+        let DesiredArtifact::File(f) = &mut sets[1].artifacts[0] else {
+            unreachable!()
+        };
+        f.location.root = sets[1].installation.root.clone();
+        let refs = [direct("a"), direct("b")];
+        let mut second = observed("shared.md", None);
+        second.location.root = sets[1].installation.root.clone();
+        let p = ready(plan_shared_upsert(
+            &s,
+            request(&sets, &[], None, &refs, &[]),
+            &[observed("shared.md", None), second],
+        ));
+        assert_eq!(p.state.artifacts.len(), 2);
+        assert_eq!(p.files.len(), 2);
+        assert_eq!(p.files[0].after.as_ref().unwrap().bytes, b"left");
+        assert_eq!(p.files[1].after.as_ref().unwrap().bytes, b"right");
+        assert!(p.state.artifacts.iter().all(|a| a.owners.len() == 1));
+    }
+}

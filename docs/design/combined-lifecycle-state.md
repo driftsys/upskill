@@ -123,7 +123,8 @@ This completes the pure state slice. Separate
 [reference reconciliation](lifecycle-reference-reconciliation.md) and
 [shared-owner removal planning](lifecycle-reference-removal.md) are implemented.
 Complete single-owner [upsert planning](lifecycle-upsert.md) is also
-implemented. Shared add/update reconciliation, exact original-JSON backup,
-guarded application, checkpoint recovery integration and observational lifecycle
-adapters remain later work. Native and complete lifecycle qualification remain
-required; this record does not declare Gate 5 or M1 complete.
+implemented. A separate explicit shared upsert now reconciles supplied owner
+contracts and observations. Exact original-JSON backup, guarded application,
+checkpoint recovery integration and observational lifecycle adapters remain
+later work. Native and complete lifecycle qualification remain required; this
+record does not declare Gate 5 or M1 complete.

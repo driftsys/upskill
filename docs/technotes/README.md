@@ -18,3 +18,6 @@ These files are not part of the published book or runtime dependencies.
 
 - [Per-owner contract validation, 2026-10-16](2026-10-16-m1-owner-contracts-validation.md):
   supplied-value examples, fault controls and qualification limits.
+
+- [Explicit shared-output reconciliation validation](2026-10-17-m1-shared-reconciliation-validation.md):
+  contracted production, private projection examples and supplied-value limits.

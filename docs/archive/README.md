@@ -606,3 +606,29 @@ Durable successors:
 [validation evidence](../technotes/2026-10-16-m1-owner-contracts-validation.md).
 Shared reconciliation, production activation and native qualification remain
 pending.
+
+## Explicit shared-output reconciliation
+
+Source paths: `docs/wip/specs/2026-10-17-m1-shared-reconciliation.md` and
+`docs/wip/plans/2026-10-17-m1-shared-reconciliation.md`. The raw
+[spec](specs/2026-10-17-m1-shared-reconciliation.md) and
+[plan](plans/2026-10-17-m1-shared-reconciliation.md) are retained unchanged.
+
+The contracted producer starts at `c9f453042c954ab2698942c4cbe4e2ee4878ba13`;
+shared planning and acceptance examples were reconciled from the stable working
+implementation supplied by the dispatcher. The dispatcher reports 1,231 passing
+Rust tests, twenty-five focused examples, Rust 1.85 and sanity exit 0. This is
+local completion evidence, not a claim of merge or hosted qualification.
+
+Durable successors:
+[specification §4.20](../specification/specification.md#420-explicit-shared-output-reconciliation),
+[captured desired sets](../design/captured-rule-desired-sets.md),
+[shared upsert](../design/lifecycle-upsert.md#explicit-shared-upsert),
+[owner contracts](../design/lifecycle-owner-contracts.md),
+[AD-0034](../adr/0034-record-explicit-owner-contracts.md),
+[AD-0035](../adr/0035-project-shared-artifacts-for-physical-planning.md),
+[AD-0036](../adr/0036-separate-explicit-sharing-entrypoints.md) and
+[validation limits](../technotes/2026-10-17-m1-shared-reconciliation-validation.md).
+Other WIP remains at its original paths with unresolved disposition. Qualified
+integration, instruction adapters, guarded application/recovery, production
+activation and native qualification remain unfinished.

@@ -81,3 +81,7 @@ records its separate digest encoding.
 - [AD-0033 — Qualified file execution with durable forward recovery](0033-qualified-file-execution-and-journals.md)
 
 - [AD-0034 — Record explicit per-owner contract evidence](0034-record-explicit-owner-contracts.md)
+
+- [AD-0035 — Project shared artifacts for physical planning](0035-project-shared-artifacts-for-physical-planning.md)
+
+- [AD-0036 — Separate explicit sharing entrypoints](0036-separate-explicit-sharing-entrypoints.md)

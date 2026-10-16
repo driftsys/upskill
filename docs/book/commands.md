@@ -489,6 +489,7 @@ now checks reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
 retirement. The inactive
 [single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md)
-connects complete add/update sets to graph and mixed-artifact planning. Shared
-add/update contracts and guarded lifecycle execution remain pending. Production
-command behavior is unchanged.
+connects complete add/update sets to graph and mixed-artifact planning. The
+separate inactive `plan_shared_upsert` API accepts explicit matching owner
+contracts for shared outputs. Guarded lifecycle execution remains pending.
+Production command behavior is unchanged.

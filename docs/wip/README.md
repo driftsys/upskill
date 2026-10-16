@@ -44,9 +44,18 @@ references must be reconciled as part of that feature's review.
   [bounded plan is archived](../archive/plans/2026-10-16-m1-gate5-upsert.md)
   with
   [local validation evidence](../technotes/2026-10-16-m1-gate5-upsert-validation.md).
-  Shared add/update and complete lifecycle planning (task 2b), guarded
-  backup/application/recovery and observational adapters remain pending. Gate 5
-  remains incomplete; production activation remains Gate 6.
+  The separate
+  [explicit shared upsert](../design/lifecycle-upsert.md#explicit-shared-upsert)
+  and
+  [contracted producer](../design/captured-rule-desired-sets.md#explicit-contract-production)
+  are implemented as inactive supplied-value boundaries. Their bounded
+  [spec](../archive/specs/2026-10-17-m1-shared-reconciliation.md) and
+  [plan](../archive/plans/2026-10-17-m1-shared-reconciliation.md) are archived
+  with
+  [validation limits](../technotes/2026-10-17-m1-shared-reconciliation-validation.md).
+  Complete lifecycle planning (task 2b), guarded backup/application/recovery and
+  qualified observational adapters remain pending. Gate 5 remains incomplete;
+  production activation remains Gate 6.
 
 - [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
   — opt-in library implementation and durable records; hosted Linux/macOS
