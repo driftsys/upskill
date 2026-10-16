@@ -1033,6 +1033,11 @@ fn replacing_association_keeps_its_prior_position_among_untouched_rows() {
     state.owner_consumers.reverse();
     validate_state(&state).unwrap();
     let mut s = set("a", "a.md", b"next");
+    s.installation.requested.push(TargetSurface::CopilotCli);
+    if let DesiredArtifact::File(file) = &mut s.artifacts[0] {
+        file.consumers = vec![TargetSurface::CopilotCli];
+    }
+
     s.artifacts.push(DesiredArtifact::File(DesiredFile {
         location: location("c.md"),
         value: value(b"c"),
@@ -1047,6 +1052,7 @@ fn replacing_association_keeps_its_prior_position_among_untouched_rows() {
         .unwrap(),
     );
     let mut expected = state.owner_consumers.clone();
+    expected[1].consumers = vec![TargetSurface::CopilotCli];
     expected.push(OwnerConsumers {
         root: root(),
         path: "c.md".into(),
@@ -1064,6 +1070,14 @@ fn replacing_association_keeps_its_prior_position_among_untouched_rows() {
         vec!["b", "a", "a"]
     );
     assert_eq!(p.state.artifacts[0].owners, vec![item("a").owner]);
+    assert_eq!(
+        p.state.artifacts[0].consumers,
+        vec![TargetSurface::CopilotCli]
+    );
+    assert_eq!(
+        p.state.installations[0].requested,
+        vec![TargetSurface::ClaudeCli, TargetSurface::CopilotCli]
+    );
     assert_eq!(p.files[0].after, Some(value(b"next")));
 }
 
@@ -1084,21 +1098,52 @@ fn disjoint_update_preserves_duplicate_legacy_and_native_rows_with_statuses() {
     let mcp = LockedMcp {
         name: "mcp-old".into(),
         client: "unknown".into(),
-        scope: None,
+        scope: Some("original-scope".into()),
         bundle: "old-bundle".into(),
         status: McpInstallStatus::Skipped,
     };
+    let bundle = LockedBundle {
+        name: "old-bundle".into(),
+        source: "malformed".into(),
+        git_ref: Some("original-ref".into()),
+        items: vec!["old".into(), "missing".into()],
+    };
     let lock = Lockfile {
         schema: 1,
-        items: vec![legacy("old"), legacy("old")],
-        bundles: vec![LockedBundle {
-            name: "old-bundle".into(),
-            source: "malformed".into(),
-            git_ref: Some("original-ref".into()),
-            items: vec!["old".into(), "missing".into()],
-        }],
-        plugins: vec![plugin.clone(), plugin],
-        mcps: vec![mcp.clone(), mcp],
+        items: vec![legacy("old"), legacy("old"), legacy("aaa-old")],
+        bundles: vec![
+            bundle.clone(),
+            bundle,
+            LockedBundle {
+                name: "aaa-bundle".into(),
+                source: "opaque-label".into(),
+                git_ref: None,
+                items: vec!["aaa-old".into()],
+            },
+        ],
+        plugins: vec![
+            plugin.clone(),
+            plugin,
+            LockedPlugin {
+                name: "aaa-native".into(),
+                client: "claude".into(),
+                identifier: "aaa-opaque".into(),
+                scope: None,
+                bundle: "aaa-bundle".into(),
+                status: PluginInstallStatus::Skipped,
+            },
+        ],
+        mcps: vec![
+            mcp.clone(),
+            mcp,
+            LockedMcp {
+                name: "aaa-mcp".into(),
+                client: "claude".into(),
+                scope: None,
+                bundle: "aaa-bundle".into(),
+                status: McpInstallStatus::Installed,
+            },
+        ],
     };
     state.legacy = Some(lock.clone());
     validate_state(&state).unwrap();

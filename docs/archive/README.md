@@ -567,7 +567,7 @@ Durable successors:
 [upsert design](../design/lifecycle-upsert.md) and
 [validation record](../technotes/2026-10-16-m1-gate5-upsert-validation.md). The
 supplied local evidence records 33 passing public acceptance examples and
-twenty-one assertion/panic controls with exact source restoration. The
+twenty-three assertion/panic controls with exact source restoration. The
 implementation is based on `ed4ab8dc018989d9f5e4485ce469aeb8baa89f1d`.
 Formatting, all-target sanity, full verification and Rust 1.85 checking passed;
 independent review and hosted checks remain separate delivery gates. This is a

@@ -70,3 +70,18 @@ Exact production source bytes were restored after each control. The cumulative
 control count is 21. Formatting, all-target sanity, full verification and Rust
 1.85 locked checks after these fixes returned exit 0. Numbered pass 2 and
 exact-head hosted checks remain the next delivery gates.
+
+## Final numbered-pass corrections
+
+Pass 2 confirmed one coverage gap: the replacement association fixture kept
+identical old and desired consumers. The strengthened example now changes the
+selected output to Copilot while retaining its old position and an appended
+Claude output. A separate quick-review fixture gap now uses distinct native rows
+beside duplicates, in an order different from lexical sorting and reversal. The
+full original snapshot is still asserted exactly.
+
+Two further assertion controls fail when a replacement reuses its old payload or
+retained plugin/MCP vectors are reversed. Exact source bytes were restored; 33
+public examples pass and the cumulative control count is 23. Production source
+is unchanged. Final local checks and exact-head hosted checks follow; there is
+no third numbered review cycle.
