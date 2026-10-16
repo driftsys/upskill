@@ -49,3 +49,24 @@ assertion controls target those exact gaps; combined with the original eight,
 the cumulative count is 13. Production source remains unchanged. The design now
 spells out diagnostic output order rather than using ambiguous “selector order”.
 Final local checks and hosted/numbered reviews remain separate gates.
+
+## PR pass 1 coverage and documentation corrections
+
+Pass 1 found no production defects. Four confirmed test gaps concerned
+successful native-plugin history preservation, exact planned destinations,
+added-reference authorization and per-artifact consumers. Minor findings
+concerned preserved association positions and two older remaining-work
+statements. All were fixed with examples and updated successor links. Additional
+quick-review gaps pin opposing path/installation order, allowed selected bundle
+metadata and merged diagnostic order. The suite now has 33 passing public
+examples, including bundle/dependency retirement and mixed dedicated/instruction
+empty-set retention.
+
+Eight additional controls each failed an intended assertion or panic: skipped
+addition authorization, association sorting by ID, rejected selected bundles,
+globally reordered blockers, requested-consumer substitution, globally sorted
+prior associations, cleared legacy plugins and corrupted file destinations.
+Exact production source bytes were restored after each control. The cumulative
+control count is 21. Formatting, all-target sanity, full verification and Rust
+1.85 locked checks after these fixes returned exit 0. Numbered pass 2 and
+exact-head hosted checks remain the next delivery gates.

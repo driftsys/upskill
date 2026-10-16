@@ -487,4 +487,8 @@ The opt-in
 [combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md)
 now checks reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
-retirement. Add/update planning and guarded execution remain pending.
+retirement. The inactive
+[single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md)
+connects complete add/update sets to graph and mixed-artifact planning. Shared
+add/update contracts and guarded lifecycle execution remain pending. Production
+command behavior is unchanged.

@@ -155,6 +155,7 @@ fn adds_complete_new_installation_and_exact_association_without_mutation() {
         }]
     );
     assert_eq!(p.files.len(), 1);
+    assert_eq!(p.files[0].location, location("a.md"));
     assert_eq!(p.files[0].before, None);
     assert_eq!(p.files[0].after, Some(value(b"new")));
     validate_state(&p.state).unwrap();
@@ -191,6 +192,13 @@ fn updates_complete_set_and_preserves_untouched_history() {
     assert_eq!(p.state.owner_consumers[0], state.owner_consumers[1]);
     assert_eq!(p.state.legacy, state.legacy);
     assert_eq!(p.files.len(), 2);
+    assert_eq!(
+        p.files
+            .iter()
+            .map(|f| f.location.clone())
+            .collect::<Vec<_>>(),
+        vec![location("a.md"), location("new.md")]
+    );
     assert_eq!(p.files[0].after, None);
     assert_eq!(p.files[1].after, Some(value(b"next")));
 }
@@ -796,7 +804,7 @@ fn legacy_collision_on_old_path_blocks_retirement_and_relocation() {
 }
 #[test]
 fn newly_appended_associations_follow_location_order_not_request_order() {
-    let sets = [set("z", "z.md", b"z"), set("a", "a.md", b"a")];
+    let sets = [set("a", "z.md", b"a"), set("z", "a.md", b"z")];
     let p = ready(
         plan_upsert(
             &empty(),
@@ -811,7 +819,7 @@ fn newly_appended_associations_follow_location_order_not_request_order() {
             .iter()
             .map(|r| (r.path.as_str(), r.installation_id.as_str()))
             .collect::<Vec<_>>(),
-        vec![("a.md", "a"), ("z.md", "z")]
+        vec![("a.md", "z"), ("z.md", "a")]
     );
 }
 #[test]
@@ -834,4 +842,422 @@ fn duplicate_legacy_blocker_from_both_probes_is_reported_once() {
         outcome,
         UpsertOutcome::Blocked(vec![SelectionDiagnostic::LegacyRow(LegacyRow::Item(0))])
     );
+}
+
+#[test]
+fn added_existing_references_require_selection_and_selected_counterparts_pass() {
+    use upskill::lifecycle::state::BundleNode;
+    let mut bundled = with_bundle();
+    bundled.references.retain(|r| r != &direct("a"));
+    let member_state = with_bundle();
+    let member = Reference::BundleInstallation {
+        bundle_id: "bundle".into(),
+        installation_id: "b".into(),
+    };
+    let dep = BundleNode {
+        id: "dep".into(),
+        source: "./dep".into(),
+        name: "dep".into(),
+        source_revision: None,
+    };
+    let mut dependency_state = with_bundle();
+    dependency_state.bundles.push(dep.clone());
+    dependency_state.references.push(Reference::DirectBundle {
+        bundle_id: "dep".into(),
+    });
+    let dependency = Reference::BundleDependency {
+        bundle_id: "bundle".into(),
+        dependency_id: "dep".into(),
+    };
+    let mut direct_bundle_state = with_bundle();
+    direct_bundle_state.bundles.push(dep);
+    direct_bundle_state.references.push(dependency.clone());
+    let cases = vec![
+        (
+            bundled,
+            direct("a"),
+            named("a"),
+            vec![set("a", "a.md", b"a")],
+            vec![observed("a.md", Some(b"a"))],
+        ),
+        (
+            member_state,
+            member,
+            named("bundle"),
+            vec![set("a", "a.md", b"a")],
+            vec![observed("a.md", Some(b"a"))],
+        ),
+        (
+            dependency_state,
+            dependency,
+            named("bundle"),
+            vec![set("a", "a.md", b"a")],
+            vec![observed("a.md", Some(b"a"))],
+        ),
+        (
+            direct_bundle_state,
+            Reference::DirectBundle {
+                bundle_id: "dep".into(),
+            },
+            named("dep"),
+            vec![],
+            vec![],
+        ),
+    ];
+    for (state, edge, selection, sets, observations) in cases {
+        validate_state(&state).unwrap();
+        let error = plan_upsert(
+            &state,
+            request(None, &[], std::slice::from_ref(&edge), &[]),
+            &[],
+        )
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("unselected existing root"));
+        let p = ready(
+            plan_upsert(
+                &state,
+                request(Some(&selection), &sets, std::slice::from_ref(&edge), &[]),
+                &observations,
+            )
+            .unwrap(),
+        );
+        let mut expected = state.references.clone();
+        expected.push(edge);
+        assert_eq!(p.state.references, expected);
+        assert_eq!(p.state.installations, state.installations);
+        assert_eq!(p.state.bundles, state.bundles);
+        assert_eq!(p.state.artifacts, state.artifacts);
+        assert_eq!(p.state.owner_consumers, state.owner_consumers);
+        validate_state(&p.state).unwrap();
+    }
+}
+#[test]
+fn selected_existing_bundle_metadata_upsert_is_accepted() {
+    let state = with_bundle();
+    let mut bundles = state.bundles.clone();
+    bundles[0].source_revision = Some("next".into());
+    let sets = [set("a", "a.md", b"a")];
+    let p = ready(
+        plan_upsert(
+            &state,
+            UpsertRequest {
+                bundles: &bundles,
+                ..request(Some(&named("bundle")), &sets, &[], &[])
+            },
+            &[observed("a.md", Some(b"a"))],
+        )
+        .unwrap(),
+    );
+    assert_eq!(p.state.bundles, bundles);
+    assert_eq!(p.state.installations, state.installations);
+    assert_eq!(p.state.references, state.references);
+    assert_eq!(p.state.artifacts, state.artifacts);
+    assert_eq!(p.state.owner_consumers, state.owner_consumers);
+    assert_eq!(p.files[0].before, p.files[0].after);
+}
+#[test]
+fn merged_blockers_keep_prior_probe_then_original_additional_row_order() {
+    use upskill::lifecycle::selection::{LegacyRow, SelectionDiagnostic};
+    let mut state = empty();
+    state.legacy = Some(upskill::lockfile::Lockfile {
+        items: vec![legacy("new-z"), legacy("old"), legacy("new-a")],
+        ..Default::default()
+    });
+    let outcome = plan_upsert(
+        &state,
+        request(
+            Some(&named("old")),
+            &[set("new-a", "a.md", b"a"), set("new-z", "z.md", b"z")],
+            &[],
+            &[],
+        ),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(
+        outcome,
+        UpsertOutcome::Blocked(vec![
+            SelectionDiagnostic::LegacyRow(LegacyRow::Item(1)),
+            SelectionDiagnostic::LegacyRow(LegacyRow::Item(0)),
+            SelectionDiagnostic::LegacyRow(LegacyRow::Item(2))
+        ])
+    );
+}
+
+#[test]
+fn consumer_associations_remain_specific_to_each_artifact() {
+    let mut s = set("a", "a.md", b"a");
+    s.installation
+        .requested
+        .extend([TargetSurface::CopilotCli, TargetSurface::OpenCodeCli]);
+    s.audience_excluded = vec![TargetSurface::OpenCodeCli];
+    s.artifacts.push(DesiredArtifact::File(DesiredFile {
+        location: location("b.md"),
+        value: value(b"b"),
+        consumers: vec![TargetSurface::CopilotCli],
+    }));
+    let p = ready(
+        plan_upsert(
+            &empty(),
+            request(None, &[s], &[direct("a")], &[]),
+            &[observed("b.md", None), observed("a.md", None)],
+        )
+        .unwrap(),
+    );
+    assert_eq!(
+        p.state
+            .owner_consumers
+            .iter()
+            .map(|r| (r.path.as_str(), r.consumers.clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("a.md", vec![TargetSurface::ClaudeCli]),
+            ("b.md", vec![TargetSurface::CopilotCli])
+        ]
+    );
+    assert_eq!(
+        p.state
+            .artifacts
+            .iter()
+            .map(|r| (r.path.as_str(), r.consumers.clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("a.md", vec![TargetSurface::ClaudeCli]),
+            ("b.md", vec![TargetSurface::CopilotCli])
+        ]
+    );
+}
+#[test]
+fn replacing_association_keeps_its_prior_position_among_untouched_rows() {
+    let mut state = prior();
+    state.owner_consumers.reverse();
+    validate_state(&state).unwrap();
+    let mut s = set("a", "a.md", b"next");
+    s.artifacts.push(DesiredArtifact::File(DesiredFile {
+        location: location("c.md"),
+        value: value(b"c"),
+        consumers: vec![TargetSurface::ClaudeCli],
+    }));
+    let p = ready(
+        plan_upsert(
+            &state,
+            request(Some(&named("a")), &[s], &[], &[]),
+            &[observed("a.md", Some(b"a")), observed("c.md", None)],
+        )
+        .unwrap(),
+    );
+    let mut expected = state.owner_consumers.clone();
+    expected.push(OwnerConsumers {
+        root: root(),
+        path: "c.md".into(),
+        contribution_id: None,
+        installation_id: "a".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    assert_eq!(p.state.owner_consumers, expected);
+    assert_eq!(
+        p.state
+            .owner_consumers
+            .iter()
+            .map(|r| r.installation_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["b", "a", "a"]
+    );
+    assert_eq!(p.state.artifacts[0].owners, vec![item("a").owner]);
+    assert_eq!(p.files[0].after, Some(value(b"next")));
+}
+
+#[test]
+fn disjoint_update_preserves_duplicate_legacy_and_native_rows_with_statuses() {
+    use upskill::lockfile::{
+        LockedBundle, LockedMcp, LockedPlugin, Lockfile, McpInstallStatus, PluginInstallStatus,
+    };
+    let mut state = prior();
+    let plugin = LockedPlugin {
+        name: "native-old".into(),
+        client: "unknown".into(),
+        identifier: "opaque".into(),
+        scope: Some("original-scope".into()),
+        bundle: "old-bundle".into(),
+        status: PluginInstallStatus::Instructions,
+    };
+    let mcp = LockedMcp {
+        name: "mcp-old".into(),
+        client: "unknown".into(),
+        scope: None,
+        bundle: "old-bundle".into(),
+        status: McpInstallStatus::Skipped,
+    };
+    let lock = Lockfile {
+        schema: 1,
+        items: vec![legacy("old"), legacy("old")],
+        bundles: vec![LockedBundle {
+            name: "old-bundle".into(),
+            source: "malformed".into(),
+            git_ref: Some("original-ref".into()),
+            items: vec!["old".into(), "missing".into()],
+        }],
+        plugins: vec![plugin.clone(), plugin],
+        mcps: vec![mcp.clone(), mcp],
+    };
+    state.legacy = Some(lock.clone());
+    validate_state(&state).unwrap();
+    let p = ready(
+        plan_upsert(
+            &state,
+            request(Some(&named("a")), &[set("a", "a.md", b"next")], &[], &[]),
+            &[observed("a.md", Some(b"a"))],
+        )
+        .unwrap(),
+    );
+    assert_eq!(p.state.legacy, Some(lock));
+    assert_eq!(p.state.installations, state.installations);
+    assert_eq!(p.state.references, state.references);
+    assert_eq!(p.state.artifacts[1], state.artifacts[1]);
+}
+
+#[test]
+fn bundle_dependency_retirement_preserves_direct_retained_member() {
+    use upskill::lifecycle::state::BundleNode;
+    let mut state = prior();
+    state.bundles = vec![
+        BundleNode {
+            id: "parent".into(),
+            source: "./parent".into(),
+            name: "parent".into(),
+            source_revision: None,
+        },
+        BundleNode {
+            id: "dep".into(),
+            source: "./dep".into(),
+            name: "dep".into(),
+            source_revision: None,
+        },
+    ];
+    state.references = vec![
+        direct("b"),
+        Reference::DirectBundle {
+            bundle_id: "parent".into(),
+        },
+        Reference::BundleDependency {
+            bundle_id: "parent".into(),
+            dependency_id: "dep".into(),
+        },
+        Reference::BundleInstallation {
+            bundle_id: "dep".into(),
+            installation_id: "a".into(),
+        },
+        Reference::BundleInstallation {
+            bundle_id: "dep".into(),
+            installation_id: "b".into(),
+        },
+    ];
+    validate_state(&state).unwrap();
+    let p = ready(
+        plan_upsert(
+            &state,
+            request(
+                Some(&named("parent")),
+                &[set("b", "b.md", b"b")],
+                &[],
+                &[Reference::DirectBundle {
+                    bundle_id: "parent".into(),
+                }],
+            ),
+            &[observed("a.md", Some(b"a")), observed("b.md", Some(b"b"))],
+        )
+        .unwrap(),
+    );
+    assert_eq!(p.state.installations, vec![item("b")]);
+    assert!(p.state.bundles.is_empty());
+    assert_eq!(p.state.references, vec![direct("b")]);
+    assert_eq!(p.state.artifacts, vec![state.artifacts[1].clone()]);
+    assert_eq!(
+        p.state.owner_consumers,
+        vec![state.owner_consumers[1].clone()]
+    );
+    assert_eq!(
+        p.files
+            .iter()
+            .map(|f| f.location.clone())
+            .collect::<Vec<_>>(),
+        vec![location("a.md"), location("b.md")]
+    );
+    assert_eq!(p.files[0].after, None);
+    assert_eq!(p.files[1].before, Some(value(b"b")));
+    assert_eq!(p.files[1].after, Some(value(b"b")));
+}
+#[test]
+fn complete_mixed_set_can_become_empty_without_losing_history_or_manual_text() {
+    use upskill::instructions::plan::{DesiredInstructionContribution, InstructionLocation};
+    let mut s = set("a", "a.md", b"a");
+    s.artifacts.push(DesiredArtifact::Instruction(
+        DesiredInstructionContribution {
+            location: InstructionLocation {
+                root: root(),
+                path: "AGENTS.md".into(),
+            },
+            id: "intro".into(),
+            markdown: "Owned\n".into(),
+            consumers: vec![TargetSurface::ClaudeCli],
+        },
+    ));
+    let p = ready(
+        plan_upsert(
+            &empty(),
+            request(None, &[s], &[direct("a")], &[]),
+            &[
+                observed("AGENTS.md", Some(b"Manual\n")),
+                observed("a.md", None),
+            ],
+        )
+        .unwrap(),
+    );
+    assert_eq!(p.state.artifacts.len(), 2);
+    assert_eq!(p.state.owner_consumers.len(), 2);
+    assert_eq!(
+        p.files
+            .iter()
+            .map(|f| f.location.clone())
+            .collect::<Vec<_>>(),
+        vec![location("AGENTS.md"), location("a.md")]
+    );
+    assert_eq!(p.files[1].after, Some(value(b"a")));
+    assert!(
+        p.files[0]
+            .after
+            .as_ref()
+            .unwrap()
+            .bytes
+            .starts_with(b"Manual\n")
+    );
+    let observations = p
+        .files
+        .iter()
+        .map(|f| ObservedFile {
+            location: f.location.clone(),
+            value: f.after.clone(),
+        })
+        .collect::<Vec<_>>();
+    let s = DesiredInstallationSet {
+        installation: item("a"),
+        artifacts: vec![],
+        audience_excluded: vec![TargetSurface::ClaudeCli],
+    };
+    let next = ready(
+        plan_upsert(
+            &p.state,
+            request(Some(&named("a")), &[s], &[], &[]),
+            &observations,
+        )
+        .unwrap(),
+    );
+    assert_eq!(next.state.installations, vec![item("a")]);
+    assert_eq!(next.state.references, vec![direct("a")]);
+    assert!(next.state.artifacts.is_empty());
+    assert!(next.state.owner_consumers.is_empty());
+    assert_eq!(next.files[0].location, location("AGENTS.md"));
+    assert_eq!(next.files[0].after, Some(value(b"Manual\n")));
+    assert_eq!(next.files[1].location, location("a.md"));
+    assert_eq!(next.files[1].after, None);
 }

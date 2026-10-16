@@ -106,4 +106,6 @@ boundary, without native discovery or filesystem execution claims.
 The opt-in [combined-state validator](combined-lifecycle-state.md) now checks
 reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
-retirement. Add/update planning and guarded execution remain pending.
+retirement. The [single-owner upsert coordinator](lifecycle-upsert.md) now
+connects complete add/update sets to graph and mixed-artifact planning. Shared
+add/update contracts and guarded lifecycle execution remain pending.
