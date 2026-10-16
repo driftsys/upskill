@@ -999,58 +999,106 @@ fn raw_roots_and_scopes_keep_equal_relative_paths_distinct() {
 }
 
 #[test]
-fn pure_release_to_multiple_unknown_owners_preserves_file_and_instruction_history() {
+fn pure_release_to_multiple_owners_preserves_history_and_physical_guards() {
     for instruction_form in [false, true] {
-        let (mut s, obs) = if instruction_form {
-            shared_instructions()
-        } else {
-            (shared(), observed("shared.md", Some(b"old")))
-        };
-        s.owner_contracts.clear();
-        s.installations.push(item("c"));
-        s.references.push(direct("c"));
-        s.artifacts[0].owners.push(item("c").owner);
-        s.owner_consumers.push(association(
-            "c",
-            if instruction_form {
+        for known in [false, true] {
+            let (mut s, obs) = if instruction_form {
+                shared_instructions()
+            } else {
+                (shared(), observed("shared.md", Some(b"old")))
+            };
+            if !known {
+                s.owner_contracts.clear();
+            }
+            s.installations.push(item("c"));
+            s.references.push(direct("c"));
+            s.artifacts[0].owners.push(item("c").owner);
+            let path = if instruction_form {
                 "AGENTS.md"
             } else {
                 "shared.md"
-            },
-            if instruction_form {
-                Some("shared")
+            };
+            s.owner_consumers.push(association(
+                "c",
+                path,
+                if instruction_form {
+                    Some("shared")
+                } else {
+                    None
+                },
+            ));
+            if known {
+                let value = if instruction_form {
+                    instruction("c", "Old\n")
+                } else {
+                    set("c", b"old")
+                };
+                let mut c = proofs(&[value]);
+                c[0].profiles[0].contract_revision = 8;
+                s.owner_contracts.extend(c);
+            }
+            validate_state(&s).unwrap();
+            let mut release = if instruction_form {
+                instruction("a", "")
             } else {
-                None
-            },
-        ));
-        validate_state(&s).unwrap();
-        let mut release = if instruction_form {
-            instruction("a", "")
-        } else {
-            set("a", b"")
-        };
-        release.artifacts.clear();
-        release.audience_excluded = vec![TargetSurface::ClaudeCli];
-        let a = Selection::Names(vec!["a".into()]);
-        let p = ready(plan_shared_upsert(
-            &s,
-            request(&[release], &[], Some(&a), &[], &[]),
-            std::slice::from_ref(&obs),
-        ));
-        assert_eq!(ids(&p.state), vec!["b", "c"]);
-        assert_eq!(p.state.artifacts[0].content, s.artifacts[0].content);
-        assert_eq!(p.files[0].after, obs.value);
-        assert_eq!(p.state.installations, s.installations);
-        assert_eq!(p.state.references, s.references);
-        assert_eq!(
-            p.state.owner_consumers,
-            s.owner_consumers
-                .iter()
-                .filter(|r| r.installation_id != "a")
-                .cloned()
-                .collect::<Vec<_>>()
-        );
-        assert!(p.state.owner_contracts.is_empty());
+                set("a", b"")
+            };
+            release.artifacts.clear();
+            release.audience_excluded = vec![TargetSurface::ClaudeCli];
+            let a = Selection::Names(vec!["a".into()]);
+            let req = request(std::slice::from_ref(&release), &[], Some(&a), &[], &[]);
+            let mut edited = obs.clone();
+            edited.value.as_mut().unwrap().bytes = if instruction_form {
+                String::from_utf8(edited.value.as_ref().unwrap().bytes.clone())
+                    .unwrap()
+                    .replace("Old", "Xld")
+                    .into_bytes()
+            } else {
+                b"edited".to_vec()
+            };
+            let mut absent = obs.clone();
+            absent.value = None;
+            for bad in [vec![], vec![absent], vec![edited]] {
+                let error = plan_shared_upsert(&s, req, &bad).unwrap_err();
+                let message = format!("{error:#}");
+                assert!(
+                    message.contains(path) && message.contains("owners [a, b, c]"),
+                    "{message}"
+                );
+            }
+            let mut mode = obs.clone();
+            mode.value.as_mut().unwrap().mode = Some(0o600);
+            if instruction_form {
+                assert_eq!(
+                    ready(plan_shared_upsert(&s, req, std::slice::from_ref(&mode))).files[0].after,
+                    mode.value
+                );
+            } else {
+                assert!(plan_shared_upsert(&s, req, &[mode]).is_err());
+            }
+            let p = ready(plan_shared_upsert(&s, req, std::slice::from_ref(&obs)));
+            assert_eq!(ids(&p.state), vec!["b", "c"]);
+            assert_eq!(p.state.artifacts[0].content, s.artifacts[0].content);
+            assert_eq!(p.files[0].after, obs.value);
+            assert_eq!(p.state.installations, s.installations);
+            assert_eq!(p.state.references, s.references);
+            assert_eq!(
+                p.state.owner_consumers,
+                s.owner_consumers
+                    .iter()
+                    .filter(|r| r.installation_id != "a")
+                    .cloned()
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(
+                p.state.owner_contracts,
+                s.owner_contracts
+                    .iter()
+                    .filter(|r| r.installation_id != "a")
+                    .cloned()
+                    .collect::<Vec<_>>()
+            );
+        }
     }
 }
 
@@ -1094,4 +1142,257 @@ fn physical_failures_name_real_owners_and_locations() {
             && message.contains("bytes changed"),
         "{message}"
     );
+}
+
+#[test]
+fn translated_diagnostics_preserve_literal_destination_text() {
+    let s = empty();
+    let mut sets = [
+        instruction("a", "Missing newline"),
+        instruction("b", "Missing newline"),
+    ];
+    for set in &mut sets {
+        let DesiredArtifact::Instruction(v) = &mut set.artifacts[0] else {
+            unreachable!()
+        };
+        v.location.path = "installation physical_0".into();
+    }
+    let c = proofs(&sets);
+    let refs = [direct("a"), direct("b")];
+    let error = plan_shared_upsert(
+        &s,
+        request(&sets, &c, None, &refs, &[]),
+        &[observed("installation physical_0", None)],
+    )
+    .unwrap_err();
+    let message = format!("{error:#}");
+    assert!(
+        message.contains("artifact owners [a, b] selector shared at installation physical_0"),
+        "{message}"
+    );
+    assert!(message.contains("must end with a newline"), "{message}");
+}
+
+#[test]
+fn diagnostic_owner_attribution_is_exact_for_multiple_identities_and_final_removal() {
+    let s = empty();
+    let mut sets = Vec::new();
+    let mut refs = Vec::new();
+    let mut obs = Vec::new();
+    for index in 0..11 {
+        let id = format!("owner{index:02}");
+        let mut value = set(&id, b"old");
+        let DesiredArtifact::File(f) = &mut value.artifacts[0] else {
+            unreachable!()
+        };
+        f.location.path = format!("file{index:02}.md");
+        obs.push(observed(&f.location.path, None));
+        refs.push(direct(&id));
+        sets.push(value);
+    }
+    let p = ready(plan_shared_upsert(
+        &s,
+        request(&sets, &[], None, &refs, &[]),
+        &obs,
+    ));
+    let selection = Selection::Names(vec!["owner10".into()]);
+    for retire in [false, true] {
+        let desired = if retire { &[][..] } else { &sets[10..] };
+        let remove = if retire {
+            vec![direct("owner10")]
+        } else {
+            vec![]
+        };
+        let error = plan_shared_upsert(
+            &p.state,
+            request(desired, &[], Some(&selection), &[], &remove),
+            &[observed("file10.md", Some(b"edited"))],
+        )
+        .unwrap_err();
+        let message = format!("{error:#}");
+        assert!(message.contains("artifact owners [owner10]"), "{message}");
+        assert!(
+            !message.contains("owner01") && !message.contains("physical_"),
+            "{message}"
+        );
+        assert!(
+            message.contains("file10.md") && message.contains("bytes changed"),
+            "{message}"
+        );
+    }
+}
+
+#[test]
+fn shared_outputs_preserve_distinct_consumer_maps_and_git_replacements() {
+    let s = empty();
+    let mut sets = [set("a", b"same"), set("b", b"same")];
+    for (index, set) in sets.iter_mut().enumerate() {
+        let id = if index == 0 { "a" } else { "b" };
+        set.installation.owner.source_revision = Some("1".repeat(40));
+        set.installation.source_evidence = SourceEvidence::Git {
+            resolved_revision: "1".repeat(40),
+            manifest_sha256: "a".repeat(64),
+        };
+        set.installation.requested = vec![
+            TargetSurface::ClaudeCli,
+            TargetSurface::CopilotCli,
+            TargetSurface::CopilotVscodeLocal,
+        ];
+        let DesiredArtifact::File(f) = &mut set.artifacts[0] else {
+            unreachable!()
+        };
+        f.consumers = vec![TargetSurface::CopilotVscodeLocal, TargetSurface::CopilotCli];
+        set.artifacts
+            .push(instruction(id, "Body\n").artifacts.remove(0));
+    }
+    let refs = [direct("a"), direct("b")];
+    let c = proofs(&sets);
+    let p = ready(plan_shared_upsert(
+        &s,
+        request(&sets, &c, None, &refs, &[]),
+        &[observed("shared.md", None), observed("AGENTS.md", None)],
+    ));
+    assert_eq!(
+        p.state.artifacts[0].consumers,
+        vec![TargetSurface::ClaudeCli]
+    );
+    assert_eq!(
+        p.state.artifacts[1].consumers,
+        vec![TargetSurface::CopilotCli, TargetSurface::CopilotVscodeLocal]
+    );
+    for row in &p.state.owner_consumers {
+        let expected = if row.path == "shared.md" {
+            vec![TargetSurface::CopilotVscodeLocal, TargetSurface::CopilotCli]
+        } else {
+            vec![TargetSurface::ClaudeCli]
+        };
+        assert_eq!(row.consumers, expected);
+    }
+    assert_eq!(
+        p.state.owner_contracts,
+        c.iter()
+            .filter(|c| c.path == "AGENTS.md")
+            .chain(c.iter().filter(|c| c.path == "shared.md"))
+            .cloned()
+            .collect::<Vec<_>>()
+    );
+    let obs = p
+        .files
+        .iter()
+        .map(|f| ObservedFile {
+            location: f.location.clone(),
+            value: f.after.clone(),
+        })
+        .collect::<Vec<_>>();
+    for set in &mut sets {
+        set.installation.owner.source_revision = Some("2".repeat(40));
+        set.installation.source_evidence = SourceEvidence::Git {
+            resolved_revision: "2".repeat(40),
+            manifest_sha256: "a".repeat(64),
+        };
+    }
+    let all = Selection::All;
+    let next = ready(plan_shared_upsert(
+        &p.state,
+        request(&sets, &proofs(&sets), Some(&all), &[], &[]),
+        &obs,
+    ));
+    assert!(
+        next.state
+            .artifacts
+            .iter()
+            .flat_map(|a| &a.owners)
+            .all(|o| o.source_revision.as_deref()
+                == Some("2222222222222222222222222222222222222222"))
+    );
+    assert_eq!(next.state.owner_consumers, p.state.owner_consumers);
+    assert_eq!(next.state.owner_contracts, p.state.owner_contracts);
+}
+
+#[test]
+fn edited_instruction_updates_identify_real_owners_and_destination() {
+    let (s, mut obs) = shared_instructions();
+    let text = String::from_utf8(obs.value.as_ref().unwrap().bytes.clone())
+        .unwrap()
+        .replace("Old", "Xld");
+    obs.value.as_mut().unwrap().bytes = text.into_bytes();
+    let sets = [instruction("a", "New\n"), instruction("b", "New\n")];
+    let c = proofs(&sets);
+    let all = Selection::All;
+    let error =
+        plan_shared_upsert(&s, request(&sets, &c, Some(&all), &[], &[]), &[obs]).unwrap_err();
+    let message = format!("{error:#}");
+    assert!(
+        message.contains("owners [a, b]")
+            && message.contains("AGENTS.md")
+            && message.contains("shared"),
+        "{message}"
+    );
+    assert!(!message.contains("physical_"), "{message}");
+}
+
+#[test]
+fn instruction_error_attribution_keeps_raw_roots_and_scopes_distinct() {
+    for dimension in 0..2 {
+        let s = empty();
+        let mut sets = [instruction("a", "Old\n"), instruction("b", "Old\n")];
+        if dimension == 0 {
+            sets[1].installation.root.path = root().path.join(".");
+        } else {
+            sets[1].installation.root.scope = OwnershipScope::User;
+        }
+        let DesiredArtifact::Instruction(v) = &mut sets[1].artifacts[0] else {
+            unreachable!()
+        };
+        v.location.root = sets[1].installation.root.clone();
+        let mut second = observed("AGENTS.md", None);
+        second.location.root = sets[1].installation.root.clone();
+        let refs = [direct("a"), direct("b")];
+        let first = ready(plan_shared_upsert(
+            &s,
+            request(&sets, &[], None, &refs, &[]),
+            &[observed("AGENTS.md", None), second],
+        ));
+        let mut obs = first
+            .files
+            .iter()
+            .map(|f| ObservedFile {
+                location: f.location.clone(),
+                value: f.after.clone(),
+            })
+            .collect::<Vec<_>>();
+        let b = obs
+            .iter_mut()
+            .find(|o| {
+                o.location.root.scope == sets[1].installation.root.scope
+                    && o.location.root.path.as_os_str()
+                        == sets[1].installation.root.path.as_os_str()
+            })
+            .unwrap();
+        b.value.as_mut().unwrap().bytes =
+            String::from_utf8(b.value.as_ref().unwrap().bytes.clone())
+                .unwrap()
+                .replace("Old", "Xld")
+                .into_bytes();
+        for set in &mut sets {
+            let DesiredArtifact::Instruction(v) = &mut set.artifacts[0] else {
+                unreachable!()
+            };
+            v.markdown = "New\n".into();
+        }
+        let all = Selection::All;
+        let error = plan_shared_upsert(
+            &first.state,
+            request(&sets, &[], Some(&all), &[], &[]),
+            &obs,
+        )
+        .unwrap_err();
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("owners [b]")
+                && !message.contains("owners [a")
+                && message.contains("AGENTS.md"),
+            "{message}"
+        );
+    }
 }

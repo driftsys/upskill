@@ -1,7 +1,9 @@
 use super::{Key, owned_key, same_content};
 use crate::files::plan::{DesiredFile, FileLocation, ObservedFile, PlannedFile};
 use crate::instructions::aggregate;
-use crate::instructions::plan::{DesiredInstructionContribution, InstructionLocation};
+use crate::instructions::plan::{
+    DesiredInstructionContribution, InstructionFileContext, InstructionLocation,
+};
 use crate::lifecycle::state::CombinedState;
 use crate::operations::plan::{DesiredArtifact, InstallationChange, plan_owned_artifacts};
 use crate::ownership::{ArtifactContent, ArtifactOwner, OwnedArtifact};
@@ -60,7 +62,8 @@ pub(super) fn plan(
             let mut value = if let Some(value) = desired.get(k) {
                 value.clone()
             } else {
-                retained_value(prior, row, observations)?
+                retained_value(prior, row, observations)
+                    .with_context(|| real_context(prior, candidate, row))?
             };
             match &mut value {
                 DesiredArtifact::File(f) => f.consumers = row.consumers.clone(),
@@ -162,43 +165,98 @@ fn retained_value(
     })
 }
 
-// The lower planner uses private installation IDs in its error context. Render
-// those contexts with authoritative real owners before the chain crosses this API.
+// Translate complete lower-planner contexts rather than replacing substrings:
+// literal destination text may itself contain an internal-looking owner name.
 fn real_diagnostic(
     error: anyhow::Error,
     tokens: &BTreeMap<Key, ArtifactOwner>,
     prior: &CombinedState,
     candidate: &CombinedState,
 ) -> anyhow::Error {
-    let mut message = format!("{error:#}");
+    let mut contexts = BTreeMap::new();
     for (key, token) in tokens {
-        let names: BTreeSet<_> = prior
+        let names = owner_names(
+            prior
+                .artifacts
+                .iter()
+                .chain(&candidate.artifacts)
+                .filter(|a| owned_key(a) == *key),
+        );
+        let owner_context = format!("artifact owners [{names}]");
+        if let Some(selector) = &key.3 {
+            contexts.insert(
+                format!(
+                    "installation {} selector {selector} at {}",
+                    token.installation_id, key.2
+                ),
+                format!("{owner_context} selector {selector} at {}", key.2),
+            );
+        }
+        contexts.insert(
+            format!("installation {} file {}", token.installation_id, key.2),
+            format!("{owner_context} file {}", key.2),
+        );
+        for reason in [
+            "missing owned file",
+            "owned file bytes changed",
+            "owned file mode evidence changed",
+        ] {
+            contexts.insert(
+                format!(
+                    "{reason} ({}) for installation {}",
+                    key.2, token.installation_id
+                ),
+                format!("{reason} ({}) for {owner_context}", key.2),
+            );
+        }
+    }
+    // Location is typed so equal relative paths in different raw roots/scopes
+    // cannot attribute an instruction failure to the wrong physical file.
+    if let Some(context) = error.downcast_ref::<InstructionFileContext>() {
+        let names = owner_names(
+            prior
+                .artifacts
+                .iter()
+                .chain(&candidate.artifacts)
+                .filter(|a| {
+                    a.root.scope == context.location.root.scope
+                        && a.root.path.as_os_str() == context.location.root.path.as_os_str()
+                        && a.path == context.location.path
+                }),
+        );
+        contexts.insert(
+            context.to_string(),
+            format!("{context} for artifact owners [{names}]"),
+        );
+    }
+    let message = error
+        .chain()
+        .map(|cause| {
+            let text = cause.to_string();
+            contexts.get(&text).cloned().unwrap_or(text)
+        })
+        .collect::<Vec<_>>()
+        .join(": ");
+    anyhow::anyhow!(message)
+}
+fn owner_names<'a>(rows: impl Iterator<Item = &'a OwnedArtifact>) -> String {
+    rows.flat_map(|a| a.owners.iter().map(|o| o.installation_id.as_str()))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+fn real_context(prior: &CombinedState, candidate: &CombinedState, row: &OwnedArtifact) -> String {
+    let key = owned_key(row);
+    let names = owner_names(
+        prior
             .artifacts
             .iter()
             .chain(&candidate.artifacts)
-            .filter(|a| owned_key(a) == *key)
-            .flat_map(|a| a.owners.iter().map(|o| o.installation_id.as_str()))
-            .collect();
-        let replacement = format!(
-            "artifact owners [{}]",
-            names.into_iter().collect::<Vec<_>>().join(", ")
-        );
-        let needle = format!("installation {}", token.installation_id);
-        let mut offset = 0;
-        while let Some(relative) = message[offset..].find(&needle) {
-            let start = offset + relative;
-            let end = start + needle.len();
-            if message
-                .as_bytes()
-                .get(end)
-                .is_some_and(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
-            {
-                offset = end;
-                continue;
-            }
-            message.replace_range(start..end, &replacement);
-            offset = start + replacement.len();
-        }
-    }
-    anyhow::anyhow!(message)
+            .filter(|a| owned_key(a) == key),
+    );
+    format!(
+        "artifact owners [{names}] at {:?} {:?}:{} selector {:?}",
+        row.root.scope, row.root.path, row.path, key.3
+    )
 }

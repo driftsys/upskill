@@ -614,10 +614,14 @@ Source paths: `docs/wip/specs/2026-10-17-m1-shared-reconciliation.md` and
 [spec](specs/2026-10-17-m1-shared-reconciliation.md) and
 [plan](plans/2026-10-17-m1-shared-reconciliation.md) are retained unchanged.
 
+The archived spec uses `operations::plan_owned_artifacts` as a shortened symbol.
+The actual function is `operations::plan::plan_owned_artifacts`; the raw archive
+bytes are retained for provenance.
+
 The contracted producer starts at `c9f453042c954ab2698942c4cbe4e2ee4878ba13`;
 shared planning and acceptance examples were reconciled from the stable working
-implementation supplied by the dispatcher. The dispatcher reports 1,237 passing
-Rust tests, thirty-one focused examples, Rust 1.85 and sanity exit 0; see the
+implementation supplied by the dispatcher. The dispatcher reports 1,242 passing
+Rust tests, thirty-six focused examples, Rust 1.85 and sanity exit 0; see the
 [execution evidence](../technotes/evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
 This is local completion evidence, not a claim of merge or hosted qualification.
 

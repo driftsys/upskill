@@ -13,11 +13,11 @@ invalid profile coverage/family/revision, empty audience, mismatched capture and
 mixed client bindings. Expected outputs are compared with the original producer
 and independent literal consumer expectations.
 
-The [shared planner suite](../../tests/lifecycle_sharing.rs) contains
-twenty-four examples covering new sharing, retained-owner addition, coordinated
-update, selected explicit requalification, unknown retained proof, conflicting
-content and modes, owner release/final retirement, immutable real bindings,
-exact observations, malformed unrelated state, legacy collisions, topology,
+The [shared planner suite](../../tests/lifecycle_sharing.rs) contains 30
+examples covering new sharing, retained-owner addition, coordinated update,
+selected explicit requalification, unknown retained proof, conflicting content
+and modes, owner release/final retirement, immutable real bindings, exact
+observations, malformed unrelated state, legacy collisions, topology,
 instruction manual bytes/modes/neighbors and empty aggregate retention. Codec
 roundtrips retain real owner evidence; projection identities do not enter
 returned state. Original upsert rejection and single-owner parity remain
@@ -27,7 +27,7 @@ distinct raw roots/scopes.
 
 ## Reported checks and controls
 
-The dispatcher reports 1,237 passing tests in the full Rust suite, thirty-one
+The dispatcher reports 1,242 passing tests in the full Rust suite, thirty-six
 passing focused examples, locked Rust 1.85 all-target checking and sanity exit 0
 for the implementation including review test additions. These reports are
 supplied delivery evidence, not independently authenticated execution by this
@@ -56,6 +56,11 @@ Whole-branch review regressions cover proof-free release from three owners to
 two for both artifact forms, and real-owner diagnostics for malformed
 instruction bodies and edited files. Both cases failed before the production
 fixes.
+
+Pass 1 adds exact producer contract cardinality, known survivor evidence/order,
+varied output consumer maps, Git revision replacement, prior-only diagnostic
+attribution and eleven-identity coverage. Typed instruction location contexts
+and exact complete-context translation preserve literal destination text.
 
 ## Limits
 

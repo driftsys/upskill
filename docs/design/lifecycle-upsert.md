@@ -119,7 +119,7 @@ evidence.
 
 The private sharing planner assigns one deterministic internal owner to each
 logical artifact identity in the union of prior and candidate state. It
-delegates physical planning to `operations::plan_owned_artifacts` after
+delegates physical planning to `operations::plan::plan_owned_artifacts` after
 validating real ownership and agreement. No alternate reference authority or
 filesystem writer is introduced. For affected retained output without desired
 bytes, exact supplied observations provide the existing body or file; the
@@ -135,11 +135,13 @@ an empty aggregate file.
 The projection maps only normalized content and instruction layout metadata back
 to the real candidate rows, requiring exact identity count and content
 agreement. Internal owner identities never enter returned state, contracts or
-references or public error messages. Physical errors translate private owner
-contexts into real owner lists while preserving location and cause text. Final
-complete validation precedes return. Errors expose no partial plan and inputs
-remain unchanged. This projection supplies no execution, source-authenticity,
-physical-containment or native authority.
+references or public error messages. Physical errors translate complete private
+owner contexts into real owner lists. Typed instruction locations retain exact
+scope/raw-root attribution; retained output extraction also adds real owner,
+location and selector context. Literal destination and cause text are preserved.
+Final complete validation precedes return. Errors expose no partial plan and
+inputs remain unchanged. This projection supplies no execution,
+source-authenticity, physical-containment or native authority.
 
 ## Remaining Gate 5 work
 

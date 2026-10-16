@@ -18,6 +18,17 @@ pub struct ObservedInstructionFile {
     pub location: InstructionLocation,
     pub content: Option<Vec<u8>>,
 }
+/// Internal location context retained for callers that translate diagnostics.
+#[derive(Debug)]
+pub(crate) struct InstructionFileContext {
+    pub(crate) action: &'static str,
+    pub(crate) location: InstructionLocation,
+}
+impl std::fmt::Display for InstructionFileContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} instruction file {}", self.action, self.location.path)
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesiredInstructionContribution {
     pub location: InstructionLocation,
@@ -102,21 +113,27 @@ pub fn plan_instructions(
                 }
             }
         }
-        if observation.content.is_none() && !records.is_empty() {
-            bail!(
-                "owned instruction file {} is absent",
-                observation.location.path
-            );
-        }
-        let bytes = observation.content.as_deref().unwrap_or_default();
-        let existing = std::str::from_utf8(bytes)
-            .with_context(|| format!("invalid UTF-8 at {}", observation.location.path))?;
-        let bodies = aggregate::inspect_owned(existing, &records)
-            .with_context(|| format!("inspect instruction file {}", observation.location.path))?;
-        let bodies: BTreeMap<_, _> = bodies
-            .into_iter()
-            .map(|body| (body.id.clone(), body))
-            .collect();
+        let (existing, bodies) = (|| -> Result<_> {
+            if observation.content.is_none() && !records.is_empty() {
+                bail!(
+                    "owned instruction file {} is absent",
+                    observation.location.path
+                );
+            }
+            let bytes = observation.content.as_deref().unwrap_or_default();
+            let existing = std::str::from_utf8(bytes)
+                .with_context(|| format!("invalid UTF-8 at {}", observation.location.path))?;
+            let bodies = aggregate::inspect_owned(existing, &records)?;
+            let bodies: BTreeMap<_, _> = bodies
+                .into_iter()
+                .map(|body| (body.id.clone(), body))
+                .collect();
+            Ok((existing, bodies))
+        })()
+        .with_context(|| InstructionFileContext {
+            action: "inspect",
+            location: observation.location.clone(),
+        })?;
         let mut metadata = BTreeMap::new();
         let mut contributions = Vec::new();
         for row in rows {
@@ -147,8 +164,12 @@ pub fn plan_instructions(
             contributions.push(Contribution::new(id, &contribution.markdown));
             metadata.insert(id.clone(), desired_artifact(owner, contribution)?);
         }
-        let edit = aggregate::reconcile(existing, &records, &contributions)
-            .with_context(|| format!("reconcile instruction file {}", observation.location.path))?;
+        let edit = aggregate::reconcile(existing, &records, &contributions).with_context(|| {
+            InstructionFileContext {
+                action: "reconcile",
+                location: observation.location.clone(),
+            }
+        })?;
         for contribution in edit.owned {
             let mut row = metadata
                 .remove(&contribution.id)

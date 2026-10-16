@@ -260,10 +260,26 @@ fn mixed_bindings_attach_only_each_output_consumers() {
         let expected = compile_rule_desired_set(request).unwrap();
         let out = compile_rule_desired_set_with_contracts(request, &p).unwrap();
         assert_eq!(out.set, expected);
+        assert_eq!(out.contracts.len(), expected.artifacts.len());
         for (artifact, contract) in expected.artifacts.iter().zip(&out.contracts) {
             let DesiredArtifact::File(file) = artifact else {
                 panic!("expected file")
             };
+            assert_eq!(contract.root, file.location.root);
+            assert_eq!(contract.path, file.location.path);
+            assert_eq!(contract.installation_id, i.owner.installation_id);
+            assert_eq!(contract.source_manifest_sha256, s.content_sha256);
+            assert_eq!(contract.contribution_id, None);
+            assert_eq!(
+                contract.content,
+                ContractContent::File {
+                    content_sha256: Sha256::digest(&file.value.bytes)
+                        .iter()
+                        .map(|b| format!("{b:02x}"))
+                        .collect(),
+                    mode: file.value.mode
+                }
+            );
             let mut consumers = file.consumers.clone();
             consumers.sort_by_key(|s| s.name());
             assert_eq!(

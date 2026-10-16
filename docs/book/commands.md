@@ -20,11 +20,11 @@ a source-registry repo).
 
 The library's strict source-manifest capture supplies values to the implemented
 pure item compiler, which derives complete per-client entrypoint and resource
-outputs. The inactive captured-rule desired-set producer is implemented;
-lifecycle reconciliation remains pending. Current commands keep their existing
-discovery, hashing and persistence behavior; they do not invoke capture or
-activate the owned lifecycle. Captured bytes do not establish source
-authenticity, an atomic snapshot or qualified filesystem containment. See the
+outputs. The inactive captured-rule desired-set producer and pure lifecycle
+reconciliation are implemented. Current commands keep their existing discovery,
+hashing and persistence behavior; they do not invoke capture or activate the
+owned lifecycle. Captured bytes do not establish source authenticity, an atomic
+snapshot or qualified filesystem containment. See the
 [strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
 
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
