@@ -698,11 +698,11 @@ rather than all diagnostics.
 
 This library prerequisite activates no CLI selector, native adapter, source
 fetch, filesystem observation, lock, journal, schema-2 persistence or execution.
-Captured-rule desired sets are implemented in §4.14. Remaining work includes
-planner integration of the implemented reference authority and per-owner
-consumer associations, immutable source evidence, target qualification,
-filesystem safety, physical permission application and metadata qualification,
-writer locking, durable state and apply/recovery. Pure
+Captured-rule desired sets are implemented in §4.14; reference authority and
+per-owner associations support removal planning in §4.16. Complete add/update
+integration with immutable source evidence, source/target adapters, qualified
+observations, permission/metadata policy, writer locking, guarded persistence
+and apply/recovery remains later lifecycle work. Pure
 [permission selection](../design/file-permission-policy.md) is implemented as a
 separate inactive supplied-value capability. It does not complete M1-A2, M1-A3
 or M1. The public declarations are in

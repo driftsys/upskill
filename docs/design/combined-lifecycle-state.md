@@ -115,8 +115,11 @@ omission, followed by exact restoration. The
 [validation record](../technotes/2026-10-15-m1-gate5-state-validation.md)
 records the checked revision and scope of the evidence.
 
-This completes the pure state slice. Compiler-to-desired-set reconciliation,
-shared-owner lifecycle planning, exact original-JSON backup, guarded
-application, checkpoint recovery integration and observational lifecycle
-adapters remain later work. Final native and hosted qualification is still
-required; this record does not declare Gate 5 or M1 complete.
+This completes the pure state slice. Separate
+[captured desired-set production](captured-rule-desired-sets.md),
+[reference reconciliation](lifecycle-reference-reconciliation.md) and
+[shared-owner removal planning](lifecycle-reference-removal.md) are implemented.
+Complete add/update planning, exact original-JSON backup, guarded application,
+checkpoint recovery integration and observational lifecycle adapters remain
+later work. Native and complete lifecycle qualification remain required; this
+record does not declare Gate 5 or M1 complete.

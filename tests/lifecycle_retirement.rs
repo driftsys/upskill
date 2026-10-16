@@ -243,6 +243,11 @@ fn metadata_only_retirement_requires_unchanged_owned_evidence() {
         let mut invalid = observed.clone();
         invalid.value.as_mut().unwrap().mode = Some(0o10000);
         assert!(!reject(&state, &[direct("a")], &[invalid]).is_empty());
+        if instruction {
+            let mut invalid = observed.clone();
+            invalid.value.as_mut().unwrap().bytes.push(255);
+            assert!(reject(&state, &[direct("a")], &[invalid]).contains("UTF-8"));
+        }
         if !instruction {
             let mut mode = observed;
             mode.value.as_mut().unwrap().mode = Some(0o600);
@@ -282,10 +287,26 @@ fn unsupported_owned_kind_blocks_retirement_but_survives_disjoint_work() {
         state.references.push(direct("skill"));
         validate_state(&state).unwrap();
         assert!(reject(&state, &[direct("skill")], &[]).contains("unsupported"));
+        let mut unsupported = state.artifacts[0].clone();
+        unsupported.path = "skill.bin".into();
+        unsupported.owners = vec![state.installations[2].owner.clone()];
+        unsupported.consumers = vec![TargetSurface::CodexCli];
+        state.artifacts.push(unsupported.clone());
+        state.owner_consumers.push(OwnerConsumers {
+            root: root(),
+            path: "skill.bin".into(),
+            contribution_id: None,
+            installation_id: "skill".into(),
+            consumers: vec![TargetSurface::CodexCli],
+        });
+        let mut native_observation = observed.clone();
+        native_observation.location.path = "skill.bin".into();
+        assert!(reject(&state, &[direct("skill")], &[native_observation]).contains("unsupported"));
         let result =
             plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed))
                 .unwrap();
         assert!(result.state.installations.contains(&state.installations[2]));
+        assert_eq!(result.state.artifacts.last().unwrap(), &unsupported);
     }
 }
 
@@ -729,4 +750,171 @@ fn scope_raw_root_and_association_order_are_preserved() {
         })
         .collect();
     assert_eq!(result.files, expected);
+}
+
+#[test]
+fn refreshed_separator_metadata_supports_sequential_retirement() {
+    for manual in ["", "Manual without final newline"] {
+        for mode in [None, Some(0o600)] {
+            let (mut state, mut observed) = shared(true);
+            let edit = aggregate::reconcile(
+                manual,
+                &[],
+                &[Contribution::new("a", "A\n"), Contribution::new("b", "B\n")],
+            )
+            .unwrap();
+            state.artifacts.clear();
+            state.owner_consumers.clear();
+            for (index, id) in ["a", "b"].into_iter().enumerate() {
+                let record = edit
+                    .owned
+                    .iter()
+                    .find(|record| record.id == id)
+                    .unwrap()
+                    .clone();
+                state.artifacts.push(OwnedArtifact {
+                    root: root(),
+                    path: "AGENTS.md".into(),
+                    content: ArtifactContent::MarkdownContribution {
+                        contribution: record,
+                    },
+                    owners: vec![state.installations[index].owner.clone()],
+                    consumers: state.installations[index].requested.clone(),
+                });
+                state.owner_consumers.push(OwnerConsumers {
+                    root: root(),
+                    path: "AGENTS.md".into(),
+                    contribution_id: Some(id.into()),
+                    installation_id: id.into(),
+                    consumers: state.installations[index].requested.clone(),
+                });
+            }
+            let ArtifactContent::MarkdownContribution { contribution: old } =
+                &state.artifacts[1].content
+            else {
+                unreachable!()
+            };
+            assert_eq!(old.preceding_newlines, 1);
+            observed.value = Some(FileValue {
+                bytes: edit.content.into_bytes(),
+                mode,
+            });
+            let first =
+                plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed))
+                    .unwrap();
+            let ArtifactContent::MarkdownContribution {
+                contribution: updated,
+            } = &first.state.artifacts[0].content
+            else {
+                unreachable!()
+            };
+            let mut expected = old.clone();
+            expected.preceding_newlines = 0;
+            assert_eq!(updated, &expected);
+            let after = first.files[0].after.clone().unwrap();
+            assert_eq!(after.mode, mode);
+            assert_eq!(
+                aggregate::inspect_owned(
+                    std::str::from_utf8(&after.bytes).unwrap(),
+                    std::slice::from_ref(updated)
+                )
+                .unwrap(),
+                vec![Contribution::new("b", "B\n")]
+            );
+            let final_observation = ObservedFile {
+                location: observed.location.clone(),
+                value: Some(after),
+            };
+            let last =
+                plan_reference_removal(&first.state, &[direct("b")], &[final_observation]).unwrap();
+            assert_eq!(
+                last.files,
+                vec![PlannedFile {
+                    location: observed.location,
+                    before: first.files[0].after.clone(),
+                    after: Some(FileValue {
+                        bytes: manual.as_bytes().to_vec(),
+                        mode
+                    })
+                }]
+            );
+        }
+    }
+}
+
+#[test]
+fn consumer_union_is_isolated_between_retained_regions_at_one_location() {
+    let (mut state, mut observed) = shared(true);
+    state
+        .installations
+        .push(installation("c", TargetSurface::CodexCli));
+    state.references.push(direct("c"));
+    let edit = aggregate::reconcile(
+        "Manual\n",
+        &[],
+        &[
+            Contribution::new("shared", "Shared\n"),
+            Contribution::new("c", "C\n"),
+        ],
+    )
+    .unwrap();
+    state.artifacts[0].content = ArtifactContent::MarkdownContribution {
+        contribution: edit
+            .owned
+            .iter()
+            .find(|record| record.id == "shared")
+            .unwrap()
+            .clone(),
+    };
+    state.artifacts.push(OwnedArtifact {
+        root: root(),
+        path: "AGENTS.md".into(),
+        content: ArtifactContent::MarkdownContribution {
+            contribution: edit
+                .owned
+                .iter()
+                .find(|record| record.id == "c")
+                .unwrap()
+                .clone(),
+        },
+        owners: vec![state.installations[2].owner.clone()],
+        consumers: vec![TargetSurface::CodexCli],
+    });
+    state.owner_consumers.push(OwnerConsumers {
+        root: root(),
+        path: "AGENTS.md".into(),
+        contribution_id: Some("c".into()),
+        installation_id: "c".into(),
+        consumers: vec![TargetSurface::CodexCli],
+    });
+    observed.value.as_mut().unwrap().bytes = edit.content.into_bytes();
+    let result =
+        plan_reference_removal(&state, &[direct("a")], std::slice::from_ref(&observed)).unwrap();
+    assert_eq!(
+        result.state.artifacts[0].consumers,
+        vec![TargetSurface::ClaudeCli]
+    );
+    assert_eq!(result.state.artifacts[1], state.artifacts[1]);
+    assert_eq!(result.state.owner_consumers, state.owner_consumers[1..]);
+    assert_eq!(
+        result.files,
+        vec![PlannedFile {
+            location: observed.location,
+            before: observed.value.clone(),
+            after: observed.value
+        }]
+    );
+}
+
+#[test]
+fn final_owner_deletion_rejects_changed_recorded_mode() {
+    for mode in [None, Some(0o640)] {
+        let (mut state, mut observed) = shared(false);
+        let ArtifactContent::File { mode: recorded, .. } = &mut state.artifacts[0].content else {
+            unreachable!()
+        };
+        *recorded = mode;
+        observed.value.as_mut().unwrap().mode = Some(0o600);
+        assert!(reject(&state, &[direct("a"), direct("b")], &[observed]).contains("mode"));
+    }
 }

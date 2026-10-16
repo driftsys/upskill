@@ -59,3 +59,16 @@ separate work. Supplied observations do not establish qualified destinations.
 Guarded first-write backup, execution, recovery and observational adapters
 remain later Gate 5 deliveries. Production commands still use schema 1; this
 slice neither completes Gate 5 nor activates M1.
+
+## Numbered PR review corrections
+
+Pass1 of PR298 found three regression-test gaps; production passed the new
+probes. The expanded 18-test suite now exercises refreshed separator metadata
+and sequential retirement from manual text without a final newline, consumer
+isolation between retained regions at one location, and mode mismatch rejection
+on final-owner deletion. It also covers invalid UTF-8 outside a region,
+unsupported owned kinds with populated artifacts, and absent aggregate modes.
+Six independent controls disabled those checks and each failed an intended
+assertion. Source bytes were restored; `pr-pass1-controls.json` records hashes.
+The cumulative assertion-control count is22. Related live documentation now
+distinguishes implemented removal planning from remaining add/update work.
