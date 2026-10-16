@@ -11,3 +11,5 @@ pub mod selection;
 pub mod upsert;
 
 pub mod contracts;
+
+mod sharing;

@@ -2,7 +2,8 @@ use sha2::{Digest, Sha256};
 use upskill::generate::Client;
 use upskill::lifecycle::contracts::ContractContent;
 use upskill::lifecycle::desired::{
-    CompilerBinding, RuleDesiredSetRequest, compile_rule_desired_set_with_contracts,
+    CompilerBinding, RuleDesiredSetRequest, compile_rule_desired_set,
+    compile_rule_desired_set_with_contracts,
 };
 use upskill::lifecycle::state::{Installation, SourceEvidence};
 use upskill::operations::plan::DesiredArtifact;
@@ -65,6 +66,13 @@ fn explicit_revisions_and_captured_output_bind_every_contract() {
     let b = binding();
     let p = profiles();
     let before = (s.clone(), i.clone(), b.clone(), p.clone());
+    let expected = compile_rule_desired_set(RuleDesiredSetRequest {
+        installation: &i,
+        source: &s,
+        folder_name: "folder",
+        bindings: &b,
+    })
+    .unwrap();
     let out = compile_rule_desired_set_with_contracts(
         RuleDesiredSetRequest {
             installation: &i,
@@ -75,6 +83,7 @@ fn explicit_revisions_and_captured_output_bind_every_contract() {
         &p,
     )
     .unwrap();
+    assert_eq!(out.set, expected);
     assert_eq!(out.set.installation, i);
     assert_eq!(out.contracts.len(), out.set.artifacts.len());
     assert_eq!(out.contracts.len(), 2);
@@ -220,4 +229,60 @@ fn mismatched_capture_is_not_promoted_to_contract_evidence() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn mixed_bindings_attach_only_each_output_consumers() {
+    for body in [
+        RULE,
+        b"---\nschema: 1\nname: source\ndescription: demo\naudience: [copilot]\n---\n\n# Demo\n",
+    ] {
+        let s = source(body);
+        let mut i = item(&s);
+        i.requested.push(TargetSurface::ClaudeCli);
+        let mut b = binding();
+        b.push(CompilerBinding {
+            client: Client::Claude,
+            consumers: vec![TargetSurface::ClaudeCli],
+        });
+        let mut p = profiles();
+        p.push(TargetProfile {
+            family: TargetFamily::Claude,
+            surface: TargetSurface::ClaudeCli,
+            contract_revision: 12,
+        });
+        let request = RuleDesiredSetRequest {
+            installation: &i,
+            source: &s,
+            folder_name: "folder",
+            bindings: &b,
+        };
+        let expected = compile_rule_desired_set(request).unwrap();
+        let out = compile_rule_desired_set_with_contracts(request, &p).unwrap();
+        assert_eq!(out.set, expected);
+        for (artifact, contract) in expected.artifacts.iter().zip(&out.contracts) {
+            let DesiredArtifact::File(file) = artifact else {
+                panic!("expected file")
+            };
+            let mut consumers = file.consumers.clone();
+            consumers.sort_by_key(|s| s.name());
+            assert_eq!(
+                contract
+                    .profiles
+                    .iter()
+                    .map(|p| (p.surface, p.contract_revision))
+                    .collect::<Vec<_>>(),
+                consumers
+                    .iter()
+                    .map(|s| (
+                        *s,
+                        p.iter()
+                            .find(|p| p.surface == *s)
+                            .unwrap()
+                            .contract_revision
+                    ))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
 }

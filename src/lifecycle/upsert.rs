@@ -1,4 +1,4 @@
-//! Pure complete installation upserts; no new shared-owner compatibility authority.
+//! Pure complete installation upserts with separate restrictive and shared entrypoints.
 use super::desired::DesiredInstallationSet;
 use super::reconcile::{GraphChanges, reconcile_references};
 use super::selection::{
@@ -192,6 +192,27 @@ pub fn plan_upsert(
     request: UpsertRequest<'_>,
     observations: &[ObservedFile],
 ) -> Result<UpsertOutcome> {
+    plan_upsert_mode(prior, request, observations, false)
+}
+
+/// Plan complete shared replacements using explicit matching owner contracts.
+///
+/// This opt-in pure boundary grants no native or filesystem qualification.
+/// Missing retained evidence blocks affected multi-owner outputs.
+pub fn plan_shared_upsert(
+    prior: &CombinedState,
+    request: UpsertRequest<'_>,
+    observations: &[ObservedFile],
+) -> Result<UpsertOutcome> {
+    plan_upsert_mode(prior, request, observations, true)
+}
+
+fn plan_upsert_mode(
+    prior: &CombinedState,
+    request: UpsertRequest<'_>,
+    observations: &[ObservedFile],
+    shared: bool,
+) -> Result<UpsertOutcome> {
     validate_state(prior).context("validate prior upsert state")?;
     let mut blockers = Vec::new();
     let selected = match request.selection {
@@ -347,7 +368,7 @@ pub fn plan_upsert(
         }
     }
     validate_legacy_destinations(prior, request.sets, &changed)?;
-    let planned = plan_owned_artifacts(&prior.artifacts, &changes, observations)?;
+
     let mut owner_consumers = Vec::new();
     for old in &prior.owner_consumers {
         if !changed.contains(&old.installation_id) {
@@ -379,19 +400,23 @@ pub fn plan_upsert(
         }
     }
     owner_contracts.extend(supplied_contracts.into_values());
-    let state = CombinedState {
+    let mut state = CombinedState {
         owner_contracts,
         schema: prior.schema,
         installations: graph.installations,
         bundles: graph.bundles,
         references: graph.references,
-        artifacts: planned.artifacts,
+        artifacts: prior.artifacts.clone(),
         owner_consumers,
         legacy: prior.legacy.clone(),
     };
+    let files = if shared {
+        super::sharing::plan(prior, &mut state, &changes, observations)?
+    } else {
+        let planned = plan_owned_artifacts(&prior.artifacts, &changes, observations)?;
+        state.artifacts = planned.artifacts;
+        planned.files
+    };
     validate_state(&state).context("validate complete upsert state")?;
-    Ok(UpsertOutcome::Ready(Box::new(UpsertPlan {
-        state,
-        files: planned.files,
-    })))
+    Ok(UpsertOutcome::Ready(Box::new(UpsertPlan { state, files })))
 }
