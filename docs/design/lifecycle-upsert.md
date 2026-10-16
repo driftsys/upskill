@@ -137,22 +137,24 @@ to the real candidate rows, requiring exact identity count and content
 agreement. Internal owner identities never enter returned state, contracts or
 references or public error messages. Physical errors translate complete private
 owner contexts into real owner lists. Typed instruction locations retain exact
-scope/raw-root attribution; retained output extraction also adds real owner,
-location and selector context. Literal destination and cause text are preserved.
-Final complete validation precedes return. Errors expose no partial plan and
-inputs remain unchanged. This projection supplies no execution,
-source-authenticity, physical-containment or native authority.
+scope/raw-root attribution. Retained aggregate extraction reports the exact
+physical file ownership grouped by selector, including neighbors verified by the
+reader. Literal destination and cause text are preserved. Final complete
+validation precedes return. Errors expose no partial plan and inputs remain
+unchanged. This projection supplies no execution, source-authenticity,
+physical-containment or native authority.
 
 ## Remaining Gate 5 work
 
-This is complete planning for the supported single-owner boundary. Graph and
-artifact errors currently report the first error; full operation-level conflict
-aggregation remains pending. Qualified source/destination integration,
-source/scoped selectors, CLI precedence, instruction compiler adapters, guarded
-first-write backup, executor/recovery integration and observational adapters
-remain. Gate 6 must qualify native targets before schema-2 production
-activation. This pure plan grants no execution, source authenticity, physical
-containment or native support authority.
+These supplied-value boundaries plan supported rule outputs and explicit shared
+reconciliation. Graph and artifact errors currently report the first error; full
+operation-level conflict aggregation remains pending. Qualified
+source/destination integration, source/scoped selectors, CLI precedence,
+instruction compiler adapters, guarded first-write backup, executor/recovery
+integration and observational adapters remain. Gate 6 must qualify native
+targets before schema-2 production activation. This pure plan grants no
+execution, source authenticity, physical containment or native support
+authority.
 
 ## Components
 

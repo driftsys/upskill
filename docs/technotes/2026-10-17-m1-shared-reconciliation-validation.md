@@ -13,7 +13,7 @@ invalid profile coverage/family/revision, empty audience, mismatched capture and
 mixed client bindings. Expected outputs are compared with the original producer
 and independent literal consumer expectations.
 
-The [shared planner suite](../../tests/lifecycle_sharing.rs) contains 30
+The [shared planner suite](../../tests/lifecycle_sharing.rs) contains 31
 examples covering new sharing, retained-owner addition, coordinated update,
 selected explicit requalification, unknown retained proof, conflicting content
 and modes, owner release/final retirement, immutable real bindings, exact
@@ -61,6 +61,11 @@ Pass 1 adds exact producer contract cardinality, known survivor evidence/order,
 varied output consumer maps, Git revision replacement, prior-only diagnostic
 attribution and eleven-identity coverage. Typed instruction location contexts
 and exact complete-context translation preserve literal destination text.
+
+Pass 2 regression coverage verifies aggregate-wide neighbor failures report the
+physical file ownership grouped by selector, and verifies missing/mode file and
+absent/invalid-UTF-8 instruction diagnostics. Retained extraction checks exact
+scope, raw root, selector and cause across equal paths in distinct roots/scopes.
 
 ## Limits
 

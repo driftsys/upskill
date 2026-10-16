@@ -247,16 +247,37 @@ fn owner_names<'a>(rows: impl Iterator<Item = &'a OwnedArtifact>) -> String {
         .join(", ")
 }
 fn real_context(prior: &CombinedState, candidate: &CombinedState, row: &OwnedArtifact) -> String {
-    let key = owned_key(row);
-    let names = owner_names(
-        prior
-            .artifacts
-            .iter()
-            .chain(&candidate.artifacts)
-            .filter(|a| owned_key(a) == key),
-    );
+    // Retained instruction extraction verifies every region in this physical
+    // file. Report the file's complete ownership by selector rather than
+    // attributing a neighbor failure to the selector being extracted.
+    let mut groups: BTreeMap<Option<String>, BTreeSet<&str>> = BTreeMap::new();
+    for artifact in prior
+        .artifacts
+        .iter()
+        .chain(&candidate.artifacts)
+        .filter(|a| {
+            a.root.scope == row.root.scope
+                && a.root.path.as_os_str() == row.root.path.as_os_str()
+                && a.path == row.path
+        })
+    {
+        groups
+            .entry(owned_key(artifact).3)
+            .or_default()
+            .extend(artifact.owners.iter().map(|o| o.installation_id.as_str()));
+    }
+    let ownership = groups
+        .into_iter()
+        .map(|(selector, names)| {
+            format!(
+                "selector {selector:?} owners [{}]",
+                names.into_iter().collect::<Vec<_>>().join(", ")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
     format!(
-        "artifact owners [{names}] at {:?} {:?}:{} selector {:?}",
-        row.root.scope, row.root.path, row.path, key.3
+        "physical file {:?} {:?}:{} ({ownership})",
+        row.root.scope, row.root.path, row.path
     )
 }

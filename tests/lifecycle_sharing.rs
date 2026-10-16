@@ -637,6 +637,31 @@ fn unchanged_shared_instruction_neighbors_keep_unknown_contracts() {
         ]
     );
     assert_eq!(p.state.owner_consumers[2..], s.owner_consumers[2..]);
+    let mut release = instruction("a", "");
+    release.artifacts.clear();
+    release.audience_excluded = vec![TargetSurface::ClaudeCli];
+    let a = Selection::Names(vec!["a".into()]);
+    let edited = edit.content.replace("Keep", "Xeep");
+    let error = plan_shared_upsert(
+        &s,
+        request(&[release], &[], Some(&a), &[], &[]),
+        &[observed("AGENTS.md", Some(edited.as_bytes()))],
+    )
+    .unwrap_err();
+    let message = format!("{error:#}");
+    assert!(
+        message.contains("selector Some(\"neighbor\") owners [c, d]"),
+        "{message}"
+    );
+    assert!(
+        message.contains("selector Some(\"shared\") owners [a, b]"),
+        "{message}"
+    );
+    assert!(
+        message.contains("AGENTS.md")
+            && message.contains("owned instruction contribution neighbor was edited"),
+        "{message}"
+    );
 }
 #[test]
 fn new_shared_instruction_cannot_adopt_existing_unowned_marker() {
@@ -1061,6 +1086,15 @@ fn pure_release_to_multiple_owners_preserves_history_and_physical_guards() {
             for bad in [vec![], vec![absent], vec![edited]] {
                 let error = plan_shared_upsert(&s, req, &bad).unwrap_err();
                 let message = format!("{error:#}");
+                if instruction_form {
+                    assert!(
+                        message.contains(&format!("{:?}", s.artifacts[0].root.scope))
+                            && message.contains(&format!("{:?}", s.artifacts[0].root.path))
+                            && message.contains("selector Some(\"shared\")"),
+                        "{message}"
+                    );
+                }
+
                 assert!(
                     message.contains(path) && message.contains("owners [a, b, c]"),
                     "{message}"
@@ -1128,20 +1162,37 @@ fn physical_failures_name_real_owners_and_locations() {
     let sets = [set("a", b"old"), set("b", b"old")];
     let c = proofs(&sets);
     let all = Selection::All;
-    let error = plan_shared_upsert(
-        &s,
-        request(&sets, &c, Some(&all), &[], &[]),
-        &[observed("shared.md", Some(b"edited"))],
-    )
-    .unwrap_err();
-    let message = format!("{error:#}");
-    assert!(!message.contains("physical_"), "{message}");
-    assert!(
-        message.contains("owners [a, b]")
-            && message.contains("shared.md")
-            && message.contains("bytes changed"),
-        "{message}"
-    );
+    let mut mode = observed("shared.md", Some(b"old"));
+    mode.value.as_mut().unwrap().mode = Some(0o600);
+    for retire in [false, true] {
+        let desired = if retire { &[][..] } else { &sets[..] };
+        let contracts = if retire { &[][..] } else { &c[..] };
+        let removed = if retire {
+            vec![direct("a"), direct("b")]
+        } else {
+            vec![]
+        };
+        for (obs, cause) in [
+            (observed("shared.md", Some(b"edited")), "bytes changed"),
+            (observed("shared.md", None), "missing owned file"),
+            (mode.clone(), "mode evidence changed"),
+        ] {
+            let error = plan_shared_upsert(
+                &s,
+                request(desired, contracts, Some(&all), &[], &removed),
+                &[obs],
+            )
+            .unwrap_err();
+            let message = format!("{error:#}");
+            assert!(
+                message.contains("owners [a, b]")
+                    && message.contains("shared.md")
+                    && message.contains(cause),
+                "{message}"
+            );
+            assert!(!message.contains("physical_"), "{message}");
+        }
+    }
 }
 
 #[test]
@@ -1311,24 +1362,49 @@ fn shared_outputs_preserve_distinct_consumer_maps_and_git_replacements() {
 
 #[test]
 fn edited_instruction_updates_identify_real_owners_and_destination() {
-    let (s, mut obs) = shared_instructions();
-    let text = String::from_utf8(obs.value.as_ref().unwrap().bytes.clone())
-        .unwrap()
-        .replace("Old", "Xld");
-    obs.value.as_mut().unwrap().bytes = text.into_bytes();
+    let (s, good) = shared_instructions();
+    let mut edited = good.clone();
+    edited.value.as_mut().unwrap().bytes =
+        String::from_utf8(edited.value.as_ref().unwrap().bytes.clone())
+            .unwrap()
+            .replace("Old", "Xld")
+            .into_bytes();
+    let mut absent = good.clone();
+    absent.value = None;
+    let mut utf8 = good;
+    utf8.value.as_mut().unwrap().bytes = vec![255];
     let sets = [instruction("a", "New\n"), instruction("b", "New\n")];
     let c = proofs(&sets);
     let all = Selection::All;
-    let error =
-        plan_shared_upsert(&s, request(&sets, &c, Some(&all), &[], &[]), &[obs]).unwrap_err();
-    let message = format!("{error:#}");
-    assert!(
-        message.contains("owners [a, b]")
-            && message.contains("AGENTS.md")
-            && message.contains("shared"),
-        "{message}"
-    );
-    assert!(!message.contains("physical_"), "{message}");
+    for retire in [false, true] {
+        let desired = if retire { &[][..] } else { &sets[..] };
+        let contracts = if retire { &[][..] } else { &c[..] };
+        let removed = if retire {
+            vec![direct("a"), direct("b")]
+        } else {
+            vec![]
+        };
+        for (obs, cause) in [
+            (edited.clone(), "was edited"),
+            (absent.clone(), "is absent"),
+            (utf8.clone(), "invalid UTF-8"),
+        ] {
+            let error = plan_shared_upsert(
+                &s,
+                request(desired, contracts, Some(&all), &[], &removed),
+                &[obs],
+            )
+            .unwrap_err();
+            let message = format!("{error:#}");
+            assert!(
+                message.contains("owners [a, b]")
+                    && message.contains("AGENTS.md")
+                    && message.contains(cause),
+                "{message}"
+            );
+            assert!(!message.contains("physical_"), "{message}");
+        }
+    }
 }
 
 #[test]
@@ -1392,6 +1468,47 @@ fn instruction_error_attribution_keeps_raw_roots_and_scopes_distinct() {
             message.contains("owners [b]")
                 && !message.contains("owners [a")
                 && message.contains("AGENTS.md"),
+            "{message}"
+        );
+
+        let mut retained = first.state.clone();
+        for (index, set) in sets.iter().enumerate() {
+            let id = if index == 0 { "hold_a" } else { "hold_b" };
+            let mut installation = item(id);
+            installation.root = set.installation.root.clone();
+            retained.artifacts[index]
+                .owners
+                .push(installation.owner.clone());
+            retained.installations.push(installation);
+            retained.references.push(direct(id));
+            let mut row = association(id, "AGENTS.md", Some("shared"));
+            row.root = set.installation.root.clone();
+            retained.owner_consumers.push(row);
+        }
+        validate_state(&retained).unwrap();
+        for set in &mut sets {
+            set.artifacts.clear();
+            set.audience_excluded = vec![TargetSurface::ClaudeCli];
+        }
+        let selected = Selection::Names(vec!["a".into(), "b".into()]);
+        let error = plan_shared_upsert(
+            &retained,
+            request(&sets, &[], Some(&selected), &[], &[]),
+            &obs,
+        )
+        .unwrap_err();
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("owners [b, hold_b]")
+                && !message.contains("owners [a")
+                && !message.contains("hold_a")
+                && message.contains("selector Some(\"shared\")"),
+            "{message}"
+        );
+        assert!(
+            message.contains(&format!("{:?}", sets[1].installation.root.scope))
+                && message.contains(&format!("{:?}", sets[1].installation.root.path))
+                && message.contains("was edited"),
             "{message}"
         );
     }

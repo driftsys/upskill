@@ -1,11 +1,11 @@
 {
-  "capture_base_head": "f3c3b1b753b68a50438f7512b4d7666120b2fb85",
+  "capture_base_head": "f2795eb463a64185d911f5790c884ddf4b870c85",
   "source_capture": "working tree at capture before commit; hashes identify the source bytes",
   "files": [
     {
       "path": "progress.md.gz",
-      "sha256": "0c3b5d5f1eb8a9b468fdf271da40778f54d37b46b3d36f38788904386f816f3e",
-      "uncompressed_sha256": "1d1d2628eaf2f0a777f359ba24e91ae9547ec379c6a27f7f4e2fe8f3c17c6aec"
+      "sha256": "e3a3a648a92dbc2581b8501a1927458f93c29cb34cadf2bd2d1b95a5b478af33",
+      "uncompressed_sha256": "2fe1836a71d9dadc9c1eeaa2ba3b8cbbc92172ce1a3dad9b54d40b59df8370dc"
     },
     {
       "path": "producer-controls.py.gz",
@@ -163,6 +163,51 @@
       "uncompressed_sha256": "e2b5dcaa4afb2ef4cbd97c098f3232ad05c89c4378254aefb940d196004e7595"
     },
     {
+      "path": "pass2-fixes-red.log.gz",
+      "sha256": "40e7fe5f767e55bc709b4d324ef0bb24af4d9e3c53352cebbfdcc3d26af67690",
+      "uncompressed_sha256": "77040e4ccc046895e67dddb919388a6bdce5a472d03453d9b77258364637b87d"
+    },
+    {
+      "path": "pass2-fixes-green.log.gz",
+      "sha256": "21ba3b1bb73566bb19ba0946e5d7f5c9df06bf6ed3626b9470b794bf2c6cc5f7",
+      "uncompressed_sha256": "6089cfd23fd3b80c5de7f7977016f730dce722583da74bbaf549c3fbd0b42f25"
+    },
+    {
+      "path": "pass2-final-focused.log.gz",
+      "sha256": "1e4f07303e58c73ba808d1dadc02a6142e260a27644fd3cf7118c50a0f97cf83",
+      "uncompressed_sha256": "c4bfe3ed5ef028bc983613dad63510b0a58e4e5d94f6ac08ce8f85e4b0ae9597"
+    },
+    {
+      "path": "pass2-controls.py.gz",
+      "sha256": "0bd174e32c7c9a36a61c6682b58549bb66c882a0917a8982438bf23c23a97e80",
+      "uncompressed_sha256": "562c72319873ab62e7a594dfbda253065c5c62990ccde3a96c8061db99d202a9"
+    },
+    {
+      "path": "pass2-controls.json.gz",
+      "sha256": "fdf33c337a107ef803ec20b549a7ee9e83323a1fe3dacb6974ff73d40da55c2f",
+      "uncompressed_sha256": "5f5c078bf0c25692d29b43a71c44ddf5ee29dac7f09f7b817771d03f7e403c9d"
+    },
+    {
+      "path": "verify-pass2.log.gz",
+      "sha256": "8d8fad724948826a6315b6fcfc1b1919f5601ff38b7f698061d72da3791b009e",
+      "uncompressed_sha256": "7dc461837a863e0e19eaf0c0e4422177e81a716b1dc492afd4a1ebc7598b7b5a"
+    },
+    {
+      "path": "sanity-pass2.log.gz",
+      "sha256": "752710916737eb21a88b3d7beb54796b5fe2210cf63e0f28b4762a99a677175d",
+      "uncompressed_sha256": "5c043c63ad95e0249d9e87fe948c964b7c7f367e7f036ddb4858d1f0e5ce683a"
+    },
+    {
+      "path": "msrv-pass2.log.gz",
+      "sha256": "1afb3569093e8e314e5124a1ac3cbe76188296d08daf79c9698c6a0ab3c3bdf1",
+      "uncompressed_sha256": "a06ef22752adbc281053dd70e5b445a51108acc3e68c54a8287a50955ca81754"
+    },
+    {
+      "path": "sanity-pass2-initial-failure.log.gz",
+      "sha256": "5f2af142a2be648c9efaa26182f5ea5a739fba42e2277913be3a61014c8d1d2e",
+      "uncompressed_sha256": "cbff1a3cdadd6d3a446c4c8d5bba849a55b389889f1bbaa20b2f0b14c5d126f5"
+    },
+    {
       "path": "pass1-control-diagnostic-owner-filter.log.gz",
       "sha256": "cee6cb4ee749b32316ecff402e89c8639a16b339f3a62708213d65b9fbf79424",
       "uncompressed_sha256": "fdfea4ba1eaeaf4888990379ceeb8a315958b5df0b789689d9a14108f21af266"
@@ -186,6 +231,36 @@
       "path": "pass1-control-varied-consumers.log.gz",
       "sha256": "ac41eef0f9bdb659b6af8f75cf2645edf706a9518a70802a09c5291c82193bed",
       "uncompressed_sha256": "1bcd089b8b8e58100b0240446d8f808513971e5e0e67aa2d4c7a21a9efba18bb"
+    },
+    {
+      "path": "pass2-control-instruction-absence-utf8.log.gz",
+      "sha256": "993ae887c0c2b6e23a57be9490c9e8359903458c9a3176bcc7da20a7144aa437",
+      "uncompressed_sha256": "e2775a875893512e6b689dc100d20abb8619e7bba17bf2c95ffc3a406bc6faeb"
+    },
+    {
+      "path": "pass2-control-missing-file.log.gz",
+      "sha256": "7ceebd0dee17c7c94ad9251ff84571b338db394a984dbfe1c4a6c5c1d28b9008",
+      "uncompressed_sha256": "7298b59540f224cd63f18d0533cbe35eb0ceedbb45f645e18b1eb0e5823e1d49"
+    },
+    {
+      "path": "pass2-control-mode-file.log.gz",
+      "sha256": "adf132dcd8bb6b424d064d833b8b8b4a5fb0f6d6523c9a6152987ae781367f65",
+      "uncompressed_sha256": "b7e416c532ac678db7b0edea216609072a1f725dde087b5de5c46250757f1eb5"
+    },
+    {
+      "path": "pass2-control-retained-fields.log.gz",
+      "sha256": "bb13868fe1c8dbf58ecc7fd35e1cf366a2b1099436cb7dcd475e89f3c9b41573",
+      "uncompressed_sha256": "1ff1ae1f2f2e8fa2e4cdb71e78dce99056178a5674da7fdda944a979306fbed8"
+    },
+    {
+      "path": "pass2-control-retained-root.log.gz",
+      "sha256": "e53ef59c897960820a5629ca31aaa093206f94e7fd59242fe47f8b0040f560f8",
+      "uncompressed_sha256": "2ea4b80062ccf28137550f1e7c48ef305a759d1c86ca50bbfc2f61548ab39a8c"
+    },
+    {
+      "path": "pass2-control-retained-scope.log.gz",
+      "sha256": "39f8fc9eef860de02727843996b026edaa29f64ca96f40de4d99a83b9655e288",
+      "uncompressed_sha256": "7c66ade883f5d96d5bc85e4773d752b1e6522707434933b07f96b5b065272be3"
     },
     {
       "path": "producer-control-coverage.log.gz",
@@ -265,10 +340,10 @@
   ],
   "source_sha256": {
     "src/lifecycle/desired/contracts.rs": "7a2e3e78eeec2b19ad83d48d5281c165d68b374671017c17016cba427f7ce697",
-    "src/lifecycle/sharing/physical.rs": "7490bbff1a679cf32c5f2139426aeede7a5243aa93c877825e67eefca3132c3f",
+    "src/lifecycle/sharing/physical.rs": "a061e94d9e84b48b4be525f4aec06fac22ca0e922fe5e36173d6da070624b968",
     "src/lifecycle/sharing/mod.rs": "12bf286d432ad5fa67dd69d7fa4ba6d2d3096a49052353f15c03489db7bc4d3e",
     "src/lifecycle/sharing/artifacts.rs": "591d8150e254fdebd7c108067d2cfba5d2254e1f00b6d9ef36bc476f9acb025d",
-    "tests/lifecycle_sharing.rs": "a4e1f1f8f9affa0c109fe3acbdc2ee040c575a492d83659a3340cadfe8d3a6cb",
+    "tests/lifecycle_sharing.rs": "40d5a374ee7753982153665c099218d9f023add01b1b021325d37e2ad145a78e",
     "tests/lifecycle_contract_producer.rs": "aab264e8409f39d677c6d23bb5a055e327d91451fb0a77261951237cc0879b3b",
     "src/instructions/plan.rs": "5f2e91fa1bf26914673621a91ff1760f217c106c2e0066acb7c003e040254b44"
   }
