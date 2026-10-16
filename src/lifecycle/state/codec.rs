@@ -61,6 +61,12 @@ pub fn serialize_state(state: &CombinedState) -> Result<String> {
                 &b.installation_id,
             ))
     });
+    for contract in &mut ordered.owner_contracts {
+        contract.profiles.sort_by_key(|p| p.surface.name());
+    }
+    ordered
+        .owner_contracts
+        .sort_by_key(super::super::contracts::key);
     let mut json =
         serde_json::to_string_pretty(&ordered).context("serialize combined lifecycle state")?;
     json.push('\n');
@@ -74,6 +80,7 @@ pub fn serialize_state(state: &CombinedState) -> Result<String> {
 pub fn project_legacy(lockfile: &Lockfile) -> Result<CombinedState> {
     ensure!(lockfile.schema == 1, "legacy projection requires schema 1");
     Ok(CombinedState {
+        owner_contracts: Vec::new(),
         schema: 2,
         installations: Vec::new(),
         bundles: Vec::new(),

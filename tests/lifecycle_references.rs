@@ -58,6 +58,7 @@ fn member(bundle: &str, item: &str) -> Reference {
 }
 fn empty() -> CombinedState {
     CombinedState {
+        owner_contracts: Vec::new(),
         schema: 2,
         installations: vec![],
         bundles: vec![],

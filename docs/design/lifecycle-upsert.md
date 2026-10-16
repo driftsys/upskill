@@ -16,12 +16,13 @@ unchanged.
 ## Selection and references
 
 `UpsertRequest` contains optional prior selection, complete desired sets, bundle
-upserts and exact added/removed references. Installation graph upserts derive
-only from the complete sets. `None` selects no existing nodes and permits new
-roots. Existing installation and bundle upserts require selection. Edits to an
-existing direct root or bundle's outgoing references require that root to be
-selected. Adding a new bundle may reference an untouched existing installation;
-that reference does not replace its artifacts or source history.
+upserts, explicit owner contracts and exact added/removed references.
+Installation graph upserts derive only from the complete sets. `None` selects no
+existing nodes and permits new roots. Existing installation and bundle upserts
+require selection. Edits to an existing direct root or bundle's outgoing
+references require that root to be selected. Adding a new bundle may reference
+an untouched existing installation; that reference does not replace its
+artifacts or source history.
 
 Every selected surviving installation needs a complete desired set. Nodes
 retired by graph reachability must also be selected. Selecting a bundle uses the
@@ -55,11 +56,11 @@ retain history without any file action.
 
 The coordinator rebuilds changed per-owner consumer associations from the
 complete sets. Untouched rows retain order and values. Replaced association
-identities retain their old positions; new rows append in lexical scope, raw
-root, path, optional contribution ID and installation ID order. Final combined
-state validation checks graph, artifact ownership and exact consumer unions.
-Tagged legacy snapshots remain unchanged, including duplicate and malformed rows
-and native statuses.
+identities retain relative order among surviving rows; new rows append in
+lexical scope, raw root, path, optional contribution ID and installation ID
+order. Final combined state validation checks graph, artifact ownership and
+exact consumer unions. Tagged legacy snapshots remain unchanged, including
+duplicate and malformed rows and native statuses.
 
 ## Destination evidence and sharing
 
@@ -78,16 +79,17 @@ must establish the facts needed for application.
 
 Affected multi-owner artifacts and new shared artifact identities remain
 unsupported. Unaffected shared rows survive disjoint changes. Equal rendered
-bytes cannot establish compatibility. Per-owner adapter contract revision and
-content evidence still need a separate design and implementation before these
-rejections can be relaxed. Shared retirement remains available through the
-separate removal API.
+bytes cannot establish compatibility. The separate
+[owner-contract boundary](lifecycle-owner-contracts.md) now records and checks
+explicit source, content and adapter-revision evidence. Shared reconciliation
+must consume it alongside qualified observations before these rejections can be
+relaxed. Shared retirement remains available through the separate removal API.
 
 ## Remaining Gate 5 work
 
 This is complete planning for the supported single-owner boundary. Graph and
 artifact errors currently report the first error; full operation-level conflict
-aggregation remains pending. Shared add/update contracts, source/scoped
+aggregation remains pending. Shared add/update reconciliation, source/scoped
 selectors, CLI precedence, instruction compiler adapters, guarded first-write
 backup, executor/recovery integration and observational adapters remain. Gate 6
 must qualify native targets before schema-2 production activation. This pure

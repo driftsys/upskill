@@ -66,6 +66,7 @@ fn set(id: &str, path: &str, bytes: &[u8]) -> DesiredInstallationSet {
 }
 fn empty() -> CombinedState {
     CombinedState {
+        owner_contracts: Vec::new(),
         schema: 2,
         installations: vec![],
         bundles: vec![],
@@ -112,6 +113,7 @@ fn request<'a>(
 ) -> UpsertRequest<'a> {
     UpsertRequest {
         selection,
+        contracts: &[],
         sets,
         bundles: &[],
         add_references: add,

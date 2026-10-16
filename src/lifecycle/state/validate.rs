@@ -189,5 +189,6 @@ pub fn validate_state(state: &CombinedState) -> Result<()> {
     }
     crate::ownership::validate_artifacts(&state.artifacts)?;
     super::associations::validate_associations(state, &installations)?;
+    super::super::contracts::validate_contracts(state)?;
     Ok(())
 }
