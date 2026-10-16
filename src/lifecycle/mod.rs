@@ -7,3 +7,5 @@ pub mod reconcile;
 pub mod retire;
 
 pub mod selection;
+
+pub mod upsert;

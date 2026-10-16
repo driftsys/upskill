@@ -98,8 +98,11 @@ Separate [reference reconciliation](lifecycle-reference-reconciliation.md) and
 [removal planning](lifecycle-reference-removal.md) now establish graph retention
 and shared-owner retirement with authoritative per-owner consumers. Pure
 [selection preflight](lifecycle-selection.md) now aggregates legacy/native
-conflicts for all/literal-name requests. Source/scoped selectors and CLI
-precedence, instruction contribution adapters, existing destinations and
-complete add/update planning remain task 2b. The mixed planner's affected
-multi-owner rejection remains intact. Guarded backup/application/recovery,
-observational adapters and native activation remain separate tasks.
+conflicts for all/literal-name requests. The pure
+[single-owner upsert coordinator](lifecycle-upsert.md) now joins complete sets,
+selected graph changes and supplied destination observations. Source/scoped
+selectors and CLI precedence, instruction compiler adapters, shared add/update
+contracts and complete lifecycle integration remain task 2b. The mixed planner's
+affected multi-owner rejection remains intact. Guarded
+backup/application/recovery, observational adapters and native activation remain
+separate tasks.

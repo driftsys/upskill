@@ -1172,6 +1172,35 @@ It neither changes production schema 1 commands nor establishes native support.
 See
 [lifecycle selection](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-selection.md).
 
+### 4.18 Complete single-owner lifecycle upsert planning
+
+The opt-in lifecycle upsert coordinator accepts complete desired installation
+sets, explicit prior selection, exact bundle/reference edits and supplied file
+observations. It reconciles graph retention before planning mixed owned outputs
+and validates the complete resulting state. Every selected surviving
+installation requires a complete set; existing changes and graph retirements
+require selection.
+
+Empty audience-filtered sets retire outputs while retaining referenced
+installation/source/requested-surface history. Desired roots must match the
+installation exactly. Output consumers and disjoint exclusions must exactly
+account for requested surfaces. Changed owner associations are rebuilt from the
+complete sets; untouched ownership, references and tagged legacy rows survive.
+
+Selection and new-name legacy/native blockers expose no successful subset. Known
+frozen legacy entrypoint/resource namespace collisions block even when observed
+files are absent. Graph/artifact errors return no partial plan. All affected
+destinations, including no-op bytes, require exact observations. Affected shared
+artifacts and new sharing remain unsupported; equal bytes do not establish an
+adapter contract. Manual aggregate bytes and observed modes retain the mixed
+planner's preservation contract.
+
+This inactive pure boundary provides no source authenticity, qualified
+filesystem or native authority. Full diagnostic aggregation, shared add/update
+contracts, CLI precedence, backup/execution/recovery and observational adapters
+remain pending. Production schema and commands stay unchanged. See the
+[lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

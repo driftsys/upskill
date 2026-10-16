@@ -54,3 +54,6 @@ may be recorded here before implementation when their status is explicit.
 - [Captured lifecycle selection preflight](lifecycle-selection.md) — inactive
   pure all/literal-name preflight; complete lifecycle orchestration remains
   pending.
+
+- [Complete lifecycle upsert planning](lifecycle-upsert.md) — inactive complete
+  single-owner sets and graph integration; new shared contracts remain pending.

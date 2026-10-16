@@ -548,3 +548,38 @@ planning. Source/scoped selection, CLI precedence, complete add/update planning,
 new sharing compatibility, guarded backup/application/recovery and observational
 adapters remain unfinished. Commands remain on schema 1; Gate 5, M1 and native
 activation remain incomplete.
+
+## Gate 5 complete single-owner upsert planning
+
+Source path: `docs/wip/plans/2026-10-16-m1-gate5-upsert.md`. The
+[archived plan](plans/2026-10-16-m1-gate5-upsert.md) preserves its exact
+original bytes, including unchecked task boxes and historical relative spec
+links. The active scope remains in the
+[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md),
+the
+[M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md),
+[captured-rule desired-set design](../design/captured-rule-desired-sets.md) and
+[selection design](../design/lifecycle-selection.md). Only this bounded plan is
+archived; the umbrella and all other WIP retain their existing disposition.
+
+Durable successors:
+[specification §4.18](../specification/specification.md#418-complete-single-owner-lifecycle-upsert-planning),
+[upsert design](../design/lifecycle-upsert.md) and
+[validation record](../technotes/2026-10-16-m1-gate5-upsert-validation.md). The
+supplied local evidence records 33 passing public acceptance examples and
+twenty-three assertion/panic controls with exact source restoration. The
+implementation is based on `ed4ab8dc018989d9f5e4485ce469aeb8baa89f1d`.
+Formatting, all-target sanity, full verification and Rust 1.85 checking passed;
+independent review and hosted checks remain separate delivery gates. This is a
+local slice record and makes no merge or delivery claim. The raw plan declares
+an unboxed `Ready(UpsertPlan)`; the implementation uses `Ready(Box<UpsertPlan>)`
+to keep the outcome variants within the project's lint requirement.
+
+The coordinator joins complete rule desired sets, explicit selection,
+authoritative reference reconciliation and mixed-artifact planning. Empty sets
+retire outputs without losing referenced history. Affected shared artifacts and
+new sharing remain rejected. Shared add/update contracts, full diagnostic
+aggregation, source/scoped selectors, CLI precedence, instruction adapters,
+guarded first-write backup, execution/recovery and observational adapters remain
+unfinished. Production commands and schema 1 remain unchanged; Gate 5, M1 and
+native activation remain incomplete.
