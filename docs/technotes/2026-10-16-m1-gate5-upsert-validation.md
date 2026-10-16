@@ -36,3 +36,16 @@ counted as a completed gate.
 Production schema 1, CLI dispatch, existing mixed-planner multi-owner rejection
 and native support claims remain unchanged. This slice does not complete Gate 5,
 activate M1 or satisfy the updater prerequisite.
+
+## Independent and quick review corrections
+
+The isolated whole-branch review found no production defects. It identified a
+small authorization coverage gap also reported by the quick tests review:
+retirement rejection could mask missing reference authorization. Additional
+quick findings concerned unselected bundle metadata, known legacy conflicts on
+old affected paths, new-association ordering and blocker deduplication. The five
+discriminating examples produce 25 passing public tests. Five additional
+assertion controls target those exact gaps; combined with the original eight,
+the cumulative count is 13. Production source remains unchanged. The design now
+spells out diagnostic output order rather than using ambiguous “selector order”.
+Final local checks and hosted/numbered reviews remain separate gates.

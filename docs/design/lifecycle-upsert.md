@@ -31,10 +31,12 @@ owned kinds block; this coordinator accepts rule installations only.
 
 Prior-selection blockers and legacy/native blockers for supplied installed or
 bundle names are collected without exposing a successful subset. Repeated
-identical diagnostics appear once. Prior-selection diagnostics retain selector
-order; additional name blockers append in selector order. Unknown names from the
-new-name collision probe do not prevent adding new roots. This probe does not
-interpret source/scoped selectors or command-line syntax.
+identical diagnostics appear once. Prior-selection diagnostics retain the
+selector output order: lexical requested-name diagnostics, original legacy
+category/index order, then unsupported installations in prior order. Additional
+legacy name blockers append in original category/index order. Unknown names from
+the new-name collision probe do not prevent adding new roots. This probe does
+not interpret source/scoped selectors or command-line syntax.
 
 ## Complete output sets and associations
 

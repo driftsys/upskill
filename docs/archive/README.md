@@ -566,14 +566,14 @@ Durable successors:
 [specification §4.18](../specification/specification.md#418-complete-single-owner-lifecycle-upsert-planning),
 [upsert design](../design/lifecycle-upsert.md) and
 [validation record](../technotes/2026-10-16-m1-gate5-upsert-validation.md). The
-supplied local evidence records 20 passing public acceptance examples and eight
-assertion/panic controls with exact source restoration. The implementation is
-based on `ed4ab8dc018989d9f5e4485ce469aeb8baa89f1d`. Formatting, all-target
-sanity, full verification and Rust 1.85 checking passed; independent review and
-hosted checks remain separate delivery gates. This is a local slice record and
-makes no merge or delivery claim. The raw plan declares an unboxed
-`Ready(UpsertPlan)`; the implementation uses `Ready(Box<UpsertPlan>)` to keep
-the outcome variants within the project's lint requirement.
+supplied local evidence records 25 passing public acceptance examples and
+thirteen assertion/panic controls with exact source restoration. The
+implementation is based on `ed4ab8dc018989d9f5e4485ce469aeb8baa89f1d`.
+Formatting, all-target sanity, full verification and Rust 1.85 checking passed;
+independent review and hosted checks remain separate delivery gates. This is a
+local slice record and makes no merge or delivery claim. The raw plan declares
+an unboxed `Ready(UpsertPlan)`; the implementation uses `Ready(Box<UpsertPlan>)`
+to keep the outcome variants within the project's lint requirement.
 
 The coordinator joins complete rule desired sets, explicit selection,
 authoritative reference reconciliation and mixed-artifact planning. Empty sets

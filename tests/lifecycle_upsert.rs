@@ -716,3 +716,122 @@ fn invalid_prior_and_source_binding_changes_fail_before_any_file_plan() {
         );
     }
 }
+
+fn with_bundle() -> CombinedState {
+    let mut state = prior();
+    state.bundles = vec![upskill::lifecycle::state::BundleNode {
+        id: "bundle".into(),
+        source: "./bundle".into(),
+        name: "bundle".into(),
+        source_revision: None,
+    }];
+    state.references.extend([
+        Reference::DirectBundle {
+            bundle_id: "bundle".into(),
+        },
+        Reference::BundleInstallation {
+            bundle_id: "bundle".into(),
+            installation_id: "a".into(),
+        },
+    ]);
+    validate_state(&state).unwrap();
+    state
+}
+#[test]
+fn rejects_unselected_reference_edits_without_retiring_any_node() {
+    let state = with_bundle();
+    for edge in [
+        direct("a"),
+        Reference::BundleInstallation {
+            bundle_id: "bundle".into(),
+            installation_id: "a".into(),
+        },
+    ] {
+        let error = plan_upsert(&state, request(None, &[], &[], &[edge]), &[]).unwrap_err();
+        assert!(format!("{error:#}").contains("unselected existing root"));
+    }
+}
+#[test]
+fn rejects_unselected_existing_bundle_metadata_upsert() {
+    let state = with_bundle();
+    let mut bundles = state.bundles.clone();
+    bundles[0].source_revision = Some("next".into());
+    let error = plan_upsert(
+        &state,
+        UpsertRequest {
+            bundles: &bundles,
+            ..request(None, &[], &[], &[])
+        },
+        &[],
+    )
+    .unwrap_err();
+    assert!(format!("{error:#}").contains("unselected bundle"));
+    assert_eq!(state.bundles[0].source_revision, None);
+}
+#[test]
+fn legacy_collision_on_old_path_blocks_retirement_and_relocation() {
+    let mut state = prior();
+    let old = ".claude/rules/old.md";
+    state.artifacts[0].path = old.into();
+    state.owner_consumers[0].path = old.into();
+    state.legacy = Some(upskill::lockfile::Lockfile {
+        items: vec![legacy("old")],
+        ..Default::default()
+    });
+    validate_state(&state).unwrap();
+    let e = plan_upsert(
+        &state,
+        request(Some(&named("a")), &[], &[], &[direct("a")]),
+        &[observed(old, Some(b"a"))],
+    )
+    .unwrap_err();
+    assert!(format!("{e:#}").contains("legacy destination"));
+    let e = plan_upsert(
+        &state,
+        request(Some(&named("a")), &[set("a", "new.md", b"new")], &[], &[]),
+        &[observed(old, Some(b"a")), observed("new.md", None)],
+    )
+    .unwrap_err();
+    assert!(format!("{e:#}").contains("legacy destination"));
+}
+#[test]
+fn newly_appended_associations_follow_location_order_not_request_order() {
+    let sets = [set("z", "z.md", b"z"), set("a", "a.md", b"a")];
+    let p = ready(
+        plan_upsert(
+            &empty(),
+            request(None, &sets, &[direct("z"), direct("a")], &[]),
+            &[observed("z.md", None), observed("a.md", None)],
+        )
+        .unwrap(),
+    );
+    assert_eq!(
+        p.state
+            .owner_consumers
+            .iter()
+            .map(|r| (r.path.as_str(), r.installation_id.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("a.md", "a"), ("z.md", "z")]
+    );
+}
+#[test]
+fn duplicate_legacy_blocker_from_both_probes_is_reported_once() {
+    use upskill::lifecycle::selection::{LegacyRow, SelectionDiagnostic};
+    let mut state = empty();
+    state.legacy = Some(upskill::lockfile::Lockfile {
+        items: vec![legacy("legacy")],
+        ..Default::default()
+    });
+    let mut s = set("new", "new.md", b"new");
+    s.installation.owner.installed_name = "legacy".into();
+    let outcome = plan_upsert(
+        &state,
+        request(Some(&named("legacy")), &[s], &[direct("new")], &[]),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(
+        outcome,
+        UpsertOutcome::Blocked(vec![SelectionDiagnostic::LegacyRow(LegacyRow::Item(0))])
+    );
+}
