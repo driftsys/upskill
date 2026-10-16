@@ -1146,6 +1146,32 @@ This pure boundary grants no qualified execution or native compatibility claim.
 Add/update sharing, guarded application, recovery and production schema-2
 activation remain later work.
 
+### 4.17 Captured lifecycle selection preflight
+
+The inactive `lifecycle::selection::select_owned_nodes` library boundary
+validates complete supplied combined state, then resolves all-record or
+literal-name selection. Names match installed aliases, bundle names and
+historical native names/declaring bundle labels. Selected owned bundles include
+their complete reference-graph dependency and installation closure, retaining
+prior node order.
+
+Every selected legacy row, unsupported owned kind, unknown name or ambiguous
+name blocks the complete selection. Unselected malformed history survives and
+does not block explicitly disjoint owned work. Native history declaring any
+selected owned bundle name blocks, including transitively selected bundles.
+Duplicate legacy rows retain separate category/index diagnostics. Named requests
+must contain nonempty unique names and must not be empty.
+
+Ready results contain owned installation/bundle identifiers. Blocked results
+contain descriptive candidates and all typed diagnostics; no subset is ready to
+apply. Name diagnostics follow lexical order, legacy diagnostics follow original
+category/index order, and unsupported kinds follow prior installation order. The
+boundary performs no I/O, state mutation, ownership adoption, reference edit or
+output planning. Source/scoped selection and CLI precedence are not represented.
+It neither changes production schema 1 commands nor establishes native support.
+See
+[lifecycle selection](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-selection.md).
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

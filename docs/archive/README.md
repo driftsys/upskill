@@ -520,3 +520,31 @@ state plus individual file actions. Shared add/update, new sharing contracts,
 first-write backup, guarded execution/recovery and observational adapters remain
 unfinished. Commands remain on schema 1; Gate 5, M1 and native activation remain
 incomplete.
+
+## Gate 5 captured selection preflight
+
+Source path: `docs/wip/plans/2026-10-16-m1-gate5-selection.md`. The
+[archived plan](plans/2026-10-16-m1-gate5-selection.md) preserves its exact raw
+bytes, including historical unchecked boxes and relative spec links. Current
+scope remains in the active
+[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md) and
+the
+[M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
+The approved completion scope archives only this selection plan; all other WIP
+retains its prior disposition.
+
+Durable successors:
+[specification §4.17](../specification/specification.md#417-captured-lifecycle-selection-preflight),
+[selection design](../design/lifecycle-selection.md) and
+[validation note](../technotes/2026-10-16-m1-gate5-selection-validation.md). The
+15 public acceptance examples passed locally, and eight controls failed their
+intended assertions with exact source restoration. Full local verification and
+locked Rust 1.85 checking passed. Independent review and hosted delivery remain
+separate gates; this entry makes no merge claim.
+
+This pure library boundary resolves all/literal-name requests and reports every
+selected legacy, unsupported, ambiguous or unknown-name blocker before later
+planning. Source/scoped selection, CLI precedence, complete add/update planning,
+new sharing compatibility, guarded backup/application/recovery and observational
+adapters remain unfinished. Commands remain on schema 1; Gate 5, M1 and native
+activation remain incomplete.

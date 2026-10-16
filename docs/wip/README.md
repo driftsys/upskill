@@ -36,9 +36,12 @@ references must be reconciled as part of that feature's review.
   implemented; its
   [plan is archived](../archive/plans/2026-10-16-m1-gate5-retirement.md) with
   [local validation evidence](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
-  Shared add/update and complete lifecycle planning (task 2b), guarded
-  backup/application/recovery and observational adapters remain pending. Gate 5
-  remains incomplete; production activation remains Gate 6.
+  [Captured selection preflight](../design/lifecycle-selection.md) is
+  implemented for all/literal-name requests; source/scoped selection and CLI
+  precedence remain pending. Shared add/update and complete lifecycle planning
+  (task 2b), guarded backup/application/recovery and observational adapters
+  remain pending. Gate 5 remains incomplete; production activation remains
+  Gate 6.
 
 - [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
   — opt-in library implementation and durable records; hosted Linux/macOS
