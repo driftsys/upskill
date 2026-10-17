@@ -2,7 +2,8 @@ use crate::files::plan::{FileLocation, ObservedFile, PlannedFile};
 use crate::filesystem::{QualifiedScope, qualification::Mount};
 use anyhow::{Context, Result, ensure};
 use rustix::fs::{
-    AtFlags, Dir, FileType, Mode, OFlags, fstat, mkdirat, openat, renameat, statat, unlinkat,
+    AtFlags, Dir, FileType, Mode, OFlags, RenameFlags, fstat, mkdirat, openat, renameat,
+    renameat_with, statat, unlinkat,
 };
 use std::fs::File;
 use std::io::{Read, Seek, Write};
@@ -201,11 +202,31 @@ pub(super) fn sync_post(
 pub(super) fn apply(scope: &QualifiedScope, action: &PlannedFile, index: usize) -> Result<()> {
     apply_named(scope, action, &nonce()?, index)
 }
+pub(super) fn apply_create_only(
+    scope: &QualifiedScope,
+    action: &PlannedFile,
+    index: usize,
+) -> Result<()> {
+    ensure!(
+        action.after.is_some() && (action.before.is_none() || action.before == action.after),
+        "create-only action cannot replace or remove content"
+    );
+    apply_named_with_policy(scope, action, &nonce()?, index, true)
+}
 fn apply_named(
     scope: &QualifiedScope,
     action: &PlannedFile,
     token: &str,
     index: usize,
+) -> Result<()> {
+    apply_named_with_policy(scope, action, token, index, false)
+}
+fn apply_named_with_policy(
+    scope: &QualifiedScope,
+    action: &PlannedFile,
+    token: &str,
+    index: usize,
+    create_only: bool,
 ) -> Result<()> {
     qualify_metadata(scope, &action.location)?;
     let locations = [action.location.clone()];
@@ -279,7 +300,17 @@ fn apply_named(
                 "execution parent binding changed"
             );
             super::checkpoint("before_effect", index)?;
-            renameat(&dir, temp.as_str(), &dir, name.as_str())?;
+            if create_only {
+                renameat_with(
+                    &dir,
+                    temp.as_str(),
+                    &dir,
+                    name.as_str(),
+                    RenameFlags::NOREPLACE,
+                )?;
+            } else {
+                renameat(&dir, temp.as_str(), &dir, name.as_str())?;
+            }
         } else {
             snapshot.verify_unchanged()?;
             let (current, _) = parent(scope, &action.location, false)?;

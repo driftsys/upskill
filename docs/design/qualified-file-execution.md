@@ -2,9 +2,11 @@
 
 This design describes the opt-in library executor in
 [`src/filesystem/execution/`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/mod.rs).
-Current commands do not call it, and it does not enable schema-2 writes or
-establish installation ownership. Hosted Linux/macOS qualification remains
-pending; gate 4 and M1 remain incomplete.
+Current commands do not call it, and it does not enable lifecycle-schema-2
+writes or establish installation ownership. Gate-4 delivery evidence is retained
+in its
+[validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md);
+combined lifecycle integration and M1 activation remain separate work.
 
 ## Request and authority boundary
 
@@ -33,6 +35,42 @@ execution include recorded and verified prefixes; failed qualification reports a
 conservative verified prefix of zero because current observations are
 unavailable. Complete includes the final State action and successful qualified
 cleanup.
+
+## Exact original-state backup prerequisite
+
+`QualifiedScope::apply_operation_with_backup` takes the complete request, guard
+and source snapshots plus a backup `FileLocation`. It requires an observed
+`state.before`, prepends its exact original bytes as action zero, and validates
+the complete resulting topology. It does not parse or reserialize those bytes;
+the caller remains responsible for the lifecycle transition. The backup must be
+absent or already match the original bytes and private mode 0o600. A mismatch
+rejects before journal creation or output effects. All other destination and
+source preconditions are also checked before the backup is created.
+
+New backups use the qualified sibling staging protocol and
+`renameat_with(NOREPLACE)`, which atomically refuses an existing destination.
+Unsupported filesystem behavior fails closed. A matching existing backup is
+synced with its parent before its Done receipt and retains physical identity. No
+backup is overwritten or removed by this method.
+
+Backup operations use execution-journal schema 2, independently of lifecycle
+lockfile schemas. It requires exactly one create-only first action, mode 0o600,
+an absent or identical before value, and byte digest/length equal to the final
+State's original evidence. Following actions use ordinary execution. Original
+execution-journal schema 1 remains accepted and cannot contain a create-only
+action. Removing, moving or downgrading the create-only marker rejects. Older
+binaries reject the new journal version; recovery requires a supporting binary.
+
+Recovery verifies the backup alongside the entire action sequence before each
+step. An interrupted publication with a matching Pending post-state is synced
+and acknowledged without rewriting it. Editing even a completed backup blocks
+later outputs and final State. Reports include the backup at index zero in their
+recorded and verified prefixes. Cleanup retains the backup. This generic
+primitive does not validate schema-1 JSON, prepare lifecycle ownership, or
+activate production commands.
+
+The persisted prerequisite is recorded in
+[AD-0037](../adr/0037-require-create-only-backup-journals.md).
 
 ## Components and file effects
 
@@ -81,15 +119,18 @@ are 0o600, single-link regular files with qualified metadata and bindings.
 contains `*` and `!.gitignore`. Existing state without matching owner and ignore
 records rejects; arbitrary existing content is not adopted.
 
-`operation.json` uses execution-journal schema 1, independently of the CLI
-lockfile schema. Strict records reject unknown fields and contain a random
-operation ID, generation, root identity, ordered action paths, a final State
-marker, before/after SHA-256 digests, lengths and ordinary modes, payload names
-and physical identities, Queued/Pending/Done receipts, and a cleanup marker.
-Payloads hold desired file/state bytes only. Sources, credentials and old user
-file copies are not archived. Payload names, identities, sizes and hashes,
-complete path topology and checkpoint order are revalidated before recovery may
-act. Persisted paths never become unchecked execution authority.
+`operation.json` uses execution-journal schema 1 for ordinary operations and
+schema 2 for backup operations, independently of the CLI lockfile schema. Strict
+records reject unknown fields and contain a random operation ID, generation,
+root identity, ordered action paths, a final State marker, before/after SHA-256
+digests, lengths and ordinary modes, payload names and physical identities,
+Queued/Pending/Done receipts, and a cleanup marker. Payloads hold desired
+file/state bytes and, for backup operations, exact original State bytes as the
+desired backup. Source captures and old output copies for rollback are not
+retained. Original State can contain sensitive user data; the explicit backup
+preserves those bytes in private storage. Payload names, identities, sizes and
+hashes, complete path topology and checkpoint order are revalidated before
+recovery may act. Persisted paths never become unchecked execution authority.
 
 ## Checkpoint ordering and forward recovery
 
@@ -113,9 +154,10 @@ any effect, receipt advancement or cleanup. Pending Before permits application;
 Pending After or Both permits acknowledgement. Acknowledgement resyncs the
 observed file, when present, and its parent directory before Done, covering an
 interruption or error after the namespace effect but before its sync. Queued
-Both uses a receipt-only checkpoint; Queued After and unexpected values require
-reconciliation. Recorded completion and currently verified completion are kept
-separate. Final State follows the identical protocol.
+Both uses a receipt-only checkpoint for ordinary actions; an unchanged backup
+prerequisite is synced with its parent before Done. Queued After and unexpected
+values require reconciliation. Recorded completion and currently verified
+completion are kept separate. Final State follows the identical protocol.
 
 After every action is Done, cleanup first publishes `cleanup_started` in a new
 durable generation. This permits later recovery to recognize completion after
@@ -150,10 +192,10 @@ The local full test suite and Rust 1.85 all-target check passed for the
 candidate implementation. Independent review identified parent-preflight, error
 prefix and public-export findings; each has a regression fix. Final
 `just verify`, all-target Clippy and the Rust 1.85 all-target check passed after
-those fixes. Hosted Linux/macOS results are still required. The CI test matrix
-includes macOS, but configuration alone is not execution evidence. Durable
-lifecycle state, schema-2 activation, legacy adoption and native Codex
-qualification remain separate work.
+those fixes. Exact-head hosted results are retained in the gate-4 evidence
+record. Configuration alone is not execution evidence. Durable lifecycle state,
+schema-2 activation, legacy adoption and native Codex qualification remain
+separate work.
 
 See [AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and
 [specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#412-qualified-file-execution-and-recovery).

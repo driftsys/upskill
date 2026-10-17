@@ -2,6 +2,16 @@
 
 ## Tested revisions and limits
 
+Delivery refresh, verified on 2026-10-17:
+[PR #293](https://github.com/driftsys/upskill/pull/293) merged as
+`a5e28b816a3f4a2db435753564a7cd1204f9e93c`. Its final tested head
+`5edd587ad703e13657cc226f4ec9c758f9281f8c` has fourteen completed successful
+hosted checks, including Linux/macOS/Windows tests, Rust 1.85, Clippy, format,
+documentation, repository tools, ShellCheck and CodeQL. The historical local
+candidate notes below describe their earlier verification stage. Gate 4 is
+merged; combined lifecycle integration, native qualification and M1 activation
+remain separate work.
+
 The original executor candidate is commit
 `c4ce337d67fdefea69a8e8388d6c28e23db4cb7f`, based on
 `00d4c2c5fe4184f63334464304a0e6bd009cd76e`. It passed 1027 tests with one
