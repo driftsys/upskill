@@ -736,9 +736,10 @@ tests were denied permissions. This is local completion evidence, not a merge or
 hosted qualification claim.
 
 Only this completed plan is archived. The Gate 5 umbrella remains active:
-source-resolution orchestration, preview, applying command adapters and complete
-lifecycle acceptance remain pending. Production commands and schema 1 stay
-unchanged. All other WIP retains its original paths and unresolved disposition.
+Source-backed command orchestration and complete lifecycle acceptance remain
+pending. Captured preview and applying adapters are implemented. Production
+commands and schema 1 stay unchanged. All other WIP retains its original paths
+and unresolved disposition.
 
 ## Read-only lifecycle preview
 
@@ -759,10 +760,10 @@ These are local completion checks, not merged or hosted qualification evidence.
 
 Only this completed bounded plan is archived. The
 [Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
-remains active: applying command adapters, source-resolution orchestration and
-complete lifecycle acceptance remain pending. Production commands and schema 1
-stay unchanged. All other WIP retains its original paths and unresolved
-disposition.
+remains active: source-backed command orchestration and complete lifecycle
+acceptance remain pending. Captured applying adapters are implemented.
+Production commands and schema 1 stay unchanged. All other WIP retains its
+original paths and unresolved disposition.
 
 ## Selected lifecycle source resolution
 

@@ -679,10 +679,10 @@ artifact roots, and unsupported schemas return errors. These observations sample
 the namespace and do not exclude concurrent writers or prove native discovery or
 source freshness. Qualified inspection is supported on Linux and macOS.
 
-Production command dispatch and schema 1 remain unchanged. Applying command
-adapters, source-resolution orchestration, and complete lifecycle acceptance
-remain Gate 5 work; this inspection slice does not complete Gate 5. Captured
-preview is described [below](#read-only-lifecycle-preview).
+Production command dispatch and schema 1 remain unchanged. Captured applying
+adapters are implemented below. Source-backed command orchestration and complete
+lifecycle acceptance remain Gate 5 work; this inspection slice does not complete
+Gate 5. Captured preview is described [below](#read-only-lifecycle-preview).
 
 `StateInspection` contains exact original bytes, validated `CombinedState`, and
 an optional descriptive `LegacyProjection`. `ScopeInspection` contains optional
@@ -735,9 +735,9 @@ The adapter performs no filesystem access, source fetch, writer locking, journal
 creation, application or recovery. Supplied observations do not prove current
 filesystem freshness or source authenticity. The preview is descriptive, not an
 execution capability; application must qualify evidence under its writer guard.
-Production command dispatch and schema 1 remain unchanged. Applying command
-adapters, source-resolution orchestration, full lifecycle acceptance and Gate 6
-native qualification remain pending.
+Production command dispatch and schema 1 remain unchanged. Captured applying
+adapters are implemented below. Source-backed command orchestration, full
+lifecycle acceptance and Gate 6 native qualification remain pending.
 
 - [Preview implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/preview.rs).
 - [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_preview.rs).

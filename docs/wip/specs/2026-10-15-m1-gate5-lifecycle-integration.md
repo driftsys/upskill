@@ -197,5 +197,6 @@ compiles complete desired sets with matching owner contracts. Its
 and [validation limits](../../technotes/m1-gate5-sources-validation.md) are
 recorded durably; its bounded
 [plan is archived](../../archive/plans/2026-10-18-lifecycle-sources.md). This
-completes source capture orchestration only. Discovery, applying command
-adapters, complete Gate 5 acceptance and Gate 6 activation remain pending.
+completes source capture orchestration only. Captured applying command adapters
+are implemented. Discovery, source-backed command orchestration, complete Gate 5
+acceptance and Gate 6 activation remain pending.

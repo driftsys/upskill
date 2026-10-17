@@ -1111,3 +1111,91 @@ fn session_open_rejects_a_mismatching_existing_schema1_backup_without_effects() 
     assert_eq!(std::fs::read(backup_path).unwrap(), backup);
     assert_eq!(std::fs::read_dir(&root.path).unwrap().count(), 2);
 }
+
+#[test]
+fn generated_and_resource_paths_keep_distinct_selected_modes_and_contracts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: tmp.path().join("output"),
+    };
+    std::fs::create_dir(&root.path).unwrap();
+    let source_root = InstallationRoot {
+        path: tmp.path().join("source"),
+        ..root.clone()
+    };
+    std::fs::create_dir(&source_root.path).unwrap();
+    std::fs::write(source_root.path.join("RULE.md"), b"captured").unwrap();
+    let source_scope = QualifiedScope::open(&source_root).unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let outcome = session
+        .prepare_upsert(
+            None,
+            &[&source],
+            ResourceExecutionPolicy::OwnerExecutable,
+            |_| {
+                let mut request = supplied(&root, &source, b"resource");
+                let mut second = request.sets[0].artifacts[0].clone();
+                let DesiredArtifact::File(file) = &mut second else {
+                    panic!()
+                };
+                file.location.path = "rules/script.sh".into();
+                file.value.mode = Some(0o755);
+                request.sets[0].artifacts.push(second);
+                for artifact in &request.sets[0].artifacts {
+                    let DesiredArtifact::File(file) = artifact else {
+                        panic!()
+                    };
+                    request.contracts.push(OwnerContract {
+                        root: root.clone(),
+                        path: file.location.path.clone(),
+                        contribution_id: None,
+                        installation_id: "owner".into(),
+                        source_manifest_sha256: source.manifest().content_sha256.clone(),
+                        content: ContractContent::File {
+                            content_sha256: hash(b"resource"),
+                            mode: file.value.mode,
+                        },
+                        profiles: vec![ConsumerContract {
+                            surface: TargetSurface::ClaudeCli,
+                            contract_revision: 1,
+                        }],
+                    });
+                }
+                Ok(request)
+            },
+        )
+        .unwrap();
+    let PrepareOutcome::Ready(prepared) = outcome else {
+        panic!("two paths failed preparation")
+    };
+    for (path, expected) in [("rules/example.md", 0o600), ("rules/script.sh", 0o700)] {
+        let c = prepared
+            .state()
+            .owner_contracts
+            .iter()
+            .find(|c| c.path == path)
+            .unwrap();
+        assert!(
+            matches!(c.content, ContractContent::File { mode: Some(mode), .. } if mode == expected)
+        );
+    }
+    prepared.apply().unwrap();
+    for (path, expected) in [("rules/example.md", 0o600), ("rules/script.sh", 0o700)] {
+        assert_eq!(
+            std::fs::metadata(root.path.join(path))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            expected
+        );
+    }
+}

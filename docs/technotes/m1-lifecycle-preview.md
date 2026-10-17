@@ -30,5 +30,6 @@ isolation, snapshots and compatibility inventory. These checks cover the local
 slice based on `a74350e90b5b577cc4babb41e30dc1753be3547f`; they do not establish
 merged or hosted qualification evidence.
 
-Applying command adapters, source-resolution orchestration, complete lifecycle
-acceptance and native qualification remain pending. Production schema is 1.
+Captured applying adapters are implemented. Source-backed command orchestration,
+complete lifecycle acceptance and native qualification remain pending.
+Production schema is 1.
