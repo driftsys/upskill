@@ -30,7 +30,7 @@ ci-commits base head:
 
 # Check all targets against the minimum supported Rust version.
 msrv-check:
-    cargo check --locked --all-targets
+    cargo +1.85.0 check --locked --all-targets
 
 # Run all checks (test + lint)
 check: test lint docs-check
