@@ -728,12 +728,36 @@ Durable successors: the
 [inspection contract and design](../topics/0005-lifecycle-planning.md#read-only-lifecycle-inspection)
 and [validation record](../technotes/m1-lifecycle-inspection.md). The local
 implementation is based on `f61afbf`; ten integration examples, the read-only
-journal unit test, `just msrv-check`, and full `RUSTC_WRAPPER= just verify`
-passed. The full verification rerun outside the sandbox passed after initial
-sandbox process tests were denied permissions. This is local completion
-evidence, not a merge or hosted qualification claim.
+journal unit test, `just msrv-check`, and full `just verify` passed. The full
+verification rerun outside the sandbox passed after initial sandbox process
+tests were denied permissions. This is local completion evidence, not a merge or
+hosted qualification claim.
 
 Only this completed plan is archived. The Gate 5 umbrella remains active:
 source-resolution orchestration, preview, applying command adapters and complete
 lifecycle acceptance remain pending. Production commands and schema 1 stay
 unchanged. All other WIP retains its original paths and unresolved disposition.
+
+## Read-only lifecycle preview
+
+Source path: `docs/wip/plans/2026-10-17-lifecycle-preview.md`. The bounded
+[preview plan](plans/2026-10-17-lifecycle-preview.md) retains its exact original
+bytes, including unchecked task boxes. Its historical relative spec link
+resolves to the active Gate 5 umbrella at
+`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
+
+Durable successors: the
+[preview contract and design](../topics/0005-lifecycle-planning.md#read-only-lifecycle-preview)
+and [validation record](../technotes/m1-lifecycle-preview.md). The local slice
+is based on `a74350e90b5b577cc4babb41e30dc1753be3547f`. Ten preview acceptance
+examples and the 33 upsert and 18 retirement regressions passed. Full
+`just verify` passed with 1,283 tests passing, no failures and one existing
+ignored test; Rust 1.85 all-targets checking and independent review passed.
+These are local completion checks, not merged or hosted qualification evidence.
+
+Only this completed bounded plan is archived. The
+[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
+remains active: applying command adapters, source-resolution orchestration and
+complete lifecycle acceptance remain pending. Production commands and schema 1
+stay unchanged. All other WIP retains its original paths and unresolved
+disposition.
