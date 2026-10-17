@@ -186,10 +186,7 @@ fn mismatched_artifact_state_binding_rejects_before_backup_or_output() {
         },
     )
     .unwrap_err();
-    assert!(
-        format!("{error:#}").contains("revalidate retained source"),
-        "unexpected rejection: {error:#}"
-    );
+    assert!(format!("{error:#}").contains("complete owned-artifact plan"));
 
     assert_eq!(std::fs::read(state_path).unwrap(), original);
     assert!(!root_path.join(".upskill-lock.json.schema1.bak").exists());
