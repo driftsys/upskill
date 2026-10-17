@@ -8,7 +8,7 @@ Vercel's `npx skills` CLI ([skills.sh](https://skills.sh)) is the de facto
 distribution tool for the open Agent Skills ecosystem. It supports 40+ agents
 and uses `SKILL.md` as the standard format on the same
 [agentskills.io](https://agentskills.io) base spec we adopted in
-[ADR-0002](./0002-portable-content-format.md).
+[ADR-0002](0002-portable-content-format.md).
 
 Org-internal tooling that competes with this would fragment the ecosystem and
 force developers to choose. Interoperating preserves both worlds: developers get
@@ -16,11 +16,11 @@ one tool that works with our internal SSOT content **and** with anything
 published to skills.sh.
 
 This ADR is one of four child ADRs of
-[ADR-0001](./0001-multi-kind-compiler-architecture.md). It is the cross-cutting
+[ADR-0001](0001-multi-kind-compiler-architecture.md). It is the cross-cutting
 strategic alignment decision; the impact lands in
-[ADR-0002](./0002-portable-content-format.md) (format compatibility),
-[ADR-0003](./0003-generation-pipeline.md) (no behavioural surprises), and
-[ADR-0004](./0004-cli-surface.md) (source-format parity).
+[ADR-0002](0002-portable-content-format.md) (format compatibility),
+[ADR-0003](0003-generation-pipeline.md) (no behavioural surprises), and
+[ADR-0004](0004-cli-surface.md) (source-format parity).
 
 ## Decision
 
@@ -53,7 +53,7 @@ For skill output:
 - No upskill-specific fields appear in generated `SKILL.md`. Schema versioning,
   metadata block, and passthrough blocks are SSOT-side concerns; they are
   stripped or merged at generation time per
-  [ADR-0003](./0003-generation-pipeline.md).
+  [ADR-0003](0003-generation-pipeline.md).
 
 Any agentskills.io-compatible client consumes upskill-generated skills
 unchanged.
@@ -75,7 +75,7 @@ top of the open standard. It does not replace, redefine, or break any existing
 standard field. Tools that don't understand `.bundle.yaml` (including
 `npx skills`) simply ignore them — bundles never appear in their output, and
 nothing else degrades. The bundle file format itself is settled in
-[ADR-0007](./0007-bundle-yaml-format.md).
+[ADR-0007](0007-bundle-yaml-format.md).
 
 Bundle authors who want their bundles consumable by skills.sh need a separate
 publishing path (skills.sh doesn't currently understand the manifest format).
@@ -84,8 +84,8 @@ This is acceptable: bundles are for org curation, not public distribution.
 ## Deliberate divergence: copy, not symlink
 
 skills.sh defaults to symlink installation. upskill uses copy **everywhere**,
-documented in [ADR-0003](./0003-generation-pipeline.md). This is the one place
-we deliberately diverge from the open ecosystem.
+documented in [ADR-0003](0003-generation-pipeline.md). This is the one place we
+deliberately diverge from the open ecosystem.
 
 **Reason.** Symlink installation requires Developer Mode + `core.symlinks=true`
 on Windows, which can't be guaranteed across the range of developer machines we
@@ -129,9 +129,9 @@ reduction.
 
 ## References
 
-- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
-- Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
-  [ADR-0003](./0003-generation-pipeline.md), [ADR-0004](./0004-cli-surface.md)
+- Parent ADR: [ADR-0001](0001-multi-kind-compiler-architecture.md)
+- Sibling ADRs: [ADR-0002](0002-portable-content-format.md),
+  [ADR-0003](0003-generation-pipeline.md), [ADR-0004](0004-cli-surface.md)
 - Agent Skills open standard: <https://agentskills.io>
 - Vercel skills CLI: <https://github.com/vercel-labs/skills>
 - skills.sh directory: <https://skills.sh>

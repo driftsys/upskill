@@ -4,13 +4,14 @@
 
 ## Context
 
-[ADR-0003](./0003-generation-pipeline.md) established the generation contract:
-one SSOT item renders to per-client output for **every** client. The only knob
-that narrows the target set is the **author-side** `audience:` field in item
-frontmatter ([format-spec §5](../specification/format-spec.md)). A **consumer**
-has no say: every `upskill add` writes `.claude/**`, `.github/**`, and
-`.agents/**` for every item, plus — since [ADR-0010](./0010-mcp-config-write.md)
-— MCP config for all four MCP targets.
+[ADR-0003](0003-generation-pipeline.md) established the generation contract: one
+SSOT item renders to per-client output for **every** client. The only knob that
+narrows the target set is the **author-side** `audience:` field in item
+frontmatter
+([format-spec §5](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)).
+A **consumer** has no say: every `upskill add` writes `.claude/**`,
+`.github/**`, and `.agents/**` for every item, plus — since
+[ADR-0010](0010-mcp-config-write.md) — MCP config for all four MCP targets.
 
 A consumer who only uses Claude Code still gets `.github/**` and `.agents/**`
 trees they neither want nor track. The default (emit for all clients) is correct
@@ -19,7 +20,7 @@ and stays; what is missing is an opt-in **consumer-side** restriction (issue
 
 ### The two target spaces
 
-[ADR-0010](./0010-mcp-config-write.md) deliberately split two enumerations that
+[ADR-0010](0010-mcp-config-write.md) deliberately split two enumerations that
 this ADR must both honour:
 
 - **`generate::Client`** (3): `claude`, `copilot`, `opencode` — the
@@ -81,9 +82,9 @@ Consumer selection is a second, independent filter: an item is written for
 generation client `g` iff `audience_targets(g)` **and** `selection_targets(g)`.
 An item whose `audience:` excludes every selected client is **warn-skipped**,
 not errored — consistent with the plugin/MCP warn-skip ethos
-([ADR-0008](./0008-plugin-install-shellout.md),
-[ADR-0010](./0010-mcp-config-write.md)). The MCP fan-out iterates the selected
-MCP targets instead of `McpTarget::ALL`.
+([ADR-0008](0008-plugin-install-shellout.md),
+[ADR-0010](0010-mcp-config-write.md)). The MCP fan-out iterates the selected MCP
+targets instead of `McpTarget::ALL`.
 
 ### Persistent selection in config, with precedence
 
@@ -138,7 +139,7 @@ needs no change.
 - **`--client <c>` / `--exclude-client <c>` value-parser flags** (the original
   issue sketch). Rejected in favour of boolean flags: `--claude` reads better,
   needs no value parser, and retroactively **validates** the `--claude --vscode`
-  examples already shown in [ADR-0008](./0008-plugin-install-shellout.md) and
+  examples already shown in [ADR-0008](0008-plugin-install-shellout.md) and
   [recipes.md](../recipes.md) — those become real instead of being deleted. The
   subtractive `--exclude-client` form is dropped as redundant.
 - **`--vscode` as MCP-only** (no `.github/**`). Rejected: VS Code has no rules
@@ -160,8 +161,8 @@ needs no change.
   MCP spaces; it is the single place the `--vscode → copilot generation` mapping
   lives.
 - Docs that showed `--claude` / `--vscode` as aspirational
-  ([ADR-0008](./0008-plugin-install-shellout.md), [recipes.md](../recipes.md))
-  are reconciled to describe the shipped flags.
+  ([ADR-0008](0008-plugin-install-shellout.md), [recipes.md](../recipes.md)) are
+  reconciled to describe the shipped flags.
 
 ## Amendment: fixed default target set (2026-10-11)
 

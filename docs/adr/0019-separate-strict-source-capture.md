@@ -31,7 +31,8 @@ capture does not establish authenticity, an atomic snapshot or qualified
 containment; stabilization and qualified observation remain activation gates.
 
 Satisfies:
-[Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests).
-Related: [source manifest design](../design/strict-source-manifests.md).
+[Specification §4.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#43-strict-captured-source-manifests).
+Related:
+[source manifest design](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#architecture-strict-source-manifests).
 Rationale:
 [archived spec](../archive/specs/2026-10-12-strict-source-manifests-design.md).

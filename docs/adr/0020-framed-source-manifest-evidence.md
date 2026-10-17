@@ -30,7 +30,8 @@ its exact encoding. A valid digest verifies supplied values rather than source
 provenance.
 
 Satisfies:
-[Specification §4.3](../specification/specification.md#43-strict-captured-source-manifests).
-Related: [source manifest design](../design/strict-source-manifests.md),
+[Specification §4.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#43-strict-captured-source-manifests).
+Related:
+[source manifest design](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#architecture-strict-source-manifests),
 [AD-0019](0019-separate-strict-source-capture.md). Rationale:
 [archived spec](../archive/specs/2026-10-12-strict-source-manifests-design.md).

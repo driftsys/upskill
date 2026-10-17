@@ -1,132 +1,33 @@
 # Captured rule desired sets
 
-The opt-in `lifecycle::desired` library binds complete captured rule compilation
-to an explicit installation root and explicit target consumers. It produces
-supplied-value desired files, not ownership, execution authority or native
-conformance evidence. Production commands and lockfiles remain on schema 1.
+This record is consolidated into the concern reference. Use the links below.
 
-## Installation and source binding
+[Read the concern](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets).
 
-`compile_rule_desired_set` accepts an `Installation`, a complete captured
-`SourceManifest`, a source folder name and explicit `CompilerBinding` values. It
-validates the installation through the combined-state validator and validates
-the entire capture. The captured manifest digest must equal recorded source
-evidence. Git and local revision constraints retain the combined-state contract;
-these strings do not authenticate source origin.
+<a id="installation-and-source-binding"></a>
 
-Only rule installations are accepted. The existing captured-item compiler
-resolves source identity and aliases, performs audience filtering, handles
-resources and ignores, and renders exact per-family output. Its source name,
-installed name and manifest identity must match the installation. No second
-output-layout table is introduced, and source paths are never reread.
+- [Installation and source binding](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-installation-and-source-binding)
 
-## Explicit consumers
+<a id="explicit-consumers"></a>
 
-| Compiler family | Allowed explicit consumer identities  |
-| --------------- | ------------------------------------- |
-| Claude          | `claude.cli`                          |
-| Copilot         | `copilot.cli`, `copilot.vscode-local` |
-| OpenCode        | `opencode.cli`                        |
+- [Explicit consumers](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-explicit-consumers)
 
-Bindings require one entry per selected family, nonempty unique consumer lists
-and exact accounting for requested surfaces. Copilot gains both consumers only
-when both were explicitly requested. Codex CLI and IDE have no compiler binding
-here and fail explicitly, even if author audience would exclude them. Family
-identity matching is not a native discovery or scope qualification claim.
+<a id="complete-desired-files"></a>
 
-Audience-excluded families are projected onto only their explicitly bound
-consumers. Their requested surfaces and complete installation record survive. An
-empty desired set is valid after exclusion and is never converted into an
-installation removal by this producer.
+- [Complete desired files](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-complete-desired-files)
 
-An active OpenCode output with nonempty SSOT `scope.paths` is rejected because
-the historical renderer drops that restriction. Absent/empty scope is accepted;
-an audience-excluded OpenCode family has no output whose scope could be widened.
-Existing compiler and production rendering behavior remain unchanged.
+<a id="explicit-contract-production"></a>
 
-## Complete desired files
+- [Explicit contract production](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-explicit-contract-production)
 
-Every compiled entrypoint and resource becomes a `DesiredArtifact::File` under
-the supplied root, preserving its raw spelling and scope. Bytes, resource
-filtering, alias link rewriting and optional captured modes are retained
-exactly. Generated entrypoint modes remain unspecified. Physical permission
-selection and qualification remain later application work.
+<a id="complete-batch-preflight"></a>
 
-Files are ordered by their portable relative path and consumers by surface name.
-Repeated paths within an installation conflict. These lexical checks do not
-resolve symlinks, aliases, case equivalence or physical containment.
+- [Complete batch preflight](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-complete-batch-preflight)
 
-## Explicit contract production
+<a id="interfaces-and-acceptance-evidence"></a>
 
-`compile_rule_desired_set_with_contracts` accepts the same captured compilation
-request plus explicit `TargetProfile` values and returns `ContractedDesiredSet`
-containing the unchanged desired set and per-artifact owner contracts. Profiles
-must exactly cover requested surfaces, be unique, match the surface's family and
-carry nonzero revisions. The producer never obtains revisions from defaults.
+- [Interfaces and acceptance evidence](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-interfaces-and-acceptance-evidence)
 
-Compilation reuses `compile_rule_desired_set`, including source identity,
-alias/resource handling and audience filtering. Each generated file contract
-binds the exact root/path/installation, captured source-manifest digest,
-rendered byte hash, optional mode and only that output's consumers with supplied
-revisions. Consumer profiles sort by surface name. Audience exclusions create no
-artifact contracts, including an empty desired set. Instruction compilation
-remains separate work. The original single and batch producers keep their
-existing behavior and shared-path rejections.
+<a id="remaining-lifecycle-boundary"></a>
 
-The [contract producer](../../src/lifecycle/desired/contracts.rs) and
-[acceptance examples](../../tests/lifecycle_contract_producer.rs) cover explicit
-profile validation and exact captured bindings. These are recorded supplied
-contracts, not native qualification.
-
-## Complete batch preflight
-
-`compile_rule_desired_sets` compiles every independent request and returns
-either `Ready` with all sets in input order or `Blocked` with contextual
-diagnostics. There is no successful subset in a blocked outcome. An empty batch
-is ready with no sets. Compilation reports one error per failed request, without
-claiming all errors within that rule.
-
-Duplicate installation IDs conflict even at disjoint roots. Successful requests
-also conflict when selected file paths are equal or ancestors of one another
-under the same scope and raw root spelling. Equal bytes do not establish a
-shared-owner contract. Different raw roots or scopes remain separate at this
-lexical boundary; physical aliases and case equivalence need later
-qualification. Diagnostics contain both request indices and installation IDs and
-sort by indices, then message. This boundary does not reconcile existing state
-or references.
-
-## Interfaces and acceptance evidence
-
-The [single-rule producer](../../src/lifecycle/desired/mod.rs) defines
-`CompilerBinding`, `RuleDesiredSetRequest` and `DesiredInstallationSet`. The
-[batch boundary](../../src/lifecycle/desired/batch.rs) exposes
-`DesiredSetDiagnostic`, `DesiredSetsOutcome` and `compile_rule_desired_sets`.
-These supplied-value interfaces neither serialize plans nor authorize effects.
-
-The [public acceptance tests](../../tests/lifecycle_desired.rs) compare literal
-paths, binary resource bytes, modes and checked-in renderer goldens. They cover
-source identity and fallback names, exact requested and excluded consumers,
-OpenCode scope refusal, raw root retention, complete ordered batch payloads,
-component-boundary topology, duplicate IDs and contextual diagnostic ordering.
-The [validation note](../technotes/2026-10-15-m1-gate5-desired-validation.md)
-records local checks and the limits of the independent review.
-
-## Remaining lifecycle boundary
-
-This producer validates each installation in a minimal direct-reference graph;
-it does not reconcile the authoritative graph across the batch or establish
-cross-request installation-identity consistency beyond duplicate ID rejection.
-Separate [reference reconciliation](lifecycle-reference-reconciliation.md) and
-[removal planning](lifecycle-reference-removal.md) now establish graph retention
-and shared-owner retirement with authoritative per-owner consumers. Pure
-[selection preflight](lifecycle-selection.md) now aggregates legacy/native
-conflicts for all/literal-name requests. The pure
-[single-owner upsert coordinator](lifecycle-upsert.md) now joins complete sets,
-selected graph changes and supplied destination observations. Source/scoped
-selectors and CLI precedence, instruction compiler adapters and complete
-lifecycle integration remain task 2b.
-[Explicit shared upsert](lifecycle-upsert.md#explicit-shared-upsert) now
-consumes recorded agreement through a separate inactive path. The mixed
-planner's affected multi-owner rejection remains intact. Guarded
-backup/application/recovery, observational adapters and native activation remain
-separate tasks.
+- [Remaining lifecycle boundary](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-remaining-lifecycle-boundary)

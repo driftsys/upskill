@@ -7,6 +7,7 @@ import sys
 
 
 FIXTURE_PREFIX = b"tests/fixtures/"
+CAPTURED_SCHEMA_PREFIX = b"docs/technotes/agent-customization/schemas/"
 
 
 def run(arguments, *, input_bytes=None):
@@ -74,7 +75,8 @@ def format_blob(path, contents):
 def main():
     index_entries = staged_index_entries()
     for path in staged_paths():
-        if path.startswith(FIXTURE_PREFIX):
+        # Prim stdin formatting does not apply .primignore exclusions.
+        if path.startswith((FIXTURE_PREFIX, CAPTURED_SCHEMA_PREFIX)):
             continue
         entry = index_entries.get(path)
         if entry is None:

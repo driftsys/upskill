@@ -3,6 +3,7 @@
 
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -176,6 +177,34 @@ class PreCommitHookTests(unittest.TestCase):
                 text=True,
             )
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_preserves_captured_schema_and_license_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            shutil.copytree(ROOT / ".githooks", repo / ".githooks")
+            self.git(repo, "init", "--quiet")
+            samples = {
+                "docs/technotes/agent-customization/schemas/client.schema.json": b'{  "schema": true }',
+                "docs/technotes/agent-customization/schemas/hooks/input.schema.json": b'{"type":"object"}',
+                "docs/technotes/agent-customization/schemas/licenses/client.txt": b"Captured license  ",
+            }
+            for name, contents in samples.items():
+                path = repo / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(contents)
+            report = "docs/technotes/agent-customization/report.md"
+            (repo / report).write_bytes(b"# Report  \n")
+            self.git(repo, "add", ".")
+            subprocess.run(
+                [sys.executable, str(repo / ".githooks/format-staged.py")],
+                cwd=repo,
+                check=True,
+            )
+            for name, contents in samples.items():
+                with self.subTest(path=name):
+                    self.assertEqual(self.index_blob_bytes(repo, name), contents)
+                    self.assertEqual((repo / name).read_bytes(), contents)
+            self.assertEqual(self.index_blob_bytes(repo, report), b"# Report\n")
 
     @classmethod
     def git(cls, repo, *arguments):

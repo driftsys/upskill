@@ -24,8 +24,8 @@ passed full verification and scoped task review. These are local implementation
 commits, not a claim of a PR merge.
 
 Durable successors:
-[specification §4.1](../specification/specification.md#41-pure-legacy-state-projection),
-[generation design](../design/generation-pipeline.md#pure-legacy-state-projection)
+[specification §4.1](../topics/0004-state-and-ownership.md#41-pure-legacy-state-projection),
+[generation design](../topics/0004-state-and-ownership.md#architecture-generation-pipeline-pure-legacy-state-projection)
 and [AD-0015](../adr/0015-pure-legacy-state-projection.md). The
 [command guide](../book/commands.md) describes the unchanged command and
 persistence boundary.
@@ -59,8 +59,8 @@ semantic mutation checks validate current behavior, while the historical
 test-first process exception remains explicit in the plan.
 
 Durable successors:
-[specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning),
-[planner design](../design/owned-instruction-planning.md),
+[specification §4.2](../topics/0006-artifact-planning.md#42-pure-owned-instruction-planning),
+[planner design](../topics/0006-artifact-planning.md#architecture-owned-instruction-planning),
 [AD-0016](../adr/0016-pure-instruction-planning.md),
 [AD-0017](../adr/0017-shared-instruction-owner-evidence.md) and
 [AD-0018](../adr/0018-retain-empty-instruction-aggregates.md).
@@ -76,13 +76,13 @@ Closeout status recorded before the whole-file planner:
 > pair; other WIP material retains its existing disposition.
 
 Current successor: the
-[pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+[pure whole-file planner](../topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans)
 is implemented for explicit complete file sets. The
-[captured item compiler](../specification/specification.md#45-captured-item-compilation)
+[captured item compiler](../topics/0002-generation.md#45-captured-item-compilation)
 derives complete per-client entrypoint/resource outputs, and the
-[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+[mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file/contribution sets. The
-[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+[captured-rule desired sets](../topics/0002-generation.md#414-captured-rule-desired-sets)
 producer binds rule outputs to explicit roots and consumers. Integration with
 lifecycle reconciliation and planning, qualified source/destination evidence,
 durable state and transactional execution remain pending. The operational
@@ -107,8 +107,8 @@ implementation; semantic mutations exposed skipped entries/errors and digest
 framing, mode, directory-path and inclusion regressions, with exact restoration.
 
 Durable successors:
-[specification §4.3](../specification/specification.md#43-strict-captured-source-manifests),
-[source manifest design](../design/strict-source-manifests.md),
+[specification §4.3](../topics/0003-sources.md#43-strict-captured-source-manifests),
+[source manifest design](../topics/0003-sources.md#architecture-strict-source-manifests),
 [AD-0019](../adr/0019-separate-strict-source-capture.md) and
 [AD-0020](../adr/0020-framed-source-manifest-evidence.md).
 
@@ -125,13 +125,13 @@ Closeout status recorded before the whole-file planner:
 > entry changes no other WIP disposition.
 
 Current successor: the
-[pure whole-file planner](../specification/specification.md#44-owned-whole-file-operation-plans)
+[pure whole-file planner](../topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans)
 is implemented for explicit complete file sets. The
-[captured item compiler](../specification/specification.md#45-captured-item-compilation)
+[captured item compiler](../topics/0002-generation.md#45-captured-item-compilation)
 derives complete per-client entrypoint/resource outputs, and the
-[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+[mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file/contribution sets. The
-[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+[captured-rule desired sets](../topics/0002-generation.md#414-captured-rule-desired-sets)
 producer is implemented. Lifecycle reconciliation and planning, immutable Git
 evidence, source stabilization, qualified observation, destination
 qualification, state/execution and Codex activation remain pending. The
@@ -160,20 +160,20 @@ commits and checks do not claim a PR merge. Linux and Windows runtime execution
 remain for hosted CI.
 
 Durable successors:
-[specification §4.4](../specification/specification.md#44-owned-whole-file-operation-plans),
-[whole-file planner design](../design/owned-file-planning.md) and
-[AD-0021 through AD-0023](../adr/README.md#owned-whole-file-planning). The
+[specification §4.4](../topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans),
+[whole-file planner design](../topics/0006-artifact-planning.md#architecture-owned-file-planning)
+and [AD-0021 through AD-0023](../adr/README.md#owned-whole-file-planning). The
 [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The
 [operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
 The
-[captured item compiler](../specification/specification.md#45-captured-item-compilation)
+[captured item compiler](../topics/0002-generation.md#45-captured-item-compilation)
 derives complete entrypoint/resource sets, and the
-[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+[mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file/contribution sets. The
-[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+[captured-rule desired sets](../topics/0002-generation.md#414-captured-rule-desired-sets)
 producer binds rule outputs to explicit roots and consumers. Integration with
 lifecycle reconciliation and planning, qualified source/destination observation,
 filesystem equivalence/containment, writer locking, permission policy, durable
@@ -202,16 +202,16 @@ commits and checks do not claim a PR merge. Hosted Linux and Windows runtime
 execution remains pending.
 
 Durable successors:
-[specification §4.5](../specification/specification.md#45-captured-item-compilation),
-[compiler design](../design/captured-item-compilation.md) and
-[AD-0024 through AD-0026](../adr/README.md#captured-item-compilation). The
+[specification §4.5](../topics/0002-generation.md#45-captured-item-compilation),
+[compiler design](../topics/0002-generation.md#architecture-captured-item-compilation)
+and [AD-0024 through AD-0026](../adr/README.md#captured-item-compilation). The
 [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The pure producer now derives complete generation entrypoint/resource sets from
 captured values. The
-[mixed coordinator](../specification/specification.md#46-mixed-owned-artifact-operation-plans)
+[mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file/contribution sets. The
-[captured-rule desired sets](../specification/specification.md#414-captured-rule-desired-sets)
+[captured-rule desired sets](../topics/0002-generation.md#414-captured-rule-desired-sets)
 producer binds complete rule outputs. Integration with ownership and lifecycle
 planning, qualified source/destination observation, writer locking, destination
 permission policy, durable state, apply/recovery and native Codex activation
@@ -242,16 +242,16 @@ behavior; hosted runtime execution, final branch/PR review and merge remain
 separate gates.
 
 Durable successors:
-[specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans),
-[mixed planning design](../design/mixed-owned-artifact-planning.md) and
-[AD-0027](../adr/0027-compose-complete-owned-artifact-plans.md). The coordinator
-composes complete explicit file/contribution sets; connecting captured compiler
-outputs to lifecycle ownership and evidence remains pending. Source/target
-qualification, complete reference authority, per-owner consumers, filesystem
-safety, permission policy, writer locking, durable state and apply/recovery
-remain deferred. No native, CLI or schema-2 activation follows; M1-A2, M1-A3 and
-M1 remain incomplete. Other WIP retains its prior disposition; this entry
-resolves only the exact named pair.
+[specification §4.6](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans),
+[mixed planning design](../topics/0006-artifact-planning.md#architecture-mixed-owned-artifact-planning)
+and [AD-0027](../adr/0027-compose-complete-owned-artifact-plans.md). The
+coordinator composes complete explicit file/contribution sets; connecting
+captured compiler outputs to lifecycle ownership and evidence remains pending.
+Source/target qualification, complete reference authority, per-owner consumers,
+filesystem safety, permission policy, writer locking, durable state and
+apply/recovery remain deferred. No native, CLI or schema-2 activation follows;
+M1-A2, M1-A3 and M1 remain incomplete. Other WIP retains its prior disposition;
+this entry resolves only the exact named pair.
 
 ## Qualified scope roots and writer locking
 
@@ -278,9 +278,9 @@ Linux/Windows checks, branch/PR review and merge remain separate gates; these
 local commits do not claim a PR merge.
 
 Durable successors:
-[specification §4.7](../specification/specification.md#47-qualified-scope-roots-and-advisory-writer-locking),
-[scope-lock design](../design/qualified-scope-locking.md) and
-[AD-0028](../adr/0028-lock-qualified-scope-directories.md). The working spec
+[specification §4.7](../topics/0007-filesystem-access.md#47-qualified-scope-roots-and-advisory-writer-locking),
+[scope-lock design](../topics/0007-filesystem-access.md#architecture-qualified-scope-locking)
+and [AD-0028](../adr/0028-lock-qualified-scope-directories.md). The working spec
 introduced no requirements beyond that early durable contract.
 
 The API pins explicitly selected ambient roots and excludes cooperating writers
@@ -322,13 +322,13 @@ unsupported-boundary job `115092610428`. Final-head CI after temporary harness
 removal and final review remain merge gates; this entry makes no merge claim.
 
 Durable successors:
-[specification §4.8](../specification/specification.md#48-qualified-destination-observations),
-[qualified destination design](../design/qualified-destination-observation.md)
+[specification §4.8](../topics/0007-filesystem-access.md#48-qualified-destination-observations),
+[qualified destination design](../topics/0007-filesystem-access.md#architecture-qualified-destination-observation)
 and [AD-0029](../adr/0029-capture-qualified-destination-evidence.md). These
 current records establish the implemented inactive qualified destination and
 writer-lock boundaries. The separate
-[qualified source design](../design/qualified-source-observation.md) and
-[AD-0030](../adr/0030-capture-qualified-source-evidence.md) now establish
+[qualified source design](../topics/0003-sources.md#architecture-qualified-source-observation)
+and [AD-0030](../adr/0030-capture-qualified-source-evidence.md) now establish
 inactive source observation; final-head hosted source qualification remains
 required. Earlier archive entries describe their dated slices; statements there
 that these boundaries remain pending are historical, not current successor
@@ -348,10 +348,11 @@ completion marks captured before archival; the raw spec's pending status is
 historical.
 
 Durable successors:
-[specification §4.9](../specification/specification.md#49-qualified-source-tree-observations),
-[source observation design](../design/qualified-source-observation.md) and
-[AD-0030](../adr/0030-capture-qualified-source-evidence.md). These authorities
-existed before implementation; archival does not redirect their citations.
+[specification §4.9](../topics/0003-sources.md#49-qualified-source-tree-observations),
+[source observation design](../topics/0003-sources.md#architecture-qualified-source-observation)
+and [AD-0030](../adr/0030-capture-qualified-source-evidence.md). These
+authorities existed before implementation; archival does not redirect their
+citations.
 
 Earlier implementation and task-reviewed corrections ended at
 `a4e84d9334f7717bfb170d59afcbaf7f829d1e82`. Local formatting, full verification,
@@ -398,9 +399,9 @@ clarified special-bit-only source examples and the tenth independently valid
 control.
 
 Durable successors:
-[specification §4.10](../specification/specification.md#410-explicit-file-permission-selection),
-[permission design](../design/file-permission-policy.md) and
-[AD-0031](../adr/0031-select-explicit-file-permissions.md). These records
+[specification §4.10](../topics/0007-filesystem-access.md#410-explicit-file-permission-selection),
+[permission design](../topics/0007-filesystem-access.md#architecture-file-permission-policy)
+and [AD-0031](../adr/0031-select-explicit-file-permissions.md). These records
 existed before implementation and remain the current authorities.
 
 Implementation commit: `b3a8acde76a81817fd39b662591d1e1a5421d11b`. Independent
@@ -430,14 +431,15 @@ remains active, as explicitly required by the approved slice-completion scope.
 All other WIP retains its prior disposition.
 
 Durable successors:
-[specification §4.13](../specification/specification.md#413-combined-lifecycle-state-foundation)
-and [combined lifecycle state design](../design/combined-lifecycle-state.md).
-The [validation record](../technotes/2026-10-15-m1-gate5-state-validation.md)
-records local checks, independent review and omission-control evidence.
-Implementation through `490b8e29a27040dac8172dfc5b4f582991029f56` passed full
-verification and locked Rust 1.85 checking; subsequent changes strengthened
-tests. Final native/hosted CI, PR review and merge remain separate gates. These
-are local slice records and make no merge claim.
+[specification §4.13](../topics/0004-state-and-ownership.md#413-combined-lifecycle-state-foundation)
+and
+[combined lifecycle state design](../topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state).
+The [validation record](../technotes/m1-gate5-state-validation.md) records local
+checks, independent review and omission-control evidence. Implementation through
+`490b8e29a27040dac8172dfc5b4f582991029f56` passed full verification and locked
+Rust 1.85 checking; subsequent changes strengthened tests. Final native/hosted
+CI, PR review and merge remain separate gates. These are local slice records and
+make no merge claim.
 
 Compiler-to-desired-set reconciliation and shared-owner lifecycle planning,
 exact original-JSON first-write backup, guarded executor/recovery integration,
@@ -455,9 +457,9 @@ completion scope archives only this completed task 2a plan; all other WIP
 retains its prior inventory and disposition.
 
 Durable successors:
-[specification §4.14](../specification/specification.md#414-captured-rule-desired-sets),
-[desired-set design](../design/captured-rule-desired-sets.md) and the
-[validation note](../technotes/2026-10-15-m1-gate5-desired-validation.md).
+[specification §4.14](../topics/0002-generation.md#414-captured-rule-desired-sets),
+[desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
+and the [validation note](../technotes/m1-gate5-desired-validation.md).
 Implementation through `9228cc1` passed full local verification and locked Rust
 1.85 all-target checking. Subsequent test-only quick-review fixes passed the
 18-test focused suite with exact production restoration. Sixteen assertion
@@ -482,9 +484,10 @@ Only this completed graph slice is archived; shared-owner lifecycle planning,
 guarded backup/recovery and observational adapters remain unfinished.
 
 Durable successors are
-[specification §4.15](../specification/specification.md#415-authoritative-lifecycle-reference-reconciliation),
-the [reference design](../design/lifecycle-reference-reconciliation.md) and
-[validation note](../technotes/2026-10-16-m1-gate5-reference-validation.md).
+[specification §4.15](../topics/0005-lifecycle-planning.md#415-authoritative-lifecycle-reference-reconciliation),
+the
+[reference design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-reconciliation)
+and [validation note](../technotes/m1-gate5-reference-validation.md).
 Implementation through `4bfc357` passed local full verification, locked Rust
 1.85 checking and hosted CI. These checks do not establish native activation,
 Gate 5 completion or a PR merge. Commands remain on schema 1.
@@ -502,10 +505,10 @@ also remains active. The approved scope archives only this completed plan. All
 other WIP retains its prior disposition.
 
 Durable successors:
-[specification §4.16](../specification/specification.md#416-reference-driven-shared-owner-removal-planning),
-[removal design](../design/lifecycle-reference-removal.md) and
-[validation note](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
-Original local implementation `b5c9537`, rebased as `911915d`, passed full local
+[specification §4.16](../topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning),
+[removal design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-removal)
+and [validation note](../technotes/m1-gate5-retirement-validation.md). Original
+local implementation `b5c9537`, rebased as `911915d`, passed full local
 verification and locked Rust 1.85 checking with 11 acceptance examples.
 Independent implementation review found no production defects. Subsequent review
 corrections strengthened the focused suite to 15 passing tests; 16
@@ -534,12 +537,12 @@ The approved completion scope archives only this selection plan; all other WIP
 retains its prior disposition.
 
 Durable successors:
-[specification §4.17](../specification/specification.md#417-captured-lifecycle-selection-preflight),
-[selection design](../design/lifecycle-selection.md) and
-[validation note](../technotes/2026-10-16-m1-gate5-selection-validation.md). The
-20 public acceptance examples passed locally, and 23 controls failed their
-intended assertions with exact source restoration. Full local verification and
-locked Rust 1.85 checking passed. Independent review and hosted delivery remain
+[specification §4.17](../topics/0005-lifecycle-planning.md#417-captured-lifecycle-selection-preflight),
+[selection design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-selection)
+and [validation note](../technotes/m1-gate5-selection-validation.md). The 20
+public acceptance examples passed locally, and 23 controls failed their intended
+assertions with exact source restoration. Full local verification and locked
+Rust 1.85 checking passed. Independent review and hosted delivery remain
 separate gates; this entry makes no merge claim.
 
 This pure library boundary resolves all/literal-name requests and reports every
@@ -558,14 +561,16 @@ links. The active scope remains in the
 [Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md),
 the
 [M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md),
-[captured-rule desired-set design](../design/captured-rule-desired-sets.md) and
-[selection design](../design/lifecycle-selection.md). Only this bounded plan is
-archived; the umbrella and all other WIP retain their existing disposition.
+[captured-rule desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
+and
+[selection design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-selection).
+Only this bounded plan is archived; the umbrella and all other WIP retain their
+existing disposition.
 
 Durable successors:
-[specification §4.18](../specification/specification.md#418-complete-single-owner-lifecycle-upsert-planning),
-[upsert design](../design/lifecycle-upsert.md) and
-[validation record](../technotes/2026-10-16-m1-gate5-upsert-validation.md). The
+[specification §4.18](../topics/0005-lifecycle-planning.md#418-complete-single-owner-lifecycle-upsert-planning),
+[upsert design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert)
+and [validation record](../technotes/m1-gate5-upsert-validation.md). The
 supplied local evidence records 33 passing public acceptance examples and
 twenty-three assertion/panic controls with exact source restoration. The
 implementation is based on `ed4ab8dc018989d9f5e4485ce469aeb8baa89f1d`.
@@ -600,12 +605,11 @@ uncompressed digest. Other active and future WIP retains its existing
 disposition.
 
 Durable successors:
-[specification §4.19](../specification/specification.md#419-per-owner-recorded-contract-evidence),
-[design](../design/lifecycle-owner-contracts.md),
+[specification §4.19](../topics/0004-state-and-ownership.md#419-per-owner-recorded-contract-evidence),
+[design](../topics/0004-state-and-ownership.md#architecture-lifecycle-owner-contracts),
 [AD-0034](../adr/0034-record-explicit-owner-contracts.md), and
-[validation evidence](../technotes/2026-10-16-m1-owner-contracts-validation.md).
-Shared reconciliation, production activation and native qualification remain
-pending.
+[validation evidence](../technotes/m1-owner-contracts-validation.md). Shared
+reconciliation, production activation and native qualification remain pending.
 
 ## Explicit shared-output reconciliation
 
@@ -626,15 +630,15 @@ Rust tests, thirty-six focused examples, Rust 1.85 and sanity exit 0; see the
 This is local completion evidence, not a claim of merge or hosted qualification.
 
 Durable successors:
-[specification §4.20](../specification/specification.md#420-explicit-shared-output-reconciliation),
-[captured desired sets](../design/captured-rule-desired-sets.md),
-[shared upsert](../design/lifecycle-upsert.md#explicit-shared-upsert),
-[owner contracts](../design/lifecycle-owner-contracts.md),
+[specification §4.20](../topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation),
+[captured desired sets](../topics/0002-generation.md#architecture-captured-rule-desired-sets),
+[shared upsert](../topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert-explicit-shared-upsert),
+[owner contracts](../topics/0004-state-and-ownership.md#architecture-lifecycle-owner-contracts),
 [AD-0034](../adr/0034-record-explicit-owner-contracts.md),
 [AD-0035](../adr/0035-project-shared-artifacts-for-physical-planning.md),
 [AD-0036](../adr/0036-separate-explicit-sharing-entrypoints.md) and
-[validation limits](../technotes/2026-10-17-m1-shared-reconciliation-validation.md).
-Other WIP remains at its original paths with unresolved disposition. Qualified
+[validation limits](../technotes/m1-shared-reconciliation-validation.md). Other
+WIP remains at its original paths with unresolved disposition. Qualified
 integration, instruction adapters, guarded application/recovery, production
 activation and native qualification remain unfinished.
 
@@ -655,13 +659,13 @@ working code based on `f54c457a30473511b66349ab4d95f30ae62d654b`; this entry
 makes no merge or hosted qualification claim.
 
 Durable successors:
-[specification §4.12](../specification/specification.md#412-qualified-file-execution-and-recovery),
-[qualified execution design](../design/qualified-file-execution.md),
+[specification §4.12](../topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery),
+[qualified execution design](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution),
 [AD-0037](../adr/0037-require-create-only-backup-journals.md) and the
-[validation record](../technotes/2026-10-17-m1-guarded-backup-validation.md).
-The dispatcher supplies local full Rust-suite, Rust 1.85, Clippy, independent
-review and three restored assertion-failing publication/policy/sync controls;
-the validation record distinguishes final verification and delivery gates.
+[validation record](../technotes/m1-guarded-backup-validation.md). The
+dispatcher supplies local full Rust-suite, Rust 1.85, Clippy, independent review
+and three restored assertion-failing publication/policy/sync controls; the
+validation record distinguishes final verification and delivery gates.
 
 This opt-in library primitive preserves exact original bytes with create-only
 publication and forward recovery. It does not validate JSON or activate
@@ -671,3 +675,43 @@ remains active: combined guarded application, observational adapters and native
 qualification remain separate work. All other WIP remains at its original paths
 with unchanged bytes and unresolved disposition; only this named pair is
 archived.
+
+## Documentation concern consolidation
+
+Source paths: `docs/wip/specs/2026-10-17-documentation-consolidation.md` and
+`docs/wip/plans/2026-10-17-documentation-consolidation.md`. The raw
+[spec](specs/2026-10-17-documentation-consolidation.md) and
+[plan](plans/2026-10-17-documentation-consolidation.md) retain their original
+bytes, including historical WIP references and unchecked task boxes.
+
+Durable successors: the eight numbered
+[concern references](../topics/README.md), the retained
+[CLI specification](../specification/specification.md), and the
+[technical-note index](../technotes/README.md). Existing design and format paths
+remain compatibility entrypoints. Technical-note filenames no longer contain
+capture dates; internal observation dates, revisions and evidence provenance
+remain in their records. ADR identifiers remain independent.
+
+Local verification of the consolidation based on
+`faae29892caa4ad0e79dec66f530324f1435c92c` passed `just docs-check`, `just fmt`
+and `just verify` before this archive step. The documentation checker covers
+repository links, rendered book anchors, publication isolation and schema
+snapshots. The dispatcher also verified 235 captured assets against the parent
+revision byte for byte before formatting. These checks describe local
+validation, not merged or hosted publication evidence; final verification and
+review remain delivery gates.
+
+Only this consolidation pair is archived. All other WIP retains its current
+paths and unresolved disposition; this documentation migration does not mark
+product implementation slices complete or activate library capabilities.
+
+The commit hook exposed a separate preservation boundary: Prim stdin formatting
+does not apply `.primignore`. The staged formatter now excludes the captured
+schema pack explicitly. A regression example covers root and nested schema
+bytes, license whitespace, and continued formatting of neighboring research
+prose; all three evidence examples failed before the correction.
+
+The [compatibility inventory](../compatibility.json) records 223 historical
+repository anchors and 235 captured asset hashes from the parent revision.
+Documentation regression checks reject unreferenced anchor removal and changed
+license or provenance bytes; the inventory is enforced by `just docs-check`.

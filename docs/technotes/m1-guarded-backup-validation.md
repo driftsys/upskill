@@ -1,5 +1,8 @@
 # Guarded original-state backup validation
 
+Validation record date: 2026-10-17. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 This bounded Gate 5 slice adds `QualifiedScope::apply_operation_with_backup`. It
 preserves exact caller-observed original State bytes in a private,
 non-overwritten backup through the existing checkpointed executor. It neither

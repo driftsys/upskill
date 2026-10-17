@@ -32,9 +32,9 @@ contracts. Supplied observations confer no filesystem or native qualification;
 guarded application remains separate work.
 
 Satisfies:
-[specification §4.20](../specification/specification.md#420-explicit-shared-output-reconciliation).
+[specification §4.20](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
 Related:
-[shared upsert design](../design/lifecycle-upsert.md#private-physical-projection),
+[shared upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert-private-physical-projection),
 [AD-0034](0034-record-explicit-owner-contracts.md).
 
 Pure owner release with no desired value at an identity preserves untouched

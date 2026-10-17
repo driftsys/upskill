@@ -1,79 +1,17 @@
 # File recovery checkpoint model
 
-This design describes the implemented inactive pure library API.
+This record is consolidated into the concern reference. Use the links below.
 
-`operations::recovery::plan_recovery` consumes a borrowed slice of supplied
-`RecoveryAction` values and returns `anyhow::Result<RecoveryDecision>`. Each
-action has an `ActionKind` (`File` or `State`), `Checkpoint` (`Queued`,
-`Pending`, `Done`) and `ObservedRelation` (`Before`, `After`, `Both`,
-`Neither`). All public model types derive `Debug`, `Clone`, `Copy`, `PartialEq`
-and `Eq`.
+[Read the concern](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-file-recovery-model).
 
-## Supplied classifications
+<a id="supplied-classifications"></a>
 
-File represents one complete planned file edit, including an instruction
-aggregate. State represents the final ownership-state checkpoint without
-choosing its schema or path. Exactly one State action must be final; state-only
-operations are valid. Checkpoints must follow `Done* Pending? Queued*`. The
-complete sequence is structurally validated before any observation decision;
-invalid structure returns a contextual error with the position or required State
-condition. Diagnostic ordering is unspecified when multiple structural
-conditions are invalid.
+- [Supplied classifications](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-file-recovery-model-supplied-classifications)
 
-Observations compare supplied current values to exact expected before and after
-values. Before and After match only their respective values; Both matches both
-and represents an unchanged action; Neither matches neither. These
-classifications are not qualified filesystem evidence. Native operations are not
-representable.
+<a id="prefixes-and-next-decisions"></a>
 
-Every Done action must match After or Both. Pending may match Before, After or
-Both. Queued must match Before or Both: a coincidental unstarted After
-observation does not establish application. All observations are checked,
-including the suffix after the next proposed step. The first conflict in
-operation order returns
-`Reconcile { index, recorded_prefix, verified_post_prefix }`.
+- [Prefixes and next decisions](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-file-recovery-model-prefixes-and-next-decisions)
 
-## Prefixes and next decisions
+<a id="evidence-and-remaining-contracts"></a>
 
-`recorded_prefix` counts leading Done checkpoints even if current observations
-contradict them. `verified_post_prefix` counts only the consecutive leading Done
-post-state observations, extended by one Pending action at After or Both. It
-stops at the first mismatch; Queued never extends it, including Both.
-
-After full validation, `Complete { completed }` reports the number of actions
-when all are Done, including State. Otherwise `Ready` returns both prefixes and
-one `RecoveryStep` at the first unfinished index:
-
-- Pending Before or Queued Before proposes `Apply { index }`.
-- Pending After or Both proposes `Acknowledge { index }`, avoiding repetition.
-- Queued Both proposes `CheckpointOnly { index }`, with no physical write.
-
-For a state-only operation supplied as Pending and After, the decision is Ready
-with recorded prefix 0, verified post-state prefix 1 and Acknowledge at index 0.
-The pending final state write is recognized without proposing it again. See the
-[public model and planner](https://github.com/driftsys/upskill/blob/main/src/operations/recovery.rs)
-and the
-[literal acceptance cases](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs).
-
-Apply is a proposed logical step, not permission to write. The function changes
-no checkpoint and skips no action. The opt-in
-[qualified executor](qualified-file-execution.md) obtains fresh qualified facts
-and advances durable checkpoints before another application decision.
-
-## Evidence and remaining contracts
-
-[`tests/recovery_plans.rs`](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs)
-pins all twelve checkpoint/relation combinations independently for both roles,
-whole-suffix validation, first-conflict selection, distinct prefixes and final
-State handling. Independent compiled semantic controls establish that these
-assertions detect omitted guards and altered decisions.
-
-This pure API performs no I/O, serialization, journal reading, byte comparison,
-locking or effects. The opt-in [qualified executor](qualified-file-execution.md)
-supplies physical observations, private desired payloads, durable receipts and
-file application in the restricted metadata envelope recorded by
-[AD-0033](../adr/0033-qualified-file-execution-and-journals.md). The
-[permission-selection policy](file-permission-policy.md) remains separate.
-Hosted executor qualification, lifecycle state integration and activation are
-pending; M1-A2, M1-A3 and M1 remain incomplete. See
-[AD-0032](../adr/0032-model-recovery-checkpoints-before-effects.md).
+- [Evidence and remaining contracts](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-file-recovery-model-evidence-and-remaining-contracts)

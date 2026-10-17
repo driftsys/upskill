@@ -27,7 +27,8 @@ The cost is deferred permission qualification before lifecycle activation.
 that a destination's mode was observed.
 
 Satisfies:
-[Specification §4.5](../specification/specification.md#45-captured-item-compilation).
-Related: [compiler design](../design/captured-item-compilation.md),
+[Specification §4.5](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#45-captured-item-compilation).
+Related:
+[compiler design](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-item-compilation),
 [AD-0024](0024-pure-captured-item-compilation.md). Rationale:
 [archived spec](../archive/specs/2026-10-12-captured-item-compilation-design.md).

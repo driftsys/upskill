@@ -1,29 +1,49 @@
 # Technical notes
 
-Technical notes are informative. They preserve investigations, comparisons and
-implementation explanations without establishing new product requirements.
-External research records its date, sources, uncertainty and version limits.
-Accepted choices belong in [ADRs](../adr/README.md); contracts belong in
-[specifications](../specification/README.md).
+These notes are informative. Requirements and architecture belong in the
+[concern reference](../topics/README.md); decisions belong in
+[ADRs](../adr/README.md). Note filenames identify their subject. Dates,
+revisions, sources and limitations inside each note identify the evidence
+snapshot; a stable name does not imply that external research remains current.
 
-- [Agent customization research, 2026-10-11](2026-10-11-agent-customization/README.md):
-  six first-class design targets, eight customization categories, official
-  documentation and schema evidence.
-- [Customization adapter capability refresh, 2026-10-14](2026-10-14-customization-adapter-evidence.md):
-  six-client mapping, Gemini/Cursor capabilities, VS Code runtime boundaries,
-  and source-pinned Superpowers packaging examples.
-- [Updater plugin startup probes, 2026-10-14](2026-10-14-updater-plugin-probes.md):
-  partial installed-client evidence for the first updater entrypoints in MVP
-  issue #283.
-- [RIDL documentation lifecycle comparison](2026-10-11-agent-customization/documentation-refactor.md):
-  the investigation behind this repository's documentation organization.
+## Research
 
-Keep schema bytes, licenses and provenance manifests together. Update dated
-research explicitly or add a successor note when upstream contracts change.
-These files are not part of the published book or runtime dependencies.
+- [Customization adapter capability refresh](customization-adapter-evidence.md):
+  source-pinned client mapping and packaging evidence.
+- [Updater plugin startup probes](updater-plugin-probes.md): partial
+  installed-client evidence for issue #285.
 
-- [Per-owner contract validation, 2026-10-16](2026-10-16-m1-owner-contracts-validation.md):
-  supplied-value examples, fault controls and qualification limits.
+- [Agent customization](agent-customization/README.md): client reports,
+  standards and schema snapshots.
+- [Documentation lifecycle comparison](agent-customization/documentation-refactor.md):
+  historical audit and migration rationale.
 
-- [Explicit shared-output reconciliation validation](2026-10-17-m1-shared-reconciliation-validation.md):
-  contracted production, private projection examples and supplied-value limits.
+## Filesystem qualification
+
+- [Filesystem qualification validation](filesystem-validation.md): historical
+  scope, source and destination checks.
+
+## Execution and recovery validation
+
+- [Guarded lifecycle application](m1-guarded-lifecycle-application.md):
+  first-write backup and executor recovery integration.
+
+- [M1 gate 4 validation evidence — 2026-10-15](m1-gate4-validation.md)
+- [Guarded original-state backup validation](m1-guarded-backup-validation.md)
+
+## State and lifecycle validation
+
+- [Gate 5 captured rule desired-set validation](m1-gate5-desired-validation.md)
+- [Gate 5 reference reconciliation validation](m1-gate5-reference-validation.md)
+- [Gate 5 reference removal validation](m1-gate5-retirement-validation.md)
+- [Gate 5 selection validation — 2026-10-16](m1-gate5-selection-validation.md)
+- [M1 Gate 5 combined-state validation](m1-gate5-state-validation.md)
+- [Gate 5 upsert validation — 2026-10-16](m1-gate5-upsert-validation.md)
+- [Per-owner contract validation](m1-owner-contracts-validation.md)
+- [Explicit shared-output reconciliation validation](m1-shared-reconciliation-validation.md)
+
+Validation records retain their individual revision and platform limits. They
+are not proof of production activation or complete lifecycle qualification. Keep
+schema bytes, licenses and provenance manifests together. Preserve captured
+evidence and its hashes; update research explicitly when upstream contracts
+change. Technical notes and evidence assets are outside the published book.

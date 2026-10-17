@@ -5,3 +5,5 @@
 {{#include ../specification/specification.md}}
 
 [Edit the canonical source](https://github.com/driftsys/upskill/edit/main/docs/specification/specification.md).
+
+Read the [contracts and architecture](topics/0002-generation.md) by concern.

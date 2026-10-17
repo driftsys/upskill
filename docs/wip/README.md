@@ -23,50 +23,47 @@ references must be reconciled as part of that feature's review.
 
 - [Gate 5 combined lifecycle](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
   — active umbrella. The pure
-  [combined-state slice](../design/combined-lifecycle-state.md) is implemented;
-  its [plan is archived](../archive/plans/2026-10-15-m1-gate5-combined-state.md)
-  with
-  [validation evidence](../technotes/2026-10-15-m1-gate5-state-validation.md).
-  The combined-state slice merged in #295 with hosted checks passing. The pure
-  [captured-rule desired-set slice](../design/captured-rule-desired-sets.md) is
-  also implemented; its completed task 2a
+  [combined-state slice](../topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state)
+  is implemented; its
+  [plan is archived](../archive/plans/2026-10-15-m1-gate5-combined-state.md)
+  with [validation evidence](../technotes/m1-gate5-state-validation.md). The
+  combined-state slice merged in #295 with hosted checks passing. The pure
+  [captured-rule desired-set slice](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
+  is also implemented; its completed task 2a
   [plan is archived](../archive/plans/2026-10-15-m1-gate5-rule-desired-sets.md)
-  with
-  [local validation evidence](../technotes/2026-10-15-m1-gate5-desired-validation.md).
+  with [local validation evidence](../technotes/m1-gate5-desired-validation.md).
   The pure
-  [reference reconciliation slice](../design/lifecycle-reference-reconciliation.md)
+  [reference reconciliation slice](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-reconciliation)
   is implemented as task 2b's first bounded delivery, following #296
   (`b01a67d`); its
   [plan is archived](../archive/plans/2026-10-16-m1-gate5-reference-reconciliation.md)
   with
-  [local validation evidence](../technotes/2026-10-16-m1-gate5-reference-validation.md).
+  [local validation evidence](../technotes/m1-gate5-reference-validation.md).
   The removal-only
-  [shared-owner retirement slice](../design/lifecycle-reference-removal.md) is
-  implemented; its
+  [shared-owner retirement slice](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-removal)
+  is implemented; its
   [plan is archived](../archive/plans/2026-10-16-m1-gate5-retirement.md) with
-  [local validation evidence](../technotes/2026-10-16-m1-gate5-retirement-validation.md).
-  [Captured selection preflight](../design/lifecycle-selection.md) is
-  implemented for all/literal-name requests; source/scoped selection and CLI
+  [local validation evidence](../technotes/m1-gate5-retirement-validation.md).
+  [Captured selection preflight](../topics/0005-lifecycle-planning.md#architecture-lifecycle-selection)
+  is implemented for all/literal-name requests; source/scoped selection and CLI
   precedence remain pending. The pure
-  [single-owner upsert coordinator](../design/lifecycle-upsert.md) connects
-  complete desired sets to graph and mixed-artifact planning; its
+  [single-owner upsert coordinator](../topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert)
+  connects complete desired sets to graph and mixed-artifact planning; its
   [bounded plan is archived](../archive/plans/2026-10-16-m1-gate5-upsert.md)
-  with
-  [local validation evidence](../technotes/2026-10-16-m1-gate5-upsert-validation.md).
+  with [local validation evidence](../technotes/m1-gate5-upsert-validation.md).
   The separate
-  [explicit shared upsert](../design/lifecycle-upsert.md#explicit-shared-upsert)
+  [explicit shared upsert](../topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert-explicit-shared-upsert)
   and
-  [contracted producer](../design/captured-rule-desired-sets.md#explicit-contract-production)
+  [contracted producer](../topics/0002-generation.md#architecture-captured-rule-desired-sets-explicit-contract-production)
   are implemented as inactive supplied-value boundaries. Their bounded
   [spec](../archive/specs/2026-10-17-m1-shared-reconciliation.md) and
   [plan](../archive/plans/2026-10-17-m1-shared-reconciliation.md) are archived
-  with
-  [validation limits](../technotes/2026-10-17-m1-shared-reconciliation-validation.md).
+  with [validation limits](../technotes/m1-shared-reconciliation-validation.md).
   Complete lifecycle planning (task 2b), guarded backup/application/recovery and
   qualified observational adapters remain pending. Gate 5 remains incomplete;
   production activation remains Gate 6.
 
-- [M1 gate 4: qualified file application and recovery](../design/qualified-file-execution.md)
+- [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)
   — opt-in library implementation and durable records; hosted Linux/macOS
   qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope
   and plan are archived with links to durable successors.
@@ -127,7 +124,6 @@ then move only the completed feature's raw working documents into
 [archive](../archive/README.md), with links to the delivery evidence and durable
 successors. Unrelated or uncertain work stays here.
 
-The
-[agent customization research](../technotes/2026-10-11-agent-customization/README.md)
+The [agent customization research](../technotes/agent-customization/README.md)
 is maintained as an informative technote at the user's request. Its open design
 questions do not change the status of accepted ADR-0013.

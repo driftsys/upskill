@@ -4,6 +4,10 @@ Research date: 2026-10-11. Status: historical audit and proposal, followed by
 the implementation disposition below. The audit itself does not ratify product
 requirements or establish implementation completion.
 
+For the current organization, use the [documentation map](../../README.md). The
+concern consolidation supersedes this audit's destination proposal; the
+comparison below retains its original observation dates and revisions.
+
 ## Disposition after the audit
 
 The user requested this refactor and explicitly selected `docs/technotes/` for

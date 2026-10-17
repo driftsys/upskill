@@ -1,5 +1,8 @@
 # Explicit shared-output reconciliation validation
 
+Validation record date: 2026-10-17. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 This inactive library slice adds contracted captured-rule production and
 explicit shared-upsert planning. It introduces no dependencies, production
 command activation, schema-1 changes, native qualification or guarded

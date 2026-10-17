@@ -24,6 +24,8 @@ A later executor may retain an empty file. This avoids deleting a potentially
 user-owned aggregate without evidence of file ownership.
 
 Satisfies:
-[Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
-Related: [planner design](../design/owned-instruction-planning.md). Rationale:
+[Specification §4.2](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#42-pure-owned-instruction-planning).
+Related:
+[planner design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-instruction-planning).
+Rationale:
 [archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).

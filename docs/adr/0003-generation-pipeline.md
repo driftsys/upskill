@@ -4,10 +4,10 @@
 
 ## Context
 
-[ADR-0002](./0002-portable-content-format.md) defines the portable on-disk
-format. This ADR addresses how SSOT becomes per-client output: paths,
-frontmatter mapping, ancillary file handling, and the formatting guarantee
-required by the spec.
+[ADR-0002](0002-portable-content-format.md) defines the portable on-disk format.
+This ADR addresses how SSOT becomes per-client output: paths, frontmatter
+mapping, ancillary file handling, and the formatting guarantee required by the
+spec.
 
 Generation must be cheap (so it can run on every install/update), deterministic
 (idempotent across re-runs), and produce output that passes markdown linting
@@ -73,7 +73,7 @@ Per format-spec §7:
 All installation is file copy or generated output. No symlinks anywhere. One
 code path; Windows portability without Developer Mode or `core.symlinks=true`.
 The deliberate divergence from skills.sh's symlink-first default is documented
-in [ADR-0005](./0005-skills-sh-ecosystem-interop.md).
+in [ADR-0005](0005-skills-sh-ecosystem-interop.md).
 
 ### Ancillary file handling
 
@@ -113,7 +113,7 @@ locations:
 | Global  | `$HOME/.upskill-lock.json` | No         |
 
 Bundles themselves live only in source registries (per
-[ADR-0002](./0002-portable-content-format.md) / format-spec §3.7); the lockfile
+[ADR-0002](0002-portable-content-format.md) / format-spec §3.7); the lockfile
 captures, per installed bundle: bundle name, source registry URL, requested
 version spec, resolved git ref, and the per-item content hashes resolved from
 the bundle. Ad-hoc items (installed without a bundle) are recorded similarly.
@@ -160,8 +160,8 @@ does.
 ## References
 
 - Format spec §7 (generation):
-  [`docs/format-spec.md`](../specification/format-spec.md)
-- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
-- Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
-  [ADR-0004](./0004-cli-surface.md),
-  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+- Parent ADR: [ADR-0001](0001-multi-kind-compiler-architecture.md)
+- Sibling ADRs: [ADR-0002](0002-portable-content-format.md),
+  [ADR-0004](0004-cli-surface.md),
+  [ADR-0005](0005-skills-sh-ecosystem-interop.md)

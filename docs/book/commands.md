@@ -125,10 +125,10 @@ per-client override files, e.g. `scripts/`, `references/`, `assets/` — are
 copied into each client's output alongside the rendered item. For rules and
 agents that render to a flat file (Claude Code, GitHub Copilot), resources go
 into a sibling `<name>/` directory and the body's relative links are rewritten
-to match. See [format-spec §2.4](./format-spec.md).
+to match. See [format-spec §2.4](format-spec.md).
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
-([format-spec §3.7](./format-spec.md#37-bundle-schema)), `add` installs those
+([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those
 client-native plugins by shelling out to each client's own CLI
 (`claude plugin install`, `copilot plugin install`, `code
 --install-extension`,
@@ -138,7 +138,7 @@ recorded as `skipped` in the lockfile; `upskill doctor` reports skipped and
 missing plugins. Removing the bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
-([format-spec §3.7](./format-spec.md#37-bundle-schema)), `add` configures those
+([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those
 Model Context Protocol servers into each targeted client's MCP configuration —
 CLI-first (`claude mcp add ...`), falling back to writing the client config file
 (e.g. `.mcp.json`) when the CLI is absent. MCP configuration is idempotent, and
@@ -364,15 +364,14 @@ Creates `<name>/<KIND>.md` **relative to the current directory** with the
 minimum frontmatter the format spec requires — there is no `<kind>` parent
 folder and no separate "destination" argument. The folder is the `<name>` you
 pass, so to place an item under `skills/` you run the command from inside
-`skills/` (see
-[Conventions](./conventions.md#scaffolding-under-the-convention)). Agents get
-`mode: subagent` and `model: sonnet` so the file is generation-ready out of the
-box. The scaffold round-trips through `upskill fmt` as a no-op and passes
-`upskill lint --strict`.
+`skills/` (see [Conventions](conventions.md#scaffolding-under-the-convention)).
+Agents get `mode: subagent` and `model: sonnet` so the file is generation-ready
+out of the box. The scaffold round-trips through `upskill fmt` as a no-op and
+passes `upskill lint --strict`.
 
 **Co-location.** Run `new` again with a different kind and the same `<name>` to
 add that kind as a sibling entrypoint inside the existing item directory
-([format-spec §2.1](./format-spec.md#21-item-directory-structure)):
+([format-spec §2.1](format-spec.md#21-item-directory-structure)):
 
 ```bash
 upskill new skill api-handler   # → api-handler/SKILL.md
@@ -389,7 +388,7 @@ divergent name.
 
 ### `upskill lint [paths...]`
 
-Validate SSOT files against the [format spec](./format-spec.md). Six rules ship
+Validate SSOT files against the [format spec](format-spec.md). Six rules ship
 out of the box:
 
 | Rule ID            | Severity | Source           |
@@ -484,11 +483,11 @@ Mode.
 | 130  | Interrupted (Ctrl+C)   |
 
 The opt-in
-[combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/design/combined-lifecycle-state.md)
+[combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state)
 now checks reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
 retirement. The inactive
-[single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md)
+[single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert)
 connects complete add/update sets to graph and mixed-artifact planning. The
 separate inactive `plan_shared_upsert` API accepts explicit matching owner
 contracts for shared outputs. Guarded lifecycle execution remains pending.

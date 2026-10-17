@@ -1,9 +1,14 @@
 # Specifications
 
-- [upskill specification](specification.md): tool behavior and CLI contract.
-- [Portable format](format-spec.md): on-disk content and generation contract.
+- [Tool specification](specification.md): CLI behavior and navigation to
+  internal contracts.
+- [Content format](../topics/0001-content-format.md): canonical portable format,
+  retaining Draft status.
+- [Concern reference](../topics/README.md): internal contracts and implemented
+  architecture.
 
-These are the canonical reference sources. The book includes them through thin
-wrappers. Keep each document's stated status: the portable format still says
-Draft; this relocation does not ratify it. Accepted changes belong with their
-implementation and tests, with decision rationale in [ADRs](../adr/README.md).
+The former portable-format path remains a compatibility page. Historical tool
+specification section anchors remain links to their owning concern. The book
+includes canonical sources rather than maintaining a second contract copy.
+Accepted decisions retain their status and rationale in
+[ADRs](../adr/README.md).

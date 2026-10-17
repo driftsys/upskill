@@ -150,5 +150,5 @@ shipped or postpone respecting native permissions in the MVP.
 ## References
 
 - [Client support commitment](adr/0013-agent-customization-targets.md)
-- [Six-client capability evidence and plugin examples](technotes/2026-10-14-customization-adapter-evidence.md)
-- [Original customization research](technotes/2026-10-11-agent-customization/README.md)
+- [Six-client capability evidence and plugin examples](technotes/customization-adapter-evidence.md)
+- [Original customization research](technotes/agent-customization/README.md)

@@ -81,9 +81,8 @@ working documents and archives.
   [Commands](docs/book/commands.md), [Recipes](docs/book/recipes.md).
 - Specification:
   [`docs/specification/specification.md`](docs/specification/specification.md).
-- On-disk contract:
-  [`docs/specification/format-spec.md`](docs/specification/format-spec.md).
-- Architecture decisions: [`docs/adr/`](docs/adr/) — see
+- On-disk contract: [content format](docs/topics/0001-content-format.md).
+- Architecture decisions: [`docs/adr/`](docs/adr) — see
   [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the umbrella
   decision.
 

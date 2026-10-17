@@ -4,6 +4,8 @@
 import hashlib
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -74,6 +76,51 @@ class DocumentationChecks(unittest.TestCase):
         self.assertEqual(check.check_snapshots(self.root), [])
         schema.write_bytes(b'{"a":2}')
         self.assertTrue(any('changed' in error for error in check.check_snapshots(self.root)))
+
+    def test_historical_anchor_inventory_detects_unreferenced_removal(self):
+        path = self.root / "docs/book/intro.md"
+        path.write_text('# Intro\n\n# Intro\n\n<a id="historical"></a>\n')
+        inventory = {"anchors": {"docs/book/intro.md": ["intro", "intro-1", "historical"]}, "assets": {}}
+        (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+        self.assertEqual(check.check_compatibility(self.root), [])
+        path.write_text('# Intro\n')
+        self.assertTrue(any(error.endswith('#historical') for error in check.check_compatibility(self.root)))
+        for fence in ("```", "~~~"):
+            with self.subTest(fence=fence):
+                path.write_text('# Intro\n\n' + fence + '\n<a id="historical"></a>\n' + fence + '\n')
+                self.assertTrue(any(error.endswith('#historical') for error in check.check_compatibility(self.root)))
+        path.unlink()
+        self.assertTrue(any('Missing compatibility page' in error for error in check.check_compatibility(self.root)))
+
+    def test_evidence_inventory_detects_license_and_provenance_changes(self):
+        for name, raw in (("license.txt", b"Captured license  "), ("manifest.json", b'{"revision":"original"}')):
+            with self.subTest(path=name):
+                path = self.root / "docs" / name
+                path.write_bytes(raw)
+                inventory = {"anchors": {}, "assets": {"docs/" + name: hashlib.sha256(raw).hexdigest()}}
+                (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+                self.assertEqual(check.check_compatibility(self.root), [])
+                path.write_bytes(b"Changed evidence\n")
+                self.assertTrue(any('changed' in error for error in check.check_compatibility(self.root)))
+                path.unlink()
+                self.assertTrue(any('Missing preserved evidence' in error for error in check.check_compatibility(self.root)))
+
+    def test_checker_command_enforces_compatibility_inventory(self):
+        folder = self.root / "scripts"
+        folder.mkdir()
+        script = folder / "check-docs.py"
+        shutil.copyfile(Path(__file__).with_name("check-docs.py"), script)
+        inventory = {"anchors": {"docs/book/intro.md": ["intro"]}, "assets": {}}
+        path = self.root / "docs/compatibility.json"
+        path.write_text(json.dumps(inventory))
+        command = [sys.executable, str(script)]
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        inventory["anchors"]["docs/book/intro.md"].append("historical")
+        path.write_text(json.dumps(inventory))
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('missing historical anchor #historical', result.stderr)
 
     def test_research_include_leak_fails(self):
         folder = self.root / "docs/technotes"

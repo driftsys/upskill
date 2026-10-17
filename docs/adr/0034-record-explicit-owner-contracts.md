@@ -41,10 +41,11 @@ authorize shared mutation, qualify native behavior or establish source
 authenticity and physical identity.
 
 Satisfies:
-[specification §4.19](../specification/specification.md#419-per-owner-recorded-contract-evidence).
-Related: [owner-contract design](../design/lifecycle-owner-contracts.md),
-[combined lifecycle state](../design/combined-lifecycle-state.md),
-[lifecycle upsert](../design/lifecycle-upsert.md).
+[specification §4.19](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#419-per-owner-recorded-contract-evidence).
+Related:
+[owner-contract design](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-lifecycle-owner-contracts),
+[combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state),
+[lifecycle upsert](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert).
 
 Pure owner release with no desired value at an identity preserves untouched
 survivors and their unknown evidence without requiring agreement. Supplied

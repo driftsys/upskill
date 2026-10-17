@@ -3,7 +3,7 @@
 Date: **2026-10-14**. Status: **captured user direction and proposed delivery
 gates**. Code baseline: `00d4c2c` (rebased on main). This document specifies
 future work, not released functionality. Evidence is collected in the
-[capability refresh](../../technotes/2026-10-14-customization-adapter-evidence.md).
+[capability refresh](../../technotes/customization-adapter-evidence.md).
 
 The concise [product roadmap](../../roadmap.md) owns the release scope and
 order. This working document records adapter details and proposed qualification

@@ -68,6 +68,6 @@ private publication, policy and sync checks are in
 [`backup_tests.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/backup_tests.rs).
 
 Satisfies:
-[specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#412-qualified-file-execution-and-recovery).
+[specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery).
 Related: [AD-0033](0033-qualified-file-execution-and-journals.md),
-[qualified execution design](../design/qualified-file-execution.md).
+[qualified execution design](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-qualified-file-execution).

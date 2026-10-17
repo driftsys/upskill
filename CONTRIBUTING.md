@@ -74,11 +74,22 @@ workflow rules.
 
 ## Documentation lifecycle
 
-Use the [documentation map](docs/README.md) to select the owning record.
-Requirements belong in specifications, accepted decisions in ADRs, and
-implemented architecture in design records. User-facing instructions belong in
-`docs/book/`. Technical notes are informative; new proposals and implementation
-plans belong in `docs/wip/specs/` and `docs/wip/plans/`.
+Use the [documentation map](docs/README.md) to select the owning record. CLI
+requirements belong in the tool specification. Other contracts and implemented
+architecture belong in `docs/topics/`, with separate Requirements and
+Architecture sections. Use the existing eight concerns before adding a new one.
+Four-digit prefixes establish a reading sequence; keep assigned filenames stable
+rather than renumbering them when adding a topic. Accepted decisions and
+rationale remain in ADRs. User instructions belong in `docs/book/`.
+
+Technical notes use descriptive filenames without date prefixes. Record research
+or validation dates, checked revisions, sources and qualification limits inside
+the note. Keep immutable evidence assets, schema snapshots, licenses and
+manifests together; evidence snapshot directories may retain capture dates. The
+staged formatter also preserves the captured schema pack: Prim stdin formatting
+does not apply the whole-tree exclusions. Index every note in
+`docs/technotes/README.md`. New proposals and implementation plans belong in
+`docs/wip/specs/` and `docs/wip/plans/`.
 
 When a feature is complete, reconcile its working documents with code and tests,
 update the durable records and book, then archive its raw spec and plan with
@@ -88,13 +99,15 @@ or Proposed ADRs.
 
 `just docs-check` checks documentation links and builds the book in a temporary
 directory. It checks rendered local links, missing chapters/includes and
-publication isolation. It runs in `just verify` and PR CI. Python 3.9 or newer
-and mdBook 0.5.4 are development tools only. The local and CI version is pinned
-because mdBook 0.5 changed the edit-link path template. External URLs and
-historical WIP/archive body references are outside the link check; their indexes
-are checked.
+publication isolation. The [compatibility inventory](docs/compatibility.json)
+also pins historical repository anchors and captured asset hashes, including
+licenses and provenance manifests. It runs in `just verify` and PR CI. Python
+3.9 or newer and mdBook 0.5.4 are development tools only. The local and CI
+version is pinned because mdBook 0.5 changed the edit-link path template.
+External URLs and historical WIP/archive body references are outside the link
+check; their indexes are checked.
 
-The book's specification chapters include canonical sources. Keep published
-chapter filenames and anchors stable, and check both repository links and the
-rendered book when changing includes. Preserve schema snapshot bytes and their
-provenance checksums when moving research.
+The book's reference chapters publish canonical concern and specification
+sources. Keep published chapter filenames and anchors stable, and check both
+repository links and the rendered book when changing includes. Preserve schema
+snapshot bytes and their provenance checksums when moving research.

@@ -4,12 +4,12 @@
 
 ## Context
 
-[ADR-0001](./0001-multi-kind-compiler-architecture.md) and
-[ADR-0003](./0003-generation-pipeline.md) established the SSOT-to-files
-contract: upskill reads SSOT items, generates per-client output files, and never
-invokes the host client at runtime. That contract is the right shape for rules,
-skills, and agents — they are content that each client consumes by reading files
-from a known path.
+[ADR-0001](0001-multi-kind-compiler-architecture.md) and
+[ADR-0003](0003-generation-pipeline.md) established the SSOT-to-files contract:
+upskill reads SSOT items, generates per-client output files, and never invokes
+the host client at runtime. That contract is the right shape for rules, skills,
+and agents — they are content that each client consumes by reading files from a
+known path.
 
 Plugins do not fit that mold. Claude Code plugins (e.g. `superpowers`), Copilot
 CLI plugins, VS Code extensions, and opencode modules carry hooks, slash
@@ -36,9 +36,9 @@ otherwise reinvent.
 
 ### Bundle gains an optional `plugins:` map
 
-[ADR-0007](./0007-bundle-yaml-format.md) defined the Bundle YAML schema. This
-ADR extends it with one new top-level key, `plugins:`, a map keyed by
-upskill-level plugin name:
+[ADR-0007](0007-bundle-yaml-format.md) defined the Bundle YAML schema. This ADR
+extends it with one new top-level key, `plugins:`, a map keyed by upskill-level
+plugin name:
 
 ```yaml
 schema: 1
@@ -164,8 +164,8 @@ demand materialises.
 - Native lifecycle (marketplace updates, version pinning, scope semantics,
   idempotent upgrades) is delegated to each client, not reinvented in upskill.
 - Consistent with the "shell out to git instead of `git2`" stance from
-  [ADR-0001](./0001-multi-kind-compiler-architecture.md) §3 — a proven pattern
-  in the codebase.
+  [ADR-0001](0001-multi-kind-compiler-architecture.md) §3 — a proven pattern in
+  the codebase.
 - Bundle authors get a single SSOT entry that fans out to whichever clients the
   consumer has installed.
 - Warn-skip keeps mixed-client teams unblocked: a Copilot-only user installing a
@@ -207,7 +207,7 @@ a coherent setup.
 to mixed-client teams. A user who runs
 `upskill add
 some-bundle --claude --vscode` (the client-selection flags
-specified in [ADR-0012](./0012-consumer-client-filtering.md)) and is missing
+specified in [ADR-0012](0012-consumer-client-filtering.md)) and is missing
 `code` would lose the entire install. Warn-skip lets the parts that can install
 proceed, and `doctor` reports the gap so it's not silently lost.
 
@@ -228,13 +228,14 @@ bundles parse unchanged.
 
 ## References
 
-- Predecessor: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
+- Predecessor: [ADR-0001](0001-multi-kind-compiler-architecture.md)
   (SSOT-to-files contract, dependency philosophy).
-- Predecessor: [ADR-0003](./0003-generation-pipeline.md) (generation pipeline
-  this ADR explicitly _does not_ extend).
-- Predecessor: [ADR-0007](./0007-bundle-yaml-format.md) (Bundle YAML schema this
+- Predecessor: [ADR-0003](0003-generation-pipeline.md) (generation pipeline this
+  ADR explicitly _does not_ extend).
+- Predecessor: [ADR-0007](0007-bundle-yaml-format.md) (Bundle YAML schema this
   ADR extends with `plugins:`).
-- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md)
+- Authoritative spec:
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
   §3.7 — to be updated with the `plugins:` sub-shape.
 - Claude Code plugin CLI: `claude plugin --help`,
   `claude plugin marketplace --help`.

@@ -85,7 +85,7 @@ upskill search auth --registry corp
 
 Inside a source-registry repo (where SSOT items live), the recommended layout
 puts all items and bundles under a top-level `skills/` directory (see
-[Conventions](./conventions.md)):
+[Conventions](conventions.md)):
 
 ```bash
 mkdir -p skills && cd skills
@@ -132,9 +132,9 @@ man upskill          # or: man upskill-add
 
 ## Where to next
 
-- **[Commands](./commands.md)** — every verb explained, with flags.
-- **[Recipes](./recipes.md)** — CI, private repos, pinning, cleanup.
-- **[Portable format](./format-spec.md)** — the on-disk SSOT contract the lint
+- **[Commands](commands.md)** — every verb explained, with flags.
+- **[Recipes](recipes.md)** — CI, private repos, pinning, cleanup.
+- **[Portable format](format-spec.md)** — the on-disk SSOT contract the lint
   validates against.
 
 [releases]: https://github.com/driftsys/upskill/releases

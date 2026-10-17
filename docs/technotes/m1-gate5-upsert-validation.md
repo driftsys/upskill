@@ -1,5 +1,8 @@
 # Gate 5 upsert validation — 2026-10-16
 
+Validation record date: 2026-10-16. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 The public acceptance examples exercise the pure coordinator through complete
 state and literal output expectations. The initial clean RED was an unresolved
 upsert module, followed by 12 passing examples. A fixture initially attempted

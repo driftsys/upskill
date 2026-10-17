@@ -178,17 +178,64 @@ def check_snapshots(root):
     return errors
 
 
+def markdown_anchors(text):
+    anchors = set()
+    fence = None
+    counts = {}
+    for line in text.splitlines():
+        marker = re.match(r"^\s*(`{3,}|~{3,})", line)
+        if marker:
+            if fence is None:
+                fence = marker[1]
+            elif marker[1][0] == fence[0] and len(marker[1]) >= len(fence):
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        anchors.update(re.findall(r'<a id="([^"\n]+)"', line))
+        heading = re.match(r"^#{1,6} (.*)", line)
+        if heading:
+            anchor = re.sub(r"[^\w -]", "", heading[1].lower()).replace(" ", "-")
+            count = counts.get(anchor, 0)
+            counts[anchor] = count + 1
+            anchors.add(anchor + (f"-{count}" if count else ""))
+    return anchors
+
+
+def check_compatibility(root):
+    inventory_path = root / "docs/compatibility.json"
+    if not inventory_path.is_file():
+        return ["Missing documentation compatibility inventory"]
+    inventory = json.loads(inventory_path.read_text())
+    errors = []
+    for relative, expected in inventory["anchors"].items():
+        path = root / relative
+        if not path.is_file():
+            errors.append(f"Missing compatibility page: {relative}")
+            continue
+        actual = markdown_anchors(path.read_text())
+        for anchor in sorted(set(expected) - actual):
+            errors.append(f"{relative}: missing historical anchor #{anchor}")
+    for relative, expected in inventory["assets"].items():
+        path = root / relative
+        if not path.is_file():
+            errors.append(f"Missing preserved evidence: {relative}")
+        elif hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            errors.append(f"Preserved evidence changed: {relative}")
+    return errors
+
+
 def main():
     root = Path(__file__).resolve().parents[1]
     version = subprocess.run(["mdbook", "--version"], capture_output=True, text=True, check=True)
     if version.stdout.strip() != "mdbook v0.5.4":
         print("Documentation checks require mdBook 0.5.4 (see CONTRIBUTING.md).", file=sys.stderr)
         return 1
-    errors = check_markdown(root) + check_book(root) + check_snapshots(root)
+    errors = check_markdown(root) + check_book(root) + check_snapshots(root) + check_compatibility(root)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Documentation links, rendered book, publication isolation and schema snapshots passed.")
+    print("Documentation links, rendered book, publication isolation, snapshots and compatibility inventory passed.")
     return 0
 
 

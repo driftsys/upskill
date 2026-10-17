@@ -34,8 +34,7 @@ upskill. Missing implementations must not be described as native limitations.
 
 ## Starting point
 
-The merged
-[research pack](../../technotes/2026-10-11-agent-customization/README.md)
+The merged [research pack](../../technotes/agent-customization/README.md)
 provides dated contracts and schema snapshots; its client reports have no native
 runtime conformance evidence. Implementation must select and test released
 versions rather than treating rolling documentation as a version guarantee.

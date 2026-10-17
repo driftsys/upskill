@@ -22,14 +22,14 @@ mount policy.
 ## Decision
 
 Implement the
-[qualified source contract](../design/qualified-source-observation.md) as a
-separate opaque non-Clone snapshot borrowing a QualifiedScope. Expose only an
-immutable existing SourceManifest and non-refreshing verify_unchanged. Preserve
-complete source inclusion and hard-link paths; reject links, special entries and
-mount changes. Record empty-directory topology privately. Share native
-qualification without changing destination policy or strict manifest digests.
-Keep the current CLI, schema 1, dependencies and legacy capture behavior
-unchanged.
+[qualified source contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#architecture-qualified-source-observation)
+as a separate opaque non-Clone snapshot borrowing a QualifiedScope. Expose only
+an immutable existing SourceManifest and non-refreshing verify_unchanged.
+Preserve complete source inclusion and hard-link paths; reject links, special
+entries and mount changes. Record empty-directory topology privately. Share
+native qualification without changing destination policy or strict manifest
+digests. Keep the current CLI, schema 1, dependencies and legacy capture
+behavior unchanged.
 
 ## Consequences
 
@@ -50,7 +50,7 @@ and source API compilation, not the source method inside the previously uncalled
 helper. The new private unsupported-host test executes that method. Final-head
 hosted checks, including native execution of this assertion on Windows, remain
 merge gates. The
-[design evidence](../design/qualified-source-observation.md#local-implementation-evidence)
+[design evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/filesystem-validation.md#architecture-qualified-source-observation-local-implementation-evidence)
 records local coverage, independent-control limits and matched release-size
 measurements. Initial public binding failures preserve source-root/verification
 context and their original scope cause; retained nested paths are independently

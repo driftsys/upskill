@@ -30,7 +30,8 @@ interface and requires future qualified producers and durable checkpoint
 protocols. It does not select journal serialization, credential storage, native
 metadata preservation or lifecycle activation.
 
-Related: [recovery model](../design/file-recovery-model.md),
+Related:
+[recovery model](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-file-recovery-model),
 [permission policy](0031-select-explicit-file-permissions.md).
 
 ## Implemented boundary
@@ -55,4 +56,4 @@ and independent compiled semantic controls pin both action roles and ordering
 boundaries.
 
 Satisfies:
-[specification §4.11](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#411-ordered-recovery-checkpoint-model).
+[specification §4.11](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#411-ordered-recovery-checkpoint-model).

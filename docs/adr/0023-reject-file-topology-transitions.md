@@ -25,7 +25,8 @@ Disjoint untouched pairs do not block work. The cost is that directory topology
 changes require a separate qualified contract.
 
 Satisfies:
-[Specification §4.4](../specification/specification.md#44-owned-whole-file-operation-plans).
-Related: [whole-file planner design](../design/owned-file-planning.md).
+[Specification §4.4](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans).
+Related:
+[whole-file planner design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-file-planning).
 Rationale:
 [archived spec](../archive/specs/2026-10-12-owned-file-planning-design.md).

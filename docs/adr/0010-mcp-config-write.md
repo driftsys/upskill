@@ -4,12 +4,12 @@
 
 ## Context
 
-[ADR-0001](./0001-multi-kind-compiler-architecture.md) and
-[ADR-0003](./0003-generation-pipeline.md) established the SSOT-to-files
-contract: upskill reads SSOT items, generates per-client output files, and never
-invokes the host client at runtime.
+[ADR-0001](0001-multi-kind-compiler-architecture.md) and
+[ADR-0003](0003-generation-pipeline.md) established the SSOT-to-files contract:
+upskill reads SSOT items, generates per-client output files, and never invokes
+the host client at runtime.
 
-[ADR-0008](./0008-plugin-install-shellout.md) extended that contract with a
+[ADR-0008](0008-plugin-install-shellout.md) extended that contract with a
 `plugins:` map on Bundle that shells out to each client's plugin CLI at install
 time. MCP servers need the same extension: a skill that relies on an MCP server
 (e.g. a "draw.io diagrams" skill referencing `DrawIO:create_diagram`) is
@@ -50,7 +50,7 @@ ADR-0008.
 ### Bundle gains an optional `mcps:` map
 
 This ADR adds one new top-level key, `mcps:`, to the Bundle schema defined in
-[ADR-0007](./0007-bundle-yaml-format.md), as a direct parallel of the `plugins:`
+[ADR-0007](0007-bundle-yaml-format.md), as a direct parallel of the `plugins:`
 map introduced by ADR-0008. The `mcps:` key is a sibling of `plugins:` in the
 YAML schema.
 
@@ -256,7 +256,7 @@ silently ignore the unknown array (serde `default`).
   `claude` CLI, not reinvented in upskill — consistent with ADR-0008's stance on
   plugins.
 - Consistent with the "shell out to git instead of `git2`" pattern from
-  [ADR-0001](./0001-multi-kind-compiler-architecture.md) §3.
+  [ADR-0001](0001-multi-kind-compiler-architecture.md) §3.
 - Bundle authors get a single SSOT entry that declares both transport
   descriptors and required env vars. Consumers get server configuration as part
   of `upskill add` rather than a separate manual step.
@@ -321,7 +321,7 @@ agent reasons through this at runtime instead.
 ## Deferred (noted, not decided)
 
 **v2: skill dependency edge.** Once
-[ADR-0009](./0009-coupling-tiers-and-dependencies.md) lands, the `requires`
+[ADR-0009](0009-coupling-tiers-and-dependencies.md) lands, the `requires`
 vocabulary will be extended with `mcps` so a skill can declare
 `requires: { mcps: [drawio] }`. Resolving the dependency would re-use the v1
 config-write machinery. v2 also includes a generated skill-body preflight
@@ -342,14 +342,14 @@ are unaffected. Old lockfiles without an `mcps` array load fine (serde
 
 ## References
 
-- Structural precedent: [ADR-0008](./0008-plugin-install-shellout.md) — plugin
+- Structural precedent: [ADR-0008](0008-plugin-install-shellout.md) — plugin
   install via client CLI shellout.
 - Dependency coupling model (v2 prerequisite):
-  [ADR-0009](./0009-coupling-tiers-and-dependencies.md).
+  [ADR-0009](0009-coupling-tiers-and-dependencies.md).
 - Design spec (background, rationale, alternatives):
   [`docs/wip/specs/2026-06-03-mcp-support-design.md`](../wip/specs/2026-06-03-mcp-support-design.md).
 - Authoritative format spec:
-  [`docs/format-spec.md`](../specification/format-spec.md) §3.7 — `mcps:`
-  sub-shape.
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+  §3.7 — `mcps:` sub-shape.
 - `src/model/bundle.rs`, `src/mcp.rs`, `src/ancillary.rs`,
   `src/pipeline/install.rs`, `src/lockfile.rs` — as-built implementation.
