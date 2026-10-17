@@ -52,4 +52,5 @@ Linux tests, and matched release CLI plus live-API probe size measurements.
 Record evidence in the durable scope-lock design before marking this decision
 implemented.
 
-Related: [qualified scope-lock design](../design/qualified-scope-locking.md).
+Related:
+[qualified scope-lock design](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#architecture-qualified-scope-locking).

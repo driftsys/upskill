@@ -26,9 +26,9 @@ do not mix in the same tree.
 
 ## Where to next
 
-- **[Getting started](./getting-started.md)** — install, first add, first
+- **[Getting started](getting-started.md)** — install, first add, first
   scaffold.
-- **[Commands](./commands.md)** — full reference for every verb.
-- **[Recipes](./recipes.md)** — CI usage, private repos, pinning.
-- **[Specification](./specification.md)** — the contract.
-- **[Portable format](./format-spec.md)** — the on-disk SSOT format.
+- **[Commands](commands.md)** — full reference for every verb.
+- **[Recipes](recipes.md)** — CI usage, private repos, pinning.
+- **[Specification](specification.md)** — the contract.
+- **[Portable format](format-spec.md)** — the on-disk SSOT format.

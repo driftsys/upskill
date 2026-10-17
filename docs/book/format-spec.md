@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
-<!-- Canonical source: docs/specification/format-spec.md -->
+<!-- Canonical source: docs/topics/0001-content-format.md -->
 
-{{#include ../specification/format-spec.md}}
+{{#include ../topics/0001-content-format.md}}
 
-[Edit the canonical source](https://github.com/driftsys/upskill/edit/main/docs/specification/format-spec.md).
+[Edit the canonical source](https://github.com/driftsys/upskill/edit/main/docs/topics/0001-content-format.md).

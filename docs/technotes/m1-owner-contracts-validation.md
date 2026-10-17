@@ -1,5 +1,8 @@
 # Per-owner contract validation
 
+Validation record date: 2026-10-16. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 The initial implementation at `d809fe2f10d221874fdf0af8c7cc5636ad40adf1` had 16
 passing public examples and 1,191 passing Rust tests across 74 result groups.
 The review fixes add fifteen examples, giving 31 in

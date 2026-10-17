@@ -1,8 +1,13 @@
 # Gate 5 reference removal validation
 
+Validation record date: 2026-10-16. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 This informative note records the inactive shared-owner removal planner. The
-[specification](../specification/specification.md#416-reference-driven-shared-owner-removal-planning)
-and [design](../design/lifecycle-reference-removal.md) define its boundary.
+[specification](../topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning)
+and
+[design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-removal)
+define its boundary.
 
 ## Acceptance and controls
 

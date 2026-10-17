@@ -44,14 +44,13 @@ Rust 2024 edition. MSRV: 1.85 (first stable release to support edition 2024).
 
 The version pin on `dprint-plugin-markdown` is deliberate; bumps are gated on
 re-running golden-file fixtures so generated output stays byte-identical. See
-[ADR-0003](./0003-generation-pipeline.md).
+[ADR-0003](0003-generation-pipeline.md).
 
 **Deliberately excluded.** `tokio`, `reqwest` (no async needed; `ureq` is
 synchronous), `git2` (~5 MB binding — shell out to `git` instead), `dialoguer`
 (prompts are simple enough with raw stdin), `toml` (no config files yet).
-[ADR-0001](./0001-multi-kind-compiler-architecture.md) §3 admits the
-well-targeted parsing/formatting deps above; `git2` and async runtimes remain
-out.
+[ADR-0001](0001-multi-kind-compiler-architecture.md) §3 admits the well-targeted
+parsing/formatting deps above; `git2` and async runtimes remain out.
 
 ### 1.3 Build profile
 
@@ -121,12 +120,12 @@ src/
 Cross-references:
 
 - The on-disk shape consumed by `model/` and `parse/` is specified in
-  [`docs/format-spec.md`](../specification/format-spec.md) and motivated by
-  [ADR-0002](./0002-portable-content-format.md).
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+  and motivated by [ADR-0002](0002-portable-content-format.md).
 - The pipeline implemented in `generate/` and `pipeline.rs` follows
-  [ADR-0003](./0003-generation-pipeline.md).
+  [ADR-0003](0003-generation-pipeline.md).
 - The CLI verbs `main.rs` dispatches to are fixed by
-  [ADR-0004](./0004-cli-surface.md).
+  [ADR-0004](0004-cli-surface.md).
 
 ## 3. Conventions
 

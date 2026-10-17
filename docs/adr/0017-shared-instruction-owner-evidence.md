@@ -25,6 +25,8 @@ Changing shared regions needs later authoritative per-owner association. The
 restriction avoids inventing evidence and does not drop unrelated ownership.
 
 Satisfies:
-[Specification §4.2](../specification/specification.md#42-pure-owned-instruction-planning).
-Related: [planner design](../design/owned-instruction-planning.md). Rationale:
+[Specification §4.2](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#42-pure-owned-instruction-planning).
+Related:
+[planner design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-instruction-planning).
+Rationale:
 [archived spec](../archive/specs/2026-10-12-owned-instruction-planning-design.md).

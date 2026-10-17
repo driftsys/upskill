@@ -1,11 +1,14 @@
 # Gate 5 reference reconciliation validation
 
+Validation record date: 2026-10-16. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 This informative note records local evidence for the inactive authoritative
 reference graph boundary, the first bounded part of task 2b. Requirements remain
 in
-[specification §4.15](../specification/specification.md#415-authoritative-lifecycle-reference-reconciliation)
+[specification §4.15](../topics/0005-lifecycle-planning.md#415-authoritative-lifecycle-reference-reconciliation)
 and implemented interfaces in the
-[reference reconciliation design](../design/lifecycle-reference-reconciliation.md).
+[reference reconciliation design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-reference-reconciliation).
 
 ## Local evidence
 

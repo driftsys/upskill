@@ -31,8 +31,8 @@ Production schema 1, command dispatch, native qualification and guarded
 application remain outside this slice.
 
 Satisfies:
-[specification §4.20](../specification/specification.md#420-explicit-shared-output-reconciliation).
+[specification §4.20](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
 Related:
-[captured desired sets](../design/captured-rule-desired-sets.md#explicit-contract-production),
-[shared upsert](../design/lifecycle-upsert.md#explicit-shared-upsert),
+[captured desired sets](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#architecture-captured-rule-desired-sets-explicit-contract-production),
+[shared upsert](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert-explicit-shared-upsert),
 [AD-0034](0034-record-explicit-owner-contracts.md).

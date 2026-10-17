@@ -4,19 +4,19 @@
 
 ## Context
 
-[ADR-0002](./0002-portable-content-format.md) established the SSOT on-disk
+[ADR-0002](0002-portable-content-format.md) established the SSOT on-disk
 contract, including bundle files as
-[Markdown-with-frontmatter](../specification/format-spec.md) named
-`<name>.bundle.md`. The frontmatter carried the manifest (`schema`, `name`,
-`description`, `items`, `requires`, `metadata`); the body carried human-readable
-documentation (install examples, adoption path, caveats).
+[Markdown-with-frontmatter](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+named `<name>.bundle.md`. The frontmatter carried the manifest (`schema`,
+`name`, `description`, `items`, `requires`, `metadata`); the body carried
+human-readable documentation (install examples, adoption path, caveats).
 
 That shape mirrored `SKILL.md` / `RULE.md` / `AGENT.md` and gave bundle authors
 one file to point at. In practice, the body never carried information that
 influenced installation behavior — the parser reads the frontmatter and discards
 the body. The Markdown body is purely documentation.
 
-[ADR-0006](./0006-flat-item-layout.md) tightened the item layout. This ADR
+[ADR-0006](0006-flat-item-layout.md) tightened the item layout. This ADR
 tightens the bundle layout for the same reason: keep the SSOT contract as small
 as it needs to be, drop redundancy.
 
@@ -152,10 +152,11 @@ manifest itself.
 
 ## References
 
-- Predecessor: [ADR-0002](./0002-portable-content-format.md) § "Bundle file
-  shape" — superseded by this ADR for the file format; the bundle schema
-  (fields, semantics, transitive resolution) is unchanged.
-- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md)
+- Predecessor: [ADR-0002](0002-portable-content-format.md) § "Bundle file shape"
+  — superseded by this ADR for the file format; the bundle schema (fields,
+  semantics, transitive resolution) is unchanged.
+- Authoritative spec:
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
   §2.2, §3.7.
-- Related: [ADR-0006](./0006-flat-item-layout.md) (same "drop redundancy in the
+- Related: [ADR-0006](0006-flat-item-layout.md) (same "drop redundancy in the
   SSOT contract" rationale, applied to items).

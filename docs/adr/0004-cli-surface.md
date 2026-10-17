@@ -15,7 +15,7 @@ manage, prolong content for three kinds across three clients) needs a surface
 that fits author workflows and bundle composition.
 
 This ADR is one of four child ADRs of
-[ADR-0001](./0001-multi-kind-compiler-architecture.md).
+[ADR-0001](0001-multi-kind-compiler-architecture.md).
 
 ## Decision
 
@@ -46,18 +46,18 @@ The nine commands split by where they run:
   generated outputs live):
   - `add`, `remove`, `update`, `list`, `info`, `doctor`.
 
-Per [ADR-0002](./0002-portable-content-format.md), SSOT items only exist in
-source registries; consumer projects never contain SSOT. Author commands
-therefore have no meaning in a consumer project, and consumer commands have no
-meaning in a source registry. Implementations MAY detect the wrong context and
-emit a clear error.
+Per [ADR-0002](0002-portable-content-format.md), SSOT items only exist in source
+registries; consumer projects never contain SSOT. Author commands therefore have
+no meaning in a consumer project, and consumer commands have no meaning in a
+source registry. Implementations MAY detect the wrong context and emit a clear
+error.
 
 ### `add` unifies bundle and ad-hoc installation
 
 Source resolution is automatic: upskill checks the registry index first; if no
 match, treats the source as a git repo or local path. Developers never decide
 between two install verbs. Source format parity with `npx skills add` is the
-subject of [ADR-0005](./0005-skills-sh-ecosystem-interop.md).
+subject of [ADR-0005](0005-skills-sh-ecosystem-interop.md).
 
 ### Install all by default
 
@@ -103,7 +103,7 @@ Consumer commands (`add`, `remove`, `update`) read and write
 their source-registry URLs, resolved git refs, and per-item content hashes.
 Plays the same role as `package-lock.json`: deterministic regeneration on
 another developer's machine or in CI. State design detailed in
-[ADR-0003](./0003-generation-pipeline.md).
+[ADR-0003](0003-generation-pipeline.md).
 
 ### "Prolong" is a CLI behaviour contract
 
@@ -155,10 +155,10 @@ cases without TTY interaction (also: scriptable, CI-friendly).
 
 ## References
 
-- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
-- Sibling ADRs: [ADR-0002](./0002-portable-content-format.md),
-  [ADR-0003](./0003-generation-pipeline.md),
-  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
+- Parent ADR: [ADR-0001](0001-multi-kind-compiler-architecture.md)
+- Sibling ADRs: [ADR-0002](0002-portable-content-format.md),
+  [ADR-0003](0003-generation-pipeline.md),
+  [ADR-0005](0005-skills-sh-ecosystem-interop.md)
 
 ## Amendments
 

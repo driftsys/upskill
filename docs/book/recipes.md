@@ -151,7 +151,7 @@ upskill add owner/registry:<name>-mcp.bundle.yaml --claude
 ```
 
 The `--claude` flag restricts this install to Claude Code (see
-[client selection](./commands.md#upskill-add-source-items)); drop it to target
+[client selection](commands.md#upskill-add-source-items)); drop it to target
 every client. This installs the skill, installs the `<name>-mcp-installer` agent
 into the client's agents directory, and configures the MCP — in one step.
 

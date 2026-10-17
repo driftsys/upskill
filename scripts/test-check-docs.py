@@ -4,6 +4,8 @@
 import hashlib
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -74,6 +76,104 @@ class DocumentationChecks(unittest.TestCase):
         self.assertEqual(check.check_snapshots(self.root), [])
         schema.write_bytes(b'{"a":2}')
         self.assertTrue(any('changed' in error for error in check.check_snapshots(self.root)))
+
+    def test_historical_anchor_inventory_detects_unreferenced_removal(self):
+        path = self.root / "docs/book/intro.md"
+        path.write_text('# Intro\n\n# Intro\n\n<a id="historical"></a>\n')
+        inventory = {"anchors": {"docs/book/intro.md": ["intro", "intro-1", "historical"]}, "assets": {}}
+        (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+        self.assertEqual(check.check_compatibility(self.root), [])
+        path.write_text('# Intro\n')
+        self.assertTrue(any(error.endswith('#historical') for error in check.check_compatibility(self.root)))
+        for fence in ("```", "~~~"):
+            with self.subTest(fence=fence):
+                path.write_text('# Intro\n\n' + fence + '\n<a id="historical"></a>\n' + fence + '\n')
+                self.assertTrue(any(error.endswith('#historical') for error in check.check_compatibility(self.root)))
+        path.unlink()
+        self.assertTrue(any('Missing compatibility page' in error for error in check.check_compatibility(self.root)))
+
+    def test_commented_historical_anchor_is_missing_from_source(self):
+        path = self.root / "docs/book/intro.md"
+        inventory = {"anchors": {"docs/book/intro.md": ["intro", "historical"]}, "assets": {}}
+        (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+        for comment in ('<!-- <a id="historical"></a> -->', '<!--\n# Historical\n<a id="historical"></a>\n-->'):
+            with self.subTest(comment=comment):
+                path.write_text('# Intro\n\n' + comment + '\n')
+                self.assertTrue(any(error.endswith('#historical') for error in check.check_compatibility(self.root)))
+        path.write_text('# Intro\n\n```md\n<!-- literal example\n```\n<a id="historical"></a>\n')
+        self.assertEqual(check.check_compatibility(self.root), [])
+
+    def test_commented_historical_anchor_is_missing_from_rendered_book(self):
+        path = self.root / "docs/book/intro.md"
+        path.write_text('# Intro\n\n<!-- <a id="historical"></a> -->\n')
+        inventory = {"anchors": {"docs/book/intro.md": ["intro", "historical"]}, "assets": {}}
+        (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+        self.assertTrue(any(error.endswith('#historical') for error in check.check_book(self.root)))
+
+    def test_rendered_specification_and_design_compatibility_mappings(self):
+        output = self.root / "rendered"
+        wrapper = self.root / "docs/book/design/file-permission-policy.md"
+        wrapper.parent.mkdir(parents=True)
+        wrapper.write_text('# Compatibility\n')
+        cases = (
+            ("docs/specification/format-spec.md", "format-spec.html"),
+            ("docs/specification/specification.md", "specification.html"),
+            ("docs/design/file-permission-policy.md", "design/file-permission-policy.html"),
+        )
+        for source, chapter in cases:
+            with self.subTest(source=source):
+                inventory = {"anchors": {source: ["historical"]}, "assets": {}}
+                (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+                path = output / chapter
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('<a id="historical"></a>\n')
+                self.assertEqual(check.check_rendered_compatibility(self.root, output), [])
+                path.write_text('<h1>Chapter without the historical anchor</h1>\n')
+                self.assertTrue(any(error.endswith('#historical') for error in check.check_rendered_compatibility(self.root, output)))
+                path.unlink()
+                self.assertTrue(any('Missing historical rendered chapter' in error for error in check.check_rendered_compatibility(self.root, output)))
+
+    def test_evidence_inventory_detects_license_and_provenance_changes(self):
+        for name, raw in (("license.txt", b"Captured license  "), ("manifest.json", b'{"revision":"original"}')):
+            with self.subTest(path=name):
+                path = self.root / "docs" / name
+                path.write_bytes(raw)
+                inventory = {"anchors": {}, "assets": {"docs/" + name: hashlib.sha256(raw).hexdigest()}}
+                (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+                self.assertEqual(check.check_compatibility(self.root), [])
+                path.write_bytes(b"Changed evidence\n")
+                self.assertTrue(any('changed' in error for error in check.check_compatibility(self.root)))
+                path.unlink()
+                self.assertTrue(any('Missing preserved evidence' in error for error in check.check_compatibility(self.root)))
+
+    def test_checker_command_enforces_compatibility_inventory(self):
+        folder = self.root / "scripts"
+        folder.mkdir()
+        script = folder / "check-docs.py"
+        shutil.copyfile(Path(__file__).with_name("check-docs.py"), script)
+        inventory = {"anchors": {"docs/book/intro.md": ["intro"]}, "assets": {}}
+        path = self.root / "docs/compatibility.json"
+        path.write_text(json.dumps(inventory))
+        command = [sys.executable, str(script)]
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        inventory["anchors"]["docs/book/intro.md"].append("historical")
+        path.write_text(json.dumps(inventory))
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('missing historical anchor #historical', result.stderr)
+        inventory["anchors"]["docs/book/intro.md"].pop()
+        raw = b"Original license  "
+        license_path = self.root / "docs/preserved-license.txt"
+        license_path.write_bytes(raw)
+        inventory["assets"]["docs/preserved-license.txt"] = hashlib.sha256(raw).hexdigest()
+        path.write_text(json.dumps(inventory))
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        license_path.write_bytes(b"Changed license\n")
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Preserved evidence changed: docs/preserved-license.txt', result.stderr)
 
     def test_research_include_leak_fails(self):
         folder = self.root / "docs/technotes"

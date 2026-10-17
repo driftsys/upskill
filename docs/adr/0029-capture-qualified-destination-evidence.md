@@ -28,7 +28,7 @@ existing dependency budget.
 ## Decision
 
 Implement the inactive snapshot boundary in the
-[qualified destination design](../design/qualified-destination-observation.md).
+[qualified destination design](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#architecture-qualified-destination-observation).
 Use descriptor-relative no-follow traversal, retained handles and exact
 revalidation. Accept APFS and Linux ext-family/tmpfs profiles only when mount
 evidence is available; reject cross-mount traversal and other profiles. Reuse

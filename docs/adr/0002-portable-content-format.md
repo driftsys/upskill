@@ -18,13 +18,13 @@ personas. We need one format that:
 - is self-describing so it can evolve without silently breaking older consumers.
 
 This ADR is one of four child ADRs of
-[ADR-0001](./0001-multi-kind-compiler-architecture.md). It owns the on-disk SSOT
-contract; [ADR-0003](./0003-generation-pipeline.md) owns how that SSOT becomes
+[ADR-0001](0001-multi-kind-compiler-architecture.md). It owns the on-disk SSOT
+contract; [ADR-0003](0003-generation-pipeline.md) owns how that SSOT becomes
 per-client output.
 
 The authoritative specification lives at
-[`docs/format-spec.md`](../specification/format-spec.md). This ADR records the
-design decisions; the spec records the contract.
+[`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md).
+This ADR records the design decisions; the spec records the contract.
 
 ## Decision
 
@@ -47,7 +47,7 @@ surface.
 
 ### Directory-per-item layout
 
-> **Superseded by [ADR-0006](./0006-flat-item-layout.md)** for the kind-subdir
+> **Superseded by [ADR-0006](0006-flat-item-layout.md)** for the kind-subdir
 > aspect. The decision that each item is its own directory stands; the
 > requirement that items live under `rules/`, `skills/`, `agents/`
 > subdirectories is dropped. Kind is determined by the entrypoint filename
@@ -70,7 +70,7 @@ See ADR-0006 for the full layout contract and rationale.
 
 The `.agents/` path is **not** a source-registry convention. It is purely the
 consumer-side generated-output path for the opencode canonical-store pattern
-(per [ADR-0003](./0003-generation-pipeline.md)). Source registries SHOULD avoid
+(per [ADR-0003](0003-generation-pipeline.md)). Source registries SHOULD avoid
 `.agents/` as their root to prevent confusion with the consumer-side meaning.
 
 ### `metadata` block for governance
@@ -156,9 +156,10 @@ from bundle versioning.
 
 ## References
 
-- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md)
-- Parent ADR: [ADR-0001](./0001-multi-kind-compiler-architecture.md)
-- Sibling ADRs: [ADR-0003](./0003-generation-pipeline.md),
-  [ADR-0004](./0004-cli-surface.md),
-  [ADR-0005](./0005-skills-sh-ecosystem-interop.md)
+- Authoritative spec:
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+- Parent ADR: [ADR-0001](0001-multi-kind-compiler-architecture.md)
+- Sibling ADRs: [ADR-0003](0003-generation-pipeline.md),
+  [ADR-0004](0004-cli-surface.md),
+  [ADR-0005](0005-skills-sh-ecosystem-interop.md)
 - Agent Skills open standard: <https://agentskills.io>

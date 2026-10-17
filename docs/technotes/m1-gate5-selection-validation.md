@@ -1,5 +1,8 @@
 # Gate 5 selection validation — 2026-10-16
 
+Validation record date: 2026-10-16. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 The 20 local public acceptance tests and full local verification passed. This
 note records only observed checks; hosted checks and independent review remain
 separate delivery gates.

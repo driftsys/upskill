@@ -39,8 +39,9 @@ Its supplied values establish no source, filesystem, permission or execution
 authority; compiler integration and lifecycle activation remain separate work.
 
 Satisfies:
-[Specification §4.6](../specification/specification.md#46-mixed-owned-artifact-operation-plans).
-Related: [mixed planning design](../design/mixed-owned-artifact-planning.md),
+[Specification §4.6](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans).
+Related:
+[mixed planning design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-mixed-owned-artifact-planning),
 [AD-0016](0016-pure-instruction-planning.md),
 [AD-0021](0021-pure-file-planning.md),
 [AD-0024](0024-pure-captured-item-compilation.md).

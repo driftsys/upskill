@@ -1,5 +1,8 @@
 # M1 Gate 5 combined-state validation
 
+Validation record date: 2026-10-15. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 Date: 2026-10-15. Scope: the first Gate 5 slice, an opt-in pure library. This is
 not evidence that Gate 5 or M1 is complete or activated.
 

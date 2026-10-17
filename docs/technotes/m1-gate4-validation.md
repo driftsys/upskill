@@ -1,5 +1,8 @@
 # M1 gate 4 validation evidence — 2026-10-15
 
+Validation record date: 2026-10-15. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 ## Tested revisions and limits
 
 Delivery refresh, verified on 2026-10-17:

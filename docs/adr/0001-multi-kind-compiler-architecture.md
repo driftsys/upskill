@@ -18,13 +18,13 @@ central abstraction is **generation** (SSOT → per-client output), and v0.1's
 This ADR is the **umbrella** for the v0.2 redesign. The substantive design is
 split across four concern-focused child ADRs:
 
-- [ADR-0002](./0002-portable-content-format.md) — Portable content format (the
+- [ADR-0002](0002-portable-content-format.md) — Portable content format (the
   on-disk SSOT contract).
-- [ADR-0003](./0003-generation-pipeline.md) — Generation pipeline (SSOT →
+- [ADR-0003](0003-generation-pipeline.md) — Generation pipeline (SSOT →
   per-client output mechanics, including the dprint embedding decision that
   originated as Phase 0's spike).
-- [ADR-0004](./0004-cli-surface.md) — CLI surface (the user-facing contract).
-- [ADR-0005](./0005-skills-sh-ecosystem-interop.md) — Compatibility with the
+- [ADR-0004](0004-cli-surface.md) — CLI surface (the user-facing contract).
+- [ADR-0005](0005-skills-sh-ecosystem-interop.md) — Compatibility with the
   Vercel/skills.sh ecosystem (cross-cutting strategic alignment).
 
 This ADR records the project-level decisions only: the pivot itself, the
@@ -61,7 +61,7 @@ prefer one focused dep over hand-rolled equivalents."
 **Positive.** Single tool covers the full lifecycle of rules / skills / agents
 across all three clients. Migration story for existing v0.1 users is explicit
 (translator from per-project lockfile to global state file per
-[ADR-0003](./0003-generation-pipeline.md)).
+[ADR-0003](0003-generation-pipeline.md)).
 
 **Negative.** ~7 engineer-weeks. Binary size grows. Small migration for v0.1
 users. README and architecture docs need rewrite. The redesign introduces
@@ -92,10 +92,10 @@ would have required this redesign anyway, just later and with more sunk cost.
   support; v0.1 lockfile migration; ancillary file generation (CLAUDE.md,
   opencode.json, .vscode/settings.json). Original estimate was 1.5w; bundles
   promoted from "deferred" to MVP per
-  [ADR-0002](./0002-portable-content-format.md), and ancillary file handling per
-  [ADR-0003](./0003-generation-pipeline.md) added scope.
+  [ADR-0002](0002-portable-content-format.md), and ancillary file handling per
+  [ADR-0003](0003-generation-pipeline.md) added scope.
 - **Phase 4** — _deleted._ `sync` absorbed into `update` per
-  [ADR-0004](./0004-cli-surface.md).
+  [ADR-0004](0004-cli-surface.md).
 - **Phase 5** (1w) — `lint` + `fmt`.
 - **Phase 6** (0.5w) — scaffold / `new`.
 - **Phase 7** (~1w) — polish + release of v0.2.0.
@@ -109,5 +109,5 @@ Project-level only. Concern-specific opens live in the child ADRs.
 - **v0.2.0 release timing relative to internal rollout phases.** Phase 7 —
   coordinated with documentation cutover and v0.1 patch-release sunset.
 - **Windows support level for v0.2.0.** Stretch goal; not blocking MVP.
-  Copy-only installation per [ADR-0003](./0003-generation-pipeline.md) removes
-  the main symlink obstacle, but full Windows CI verification is deferred.
+  Copy-only installation per [ADR-0003](0003-generation-pipeline.md) removes the
+  main symlink obstacle, but full Windows CI verification is deferred.

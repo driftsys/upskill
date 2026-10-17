@@ -59,13 +59,13 @@ rechecks reject observed namespace changes, but cannot exclude every race with
 external editors. There is no multi-file atomicity guarantee. Sync ordering and
 real process termination tests do not establish hardware power-loss durability.
 Gate-4 hosted delivery evidence is retained in the
-[validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).
+[validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate4-validation.md).
 Combined lifecycle integration and M1 activation remain separate work. Current
 CLI commands and schema-1 lockfiles do not consume this API.
 
 Satisfies:
-[specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#412-qualified-file-execution-and-recovery).
+[specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery).
 Related: [AD-0028](0028-lock-qualified-scope-directories.md),
 [AD-0031](0031-select-explicit-file-permissions.md),
 [AD-0032](0032-model-recovery-checkpoints-before-effects.md),
-[qualified execution design](../design/qualified-file-execution.md).
+[qualified execution design](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#architecture-qualified-file-execution).

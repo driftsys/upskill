@@ -117,8 +117,8 @@ These are candidate validation versions, not minimum supported versions or
 release promises. The Copilot extension and Codex IDE versions still need to be
 recorded independently of the editor. The implementation plan must select exact
 Linux/macOS/Windows test combinations before claiming their support. The
-[research snapshots](../../technotes/2026-10-11-agent-customization/README.md)
-remain the contract inventory, not substitutes for those tests.
+[research snapshots](../../technotes/agent-customization/README.md) remain the
+contract inventory, not substitutes for those tests.
 
 ### F-A implementation boundary
 

@@ -11,8 +11,7 @@ Copilot, and OpenCode. Their customization contracts have evolved, and other
 clients now provide overlapping capabilities with different discovery paths,
 formats, scopes, and execution semantics.
 
-The
-[agent customization research](../technotes/2026-10-11-agent-customization/README.md)
+The [agent customization research](../technotes/agent-customization/README.md)
 collects current documentation and available schemas for six client families.
 Designing only around the existing clients would leave Codex support and later
 Cursor and Gemini CLI support dependent on assumptions that may not hold for
@@ -80,7 +79,7 @@ shared design can support staged delivery.
 
 ## References
 
-- [Research index and sources](../technotes/2026-10-11-agent-customization/README.md)
-- [Design inputs and open questions](../technotes/2026-10-11-agent-customization/design-inputs.md)
+- [Research index and sources](../technotes/agent-customization/README.md)
+- [Design inputs and open questions](../technotes/agent-customization/design-inputs.md)
 - [ADR-0008 — Plugin installation](0008-plugin-install-shellout.md)
 - [ADR-0010 — MCP server configuration](0010-mcp-config-write.md)

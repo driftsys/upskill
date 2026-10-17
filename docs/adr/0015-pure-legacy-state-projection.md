@@ -51,9 +51,9 @@ requested-selection reconciliation, schema-2 preservation, exact backup and
 transactional execution remain pending. This decision does not complete M1-A2.
 
 Satisfies:
-[Specification §4.1](../specification/specification.md#41-pure-legacy-state-projection).
+[Specification §4.1](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#41-pure-legacy-state-projection).
 Related: [ADR-0003](0003-generation-pipeline.md),
 [ADR-0011](0011-generic-git-url-source.md),
-[design](../design/generation-pipeline.md#pure-legacy-state-projection).
+[design](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-generation-pipeline-pure-legacy-state-projection).
 Rationale:
 [archived feature spec](../archive/specs/2026-10-12-legacy-state-projection-design.md).

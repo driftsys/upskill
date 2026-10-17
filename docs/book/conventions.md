@@ -1,10 +1,10 @@
 # Upskill conventions
 
-The [portable format](./format-spec.md) is intentionally tool-agnostic: it
-defines what any conforming consumer must accept, but leaves many choices open
-(which path holds items, where bundles live, etc.). This page records the
-specific conventions the **upskill project itself** follows when authoring and
-consuming registries, so that:
+The [portable format](format-spec.md) is intentionally tool-agnostic: it defines
+what any conforming consumer must accept, but leaves many choices open (which
+path holds items, where bundles live, etc.). This page records the specific
+conventions the **upskill project itself** follows when authoring and consuming
+registries, so that:
 
 - `upskill new <kind> <name>` drops items directly where they belong.
 - Examples in this book, in fixtures, and in the `driftsys/skills` source
@@ -48,7 +48,7 @@ Why this shape:
   `skills/` produces `skills/<name>/<KIND>.md` with no follow-up moves.
 - **Holds all three kinds.** Despite the directory name, `skills/` carries rules
   and agents as well. Kind is determined by the entrypoint filename
-  ([format-spec §2.1](./format-spec.md#21-item-directory-structure)), not by the
+  ([format-spec §2.1](format-spec.md#21-item-directory-structure)), not by the
   parent directory.
 
 ### When bundles outgrow the flat layout
@@ -78,8 +78,8 @@ layout until scanning `skills/` for an item becomes harder than scanning it for
 a bundle.
 
 `upskill` discovers bundles by scanning for the `.bundle.yaml` suffix
-([format-spec §2.2](./format-spec.md#22-bundle-files)) and is indifferent to
-which of these two sub-layouts the registry uses.
+([format-spec §2.2](format-spec.md#22-bundle-files)) and is indifferent to which
+of these two sub-layouts the registry uses.
 
 ## Item naming
 
@@ -105,8 +105,7 @@ upskill new agent security-review # → skills/security-review/AGENT.md
 
 Bundles are plain `*.bundle.yaml` files you create alongside the items — there
 is no scaffolder for them; copy the
-[format-spec §3.7](./format-spec.md#37-bundle-schema) example as a starting
-point.
+[format-spec §3.7](format-spec.md#37-bundle-schema) example as a starting point.
 
 ## What these conventions do not change
 
@@ -116,9 +115,9 @@ point.
 - **Generation output.** Consumer-side paths (`.claude/skills/<name>/...`,
   `.github/skills/...`, `.agents/skills/...`) are unrelated to source-side
   layout. They are specified in
-  [format-spec §7](./format-spec.md#7-generation-client-specific-output).
+  [format-spec §7](format-spec.md#7-generation-client-specific-output).
 - **The `.agents/` reservation.** Source registries SHOULD NOT use `.agents/` as
   their item root, to prevent confusion with the consumer-side opencode
-  canonical-store path ([format-spec §7.3](./format-spec.md#73-opencode)). This
+  canonical-store path ([format-spec §7.3](format-spec.md#73-opencode)). This
   applies whether the registry follows the upskill conventional layout or any
   other.

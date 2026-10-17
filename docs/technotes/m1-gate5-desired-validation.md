@@ -1,10 +1,13 @@
 # Gate 5 captured rule desired-set validation
 
+Validation record date: 2026-10-15. This date identifies the original evidence
+record; consolidation does not rerun or extend its qualification.
+
 This informative note records local evidence for completed task 2a: the inactive
 captured-rule producer and complete batch preflight. The requirements remain in
-[specification §4.14](../specification/specification.md#414-captured-rule-desired-sets)
+[specification §4.14](../topics/0002-generation.md#414-captured-rule-desired-sets)
 and the implemented interfaces in the
-[desired-set design](../design/captured-rule-desired-sets.md).
+[desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets).
 
 ## Local evidence
 

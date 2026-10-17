@@ -48,15 +48,15 @@ fail conservatively until a qualified metadata policy exists.
 
 Related:
 [AD-0026](https://github.com/driftsys/upskill/blob/main/docs/adr/0026-separate-generated-permission-policy.md),
-[permission policy](../design/file-permission-policy.md).
+[permission policy](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#architecture-file-permission-policy).
 
 See
-[specification 4.10](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#410-explicit-file-permission-selection).
+[specification 4.10](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#410-explicit-file-permission-selection).
 [Qualified file effects and journal/recovery](0033-qualified-file-execution-and-journals.md)
 are implemented as opt-in library capabilities. Combined lifecycle state,
 activation and hosted qualification remain pending; M1-A2, M1-A3 and M1 remain
 incomplete.
 
 Satisfies:
-[specification §4.10](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#410-explicit-file-permission-selection).
+[specification §4.10](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#410-explicit-file-permission-selection).
 Related decisions: AD-0026.

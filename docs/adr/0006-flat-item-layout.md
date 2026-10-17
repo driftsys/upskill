@@ -4,7 +4,7 @@
 
 ## Context
 
-[ADR-0002](./0002-portable-content-format.md) established the SSOT on-disk
+[ADR-0002](0002-portable-content-format.md) established the SSOT on-disk
 contract, with the illustrative layout:
 
 ```text
@@ -14,11 +14,11 @@ contract, with the illustrative layout:
 └── agents/<name>/AGENT.md
 ```
 
-[`docs/format-spec.md` §2.1](../specification/format-spec.md) and the lint
-discovery walk ([`src/lint.rs:181`](../../src/lint.rs)) both treat the kind
-subdirectories (`rules/`, `skills/`, `agents/`) as required. ADR-0002's prose
-calls the diagram "illustrative, not normative," but the spec and implementation
-enforce it as normative — a long-standing inconsistency.
+[`docs/format-spec.md` §2.1](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
+and the lint discovery walk ([`src/lint.rs:181`](../../src/lint.rs)) both treat
+the kind subdirectories (`rules/`, `skills/`, `agents/`) as required. ADR-0002's
+prose calls the diagram "illustrative, not normative," but the spec and
+implementation enforce it as normative — a long-standing inconsistency.
 
 Two observations make the kind subdirs net-negative:
 
@@ -151,12 +151,13 @@ a `git mv` per item.
 
 ## References
 
-- Predecessor: [ADR-0002](./0002-portable-content-format.md) §
-  "Directory-per-item layout, symmetric across kinds" — superseded by this ADR
-  for the kind-subdir aspect; other ADR-0002 decisions (frontmatter shape,
-  vocabulary, metadata, passthroughs, directives, bundle-as-manifest, schema
-  versioning, body conventions) remain in force.
-- Authoritative spec: [`docs/format-spec.md`](../specification/format-spec.md)
+- Predecessor: [ADR-0002](0002-portable-content-format.md) § "Directory-per-item
+  layout, symmetric across kinds" — superseded by this ADR for the kind-subdir
+  aspect; other ADR-0002 decisions (frontmatter shape, vocabulary, metadata,
+  passthroughs, directives, bundle-as-manifest, schema versioning, body
+  conventions) remain in force.
+- Authoritative spec:
+  [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
 - Epic: [#62](https://github.com/driftsys/upskill/issues/62) — v0.4 Registry
   standard
 - Agent Skills open standard: <https://agentskills.io>
