@@ -1,0 +1,295 @@
+{
+  "base": "f54c457a30473511b66349ab4d95f30ae62d654b",
+  "scope": "Guarded original-state backup executor prerequisite; lifecycle integration and native qualification remain separate.",
+  "artifacts": [
+    {
+      "path": "upskill-gate5-application-baseline.log.gz",
+      "sha256": "726d1450e4a3a6d40476b42c2e7a57aca704e07d631f5608a6bdffffaa9335a8",
+      "uncompressed_sha256": "5886e0d4758db9b17066e666db50e0c71461b8d6409ce08a3d71938fa7e4e625"
+    },
+    {
+      "path": "upskill-gate5-backup-red.log.gz",
+      "sha256": "91d4d90243d9bdd926be75546ff5f9e7eb1a37d83565172b6d7abe93f3bd98e2",
+      "uncompressed_sha256": "cd96615b55e7b3d59ec9d8090617959893fb893763cccbb5cb239c52b107456d"
+    },
+    {
+      "path": "upskill-gate5-backup-behavior-red.log.gz",
+      "sha256": "5a9f47fc1ecdd9bf5eb4298273278933d59bd0dc4534912aca13db89afa400e2",
+      "uncompressed_sha256": "51cb5476b0129e9500d4cbb95006e48c0047049dbc56ea7b4ae6c2945e4f74fd"
+    },
+    {
+      "path": "upskill-gate5-backup-green.log.gz",
+      "sha256": "f8d423c345b40aedbefe56757cc7465016e4d2464bd963d3f7cb326b3e45f563",
+      "uncompressed_sha256": "14d129311fc30ce70679a2482e9fc0843946128e2f57700112c9162878cf873e"
+    },
+    {
+      "path": "upskill-gate5-backup-executor.log.gz",
+      "sha256": "6c2657262961b73c64e4d3fea356f903a33a1aff7121032ca307134e345d20ce",
+      "uncompressed_sha256": "ad8630a8d5e0a829ec8270794891e5e8c01db1777bfe532640e1aeb64f330dfc"
+    },
+    {
+      "path": "upskill-gate5-backup-process.log.gz",
+      "sha256": "0cbaab4433bbdb3d0a4feff156067e2c78a5f1babfe23b0de7e7e4d2f6fd7907",
+      "uncompressed_sha256": "34bf308623d40e076f119a6ea75ed1f5aaf171e392051d01026a8e122bbb76ee"
+    },
+    {
+      "path": "upskill-gate5-backup-clippy.log.gz",
+      "sha256": "97ccdf608efb82e94d3cc882e22990b1ac84be7d1a4f334c8a23049e215f328d",
+      "uncompressed_sha256": "10ac07f519cf65c435280ff2e0cbba145381170d84e0cc0f53fe2b75fc39cc83"
+    },
+    {
+      "path": "upskill-gate5-backup-msrv.log.gz",
+      "sha256": "57c3e3e5c0d5eaf8ee5bcd67581e8ec753702ff4a3db29f538afe7e82ccdee70",
+      "uncompressed_sha256": "5140e3e0b382f9adb57c80ac1e38c31b1ed20fc0b53889992e247fdf5cf8bf31"
+    },
+    {
+      "path": "upskill-gate5-backup-verify.log.gz",
+      "sha256": "71a4050c457228569a0b95a69a08a9cf26ba04b0114ebbefc4a479b953262f69",
+      "uncompressed_sha256": "603f10133e14fcdcdb83c4ad6837d5544726bcc8a011398b33aa08a961823447"
+    },
+    {
+      "path": "upskill-gate5-backup-final-verify.log.gz",
+      "sha256": "08ffa4d56b0eb6dddfe3872f677623dd30eed70256ae5e1ca62b686a9ff7c748",
+      "uncompressed_sha256": "75b0578f98f8f02e03658ca8c441d79becaed3c64b0f596af529eafd53780397"
+    },
+    {
+      "path": "upskill-gate5-backup-control-publication.log.gz",
+      "sha256": "5bbc98379b3cda93841363a1abe54fab5e175820ae7971f587dca4ca6dee7867",
+      "uncompressed_sha256": "ba2668813d545c1822f8ed428fe7f56479b3fa82218b93a59afd13668279791c"
+    },
+    {
+      "path": "upskill-gate5-backup-control-policy.log.gz",
+      "sha256": "46c012860f5744677f5224b34dcd1e84a3de09a8f49ed8a4c5fba92f140825ef",
+      "uncompressed_sha256": "baa33528fc794ac3e26e3014a35589947edd24a0910e86e8885744a766066535"
+    },
+    {
+      "path": "upskill-gate5-backup-control-sync.log.gz",
+      "sha256": "c6c9ee1adbd5027b7f9162e20dd38cbae0cfcceec8c8b103875e2c930aeb78c3",
+      "uncompressed_sha256": "fa27cfd7a09ba24e0ac00357d71619217314970de162858efba6293e3e3c4374"
+    },
+    {
+      "path": "upskill-gate5-backup-restored.log.gz",
+      "sha256": "e9539339e3f3d6291435c11230926a2120242051a94f17c6a3dc54e7822ebc5e",
+      "uncompressed_sha256": "5e325b5f9ac767001e20b3c163482797cf5ee96444afa8be3dfc4892fd26f6a3"
+    },
+    {
+      "path": "progress.md.gz",
+      "sha256": "148a2fe12b6c2358c38c8a2e724adfba916305df4467b09dc2508905e4211446",
+      "uncompressed_sha256": "4da7c5847628e82b3d9440ad18dfa59c101be53bae8839273b17ca0e3fe1dff5"
+    },
+    {
+      "path": "independent-review.txt.gz",
+      "sha256": "c07cd4f717bc0e500997ccd1826f65cbe8cc5e917b41cc052fa8613ba3f0b993",
+      "uncompressed_sha256": "8103ea6a0c241310b5534b83be2f1e1e415709fa05151d383aa6840ed16ada89"
+    },
+    {
+      "path": "upskill-gate5-backup-delivery-verify.log.gz",
+      "sha256": "1221a5bd004cb2c7869c08d23b9a9df7c44ee02c8e4d52061d24cc39e7b28d65",
+      "uncompressed_sha256": "0a5674f23669ff0f6c80110bfeb9ff9121944856ec4bd1531207102a3917d0df"
+    },
+    {
+      "path": "upskill-gate5-backup-docs-check.log.gz",
+      "sha256": "e360b14af887dac023169d9d8cc99da982b6b0fe7f1f37e800260d2e05d3e5ae",
+      "uncompressed_sha256": "14a66f1c651025d79051e41ea272c24442e3e0271d021cd96b5cc371b8e00d58"
+    },
+    {
+      "path": "original-archived-spec.md.gz",
+      "sha256": "f039612544406b39262da28e4b75c1e93dd28ed3a928a1a0910720f3cd367538",
+      "uncompressed_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-green.log.gz",
+      "sha256": "3cdd29c051d0cc593c438f1186f300e7eea7149e8c2ab3c6e05a984c4c1680e5",
+      "uncompressed_sha256": "9ef2ef7eb9bd3462d72f92bab7c38a7525135fc6193ec336d17745a86b042389"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-restored.log.gz",
+      "sha256": "eeae7c3711bb626116e17436bd67689600c8e24cf9714df11e663bace967f997",
+      "uncompressed_sha256": "745c52708329012a5ecdfbef2adda67292adcffb51ab170b774c7bad7a839722"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-digest.log.gz",
+      "sha256": "de7d261aa9ae97e4fe63784b601d42f033070c451c6451cbd7f93d546ad44cd9",
+      "uncompressed_sha256": "8beb857d2cc111bcc0553f87f48f37a54092da945639ecbf039b739ec8136289"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-length.log.gz",
+      "sha256": "4fa67f2c523524bdba6250c2ef2531143e1b1cca94125562a341ff75e4003b9e",
+      "uncompressed_sha256": "03c7fb791ec5f6c6cd46a9b04871262f5736be9a6d3ecd2ca05a803e72e102a8"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-sync-body.log.gz",
+      "sha256": "6616bb9db702e250dd66092e1bbbe58702666445e7f6c4307945a93e55e2bc1a",
+      "uncompressed_sha256": "7e74fa315733479c4e19f7dad88dc3b6d836bd9bb706dd36cceb745b7d7342a6"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-mode.log.gz",
+      "sha256": "47e61fee6922c45ed6d06f589cc7b6d27c7643ca0592ef12e157cb0e2b1cf7b6",
+      "uncompressed_sha256": "1e2476a8d022a2abbb40de74324031e3ae4edf3ab9166450b8cceb5179f2fc41"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-verify.log.gz",
+      "sha256": "776aca91c9fdba0d97d1a6c5d1942fee36c3ee94bc1142d67fc9503a3ea9c7b5",
+      "uncompressed_sha256": "8943806be2cedb22b1e63418042cfc75e0a20fde5622da6bb97c1613df705c7c"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-clippy.log.gz",
+      "sha256": "4affe363a82a8d10150b5d78b4894e1a93a54dad843e7ff3f199cc1be654acf8",
+      "uncompressed_sha256": "8d751dc067467519a39641d3223b0706233283eabd86f07c04799d47ae18a1b1"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-msrv.log.gz",
+      "sha256": "601cce31b3837dccf56c7fc55c173116ea0bb2cc1952a92e6c232e1f9322075a",
+      "uncompressed_sha256": "fa930a1c12f740fa9e37090e345f5935d25b1dc07b2483ad246b6733cd884a88"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-control-private-mode.log.gz",
+      "sha256": "5ba9b732071b37dfab442d1f3a2fde502ac711d8dbb23bb9ac09261888b9e40b",
+      "uncompressed_sha256": "8a07c71eade1b9e363ba48ef585d71aaf4d5fcf2dbcb313cecabb3ee4d739f0e"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-control-source-forwarding.log.gz",
+      "sha256": "75a403656692bdb327ffae43549f77d1a3834fc2dbc7f47e74b8a58516017b77",
+      "uncompressed_sha256": "3f632f4e961a99655886eaf01d9abe52308b83d9c8d8abaf1dd3f388b3ed9aa3"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-restored.log.gz",
+      "sha256": "074fc71887fdb771b4a492ea96c24c3a62eaae4a21dfa7aca70e3af41a9c7b76",
+      "uncompressed_sha256": "4789c81f5aa3fb03d03dd14359bb836431e609512d70060916cc3fa8a3ca79df"
+    },
+    {
+      "path": "upskill-gate5-backup-command-provenance.log.gz",
+      "sha256": "1180f1335c75bf2b82942e22a7d8f586da268f135666d9dacff61175ac5791f7",
+      "uncompressed_sha256": "da829b9941b9a53beb6f22f2a9c20e1413eb812eee447aa13142aba7f6cf110c"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-verify.log.gz",
+      "sha256": "31e1fbfc8fb7b5d4d68153ad476f818b114ab77bfcc3483551dcf2de6bf96724",
+      "uncompressed_sha256": "818f9f62b531020539ac36fc9d99941fe939d48069318ce04805752ce31332c4"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-command-provenance.log.gz",
+      "sha256": "a0f480babadcfec87c53df3bcfcb99e02c9df21540273961ba1a316721140dcf",
+      "uncompressed_sha256": "0b68d20b38228d5d22511f8075f324a690d2e38d81c3a824371b309a04521b34"
+    },
+    {
+      "path": "upskill-gate5-backup-positive-source-control.log.gz",
+      "sha256": "9ef4a42a27f20008b6751ea0e0161dbbcb7c610e0fb956842e5b73085d0ccd0a",
+      "uncompressed_sha256": "c7c3727aedd1ec59398c4358f311ca5b7eb17c5859ad4aede235b1d04f7e722a"
+    },
+    {
+      "path": "upskill-gate5-backup-positive-source-restored.log.gz",
+      "sha256": "266c3c4a34937af3e26e487af187f72791d1d54f8b14f6605834b87d9d694b32",
+      "uncompressed_sha256": "3ef8f32bc1962c4fbe65a0e8508b3bda901c070468e62bf459dd1701daec534f"
+    },
+    {
+      "path": "upskill-gate5-backup-final-source-verify.log.gz",
+      "sha256": "ab5c10b1177eacb17cd71a786beb6bccc28a36b3ea2926a5d8931bfc51de7874",
+      "uncompressed_sha256": "73e797e40bd6a461a01b466dca3eb5718508056a5ec2c8f36bc4fd7428361a35"
+    },
+    {
+      "path": "upskill-gate5-backup-final-source-command-provenance.log.gz",
+      "sha256": "a0b56c24d1005a2966b52e8e66f2bbe277b48075353101d620820f74624f4014",
+      "uncompressed_sha256": "3c410ee4dace5d1985d758263517fd47ff09b1e152a6f2d627de62f3c4fefaec"
+    }
+  ],
+  "sources": {
+    "src/filesystem/execution/backend.rs": "9dacfa2d712c666a2a39fa139b9d6ddad68a30c2878572143071e77ff9250701",
+    "src/filesystem/execution/journal.rs": "ae21848b02ee882c5b698dbec2b382485574869720764007f21dbe34e55c1f52",
+    "src/filesystem/execution/run.rs": "410c061e72f07caf5b5414f690a705d0246de3063448417d917faf0d5f5e555b",
+    "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
+    "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
+    "src/filesystem/execution/backup_tests.rs": "1b4664ac576013189758d139ef5ba577508820ebdfd584f6e09fce6e0be96a31",
+    "tests/execution_backup.rs": "c22cd16ba4dbe6c8fedd0e5c3f6b3260875464c58c7f778a3fbade730a2544df"
+  },
+  "controls": {
+    "publication": 101,
+    "policy": 101,
+    "sync": 101,
+    "quick-original-digest": 101,
+    "quick-original-length": 101,
+    "quick-sync-body": 101,
+    "quick-original-mode": 101,
+    "pass1-private-mode": 101,
+    "pass1-source-forwarding": 101,
+    "reject-all-captured-sources": 101
+  },
+  "verification": {
+    "baseline": 0,
+    "clippy": 0,
+    "rust_1_85": 0,
+    "focused_restored": 0,
+    "first_verify": "1244 Rust tests pass; docs links fail",
+    "second_verify": "1244 Rust tests pass; missing evidence manifest and book chapter fail",
+    "final_verify": 0,
+    "final_tests": {
+      "passed": 1244,
+      "failed": 0,
+      "ignored": 1,
+      "suite_count": 69,
+      "counting": "Count final summary for each Cargo suite; exclude duplicated nested subprocess summaries."
+    },
+    "docs_check": 0,
+    "fixed_verify": 0,
+    "fixed_clippy": 0,
+    "fixed_rust_1_85": 0,
+    "pass1_fixed": {
+      "verify": 0,
+      "all_target_clippy": 0,
+      "locked_rust_1_85": 0,
+      "passed": 1245,
+      "failed": 0,
+      "ignored": 1,
+      "cargo_suites": 69
+    },
+    "final_captured_source": {
+      "verify": 0,
+      "all_target_clippy": 0,
+      "locked_rust_1_85": 0,
+      "passed": 1245,
+      "failed": 0,
+      "ignored": 1,
+      "cargo_suites": 69
+    }
+  },
+  "archive": {
+    "original_spec_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447",
+    "formatted_reading_copy_sha256": "5e97182bec179b1634d30d8a1cf37a1bc90b50f3ffae3dbee4ec91a0b217a24e",
+    "original_plan_sha256": "e59a48157664cf1731a62bc1e3123e79d444cf28fa6716beff398f059784af5b"
+  },
+  "initial_sources": {
+    "src/filesystem/execution/backend.rs": "9dacfa2d712c666a2a39fa139b9d6ddad68a30c2878572143071e77ff9250701",
+    "src/filesystem/execution/journal.rs": "ae21848b02ee882c5b698dbec2b382485574869720764007f21dbe34e55c1f52",
+    "src/filesystem/execution/run.rs": "410c061e72f07caf5b5414f690a705d0246de3063448417d917faf0d5f5e555b",
+    "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
+    "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
+    "src/filesystem/execution/backup_tests.rs": "099d32de7b4ce93fb29c5057fe517096f5c748f7dbc7b33b38e86fa178ef52cd",
+    "tests/execution_backup.rs": "906599053fdf3f6bf26d921168d0411270820057352abb1fce20ce084dbf4245"
+  },
+  "initial_reviewed_head": "fcccf26fba1863df9728a33c2045c85863fc9bf9",
+  "quick_review": {
+    "scope": "fcccf26 only; advisory docs/tests seats; no refuters or fix review",
+    "docs": "three Minor qualifiers corrected",
+    "tests": "two Important assertion gaps corrected; ordinary original-State mode covered",
+    "after_fixes": "four additional isolated controls assertion-fail; restored focused4+integration5 pass"
+  },
+  "pass1_review": {
+    "head": "0bf6c8bc9d9a177d973a5dc057c7ae297a135376",
+    "findings": {
+      "F1": "Private-mode guard deletion detected with generic-valid0700 corruption.",
+      "F2": "Dropping source forwarding detected by stale-source backup acceptance."
+    },
+    "fixed_runtime": "unchanged",
+    "restored_focused": {
+      "internal": 4,
+      "integration": 6
+    },
+    "final_verification": 0
+  },
+  "positive_source_fix": {
+    "requirement": "Accept unchanged nonempty captures; reject stale captures before effects.",
+    "focused_integration": 6,
+    "runtime": "unchanged",
+    "final_verification": 0
+  }
+}

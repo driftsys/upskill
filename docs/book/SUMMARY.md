@@ -29,3 +29,4 @@
 - [Recovery checkpoint decision](../adr/0032-model-recovery-checkpoints-before-effects.md)
 - [Qualified file execution and recovery](../design/qualified-file-execution.md)
 - [Qualified file execution decision](../adr/0033-qualified-file-execution-and-journals.md)
+- [Create-only backup journal decision](../adr/0037-require-create-only-backup-journals.md)

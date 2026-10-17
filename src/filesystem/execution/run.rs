@@ -11,6 +11,43 @@ use crate::operations::recovery::{
 use anyhow::{Context, Result, ensure};
 
 impl QualifiedScope {
+    /// Apply an operation after preserving its exact original state in a private backup.
+    pub fn apply_operation_with_backup(
+        &self,
+        guard: &ScopeWriterGuard<'_>,
+        sources: &[&SourceSnapshot<'_>],
+        request: ExecutionRequest,
+        backup: FileLocation,
+    ) -> Result<ExecutionReport> {
+        guard.require_scope(self)?;
+        let mut request = request;
+        let original = request
+            .state
+            .before
+            .as_ref()
+            .context("backup requires observed original state")?;
+        let after = crate::files::plan::FileValue {
+            bytes: original.bytes.clone(),
+            mode: Some(0o600),
+        };
+        request.files.insert(
+            0,
+            PlannedFile {
+                location: backup.clone(),
+                before: None,
+                after: Some(after.clone()),
+            },
+        );
+        request::validate(&request)?;
+        let observed = self.observe_destinations(std::slice::from_ref(&backup))?;
+        let value = &observed.observations()[0].value;
+        ensure!(
+            value.is_none() || value.as_ref() == Some(&after),
+            "existing backup differs from exact original bytes or private mode"
+        );
+        request.files[0].before = value.clone();
+        self.apply_prepared_operation(guard, sources, request, true)
+    }
     /// Apply a caller-authorized complete file plan under its matching scope guard.
     /// This opt-in API does not establish ownership or activate CLI commands.
     pub fn apply_operation(
@@ -18,6 +55,15 @@ impl QualifiedScope {
         guard: &ScopeWriterGuard<'_>,
         sources: &[&SourceSnapshot<'_>],
         request: ExecutionRequest,
+    ) -> Result<ExecutionReport> {
+        self.apply_prepared_operation(guard, sources, request, false)
+    }
+    fn apply_prepared_operation(
+        &self,
+        guard: &ScopeWriterGuard<'_>,
+        sources: &[&SourceSnapshot<'_>],
+        request: ExecutionRequest,
+        backup: bool,
     ) -> Result<ExecutionReport> {
         guard.require_scope(self)?;
         request::validate(&request)?;
@@ -55,7 +101,12 @@ impl QualifiedScope {
             Journal::load(self)?.is_none(),
             "recover existing execution before starting another operation"
         );
-        drive(self, guard, Journal::create(self, &request)?)
+        let journal = if backup {
+            Journal::create_with_backup(self, &request)?
+        } else {
+            Journal::create(self, &request)?
+        };
+        drive(self, guard, journal)
     }
     /// Recover validated durable file receipts, preserving unexpected observations.
     pub fn recover_operation(
@@ -168,11 +219,17 @@ fn drive(
                                 before: observations[index].value.clone(),
                                 after: journal.payload(index)?,
                             };
-                            backend::apply(scope, &action, index)
+                            if journal.disk.actions[index].create_only {
+                                backend::apply_create_only(scope, &action, index)
+                            } else {
+                                backend::apply(scope, &action, index)
+                            }
                         }
                         RecoveryStep::Acknowledge { index }
                         | RecoveryStep::CheckpointOnly { index } => {
-                            if matches!(step, RecoveryStep::Acknowledge { .. }) {
+                            if matches!(step, RecoveryStep::Acknowledge { .. })
+                                || journal.disk.actions[index].create_only
+                            {
                                 backend::sync_post(
                                     scope,
                                     &locations[index],
