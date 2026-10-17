@@ -175,3 +175,21 @@ changes or pending intent. Independent controls deleting Git revalidation and
 making repeated add a successful no-op both failed the strengthened assertions.
 Duplicate target rejection and complete two-source add/update/remove are also
 asserted. These controls do not replace final hosted qualification or review.
+
+## Integrated delivery checkpoint
+
+The final branch includes the captured adapter's sixteen examples and the
+orchestration suite's twelve examples: the five focused suites contain 56 tests.
+Full integrated verification passed in
+`/private/tmp/upskill-gate5-integrated-verify.log`. The subsequent parent change
+only reverses supplied contract order in the new permission fixture; its sixteen
+adapter tests and Rust 1.85 check passed again, with no production-code change.
+The final parent-integrated branch's verification is recorded in
+`/private/tmp/upskill-gate5-delivery-verify.log` and its Rust 1.85 check in
+`/private/tmp/upskill-gate5-delivery-msrv.log`.
+
+This note records pre-merge local checkpoints. The reviewed pull requests and
+MVP epic #283 carry the exact hosted-head and merge evidence. Gate 5 delivery
+requires those checks and merges; no local result activates production schema 2
+or establishes native Codex discovery. Stage residue #316 and advisory debt
+#313, #311 and #309 remain tracked separately.
