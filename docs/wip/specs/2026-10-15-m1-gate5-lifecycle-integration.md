@@ -177,3 +177,15 @@ The task is complete only after the full acceptance suite, `just fmt`,
 `just verify`, Rust 1.85 evidence, hosted CI, and independent task/final review
 pass. Completion prepares gate 5; it does not claim that M1 is activated or that
 #284's prerequisite has passed until gate 6 is also complete.
+
+## Selected source prerequisite
+
+The opt-in applying source prerequisite now resolves explicit local/Git rule
+roots, retains qualified source evidence and actual checkout commits, and
+compiles complete desired sets with matching owner contracts. Its
+[contract and design](../../topics/0003-sources.md#selected-lifecycle-rule-sources)
+and [validation limits](../../technotes/m1-gate5-sources-validation.md) are
+recorded durably; its bounded
+[plan is archived](../../archive/plans/2026-10-18-lifecycle-sources.md). This
+completes source capture orchestration only. Discovery, applying command
+adapters, complete Gate 5 acceptance and Gate 6 activation remain pending.
