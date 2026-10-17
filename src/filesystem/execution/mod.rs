@@ -62,6 +62,11 @@ mod process_tests;
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 impl crate::filesystem::QualifiedScope {
+    /// Journal inspection is explicitly unsupported on this operating system.
+    pub fn has_pending_operation(&self) -> anyhow::Result<bool> {
+        anyhow::bail!("qualified journal inspection is unsupported on this operating system")
+    }
+
     /// Backup execution is explicitly unsupported on this operating system.
     pub fn apply_operation_with_backup(
         &self,

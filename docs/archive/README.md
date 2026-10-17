@@ -715,3 +715,25 @@ The [compatibility inventory](../compatibility.json) records 223 historical
 repository anchors and 235 captured asset hashes from the parent revision.
 Documentation regression checks reject unreferenced anchor removal and changed
 license or provenance bytes; the inventory is enforced by `just docs-check`.
+
+## Read-only lifecycle inspection
+
+Source path: `docs/wip/plans/2026-10-17-lifecycle-inspection.md`. The bounded
+[inspection plan](plans/2026-10-17-lifecycle-inspection.md) retains its exact
+original bytes, including unchecked task boxes. Its historical relative spec
+link resolves to the active Gate 5 umbrella at
+`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
+
+Durable successors: the
+[inspection contract and design](../topics/0005-lifecycle-planning.md#read-only-lifecycle-inspection)
+and [validation record](../technotes/m1-lifecycle-inspection.md). The local
+implementation is based on `f61afbf`; ten integration examples, the read-only
+journal unit test, `just msrv-check`, and full `RUSTC_WRAPPER= just verify`
+passed. The full verification rerun outside the sandbox passed after initial
+sandbox process tests were denied permissions. This is local completion
+evidence, not a merge or hosted qualification claim.
+
+Only this completed plan is archived. The Gate 5 umbrella remains active:
+source-resolution orchestration, preview, applying command adapters and complete
+lifecycle acceptance remain pending. Production commands and schema 1 stay
+unchanged. All other WIP retains its original paths and unresolved disposition.

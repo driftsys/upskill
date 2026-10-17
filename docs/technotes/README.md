@@ -41,6 +41,7 @@ snapshot; a stable name does not imply that external research remains current.
 - [Gate 5 upsert validation — 2026-10-16](m1-gate5-upsert-validation.md)
 - [Per-owner contract validation](m1-owner-contracts-validation.md)
 - [Explicit shared-output reconciliation validation](m1-shared-reconciliation-validation.md)
+- [Read-only lifecycle inspection validation](m1-lifecycle-inspection.md)
 
 Validation records retain their individual revision and platform limits. They
 are not proof of production activation or complete lifecycle qualification. Keep
