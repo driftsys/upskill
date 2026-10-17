@@ -9,6 +9,12 @@ Accepted choices belong in [ADRs](../adr/README.md); contracts belong in
 - [Agent customization research, 2026-10-11](2026-10-11-agent-customization/README.md):
   six first-class design targets, eight customization categories, official
   documentation and schema evidence.
+- [Customization adapter capability refresh, 2026-10-14](2026-10-14-customization-adapter-evidence.md):
+  six-client mapping, Gemini/Cursor capabilities, VS Code runtime boundaries,
+  and source-pinned Superpowers packaging examples.
+- [Updater plugin startup probes, 2026-10-14](2026-10-14-updater-plugin-probes.md):
+  partial installed-client evidence for the first updater entrypoints in MVP
+  issue #283.
 - [RIDL documentation lifecycle comparison](2026-10-11-agent-customization/documentation-refactor.md):
   the investigation behind this repository's documentation organization.
 

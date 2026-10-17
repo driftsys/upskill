@@ -3,6 +3,13 @@
 Date: 2026-10-11. Status: **Proposed delivery roadmap**. Baseline: `b866f5e` (PR
 #250); no adapter implementation is included here.
 
+Sequencing update (2026-10-14): the user now requests four initial clients and
+an updater/content/plugin MVP before tools, permissions, hooks and MCP
+management. See the [new roadmap](2026-10-14-customization-adapter-roadmap.md).
+The milestones below retain the earlier proposal for context; use the newer
+roadmap for release order. Existing foundation and lifecycle requirements remain
+inputs to that work.
+
 ## Outcome and scope
 
 Make upskill a reliable authoring, installation, and maintenance tool for
