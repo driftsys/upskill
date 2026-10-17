@@ -166,6 +166,10 @@ discovery, reload behavior, project/user scope, offline and interrupted updates,
 and startup overhead for each supported runtime profile. Initial harmless probes
 do not qualify automatic maintenance or establish owned-skill support.
 
+Rule qualification must cover team/user overrides, scope, duplicate activation,
+and behavior through resumed sessions and context compaction for each supported
+runtime profile.
+
 Client-native plugin installation, updates, disablement and removal require
 separate package/catalog evidence. Existing native restrictions remain
 authoritative; later permission management does not postpone respecting them.
