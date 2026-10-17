@@ -171,6 +171,26 @@
       "path": "upskill-gate5-backup-pass1-command-provenance.log.gz",
       "sha256": "a0f480babadcfec87c53df3bcfcb99e02c9df21540273961ba1a316721140dcf",
       "uncompressed_sha256": "0b68d20b38228d5d22511f8075f324a690d2e38d81c3a824371b309a04521b34"
+    },
+    {
+      "path": "upskill-gate5-backup-positive-source-control.log.gz",
+      "sha256": "9ef4a42a27f20008b6751ea0e0161dbbcb7c610e0fb956842e5b73085d0ccd0a",
+      "uncompressed_sha256": "c7c3727aedd1ec59398c4358f311ca5b7eb17c5859ad4aede235b1d04f7e722a"
+    },
+    {
+      "path": "upskill-gate5-backup-positive-source-restored.log.gz",
+      "sha256": "266c3c4a34937af3e26e487af187f72791d1d54f8b14f6605834b87d9d694b32",
+      "uncompressed_sha256": "3ef8f32bc1962c4fbe65a0e8508b3bda901c070468e62bf459dd1701daec534f"
+    },
+    {
+      "path": "upskill-gate5-backup-final-source-verify.log.gz",
+      "sha256": "ab5c10b1177eacb17cd71a786beb6bccc28a36b3ea2926a5d8931bfc51de7874",
+      "uncompressed_sha256": "73e797e40bd6a461a01b466dca3eb5718508056a5ec2c8f36bc4fd7428361a35"
+    },
+    {
+      "path": "upskill-gate5-backup-final-source-command-provenance.log.gz",
+      "sha256": "a0b56c24d1005a2966b52e8e66f2bbe277b48075353101d620820f74624f4014",
+      "uncompressed_sha256": "3c410ee4dace5d1985d758263517fd47ff09b1e152a6f2d627de62f3c4fefaec"
     }
   ],
   "sources": {
@@ -180,7 +200,7 @@
     "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
     "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
     "src/filesystem/execution/backup_tests.rs": "1b4664ac576013189758d139ef5ba577508820ebdfd584f6e09fce6e0be96a31",
-    "tests/execution_backup.rs": "c9c3119a5d5c3b7186a0174dafd5f524b349a5b9b937f3cf220e42febcf05769"
+    "tests/execution_backup.rs": "c22cd16ba4dbe6c8fedd0e5c3f6b3260875464c58c7f778a3fbade730a2544df"
   },
   "controls": {
     "publication": 101,
@@ -191,7 +211,8 @@
     "quick-sync-body": 101,
     "quick-original-mode": 101,
     "pass1-private-mode": 101,
-    "pass1-source-forwarding": 101
+    "pass1-source-forwarding": 101,
+    "reject-all-captured-sources": 101
   },
   "verification": {
     "baseline": 0,
@@ -213,6 +234,15 @@
     "fixed_clippy": 0,
     "fixed_rust_1_85": 0,
     "pass1_fixed": {
+      "verify": 0,
+      "all_target_clippy": 0,
+      "locked_rust_1_85": 0,
+      "passed": 1245,
+      "failed": 0,
+      "ignored": 1,
+      "cargo_suites": 69
+    },
+    "final_captured_source": {
       "verify": 0,
       "all_target_clippy": 0,
       "locked_rust_1_85": 0,
@@ -254,6 +284,12 @@
       "internal": 4,
       "integration": 6
     },
+    "final_verification": 0
+  },
+  "positive_source_fix": {
+    "requirement": "Accept unchanged nonempty captures; reject stale captures before effects.",
+    "focused_integration": 6,
+    "runtime": "unchanged",
     "final_verification": 0
   }
 }

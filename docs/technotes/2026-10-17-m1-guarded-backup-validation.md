@@ -65,7 +65,7 @@ additional review over the fixes. Four additional controls independently removed
 original digest binding, original length binding, the backup sync call while
 retaining its checkpoint, and fixed private backup mode. Each compiled and
 assertion-failed; exact source was restored and all nine focused examples
-passed. Nine controls are retained in total, including the later full-review
+passed. Ten controls are retained in total, including the later full-review
 cases. The archived Markdown spec is a formatted reading copy; its exact
 original bytes are retained as compressed evidence because staged stdin
 formatting rewraps Markdown independently of file-ignore rules.
@@ -111,3 +111,15 @@ and one ignored subprocess entrypoint; documentation checks and build passed.
 All-target Clippy and locked Rust 1.85 checks passed with recorded invocations.
 The exact fix-diff review and hosted delivery remain separate gates; no native
 or lifecycle activation is claimed.
+
+The commit-level quick test check requested the positive captured-source case.
+The same acceptance example now covers unchanged and stale captures. A control
+rejecting every nonempty source slice compiled and assertion-failed; restored
+runtime code passed all six integration examples. This is the tenth retained
+control. The final fix-diff review includes both captured-source outcomes.
+
+Final captured-source verification passed `just verify` with 1,245 distinct
+tests across 69 Cargo suites, zero failures and one ignored subprocess
+entrypoint. Documentation checks and build passed. The final source-bound
+transcript records successful all-target Clippy and locked Rust 1.85 checking
+with versions, flags, exit codes and the final test-source hashes.
