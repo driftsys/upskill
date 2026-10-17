@@ -22,3 +22,8 @@ pub mod preview;
 pub mod sources;
 
 pub mod commands;
+
+pub mod orchestration;
+
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+mod acceptance_tests;

@@ -428,7 +428,7 @@ Source path: `docs/wip/plans/2026-10-15-m1-gate5-combined-state.md`. The
 [archived plan](plans/2026-10-15-m1-gate5-combined-state.md) retains its
 original bytes, including historical unchecked task boxes. Only this completed
 pure state slice is archived. Its broader
-[Gate 5 specification](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
+[Gate 5 specification](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
 remains active, as explicitly required by the approved slice-completion scope.
 All other WIP retains its prior disposition.
 
@@ -481,9 +481,9 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-reference-reconciliation.md`.
 The [archived plan](plans/2026-10-16-m1-gate5-reference-reconciliation.md)
 retains its historical relative scope link and unchecked boxes. Its current
 scope is the active
-[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md).
-Only this completed graph slice is archived; shared-owner lifecycle planning,
-guarded backup/recovery and observational adapters remain unfinished.
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md). Only this
+completed graph slice is archived; shared-owner lifecycle planning, guarded
+backup/recovery and observational adapters remain unfinished.
 
 Durable successors are
 [specification §4.15](../topics/0005-lifecycle-planning.md#415-authoritative-lifecycle-reference-reconciliation),
@@ -500,7 +500,7 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-retirement.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-retirement.md) preserves its exact raw
 bytes, including historical unchecked task boxes and relative spec links. The
 current umbrella remains at
-[Gate 5 lifecycle integration](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md);
+[Gate 5 lifecycle integration](specs/2026-10-15-m1-gate5-lifecycle-integration.md);
 the
 [M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
 also remains active. The approved scope archives only this completed plan. All
@@ -532,8 +532,7 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-selection.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-selection.md) preserves its exact raw
 bytes, including historical unchecked boxes and relative spec links. Current
 scope remains in the active
-[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md) and
-the
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) and the
 [M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 The approved completion scope archives only this selection plan; all other WIP
 retains its prior disposition.
@@ -560,8 +559,7 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-upsert.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-upsert.md) preserves its exact
 original bytes, including unchecked task boxes and historical relative spec
 links. The active scope remains in the
-[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md),
-the
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md), the
 [M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md),
 [captured-rule desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
 and
@@ -655,10 +653,10 @@ with hashes in the evidence manifest. The
 [plan](plans/2026-10-17-m1-guarded-backup.md) retains its original bytes. Both
 retain historical relative WIP references and unchecked delivery tasks. The
 archived spec's relative umbrella link is historical: resolve it as
-`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md` from the archived
-spec directory. The bounded local implementation is reconciled against the
-working code based on `f54c457a30473511b66349ab4d95f30ae62d654b`; this entry
-makes no merge or hosted qualification claim.
+`../specs/2026-10-15-m1-gate5-lifecycle-integration.md` from the archived spec
+directory. The bounded local implementation is reconciled against the working
+code based on `f54c457a30473511b66349ab4d95f30ae62d654b`; this entry makes no
+merge or hosted qualification claim.
 
 Durable successors:
 [specification §4.12](../topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery),
@@ -672,8 +670,8 @@ validation record distinguishes final verification and delivery gates.
 This opt-in library primitive preserves exact original bytes with create-only
 publication and forward recovery. It does not validate JSON or activate
 production lifecycle writes. The
-[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
-remains active: combined guarded application, observational adapters and native
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) remains
+active: combined guarded application, observational adapters and native
 qualification remain separate work. All other WIP remains at its original paths
 with unchanged bytes and unresolved disposition; only this named pair is
 archived.
@@ -724,7 +722,7 @@ Source path: `docs/wip/plans/2026-10-17-lifecycle-inspection.md`. The bounded
 [inspection plan](plans/2026-10-17-lifecycle-inspection.md) retains its exact
 original bytes, including unchecked task boxes. Its historical relative spec
 link resolves to the active Gate 5 umbrella at
-`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
+`../specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
 
 Durable successors: the
 [inspection contract and design](../topics/0005-lifecycle-planning.md#read-only-lifecycle-inspection)
@@ -747,7 +745,7 @@ Source path: `docs/wip/plans/2026-10-17-lifecycle-preview.md`. The bounded
 [preview plan](plans/2026-10-17-lifecycle-preview.md) retains its exact original
 bytes, including unchecked task boxes. Its historical relative spec link
 resolves to the active Gate 5 umbrella at
-`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
+`../specs/2026-10-15-m1-gate5-lifecycle-integration.md`.
 
 Durable successors: the
 [preview contract and design](../topics/0005-lifecycle-planning.md#read-only-lifecycle-preview)
@@ -759,11 +757,11 @@ ignored test; Rust 1.85 all-targets checking and independent review passed.
 These are local completion checks, not merged or hosted qualification evidence.
 
 Only this completed bounded plan is archived. The
-[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
-remains active: source-backed command orchestration and complete lifecycle
-acceptance remain pending. Captured applying adapters are implemented.
-Production commands and schema 1 stay unchanged. All other WIP retains its
-original paths and unresolved disposition.
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) is now
+archived after local combined acceptance. Captured adapters and source-backed
+orchestration are implemented; final delivery review, hosted CI and merge remain
+required. Production commands stay on schema 1 pending Gate 6. All other WIP
+retains its original paths and unresolved disposition.
 
 ## Selected lifecycle source resolution
 
@@ -796,3 +794,36 @@ and [validation note](../technotes/m1-captured-lifecycle-commands.md). The
 shared Gate 5 umbrella and completion lane remain active for source-backed
 command orchestration and full lifecycle acceptance. Production writes remain on
 schema 1 pending Gate 6 qualification.
+
+## Source-backed lifecycle commands and final acceptance
+
+The bounded [orchestration plan](plans/2026-10-18-lifecycle-orchestration.md)
+retains the source-backed command implementation record. Its durable successors
+are the lifecycle planning concern and
+[orchestration validation note](../technotes/m1-gate5-orchestration-validation.md).
+The [final acceptance plan](plans/2026-10-18-gate5-final-acceptance.md) records
+whole-lifecycle process testing; the
+[acceptance matrix](../technotes/m1-gate5-final-acceptance.md) preserves its
+results and limits, including staging-residue debt #316. The shared umbrella and
+completion lane remain active until final integration and delivery
+qualification. Production activation remains Gate 6 work.
+
+## Combined lifecycle delivery lane
+
+The completed raw
+[Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) and
+[completion plan](plans/2026-10-18-gate5-completion.md) retain their original
+bytes and historical status lines. Current contracts and evidence are in the
+[combined lifecycle topic](../topics/0005-lifecycle-planning.md#combined-owned-content-lifecycle-contract)
+and [final acceptance note](../technotes/m1-gate5-final-acceptance.md). Local
+full verification, Rust 1.85 and all ten acceptance criteria passed. Final
+delivery review, hosted CI and merge remain separate requirements. Production
+activation and native Codex qualification remain Gate 6.
+
+Historical links from archived records to the former WIP umbrella now resolve
+through this archive entry. Older per-slice pending-work prose records its
+original checkpoint; the final acceptance note is the current delivery
+authority. The archived spec SHA-256 is
+`7e8f1241a3e1e91fafee793e6e5f38c9a361bfc2e6ea198de2503bf7a7b7ae3a`; the archived
+completion plan SHA-256 is
+`816ac4d108884b6ccc8d76d5713363f92757c7211db49969ec44d17a556d248f`.

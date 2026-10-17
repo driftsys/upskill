@@ -113,7 +113,9 @@ filesystem or source-authenticity authority. The original upsert and public
 mixed planner retain affected multi-owner rejection;
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation)
 consumes agreement through a separate entrypoint. Production commands and schema
-1 are unchanged; Gate 5 remains incomplete. See the
+1 are unchanged. Combined lifecycle delivery evidence is recorded in the
+[Gate 5 acceptance note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md).
+See the
 [owner-contract design](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-lifecycle-owner-contracts)
 and
 [AD-0034](https://github.com/driftsys/upskill/blob/main/docs/adr/0034-record-explicit-owner-contracts.md).

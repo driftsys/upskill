@@ -179,7 +179,80 @@ available through an opt-in library boundary; command activation, client
 adapters and native qualification remain later work. See the
 [shared upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert-explicit-shared-upsert).
 
+### Combined owned-content lifecycle contract
+
+The opt-in library lifecycle creates ownership only through explicit new
+installation. Fresh and migrated add, update and remove preserve unrelated owned
+references and indexed tagged legacy/native rows without adopting legacy
+outputs. Unsupported or malformed retained rows remain visible. Selection that
+requires unsupported or ambiguous legacy work stops before effects; explicitly
+disjoint owned work can proceed.
+
+Complete selection and planning precede application. Changes to affected owned
+whole files or contribution regions conflict without partial application.
+Instruction edits retain manual bytes and untouched contributions. Removal
+changes only unchanged individually enumerated owned files whose final reference
+has ended; extra resources and unowned directories survive.
+
+List, doctor and preview remain observational: they preserve exact state bytes
+and create no migration, backup, journal or output changes. Applying operations
+reject changed state, source or destination evidence and require the matching
+qualified scope writer guard. A competing cooperating writer cannot apply in
+that scope concurrently. Backup and interruption requirements are recorded in
+[combined lifecycle backup and recovery](0008-execution-and-recovery.md#combined-lifecycle-backup-and-recovery).
+
+The source-backed rule adapter and supplied instruction adapter exercise this
+contract without activating production commands. Production writes remain schema
+1 until the Codex adapter and selector gate is complete. Local acceptance
+coverage and its limits are recorded in the
+[Gate 5 acceptance matrix](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md).
+The combined implementation passed local full `just verify`, explicit Rust 1.85
+checking and an independent audit of all ten acceptance criteria. Final delivery
+review, hosted CI and merge remain delivery requirements; this contract does not
+declare Gate 5 delivered.
+
 ## Architecture
+
+### Combined lifecycle integration
+
+The library connects one authoritative combined-state envelope, reference graph
+and owner contracts to captured compilation, complete desired sets and the mixed
+owned-artifact planner. It introduces neither an ownership sidecar nor a second
+writer or recovery protocol. The typed indexed legacy projection preserves each
+original row and source label; unknown original JSON fields remain in the exact
+schema-1 backup rather than the typed projection.
+
+For applying requests, the caller acquires the qualified scope writer guard. The
+captured session recovers any pending executor operation before source work;
+every recovery report stops the new request. Complete selection preflight then
+rejects unsupported selected work before resolution. Explicit rule-source
+orchestration retains local/Git captures, actual commits, compiler bindings and
+owner contracts throughout scoped preparation and consuming application.
+Caller-authorized instruction contributions use the captured adapter directly.
+Both paths observe affected destinations, plan the complete operation and
+revalidate exact state, source and destination evidence before applying through
+the same origin-bound qualified executor.
+
+Migrated origin binds the original schema-1 bytes to a restricted create-only
+backup. Fresh origin requires absent state and backup without creating imaginary
+history. Ordered executor actions persist file effects followed by combined
+state; recovery uses those persisted actions without fetching or recompiling
+sources. Inspection and captured preview are separate observational boundaries
+and never recover, fetch, migrate or write. See the component interfaces below
+and
+[origin-bound application](0008-execution-and-recovery.md#origin-bound-lifecycle-application).
+
+The
+[acceptance evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md)
+maps all ten criteria to executable examples, including 162 process
+interruptions and two late-edit reconciliation cases. Accounted staging residue
+remains explicit debt #316; this evidence does not prove hardware power-loss
+durability or native client discovery. Production command dispatch and
+`CURRENT_SCHEMA = 1` stay unchanged. Gate 6 must qualify the Codex instruction
+adapter and selector before production activation.
+
+Satisfies:
+[combined owned-content lifecycle contract](#combined-owned-content-lifecycle-contract).
 
 <a id="architecture-lifecycle-selection"></a>
 
@@ -245,8 +318,10 @@ enforce this outcome, complete desired-set/reference planning, qualified
 observation and execution. Source/scope selectors and flag/config/history
 precedence remain later work; production CLI selection behavior is unchanged.
 Production schema remains 1. The captured command adapter now connects this
-preflight to guarded application and executor recovery. Full Gate 5 acceptance,
-M1 activation and Codex qualification remain incomplete.
+preflight to guarded application and executor recovery. Local full Gate 5
+acceptance is recorded in the
+[acceptance matrix](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md);
+final delivery, M1 activation and Codex qualification remain pending.
 
 <a id="architecture-lifecycle-selection-components"></a>
 
@@ -624,9 +699,11 @@ These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
 operation-level conflict aggregation remains pending. The
 [captured command adapter](#captured-lifecycle-command-adapters) connects
-supplied source snapshots, qualified destinations and guarded application.
-Source resolution, source/scoped selectors, CLI precedence, instruction compiler
-adapters and full CLI integration remain. Captured
+supplied source snapshots, qualified destinations and guarded application. The
+[source-backed adapter](#source-backed-lifecycle-orchestration) now resolves
+explicit rule roots and applies invocation/configuration/recorded target
+precedence. Source/scoped selectors, instruction compiler adapters, registry
+discovery and production CLI integration remain. Captured
 [preview](#read-only-lifecycle-preview) is available as an opt-in supplied-value
 boundary. Read-only captured list/doctor and qualified scope inspection are
 available through the [inspection boundary](#read-only-lifecycle-inspection).
@@ -679,10 +756,12 @@ artifact roots, and unsupported schemas return errors. These observations sample
 the namespace and do not exclude concurrent writers or prove native discovery or
 source freshness. Qualified inspection is supported on Linux and macOS.
 
-Production command dispatch and schema 1 remain unchanged. Captured applying
-adapters are implemented below. Source-backed command orchestration and complete
-lifecycle acceptance remain Gate 5 work; this inspection slice does not complete
-Gate 5. Captured preview is described [below](#read-only-lifecycle-preview).
+Production command dispatch and schema 1 remain unchanged. The
+[captured command adapters](#captured-lifecycle-command-adapters) and
+[source-backed orchestration](#source-backed-lifecycle-orchestration) are now
+implemented as opt-in library boundaries. Complete lifecycle delivery remains
+Gate 5 work; this inspection slice does not complete Gate 5. Captured preview is
+described [below](#read-only-lifecycle-preview).
 
 `StateInspection` contains exact original bytes, validated `CombinedState`, and
 an optional descriptive `LegacyProjection`. `ScopeInspection` contains optional
@@ -735,9 +814,10 @@ The adapter performs no filesystem access, source fetch, writer locking, journal
 creation, application or recovery. Supplied observations do not prove current
 filesystem freshness or source authenticity. The preview is descriptive, not an
 execution capability; application must qualify evidence under its writer guard.
-Production command dispatch and schema 1 remain unchanged. Captured applying
-adapters are implemented below. Source-backed command orchestration, full
-lifecycle acceptance and Gate 6 native qualification remain pending.
+Production command dispatch and schema 1 remain unchanged. Captured command
+adapters and explicit rule-source orchestration are implemented as opt-in
+library boundaries. Complete lifecycle delivery and Gate 6 native qualification
+remain pending.
 
 - [Preview implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/preview.rs).
 - [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_preview.rs).
@@ -809,12 +889,92 @@ cover fresh and migrated writes, update/removal, complete blockers, stale
 captures, direct roots, shared ownership, permissions and reserved destinations.
 The
 [validation note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-captured-lifecycle-commands.md)
-records qualification limits. Whole-lane interruption acceptance, source
-orchestration, hosted delivery and Gate 6 native qualification remain separate
-work.
+records qualification limits. The
+[source-backed adapter](#source-backed-lifecycle-orchestration) binds compiled
+rule outputs to retained captures. Whole-lane interruption acceptance, hosted
+delivery and Gate 6 native qualification are separate evidence and delivery
+concerns.
 
 Satisfies:
 [captured lifecycle selection preflight](#417-captured-lifecycle-selection-preflight),
 [complete lifecycle upsert](#418-complete-single-owner-lifecycle-upsert-planning),
 [shared-output reconciliation](#420-explicit-shared-output-reconciliation), and
 [reference-driven removal](#416-reference-driven-shared-owner-removal-planning).
+
+## Source-backed lifecycle orchestration
+
+### Requirements
+
+The opt-in applying boundary opens the guarded lifecycle session and completes
+recovery before any source work. A recovery report stops the current request.
+Complete literal/all selection and target preflight precede resolution. Selected
+legacy or unsupported nodes block the complete operation; unrelated legacy rows
+remain preserved. Removal uses recorded direct references and ownership without
+resolving sources or interpreting current preferences as history.
+
+Explicit add requests identify each source rule name and installed alias.
+Updates preserve installation IDs, aliases and the existing reference graph
+while recapturing the requested source binding and recording actual Git commits
+and exact manifest digests. Repeated add of the same binding reuses its recorded
+ID and adds no duplicate direct reference. A different binding cannot reuse an
+installed alias. Caller-supplied complete graphs and manual/shared instruction
+contributions remain on the captured command API.
+
+Nonempty invocation targets override nonempty project configuration, then
+nonempty global configuration. Update otherwise uses recorded targets; add uses
+caller-supplied defaults. Empty selections are absent overrides. No effective
+selection or duplicate requested targets rejects rather than inventing defaults.
+Requested targets, audience exclusions and actual artifact consumers remain
+separate. Compilation requires explicit compiler bindings and profiles and is
+limited to the existing Claude, Copilot and OpenCode families. Native Codex
+qualification and production schema-2 activation remain Gate 6 work.
+
+### Architecture
+
+#### Interfaces and preparation lifetime
+
+[`lifecycle::orchestration::with_prepared`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/orchestration.rs)
+accepts a qualified scope, its caller-retained writer guard, installation root,
+`SourceRequest`, `SourceOptions` and a callback. `SourceRequest` distinguishes
+explicit add roots, selected updates and selected removals. `SourceOptions`
+contains target precedence inputs, add defaults and a `CompilerContext` holding
+compiler bindings, contract profiles and resource execution policy.
+
+`OrchestrationOutcome` distinguishes typed blockers, recovery and `Ready(T)`,
+which contains the callback result rather than proving application. The callback
+receives opaque `SourcePrepared`; consuming `apply` revalidates all retained
+captures, including Git identity, before the captured operation's own metadata,
+destination and snapshot checks. Discarding preparation applies nothing. The
+prepared operation cannot outlive the callback or accept substituted output.
+Resolvers, private temporary checkouts and captures remain alive until the
+callback returns. Existing permission selection keeps owner contracts consistent
+with resulting file modes. The adapter introduces no separate writer or journal.
+
+#### Installation identity
+
+New IDs are full lowercase SHA-256 digests of a versioned JSON tuple containing
+`upskill-installation-v1`, ownership scope, raw root bytes, normalized requested
+source label, rule kind, source name and installed alias. Tuple serialization
+frames component boundaries; actual resolved Git commits and manifest digests
+are evidence outside identity. Exact prior bindings reuse recorded IDs,
+including previous caller-selected IDs. A computed ID already bound differently
+or multiple prior installations with the same binding rejects. Raw root spelling
+remains identity-bearing.
+
+The adapter selects existing matching owners for complete upsert and adds only
+absent direct references. Alias preflight normalizes local ancestors while
+leaving the selected final component for qualification. Updates retain graph
+history; this module neither discovers registries nor constructs bundle graphs.
+
+#### Acceptance and limits
+
+[Integration examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_orchestration.rs)
+cover local add/update/remove, branch advancement, exact revision and manifest
+evidence, ID and alias preservation, repeated add, target precedence, stale
+captures, manual output conflicts, disjoint legacy preservation, complete
+selection blockers, audience exclusions and resource permissions. A private
+identity example pins raw-root framing, collision rejection and reuse of prior
+IDs independently of resolved commit evidence. The
+[validation note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-orchestration-validation.md)
+records local checks and review evidence. These examples alone establish neither
+whole-lifecycle interruption acceptance nor hosted delivery or native behavior.
