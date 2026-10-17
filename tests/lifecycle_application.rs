@@ -161,32 +161,34 @@ fn mismatched_artifact_state_binding_rejects_before_backup_or_output() {
     let mode = std::fs::metadata(&state_path).unwrap().permissions().mode() & 0o777;
     let planned_state = owned_rule_state(&root, b"planned");
 
+    let error = apply_first_schema2_write(
+        &scope,
+        &guard,
+        FirstSchema2Write {
+            plan: FileOperationPlan {
+                artifacts: vec![],
+                files: vec![],
+            },
+            state_before: FileValue {
+                bytes: original.to_vec(),
+                mode: Some(mode),
+            },
+            state_location: FileLocation {
+                root: root.clone(),
+                path: ".upskill-lock.json".into(),
+            },
+            backup_location: FileLocation {
+                root,
+                path: ".upskill-lock.json.schema1.bak".into(),
+            },
+            state_after: &planned_state,
+            sources: &[],
+        },
+    )
+    .unwrap_err();
     assert!(
-        apply_first_schema2_write(
-            &scope,
-            &guard,
-            FirstSchema2Write {
-                plan: FileOperationPlan {
-                    artifacts: vec![],
-                    files: vec![],
-                },
-                state_before: FileValue {
-                    bytes: original.to_vec(),
-                    mode: Some(mode)
-                },
-                state_location: FileLocation {
-                    root: root.clone(),
-                    path: ".upskill-lock.json".into()
-                },
-                backup_location: FileLocation {
-                    root,
-                    path: ".upskill-lock.json.schema1.bak".into()
-                },
-                state_after: &planned_state,
-                sources: &[],
-            }
-        )
-        .is_err()
+        format!("{error:#}").contains("revalidate retained source"),
+        "unexpected rejection: {error:#}"
     );
 
     assert_eq!(std::fs::read(state_path).unwrap(), original);
@@ -300,49 +302,51 @@ fn changed_captured_source_rejects_later_write_before_effects() {
     std::fs::create_dir(root_path.join("rules")).unwrap();
     std::fs::write(&output_path, b"old output").unwrap();
 
+    let error = apply_schema2_write(
+        &scope,
+        &guard,
+        ExistingSchema2Write {
+            plan: FileOperationPlan {
+                artifacts: next_state.artifacts.clone(),
+                files: vec![PlannedFile {
+                    location: FileLocation {
+                        root: root.clone(),
+                        path: "rules/a.md".into(),
+                    },
+                    before: Some(FileValue {
+                        bytes: b"old output".to_vec(),
+                        mode: Some(0o644),
+                    }),
+                    after: Some(FileValue {
+                        bytes: b"new output".to_vec(),
+                        mode: Some(0o644),
+                    }),
+                }],
+            },
+            state_before: FileValue {
+                bytes: state_bytes.clone(),
+                mode: Some(mode),
+            },
+            state_location: FileLocation {
+                root: root.clone(),
+                path: ".upskill-lock.json".into(),
+            },
+            backup_original: FileValue {
+                bytes: backup_bytes.to_vec(),
+                mode: Some(0o644),
+            },
+            backup_location: FileLocation {
+                root,
+                path: ".upskill-lock.json.schema1.bak".into(),
+            },
+            state_after: &next_state,
+            sources: &sources,
+        },
+    )
+    .unwrap_err();
     assert!(
-        apply_schema2_write(
-            &scope,
-            &guard,
-            ExistingSchema2Write {
-                plan: FileOperationPlan {
-                    artifacts: next_state.artifacts.clone(),
-                    files: vec![PlannedFile {
-                        location: FileLocation {
-                            root: root.clone(),
-                            path: "rules/a.md".into()
-                        },
-                        before: Some(FileValue {
-                            bytes: b"old output".to_vec(),
-                            mode: Some(0o644)
-                        }),
-                        after: Some(FileValue {
-                            bytes: b"new output".to_vec(),
-                            mode: Some(0o644)
-                        }),
-                    }],
-                },
-                state_before: FileValue {
-                    bytes: state_bytes.clone(),
-                    mode: Some(mode)
-                },
-                state_location: FileLocation {
-                    root: root.clone(),
-                    path: ".upskill-lock.json".into()
-                },
-                backup_original: FileValue {
-                    bytes: backup_bytes.to_vec(),
-                    mode: Some(0o644)
-                },
-                backup_location: FileLocation {
-                    root,
-                    path: ".upskill-lock.json.schema1.bak".into()
-                },
-                state_after: &next_state,
-                sources: &sources,
-            }
-        )
-        .is_err()
+        format!("{error:#}").contains("revalidate retained source"),
+        "unexpected rejection: {error:#}"
     );
 
     assert_eq!(std::fs::read(state_path).unwrap(), state_bytes);
