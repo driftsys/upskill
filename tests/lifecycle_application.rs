@@ -160,8 +160,6 @@ fn mismatched_artifact_state_binding_rejects_before_backup_or_output() {
     let guard = scope.try_lock_writer().unwrap();
     let mode = std::fs::metadata(&state_path).unwrap().permissions().mode() & 0o777;
     let planned_state = owned_rule_state(&root, b"planned");
-    let mut committed_state = planned_state.clone();
-    committed_state.artifacts.clear();
 
     assert!(
         apply_first_schema2_write(
@@ -169,7 +167,7 @@ fn mismatched_artifact_state_binding_rejects_before_backup_or_output() {
             &guard,
             FirstSchema2Write {
                 plan: FileOperationPlan {
-                    artifacts: planned_state.artifacts,
+                    artifacts: vec![],
                     files: vec![],
                 },
                 state_before: FileValue {
@@ -184,7 +182,7 @@ fn mismatched_artifact_state_binding_rejects_before_backup_or_output() {
                     root,
                     path: ".upskill-lock.json.schema1.bak".into()
                 },
-                state_after: &committed_state,
+                state_after: &planned_state,
                 sources: &[],
             }
         )
@@ -363,8 +361,7 @@ fn mismatched_later_artifact_state_binding_rejects_before_effects() {
         path: root_path.clone(),
     };
     let prior_state = owned_rule_state(&root, b"old output");
-    let mut next_state = owned_rule_state(&root, b"new output");
-    next_state.artifacts.clear();
+    let next_state = owned_rule_state(&root, b"new output");
     let state_path = root_path.join(".upskill-lock.json");
     let state_bytes = serialize_state(&prior_state).unwrap().into_bytes();
     std::fs::write(&state_path, &state_bytes).unwrap();
@@ -383,7 +380,7 @@ fn mismatched_later_artifact_state_binding_rejects_before_effects() {
             &guard,
             ExistingSchema2Write {
                 plan: FileOperationPlan {
-                    artifacts: owned_rule_state(&root, b"new output").artifacts,
+                    artifacts: vec![],
                     files: vec![PlannedFile {
                         location: FileLocation {
                             root: root.clone(),
