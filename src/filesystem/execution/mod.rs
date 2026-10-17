@@ -35,10 +35,10 @@ pub enum ExecutionOutcome {
 }
 
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
-type CheckpointHook = Box<dyn FnMut(&'static str, usize) -> anyhow::Result<()>>;
+pub(crate) type CheckpointHook = Box<dyn FnMut(&'static str, usize) -> anyhow::Result<()>>;
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
 thread_local! {
-    static TEST_HOOK: std::cell::RefCell<Option<CheckpointHook>> = std::cell::RefCell::new(None);
+    pub(crate) static TEST_HOOK: std::cell::RefCell<Option<CheckpointHook>> = std::cell::RefCell::new(None);
 }
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 fn checkpoint(label: &'static str, index: usize) -> anyhow::Result<()> {

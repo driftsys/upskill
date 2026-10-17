@@ -10,6 +10,7 @@ pub mod selection;
 
 pub mod upsert;
 
+pub mod application;
 pub mod contracts;
 
 mod sharing;
