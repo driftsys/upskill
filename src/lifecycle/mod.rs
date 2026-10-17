@@ -16,3 +16,5 @@ pub mod contracts;
 mod sharing;
 
 pub mod inspection;
+
+pub mod preview;

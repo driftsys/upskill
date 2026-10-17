@@ -622,9 +622,11 @@ These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
 operation-level conflict aggregation remains pending. Qualified
 source/destination integration, source/scoped selectors, CLI precedence,
-instruction compiler adapters, preview adapters and full CLI integration remain.
-Read-only captured list/doctor and qualified scope inspection are available
-through the [inspection boundary](#read-only-lifecycle-inspection). The opt-in
+instruction compiler adapters and full CLI integration remain. Captured
+[preview](#read-only-lifecycle-preview) is available as an opt-in supplied-value
+boundary. Read-only captured list/doctor and qualified scope inspection are
+available through the [inspection boundary](#read-only-lifecycle-inspection).
+The opt-in
 [guarded application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
 now provides first-write backup and executor/recovery integration. Gate 6 must
 qualify native targets before schema-2 production activation. This pure plan
@@ -673,9 +675,10 @@ artifact roots, and unsupported schemas return errors. These observations sample
 the namespace and do not exclude concurrent writers or prove native discovery or
 source freshness. Qualified inspection is supported on Linux and macOS.
 
-Production command dispatch and schema 1 remain unchanged. Preview, applying
-command adapters, source-resolution orchestration, and complete lifecycle
-acceptance remain Gate 5 work; this inspection slice does not complete Gate 5.
+Production command dispatch and schema 1 remain unchanged. Applying command
+adapters, source-resolution orchestration, and complete lifecycle acceptance
+remain Gate 5 work; this inspection slice does not complete Gate 5. Captured
+preview is described [below](#read-only-lifecycle-preview).
 
 `StateInspection` contains exact original bytes, validated `CombinedState`, and
 an optional descriptive `LegacyProjection`. `ScopeInspection` contains optional
@@ -691,3 +694,47 @@ Components:
 - [Read-only journal observation](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/run.rs).
 - [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_inspection.rs).
 - [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-inspection.md).
+
+## Read-only lifecycle preview
+
+The opt-in `lifecycle::preview::preview` API consumes captured schema-1 or
+schema-2 state bytes, an explicit `PreviewRequest`, and supplied output
+observations. It delegates restrictive upserts to `plan_upsert`, explicit shared
+upserts to `plan_shared_upsert`, and exact reference removals to
+`plan_reference_removal`. Reference-removal requests identify graph edges; CLI
+name/source selection and source resolution remain separate work.
+
+A ready `LifecyclePreview` retains exact original state bytes, the complete
+validated proposed combined state, and ordered `FilePreview` actions. Each
+action retains the planner's exact location and before/after bytes and modes.
+`FileChange` distinguishes creates, content-only changes, mode-only changes,
+combined content/mode changes, removals, and unchanged actions. Reference and
+owner changes can change state while leaving output bytes unchanged; those no-op
+output actions remain visible when returned by the planner.
+
+`StateChange` compares canonical validated records, so differences only in
+serialization whitespace or canonical record order do not imply semantic
+changes. Schema-1 input instead reports `UpgradeFromSchema1`: any subsequent
+applying transition would require the exact-backup prerequisite. Preview does
+not create that backup or perform a migration. Output actions exclude the final
+state write and backup, which remain guarded application responsibilities.
+
+Selection blockers return `PreviewOutcome::Blocked` with the existing typed
+diagnostics and no partial actions. Invalid state, missing/edited output
+evidence, and graph/artifact conflicts return an error without a successful
+partial preview. The underlying planners retain their first-error behavior;
+operation-wide conflict aggregation is not introduced here. Unrelated typed
+legacy/native rows survive in the proposed state, and unknown original schema-1
+fields remain available in the retained bytes rather than the typed projection.
+
+The adapter performs no filesystem access, source fetch, writer locking, journal
+creation, application or recovery. Supplied observations do not prove current
+filesystem freshness or source authenticity. The preview is descriptive, not an
+execution capability; application must qualify evidence under its writer guard.
+Production command dispatch and schema 1 remain unchanged. Applying command
+adapters, source-resolution orchestration, full lifecycle acceptance and Gate 6
+native qualification remain pending.
+
+- [Preview implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/preview.rs).
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_preview.rs).
+- [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-preview.md).
