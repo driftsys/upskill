@@ -8,7 +8,7 @@ preparation, application adapters and observational inspection remain separate.
 
 ## Acceptance evidence
 
-Five real-filesystem integration examples in
+Six real-filesystem integration examples in
 [execution_backup.rs](../../tests/execution_backup.rs) cover literal original
 bytes including unknown JSON fields and whitespace, mode 0o600, retained
 matching-backup identity, ordinary original State mode 0o644 with private backup
@@ -16,7 +16,7 @@ mode 0o600, mismatched bytes/modes, full-request preflight and invalid backup
 topology or missing original state.
 
 Four focused internal examples cover a file appearing immediately before
-publication, edits to a completed backup blocking recovery, eight journal policy
+publication, edits to a completed backup blocking recovery, nine journal policy
 or evidence corruptions, and syncing an unchanged matching backup before output.
 The sync fixture checks exact backup-file and parent descriptor identities, call
 order, failure of each sync, retained Queued receipt/generation and unchanged
@@ -65,10 +65,10 @@ additional review over the fixes. Four additional controls independently removed
 original digest binding, original length binding, the backup sync call while
 retaining its checkpoint, and fixed private backup mode. Each compiled and
 assertion-failed; exact source was restored and all nine focused examples
-passed. Seven controls are retained in total. The archived Markdown spec is a
-formatted reading copy; its exact original bytes are retained as compressed
-evidence because staged stdin formatting rewraps Markdown independently of
-file-ignore rules.
+passed. Nine controls are retained in total, including the later full-review
+cases. The archived Markdown spec is a formatted reading copy; its exact
+original bytes are retained as compressed evidence because staged stdin
+formatting rewraps Markdown independently of file-ignore rules.
 
 ## Verification status
 
@@ -90,3 +90,24 @@ local macOS result does not establish Linux/macOS/Windows execution evidence.
 Ordinary execution journals retain schema 1; backup operations require journal
 schema 2. Older binaries reject the latter. Neither journal version activates a
 new lifecycle lockfile schema or completes Gate 5/M1.
+
+## Full PR review fixes
+
+Pass 1 on `0bf6c8b` found two Important coverage gaps. The private-mode case now
+uses 0o700, which ordinary new-output validation permits, and asserts the
+backup-specific rejection. The stale-source acceptance calls the backup method
+with a nonempty captured-source slice and checks exact original State and source
+bytes plus absent backup, journal and output files. Deleting the private-mode
+guard and dropping source forwarding independently compiled and
+assertion-failed. Exact runtime sources were restored; four internal and six
+integration examples passed. Production runtime code is unchanged by these
+fixes.
+
+A separate advisory evidence check requested command provenance for Clippy and
+Rust 1.85. The retained command transcript records exact invocations, versions,
+flags and exit codes, with the improved test-source hashes. After these fixes,
+`just verify` passed 1,245 distinct tests across 69 Cargo suites, zero failures
+and one ignored subprocess entrypoint; documentation checks and build passed.
+All-target Clippy and locked Rust 1.85 checks passed with recorded invocations.
+The exact fix-diff review and hosted delivery remain separate gates; no native
+or lifecycle activation is claimed.

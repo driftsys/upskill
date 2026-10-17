@@ -160,6 +160,37 @@ fn stale_output_blocks_before_creating_backup() {
 }
 
 #[test]
+fn stale_source_blocks_before_backup_intent_or_outputs() {
+    let (tmp, scope, request, backup) = fixture();
+    let source = tempfile::tempdir().unwrap();
+    std::fs::write(source.path().join("body.md"), b"captured source").unwrap();
+    let source_scope = QualifiedScope::open(&InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: source.path().into(),
+    })
+    .unwrap();
+    let snapshot = source_scope.observe_source_tree().unwrap();
+    std::fs::write(source.path().join("body.md"), b"changed source").unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    assert!(
+        scope
+            .apply_operation_with_backup(&guard, &[&snapshot], request, backup.clone())
+            .is_err()
+    );
+    assert!(!tmp.path().join(backup.path).exists());
+    assert!(!tmp.path().join(".upskill").exists());
+    assert!(!tmp.path().join("rule.md").exists());
+    assert_eq!(
+        std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        ORIGINAL
+    );
+    assert_eq!(
+        std::fs::read(source.path().join("body.md")).unwrap(),
+        b"changed source"
+    );
+}
+
+#[test]
 fn rejects_backup_aliases_reserved_paths_and_missing_original_state() {
     for path in [
         "rule.md",

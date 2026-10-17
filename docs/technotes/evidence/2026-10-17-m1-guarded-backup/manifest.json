@@ -141,6 +141,36 @@
       "path": "upskill-gate5-backup-fixed-msrv.log.gz",
       "sha256": "601cce31b3837dccf56c7fc55c173116ea0bb2cc1952a92e6c232e1f9322075a",
       "uncompressed_sha256": "fa930a1c12f740fa9e37090e345f5935d25b1dc07b2483ad246b6733cd884a88"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-control-private-mode.log.gz",
+      "sha256": "5ba9b732071b37dfab442d1f3a2fde502ac711d8dbb23bb9ac09261888b9e40b",
+      "uncompressed_sha256": "8a07c71eade1b9e363ba48ef585d71aaf4d5fcf2dbcb313cecabb3ee4d739f0e"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-control-source-forwarding.log.gz",
+      "sha256": "75a403656692bdb327ffae43549f77d1a3834fc2dbc7f47e74b8a58516017b77",
+      "uncompressed_sha256": "3f632f4e961a99655886eaf01d9abe52308b83d9c8d8abaf1dd3f388b3ed9aa3"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-restored.log.gz",
+      "sha256": "074fc71887fdb771b4a492ea96c24c3a62eaae4a21dfa7aca70e3af41a9c7b76",
+      "uncompressed_sha256": "4789c81f5aa3fb03d03dd14359bb836431e609512d70060916cc3fa8a3ca79df"
+    },
+    {
+      "path": "upskill-gate5-backup-command-provenance.log.gz",
+      "sha256": "1180f1335c75bf2b82942e22a7d8f586da268f135666d9dacff61175ac5791f7",
+      "uncompressed_sha256": "da829b9941b9a53beb6f22f2a9c20e1413eb812eee447aa13142aba7f6cf110c"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-verify.log.gz",
+      "sha256": "31e1fbfc8fb7b5d4d68153ad476f818b114ab77bfcc3483551dcf2de6bf96724",
+      "uncompressed_sha256": "818f9f62b531020539ac36fc9d99941fe939d48069318ce04805752ce31332c4"
+    },
+    {
+      "path": "upskill-gate5-backup-pass1-command-provenance.log.gz",
+      "sha256": "a0f480babadcfec87c53df3bcfcb99e02c9df21540273961ba1a316721140dcf",
+      "uncompressed_sha256": "0b68d20b38228d5d22511f8075f324a690d2e38d81c3a824371b309a04521b34"
     }
   ],
   "sources": {
@@ -149,8 +179,8 @@
     "src/filesystem/execution/run.rs": "410c061e72f07caf5b5414f690a705d0246de3063448417d917faf0d5f5e555b",
     "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
     "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
-    "src/filesystem/execution/backup_tests.rs": "8d0fb97a2e3ae1ce0fe7d288a1759506f4cffefb18a84a3134879dd08dcd57ee",
-    "tests/execution_backup.rs": "36eadb2a4ec278eb1af2787fa783960476e39b946e547d5c60f62980b8377df5"
+    "src/filesystem/execution/backup_tests.rs": "1b4664ac576013189758d139ef5ba577508820ebdfd584f6e09fce6e0be96a31",
+    "tests/execution_backup.rs": "c9c3119a5d5c3b7186a0174dafd5f524b349a5b9b937f3cf220e42febcf05769"
   },
   "controls": {
     "publication": 101,
@@ -159,7 +189,9 @@
     "quick-original-digest": 101,
     "quick-original-length": 101,
     "quick-sync-body": 101,
-    "quick-original-mode": 101
+    "quick-original-mode": 101,
+    "pass1-private-mode": 101,
+    "pass1-source-forwarding": 101
   },
   "verification": {
     "baseline": 0,
@@ -179,7 +211,16 @@
     "docs_check": 0,
     "fixed_verify": 0,
     "fixed_clippy": 0,
-    "fixed_rust_1_85": 0
+    "fixed_rust_1_85": 0,
+    "pass1_fixed": {
+      "verify": 0,
+      "all_target_clippy": 0,
+      "locked_rust_1_85": 0,
+      "passed": 1245,
+      "failed": 0,
+      "ignored": 1,
+      "cargo_suites": 69
+    }
   },
   "archive": {
     "original_spec_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447",
@@ -201,5 +242,18 @@
     "docs": "three Minor qualifiers corrected",
     "tests": "two Important assertion gaps corrected; ordinary original-State mode covered",
     "after_fixes": "four additional isolated controls assertion-fail; restored focused4+integration5 pass"
+  },
+  "pass1_review": {
+    "head": "0bf6c8bc9d9a177d973a5dc057c7ae297a135376",
+    "findings": {
+      "F1": "Private-mode guard deletion detected with generic-valid0700 corruption.",
+      "F2": "Dropping source forwarding detected by stale-source backup acceptance."
+    },
+    "fixed_runtime": "unchanged",
+    "restored_focused": {
+      "internal": 4,
+      "integration": 6
+    },
+    "final_verification": 0
   }
 }

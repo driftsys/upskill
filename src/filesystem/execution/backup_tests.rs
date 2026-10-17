@@ -138,6 +138,7 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
         "downgrade",
         "replace",
         "mode",
+        "private-mode",
         "bytes",
         "original-digest",
         "original-length",
@@ -173,6 +174,7 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
                 disk["actions"][0]["before"] = disk["actions"][2]["after"].clone();
             }
             "mode" => disk["actions"][0]["after"]["mode"] = 0o644.into(),
+            "private-mode" => disk["actions"][0]["after"]["mode"] = 0o700.into(),
             "bytes" => disk["actions"][0]["after"]["digest"] = "f".repeat(64).into(),
             "original-digest" => disk["actions"][2]["before"]["digest"] = "f".repeat(64).into(),
             "original-length" => disk["actions"][2]["before"]["length"] = 99.into(),
@@ -182,7 +184,7 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
         let error = scope
             .recover_operation(&guard)
             .expect_err(&format!("accepted {change}"));
-        if change.starts_with("original-") {
+        if change.starts_with("original-") || change == "private-mode" {
             assert!(format!("{error:#}").contains("backup evidence differs from original state"));
         }
         assert!(!tmp.path().join("backup").exists());
