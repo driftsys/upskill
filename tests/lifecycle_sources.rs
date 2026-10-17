@@ -103,8 +103,17 @@ fn selected_final_symlink_is_rejected() {
     assert!(ResolvedRuleSource::resolve(&InstallSource::LocalPath(link)).is_err());
 }
 
+fn fixture_command(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            command.env_remove(key);
+        }
+    }
+    command
+}
 fn git(root: &std::path::Path, args: &[&str]) -> String {
-    let output = std::process::Command::new("git")
+    let output = fixture_command("git")
         .current_dir(root)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -263,7 +272,7 @@ fn isolated_git_test(name: &str) -> bool {
         return false;
     }
     let home = tempfile::tempdir().unwrap();
-    let output = std::process::Command::new(std::env::current_exe().unwrap())
+    let output = fixture_command(std::env::current_exe().unwrap())
         .args(["--exact", name, "--nocapture"])
         .env("UPSKILL_SOURCE_TEST_CHILD", "1")
         .env("HOME", home.path())
@@ -343,6 +352,68 @@ fn resource_bytes_and_executable_mode_survive_compilation() {
             ..
         }
     )));
+    assert_eq!(desired.set.artifacts.len(), 2);
+    assert_eq!(desired.contracts.len(), desired.set.artifacts.len());
+    let captured_hash = source
+        .capture()
+        .unwrap()
+        .snapshot()
+        .manifest()
+        .content_sha256
+        .clone();
+    let mut seen = std::collections::BTreeSet::new();
+    for artifact in &desired.set.artifacts {
+        use sha2::{Digest, Sha256};
+        let upskill::operations::plan::DesiredArtifact::File(file) = artifact else {
+            panic!("rule file output");
+        };
+        let contracts: Vec<_> = desired
+            .contracts
+            .iter()
+            .filter(|contract| {
+                contract.root == file.location.root && contract.path == file.location.path
+            })
+            .collect();
+        assert_eq!(contracts.len(), 1);
+        let contract = contracts[0];
+        assert!(seen.insert(contract.path.clone()));
+        assert_eq!(contract.installation_id, "test-installation");
+        assert_eq!(contract.source_manifest_sha256, captured_hash);
+        assert_eq!(contract.contribution_id, None);
+        assert_eq!(file.consumers, vec![TargetSurface::ClaudeCli]);
+        assert_eq!(
+            contract.profiles,
+            vec![upskill::lifecycle::contracts::ConsumerContract {
+                surface: TargetSurface::ClaudeCli,
+                contract_revision: 1
+            }]
+        );
+        let hash: String = Sha256::digest(&file.value.bytes)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        assert_eq!(
+            contract.content,
+            upskill::lifecycle::contracts::ContractContent::File {
+                content_sha256: hash,
+                mode: file.value.mode
+            }
+        );
+        if file.location.path.ends_with("scripts/check.sh") {
+            assert_eq!(file.value.bytes, b"#!/bin/sh\nexit 0\n");
+            assert_eq!(file.value.mode, Some(0o755));
+        } else {
+            assert!(String::from_utf8_lossy(&file.value.bytes).contains("Captured bytes"));
+            assert_eq!(file.value.mode, None);
+        }
+    }
+    assert_eq!(
+        seen,
+        std::collections::BTreeSet::from([
+            ".claude/rules/alias.md".to_owned(),
+            ".claude/rules/alias/scripts/check.sh".to_owned(),
+        ])
+    );
     assert!(!desired.set.installation.root.path.exists());
 }
 
@@ -423,7 +494,7 @@ fn inherited_git_index_cannot_escape_private_checkout() {
             std::fs::copy(repository.join(".git/index"), &external_index).unwrap();
         }
         let before = std::fs::read(&external_index).ok();
-        let output = std::process::Command::new(std::env::current_exe().unwrap())
+        let output = fixture_command(std::env::current_exe().unwrap())
             .args([
                 "--exact",
                 "inherited_git_index_cannot_escape_private_checkout",
@@ -452,5 +523,93 @@ fn inherited_git_index_cannot_escape_private_checkout() {
             before,
             "source resolver touched inherited external index"
         );
+    }
+}
+
+#[test]
+fn git_symlink_ancestor_cannot_escape_into_private_metadata() {
+    if isolated_git_test("git_symlink_ancestor_cannot_escape_into_private_metadata") {
+        return;
+    }
+    let fixture = tempfile::tempdir().unwrap();
+    git(fixture.path(), &["init", "--quiet"]);
+    std::fs::write(fixture.path().join("RULE.md"), RULE).unwrap();
+    std::os::unix::fs::symlink("../metadata", fixture.path().join("bridge")).unwrap();
+    git(fixture.path(), &["add", "."]);
+    git(
+        fixture.path(),
+        &[
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "fixture",
+        ],
+    );
+    let source = InstallSource::Git(upskill::source::GitRepo {
+        url: format!("file://{}", fixture.path().display()),
+        git_ref: None,
+        subfolder: Some("bridge/objects".into()),
+    });
+    let error = ResolvedRuleSource::resolve(&source)
+        .err()
+        .expect("canonical containment rejection");
+    assert!(
+        format!("{error:#}").contains("source subfolder escapes checkout"),
+        "{error:#}"
+    );
+}
+
+#[test]
+fn fixture_commands_and_isolated_children_preserve_external_indexes() {
+    const CHILD: &str = "UPSKILL_SOURCE_FIXTURE_INDEX_CHILD";
+    if std::env::var_os(CHILD).is_some() {
+        let fixture = tempfile::tempdir().unwrap();
+        git(fixture.path(), &["init", "--quiet"]);
+        std::fs::write(fixture.path().join("RULE.md"), RULE).unwrap();
+        git(fixture.path(), &["add", "."]);
+        git(
+            fixture.path(),
+            &[
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "--quiet",
+                "-m",
+                "fixture",
+            ],
+        );
+        git_repository_root_capture_excludes_private_metadata();
+        return;
+    }
+    let fixture = tempfile::tempdir().unwrap();
+    let external = fixture.path().join("external-index");
+    for existing in [false, true] {
+        if existing {
+            std::fs::write(&external, b"unrelated external index sentinel").unwrap();
+        }
+        let before = std::fs::read(&external).ok();
+        let output = fixture_command(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "fixture_commands_and_isolated_children_preserve_external_indexes",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .env("GIT_INDEX_FILE", &external)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(std::fs::read(&external).ok(), before);
     }
 }

@@ -132,11 +132,13 @@ derives complete per-client entrypoint/resource outputs, and the
 [mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 composes explicit complete file/contribution sets. The
 [captured-rule desired sets](../topics/0002-generation.md#414-captured-rule-desired-sets)
-producer is implemented. Lifecycle reconciliation and planning, immutable Git
-evidence, source stabilization, qualified observation, destination
-qualification, state/execution and Codex activation remain pending. The
-source-manifest platform evidence above is retained as recorded; the whole-file
-planning pair is archived in its own entry below.
+producer is implemented. Immutable Git evidence, listed as pending at that
+historical stage, is now supplied by the
+[selected lifecycle source boundary](../topics/0003-sources.md#applying-selected-lifecycle-rule-sources).
+Lifecycle reconciliation and planning, source stabilization, qualified
+observation, destination qualification, state/execution and Codex activation
+remain pending. The source-manifest platform evidence above is retained as
+recorded; the whole-file planning pair is archived in its own entry below.
 
 ## Owned whole-file operation planning
 

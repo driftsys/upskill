@@ -253,12 +253,12 @@ const REPOSITORY_LOCAL_GIT_ENV: &[&str] = &[
     "GIT_COMMON_DIR",
     "GIT_INTERNAL_SUPER_PREFIX",
 ];
-fn git(root: &Path, args: &[&str]) -> Result<String> {
+fn source_git_command(root: &Path, args: &[&str]) -> Result<Command> {
     let mut command = Command::new("git");
     for name in REPOSITORY_LOCAL_GIT_ENV {
         command.env_remove(name);
     }
-    let output = command
+    command
         .current_dir(root)
         .arg("--git-dir")
         .arg(
@@ -268,7 +268,11 @@ fn git(root: &Path, args: &[&str]) -> Result<String> {
         )
         .arg("--work-tree")
         .arg(root)
-        .args(args)
+        .args(args);
+    Ok(command)
+}
+fn git(root: &Path, args: &[&str]) -> Result<String> {
+    let output = source_git_command(root, args)?
         .output()
         .context("run source git command")?;
     ensure!(
@@ -287,11 +291,34 @@ mod tests {
     use super::*;
     #[test]
     fn cleared_environment_covers_installed_git_repository_local_overrides() {
-        let output = Command::new("git")
+        let mut query = Command::new("git");
+        for (key, _) in std::env::vars_os() {
+            if key.to_string_lossy().starts_with("GIT_") {
+                query.env_remove(key);
+            }
+        }
+        let output = query
             .args(["rev-parse", "--local-env-vars"])
             .output()
             .unwrap();
         assert!(output.status.success());
+        let command =
+            source_git_command(Path::new("/private/checkout/tree"), &["rev-parse", "HEAD"])
+                .unwrap();
+        let removed: std::collections::BTreeSet<_> = command
+            .get_envs()
+            .filter_map(|(name, value)| {
+                value
+                    .is_none()
+                    .then_some(name.to_string_lossy().into_owned())
+            })
+            .collect();
+        for name in REPOSITORY_LOCAL_GIT_ENV {
+            assert!(
+                removed.contains(*name),
+                "command retains repository-local override: {name}"
+            );
+        }
         for name in String::from_utf8(output.stdout).unwrap().lines() {
             assert!(
                 REPOSITORY_LOCAL_GIT_ENV.contains(&name),

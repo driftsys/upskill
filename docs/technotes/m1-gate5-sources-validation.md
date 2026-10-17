@@ -86,3 +86,30 @@ omitting compile revalidation after a local edit; omitting it after an
 equal-byte Git revision change; and removing both source containment guards.
 Production code was restored exactly afterward. The corrections change tests and
 evidence, with no production behavior change.
+
+The full PR review identified fixture isolation and three regression-protection
+gaps. Fixture Git commands and isolated child builders now clear every inherited
+`GIT_*` variable before applying explicit fixture configuration. Only controlled
+regression children receive a temporary external index override. A process
+example proves fixture setup and nested isolated children preserve both an
+absent external index and an existing unrelated sentinel. Production command
+creation is exposed only through a private helper so a unit test can inspect the
+actual `Command::get_envs` removals for every repository-local key, rather than
+checking constant membership alone. Native authentication configuration remains
+unchanged.
+
+A lexically normal `bridge/objects` selection traverses a committed ancestor
+symlink to the private metadata sibling and requires the canonical-containment
+error. Resource-bearing compilation now asserts two complete artifacts and two
+matching contracts, their exact entrypoint/resource keys, bodies, modes,
+consumer profiles, installation identity and captured-manifest digest. Archive
+status now identifies the earlier immutable-Git-evidence deferral as historical
+and links to the implemented selected-source contract.
+
+All four associated mutation controls failed at runtime: removing fixture
+isolation, clearing only the index override, deleting canonical containment, and
+filtering out the generated entrypoint contract when a resource contract exists.
+All temporary mutations were restored. Controlled launchers clear ambient Git
+variables without logging their values. Final coverage is eleven integration
+examples and three private unit examples; native-client and
+network-authentication acceptance remain outside this evidence.
