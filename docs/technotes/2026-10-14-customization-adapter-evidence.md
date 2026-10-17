@@ -9,6 +9,13 @@ rewriting its historical evidence. The related proposal is the
 Rolling documentation establishes candidate mechanisms, not a tested release
 range.
 
+## Evidence limits
+
+The mechanisms below are dated candidates, not verified current support. Refresh
+the relevant official documentation and runtime evidence when implementing each
+adapter. Historical research remains informative and does not override the
+active lifecycle plan or its activation gates.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |

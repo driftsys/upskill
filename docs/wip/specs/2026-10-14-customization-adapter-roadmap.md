@@ -18,18 +18,10 @@ implementation. This changes the three-client-first sequencing in the
 preserving the six-family commitment in
 [ADR-0013](../../adr/0013-agent-customization-targets.md).
 
-The next release delivers **auto-update plus rules, skills, bundles and
-plugins** across the four initial clients. The following release adds **tools,
-permissions, hooks and MCP management**. These are relative release stages; no
-semantic version numbers or delivery dates are assigned here. Subagents remain
-part of the customization inventory but are not assigned to either release.
-Existing agent and MCP behavior is preserved; deferral does not mean removing
-already supported functionality.
-
-After MVP qualification, complete a cleanup/refactoring phase before expanding
-customization management. Remove proven dead paths, consolidate duplicated
-logic, and reconcile legacy handling while retaining supported migrations. The
-supported MVP behavior remains the regression contract.
+Release scope, ordering and implementation dependencies are maintained only in
+[the product roadmap](../../roadmap.md). This proposal records adapter choices
+and unresolved qualification questions; it is not an independent delivery plan.
+Existing agent and MCP behavior remains part of the regression contract.
 
 **`driftsys/metapowers` is the intended marketplace repository.** Client-native
 catalogs and installation references belong to that distribution surface. This
@@ -166,40 +158,17 @@ Two sessions displayed in the same editor may therefore require different
 adapter profiles. Selecting a different model inside one harness does not switch
 its adapter.
 
-## Delivery roadmap
+## Qualification questions
 
-Deliver each slice across all four initial clients before expanding the managed
-customization categories. Reuse the existing ownership/planning work; audit
-which foundation gates are already satisfied rather than implementing them
-again.
+Use the [product roadmap](../../roadmap.md) for dependency order. Adapter
+qualification must establish installed lifecycle invocation, native content
+discovery, reload behavior, project/user scope, offline and interrupted updates,
+and startup overhead for each supported runtime profile. Initial harmless probes
+do not qualify automatic maintenance or establish owned-skill support.
 
-| Stage | Deliverable                                           | Exit evidence                                                                                                                                                             |
-| ----- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A0    | Four runtime profiles and minimal plugin probes       | Exact released versions/scopes selected; installed package runs a harmless maintenance canary; update timing and reload behavior recorded                                 |
-| A1    | Shared CLI/content maintenance plus four thin plugins | Real binary and skill update fixtures; startup overhead measured against an agreed baseline and budget; offline, concurrent, interrupted and pinned-ref behavior verified |
-| A2    | Rules                                                 | Native Claude/Copilot and qualified Codex/OpenCode route; team/user override, scope, duplication, resume and compaction tests                                             |
-| A3    | Skills and bundles                                    | Native discovery/invocation, resources, dependency selection and ownership-preserving update/remove across all four                                                       |
-| A4    | Plugin and metapowers marketplace delivery            | Client-specific package/catalog validation; fresh install, update, disable/remove, version compatibility and duplicate-content checks                                     |
-| A5    | Next-release qualification                            | Auto-update plus the four MVP categories pass the declared matrix; migration and reload guidance published                                                                |
-| A6    | Post-MVP cleanup and refactoring                      | Proven dead paths removed; shared logic consolidated; supported behavior and migrations pass the MVP regression matrix                                                    |
-| B1    | Tool model                                            | Native tool identifiers/capabilities and unsupported mappings validated per runtime                                                                                       |
-| B2    | Permissions                                           | Effective native allow/ask/deny and applicable execution boundaries; restrictions never silently broaden                                                                  |
-| B3    | Managed hooks                                         | Event/payload/result mapping, execution environment, trust and full lifecycle checks                                                                                      |
-| B4    | MCP management                                        | Config ownership, transport/auth references, discovery, controlled tool call and update/remove checks                                                                     |
-| B5    | Following-release qualification                       | Combined tools/permissions/hooks/MCP bundle works across the four clients                                                                                                 |
-
-A0/A1 build and test local plugin packages before marketplace publication. The
-A4 slice broadens that into managed plugin lifecycle and distributable catalogs.
-It is not a dependency that prevents the initial updater experiment. Stages
-express dependencies and evidence, not a requirement for large generic
-frameworks or one PR per entire stage. Implementation stories should remain
-small, with acceptance examples, tests, code and docs together.
-
-The following release adds first-class management, not the first awareness of
-permissions. MVP installation must already preserve existing restrictions and
-respect the native approval/trust model. Existing MCP/agent support receives
-regression checks throughout. Cursor/Gemini implementation and subagent
-management need later scheduling.
+Client-native plugin installation, updates, disablement and removal require
+separate package/catalog evidence. Existing native restrictions remain
+authoritative; later permission management does not postpone respecting them.
 
 ## Decisions still required before coding
 

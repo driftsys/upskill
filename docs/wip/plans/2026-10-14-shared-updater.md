@@ -4,6 +4,9 @@
 > to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for
 > tracking.
 
+**Status:** retained draft; refresh against the completed prerequisites before
+execution.
+
 **Goal:** Add one scope-aware Rust maintenance command that refreshes installed
 upskill content and updates only binaries registered as upskill-managed.
 
@@ -21,8 +24,10 @@ Add no runtime dependencies.
 
 **Start gate:** Do not start #284 implementation until the M1 ownership-aware
 lifecycle completes its combined-state, qualified-apply, recovery, and adapter
-activation gates. Do not deliver a binary-only slice while content refresh is
-blocked on M1. Schema-1 content is reported as `legacy-unverified` and left
+activation gates, and owned-skill lifecycle support is available. M1 covers
+rule/instruction effects and does not itself provide owned-skill updates. Do not
+deliver a binary-only slice while content refresh is blocked on either
+prerequisite. Schema-1 content is reported as `legacy-unverified` and left
 untouched. Do not route it through the current schema-1 update pipeline or
 create a parallel ownership sidecar.
 
@@ -65,7 +70,7 @@ create a parallel ownership sidecar.
 
 **Files:**
 
-- Create: `docs/adr/0033-shared-maintenance-and-binary-ownership.md`
+- Create: `docs/adr/<next-id>-shared-maintenance-and-binary-ownership.md`
 - Modify: `docs/adr/README.md`
 - Create: `tests/cli_maintain.rs`
 
@@ -101,10 +106,10 @@ before production code is added.
 
 - [ ] **Step 3: Record the accepted policy in the ADR**
 
-Add `AD-0033` with the approved policy: 24-hour success interval, one-hour retry
-delay, stable latest by default, explicit installer tag pin, explicit
-project/user scope, and registered installer ownership only. Link it from the
-ADR index.
+Allocate the next unused ADR identifier at implementation time and record the
+reviewed policy: 24-hour success interval, one-hour retry delay, stable latest
+by default, explicit installer tag pin, explicit project/user scope, and
+registered installer ownership only. Link it from the ADR index.
 
 - [ ] **Step 4: Re-run the acceptance tests and confirm the intended red state**
 
@@ -116,7 +121,8 @@ test binary compiles and the `update` help compatibility assertion passes.
 - [ ] **Step 5: Commit the CLI contract and ADR**
 
 ```bash
-git add tests/cli_maintain.rs docs/adr/0033-shared-maintenance-and-binary-ownership.md docs/adr/README.md
+git add tests/cli_maintain.rs docs/adr/
+git diff --cached --stat
 git commit -m "feat: define shared maintenance command"
 ```
 

@@ -162,17 +162,17 @@ desktop support must be separately established before the matrix claims it.
 
 ## Open acceptance gates
 
-- Treat completion of the M1 ownership-aware lifecycle and its activation gates
-  as a prerequisite to starting #284 implementation. Do not deliver a
-  binary-only slice of #284 while its automatic content-refresh contract is
-  blocked on M1.
+- Require M1 lifecycle completion through Gate 6 activation and an extension
+  providing owned-skill lifecycle support before starting #284 implementation.
+  M1 rule/instruction ownership alone does not satisfy automatic skill refresh.
+  Do not deliver a binary-only slice while either prerequisite remains open.
 - Confirm the recommended project/user scope policy and the 24-hour/one-hour
   cadence.
 - Complete Codex lifecycle qualification, including the applicable desktop
   surface and hook trust behavior.
 - Agree on and measure the startup baseline and overhead budget.
-- Confirm the updater can extend the current install script's ownership record
-  without treating existing unmarked binaries as managed.
+- Create installer ownership metadata; the current installer has no such record;
+  do so without treating existing unmarked binaries as managed.
 
 No production implementation should begin until this design is reviewed and
 approved. The implementation plan follows that review.

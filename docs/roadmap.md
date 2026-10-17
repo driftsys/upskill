@@ -36,7 +36,23 @@ four initial clients.
 | 4     | Bundles                 | Coherent collections of content, dependencies and plugin declarations                                         |
 | 5     | Plugins and marketplace | Client-native installation/update/remove and distribution through metapowers                                  |
 
-### Updater first
+### Implementation dependencies
+
+Complete these prerequisites in order before implementing automatic maintenance:
+
+1. Finish M1 and qualify its ownership-aware rule/instruction lifecycle through
+   Gate 6 activation.
+2. Extend the activated ownership-aware lifecycle to skills, including
+   resources, local-edit preservation, update, removal and interruption
+   recovery.
+3. Implement shared automatic maintenance and qualify its client integrations.
+
+M1 alone does not provide owned-skill updates. The broader four-client MVP scope
+remains the release goal; individual foundation slices do not complete it.
+Harmless lifecycle probes may establish candidate entrypoints before these
+implementation prerequisites are complete.
+
+### Updater qualification
 
 Start with a small installed-plugin probe for each client. Verify that its
 startup/lifecycle entry point can invoke the CLI, then implement the shared

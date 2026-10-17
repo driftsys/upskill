@@ -4,6 +4,13 @@ Date: **2026-10-14**. Status: **partial installed-client evidence**. This note
 records probes for [issue #285](https://github.com/driftsys/upskill/issues/285).
 It does not declare a supported client matrix or production hook contract.
 
+## Evidence limits
+
+These dated observations do not establish support for current client releases.
+Repeat the relevant probes during updater qualification, including trust,
+disablement, reload behavior and startup timing. Preserving this note does not
+reproduce or independently verify its historical runtime results.
+
 ## Environment
 
 - macOS 15.6.1, Darwin arm64.
