@@ -72,14 +72,18 @@ file-ignore rules.
 
 ## Verification status
 
-The first full `just verify` run passed 1,252 Rust tests with one ignored
+The first full `just verify` run passed 1,244 Rust tests with one ignored
 subprocess entrypoint, then failed the book-link check on newly added relative
 links to an evidence page outside the book. The links were changed to repository
 URLs. All-target Clippy and locked Rust 1.85 checking passed. Final verification
-after documentation reconciliation passed: `just fmt`, `just verify` (1,252 Rust
+after documentation reconciliation passed: `just fmt`, `just verify` (1,244 Rust
 tests, one ignored subprocess entrypoint), documentation checks and build all
 completed successfully. The earlier failed runs remain retained as evidence.
-Exact-head hosted checks are a separate delivery gate.
+After the quick-review fixes, `just verify` again passed all 1,244 tests,
+documentation checks and build. All-target Clippy and locked Rust 1.85 checking
+also passed on the improved test sources. Counts use each Cargo suite's final
+summary; nested child-process summaries are excluded. Exact-head hosted checks
+are a separate delivery gate.
 
 Hosted qualification must execute on the delivered head. A CI configuration or
 local macOS result does not establish Linux/macOS/Windows execution evidence.

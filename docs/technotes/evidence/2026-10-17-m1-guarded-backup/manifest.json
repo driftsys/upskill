@@ -126,6 +126,21 @@
       "path": "upskill-gate5-backup-quick-control-original-mode.log.gz",
       "sha256": "47e61fee6922c45ed6d06f589cc7b6d27c7643ca0592ef12e157cb0e2b1cf7b6",
       "uncompressed_sha256": "1e2476a8d022a2abbb40de74324031e3ae4edf3ab9166450b8cceb5179f2fc41"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-verify.log.gz",
+      "sha256": "776aca91c9fdba0d97d1a6c5d1942fee36c3ee94bc1142d67fc9503a3ea9c7b5",
+      "uncompressed_sha256": "8943806be2cedb22b1e63418042cfc75e0a20fde5622da6bb97c1613df705c7c"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-clippy.log.gz",
+      "sha256": "4affe363a82a8d10150b5d78b4894e1a93a54dad843e7ff3f199cc1be654acf8",
+      "uncompressed_sha256": "8d751dc067467519a39641d3223b0706233283eabd86f07c04799d47ae18a1b1"
+    },
+    {
+      "path": "upskill-gate5-backup-fixed-msrv.log.gz",
+      "sha256": "601cce31b3837dccf56c7fc55c173116ea0bb2cc1952a92e6c232e1f9322075a",
+      "uncompressed_sha256": "fa930a1c12f740fa9e37090e345f5935d25b1dc07b2483ad246b6733cd884a88"
     }
   ],
   "sources": {
@@ -151,16 +166,20 @@
     "clippy": 0,
     "rust_1_85": 0,
     "focused_restored": 0,
-    "first_verify": "1252 Rust tests pass; docs links fail",
-    "second_verify": "1252 Rust tests pass; missing evidence manifest and book chapter fail",
+    "first_verify": "1244 Rust tests pass; docs links fail",
+    "second_verify": "1244 Rust tests pass; missing evidence manifest and book chapter fail",
     "final_verify": 0,
     "final_tests": {
-      "passed": 1252,
+      "passed": 1244,
       "failed": 0,
-      "ignored": 1
+      "ignored": 1,
+      "suite_count": 69,
+      "counting": "Count final summary for each Cargo suite; exclude duplicated nested subprocess summaries."
     },
     "docs_check": 0,
-    "fixed_verify": "pending"
+    "fixed_verify": 0,
+    "fixed_clippy": 0,
+    "fixed_rust_1_85": 0
   },
   "archive": {
     "original_spec_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447",
