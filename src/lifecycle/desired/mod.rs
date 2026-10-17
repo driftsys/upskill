@@ -62,6 +62,7 @@ fn produce(request: &RuleDesiredSetRequest<'_>) -> Result<DesiredInstallationSet
         "only rule desired sets are supported"
     );
     validate_state(&CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations: vec![installation.clone()],

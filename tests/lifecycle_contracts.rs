@@ -76,6 +76,7 @@ fn contract(id: &str, path: &str, bytes: &[u8]) -> OwnerContract {
 fn state() -> CombinedState {
     let installations = vec![item("a"), item("b")];
     CombinedState {
+        origin: None,
         schema: 2,
         references: vec![direct("a"), direct("b")],
         bundles: vec![],

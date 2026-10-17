@@ -139,15 +139,15 @@ exposes the records and public functions.
 #### Public records and validation
 
 `CombinedState` holds the schema number, installations, bundles, references,
-owned artifacts, per-owner consumers, optional owner contracts and an optional
-typed legacy snapshot. An `Installation` reuses `ArtifactOwner` and
-`InstallationRoot`, and records its complete requested target surfaces and
-`SourceEvidence`. A `BundleNode` records its ID, source, name and optional
-source revision. `Reference` distinguishes direct installations, direct bundles,
-bundle membership and bundle dependencies. `OwnerConsumers` binds an
-installation ID to a root, relative path, optional contribution selector and
-explicit consumers. Existing ownership, target and schema-1 types retain their
-wire representations. No new dependency is required.
+owned artifacts, per-owner consumers, optional owner contracts, optional origin
+evidence and an optional typed legacy snapshot. An `Installation` reuses
+`ArtifactOwner` and `InstallationRoot`, and records its complete requested
+target surfaces and `SourceEvidence`. A `BundleNode` records its ID, source,
+name and optional source revision. `Reference` distinguishes direct
+installations, direct bundles, bundle membership and bundle dependencies.
+`OwnerConsumers` binds an installation ID to a root, relative path, optional
+contribution selector and explicit consumers. Existing ownership, target and
+schema-1 types retain their wire representations. No new dependency is required.
 
 [`validate_state`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/validate.rs)
 checks the complete envelope and reuses `ownership::validate_artifacts` for
@@ -459,3 +459,32 @@ identity, source compatibility, malformed and duplicate rows, unsupported
 schemas and root-independent paths. Existing pipeline output and resource tests
 cover the unchanged wrappers. These checks do not establish native Windows
 execution, native discovery or actual artifact ownership.
+
+## Durable lifecycle origin
+
+### Requirements
+
+Later writes must preserve initial-state origin and retained typed legacy
+history. Fresh initialization requires absent state and backup and creates
+private state without inventing historical bytes. Migration binds the exact
+original schema-1 bytes; reopened writes reject changed backup evidence. Missing
+historical provenance remains unknown and blocks bound application.
+
+### Architecture
+
+Combined state optionally carries a strict `origin` record. `fresh` identifies
+an originally absent lockfile and requires no legacy snapshot. `migrated`
+requires a retained schema-1 snapshot and binds the original exact backup bytes
+with `backup_sha256` and `backup_length`. The constructor
+`StateOrigin::from_schema1_bytes` hashes original bytes, including whitespace
+and unknown schema-1 fields. Existing unbound internal schema-2 records remain
+valid for inspection; an applying adapter cannot infer original provenance from
+them.
+
+Origin survives complete upsert and reference-retirement planning. The bound
+application boundary preserves it across writes, verifies the canonical backup
+against that durable evidence and refuses changed origin or legacy history.
+Fresh initialization has no fabricated schema-1 backup. See
+[AD-0038](https://github.com/driftsys/upskill/blob/main/docs/adr/0038-bind-lifecycle-origin-to-original-backup.md)
+and the
+[origin validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-state-origin.md).

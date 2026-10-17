@@ -210,6 +210,7 @@ fn graph_state(
     references: Vec<Reference>,
 ) -> CombinedState {
     CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations,

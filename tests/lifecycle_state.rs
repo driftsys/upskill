@@ -38,6 +38,7 @@ fn bundle(id: &str) -> BundleNode {
 }
 fn state() -> CombinedState {
     CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations: vec![installation()],

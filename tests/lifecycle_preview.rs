@@ -58,6 +58,7 @@ fn location(root: &InstallationRoot, path: &str) -> FileLocation {
 }
 fn empty() -> CombinedState {
     CombinedState {
+        origin: None,
         schema: 2,
         installations: vec![],
         bundles: vec![],

@@ -69,6 +69,7 @@ fn shared(instruction: bool) -> (CombinedState, ObservedFile) {
         )
     };
     let state = CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         references: vec![direct("a"), direct("b")],

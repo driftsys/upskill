@@ -66,6 +66,7 @@ fn set(id: &str, path: &str, bytes: &[u8]) -> DesiredInstallationSet {
 }
 fn empty() -> CombinedState {
     CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations: vec![],

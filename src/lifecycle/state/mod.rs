@@ -4,6 +4,8 @@ use crate::ownership::{ArtifactOwner, InstallationRoot, OwnedArtifact};
 use crate::target::TargetSurface;
 use serde::{Deserialize, Serialize};
 mod associations;
+mod origin;
+pub use origin::StateOrigin;
 mod codec;
 pub use codec::{parse_state, project_legacy, serialize_state};
 mod validate;
@@ -13,6 +15,8 @@ pub use validate::validate_state;
 #[serde(deny_unknown_fields)]
 pub struct CombinedState {
     pub schema: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<StateOrigin>,
     pub installations: Vec<Installation>,
     pub bundles: Vec<BundleNode>,
     pub references: Vec<Reference>,

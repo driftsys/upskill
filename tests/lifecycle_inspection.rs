@@ -24,6 +24,7 @@ fn state() -> CombinedState {
         installed_name: "alias".into(),
     };
     CombinedState {
+        origin: None,
         schema: 2,
         installations: vec![Installation {
             owner: owner.clone(),

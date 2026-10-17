@@ -39,6 +39,7 @@ fn owned_rule_state(root: &InstallationRoot, bytes: &[u8]) -> CombinedState {
         consumers: vec![TargetSurface::ClaudeCli],
     };
     CombinedState {
+        origin: None,
         schema: 2,
         installations: vec![Installation {
             owner,

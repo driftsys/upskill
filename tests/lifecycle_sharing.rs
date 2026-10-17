@@ -55,6 +55,7 @@ fn direct(id: &str) -> Reference {
 }
 fn empty() -> CombinedState {
     CombinedState {
+        origin: None,
         schema: 2,
         installations: vec![],
         bundles: vec![],

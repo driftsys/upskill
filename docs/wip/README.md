@@ -71,6 +71,20 @@ references must be reconciled as part of that feature's review.
   remain pending. Gate 5 remains incomplete; production activation remains
   Gate 6.
 
+- Origin/fresh-state prerequisite: the bounded
+  [origin plan](../archive/plans/2026-10-18-lifecycle-state-origin.md) is
+  archived after local implementation and acceptance review. Durable successors
+  are
+  [origin state and ownership](../topics/0004-state-and-ownership.md#durable-lifecycle-origin),
+  [bound application](../topics/0008-execution-and-recovery.md#origin-bound-lifecycle-application),
+  [AD-0038](../adr/0038-bind-lifecycle-origin-to-original-backup.md) and the
+  [validation record](../technotes/m1-lifecycle-state-origin.md). Final local
+  verification and hosted delivery remain recorded separately in that note. The
+  shared Gate 5 umbrella and
+  [completion lane](plans/2026-10-18-gate5-completion.md) remain active; their
+  presence is accepted within this bounded delivery under the user's delegated
+  Gate 5 sequencing. All other WIP retains its original paths and disposition.
+
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)
   — opt-in library implementation and durable records; hosted Linux/macOS
   qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope

@@ -20,6 +20,9 @@ fn valid_hash(value: &str) -> bool {
 /// A valid state does not establish containment, source authenticity or native support.
 pub fn validate_state(state: &CombinedState) -> Result<()> {
     ensure!(state.schema == 2, "combined state requires schema 2");
+    if let Some(origin) = &state.origin {
+        origin.validate(state.legacy.as_ref())?;
+    }
     let mut installations = BTreeMap::new();
     let mut identities = BTreeSet::new();
     for item in &state.installations {
