@@ -61,8 +61,9 @@ hashes do not establish trusted provenance or source authenticity.
 Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
-case collisions, reserved names, aliases or filesystem limits. Immutable Git
-evidence, integration of captured-rule desired sets
+case collisions, reserved names, aliases or filesystem limits. The separate
+selected-source boundary records immutable Git evidence; integration of
+captured-rule desired sets
 ([captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets))
 with lifecycle state and execution, and Codex activation remain pending.
 Qualified scope roots and writer locking
@@ -172,6 +173,29 @@ unsupported-host test now calls the source method and requires contextual
 rejection. Its native Windows execution and all hosted checks for the eventual
 final PR head remain merge gates. No qualified Windows backend is implemented.
 
+<a id="selected-lifecycle-rule-sources"></a>
+
+### Selected lifecycle rule sources
+
+The opt-in applying source prerequisite resolves one explicitly selected local
+or Git rule item root and retains its qualified source identity through capture
+and compilation. Captured source evidence remains bound to the resolver that
+supplied its source label and actual Git commit. Compilation returns complete
+desired artifacts and matching owner contracts for explicitly supplied
+installation, consumer and target bindings. Branches, tags and full commit SHAs
+record the resolved checkout commit rather than treating a requested ref as
+immutable.
+
+Resolution rejects final local symlinks and Git subfolder escapes. Private Git
+metadata stays outside the captured item tree; inherited repository-local Git
+overrides cannot redirect checkout writes. Authentication continues through
+Git's native global/system configuration, credential helpers, SSH and askpass.
+Revalidation checks the retained source tree and checkout revision without
+refreshing evidence. The boundary performs no destination observation,
+registration, output or backup writes. Preview uses supplied captured evidence
+and does not call this resolver. Discovery, applying command adapters, Codex
+qualification and schema-2 production activation remain pending.
+
 ## Architecture
 
 <a id="architecture-strict-source-manifests"></a>
@@ -261,8 +285,10 @@ is implemented for explicitly supplied complete file sets. The separate
 derives complete per-client entrypoint and resource outputs from these captured
 values. The inactive
 [captured-rule desired-set producer](0002-generation.md#architecture-captured-rule-desired-sets)
-binds complete rule outputs. Lifecycle reconciliation, immutable Git revision
-evidence and execution remain later work. Qualified scope roots, writer locking,
+binds complete rule outputs. Lifecycle reconciliation and execution remain later
+work. The separate
+[selected-source boundary](#architecture-selected-lifecycle-rule-sources)
+records immutable Git revision evidence. Qualified scope roots, writer locking,
 [destination observation](0007-filesystem-access.md#architecture-qualified-destination-observation)
 and [qualified source observation](#architecture-qualified-source-observation)
 are implemented separately. Source snapshots retain revalidation evidence around
@@ -479,3 +505,70 @@ status must remain honest.
 
 Historical execution results are retained in the
 [filesystem validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/filesystem-validation.md#architecture-qualified-source-observation-local-implementation-evidence).
+
+<a id="architecture-selected-lifecycle-rule-sources"></a>
+
+### Applying selected lifecycle rule sources
+
+The opt-in Gate 5 library resolves explicitly selected local or Git rule item
+roots through `lifecycle::sources::ResolvedRuleSource`. It retains a qualified
+source scope and any private temporary checkout. This boundary performs no
+registration, destination observation, output writes or backup writes. Read-only
+preview does not use it; registry discovery and command selection remain later
+orchestration.
+
+`capture()` returns a private association between strict captured bytes and the
+resolved source metadata. `CapturedRuleSource::compile` accepts an explicit
+installation binding, compiler consumers and target profiles, and produces a
+complete desired set with matching owner contracts. Requested branches, tags and
+full commit SHAs become the actual immutable checkout commit in installation
+evidence. Supported compiler families remain Claude, Copilot and OpenCode; Codex
+compiler surfaces are rejected until Gate 6.
+
+The retained `snapshot()` can be supplied to later executor revalidation.
+`verify_unchanged()` samples the original source tree and checkout revision
+without refreshing evidence. These checks do not provide an atomic filesystem
+snapshot or exclusion against external writers. Local final symlinks and Git
+subfolder escapes are rejected. Git metadata is kept outside the captured work
+tree, and the temporary checkout lives until the resolver is dropped.
+
+Implementation evidence and the separate permission-selection requirement are
+recorded in the
+[selected source validation note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-sources-validation.md).
+
+#### Resolution and retained evidence
+
+Local resolution makes relative paths absolute and canonicalizes only their
+ancestors, leaving the selected final component for qualified symlink rejection.
+Git resolution uses synchronous init, shallow fetch and detached checkout with
+structured command arguments. A private temporary directory owns separate `tree`
+and `metadata` directories. Explicit subfolders must contain only normal
+relative components and remain inside the checkout after canonicalization. The
+resolver obtains the immutable revision through `HEAD^{commit}` and retains the
+temporary directory until it is dropped.
+
+Each Git subprocess removes the repository-local override set enumerated by
+`git rev-parse --local-env-vars`, including index, object, common-directory and
+repository-scoped config variables. A private coverage test compares that set
+with the installed Git. Native authentication configuration remains available;
+the resolver does not inject credentials.
+
+`CapturedRuleSource` borrows its resolver and opaque qualified source snapshot.
+Capture checks the Git revision before and after observing the source tree;
+revalidation checks it around snapshot verification. Compilation revalidates,
+binds the original manifest hash and resolved commit to the installation, then
+calls the existing contracted desired-set producer. The borrowed `snapshot()`
+accessor supplies source evidence to a later executor without transferring
+ownership or extending the checkout lifetime.
+
+Permission evidence is not executor policy. Generated rule entrypoints and their
+contracts carry `mode: None`; resources retain observed permission bits. A later
+applying adapter must select modes through
+`files::permissions::select_file_mode` using qualified destination evidence and
+explicit resource execution policy, and keep the desired artifacts and owner
+contracts consistent before planning.
+
+The implementation lives in
+[`src/lifecycle/sources.rs`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/sources.rs),
+with public acceptance coverage in
+[`tests/lifecycle_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_sources.rs).

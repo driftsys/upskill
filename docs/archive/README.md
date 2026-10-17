@@ -761,3 +761,16 @@ remains active: applying command adapters, source-resolution orchestration and
 complete lifecycle acceptance remain pending. Production commands and schema 1
 stay unchanged. All other WIP retains its original paths and unresolved
 disposition.
+
+## Selected lifecycle source resolution
+
+The bounded [source plan](plans/2026-10-18-lifecycle-sources.md) is archived
+after local implementation, full verification, Rust 1.85 checking and
+independent review. The
+[source contract](../topics/0003-sources.md#selected-lifecycle-rule-sources) and
+[validation note](../technotes/m1-gate5-sources-validation.md) describe selected
+local/Git rule roots, private retained captures and immutable revisions. An
+inherited Git index confinement defect was reproduced and corrected before
+delivery. Hosted final-head checks remain separate evidence. Command
+orchestration and whole-lane acceptance remain under the active Gate 5 umbrella;
+production commands remain on schema 1.

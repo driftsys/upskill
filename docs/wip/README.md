@@ -66,10 +66,11 @@ references must be reconciled as part of that feature's review.
   original state bytes and ordered output actions without effects. Its
   [bounded plan is archived](../archive/plans/2026-10-17-lifecycle-preview.md);
   its [validation limits](../technotes/m1-lifecycle-preview.md) distinguish
-  supplied evidence from qualified application authority. Source-resolution
-  orchestration, applying command adapters and complete lifecycle acceptance
-  remain pending. Gate 5 remains incomplete; production activation remains
-  Gate 6.
+  supplied evidence from qualified application authority. Selected local/Git
+  rule-source resolution and retained captures are implemented; see the
+  [validation record](../technotes/m1-gate5-sources-validation.md). Command
+  orchestration, applying adapters and complete lifecycle acceptance remain
+  pending. Gate 5 remains incomplete; production activation remains Gate 6.
 
 - Origin/fresh-state prerequisite: the bounded
   [origin plan](../archive/plans/2026-10-18-lifecycle-state-origin.md) is

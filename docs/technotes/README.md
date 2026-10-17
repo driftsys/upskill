@@ -34,6 +34,7 @@ snapshot; a stable name does not imply that external research remains current.
 ## State and lifecycle validation
 
 - [Gate 5 captured rule desired-set validation](m1-gate5-desired-validation.md)
+- [Gate 5 selected-source resolution validation](m1-gate5-sources-validation.md)
 - [Gate 5 reference reconciliation validation](m1-gate5-reference-validation.md)
 - [Gate 5 reference removal validation](m1-gate5-retirement-validation.md)
 - [Gate 5 selection validation — 2026-10-16](m1-gate5-selection-validation.md)
