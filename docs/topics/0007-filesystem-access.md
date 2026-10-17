@@ -98,13 +98,16 @@ termination does not guarantee Rust destructors run.
 Observation creates no files, directories, locks or persistent state and
 acquires no writer guard. Plain observations convey no execution or permission
 authority. These sampled checks do not exclude external writers or hostile
-ancestor relocation. A future executor must retain its writer guard and
+ancestor relocation. An applying executor must retain its writer guard and
 independently establish complete lifecycle inputs, authority, permission policy,
 immediate pre-effect checks and recovery. Existing commands and schema 1 remain
-unchanged; Windows qualification and lifecycle execution remain pending. Hosted
-Linux runtime qualification and Windows unsupported-boundary checks passed on
-2026-10-13 for PR head `765e70b9b7ce5386530ffea1fe9814b228724428` (merge
-checkout `242930ef9107aff6eff432484f474e47157983f2`) in
+unchanged; Windows qualification and complete observational lifecycle
+integration remain pending. The opt-in
+[application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
+provides guarded execution and recovery for supplied plans. Hosted Linux runtime
+qualification and Windows unsupported-boundary checks passed on 2026-10-13 for
+PR head `765e70b9b7ce5386530ffea1fe9814b228724428` (merge checkout
+`242930ef9107aff6eff432484f474e47157983f2`) in
 [Actions run 38330080515](https://github.com/driftsys/upskill/actions/runs/38330080515).
 That evidence does not establish a qualified Windows backend or cover later
 local timestamp and special-bit tests. Independent regression controls now cover

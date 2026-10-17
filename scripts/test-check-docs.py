@@ -110,6 +110,29 @@ class DocumentationChecks(unittest.TestCase):
         (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
         self.assertTrue(any(error.endswith('#historical') for error in check.check_book(self.root)))
 
+    def test_rendered_specification_and_design_compatibility_mappings(self):
+        output = self.root / "rendered"
+        wrapper = self.root / "docs/book/design/file-permission-policy.md"
+        wrapper.parent.mkdir(parents=True)
+        wrapper.write_text('# Compatibility\n')
+        cases = (
+            ("docs/specification/format-spec.md", "format-spec.html"),
+            ("docs/specification/specification.md", "specification.html"),
+            ("docs/design/file-permission-policy.md", "design/file-permission-policy.html"),
+        )
+        for source, chapter in cases:
+            with self.subTest(source=source):
+                inventory = {"anchors": {source: ["historical"]}, "assets": {}}
+                (self.root / "docs/compatibility.json").write_text(json.dumps(inventory))
+                path = output / chapter
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('<a id="historical"></a>\n')
+                self.assertEqual(check.check_rendered_compatibility(self.root, output), [])
+                path.write_text('<h1>Chapter without the historical anchor</h1>\n')
+                self.assertTrue(any(error.endswith('#historical') for error in check.check_rendered_compatibility(self.root, output)))
+                path.unlink()
+                self.assertTrue(any('Missing historical rendered chapter' in error for error in check.check_rendered_compatibility(self.root, output)))
+
     def test_evidence_inventory_detects_license_and_provenance_changes(self):
         for name, raw in (("license.txt", b"Captured license  "), ("manifest.json", b'{"revision":"original"}')):
             with self.subTest(path=name):
