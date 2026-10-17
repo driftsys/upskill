@@ -62,10 +62,13 @@ Reference removal preserves surviving shared owners' contracts and removes
 retired owners' contracts, including instruction contributions and final empty
 aggregates.
 
-Affected multi-owner upsert and mixed-planner rejection remain intact. Shared
-reconciliation must consume this evidence together with qualified source and
-destination observations before those rejections can be relaxed. This bounded
-slice does not complete Gate 5 or qualify native clients.
+The original `plan_upsert` and public mixed-planner sharing rejections remain
+intact. The separate [shared upsert](lifecycle-upsert.md#explicit-shared-upsert)
+consumes agreement for affected desired final multi-owner artifacts. Complete
+selected recompilation can replace unknown history; unknown unselected proof is
+never inferred. Agreement alone grants no shared-mutation or execution
+authority. This supplied-value path does not integrate qualified
+source/destination observations, complete Gate 5 or qualify native clients.
 
 ## Components
 
@@ -76,3 +79,7 @@ slice does not complete Gate 5 or qualify native clients.
 - [Acceptance examples](../../tests/lifecycle_contracts.rs)
 - [Evidence policy](../adr/0034-record-explicit-owner-contracts.md)
 - [Validation limits](../technotes/2026-10-16-m1-owner-contracts-validation.md)
+
+Pure owner release with no desired value at an identity preserves untouched
+survivors and their unknown evidence without requiring agreement. Supplied
+physical observations and all physical checks still apply.

@@ -20,11 +20,11 @@ a source-registry repo).
 
 The library's strict source-manifest capture supplies values to the implemented
 pure item compiler, which derives complete per-client entrypoint and resource
-outputs. The inactive captured-rule desired-set producer is implemented;
-lifecycle reconciliation remains pending. Current commands keep their existing
-discovery, hashing and persistence behavior; they do not invoke capture or
-activate the owned lifecycle. Captured bytes do not establish source
-authenticity, an atomic snapshot or qualified filesystem containment. See the
+outputs. The inactive captured-rule desired-set producer and pure lifecycle
+reconciliation are implemented. Current commands keep their existing discovery,
+hashing and persistence behavior; they do not invoke capture or activate the
+owned lifecycle. Captured bytes do not establish source authenticity, an atomic
+snapshot or qualified filesystem containment. See the
 [strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
 
 The library's pure `files::plan::plan_files` API plans complete owned whole-file
@@ -489,6 +489,7 @@ now checks reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
 retirement. The inactive
 [single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md)
-connects complete add/update sets to graph and mixed-artifact planning. Shared
-add/update contracts and guarded lifecycle execution remain pending. Production
-command behavior is unchanged.
+connects complete add/update sets to graph and mixed-artifact planning. The
+separate inactive `plan_shared_upsert` API accepts explicit matching owner
+contracts for shared outputs. Guarded lifecycle execution remains pending.
+Production command behavior is unchanged.

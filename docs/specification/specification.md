@@ -1143,8 +1143,9 @@ state is validated. Referenced empty installations survive; empty retired
 installations need no file action.
 
 This pure boundary grants no qualified execution or native compatibility claim.
-Add/update sharing, guarded application, recovery and production schema-2
-activation remain later work.
+Add/update sharing is a separate opt-in supplied-value boundary in §4.20.
+Guarded application, recovery and production schema-2 activation remain later
+work.
 
 ### 4.17 Captured lifecycle selection preflight
 
@@ -1174,8 +1175,8 @@ See
 
 ### 4.18 Complete single-owner lifecycle upsert planning
 
-The opt-in lifecycle upsert coordinator accepts complete desired installation
-sets, explicit prior selection, exact bundle/reference edits and supplied file
+The opt-in `plan_upsert` coordinator accepts complete desired installation sets,
+explicit prior selection, exact bundle/reference edits and supplied file
 observations. It reconciles graph retention before planning mixed owned outputs
 and validates the complete resulting state. Every selected surviving
 installation requires a complete set; existing changes and graph retirements
@@ -1196,9 +1197,10 @@ adapter contract. Manual aggregate bytes and observed modes retain the mixed
 planner's preservation contract.
 
 This inactive pure boundary provides no source authenticity, qualified
-filesystem or native authority. Full diagnostic aggregation, shared add/update
-reconciliation, CLI precedence, backup/execution/recovery and observational
-adapters remain pending. Production schema and commands stay unchanged. See the
+filesystem or native authority. The separate shared entrypoint is specified in
+§4.20. Full diagnostic aggregation, CLI precedence, backup/execution/recovery
+and observational adapters remain pending. Production schema and commands stay
+unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md).
 
 ### 4.19 Per-owner recorded contract evidence
@@ -1233,12 +1235,60 @@ and reference graph retirement remove only associated retired evidence;
 surviving shared owners retain their contracts.
 
 This inactive supplied-value boundary grants no shared-mutation, native,
-filesystem or source-authenticity authority. Existing affected multi-owner
-rejection remains. Production commands and schema 1 are unchanged; Gate 5
-remains incomplete. See the
+filesystem or source-authenticity authority. The original upsert and public
+mixed planner retain affected multi-owner rejection; §4.20 consumes agreement
+through a separate entrypoint. Production commands and schema 1 are unchanged;
+Gate 5 remains incomplete. See the
 [owner-contract design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-owner-contracts.md)
 and
 [AD-0034](https://github.com/driftsys/upskill/blob/main/docs/adr/0034-record-explicit-owner-contracts.md).
+
+### 4.20 Explicit shared-output reconciliation
+
+The inactive `compile_rule_desired_set_with_contracts` producer accepts explicit
+target profiles covering exactly the installation's requested surfaces. Profiles
+are unique, nonzero and match their target families. It reuses captured rule
+compilation and returns the desired set plus exact per-artifact contracts
+binding source manifest, normalized content and only that artifact's consumers
+to the supplied revisions. Audience exclusions produce no artifact contracts. It
+never fills revisions from defaults. Original producer and batch behavior is
+unchanged; instruction compiler production remains separate work.
+
+The inactive `plan_shared_upsert` entrypoint uses the same complete desired
+sets, selection, graph authority, legacy checks and evidence propagation as
+`plan_upsert`. Exact scope, raw root, path and optional contribution selector
+identify an artifact. Surviving artifacts and owners retain relative order; new
+identities append in key order. Immutable real-owner bindings remain enforced.
+Conflicting desired bytes, modes or instruction bodies reject. Untouched owners
+cannot implicitly acquire changed content or inferred proof.
+
+Every affected artifact receiving desired output with multiple final owners
+requires complete valid contracts with exact source-manifest and complete
+surface/revision-map agreement. Unknown unselected evidence blocks; complete
+newly supplied evidence may replace unknown selected history. Single-owner plans
+require no invented evidence. Retirement removes released owners' evidence while
+retaining surviving history. Pure owner release with no desired value at the
+identity preserves surviving content, associations and evidence unchanged,
+without requiring missing contracts, even when multiple owners remain.
+
+Private per-artifact projection reuses the mixed physical planner after real
+ownership and agreement validation. Exact supplied observations are required for
+all affected locations, including no-ops. Unknown dedicated files and unmanaged
+markers cannot be adopted. Instruction changes preserve manual bytes and
+observed modes; unchanged shared neighbors may retain unknown body proof while
+aggregate layout metadata refreshes. Final contribution removal keeps an empty
+aggregate. Only reconciled content metadata maps back onto authoritative real
+owners; internal projection identities never escape to state, contracts or
+references or error diagnostics. Physical errors name authoritative real owners
+and preserve actionable location/cause text. Complete final validation precedes
+return and failures expose no partial plan.
+
+Inputs remain unchanged. This supplied-value path grants no filesystem
+containment, source authenticity, native behavior or execution authority.
+Production commands, schema 1, original upsert and public mixed-planner sharing
+rejections remain unchanged. Guarded application, qualified integration and
+native qualification remain later work. See the
+[shared upsert design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md#explicit-shared-upsert).
 
 ## 5. Source format and authentication
 

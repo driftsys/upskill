@@ -107,5 +107,6 @@ The opt-in [combined-state validator](combined-lifecycle-state.md) now checks
 reference authority and explicit per-owner consumer associations.
 Reference-driven removal planning now connects this state to shared-owner
 retirement. The [single-owner upsert coordinator](lifecycle-upsert.md) now
-connects complete add/update sets to graph and mixed-artifact planning. Shared
-add/update contracts and guarded lifecycle execution remain pending.
+connects complete add/update sets to graph and mixed-artifact planning. The
+separate inactive `plan_shared_upsert` entrypoint consumes explicit
+shared-output contracts. Guarded lifecycle execution remains pending.

@@ -75,13 +75,15 @@ The separate [removal planner](lifecycle-reference-removal.md) reconciles
 shared-owner retirement. The pure [selection preflight](lifecycle-selection.md)
 aggregates selected legacy and native conflicts for all/literal-name requests.
 The pure [single-owner upsert coordinator](lifecycle-upsert.md) now connects
-complete desired sets and selected graph changes to mixed-artifact planning.
-Source/scoped selectors and CLI precedence, shared add/update contracts,
-instruction compiler adapters and complete lifecycle integration remain task 2b
-work. Existing mixed and instruction planners keep their affected multi-owner
-rejection. Guarded lifecycle backup/application/recovery, observational adapters
-and native activation remain separate gates. This boundary alone does not
-complete task 2b, Gate 5, M1 or the updater prerequisite.
+complete desired sets and selected graph changes to mixed-artifact planning. The
+separate [explicit shared upsert](lifecycle-upsert.md#explicit-shared-upsert)
+now consumes recorded contracts and supplied observations. Source/scoped
+selectors and CLI precedence, instruction compiler adapters and complete
+lifecycle integration remain task 2b work. Existing mixed and instruction
+planners keep their affected multi-owner rejection. Guarded lifecycle
+backup/application/recovery, observational adapters and native activation remain
+separate gates. This boundary alone does not complete task 2b, Gate 5, M1 or the
+updater prerequisite.
 
 ## Trace
 

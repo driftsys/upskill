@@ -77,27 +77,91 @@ relative destinations across supplied roots. Missing candidate information is
 not filled in by inferring ownership; later source/destination qualification
 must establish the facts needed for application.
 
-Affected multi-owner artifacts and new shared artifact identities remain
-unsupported. Unaffected shared rows survive disjoint changes. Equal rendered
-bytes cannot establish compatibility. The separate
+In `plan_upsert`, affected multi-owner artifacts and new shared artifact
+identities remain unsupported. Unaffected shared rows survive disjoint changes.
+Equal rendered bytes cannot establish compatibility. The separate
 [owner-contract boundary](lifecycle-owner-contracts.md) now records and checks
-explicit source, content and adapter-revision evidence. Shared reconciliation
-must consume it alongside qualified observations before these rejections can be
-relaxed. Shared retirement remains available through the separate removal API.
+explicit source, content and adapter-revision evidence. The separate
+`plan_shared_upsert` entrypoint consumes that evidence with supplied
+observations as described below. Shared retirement also remains available
+through the separate removal API.
+
+## Explicit shared upsert
+
+`plan_shared_upsert` accepts the same request and observations and returns the
+same outcome as `plan_upsert`. Both entrypoints share selection, complete-set
+validation, graph retention, legacy collision checks and contract propagation.
+The original entrypoint and the public mixed planner retain their conservative
+sharing rejection. The shared entrypoint is an inactive supplied-value API;
+source and filesystem qualification remain outside this boundary.
+
+Candidate artifacts use exact scope, raw root, path and optional contribution
+selector. Surviving artifact identities and real owners retain relative order;
+new identities and owners append in key order. Changed installations supply
+complete sets. Untouched owners keep their binding, body/file content and
+contract evidence. Adding an owner cannot silently change retained content.
+Desired file bytes and modes or instruction bodies at one identity must agree.
+Real immutable owner bindings are checked before physical projection.
+
+After candidate whole-state validation, every affected artifact receiving
+desired output with multiple final owners requires complete matching contracts
+for all final owners. Full source-manifest digests and complete surface/revision
+maps must agree. Missing unselected evidence blocks the operation. Selected
+owners may replace unknown history with complete newly supplied evidence; no
+default revision is inferred. Single-owner results do not require invented
+proof. Retirement removes only the released owners' proof. A pure release with
+no desired value at that identity retains all surviving owners and evidence
+unchanged, including unknown proof, without requiring agreement. Physical
+observations remain mandatory. Unaffected shared neighbors may retain unknown
+evidence.
+
+## Private physical projection
+
+The private sharing planner assigns one deterministic internal owner to each
+logical artifact identity in the union of prior and candidate state. It
+delegates physical planning to `operations::plan::plan_owned_artifacts` after
+validating real ownership and agreement. No alternate reference authority or
+filesystem writer is introduced. For affected retained output without desired
+bytes, exact supplied observations provide the existing body or file; the
+existing planner verifies ownership and recorded content.
+
+The existing planner retains observation, no-op verification, topology,
+permission and marker guards. Unknown dedicated files and unmanaged markers
+cannot be adopted. Shared instruction changes preserve exact manual text and
+observed modes. Untouched contribution bodies retain their proof, while
+aggregate whitespace metadata may refresh. Removing the final contribution keeps
+an empty aggregate file.
+
+The projection maps only normalized content and instruction layout metadata back
+to the real candidate rows, requiring exact identity count and content
+agreement. Internal owner identities never enter returned state, contracts or
+references or public error messages. Physical errors translate complete private
+owner contexts into real owner lists. Typed instruction locations retain exact
+scope/raw-root attribution. Retained aggregate extraction reports the exact
+physical file ownership grouped by selector, including neighbors verified by the
+reader. Literal destination and cause text are preserved. Final complete
+validation precedes return. Errors expose no partial plan and inputs remain
+unchanged. This projection supplies no execution, source-authenticity,
+physical-containment or native authority.
 
 ## Remaining Gate 5 work
 
-This is complete planning for the supported single-owner boundary. Graph and
-artifact errors currently report the first error; full operation-level conflict
-aggregation remains pending. Shared add/update reconciliation, source/scoped
-selectors, CLI precedence, instruction compiler adapters, guarded first-write
-backup, executor/recovery integration and observational adapters remain. Gate 6
-must qualify native targets before schema-2 production activation. This pure
-plan grants no execution, source authenticity, physical containment or native
-support authority.
+These supplied-value boundaries plan supported rule outputs and explicit shared
+reconciliation. Graph and artifact errors currently report the first error; full
+operation-level conflict aggregation remains pending. Qualified
+source/destination integration, source/scoped selectors, CLI precedence,
+instruction compiler adapters, guarded first-write backup, executor/recovery
+integration and observational adapters remain. Gate 6 must qualify native
+targets before schema-2 production activation. This pure plan grants no
+execution, source authenticity, physical containment or native support
+authority.
 
 ## Components
 
 - [Coordinator](../../src/lifecycle/upsert.rs)
 - [Acceptance examples](../../tests/lifecycle_upsert.rs)
 - [Validation record](../technotes/2026-10-16-m1-gate5-upsert-validation.md)
+
+- [Shared reconciliation implementation](../../src/lifecycle/sharing/mod.rs)
+- [Shared acceptance examples](../../tests/lifecycle_sharing.rs)
+- [Shared validation limits](../technotes/2026-10-17-m1-shared-reconciliation-validation.md)

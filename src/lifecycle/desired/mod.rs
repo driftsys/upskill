@@ -2,7 +2,9 @@
 //!
 //! These pure values establish no ownership, containment or native conformance.
 mod batch;
+mod contracts;
 pub use batch::{DesiredSetDiagnostic, DesiredSetsOutcome, compile_rule_desired_sets};
+pub use contracts::{ContractedDesiredSet, compile_rule_desired_set_with_contracts};
 
 use crate::compile::item::{ItemCompileRequest, compile_item};
 use crate::files::plan::{DesiredFile, FileLocation, FileValue};
