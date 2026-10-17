@@ -824,6 +824,6 @@ Historical links from archived records to the former WIP umbrella now resolve
 through this archive entry. Older per-slice pending-work prose records its
 original checkpoint; the final acceptance note is the current delivery
 authority. The archived spec SHA-256 is
-`7e8f1241a3e1e91fafee793e6e5f38c9a361bfc2e6ea198de2503bf7a7b7ae3a`; the archived
+`916606a7078be19fca4cafab69b0ae9b118d476bcdc9fd88a2441a5c08bef5ec`; the archived
 completion plan SHA-256 is
 `816ac4d108884b6ccc8d76d5713363f92757c7211db49969ec44d17a556d248f`.
