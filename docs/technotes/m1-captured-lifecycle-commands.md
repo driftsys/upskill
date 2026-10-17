@@ -62,7 +62,7 @@ work.
 
 ## Delivery evidence
 
-Local validation on 2026-10-18 passed 11 focused integration cases and the
+Local validation on 2026-10-18 passed 15 focused integration cases and the
 recovery-stop unit example, full `just verify` (no failures, one existing
 ignored test), all-target Clippy with denied warnings, and explicit Rust 1.85
 `just msrv-check`. The independent task review reported PASS with no findings.
@@ -76,6 +76,15 @@ After stacking on source commit `b0e1593`, final `just verify` and Rust 1.85
 checking passed again. Logs are
 `/private/tmp/upskill-lifecycle-commands-stacked-verify.log` and
 `/private/tmp/upskill-lifecycle-commands-stacked-msrv.log`.
+
+The pre-PR test wave also pins nonempty unrelated source rejection, matching
+captures for every installation, mixed owned/blocked complete selection, stale
+metadata and sources before builder invocation, bad backup rejection, and
+instruction modes after update and removal. Negative controls replacing digest
+matching with source-list nonemptiness and ignoring blockers with owned
+candidates both fail their focused acceptance cases. Production source was
+restored exactly. Wave evidence uses
+`/private/tmp/upskill-lifecycle-commands-wave-*` logs.
 
 The raw bounded plan is retained in
 [the archive](../archive/plans/2026-10-18-lifecycle-commands.md). Its durable

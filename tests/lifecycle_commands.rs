@@ -402,6 +402,14 @@ fn instruction_add_update_remove_preserves_manual_bytes_and_ordinary_mode() {
             panic!()
         };
         prepared.apply().unwrap();
+        assert_eq!(
+            std::fs::metadata(root.path.join("AGENTS.md"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            if existing { 0o640 } else { 0o600 }
+        );
         let bytes = std::fs::read_to_string(root.path.join("AGENTS.md")).unwrap();
         assert!(bytes.contains("Second body"));
         if existing {
@@ -416,6 +424,14 @@ fn instruction_add_update_remove_preserves_manual_bytes_and_ordinary_mode() {
             panic!()
         };
         prepared.apply().unwrap();
+        assert_eq!(
+            std::fs::metadata(root.path.join("AGENTS.md"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            if existing { 0o640 } else { 0o600 }
+        );
         assert_eq!(
             std::fs::read(root.path.join("AGENTS.md")).unwrap(),
             if existing {
@@ -841,4 +857,257 @@ fn updating_and_removing_one_instruction_preserves_an_unselected_contribution() 
     assert!(content.starts_with("Manual prefix\n"));
     assert!(content.contains("Retained body\n"));
     assert!(!content.contains("Updated body"));
+}
+
+#[test]
+fn each_desired_installation_requires_its_matching_nonempty_source_capture() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: tmp.path().join("output"),
+    };
+    std::fs::create_dir(&root.path).unwrap();
+    let mut source_roots = Vec::new();
+    for (name, bytes) in [
+        ("matching", b"matching".as_slice()),
+        ("unrelated", b"unrelated".as_slice()),
+    ] {
+        let source_root = InstallationRoot {
+            path: tmp.path().join(name),
+            ..root.clone()
+        };
+        std::fs::create_dir(&source_root.path).unwrap();
+        std::fs::write(source_root.path.join("RULE.md"), bytes).unwrap();
+        source_roots.push(QualifiedScope::open(&source_root).unwrap());
+    }
+    let matching = source_roots[0].observe_source_tree().unwrap();
+    let unrelated = source_roots[1].observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let result = session.prepare_upsert(
+        None,
+        &[&unrelated],
+        ResourceExecutionPolicy::Disabled,
+        |_| Ok(supplied(&root, &matching, b"desired")),
+    );
+    assert!(
+        matches!(result, Err(error) if error.to_string().contains("matching captured source snapshot"))
+    );
+    let multi = || {
+        let mut request = supplied(&root, &matching, b"first");
+        let mut second = supplied(&root, &unrelated, b"second").sets.remove(0);
+        second.installation.owner.installation_id = "second".into();
+        second.installation.owner.installed_name = "second".into();
+        let DesiredArtifact::File(file) = &mut second.artifacts[0] else {
+            panic!()
+        };
+        file.location.path = "rules/second.md".into();
+        request.sets.push(second);
+        request.add_references.push(Reference::DirectInstallation {
+            installation_id: "second".into(),
+        });
+        request
+    };
+    let result = session.prepare_upsert(
+        None,
+        &[&matching],
+        ResourceExecutionPolicy::Disabled,
+        |_| Ok(multi()),
+    );
+    assert!(
+        matches!(result, Err(error) if error.to_string().contains("matching captured source snapshot"))
+    );
+    assert_eq!(std::fs::read_dir(&root.path).unwrap().count(), 0);
+    assert!(matches!(
+        session
+            .prepare_upsert(
+                None,
+                &[&matching],
+                ResourceExecutionPolicy::Disabled,
+                |_| Ok(supplied(&root, &matching, b"desired"))
+            )
+            .unwrap(),
+        PrepareOutcome::Ready(_)
+    ));
+    let PrepareOutcome::Ready(prepared) = session
+        .prepare_upsert(
+            None,
+            &[&matching, &unrelated],
+            ResourceExecutionPolicy::Disabled,
+            |_| Ok(multi()),
+        )
+        .unwrap()
+    else {
+        panic!()
+    };
+    prepared.apply().unwrap();
+    assert_eq!(
+        std::fs::read(root.path.join("rules/second.md")).unwrap(),
+        b"second"
+    );
+}
+
+#[test]
+fn mixed_owned_and_missing_or_legacy_selection_blocks_the_entire_request() {
+    for legacy in [false, true] {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: tmp.path().join("output"),
+        };
+        std::fs::create_dir(&root.path).unwrap();
+        if legacy {
+            let mut lock = upskill::lockfile::Lockfile::default();
+            lock.bundles.push(upskill::lockfile::LockedBundle {
+                name: "blocked".into(),
+                source: "old".into(),
+                git_ref: None,
+                items: vec![],
+            });
+            std::fs::write(
+                root.path.join(".upskill-lock.json"),
+                serde_json::to_vec(&lock).unwrap(),
+            )
+            .unwrap();
+        }
+        let source_root = InstallationRoot {
+            path: tmp.path().join("source"),
+            ..root.clone()
+        };
+        std::fs::create_dir(&source_root.path).unwrap();
+        std::fs::write(source_root.path.join("RULE.md"), b"captured").unwrap();
+        let source_scope = QualifiedScope::open(&source_root).unwrap();
+        let source = source_scope.observe_source_tree().unwrap();
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let SessionOutcome::Ready(session) =
+            LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+        else {
+            panic!()
+        };
+        let PrepareOutcome::Ready(prepared) = session
+            .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+                Ok(supplied(&root, &source, b"owned"))
+            })
+            .unwrap()
+        else {
+            panic!()
+        };
+        prepared.apply().unwrap();
+        let original_state = std::fs::read(root.path.join(".upskill-lock.json")).unwrap();
+        let SessionOutcome::Ready(session) =
+            LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+        else {
+            panic!()
+        };
+        let selection = Selection::Names(vec!["example".into(), "blocked".into()]);
+        let PrepareOutcome::Blocked(diagnostics) = session
+            .prepare_upsert(
+                Some(&selection),
+                &[&source],
+                ResourceExecutionPolicy::Disabled,
+                |_| panic!("mixed blocked selection invoked builder"),
+            )
+            .unwrap()
+        else {
+            panic!("mixed request must have no ready subset")
+        };
+        use upskill::lifecycle::selection::{LegacyRow, SelectionDiagnostic};
+        assert_eq!(
+            diagnostics,
+            vec![CommandDiagnostic::Selection(if legacy {
+                SelectionDiagnostic::LegacyRow(LegacyRow::Bundle(0))
+            } else {
+                SelectionDiagnostic::UnknownName("blocked".into())
+            })]
+        );
+        assert!(matches!(
+            session.prepare_remove(&selection).unwrap(),
+            PrepareOutcome::Blocked(_)
+        ));
+        assert_eq!(
+            std::fs::read(root.path.join(".upskill-lock.json")).unwrap(),
+            original_state
+        );
+        assert_eq!(
+            std::fs::read(root.path.join("rules/example.md")).unwrap(),
+            b"owned"
+        );
+        assert!(!root.path.join(".upskill/state/operation.json").exists());
+    }
+}
+
+#[test]
+fn stale_metadata_or_source_before_preparation_stops_before_builder() {
+    for stale in ["metadata", "source"] {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: tmp.path().join("output"),
+        };
+        std::fs::create_dir(&root.path).unwrap();
+        let source_root = InstallationRoot {
+            path: tmp.path().join("source"),
+            ..root.clone()
+        };
+        std::fs::create_dir(&source_root.path).unwrap();
+        std::fs::write(source_root.path.join("RULE.md"), b"captured").unwrap();
+        let source_scope = QualifiedScope::open(&source_root).unwrap();
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let SessionOutcome::Ready(session) =
+            LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+        else {
+            panic!()
+        };
+        let source = source_scope.observe_source_tree().unwrap();
+        if stale == "metadata" {
+            std::fs::write(root.path.join(".upskill-lock.json"), b"late metadata").unwrap();
+        } else {
+            std::fs::write(source_root.path.join("RULE.md"), b"late source").unwrap();
+        }
+        assert!(
+            session
+                .prepare_upsert(
+                    None,
+                    &[&source],
+                    ResourceExecutionPolicy::Disabled,
+                    |_| panic!("stale evidence invoked builder")
+                )
+                .is_err()
+        );
+        assert!(!root.path.join("rules").exists());
+        assert!(!root.path.join(".upskill/state/operation.json").exists());
+    }
+}
+
+#[test]
+fn session_open_rejects_a_mismatching_existing_schema1_backup_without_effects() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: tmp.path().into(),
+    };
+    let state = b"{\"schema\":1}\n";
+    let backup = b"{\"schema\":1,\"unexpected\":true}\n";
+    std::fs::write(root.path.join(".upskill-lock.json"), state).unwrap();
+    let backup_path = root.path.join(".upskill-lock.json.schema1.bak");
+    std::fs::write(&backup_path, backup).unwrap();
+    std::fs::set_permissions(&backup_path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    assert!(
+        matches!(LifecycleSession::open(&scope, &guard, root.clone()), Err(error) if error.to_string().contains("backup differs"))
+    );
+    assert_eq!(
+        std::fs::read(root.path.join(".upskill-lock.json")).unwrap(),
+        state
+    );
+    assert_eq!(std::fs::read(backup_path).unwrap(), backup);
+    assert_eq!(std::fs::read_dir(&root.path).unwrap().count(), 2);
 }

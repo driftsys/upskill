@@ -68,20 +68,19 @@ Spec:
   full pass-1 ledger
   `/Users/sebastientasson/.codex/review-ledgers/driftsys-upskill/pr312-pass1.md`;
   all hosted checks passed. T1-T3 remain deferred in #311, status prose in #309.
-- Origin/fresh-state prerequisite: six public examples plus fresh
-  recovery/late-backup unit example pass; independent review found no runtime
-  defect, recommended acceptance cases were added. Final verification and MSRV
-  passed. PR #314 is open at `73f6135b1656f7d56660fbbe13032b30fd18f2a5` with
-  full review and hosted CI in progress. Quick-review fixes pin matching
-  replacement-backup immutability and clarify migration-only backup
-  requirements; other coverage debt is #313.
-- Source orchestration prerequisite: worker owns `feat/lifecycle-sources` in
-  `.claude/worktrees/lifecycle-sources`; private metadata/worktree Git checkout
-  supports branch/tag/SHA while retaining qualified item snapshots; full
-  verification and MSRV passed, including the corrected inherited Git index
-  confinement regression and approved scoped re-review. Commit `b0e1593` is
-  published; quick-review test improvements are in progress before its PR.
-- Captured command adapters: worker implementing in `feat/lifecycle-commands`,
-  based on origin prerequisite commit `21e692d`; rebase onto merged
-  prerequisites before delivery. Final source orchestration and full acceptance
-  remain pending.
+- Origin/fresh-state prerequisite: PR #314 squash-merged as
+  `77181b90222473345dab6b46a3665828649361b9` after full review and all hosted
+  checks passed. Remaining advisory origin coverage is #313; minor migration
+  wording in #309 is reconciled by the captured adapter documentation.
+- Source prerequisite: `feat/lifecycle-sources` contains `b0e1593` and verified
+  quick-review fixes in `dbdddbe`. Distinct refs, containment rejection and
+  stale compilation are pinned with mutation controls. Full verification and
+  MSRV passed; PR/hosted delivery follows.
+- Captured command adapters: implemented in `feat/lifecycle-commands`, stacked
+  on source commit `b0e1593`. Eleven examples, recovery-stop coverage, final
+  stacked verification/MSRV and independent task review passed. Bounded
+  gardening is complete. Quick-review test assertions are being strengthened
+  before PR delivery.
+- Source-backed command orchestration: worker implementing in
+  `feat/lifecycle-orchestration`, based on captured commit `38647b4`. Whole-lane
+  recovery acceptance and final Gate 5 qualification remain pending.
