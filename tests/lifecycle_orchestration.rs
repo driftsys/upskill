@@ -27,6 +27,16 @@ fn target_precedence_ignores_empty_overrides() {
         );
     }
     assert!(effective_targets(TargetSelection::default(), &[]).is_err());
+    assert!(
+        effective_targets(
+            TargetSelection {
+                invocation: &[TargetSurface::ClaudeCli, TargetSurface::ClaudeCli],
+                ..Default::default()
+            },
+            &[]
+        )
+        .is_err()
+    );
 }
 
 use upskill::files::permissions::ResourceExecutionPolicy;
@@ -120,8 +130,21 @@ fn local_add_update_remove_retains_identity_alias_and_exact_source_evidence() {
     );
     let output = tmp.path().join(&first.artifacts[0].path);
     assert!(std::fs::read_to_string(&output).unwrap().contains("First"));
+    write_rule(source.path(), "Repeated add refresh");
     run(&root, add(source.path()));
-    assert_eq!(state(tmp.path()).installations.len(), 1);
+    let repeated = state(tmp.path());
+    assert_eq!(repeated.installations.len(), 1);
+    assert_eq!(repeated.installations[0].owner.installation_id, id);
+    assert_eq!(repeated.references, first.references);
+    assert_ne!(
+        repeated.installations[0].source_evidence,
+        first.installations[0].source_evidence
+    );
+    assert!(
+        std::fs::read_to_string(&output)
+            .unwrap()
+            .contains("Repeated add refresh")
+    );
     write_rule(source.path(), "Second");
     run(
         &root,
@@ -378,6 +401,7 @@ fn git_branch_advancement_updates_actual_revision_without_changing_id_or_request
         let output = command.args(["--exact", "git_branch_advancement_updates_actual_revision_without_changing_id_or_requested_binding", "--nocapture"])
             .env(CHILD, repo.path()).env("HOME", home.path()).env("USERPROFILE", home.path())
             .env("GIT_CONFIG_GLOBAL", home.path().join(".gitconfig")).env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("GIT_TRACE2_EVENT", home.path().join("source-trace.json"))
             .env_remove("GIT_CONFIG_COUNT").env_remove("GIT_CONFIG_PARAMETERS").env_remove("GIT_DIR").env_remove("GIT_WORK_TREE")
             .output().unwrap();
         assert!(
@@ -454,6 +478,73 @@ fn git_branch_advancement_updates_actual_revision_without_changing_id_or_request
             .unwrap()
             .contains("Second commit")
     );
+    let state_before = std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+    let output_before = std::fs::read(&output).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let result = with_prepared(
+        &scope,
+        &guard,
+        root.clone(),
+        SourceRequest::Update(Selection::All),
+        SourceOptions {
+            targets: TargetSelection::default(),
+            add_defaults: &[],
+            compiler: &context(),
+        },
+        |prepared| {
+            let trace =
+                std::fs::read_to_string(std::env::var_os("GIT_TRACE2_EVENT").unwrap()).unwrap();
+            let metadata = trace
+                .lines()
+                .filter_map(|line| {
+                    let event: serde_json::Value = serde_json::from_str(line).ok()?;
+                    let argv = event.get("argv")?.as_array()?;
+                    let at = argv
+                        .iter()
+                        .position(|arg| arg.as_str() == Some("--git-dir"))?;
+                    argv.get(at + 1)?.as_str().map(str::to_owned)
+                })
+                .last()
+                .expect("retained checkout Git metadata in trace");
+            let old = git(&repo, &["--git-dir", &metadata, "rev-parse", "HEAD"]);
+            let new = git(
+                &repo,
+                &[
+                    "--git-dir",
+                    &metadata,
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "commit-tree",
+                    "HEAD^{tree}",
+                    "-p",
+                    "HEAD",
+                    "-m",
+                    "same tree, different identity",
+                ],
+            );
+            assert_ne!(old, new);
+            git(&repo, &["--git-dir", &metadata, "update-ref", "HEAD", &new]);
+            prepared.apply()
+        },
+    );
+    assert!(
+        format!(
+            "{:#}",
+            result.err().expect("changed checkout identity must reject")
+        )
+        .contains("source checkout revision changed")
+    );
+    assert_eq!(
+        std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        state_before
+    );
+    assert_eq!(std::fs::read(&output).unwrap(), output_before);
+    assert!(!scope.has_pending_operation().unwrap());
+    drop(guard);
+    drop(scope);
     run(&root, SourceRequest::Remove(Selection::All));
     assert!(!output.exists());
 }
@@ -649,4 +740,74 @@ fn fixture_git_commands_ignore_inherited_repository_overrides() {
         std::fs::read(std::env::var_os(CHILD).unwrap()).unwrap(),
         b"external index sentinel"
     );
+}
+
+#[test]
+fn complete_multi_source_add_update_and_remove_retains_each_installation() {
+    let destination = tempfile::tempdir().unwrap();
+    let first = tempfile::tempdir().unwrap();
+    let second = tempfile::tempdir().unwrap();
+    write_rule(first.path(), "First source");
+    write_rule(second.path(), "Second source");
+    let root = root(destination.path());
+    run(
+        &root,
+        SourceRequest::Add(vec![
+            AddRule {
+                source: InstallSource::LocalPath(first.path().into()),
+                source_name: "source".into(),
+                installed_name: "first".into(),
+            },
+            AddRule {
+                source: InstallSource::LocalPath(second.path().into()),
+                source_name: "source".into(),
+                installed_name: "second".into(),
+            },
+        ]),
+    );
+    let initial = state(destination.path());
+    assert_eq!(initial.installations.len(), 2);
+    assert_eq!(initial.artifacts.len(), 2);
+    assert_eq!(initial.references.len(), 2);
+    assert_eq!(initial.owner_contracts.len(), 2);
+    assert_ne!(
+        initial.installations[0].owner.installation_id,
+        initial.installations[1].owner.installation_id
+    );
+    let paths = initial
+        .artifacts
+        .iter()
+        .map(|artifact| destination.path().join(&artifact.path))
+        .collect::<Vec<_>>();
+    for text in ["First source", "Second source"] {
+        assert!(
+            paths
+                .iter()
+                .any(|path| std::fs::read_to_string(path).unwrap().contains(text))
+        );
+    }
+    write_rule(first.path(), "First refreshed");
+    write_rule(second.path(), "Second refreshed");
+    run(&root, SourceRequest::Update(Selection::All));
+    let updated = state(destination.path());
+    assert_eq!(updated.references, initial.references);
+    assert_eq!(updated.installations.len(), 2);
+    for prior in &initial.installations {
+        let current = updated
+            .installations
+            .iter()
+            .find(|item| item.owner.installation_id == prior.owner.installation_id)
+            .unwrap();
+        assert_ne!(current.source_evidence, prior.source_evidence);
+    }
+    for text in ["First refreshed", "Second refreshed"] {
+        assert!(
+            paths
+                .iter()
+                .any(|path| std::fs::read_to_string(path).unwrap().contains(text))
+        );
+    }
+    run(&root, SourceRequest::Remove(Selection::All));
+    assert!(state(destination.path()).installations.is_empty());
+    assert!(paths.iter().all(|path| !path.exists()));
 }

@@ -349,11 +349,21 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                 };
                 let scope = QualifiedScope::open(&root(&path)).unwrap();
                 let guard = scope.try_lock_writer().unwrap();
-                let result =
-                    crate::lifecycle::commands::LifecycleSession::open(&scope, &guard, root(&path))
-                        .unwrap();
+                let result: OrchestrationOutcome<()> = with_prepared(
+                    &scope,
+                    &guard,
+                    root(&path),
+                    add(&path.join("missing-new-request-source")),
+                    SourceOptions {
+                        targets: TargetSelection::default(),
+                        add_defaults: &[TargetSurface::ClaudeCli],
+                        compiler: &context(),
+                    },
+                    |_| panic!("recovery must stop before preparing a new request"),
+                )
+                .unwrap();
                 match result {
-                    crate::lifecycle::commands::SessionOutcome::Recovery(report) => {
+                    OrchestrationOutcome::Recovery(report) => {
                         if sabotage {
                             assert!(matches!(report.outcome, ExecutionOutcome::Reconcile { .. }));
                             assert_eq!(
@@ -370,18 +380,10 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                         }
                         assert_eq!(report.outcome, ExecutionOutcome::Complete);
                     }
-                    crate::lifecycle::commands::SessionOutcome::Ready(_) => {
-                        // Before the first pending receipt, no journal exists yet.
-                        assert_eq!(point, "before_pending");
-                        assert_eq!(index, 0);
-                        drop(guard);
-                        drop(scope);
-                        write_rule(&source, "Second");
-                        std::fs::write(source.join("scripts/check.sh"), b"second resource")
-                            .unwrap();
-                        run(&root(&path), request(&source, operation));
-                        assert_image(&path, &expected);
-                        continue;
+                    OrchestrationOutcome::Ready(_) | OrchestrationOutcome::Blocked(_) => {
+                        panic!(
+                            "persisted checkpoint journal missing at {operation}:{point}:{index}"
+                        );
                     }
                 }
                 assert_image(&path, &expected);

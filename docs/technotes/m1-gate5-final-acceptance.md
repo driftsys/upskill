@@ -37,7 +37,10 @@ effect checkpoints; the matrix follows emitted events rather than inventing
 those checkpoints.
 
 The parent verifies concurrent writer rejection, terminates the child, opens a
-new writer session and recovers through the lifecycle session boundary. Source
+new writer session and recovers through `orchestration::with_prepared`. A new
+request names a missing source and its preparation callback must never run;
+recovery returns before source work and stops that request. Every observed
+checkpoint already has a persisted journal, so a ready result fails. Source
 bytes change after termination. Recovery must still match the successful
 operation's exact regular-file image outside executor storage, including
 combined-state bytes, output bytes, backup bytes and modes. A second session
@@ -97,11 +100,11 @@ The combined final source and adapter tree subsequently passed full
 run includes Rust tests, Clippy, Rust and Markdown format checks, Markdown lint,
 shell and hook checks, documentation regression checks, rendered book validation
 and build. The combined tree also passed explicit Rust 1.85 `just msrv-check`;
-its log is `/private/tmp/upskill-gate5-final-msrv.log`. The final command suite
-contains fifteen examples, bringing the five focused integration suites to
-fifty-four examples; the eleven-command and fifty-total counts above describe
-the earlier snapshot. Hosted CI, independent final delivery review and merge
-remain pending. Local verification does not substitute for those delivery
+its log is `/private/tmp/upskill-gate5-final-msrv.log`. At that checkpoint the
+command suite contained fifteen examples, bringing the five focused integration
+suites to fifty-four examples; the eleven-command and fifty-total counts above
+describe the earlier snapshot. Hosted CI, independent final delivery review and
+merge remain pending. Local verification does not substitute for those delivery
 requirements.
 
 ## Independent local acceptance audit
@@ -152,3 +155,23 @@ Archive SHA-256 digests:
   `7e8f1241a3e1e91fafee793e6e5f38c9a361bfc2e6ea198de2503bf7a7b7ae3a`.
 - Completion plan:
   `816ac4d108884b6ccc8d76d5713363f92757c7211db49969ec44d17a556d248f`.
+
+## Quick-review acceptance correction
+
+The final test wave requires recovery through `orchestration::with_prepared`
+with an unavailable new source and a preparation callback that must not run.
+Every observed effect/receipt checkpoint already has a persisted journal; a
+ready result now fails instead of retrying the request. The strict session
+recovery control passed in 104.90 seconds before the orchestration-entrypoint
+correction. The full corrected tree passed `just verify` in
+`/private/tmp/upskill-gate5-wave-verify.log` and Rust 1.85 in
+`/private/tmp/upskill-gate5-wave-msrv.log`.
+
+The orchestration suite now contains twelve examples. Repeated add must refresh
+changed content and source evidence while preserving identity and references.
+Apply-time Git identity is pinned by changing a retained checkout HEAD to
+another commit with the same tree: application rejects without state/output
+changes or pending intent. Independent controls deleting Git revalidation and
+making repeated add a successful no-op both failed the strengthened assertions.
+Duplicate target rejection and complete two-source add/update/remove are also
+asserted. These controls do not replace final hosted qualification or review.
