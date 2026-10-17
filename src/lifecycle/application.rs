@@ -157,3 +157,98 @@ pub fn recover(
 ) -> Result<Option<ExecutionReport>> {
     scope.recover_operation(guard)
 }
+
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+mod tests {
+    use super::*;
+    use crate::filesystem::execution::{ExecutionOutcome, TEST_HOOK};
+    use crate::ownership::OwnershipScope;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn recovery_completes_interrupted_first_write_through_lifecycle_boundary() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root_path = tmp.path().join("project");
+        std::fs::create_dir(&root_path).unwrap();
+        let root = crate::ownership::InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: root_path.clone(),
+        };
+        let state_path = root_path.join(".upskill-lock.json");
+        let original = b"{\"schema\":1}\n";
+        std::fs::write(&state_path, original).unwrap();
+        let mode = std::fs::metadata(&state_path).unwrap().permissions().mode() & 0o777;
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let state_after = CombinedState {
+            schema: 2,
+            installations: vec![],
+            bundles: vec![],
+            references: vec![],
+            artifacts: vec![],
+            owner_consumers: vec![],
+            owner_contracts: vec![],
+            legacy: None,
+        };
+        TEST_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|point, index| {
+                if point == "after_effect" && index == 0 {
+                    anyhow::bail!("injected interruption after backup effect");
+                }
+                Ok(())
+            }));
+        });
+        let interrupted = apply_first_schema2_write(
+            &scope,
+            &guard,
+            FirstSchema2Write {
+                plan: FileOperationPlan {
+                    artifacts: vec![],
+                    files: vec![PlannedFile {
+                        location: FileLocation {
+                            root: root.clone(),
+                            path: "rules/a.md".into(),
+                        },
+                        before: None,
+                        after: Some(FileValue {
+                            bytes: b"output".to_vec(),
+                            mode: Some(0o600),
+                        }),
+                    }],
+                },
+                state_before: FileValue {
+                    bytes: original.to_vec(),
+                    mode: Some(mode),
+                },
+                state_location: FileLocation {
+                    root: root.clone(),
+                    path: ".upskill-lock.json".into(),
+                },
+                backup_location: FileLocation {
+                    root,
+                    path: ".upskill-lock.json.schema1.bak".into(),
+                },
+                state_after: &state_after,
+                sources: &[],
+            },
+        );
+        TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+        assert!(interrupted.is_err());
+        assert_eq!(std::fs::read(&state_path).unwrap(), original);
+
+        let report = recover(&scope, &guard).unwrap().unwrap();
+        assert_eq!(report.outcome, ExecutionOutcome::Complete);
+        assert_eq!(
+            std::fs::read(root_path.join(".upskill-lock.json.schema1.bak")).unwrap(),
+            original
+        );
+        assert_eq!(
+            std::fs::read(root_path.join("rules/a.md")).unwrap(),
+            b"output"
+        );
+        assert_eq!(
+            std::fs::read(state_path).unwrap(),
+            serialize_state(&state_after).unwrap().as_bytes()
+        );
+    }
+}

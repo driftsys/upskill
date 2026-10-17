@@ -1158,9 +1158,11 @@ state is validated. Referenced empty installations survive; empty retired
 installations need no file action.
 
 This pure boundary grants no qualified execution or native compatibility claim.
-Add/update sharing is a separate opt-in supplied-value boundary in §4.20.
-Guarded application, recovery and production schema-2 activation remain later
-work.
+Add/update sharing is a separate opt-in supplied-value boundary in §4.20. The
+opt-in guarded application boundary now covers first and subsequent schema-2
+writes, exact schema-1 backup validation, captured-source freshness, and
+recovery through the qualified executor journal. Production commands, source
+resolution, client adapters and native qualification remain later work.
 
 ### 4.17 Captured lifecycle selection preflight
 
@@ -1301,8 +1303,9 @@ return and failures expose no partial plan.
 Inputs remain unchanged. This supplied-value path grants no filesystem
 containment, source authenticity, native behavior or execution authority.
 Production commands, schema 1, original upsert and public mixed-planner sharing
-rejections remain unchanged. Guarded application, qualified integration and
-native qualification remain later work. See the
+rejections remain unchanged. Guarded application and executor recovery are
+available through an opt-in library boundary; command activation, client
+adapters and native qualification remain later work. See the
 [shared upsert design](https://github.com/driftsys/upskill/blob/main/docs/design/lifecycle-upsert.md#explicit-shared-upsert).
 
 ## 5. Source format and authentication
