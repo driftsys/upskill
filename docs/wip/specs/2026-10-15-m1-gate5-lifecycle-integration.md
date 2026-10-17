@@ -122,6 +122,10 @@ source and destination observations, and `QualifiedScope::apply_operation` /
 [qualified file execution](../../design/qualified-file-execution.md) and
 [AD-0033](../../adr/0033-qualified-file-execution-and-journals.md).
 
+The opt-in first-schema-2 guarded application boundary and its current limits
+are recorded in the
+[guarded lifecycle application note](../../technotes/2026-10-17-m1-guarded-lifecycle-application.md).
+
 ## Implementation direction
 
 - Add an opt-in library lifecycle boundary. Keep `main.rs`, existing command
