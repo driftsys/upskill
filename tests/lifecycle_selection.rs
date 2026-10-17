@@ -36,6 +36,7 @@ fn state() -> CombinedState {
         })
         .collect();
     CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations,

@@ -1,8 +1,11 @@
-//! Guarded application of a first combined-state lifecycle operation.
+//! Guarded application of combined-state lifecycle operations.
 //!
 //! This boundary binds the complete owned-artifact plan to the state committed by
 //! the same executor journal. The schema-1 backup and all output/state actions are
 //! applied under the matching qualified scope writer guard.
+
+mod bound;
+pub use bound::{BoundSchema2Write, SCHEMA1_BACKUP_NAME, apply_bound_schema2_write};
 
 use anyhow::{Context, Result, ensure};
 
@@ -181,6 +184,7 @@ mod tests {
         let scope = QualifiedScope::open(&root).unwrap();
         let guard = scope.try_lock_writer().unwrap();
         let state_after = CombinedState {
+            origin: None,
             schema: 2,
             installations: vec![],
             bundles: vec![],

@@ -80,6 +80,7 @@ pub fn serialize_state(state: &CombinedState) -> Result<String> {
 pub fn project_legacy(lockfile: &Lockfile) -> Result<CombinedState> {
     ensure!(lockfile.schema == 1, "legacy projection requires schema 1");
     Ok(CombinedState {
+        origin: None,
         owner_contracts: Vec::new(),
         schema: 2,
         installations: Vec::new(),

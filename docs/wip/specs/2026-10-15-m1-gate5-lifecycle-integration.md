@@ -37,8 +37,9 @@ inactive until gate 6 has passed its Codex adapter qualification.
 - Complete the compiler-to-lifecycle desired-set connection, authoritative
   reference graph, and per-owner consumer association required by the M1
   lifecycle design.
-- On the first schema-2 write, create and verify a restricted, non-overwritten
-  byte-exact backup of the observed schema-1 lockfile before any output effect.
+- When first migrating observed schema-1 state, create and verify a restricted,
+  non-overwritten byte-exact backup of the observed schema-1 lockfile before any
+  output effect.
 - Apply only unchanged owned files or contribution regions. Preserve unrelated
   owners, manual bytes, unselected legacy records, and individually enumerated
   extra resources. Never use recursive legacy output removal.
@@ -69,9 +70,12 @@ inactive until gate 6 has passed its Codex adapter qualification.
 1. **New ownership beside legacy history:** adding an explicitly selected item
    creates owner records while preserving unrelated schema-1 rows in the tagged
    legacy snapshot. No legacy output is adopted.
-2. **Exact first-write backup:** before the first schema-2 output effect, the
-   backup bytes equal the observed schema-1 lockfile. A mismatched existing
-   backup blocks the operation without changing state or outputs.
+2. **Exact migration backup:** when migrating observed schema-1 state, before
+   the first schema-2 output effect the backup bytes equal the observed schema-1
+   lockfile. A mismatched existing backup blocks the operation without changing
+   state or outputs. Fresh initialization requires absent state and backup,
+   creates private schema-2 state, and journals backup absence without inventing
+   schema-1 bytes.
 3. **Manual-content preservation:** adding, updating, and removing owned
    contributions preserves manual bytes and every untouched contribution.
    Editing an affected owned region or whole file produces a conflict with no

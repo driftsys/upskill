@@ -441,11 +441,12 @@ Validation results and tested source identities are retained in the
 
 The opt-in `lifecycle::application` boundary binds a complete owned-artifact
 plan to the combined state written by the same qualified execution request. It
-requires schema-1 state evidence for the first schema-2 transition and requires
-the resulting state's artifact records to equal the planner output. The request
-is applied under the matching `QualifiedScope` writer guard. The existing
-executor creates the private exact-byte backup before output actions and uses
-its durable journal for state-last recovery.
+requires exact schema-1 evidence for migration, or explicit absence of state and
+backup for fresh initialization. The resulting state's artifact records must
+equal the planner output. The request is applied under the matching
+`QualifiedScope` writer guard. The existing executor creates the private
+exact-byte backup before output actions and uses its durable journal for
+state-last recovery.
 
 `lifecycle::application::recover` delegates to the same qualified executor
 recovery API under its matching writer guard. It does not perform inspection or
@@ -454,3 +455,26 @@ recovery without an explicit caller invocation.
 See the
 [validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-guarded-lifecycle-application.md)
 for backup and recovery examples and remaining Gate 5 work.
+
+## Origin-bound lifecycle application
+
+`lifecycle::application::apply_bound_schema2_write` accepts captured optional
+state and backup values, a complete file plan, proposed combined state and
+retained source snapshots. It requires canonical lockfile/backup paths,
+validated state and complete artifact agreement. A matching scope writer guard
+and executor checks remain necessary; the records alone grant no authority.
+
+For an absent lockfile, proposed origin must be `fresh`, and the backup must be
+absent. The executor receives a backup-absence no-op and a new private mode-0600
+state action. For observed schema 1, the proposed migrated origin must bind its
+exact bytes and retain its typed snapshot; existing create-only backup execution
+runs before output effects. For observed schema 2, origin and legacy history
+cannot change. A migrated backup must match the original digest/length and mode
+0600, while fresh state continues to require backup absence. Unknown provenance
+requires reconciliation rather than a guessed migration.
+
+This entrypoint reuses existing source/destination rechecks and checkpointed
+recovery. It does not recover before preparation, resolve sources or activate
+production commands. Those applying adapter responsibilities and complete Gate 5
+acceptance remain pending. See
+[AD-0038](https://github.com/driftsys/upskill/blob/main/docs/adr/0038-bind-lifecycle-origin-to-original-backup.md).

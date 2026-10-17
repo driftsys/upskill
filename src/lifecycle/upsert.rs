@@ -402,6 +402,7 @@ fn plan_upsert_mode(
     }
     owner_contracts.extend(supplied_contracts.into_values());
     let mut state = CombinedState {
+        origin: prior.origin.clone(),
         owner_contracts,
         schema: prior.schema,
         installations: graph.installations,

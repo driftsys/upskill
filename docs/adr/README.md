@@ -87,3 +87,5 @@ records its separate digest encoding.
 - [AD-0036 — Separate explicit sharing entrypoints](0036-separate-explicit-sharing-entrypoints.md)
 
 - [AD-0037 — Require create-only backup journals](0037-require-create-only-backup-journals.md)
+
+- [AD-0038 — Bind lifecycle origin to the original backup](0038-bind-lifecycle-origin-to-original-backup.md)
