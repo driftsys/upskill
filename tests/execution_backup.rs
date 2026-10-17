@@ -51,36 +51,52 @@ fn fixture() -> (
 
 #[test]
 fn preserves_exact_original_bytes_before_applying_outputs() {
-    let (tmp, scope, request, backup) = fixture();
-    let guard = scope.try_lock_writer().unwrap();
-    let report = scope
-        .apply_operation_with_backup(&guard, &[], request, backup)
+    for original_mode in [0o600, 0o644] {
+        let (tmp, scope, mut request, backup) = fixture();
+        request.state.before.as_mut().unwrap().mode = Some(original_mode);
+        request.state.after.as_mut().unwrap().mode = Some(original_mode);
+        std::fs::set_permissions(
+            tmp.path().join(".upskill-lock.json"),
+            std::fs::Permissions::from_mode(original_mode),
+        )
         .unwrap();
-    assert_eq!(report.outcome, ExecutionOutcome::Complete);
-    assert_eq!(
-        (report.recorded_prefix, report.verified_post_prefix),
-        (3, 3)
-    );
-    assert_eq!(
-        std::fs::read(tmp.path().join(".upskill-lock.schema-1.json")).unwrap(),
-        ORIGINAL
-    );
-    assert_eq!(
-        std::fs::metadata(tmp.path().join(".upskill-lock.schema-1.json"))
-            .unwrap()
-            .mode()
-            & 0o7777,
-        0o600
-    );
-    assert_eq!(
-        std::fs::read(tmp.path().join("rule.md")).unwrap(),
-        b"new rule\n"
-    );
-    assert_eq!(
-        std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
-        b"schema two\n"
-    );
-    assert!(scope.recover_operation(&guard).unwrap().is_none());
+        let guard = scope.try_lock_writer().unwrap();
+        let report = scope
+            .apply_operation_with_backup(&guard, &[], request, backup)
+            .unwrap();
+        assert_eq!(report.outcome, ExecutionOutcome::Complete);
+        assert_eq!(
+            (report.recorded_prefix, report.verified_post_prefix),
+            (3, 3)
+        );
+        assert_eq!(
+            std::fs::read(tmp.path().join(".upskill-lock.schema-1.json")).unwrap(),
+            ORIGINAL
+        );
+        assert_eq!(
+            std::fs::metadata(tmp.path().join(".upskill-lock.schema-1.json"))
+                .unwrap()
+                .mode()
+                & 0o7777,
+            0o600
+        );
+        assert_eq!(
+            std::fs::read(tmp.path().join("rule.md")).unwrap(),
+            b"new rule\n"
+        );
+        assert_eq!(
+            std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+            b"schema two\n"
+        );
+        assert!(scope.recover_operation(&guard).unwrap().is_none());
+        assert_eq!(
+            std::fs::metadata(tmp.path().join(".upskill-lock.json"))
+                .unwrap()
+                .mode()
+                & 0o7777,
+            original_mode
+        );
+    }
 }
 
 #[test]

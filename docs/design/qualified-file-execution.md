@@ -119,15 +119,18 @@ are 0o600, single-link regular files with qualified metadata and bindings.
 contains `*` and `!.gitignore`. Existing state without matching owner and ignore
 records rejects; arbitrary existing content is not adopted.
 
-`operation.json` uses execution-journal schema 1, independently of the CLI
-lockfile schema. Strict records reject unknown fields and contain a random
-operation ID, generation, root identity, ordered action paths, a final State
-marker, before/after SHA-256 digests, lengths and ordinary modes, payload names
-and physical identities, Queued/Pending/Done receipts, and a cleanup marker.
-Payloads hold desired file/state bytes only. Sources, credentials and old user
-file copies are not archived. Payload names, identities, sizes and hashes,
-complete path topology and checkpoint order are revalidated before recovery may
-act. Persisted paths never become unchecked execution authority.
+`operation.json` uses execution-journal schema 1 for ordinary operations and
+schema 2 for backup operations, independently of the CLI lockfile schema. Strict
+records reject unknown fields and contain a random operation ID, generation,
+root identity, ordered action paths, a final State marker, before/after SHA-256
+digests, lengths and ordinary modes, payload names and physical identities,
+Queued/Pending/Done receipts, and a cleanup marker. Payloads hold desired
+file/state bytes and, for backup operations, exact original State bytes as the
+desired backup. Source captures and old output copies for rollback are not
+retained. Original State can contain sensitive user data; the explicit backup
+preserves those bytes in private storage. Payload names, identities, sizes and
+hashes, complete path topology and checkpoint order are revalidated before
+recovery may act. Persisted paths never become unchecked execution authority.
 
 ## Checkpoint ordering and forward recovery
 
@@ -151,9 +154,10 @@ any effect, receipt advancement or cleanup. Pending Before permits application;
 Pending After or Both permits acknowledgement. Acknowledgement resyncs the
 observed file, when present, and its parent directory before Done, covering an
 interruption or error after the namespace effect but before its sync. Queued
-Both uses a receipt-only checkpoint; Queued After and unexpected values require
-reconciliation. Recorded completion and currently verified completion are kept
-separate. Final State follows the identical protocol.
+Both uses a receipt-only checkpoint for ordinary actions; an unchanged backup
+prerequisite is synced with its parent before Done. Queued After and unexpected
+values require reconciliation. Recorded completion and currently verified
+completion are kept separate. Final State follows the identical protocol.
 
 After every action is Done, cleanup first publishes `cleanup_started` in a new
 durable generation. This permits later recovery to recognize completion after

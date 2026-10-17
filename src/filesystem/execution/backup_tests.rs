@@ -49,6 +49,7 @@ struct ResetHook;
 impl Drop for ResetHook {
     fn drop(&mut self) {
         TEST_HOOK.with(|h| *h.borrow_mut() = None);
+        backend::TEST_SYNC.with(|h| *h.borrow_mut() = None);
     }
 }
 
@@ -138,6 +139,8 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
         "replace",
         "mode",
         "bytes",
+        "original-digest",
+        "original-length",
     ] {
         let (tmp, scope, request, backup) = fixture();
         let _reset = ResetHook;
@@ -171,13 +174,17 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
             }
             "mode" => disk["actions"][0]["after"]["mode"] = 0o644.into(),
             "bytes" => disk["actions"][0]["after"]["digest"] = "f".repeat(64).into(),
+            "original-digest" => disk["actions"][2]["before"]["digest"] = "f".repeat(64).into(),
+            "original-length" => disk["actions"][2]["before"]["length"] = 99.into(),
             _ => unreachable!(),
         }
         std::fs::write(path, serde_json::to_vec(&disk).unwrap()).unwrap();
-        assert!(
-            scope.recover_operation(&guard).is_err(),
-            "accepted {change}"
-        );
+        let error = scope
+            .recover_operation(&guard)
+            .expect_err(&format!("accepted {change}"));
+        if change.starts_with("original-") {
+            assert!(format!("{error:#}").contains("backup evidence differs from original state"));
+        }
         assert!(!tmp.path().join("backup").exists());
         assert!(!tmp.path().join("output").exists());
         assert_eq!(
@@ -189,33 +196,59 @@ fn corrupt_backup_journal_policy_rejects_before_effects() {
 
 #[test]
 fn existing_backup_is_synced_before_first_output_without_replacement() {
-    let (tmp, scope, request, backup) = fixture();
-    let path = tmp.path().join("backup");
-    std::fs::write(&path, b"original state\n").unwrap();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
-    let before = std::fs::metadata(&path).unwrap();
-    let _reset = ResetHook;
-    TEST_HOOK.with(|h| {
-        *h.borrow_mut() = Some(Box::new(|label, index| {
-            anyhow::ensure!(
-                label != "after_ack_sync" || index != 0,
-                "stop after backup sync"
-            );
-            Ok(())
-        }))
-    });
-    let guard = scope.try_lock_writer().unwrap();
-    assert!(
-        scope
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    for fail_at in ["file", "directory"] {
+        let (tmp, scope, request, backup) = fixture();
+        let path = tmp.path().join("backup");
+        std::fs::write(&path, b"original state\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let before = std::fs::metadata(&path).unwrap();
+        let backup_id = (before.dev(), before.ino());
+        let root = std::fs::metadata(tmp.path()).unwrap();
+        let root_id = (root.dev(), root.ino());
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        let seen = Rc::clone(&calls);
+        let _reset = ResetHook;
+        backend::TEST_SYNC.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move |file, kind| {
+                let metadata = file.metadata()?;
+                let expected = if kind == "file" { backup_id } else { root_id };
+                assert_eq!((metadata.dev(), metadata.ino()), expected);
+                seen.borrow_mut().push(kind);
+                anyhow::ensure!(kind != fail_at, "injected backup {kind} sync failure");
+                file.sync_all()?;
+                Ok(())
+            }))
+        });
+        let guard = scope.try_lock_writer().unwrap();
+        let error = scope
             .apply_operation_with_backup(&guard, &[], request, backup)
-            .is_err()
-    );
-    assert!(!tmp.path().join("output").exists());
-    TEST_HOOK.with(|h| *h.borrow_mut() = None);
-    assert_eq!(
-        scope.recover_operation(&guard).unwrap().unwrap().outcome,
-        ExecutionOutcome::Complete
-    );
-    let after = std::fs::metadata(&path).unwrap();
-    assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
+            .unwrap_err();
+        assert!(format!("{error:#}").contains(&format!("injected backup {fail_at} sync failure")));
+        let expected = if fail_at == "file" {
+            vec!["file"]
+        } else {
+            vec!["file", "directory"]
+        };
+        assert_eq!(*calls.borrow(), expected);
+        assert!(!tmp.path().join("output").exists());
+        assert_eq!(
+            std::fs::read(tmp.path().join("state")).unwrap(),
+            b"original state\n"
+        );
+        let disk: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(tmp.path().join(".upskill/state/operation.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(disk["actions"][0]["receipt"], "queued");
+        assert_eq!(disk["generation"], 0);
+        backend::TEST_SYNC.with(|h| *h.borrow_mut() = None);
+        assert_eq!(
+            scope.recover_operation(&guard).unwrap().unwrap().outcome,
+            ExecutionOutcome::Complete
+        );
+        let after = std::fs::metadata(&path).unwrap();
+        assert_eq!(backup_id, (after.dev(), after.ino()));
+    }
 }

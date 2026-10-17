@@ -641,16 +641,18 @@ activation and native qualification remain unfinished.
 ## Guarded original-state backup prerequisite
 
 Source paths: `docs/wip/specs/2026-10-17-m1-guarded-backup.md` and
-`docs/wip/plans/2026-10-17-m1-guarded-backup.md`. The raw
-[spec](specs/2026-10-17-m1-guarded-backup.md) and
-[plan](plans/2026-10-17-m1-guarded-backup.md) preserve their exact original
-bytes, including historical relative WIP references and unchecked delivery
-tasks. The archived spec's relative umbrella link is historical: resolve it as
+`docs/wip/plans/2026-10-17-m1-guarded-backup.md`. The
+[spec reading copy](specs/2026-10-17-m1-guarded-backup.md) uses canonical
+Markdown formatting. Its exact original bytes are retained as
+[compressed evidence](../technotes/evidence/2026-10-17-m1-guarded-backup/original-archived-spec.md.gz),
+with hashes in the evidence manifest. The
+[plan](plans/2026-10-17-m1-guarded-backup.md) retains its original bytes. Both
+retain historical relative WIP references and unchecked delivery tasks. The
+archived spec's relative umbrella link is historical: resolve it as
 `../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md` from the archived
-spec directory. The raw bytes are unchanged. The bounded local implementation is
-reconciled against the working code based on
-`f54c457a30473511b66349ab4d95f30ae62d654b`; this entry makes no merge or hosted
-qualification claim.
+spec directory. The bounded local implementation is reconciled against the
+working code based on `f54c457a30473511b66349ab4d95f30ae62d654b`; this entry
+makes no merge or hosted qualification claim.
 
 Durable successors:
 [specification §4.12](../specification/specification.md#412-qualified-file-execution-and-recovery),

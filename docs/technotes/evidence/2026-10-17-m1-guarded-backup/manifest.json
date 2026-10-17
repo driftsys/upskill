@@ -91,6 +91,41 @@
       "path": "upskill-gate5-backup-docs-check.log.gz",
       "sha256": "e360b14af887dac023169d9d8cc99da982b6b0fe7f1f37e800260d2e05d3e5ae",
       "uncompressed_sha256": "14a66f1c651025d79051e41ea272c24442e3e0271d021cd96b5cc371b8e00d58"
+    },
+    {
+      "path": "original-archived-spec.md.gz",
+      "sha256": "f039612544406b39262da28e4b75c1e93dd28ed3a928a1a0910720f3cd367538",
+      "uncompressed_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-green.log.gz",
+      "sha256": "3cdd29c051d0cc593c438f1186f300e7eea7149e8c2ab3c6e05a984c4c1680e5",
+      "uncompressed_sha256": "9ef2ef7eb9bd3462d72f92bab7c38a7525135fc6193ec336d17745a86b042389"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-restored.log.gz",
+      "sha256": "eeae7c3711bb626116e17436bd67689600c8e24cf9714df11e663bace967f997",
+      "uncompressed_sha256": "745c52708329012a5ecdfbef2adda67292adcffb51ab170b774c7bad7a839722"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-digest.log.gz",
+      "sha256": "de7d261aa9ae97e4fe63784b601d42f033070c451c6451cbd7f93d546ad44cd9",
+      "uncompressed_sha256": "8beb857d2cc111bcc0553f87f48f37a54092da945639ecbf039b739ec8136289"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-length.log.gz",
+      "sha256": "4fa67f2c523524bdba6250c2ef2531143e1b1cca94125562a341ff75e4003b9e",
+      "uncompressed_sha256": "03c7fb791ec5f6c6cd46a9b04871262f5736be9a6d3ecd2ca05a803e72e102a8"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-sync-body.log.gz",
+      "sha256": "6616bb9db702e250dd66092e1bbbe58702666445e7f6c4307945a93e55e2bc1a",
+      "uncompressed_sha256": "7e74fa315733479c4e19f7dad88dc3b6d836bd9bb706dd36cceb745b7d7342a6"
+    },
+    {
+      "path": "upskill-gate5-backup-quick-control-original-mode.log.gz",
+      "sha256": "47e61fee6922c45ed6d06f589cc7b6d27c7643ca0592ef12e157cb0e2b1cf7b6",
+      "uncompressed_sha256": "1e2476a8d022a2abbb40de74324031e3ae4edf3ab9166450b8cceb5179f2fc41"
     }
   ],
   "sources": {
@@ -99,13 +134,17 @@
     "src/filesystem/execution/run.rs": "410c061e72f07caf5b5414f690a705d0246de3063448417d917faf0d5f5e555b",
     "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
     "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
-    "src/filesystem/execution/backup_tests.rs": "099d32de7b4ce93fb29c5057fe517096f5c748f7dbc7b33b38e86fa178ef52cd",
-    "tests/execution_backup.rs": "906599053fdf3f6bf26d921168d0411270820057352abb1fce20ce084dbf4245"
+    "src/filesystem/execution/backup_tests.rs": "8d0fb97a2e3ae1ce0fe7d288a1759506f4cffefb18a84a3134879dd08dcd57ee",
+    "tests/execution_backup.rs": "36eadb2a4ec278eb1af2787fa783960476e39b946e547d5c60f62980b8377df5"
   },
   "controls": {
     "publication": 101,
     "policy": 101,
-    "sync": 101
+    "sync": 101,
+    "quick-original-digest": 101,
+    "quick-original-length": 101,
+    "quick-sync-body": 101,
+    "quick-original-mode": 101
   },
   "verification": {
     "baseline": 0,
@@ -120,6 +159,28 @@
       "failed": 0,
       "ignored": 1
     },
-    "docs_check": 0
+    "docs_check": 0,
+    "fixed_verify": "pending"
+  },
+  "archive": {
+    "original_spec_sha256": "1a33e9cfde7b4c87fb47c987a10c77b4378aa7108e592ccf7ae0d13302afd447",
+    "formatted_reading_copy_sha256": "5e97182bec179b1634d30d8a1cf37a1bc90b50f3ffae3dbee4ec91a0b217a24e",
+    "original_plan_sha256": "e59a48157664cf1731a62bc1e3123e79d444cf28fa6716beff398f059784af5b"
+  },
+  "initial_sources": {
+    "src/filesystem/execution/backend.rs": "9dacfa2d712c666a2a39fa139b9d6ddad68a30c2878572143071e77ff9250701",
+    "src/filesystem/execution/journal.rs": "ae21848b02ee882c5b698dbec2b382485574869720764007f21dbe34e55c1f52",
+    "src/filesystem/execution/run.rs": "410c061e72f07caf5b5414f690a705d0246de3063448417d917faf0d5f5e555b",
+    "src/filesystem/execution/mod.rs": "efb8cd73ab3ced1c012897cb2a5005bf8def6a036281f638fcd0e71de8366b51",
+    "src/filesystem/execution/process_tests.rs": "8f4b020451ed37cee67fd5ee80c629b82c41523dd2903430bce3f7e7525a6da5",
+    "src/filesystem/execution/backup_tests.rs": "099d32de7b4ce93fb29c5057fe517096f5c748f7dbc7b33b38e86fa178ef52cd",
+    "tests/execution_backup.rs": "906599053fdf3f6bf26d921168d0411270820057352abb1fce20ce084dbf4245"
+  },
+  "initial_reviewed_head": "fcccf26fba1863df9728a33c2045c85863fc9bf9",
+  "quick_review": {
+    "scope": "fcccf26 only; advisory docs/tests seats; no refuters or fix review",
+    "docs": "three Minor qualifiers corrected",
+    "tests": "two Important assertion gaps corrected; ordinary original-State mode covered",
+    "after_fixes": "four additional isolated controls assertion-fail; restored focused4+integration5 pass"
   }
 }

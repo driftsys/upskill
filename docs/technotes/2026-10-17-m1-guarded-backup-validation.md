@@ -11,14 +11,20 @@ preparation, application adapters and observational inspection remain separate.
 Five real-filesystem integration examples in
 [execution_backup.rs](../../tests/execution_backup.rs) cover literal original
 bytes including unknown JSON fields and whitespace, mode 0o600, retained
-matching-backup identity, mismatched bytes/modes, full-request preflight and
-invalid backup topology or missing original state.
+matching-backup identity, ordinary original State mode 0o644 with private backup
+mode 0o600, mismatched bytes/modes, full-request preflight and invalid backup
+topology or missing original state.
 
 Four focused internal examples cover a file appearing immediately before
-publication, edits to a completed backup blocking recovery, six journal policy
+publication, edits to a completed backup blocking recovery, eight journal policy
 or evidence corruptions, and syncing an unchanged matching backup before output.
-The publication race fixture observes both the first failure and the subsequent
-reconciliation outcome, checking retained manual bytes and original State.
+The sync fixture checks exact backup-file and parent descriptor identities, call
+order, failure of each sync, retained Queued receipt/generation and unchanged
+outputs before recovering. Original digest/length corruptions change final State
+before evidence while preserving valid backup payload evidence, isolating the
+backup-to-original binding from generic payload validation. The publication race
+fixture observes both the first failure and the subsequent reconciliation
+outcome, checking retained manual bytes and original State.
 
 A process test terminates real children at 37 effect/receipt boundaries across
 the backup, four output positions and final State. The unchanged output has only
@@ -52,6 +58,17 @@ journal authentication against coordinated malicious rewriting, complete
 external-race prevention and hardware durability were explicitly excluded from
 this bounded primitive. Those limits remain documented; structural validation
 does not authenticate the journal against a writer with scope access.
+
+The commit's advisory quick docs/tests pass found three Minor documentation
+qualifiers and two Important assertion gaps. All were corrected, with no
+additional review over the fixes. Four additional controls independently removed
+original digest binding, original length binding, the backup sync call while
+retaining its checkpoint, and fixed private backup mode. Each compiled and
+assertion-failed; exact source was restored and all nine focused examples
+passed. Seven controls are retained in total. The archived Markdown spec is a
+formatted reading copy; its exact original bytes are retained as compressed
+evidence because staged stdin formatting rewraps Markdown independently of
+file-ignore rules.
 
 ## Verification status
 

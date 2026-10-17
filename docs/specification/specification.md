@@ -1028,12 +1028,12 @@ Darwin provenance is allowed only with an equal value on prior and staged files.
 
 The private `<scope-root>/.upskill/state/` store binds root and directory
 identities. Its directory is 0o700 and private files are 0o600. The root and
-store parent must not allow group/other writes. Strict execution-journal schema
-1 records the complete ordered actions, before/after digests, lengths and modes,
+store parent must not allow group/other writes. Both execution-journal schemas
+record the complete ordered actions, before/after digests, lengths and modes,
 bound desired payloads, final State, generations and Queued/Pending/Done
 receipts. Invalid paths, unsupported records, payload changes and mismatched
-storage bindings reject without output effects. This journal schema does not
-activate a new lifecycle lockfile schema.
+storage bindings reject without output effects. Neither journal schema activates
+a new lifecycle lockfile schema.
 
 Desired payloads are synced before initial journal publication. Each generation
 uses staged-file sync, atomic publication and directory sync. Persist Pending
