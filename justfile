@@ -24,6 +24,14 @@ sanity:
     cargo clippy --all-targets -- -D warnings
     cargo check --all-targets --locked
 
+# Validate commits in a pull request range.
+ci-commits base head:
+    git std lint --range "{{base}}..{{head}}"
+
+# Check all targets against the minimum supported Rust version.
+msrv-check:
+    cargo +1.85.0 check --locked --all-targets
+
 # Run all checks (test + lint)
 check: test lint docs-check
 
