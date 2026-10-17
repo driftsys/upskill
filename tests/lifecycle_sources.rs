@@ -8,12 +8,14 @@ fn capture_rejects_edits_and_missing_sources() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("rule");
     std::fs::create_dir(&root).unwrap();
-    std::fs::write(root.join("RULE.md"), b"original").unwrap();
+    std::fs::write(root.join("RULE.md"), RULE).unwrap();
     let resolved = ResolvedRuleSource::resolve(&InstallSource::LocalPath(root.clone())).unwrap();
     let captured = resolved.capture().unwrap();
-    assert_eq!(captured.snapshot().manifest().files[0].bytes, b"original");
+    assert_eq!(captured.snapshot().manifest().files[0].bytes, RULE);
+    assert!(compile_capture(&captured, "source", &profiles()).is_ok());
     std::fs::write(root.join("RULE.md"), b"changed").unwrap();
     assert!(captured.verify_unchanged().is_err());
+    assert!(compile_capture(&captured, "source", &profiles()).is_err());
     assert!(ResolvedRuleSource::resolve(&InstallSource::LocalPath(root.join("missing"))).is_err());
 }
 
@@ -29,7 +31,14 @@ fn compile(
     name: &str,
     profiles: &[TargetProfile],
 ) -> anyhow::Result<upskill::lifecycle::desired::ContractedDesiredSet> {
-    source.capture()?.compile(RuleSourceBinding {
+    compile_capture(&source.capture()?, name, profiles)
+}
+fn compile_capture(
+    source: &upskill::lifecycle::sources::CapturedRuleSource<'_>,
+    name: &str,
+    profiles: &[TargetProfile],
+) -> anyhow::Result<upskill::lifecycle::desired::ContractedDesiredSet> {
+    source.compile(RuleSourceBinding {
         installation_id: "test-installation",
         expected_source_name: name,
         installed_name: "alias",
@@ -134,9 +143,31 @@ fn git_branch_tag_and_full_sha_capture_actual_revision_and_retain_checkout() {
             "fixture",
         ],
     );
+    let historic = git(tmp.path(), &["rev-parse", "HEAD"]);
+    let tagged_bytes = [RULE, b"\nTagged revision\n"].concat();
+    let main_bytes = [RULE, b"\nCurrent main revision\n"].concat();
+    let commit = [
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-am",
+        "next fixture",
+    ];
+    std::fs::write(tmp.path().join("item/RULE.md"), &tagged_bytes).unwrap();
+    git(tmp.path(), &commit);
     git(tmp.path(), &["tag", "v1"]);
-    let sha = git(tmp.path(), &["rev-parse", "HEAD"]);
-    for reference in ["main", "v1", sha.as_str()] {
+    let tagged = git(tmp.path(), &["rev-parse", "HEAD"]);
+    std::fs::write(tmp.path().join("item/RULE.md"), &main_bytes).unwrap();
+    git(tmp.path(), &commit);
+    let main = git(tmp.path(), &["rev-parse", "HEAD"]);
+    for (reference, revision, bytes) in [
+        ("main", main.as_str(), main_bytes.as_slice()),
+        ("v1", tagged.as_str(), tagged_bytes.as_slice()),
+        (historic.as_str(), historic.as_str(), RULE),
+    ] {
         let source = InstallSource::Git(upskill::source::GitRepo {
             url: format!("file://{}", tmp.path().display()),
             git_ref: Some(reference.into()),
@@ -144,20 +175,34 @@ fn git_branch_tag_and_full_sha_capture_actual_revision_and_retain_checkout() {
         });
         let resolved = ResolvedRuleSource::resolve(&source).unwrap();
         let captured = resolved.capture().unwrap();
-        let result = compile(&resolved, "source", &profiles()).unwrap();
+        let result = compile_capture(&captured, "source", &profiles()).unwrap();
         assert_eq!(
             result.set.installation.owner.source_revision.as_deref(),
-            Some(sha.as_str())
+            Some(revision)
         );
+        assert_eq!(
+            result.set.installation.owner.installation_id,
+            "test-installation"
+        );
+        assert_eq!(result.set.installation.owner.source, source.to_string());
         captured.verify_unchanged().unwrap();
         assert_eq!(captured.snapshot().manifest().files.len(), 1);
+        assert_eq!(captured.snapshot().manifest().files[0].bytes, bytes);
     }
-    let escape = InstallSource::Git(upskill::source::GitRepo {
-        url: format!("file://{}", tmp.path().display()),
-        git_ref: None,
-        subfolder: Some("../escape".into()),
-    });
-    assert!(ResolvedRuleSource::resolve(&escape).is_err());
+    for subfolder in ["../metadata", "item/../item"] {
+        let escape = InstallSource::Git(upskill::source::GitRepo {
+            url: format!("file://{}", tmp.path().display()),
+            git_ref: None,
+            subfolder: Some(subfolder.into()),
+        });
+        let error = ResolvedRuleSource::resolve(&escape)
+            .err()
+            .expect("lexical source selection rejection");
+        assert!(
+            format!("{error:#}").contains("source subfolder must be a contained relative path"),
+            "{error:#}"
+        );
+    }
 }
 
 #[test]
@@ -166,11 +211,17 @@ fn git_repository_root_capture_excludes_private_metadata() {
         return;
     }
     let tmp = tempfile::tempdir().unwrap();
-    git(tmp.path(), &["init", "--quiet"]);
-    std::fs::write(tmp.path().join("RULE.md"), RULE).unwrap();
-    git(tmp.path(), &["add", "."]);
+    let repository = tmp.path().join("repository-root-rule");
+    std::fs::create_dir(&repository).unwrap();
+    git(&repository, &["init", "--quiet"]);
+    std::fs::write(
+        repository.join("RULE.md"),
+        b"---\nschema: 1\ndescription: unnamed\n---\n\nFallback\n",
+    )
+    .unwrap();
+    git(&repository, &["add", "."]);
     git(
-        tmp.path(),
+        &repository,
         &[
             "-c",
             "user.name=Test",
@@ -183,11 +234,17 @@ fn git_repository_root_capture_excludes_private_metadata() {
         ],
     );
     let source = InstallSource::Git(upskill::source::GitRepo {
-        url: format!("file://{}", tmp.path().display()),
+        url: format!("file://{}", repository.display()),
         git_ref: None,
         subfolder: None,
     });
     let resolved = ResolvedRuleSource::resolve(&source).unwrap();
+    let desired = compile(&resolved, "repository-root-rule", &profiles()).unwrap();
+    assert_eq!(
+        desired.set.installation.owner.source_name,
+        "repository-root-rule"
+    );
+    assert_eq!(desired.set.installation.owner.source, source.to_string());
     assert_eq!(
         resolved
             .capture()
@@ -231,10 +288,25 @@ fn isolated_git_test(name: &str) -> bool {
 #[test]
 fn local_dot_selection_preserves_real_folder_and_rejects_final_symlink() {
     let tmp = tempfile::tempdir().unwrap();
-    std::fs::write(tmp.path().join("RULE.md"), RULE).unwrap();
-    let selected = tmp.path().join(".");
+    let root = tmp.path().join("selected-rule");
+    std::fs::create_dir(&root).unwrap();
+    std::fs::write(
+        root.join("RULE.md"),
+        b"---\nschema: 1\ndescription: unnamed\n---\n\nFallback\n",
+    )
+    .unwrap();
+    let selected = root.join(".");
     let resolved = ResolvedRuleSource::resolve(&InstallSource::LocalPath(selected)).unwrap();
-    assert!(compile(&resolved, "source", &profiles()).is_ok());
+    let desired = compile(&resolved, "selected-rule", &profiles()).unwrap();
+    assert_eq!(desired.set.installation.owner.source_name, "selected-rule");
+    assert_eq!(
+        desired.set.installation.owner.installation_id,
+        "test-installation"
+    );
+    assert_eq!(
+        desired.set.installation.owner.source,
+        InstallSource::LocalPath(root.canonicalize().unwrap()).to_string()
+    );
 }
 
 #[test]

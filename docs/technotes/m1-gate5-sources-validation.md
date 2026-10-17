@@ -67,3 +67,22 @@ The bounded implementation plan is preserved in
 [source contract and design](../topics/0003-sources.md#selected-lifecycle-rule-sources)
 describe the implemented boundary. The Gate 5 umbrella remains active because
 applying command adapters and complete lifecycle acceptance are still pending.
+
+A bounded coverage correction strengthened the same nine integration examples
+and three private unit examples. Git branch, tag and historic full SHA now
+select three distinct commits with distinct captured bytes. Lexical containment
+examples select the existing private metadata sibling (`../metadata`) and an
+existing in-tree path with parent traversal (`item/../item`), and require the
+source selection diagnostic. QualifiedScope independently rejects parent
+components; the diagnostic assertion pins rejection at the source-selection
+boundary rather than relying on that later defense. Local and Git examples
+compile the same capture successfully before mutation, then reject compilation
+through that same capture after a local edit or equal-byte Git revision change.
+Local and repository fallback names, installation IDs and canonical source
+labels are also asserted.
+
+Four mutation controls failed as intended: ignoring the requested Git ref;
+omitting compile revalidation after a local edit; omitting it after an
+equal-byte Git revision change; and removing both source containment guards.
+Production code was restored exactly afterward. The corrections change tests and
+evidence, with no production behavior change.

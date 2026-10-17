@@ -305,7 +305,11 @@ mod tests {
         let tree = temp.path().join("tree");
         std::fs::create_dir(&tree).unwrap();
         git(&tree, &["init", "--quiet"]).unwrap();
-        std::fs::write(tree.join("RULE.md"), b"captured").unwrap();
+        std::fs::write(
+            tree.join("RULE.md"),
+            b"---\nschema: 1\nname: source\ndescription: demo\n---\n\nCaptured\n",
+        )
+        .unwrap();
         git(&tree, &["add", "--", "RULE.md"]).unwrap();
         let commit = [
             "-c",
@@ -327,9 +331,35 @@ mod tests {
             checkout: Some(temp),
         };
         let captured = resolved.capture().unwrap();
+        let destination = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: tree.parent().unwrap().join("destination"),
+        };
+        let requested = [TargetSurface::ClaudeCli];
+        let bindings = [CompilerBinding {
+            client: crate::generate::Client::Claude,
+            consumers: requested.to_vec(),
+        }];
+        let profiles = [TargetProfile::new(
+            TargetSurface::ClaudeCli.family(),
+            TargetSurface::ClaudeCli,
+            1,
+        )
+        .unwrap()];
+        let binding = || RuleSourceBinding {
+            installation_id: "revision-test",
+            expected_source_name: "source",
+            installed_name: "alias",
+            root: &destination,
+            requested: &requested,
+            bindings: &bindings,
+            profiles: &profiles,
+        };
+        captured.compile(binding()).unwrap();
         git(&tree, &commit).unwrap();
         captured.snapshot().verify_unchanged().unwrap();
         assert!(captured.verify_unchanged().is_err());
+        assert!(captured.compile(binding()).is_err());
     }
     #[test]
     fn temporary_checkout_is_retained_and_removed_on_drop() {
