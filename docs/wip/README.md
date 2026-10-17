@@ -12,6 +12,15 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
+  — four-client MVP sequencing and proposed qualification gates; retained
+  planning.
+
+- [Shared updater design](specs/2026-10-14-shared-updater-design.md) and
+  [implementation plan](plans/2026-10-14-shared-updater.md) — proposed
+  `upskill maintain` command; implementation waits for M1 lifecycle completion
+  and design review.
+
 - [Gate 5 combined lifecycle](specs/2026-10-15-m1-gate5-lifecycle-integration.md)
   — active umbrella. The pure
   [combined-state slice](../design/combined-lifecycle-state.md) is implemented;
