@@ -263,6 +263,28 @@ mod application {
         assert_eq!(observed(&path), before);
         assert!(!tmp.path().join("bad-mode.md").exists());
         std::fs::set_permissions(&backup_path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        // A matching replacement backup cannot authorize changing recorded origin.
+        std::fs::write(&backup_path, changed).unwrap();
+        let mut rebound = state.clone();
+        rebound.origin = Some(StateOrigin::from_schema1_bytes(changed).unwrap());
+        let error = apply_bound_schema2_write(
+            &scope,
+            &guard,
+            operation(
+                &root,
+                Some(before.clone()),
+                Some(observed(&backup_path)),
+                &rebound,
+                "rebound.md",
+            ),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("origin"), "{error:#}");
+        assert_eq!(observed(&path), before);
+        assert_eq!(std::fs::read(&backup_path).unwrap(), changed);
+        assert!(!tmp.path().join("rebound.md").exists());
+        assert!(!scope.has_pending_operation().unwrap());
+        std::fs::write(&backup_path, original).unwrap();
         for candidate in [
             {
                 let mut candidate = state.clone();

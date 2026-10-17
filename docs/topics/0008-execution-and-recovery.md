@@ -441,11 +441,12 @@ Validation results and tested source identities are retained in the
 
 The opt-in `lifecycle::application` boundary binds a complete owned-artifact
 plan to the combined state written by the same qualified execution request. It
-requires schema-1 state evidence for the first schema-2 transition and requires
-the resulting state's artifact records to equal the planner output. The request
-is applied under the matching `QualifiedScope` writer guard. The existing
-executor creates the private exact-byte backup before output actions and uses
-its durable journal for state-last recovery.
+requires exact schema-1 evidence for migration, or explicit absence of state and
+backup for fresh initialization. The resulting state's artifact records must
+equal the planner output. The request is applied under the matching
+`QualifiedScope` writer guard. The existing executor creates the private
+exact-byte backup before output actions and uses its durable journal for
+state-last recovery.
 
 `lifecycle::application::recover` delegates to the same qualified executor
 recovery API under its matching writer guard. It does not perform inspection or

@@ -1,4 +1,4 @@
-//! Guarded application of a first combined-state lifecycle operation.
+//! Guarded application of combined-state lifecycle operations.
 //!
 //! This boundary binds the complete owned-artifact plan to the state committed by
 //! the same executor journal. The schema-1 backup and all output/state actions are

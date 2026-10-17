@@ -180,11 +180,13 @@ filesystems. A dependency choice requires an ADR, minimum-compiler evidence,
 cross-process contention/release tests and binary-size measurement. This
 document selects no dependency and makes no network-filesystem locking promise.
 
-Before the first schema-2 write, retain the exact schema-1 bytes in a
-restricted, non-overwritten backup and verify the backup matches the observed
-source state. Reading, listing, doctor and preview never create a migration
-backup or rewrite state. Restoring the backup alone cannot undo output or native
-operations; do not offer downgrade without a verified inverse plan.
+When first migrating observed schema-1 state to schema 2, retain its exact bytes
+in a restricted, non-overwritten backup and verify the backup matches the
+observed source state. Fresh initialization requires absent state and backup and
+creates private schema-2 state without a historical backup. Reading, listing,
+doctor and preview never create a migration backup or rewrite state. Restoring
+the backup alone cannot undo output or native operations; do not offer downgrade
+without a verified inverse plan.
 
 ## Activation gates and delivery order
 
