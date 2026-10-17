@@ -124,7 +124,9 @@ This completes the pure state slice. Separate
 [shared-owner removal planning](lifecycle-reference-removal.md) are implemented.
 Complete single-owner [upsert planning](lifecycle-upsert.md) is also
 implemented. A separate explicit shared upsert now reconciles supplied owner
-contracts and observations. Exact original-JSON backup, guarded application,
-checkpoint recovery integration and observational lifecycle adapters remain
-later work. Native and complete lifecycle qualification remain required; this
-record does not declare Gate 5 or M1 complete.
+contracts and observations. The opt-in
+[guarded application boundary](../technotes/2026-10-17-m1-guarded-lifecycle-application.md)
+connects complete artifact plans and combined state to checkpointed execution,
+including the exact original-state backup and recovery path. Observational
+lifecycle adapters, native and complete lifecycle qualification remain required;
+this record does not declare Gate 5 or M1 complete.

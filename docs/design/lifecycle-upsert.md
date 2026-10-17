@@ -150,10 +150,12 @@ These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
 operation-level conflict aggregation remains pending. Qualified
 source/destination integration, source/scoped selectors, CLI precedence,
-instruction compiler adapters, guarded first-write backup, executor/recovery
-integration and observational adapters remain. Gate 6 must qualify native
-targets before schema-2 production activation. This pure plan grants no
-execution, source authenticity, physical containment or native support
+instruction compiler adapters, observational adapters and full CLI integration
+remain. The opt-in
+[guarded application boundary](../technotes/2026-10-17-m1-guarded-lifecycle-application.md)
+now provides first-write backup and executor/recovery integration. Gate 6 must
+qualify native targets before schema-2 production activation. This pure plan
+grants no execution, source authenticity, physical containment or native support
 authority.
 
 ## Components
