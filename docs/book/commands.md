@@ -490,5 +490,7 @@ retirement. The inactive
 [single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert)
 connects complete add/update sets to graph and mixed-artifact planning. The
 separate inactive `plan_shared_upsert` API accepts explicit matching owner
-contracts for shared outputs. Guarded lifecycle execution remains pending.
-Production command behavior is unchanged.
+contracts for shared outputs. An opt-in
+[guarded application boundary](topics/0008-execution-and-recovery.md#guarded-lifecycle-application)
+provides backup and executor recovery for supplied plans. Production command
+behavior is unchanged.

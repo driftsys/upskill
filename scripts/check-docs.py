@@ -124,6 +124,35 @@ def check_publication_sources(root):
     return errors
 
 
+def check_rendered_compatibility(root, output):
+    inventory_path = root / "docs/compatibility.json"
+    if not inventory_path.is_file():
+        return []  # The source compatibility check diagnoses a missing inventory.
+    inventory = json.loads(inventory_path.read_text())
+    errors = []
+    for relative, expected in inventory["anchors"].items():
+        source = Path(relative)
+        if source.is_relative_to(Path("docs/book")):
+            chapter = source.relative_to("docs/book").with_suffix(".html")
+        elif relative == "docs/specification/format-spec.md":
+            chapter = Path("format-spec.html")
+        elif relative == "docs/specification/specification.md":
+            chapter = Path("specification.html")
+        elif source.parent == Path("docs/design") and (root / "docs/book/design" / source.name).is_file():
+            chapter = Path("design") / source.with_suffix(".html").name
+        else:
+            continue  # Unpublished compatibility pages are checked as source.
+        path = output / chapter
+        if not path.is_file():
+            errors.append(f"Missing historical rendered chapter: {chapter}")
+            continue
+        html = HtmlLinks()
+        html.feed(path.read_text())
+        for anchor in sorted(set(expected) - html.ids):
+            errors.append(f"{chapter}: missing historical anchor #{anchor}")
+    return errors
+
+
 def check_book(root):
     source_errors = check_publication_sources(root)
     if source_errors:
@@ -148,6 +177,7 @@ def check_book(root):
             errors.append("mdBook did not produce index.html")
         else:
             errors.extend(check_html(output))
+            errors.extend(check_rendered_compatibility(root, output))
             for path in output.rglob("*"):
                 relative = path.relative_to(output)
                 if any(part in {"technotes", "wip", "archive", "superpowers", "research"} for part in relative.parts):
@@ -179,9 +209,8 @@ def check_snapshots(root):
 
 
 def markdown_anchors(text):
-    anchors = set()
+    lines = []
     fence = None
-    counts = {}
     for line in text.splitlines():
         marker = re.match(r"^\s*(`{3,}|~{3,})", line)
         if marker:
@@ -190,9 +219,14 @@ def markdown_anchors(text):
             elif marker[1][0] == fence[0] and len(marker[1]) >= len(fence):
                 fence = None
             continue
-        if fence is not None:
-            continue
-        anchors.update(re.findall(r'<a id="([^"\n]+)"', line))
+        if fence is None:
+            lines.append(line)
+    prose = re.sub(r"<!--.*?(?:-->|\Z)", "", "\n".join(lines), flags=re.DOTALL)
+    html = HtmlLinks()
+    html.feed(prose)
+    anchors = html.ids
+    counts = {}
+    for line in prose.splitlines():
         heading = re.match(r"^#{1,6} (.*)", line)
         if heading:
             anchor = re.sub(r"[^\w -]", "", heading[1].lower()).replace(" ", "-")

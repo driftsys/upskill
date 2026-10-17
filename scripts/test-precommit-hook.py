@@ -184,6 +184,7 @@ class PreCommitHookTests(unittest.TestCase):
             shutil.copytree(ROOT / ".githooks", repo / ".githooks")
             self.git(repo, "init", "--quiet")
             samples = {
+                "docs/technotes/agent-customization/schemas/manifest.json": b'[ {"file":"client.schema.json"} ]',
                 "docs/technotes/agent-customization/schemas/client.schema.json": b'{  "schema": true }',
                 "docs/technotes/agent-customization/schemas/hooks/input.schema.json": b'{"type":"object"}',
                 "docs/technotes/agent-customization/schemas/licenses/client.txt": b"Captured license  ",

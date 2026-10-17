@@ -409,7 +409,10 @@ retirement. The
 [single-owner upsert coordinator](0005-lifecycle-planning.md#architecture-lifecycle-upsert)
 now connects complete add/update sets to graph and mixed-artifact planning. The
 separate inactive `plan_shared_upsert` entrypoint consumes explicit
-shared-output contracts. Guarded lifecycle execution remains pending.
+shared-output contracts. The opt-in
+[application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
+connects complete plans and state to guarded execution and recovery. Production
+command activation and observational adapters remain pending.
 
 <a id="architecture-owned-file-planning"></a>
 

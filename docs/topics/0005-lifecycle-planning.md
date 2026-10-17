@@ -122,9 +122,11 @@ planner's preservation contract.
 This inactive pure boundary provides no source authenticity, qualified
 filesystem or native authority. The separate shared entrypoint is specified in
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
-Full diagnostic aggregation, CLI precedence, backup/execution/recovery and
-observational adapters remain pending. Production schema and commands stay
-unchanged. See the
+Full diagnostic aggregation, CLI precedence and observational adapters remain
+pending. Guarded backup, application and recovery are available through the
+opt-in
+[application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application).
+Production schema and commands stay unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert).
 
 <a id="420-explicit-shared-output-reconciliation"></a>
