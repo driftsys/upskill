@@ -1169,6 +1169,7 @@ fn generated_and_resource_paths_keep_distinct_selected_modes_and_contracts() {
                         }],
                     });
                 }
+                request.contracts.reverse();
                 Ok(request)
             },
         )
