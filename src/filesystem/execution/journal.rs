@@ -14,6 +14,28 @@ use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
 type Identity = (u64, u64);
+fn validate_backup_request(request: &ExecutionRequest) -> Result<()> {
+    let backup = request
+        .files
+        .first()
+        .context("missing backup prerequisite")?;
+    let after = backup
+        .after
+        .as_ref()
+        .context("backup must remain present")?;
+    let original = request
+        .state
+        .before
+        .as_ref()
+        .context("backup requires original state")?;
+    ensure!(
+        after.mode == Some(0o600)
+            && (backup.before.is_none() || backup.before.as_ref() == Some(after))
+            && after.bytes == original.bytes,
+        "backup must preserve exact original state with private create-only policy"
+    );
+    Ok(())
+}
 #[cfg(test)]
 type PublicationSyncHook = Box<dyn FnMut(&File, usize) -> Result<()>>;
 #[cfg(test)]
@@ -74,6 +96,8 @@ pub(super) struct Disk {
 pub(super) struct Action {
     pub path: String,
     pub state: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub create_only: bool,
     pub before: Option<Evidence>,
     pub after: Option<Evidence>,
     pub payload: Option<Payload>,
@@ -319,7 +343,23 @@ pub(super) struct Journal<'a> {
 }
 impl<'a> Journal<'a> {
     pub fn create(scope: &'a QualifiedScope, request: &ExecutionRequest) -> Result<Self> {
+        Self::create_inner(scope, request, false)
+    }
+    pub fn create_with_backup(
+        scope: &'a QualifiedScope,
+        request: &ExecutionRequest,
+    ) -> Result<Self> {
+        Self::create_inner(scope, request, true)
+    }
+    fn create_inner(
+        scope: &'a QualifiedScope,
+        request: &ExecutionRequest,
+        backup: bool,
+    ) -> Result<Self> {
         request::validate(request)?;
+        if backup {
+            validate_backup_request(request)?;
+        }
         let store = Store::open(scope, true)?.context("missing execution state directory")?;
         ensure!(
             store.read("operation.json")?.is_none(),
@@ -347,6 +387,7 @@ impl<'a> Journal<'a> {
             actions.push(Action {
                 path: action.location.path.clone(),
                 state: index == request.files.len(),
+                create_only: backup && index == 0,
                 before: action.before.as_ref().map(Evidence::of).transpose()?,
                 after: action.after.as_ref().map(Evidence::of).transpose()?,
                 payload,
@@ -354,7 +395,7 @@ impl<'a> Journal<'a> {
             });
         }
         let disk = Disk {
-            schema: 1,
+            schema: if backup { 2 } else { 1 },
             id,
             generation: 0,
             cleanup_started: false,
@@ -378,7 +419,7 @@ impl<'a> Journal<'a> {
         let disk: Disk =
             serde_json::from_slice(&bytes).context("parse strict execution journal")?;
         ensure!(
-            disk.schema == 1
+            matches!(disk.schema, 1 | 2)
                 && disk.root_identity == store.owner.root
                 && disk.id.len() == 32
                 && disk.id.bytes().all(|b| b.is_ascii_hexdigit()),
@@ -389,6 +430,33 @@ impl<'a> Journal<'a> {
         Ok(Some(journal))
     }
     fn validate(&self) -> Result<()> {
+        let backup = self.disk.schema == 2;
+        ensure!(
+            self.disk
+                .actions
+                .iter()
+                .enumerate()
+                .all(|(i, a)| a.create_only == (backup && i == 0)),
+            "invalid create-only journal ordering"
+        );
+        if backup {
+            let first = self.disk.actions.first().context("missing backup action")?;
+            let state = self.disk.actions.last().context("missing final state")?;
+            let after = first.after.as_ref().context("backup must remain present")?;
+            let original = state
+                .before
+                .as_ref()
+                .context("backup requires original state evidence")?;
+            ensure!(
+                !first.state
+                    && state.state
+                    && after.mode == 0o600
+                    && (first.before.is_none() || first.before.as_ref() == Some(after))
+                    && after.digest == original.digest
+                    && after.length == original.length,
+                "backup evidence differs from original state or private create-only policy"
+            );
+        }
         let mut files = Vec::new();
         let mut states = Vec::new();
         let mut steps = Vec::new();

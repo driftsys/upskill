@@ -85,3 +85,5 @@ records its separate digest encoding.
 - [AD-0035 — Project shared artifacts for physical planning](0035-project-shared-artifacts-for-physical-planning.md)
 
 - [AD-0036 — Separate explicit sharing entrypoints](0036-separate-explicit-sharing-entrypoints.md)
+
+- [AD-0037 — Require create-only backup journals](0037-require-create-only-backup-journals.md)

@@ -1,3 +1,6 @@
 # Upstream evidence is preserved byte-for-byte; schemas/manifest.json records hashes.
 /docs/technotes/2026-10-11-agent-customization/schemas/**/*.schema.json
 /docs/technotes/2026-10-11-agent-customization/schemas/licenses/*.txt
+
+# Preserve the original archived backup specification as reviewed evidence.
+/docs/archive/specs/2026-10-17-m1-guarded-backup.md

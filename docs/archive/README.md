@@ -637,3 +637,35 @@ Durable successors:
 Other WIP remains at its original paths with unresolved disposition. Qualified
 integration, instruction adapters, guarded application/recovery, production
 activation and native qualification remain unfinished.
+
+## Guarded original-state backup prerequisite
+
+Source paths: `docs/wip/specs/2026-10-17-m1-guarded-backup.md` and
+`docs/wip/plans/2026-10-17-m1-guarded-backup.md`. The raw
+[spec](specs/2026-10-17-m1-guarded-backup.md) and
+[plan](plans/2026-10-17-m1-guarded-backup.md) preserve their exact original
+bytes, including historical relative WIP references and unchecked delivery
+tasks. The archived spec's relative umbrella link is historical: resolve it as
+`../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md` from the archived
+spec directory. The raw bytes are unchanged. The bounded local implementation is
+reconciled against the working code based on
+`f54c457a30473511b66349ab4d95f30ae62d654b`; this entry makes no merge or hosted
+qualification claim.
+
+Durable successors:
+[specification §4.12](../specification/specification.md#412-qualified-file-execution-and-recovery),
+[qualified execution design](../design/qualified-file-execution.md),
+[AD-0037](../adr/0037-require-create-only-backup-journals.md) and the
+[validation record](../technotes/2026-10-17-m1-guarded-backup-validation.md).
+The dispatcher supplies local full Rust-suite, Rust 1.85, Clippy, independent
+review and three restored assertion-failing publication/policy/sync controls;
+the validation record distinguishes final verification and delivery gates.
+
+This opt-in library primitive preserves exact original bytes with create-only
+publication and forward recovery. It does not validate JSON or activate
+production lifecycle writes. The
+[Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
+remains active: combined guarded application, observational adapters and native
+qualification remain separate work. All other WIP remains at its original paths
+with unchanged bytes and unresolved disposition; only this named pair is
+archived.

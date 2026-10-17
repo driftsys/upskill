@@ -56,10 +56,23 @@ fn checkpoint(label: &'static str, index: usize) -> anyhow::Result<()> {
     }
 }
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+mod backup_tests;
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
 mod process_tests;
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 impl crate::filesystem::QualifiedScope {
+    /// Backup execution is explicitly unsupported on this operating system.
+    pub fn apply_operation_with_backup(
+        &self,
+        guard: &crate::filesystem::ScopeWriterGuard<'_>,
+        sources: &[&crate::filesystem::SourceSnapshot<'_>],
+        request: ExecutionRequest,
+        backup: crate::files::plan::FileLocation,
+    ) -> anyhow::Result<ExecutionReport> {
+        let _ = (guard, sources, request, backup);
+        anyhow::bail!("qualified backup execution is unsupported on this operating system")
+    }
     /// File execution is explicitly unsupported on this operating system.
     pub fn apply_operation(
         &self,

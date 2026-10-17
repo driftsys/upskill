@@ -15,8 +15,10 @@ separate gates.
 The approved design selects forward recovery from exact before/after evidence. A
 multi-file atomicity promise is unavailable with independent file replacements.
 Retaining old user files for rollback would introduce extra sensitive copies;
-this executor retains desired outputs and final state only. Other alternatives
-were not documented.
+the ordinary executor retains desired outputs and final state only. The separate
+opt-in backup prerequisite is recorded in
+[AD-0037](0037-require-create-only-backup-journals.md). Other alternatives were
+not documented.
 
 ## Decision
 
@@ -24,7 +26,7 @@ Expose opt-in `QualifiedScope::apply_operation` and `recover_operation` methods,
 requiring the matching live scope writer guard. Accept a complete ordered file
 plan and one distinct, present final State action. The caller supplies ownership
 authority, final state bytes and all relevant qualified source snapshots; the
-executor does not select installations or define schema 2.
+executor does not select installations or define lifecycle lockfile schema 2.
 
 Verify supplied sources and all destination preconditions before publishing
 intent. Store a strict execution journal and bound desired payloads in the
@@ -56,9 +58,10 @@ Advisory locks coordinate cooperating upskill writers. Pinned handles and
 rechecks reject observed namespace changes, but cannot exclude every race with
 external editors. There is no multi-file atomicity guarantee. Sync ordering and
 real process termination tests do not establish hardware power-loss durability.
-Hosted Linux/macOS qualification remains pending; this record does not mark gate
-4 or M1 complete. Current CLI commands and schema-1 lockfiles do not consume
-this API.
+Gate-4 hosted delivery evidence is retained in the
+[validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).
+Combined lifecycle integration and M1 activation remain separate work. Current
+CLI commands and schema-1 lockfiles do not consume this API.
 
 Satisfies:
 [specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#412-qualified-file-execution-and-recovery).

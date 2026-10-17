@@ -74,6 +74,9 @@ struct Paused {
     _stream: UnixStream,
 }
 fn stop_at(tmp: &tempfile::TempDir, point: &str, index: usize) -> Paused {
+    stop_at_mode(tmp, point, index, false)
+}
+fn stop_at_mode(tmp: &tempfile::TempDir, point: &str, index: usize, backup: bool) -> Paused {
     let socket = tmp.path().join("probe.sock");
     let listener = UnixListener::bind(&socket).unwrap();
     listener.set_nonblocking(true).unwrap();
@@ -87,6 +90,10 @@ fn stop_at(tmp: &tempfile::TempDir, point: &str, index: usize) -> Paused {
         .env("UPSKILL_EXECUTION_PROBE_ROOT", tmp.path())
         .env("UPSKILL_EXECUTION_PROBE_POINT", point)
         .env("UPSKILL_EXECUTION_PROBE_INDEX", index.to_string())
+        .env(
+            "UPSKILL_EXECUTION_PROBE_BACKUP",
+            if backup { "1" } else { "0" },
+        )
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
         .spawn()
@@ -184,8 +191,57 @@ fn probe() {
     });
     let scope = QualifiedScope::open(&root(&path)).unwrap();
     let guard = scope.try_lock_writer().unwrap();
-    scope.apply_operation(&guard, &[], request(&path)).unwrap();
+    if std::env::var("UPSKILL_EXECUTION_PROBE_BACKUP").as_deref() == Ok("1") {
+        scope
+            .apply_operation_with_backup(
+                &guard,
+                &[],
+                request(&path),
+                FileLocation {
+                    root: root(&path),
+                    path: ".upskill-lock.schema-1.json".into(),
+                },
+            )
+            .unwrap();
+    } else {
+        scope.apply_operation(&guard, &[], request(&path)).unwrap();
+    }
     writeln!(stream, "complete").unwrap();
+}
+#[test]
+fn backup_recovers_after_every_effect_and_receipt_boundary() {
+    for index in 0..6 {
+        for point in [
+            "before_pending",
+            "after_pending",
+            "before_effect",
+            "after_effect",
+            "after_effect_sync",
+            "before_done",
+            "after_done",
+        ] {
+            if index == 4 && !["before_done", "after_done"].contains(&point) {
+                continue;
+            }
+            let tmp = setup();
+            let mut child = stop_at_mode(&tmp, point, index, true);
+            kill(&mut child);
+            let backup = tmp.path().join(".upskill-lock.schema-1.json");
+            let before = std::fs::metadata(&backup).ok().map(|m| (m.dev(), m.ino()));
+            let report = finish(&tmp);
+            assert_eq!(
+                (report.recorded_prefix, report.verified_post_prefix),
+                (6, 6)
+            );
+            assert_eq!(std::fs::read(&backup).unwrap(), b"old-state");
+            let after = std::fs::metadata(&backup).unwrap();
+            assert_eq!(after.mode() & 0o7777, 0o600);
+            assert_eq!(after.nlink(), 1);
+            if let Some(before) = before {
+                assert_eq!(before, (after.dev(), after.ino()));
+            }
+        }
+    }
 }
 #[test]
 fn recovers_after_every_effect_and_receipt_boundary() {

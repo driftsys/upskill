@@ -1005,6 +1005,19 @@ library methods; current CLI commands and schema-1 lockfiles do not use them.
 Unsupported operating systems reject explicitly. Supported Linux/macOS paths
 retain the existing qualification requirements.
 
+`QualifiedScope::apply_operation_with_backup` prepends the exact original
+`state.before` bytes as a private mode-0o600 backup action. It requires the
+backup to be absent or byte- and mode-identical, validates the full request
+before effects, and atomically publishes new backups without replacement.
+Matching existing backups are synced with their parent and retain identity.
+Backup operations use execution-journal schema 2: exactly one create-only first
+action is bound to the final State's original byte digest and length. Ordinary
+journal schema 1 remains supported. Recovery verifies the backup before
+subsequent effects; edits require reconciliation, and a matching Pending
+publication is acknowledged without rewriting. Report prefixes include the
+backup at index zero. The caller validates the lifecycle transition; this
+primitive does not parse original JSON or enable schema-2 production writes.
+
 Effects replace files through exclusive sibling staging, file sync, atomic
 rename and parent-directory sync, or unlink individual planned files and sync
 their parents. Rechecks precede each effect. Unchanged files retain identity;
@@ -1027,9 +1040,10 @@ uses staged-file sync, atomic publication and directory sync. Persist Pending
 before each effect, sync and reobserve its post-state, then persist Done. A
 Pending post-state is resynced, including its parent directory, before recovery
 acknowledges it; it is not rewritten. A Queued post-state or unexpected value
-requires reconciliation. No-op actions use receipt-only checkpoints. Final State
-uses the same protocol. Reports distinguish the recorded Done prefix from the
-currently verified post-state prefix.
+requires reconciliation. No-op actions use receipt-only checkpoints, except
+matching backup prerequisites which are synced before Done. Final State uses the
+same protocol. Reports distinguish the recorded Done prefix from the currently
+verified post-state prefix.
 
 Completed cleanup is durably marked before removing validated payloads. The
 completed journal is removed last; conflicting or unknown files are preserved.
@@ -1040,8 +1054,9 @@ orphan files rather than deleting content without established authority.
 Advisory locking coordinates cooperating writers, not all external edits;
 rechecks cannot exclude every namespace race. Operations are not atomic across
 files. Process interruption coverage does not establish hardware power-loss
-durability. Hosted Linux/macOS qualification remains pending, so gate 4, M1-A2,
-M1-A3 and M1 are not declared complete. See
+durability. Gate-4 hosted evidence is retained in its
+[validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/2026-10-15-m1-gate4-validation.md).
+Combined lifecycle integration and M1 activation remain separate work. See
 [AD-0033](../adr/0033-qualified-file-execution-and-journals.md) and the
 [qualified execution design](../design/qualified-file-execution.md).
 
