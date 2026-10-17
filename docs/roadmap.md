@@ -28,13 +28,13 @@ Tracking: [MVP epic #283](https://github.com/driftsys/upskill/issues/283).
 Deliver **automatic updates, rules, skills, bundles and plugins** across the
 four initial clients.
 
-| Order | Deliverable             | Expected outcome                                                                                              |
-| ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1     | Upskill updater plugins | Each client integration triggers shared maintenance for the upskill CLI and installed skills                  |
-| 2     | Rules                   | Generic defaults yield to explicit user and team instructions; each adapter selects a qualified loading route |
-| 3     | Skills                  | Native discovery and invocation, supporting resources, and reliable install/update/remove                     |
-| 4     | Bundles                 | Coherent collections of content, dependencies and plugin declarations                                         |
-| 5     | Plugins and marketplace | Client-native installation/update/remove and distribution through metapowers                                  |
+| Deliverable             | Expected outcome                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Upskill updater plugins | Each client integration triggers shared maintenance for the upskill CLI and installed skills                  |
+| Rules                   | Generic defaults yield to explicit user and team instructions; each adapter selects a qualified loading route |
+| Skills                  | Native discovery and invocation, supporting resources, and reliable install/update/remove                     |
+| Bundles                 | Coherent collections of content, dependencies and plugin declarations                                         |
+| Plugins and marketplace | Client-native installation/update/remove and distribution through metapowers                                  |
 
 ### Implementation dependencies
 
