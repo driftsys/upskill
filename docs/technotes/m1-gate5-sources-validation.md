@@ -101,10 +101,12 @@ unchanged.
 A lexically normal `bridge/objects` selection traverses a committed ancestor
 symlink to the private metadata sibling and requires the canonical-containment
 error. Resource-bearing compilation now asserts two complete artifacts and two
-matching contracts, their exact entrypoint/resource keys, bodies, modes,
-consumer profiles, installation identity and captured-manifest digest. Archive
-status now identifies the earlier immutable-Git-evidence deferral as historical
-and links to the implemented selected-source contract.
+matching contracts, exact entrypoint/resource keys and resource bytes, required
+source-body presence in the generated entrypoint, modes, consumer profiles,
+installation identity, captured-manifest digest and contract-digest consistency
+with produced bytes. Archive status now identifies the earlier
+immutable-Git-evidence deferral as historical and links to the implemented
+selected-source contract.
 
 All four associated mutation controls failed at runtime: removing fixture
 isolation, clearing only the index override, deleting canonical containment, and

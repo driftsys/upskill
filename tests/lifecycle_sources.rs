@@ -269,6 +269,19 @@ fn git_repository_root_capture_excludes_private_metadata() {
 // Run resolver subprocesses with private Git configuration, without process-wide env edits.
 fn isolated_git_test(name: &str) -> bool {
     if std::env::var_os("UPSKILL_SOURCE_TEST_CHILD").is_some() {
+        let unexpected: Vec<_> = std::env::vars_os()
+            .map(|(key, _)| key)
+            .filter(|key| {
+                let key = key.to_string_lossy();
+                key.starts_with("GIT_")
+                    && key != "GIT_CONFIG_GLOBAL"
+                    && key != "GIT_CONFIG_NOSYSTEM"
+            })
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "unexpected child Git environment keys: {unexpected:?}"
+        );
         return false;
     }
     let home = tempfile::tempdir().unwrap();
