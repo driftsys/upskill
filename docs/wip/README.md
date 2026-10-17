@@ -86,6 +86,14 @@ references must be reconciled as part of that feature's review.
   presence is accepted within this bounded delivery under the user's delegated
   Gate 5 sequencing. All other WIP retains its original paths and disposition.
 
+- Captured command adapters: the bounded
+  [plan](../archive/plans/2026-10-18-lifecycle-commands.md) is archived after
+  local verification and independent review. The
+  [adapter design](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+  and [validation record](../technotes/m1-captured-lifecycle-commands.md)
+  describe the inactive library boundary. Source-backed command orchestration
+  and complete lifecycle acceptance remain active under the shared umbrella.
+
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)
   — opt-in library implementation and durable records; hosted Linux/macOS
   qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope

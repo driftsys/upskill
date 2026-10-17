@@ -776,3 +776,22 @@ inherited Git index confinement defect was reproduced and corrected before
 delivery. Hosted final-head checks remain separate evidence. Command
 orchestration and whole-lane acceptance remain under the active Gate 5 umbrella;
 production commands remain on schema 1.
+
+## Lifecycle origin and captured command adapters
+
+The [origin plan](plans/2026-10-18-lifecycle-state-origin.md) is retained after
+its bounded delivery in PR #314, merged as
+`77181b90222473345dab6b46a3665828649361b9`. Its durable records are
+[AD-0038](../adr/0038-bind-lifecycle-origin-to-original-backup.md),
+[origin state](../topics/0004-state-and-ownership.md#durable-lifecycle-origin),
+[bound application](../topics/0008-execution-and-recovery.md#origin-bound-lifecycle-application)
+and the [validation note](../technotes/m1-lifecycle-state-origin.md).
+
+The [captured adapter plan](plans/2026-10-18-lifecycle-commands.md) is retained
+after local implementation and independent review. Its durable successors are
+the
+[adapter design](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+and [validation note](../technotes/m1-captured-lifecycle-commands.md). The
+shared Gate 5 umbrella and completion lane remain active for source-backed
+command orchestration and full lifecycle acceptance. Production writes remain on
+schema 1 pending Gate 6 qualification.

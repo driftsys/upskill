@@ -44,6 +44,7 @@ snapshot; a stable name does not imply that external research remains current.
 - [Explicit shared-output reconciliation validation](m1-shared-reconciliation-validation.md)
 - [Read-only lifecycle inspection validation](m1-lifecycle-inspection.md)
 - [Read-only lifecycle preview validation](m1-lifecycle-preview.md)
+- [Captured lifecycle command adapter validation](m1-captured-lifecycle-commands.md)
 - [Lifecycle state origin validation](m1-lifecycle-state-origin.md)
 
 Validation records retain their individual revision and platform limits. They

@@ -56,6 +56,12 @@ Spec:
   remain Gate 6; supplied instruction contributions must still pass complete
   lifecycle preservation/recovery acceptance.
 
+- R-G5-CAPTURED-1: Supplied typed instruction contributions remain supported
+  caller-authorized inputs to the guarded captured adapters. Separate
+  source-backed rule orchestration binds compiler outputs to retained captures.
+  Cost if wrong: a stricter authoring API may be needed later; this does not
+  claim that public desired values authenticate source content.
+
 ## Status
 
 - Preview PR #312: squash-merged as `aeb92256fec4a3939b25984ef35bc69b67a0e949`;
@@ -64,10 +70,18 @@ Spec:
   all hosted checks passed. T1-T3 remain deferred in #311, status prose in #309.
 - Origin/fresh-state prerequisite: six public examples plus fresh
   recovery/late-backup unit example pass; independent review found no runtime
-  defect, recommended acceptance cases were added. Final full verification and
-  delivery in progress in `feat/lifecycle-state-origin`.
+  defect, recommended acceptance cases were added. Final verification and MSRV
+  passed. PR #314 is open at `73f6135b1656f7d56660fbbe13032b30fd18f2a5` with
+  full review and hosted CI in progress. Quick-review fixes pin matching
+  replacement-backup immutability and clarify migration-only backup
+  requirements; other coverage debt is #313.
 - Source orchestration prerequisite: worker owns `feat/lifecycle-sources` in
   `.claude/worktrees/lifecycle-sources`; private metadata/worktree Git checkout
   supports branch/tag/SHA while retaining qualified item snapshots; full
-  verification in progress.
-- Command adapters and final acceptance: pending prerequisite merges.
+  verification and MSRV passed, including the corrected inherited Git index
+  confinement regression and approved scoped re-review. Commit `b0e1593` is
+  published; quick-review test improvements are in progress before its PR.
+- Captured command adapters: worker implementing in `feat/lifecycle-commands`,
+  based on origin prerequisite commit `21e692d`; rebase onto merged
+  prerequisites before delivery. Final source orchestration and full acceptance
+  remain pending.

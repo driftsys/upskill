@@ -244,8 +244,9 @@ authority to remove references or apply outputs. Later orchestration must
 enforce this outcome, complete desired-set/reference planning, qualified
 observation and execution. Source/scope selectors and flag/config/history
 precedence remain later work; production CLI selection behavior is unchanged.
-Production schema remains 1. Gate 5/M1 activation, backup/recovery and Codex
-qualification remain incomplete.
+Production schema remains 1. The captured command adapter now connects this
+preflight to guarded application and executor recovery. Full Gate 5 acceptance,
+M1 activation and Codex qualification remain incomplete.
 
 <a id="architecture-lifecycle-selection-components"></a>
 
@@ -357,9 +358,10 @@ now consumes recorded contracts and supplied observations. Source/scoped
 selectors and CLI precedence, instruction compiler adapters and complete
 lifecycle integration remain task 2b work. Existing mixed and instruction
 planners keep their affected multi-owner rejection. Guarded lifecycle
-backup/application/recovery, observational adapters and native activation remain
-separate gates. This boundary alone does not complete task 2b, Gate 5, M1 or the
-updater prerequisite.
+backup/application/recovery and observational adapters are available through
+separate library boundaries; complete command integration and native activation
+remain separate gates. This boundary alone does not complete task 2b, Gate 5, M1
+or the updater prerequisite.
 
 <a id="architecture-lifecycle-reference-reconciliation-trace"></a>
 
@@ -620,9 +622,11 @@ physical-containment or native authority.
 
 These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
-operation-level conflict aggregation remains pending. Qualified
-source/destination integration, source/scoped selectors, CLI precedence,
-instruction compiler adapters and full CLI integration remain. Captured
+operation-level conflict aggregation remains pending. The
+[captured command adapter](#captured-lifecycle-command-adapters) connects
+supplied source snapshots, qualified destinations and guarded application.
+Source resolution, source/scoped selectors, CLI precedence, instruction compiler
+adapters and full CLI integration remain. Captured
 [preview](#read-only-lifecycle-preview) is available as an opt-in supplied-value
 boundary. Read-only captured list/doctor and qualified scope inspection are
 available through the [inspection boundary](#read-only-lifecycle-inspection).
@@ -738,3 +742,79 @@ native qualification remain pending.
 - [Preview implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/preview.rs).
 - [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_preview.rs).
 - [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-preview.md).
+
+## Captured lifecycle command adapters
+
+The opt-in
+[command adapter](https://github.com/driftsys/upskill/blob/main/src/lifecycle/commands.rs)
+connects the existing selection, shared upsert and reference-removal planners to
+origin-bound qualified execution. It is a library interface for applying
+requests; production command dispatch remains on schema 1. Source fetching and
+native client discovery are outside this boundary.
+
+### Session capture and recovery
+
+Callers acquire the matching `QualifiedScope` writer guard before opening
+`LifecycleSession`. Opening recovers the existing executor journal before
+capturing canonical lockfile and backup evidence. Every recovery report returns
+`SessionOutcome::Recovery` and stops the new request, including completed
+recovery; callers inspect the report and open a new session before source work.
+A ready session retains opaque metadata observations under the same guard.
+Absent state establishes fresh origin, schema 1 establishes migrated origin
+bound to its exact bytes, and schema 2 requires known origin. Fresh state
+rejects a backup; migrated state validates the retained original backup rather
+than accepting today's backup as new historical authority.
+
+### Upsert preparation and supplied authority
+
+`prepare_upsert` runs complete existing-selection preflight before invoking its
+builder. The builder supplies complete desired sets, owner contracts, bundle
+nodes and exact reference edits. Every desired installation's manifest digest
+must match a retained `SourceSnapshot`. This proves captured association and
+freshness, not compiler origin for arbitrary supplied output. Typed instruction
+contributions remain caller-authorized values under ruling **R-G5-CAPTURED-1**;
+a source orchestration adapter must bind its rule values to actual compiler
+results. Alternatives for this supplied-value boundary were not documented.
+
+The adapter enumerates old and desired output locations into qualified evidence,
+then supplies only affected observations to `plan_shared_upsert`. File
+permission selection updates desired content and matching owner contracts
+together. Generated files start private, ordinary existing modes survive,
+resource owner execution follows explicit `ResourceExecutionPolicy` (normally
+`Disabled`), and instruction actions select generated modes from exact observed
+before values. State, backup and executor-journal destinations cannot be content
+outputs.
+
+### Direct-root removal and consuming application
+
+`prepare_remove` preflights the complete selection and derives only direct roots
+whose literal installation or bundle name was requested. Bundle
+dependency/member closure does not remove independent direct roots. A named
+member retained only through a bundle returns `NoDirectReference`; the caller
+can identify its declaring bundle. Reachability and owner retirement reuse the
+existing planners, preserving shared survivors, manual instruction bytes,
+unselected graph records and individually unowned extra resources.
+
+A ready `PreparedOperation` privately retains its next state, file plan and
+qualified destinations while borrowing its session and exact source snapshots.
+Read-only accessors expose the proposed state and plan. Consuming `apply` cannot
+accept replacement state, snapshots or guard: it rechecks metadata, destinations
+and sources before calling the existing
+[origin-bound writer](0008-execution-and-recovery.md#origin-bound-lifecycle-application).
+That writer owns output/state checkpoints and recovery; no second journal or
+writer is introduced.
+
+[Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_commands.rs)
+cover fresh and migrated writes, update/removal, complete blockers, stale
+captures, direct roots, shared ownership, permissions and reserved destinations.
+The
+[validation note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-captured-lifecycle-commands.md)
+records qualification limits. Whole-lane interruption acceptance, source
+orchestration, hosted delivery and Gate 6 native qualification remain separate
+work.
+
+Satisfies:
+[captured lifecycle selection preflight](#417-captured-lifecycle-selection-preflight),
+[complete lifecycle upsert](#418-complete-single-owner-lifecycle-upsert-planning),
+[shared-output reconciliation](#420-explicit-shared-output-reconciliation), and
+[reference-driven removal](#416-reference-driven-shared-owner-removal-planning).

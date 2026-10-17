@@ -37,9 +37,10 @@ inactive until gate 6 has passed its Codex adapter qualification.
 - Complete the compiler-to-lifecycle desired-set connection, authoritative
   reference graph, and per-owner consumer association required by the M1
   lifecycle design.
-- When first migrating observed schema-1 state, create and verify a restricted,
-  non-overwritten byte-exact backup of the observed schema-1 lockfile before any
-  output effect.
+- When the first schema-2 write migrates an observed schema-1 lockfile, create
+  and verify its restricted, non-overwritten byte-exact backup before any output
+  effect. Fresh initialization retains backup absence as a journaled
+  precondition.
 - Apply only unchanged owned files or contribution regions. Preserve unrelated
   owners, manual bytes, unselected legacy records, and individually enumerated
   extra resources. Never use recursive legacy output removal.
@@ -130,6 +131,13 @@ The opt-in first-schema-2 guarded application boundary and its current limits
 are recorded in the
 [guarded lifecycle application note](../../technotes/m1-guarded-lifecycle-application.md).
 
+The captured applying adapter slice is recorded in
+[captured lifecycle command adapters](../../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+and its [validation note](../../technotes/m1-captured-lifecycle-commands.md).
+Its session and prepared operation connect supplied sources to qualified
+execution; source orchestration and complete Gate 5 acceptance remain active
+umbrella work.
+
 ## Implementation direction
 
 - Add an opt-in library lifecycle boundary. Keep `main.rs`, existing command
@@ -151,10 +159,12 @@ are recorded in the
   Preview consumes supplied captured evidence and never fetches; applying source
   resolution is explicit orchestration. Return typed diagnostics and outcomes,
   leaving presentation in `main.rs`.
-- Include the exact first-write backup as a guarded, create-only prerequisite
-  before executor output effects. Never overwrite it. Recheck its bytes on
-  retry/recovery. Any executor extension required for this prerequisite must
-  retain the existing checkpoint protocol and receive focused review.
+- For migration from observed schema 1, include its exact first-write backup as
+  a guarded, create-only prerequisite before executor output effects. Never
+  overwrite it. Recheck its bytes on retry/recovery. Fresh initialization
+  journals backup absence and never invents schema-1 bytes. Any executor
+  extension required for this prerequisite must retain the existing checkpoint
+  protocol and receive focused review.
 - Reuse qualified executor recovery for file and final-state actions. Lifecycle
   metadata must be reconstructible from the persisted operation; no independent
   sidecar becomes authoritative. Inspection reports pending recovery without

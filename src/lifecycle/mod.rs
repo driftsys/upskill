@@ -20,3 +20,5 @@ pub mod inspection;
 pub mod preview;
 
 pub mod sources;
+
+pub mod commands;
