@@ -130,7 +130,7 @@ fn first_schema2_write_backs_up_exact_schema1_bytes_before_outputs() {
         expected_state.as_bytes()
     );
     assert_eq!(
-        std::fs::metadata(&root_path.join(".upskill-lock.json"))
+        std::fs::metadata(root_path.join(".upskill-lock.json"))
             .unwrap()
             .permissions()
             .mode()
