@@ -70,10 +70,20 @@ fn first_schema2_write_backs_up_exact_schema1_bytes_before_outputs() {
     let tmp = tempfile::tempdir().unwrap();
     let root_path = tmp.path().join("project");
     std::fs::create_dir(&root_path).unwrap();
+    let source_path = tmp.path().join("source");
+    std::fs::create_dir(&source_path).unwrap();
+    std::fs::write(source_path.join("rule.md"), b"captured rule source").unwrap();
     let root = InstallationRoot {
         scope: OwnershipScope::Project,
         path: root_path.clone(),
     };
+    let source_root = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: source_path,
+    };
+    let source_scope = QualifiedScope::open(&source_root).unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let sources = [&source];
     let state_path = root_path.join(".upskill-lock.json");
     let original = b"{ \"schema\": 1, \"unknown\": true }\n";
     std::fs::write(&state_path, original).unwrap();
@@ -119,7 +129,7 @@ fn first_schema2_write_backs_up_exact_schema1_bytes_before_outputs() {
                 path: ".upskill-lock.json.schema1.bak".into(),
             },
             state_after: &after,
-            sources: &[],
+            sources: &sources,
         },
     )
     .unwrap();
@@ -585,10 +595,20 @@ fn later_schema2_write_commits_new_state_and_preserves_backup_bytes_and_mode() {
     let tmp = tempfile::tempdir().unwrap();
     let root_path = tmp.path().join("project");
     std::fs::create_dir(&root_path).unwrap();
+    let source_path = tmp.path().join("source");
+    std::fs::create_dir(&source_path).unwrap();
+    std::fs::write(source_path.join("rule.md"), b"captured rule source").unwrap();
     let root = InstallationRoot {
         scope: OwnershipScope::Project,
         path: root_path.clone(),
     };
+    let source_root = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: source_path,
+    };
+    let source_scope = QualifiedScope::open(&source_root).unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let sources = [&source];
     let state_path = root_path.join(".upskill-lock.json");
     let backup_path = root_path.join(".upskill-lock.json.schema1.bak");
     let prior_state = owned_rule_state(&root, b"old generation");
@@ -658,7 +678,7 @@ fn later_schema2_write_commits_new_state_and_preserves_backup_bytes_and_mode() {
                 path: ".upskill-lock.json.schema1.bak".into(),
             },
             state_after: &next_state,
-            sources: &[],
+            sources: &sources,
         },
     )
     .unwrap();
