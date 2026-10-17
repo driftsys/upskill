@@ -59,8 +59,10 @@ references must be reconciled as part of that feature's review.
   [spec](../archive/specs/2026-10-17-m1-shared-reconciliation.md) and
   [plan](../archive/plans/2026-10-17-m1-shared-reconciliation.md) are archived
   with [validation limits](../technotes/m1-shared-reconciliation-validation.md).
-  Complete lifecycle planning (task 2b), guarded backup/application/recovery and
-  qualified observational adapters remain pending. Gate 5 remains incomplete;
+  [Read-only lifecycle inspection](../topics/0005-lifecycle-planning.md#read-only-lifecycle-inspection)
+  now provides opt-in captured list/doctor and qualified scope reports.
+  Source-resolution orchestration, preview, applying command adapters and
+  complete lifecycle acceptance remain pending. Gate 5 remains incomplete;
   production activation remains Gate 6.
 
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)

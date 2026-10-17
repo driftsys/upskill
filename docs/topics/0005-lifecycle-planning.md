@@ -622,8 +622,9 @@ These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
 operation-level conflict aggregation remains pending. Qualified
 source/destination integration, source/scoped selectors, CLI precedence,
-instruction compiler adapters, observational adapters and full CLI integration
-remain. The opt-in
+instruction compiler adapters, preview adapters and full CLI integration remain.
+Read-only captured list/doctor and qualified scope inspection are available
+through the [inspection boundary](#read-only-lifecycle-inspection). The opt-in
 [guarded application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
 now provides first-write backup and executor/recovery integration. Gate 6 must
 qualify native targets before schema-2 production activation. This pure plan
@@ -641,3 +642,52 @@ authority.
 - [Shared reconciliation implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/sharing/mod.rs)
 - [Shared acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_sharing.rs)
 - [Shared validation limits](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-shared-reconciliation-validation.md)
+
+## Read-only lifecycle inspection
+
+The opt-in `lifecycle::inspection` library exposes `inspect_state`, `doctor`,
+and `inspect_scope`. `inspect_state` accepts captured schema-1 or strict
+schema-2 bytes, retains those exact bytes, and exposes validated combined
+records alongside indexed legacy rows and diagnostics. Unknown schema-1 JSON
+fields remain in the captured bytes rather than the typed projection.
+
+`doctor` consumes supplied destination observations. It distinguishes missing
+evidence from an observed missing file, checks whole-file hashes and recorded
+modes, and verifies the complete set of recorded Markdown regions at each
+location through the existing aggregate verifier. A shared aggregate validation
+failure is reported against each recorded contribution at that location. Manual
+bytes outside owned regions remain outside the content hash. Duplicate
+destination observations are rejected; extra observations are permitted.
+Whole-file mode checks apply only when state records an expected mode; missing
+mode evidence then reports `ModeUnknown`. Markdown contribution checks do not
+compare file modes. Legacy diagnostics remain visible in the inspection report;
+legacy output is neither adopted nor checked as owned content.
+
+`inspect_scope` captures the state and owned destinations through the qualified
+filesystem boundary and revalidates both snapshots before returning. It reports
+validated journal presence through `QualifiedScope::has_pending_operation`
+without taking a writer lock, creating execution storage, fetching sources,
+writing backups, or performing recovery. A completed journal awaiting cleanup
+also counts as pending. Malformed journals, unsafe destinations, foreign
+artifact roots, and unsupported schemas return errors. These observations sample
+the namespace and do not exclude concurrent writers or prove native discovery or
+source freshness. Qualified inspection is supported on Linux and macOS.
+
+Production command dispatch and schema 1 remain unchanged. Preview, applying
+command adapters, source-resolution orchestration, and complete lifecycle
+acceptance remain Gate 5 work; this inspection slice does not complete Gate 5.
+
+`StateInspection` contains exact original bytes, validated `CombinedState`, and
+an optional descriptive `LegacyProjection`. `ScopeInspection` contains optional
+state, ordered artifact diagnostics, and the sampled `pending_recovery` flag. An
+absent state file yields no state or artifact diagnostics while journal
+inspection still runs. Diagnostic indices address the original artifact vector;
+one artifact may report both content and mode drift. No report authorizes a
+repair or ownership adoption.
+
+Components:
+
+- [Inspection implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/inspection.rs).
+- [Read-only journal observation](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/run.rs).
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_inspection.rs).
+- [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-inspection.md).

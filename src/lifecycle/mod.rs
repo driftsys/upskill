@@ -14,3 +14,5 @@ pub mod application;
 pub mod contracts;
 
 mod sharing;
+
+pub mod inspection;

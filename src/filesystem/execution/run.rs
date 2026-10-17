@@ -11,6 +11,16 @@ use crate::operations::recovery::{
 use anyhow::{Context, Result, ensure};
 
 impl QualifiedScope {
+    /// Observe validated journal presence without locking, creating storage or recovery.
+    /// A completed journal awaiting cleanup is also pending. This is a sampled
+    /// observation and does not exclude concurrent writers.
+    pub fn has_pending_operation(&self) -> Result<bool> {
+        self.verify_binding()?;
+        let pending = Journal::load(self)?.is_some();
+        self.verify_binding()?;
+        Ok(pending)
+    }
+
     /// Apply an operation after preserving its exact original state in a private backup.
     pub fn apply_operation_with_backup(
         &self,

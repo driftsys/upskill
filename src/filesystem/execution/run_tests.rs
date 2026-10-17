@@ -597,3 +597,56 @@ fn journal_publication_sync_precedes_output_and_receipt_progress() {
         }
     }
 }
+
+#[test]
+fn pending_inspection_is_observational_for_absent_and_interrupted_storage() {
+    let (tmp, scope, request) = fixture();
+    assert!(!scope.has_pending_operation().unwrap());
+    assert_eq!(std::fs::read_dir(tmp.path()).unwrap().count(), 0);
+    let journal = super::super::journal::Journal::create(&scope, &request).unwrap();
+    let path = tmp.path().join(".upskill/state/operation.json");
+    let before = std::fs::read(&path).unwrap();
+    let storage = tmp.path().join(".upskill/state");
+    let capture = || {
+        let mut entries: Vec<_> = std::fs::read_dir(&storage)
+            .unwrap()
+            .map(|entry| {
+                let entry = entry.unwrap();
+                (entry.file_name(), std::fs::read(entry.path()).unwrap())
+            })
+            .collect();
+        entries.sort();
+        entries
+    };
+    let original_storage = capture();
+    assert!(scope.has_pending_operation().unwrap());
+    let report = crate::lifecycle::inspection::inspect_scope(
+        &scope,
+        &InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: tmp.path().into(),
+        },
+    )
+    .unwrap();
+    assert!(report.pending_recovery);
+    assert!(report.state.is_none());
+    assert_eq!(capture(), original_storage);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert!(!tmp.path().join("a").exists());
+    assert!(!tmp.path().join("state").exists());
+    drop(journal);
+    std::fs::write(&path, b"invalid journal").unwrap();
+    assert!(scope.has_pending_operation().is_err());
+    assert_eq!(std::fs::read(&path).unwrap(), b"invalid journal");
+    assert!(
+        crate::lifecycle::inspection::inspect_scope(
+            &scope,
+            &InstallationRoot {
+                scope: OwnershipScope::Project,
+                path: tmp.path().into(),
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), b"invalid journal");
+}
