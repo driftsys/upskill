@@ -188,7 +188,8 @@ Bundles are flat YAML manifest files, not directories:
 
 ### 2.3 Per-client override files
 
-Any entrypoint MAY have optional per-client body overrides alongside it in the
+For the three historical generation clients (`claude`, `copilot`, `opencode`),
+any entrypoint MAY have optional per-client body overrides alongside it in the
 same item directory:
 
 ```text
@@ -210,10 +211,14 @@ Override file rules:
 - Override files contain body content only; they MUST NOT include YAML
   frontmatter.
 - Frontmatter is always taken from the canonical entrypoint.
-- The `<client>` suffix MUST be one of the known client identifiers (see §6.1).
+- The `<client>` suffix MUST be one of `claude`, `copilot` or `opencode`. The
+  four audience/directive family identifiers in §3.1 and §6.1 do not extend this
+  override vocabulary. `codex` is not a supported override suffix; the bounded
+  Codex instruction producer rejects rule overrides.
 
-**Body-resolution order for a given client (canonical statement).**
-Implementations resolve the body for client `C` as follows:
+**Body-resolution order for a given client (canonical statement).** For
+historical generation client `C` (`claude`, `copilot` or `opencode`),
+implementations resolve the body as follows:
 
 1. If `<KIND>.<C>.md` exists, use its body verbatim. Directives in the canonical
    body are NOT processed for client `C`.
@@ -1103,7 +1108,9 @@ They are explicitly **permitted** inside:
   a client that would not understand it.
 - Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`,
   `AGENT.opencode.md`, etc. — when the filename suffix matches the construct's
-  client. Override files are loaded only by the matching client's generator.
+  historical generation client (`claude`, `copilot` or `opencode`). Override
+  files are loaded only by the matching client's generator; `codex` has no
+  override-file form.
 
 | Construct                       | Why prohibited (in always-rendered content) | Client         |
 | ------------------------------- | ------------------------------------------- | -------------- |
@@ -1117,8 +1124,9 @@ They are explicitly **permitted** inside:
 
 If an item needs one of these constructs in content that would otherwise reach
 every client, wrap it in a matching-client directive block (§6) or move it to a
-matching-client override file (§2.3). Items that genuinely target only one
-client end-to-end MAY instead be marked single-client via `audience` (§3.1).
+matching override file for a historical generation client (§2.3). Items that
+target only one client end-to-end MAY instead be marked single-client via
+`audience` (§3.1).
 
 ---
 
@@ -1143,7 +1151,9 @@ Content rendered only for Claude Code output.
 - `<client-list>` is a comma-separated list of client identifiers, optionally
   prefixed with `!` for negation.
 
-Known family identifiers: `claude`, `copilot`, `codex`, `opencode`.
+Known audience/directive family identifiers: `claude`, `copilot`, `codex`,
+`opencode`. Override suffixes remain limited to the three historical generation
+clients in §2.3; `codex` does not add an override suffix.
 
 These identifiers describe source families. They do not add selectable surfaces
 or change historical default clients. The library-only Codex instruction subset
@@ -1191,8 +1201,10 @@ Implementations:
 
 Override-file precedence over directives is defined by §2.3 (per-client override
 file rules); this subsection exists only as a cross-reference. When generating
-output for a given client, implementations resolve the body per the rules in
-§2.3.
+output for a historical generation client (`claude`, `copilot` or `opencode`),
+implementations resolve the body per the rules in §2.3. The bounded Codex
+instruction producer rejects rule override entrypoints and processes directives
+only in the canonical body.
 
 ---
 

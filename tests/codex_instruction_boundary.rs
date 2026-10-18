@@ -10,7 +10,9 @@ use upskill::operations::plan::DesiredArtifact;
 use upskill::ownership::{ArtifactOwner, InstallationRoot, OwnershipScope};
 use upskill::pipeline::ItemKind;
 use upskill::source_manifest::{SourceManifest, capture_source};
-use upskill::target::{CapabilityError, TargetFamily, TargetProfile, TargetSurface};
+use upskill::target::{
+    CapabilityCategory, CapabilityError, TargetFamily, TargetProfile, TargetSurface,
+};
 
 fn captured(fields: &str, body: &str, extras: &[(&str, &[u8])]) -> SourceManifest {
     let tmp = tempfile::tempdir().unwrap();
@@ -207,6 +209,23 @@ fn global_codex_only_accepts_two_readers_and_stable_framed_identity_across_updat
             ("codex.ide", InstructionReaderRole::PotentialIncidental),
         ]
     );
+    assert_eq!(contribution(&a).location.root, item.root);
+    assert_eq!(contribution(&a).location.root.scope, OwnershipScope::User);
+    assert_eq!(contribution(&a).location.path, ".codex/AGENTS.md");
+    assert_eq!(contribution(&a).consumers, vec![TargetSurface::CodexCli]);
+    let [contract] = a.desired.contracts.as_slice() else {
+        panic!("expected one global owner contract")
+    };
+    assert_eq!(contract.root, item.root);
+    assert_eq!(contract.root.scope, OwnershipScope::User);
+    assert_eq!(contract.path, ".codex/AGENTS.md");
+    assert_eq!(
+        contract.profiles,
+        vec![ConsumerContract {
+            surface: TargetSurface::CodexCli,
+            contract_revision: 1,
+        }]
+    );
     let id = hash(br#"["upskill-codex-contribution-v1","rule-source"]"#);
     assert_eq!(contribution(&a).id, id);
     let second = captured("audience: [codex]\n", "Second\n", &[]);
@@ -231,19 +250,93 @@ fn global_codex_only_accepts_two_readers_and_stable_framed_identity_across_updat
 #[test]
 fn excluded_codex_retains_history_without_artifacts_contracts_or_compatibility_claim() {
     let source = captured("audience: [claude]\n", "Claude\n", &[]);
-    let item = installation(&source, OwnershipScope::Project);
-    let result = compile(&item, &source).unwrap();
-    assert_eq!(result.desired.set.installation, item);
-    assert!(result.desired.set.artifacts.is_empty());
-    assert!(result.desired.contracts.is_empty());
-    assert_eq!(
-        result.desired.set.audience_excluded,
-        vec![TargetSurface::CodexCli]
-    );
-    assert_eq!(
-        result.readers.compatibility,
-        InstructionCompatibility::NotEvaluated
-    );
+    for (scope, path, readers) in [
+        (
+            OwnershipScope::Project,
+            "AGENTS.md",
+            vec![
+                (
+                    TargetFamily::Codex,
+                    TargetSurface::CodexCli,
+                    1,
+                    InstructionReaderRole::Requested,
+                ),
+                (
+                    TargetFamily::Codex,
+                    TargetSurface::CodexIde,
+                    1,
+                    InstructionReaderRole::PotentialIncidental,
+                ),
+                (
+                    TargetFamily::Copilot,
+                    TargetSurface::CopilotCli,
+                    1,
+                    InstructionReaderRole::PotentialIncidental,
+                ),
+                (
+                    TargetFamily::Copilot,
+                    TargetSurface::CopilotVscodeLocal,
+                    1,
+                    InstructionReaderRole::PotentialIncidental,
+                ),
+                (
+                    TargetFamily::OpenCode,
+                    TargetSurface::OpenCodeCli,
+                    1,
+                    InstructionReaderRole::PotentialIncidental,
+                ),
+            ],
+        ),
+        (
+            OwnershipScope::User,
+            ".codex/AGENTS.md",
+            vec![
+                (
+                    TargetFamily::Codex,
+                    TargetSurface::CodexCli,
+                    1,
+                    InstructionReaderRole::Requested,
+                ),
+                (
+                    TargetFamily::Codex,
+                    TargetSurface::CodexIde,
+                    1,
+                    InstructionReaderRole::PotentialIncidental,
+                ),
+            ],
+        ),
+    ] {
+        let item = installation(&source, scope);
+        let result = compile(&item, &source).unwrap();
+        assert_eq!(result.desired.set.installation, item);
+        assert!(result.desired.set.artifacts.is_empty());
+        assert!(result.desired.contracts.is_empty());
+        assert_eq!(
+            result.desired.set.audience_excluded,
+            vec![TargetSurface::CodexCli]
+        );
+        assert_eq!(result.readers.location.root, item.root);
+        assert_eq!(result.readers.location.path, path);
+        assert_eq!(result.readers.contract_revision, 1);
+        assert_eq!(
+            result
+                .readers
+                .readers
+                .iter()
+                .map(|reader| (
+                    reader.profile.family,
+                    reader.profile.surface,
+                    reader.profile.contract_revision,
+                    reader.role,
+                ))
+                .collect::<Vec<_>>(),
+            readers
+        );
+        assert_eq!(
+            result.readers.compatibility,
+            InstructionCompatibility::NotEvaluated
+        );
+    }
 }
 
 #[test]
@@ -311,7 +404,13 @@ fn rejects_wrong_intent_profile_destination_and_malformed_binding() {
     ] {
         let mut item = installation(&source, OwnershipScope::Project);
         item.requested = surfaces;
-        assert!(compile(&item, &source).is_err());
+        let error = compile(&item, &source).unwrap_err();
+        let capability = error
+            .downcast_ref::<CapabilityError>()
+            .expect("selection must retain its typed capability error");
+        assert_eq!(capability.surface, TargetSurface::CodexCli);
+        assert_eq!(capability.key.category, CapabilityCategory::Instructions);
+        assert_eq!(capability.key.name, "selection");
     }
     let item = installation(&source, OwnershipScope::Project);
     for profile in [
@@ -787,6 +886,11 @@ fn canonical_formatting_and_compatible_directives_bind_literal_output_digest() {
             "# Shared\n\nShared text.\n",
         ),
         (
+            OwnershipScope::Project,
+            "<!-- @client:codex -->\n## Shared\nText.\n<!-- @endclient -->\n<!-- @client:copilot -->\n## Shared\n\nText.\n<!-- @endclient -->\n<!-- @client:opencode -->\n## Shared\n\n\nText.\n<!-- @endclient -->",
+            "## Shared\n\nText.\n",
+        ),
+        (
             OwnershipScope::User,
             "<!-- @client:codex -->\nGlobal Codex text.\n<!-- @endclient -->",
             "Global Codex text.\n",
@@ -829,4 +933,76 @@ fn absent_declared_source_name_uses_captured_folder_binding() {
             .source_name,
         "folder"
     );
+}
+
+#[test]
+fn absent_declared_source_name_rejects_a_different_captured_folder_binding() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("RULE.md"),
+        "---\nschema: 1\ndescription: demo\n---\nGeneric\n",
+    )
+    .unwrap();
+    let source = capture_source(tmp.path()).unwrap();
+    let mut item = installation(&source, OwnershipScope::Project);
+    item.owner.source_name = "different-folder".into();
+    let error = compile(&item, &source).unwrap_err();
+    assert!(
+        error.downcast_ref::<CapabilityError>().is_none(),
+        "{error:#}"
+    );
+    let context = format!("{error:#}");
+    assert!(
+        context.contains("compile Codex instructions rule-source"),
+        "{context}"
+    );
+    assert!(
+        context.contains("source name differs from installation binding"),
+        "{context}"
+    );
+}
+
+#[test]
+fn excluded_sources_reject_unsupported_semantics_before_audience_exclusion() {
+    for (fields, extras, capability_name) in [
+        ("scope:\n  paths: ['src/**']\n", vec![], "scope"),
+        ("codex: {}\n", vec![], "extensions"),
+        ("copilot: {}\n", vec![], "extensions"),
+        ("opencode: {}\n", vec![], "extensions"),
+        ("claude: {}\n", vec![], "extensions"),
+        ("future-behavior: true\n", vec![], "extensions"),
+        (
+            "ignore: ['RULE.*.md']\n",
+            vec![("RULE.codex.md", b"required override".as_slice())],
+            "override",
+        ),
+        (
+            "",
+            vec![("RULE.copilot.md", b"required override".as_slice())],
+            "override",
+        ),
+        (
+            "",
+            vec![("data.bin", b"effective resource".as_slice())],
+            "resources",
+        ),
+    ] {
+        let source = captured(
+            &format!("audience: [claude]\n{fields}"),
+            "Excluded\n",
+            &extras,
+        );
+        for scope in [OwnershipScope::Project, OwnershipScope::User] {
+            let item = installation(&source, scope);
+            let before = (item.clone(), source.clone());
+            let error = compile(&item, &source).unwrap_err();
+            let capability = error
+                .downcast_ref::<CapabilityError>()
+                .expect("unsupported excluded source must retain its typed capability error");
+            assert_eq!(capability.surface, TargetSurface::CodexCli);
+            assert_eq!(capability.key.category, CapabilityCategory::Instructions);
+            assert_eq!(capability.key.name, capability_name);
+            assert_eq!((item, source.clone()), before);
+        }
+    }
 }
