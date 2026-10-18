@@ -505,7 +505,7 @@ fn git_branch_advancement_updates_actual_revision_without_changing_id_or_request
                         .position(|arg| arg.as_str() == Some("--git-dir"))?;
                     argv.get(at + 1)?.as_str().map(str::to_owned)
                 })
-                .last()
+                .next_back()
                 .expect("retained checkout Git metadata in trace");
             let old = git(&repo, &["--git-dir", &metadata, "rev-parse", "HEAD"]);
             let new = git(
