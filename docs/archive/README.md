@@ -880,3 +880,46 @@ pending; the archive records the finished implementation slice rather than whole
 M1 or Gate 6 completion. All other WIP, including the existing accepted
 sequencing marker in `docs/wip/README.md`, retains its original bytes, paths and
 disposition.
+
+## Source-backed Codex instruction lifecycle
+
+Task #325 adds selected local/Git Codex rule compilation and explicit source
+orchestration as opt-in library interfaces. Its archived
+[spec](specs/2026-10-18-codex-source-integration.md) and
+[plan](plans/2026-10-18-codex-source-integration.md) retain the exact bytes from
+`docs/wip/specs/2026-10-18-codex-source-integration.md` and
+`docs/wip/plans/2026-10-18-codex-source-integration.md` at implementation head
+`3efd46033d7dfd0801da45f3780c31b3156fb4fd`. Feature base:
+`2c64620e3ba3d7e613e2c46abea6919ad2ed86bc`. These are local implementation
+commits, with no claim of PR merge or hosted acceptance. References and
+unchecked delivery steps inside the raw plan remain historical working material.
+
+Durable successors:
+
+- [Selected lifecycle rule source requirements](../topics/0003-sources.md#selected-lifecycle-rule-sources)
+  and
+  [source integration architecture](../topics/0003-sources.md#explicit-codex-source-integration).
+- [Source-backed lifecycle requirements and architecture](../topics/0005-lifecycle-planning.md#source-backed-lifecycle-orchestration).
+- [Captured Codex instruction boundary](../topics/0002-generation.md#captured-codex-instruction-boundary).
+- [AD-0039](../adr/0039-compile-captured-codex-instructions.md), including the
+  explicit route, retained representation, declared-root authority and separate
+  reader-report decisions.
+- [Command/library boundary](../book/commands.md).
+
+Completion evidence: dedicated source/orchestration acceptance examples and
+reviewed root-preflight corrections are committed at the implementation head.
+The dispatcher's full `just fmt`, `just verify`, `just sanity` and
+`just msrv-check` runs passed after those changes. Verification included all 17
+documentation checker tests, rendered book checks and Rust 1.85 all-targets
+checking. Task reports and scoped review evidence remain in the local
+`.superpowers/sdd/2026-10-18-codex-source-integration/` evidence directory.
+
+Production CLI routing, schema 1, generation clients and defaults remain
+unchanged. Complete all-kind adapters, conflict aggregation, native
+user/IDE/Linux/OpenCode qualification, activation and staging accounting in #316
+remain separate gates. Final branch/PR review and hosted delivery remain
+separate work. Archival completes only this bounded implementation pair.
+
+The other 17 specs, 19 plans and `docs/wip/README.md` retain their exact paths
+and bytes. Their existing sequencing disposition is recorded in the WIP
+inventory; this archive does not resolve broader M1 or updater work.

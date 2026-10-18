@@ -144,8 +144,9 @@ never fills revisions from defaults. Original producer and batch behavior is
 unchanged. The separate
 [bounded Codex instruction producer](0002-generation.md#captured-codex-instruction-boundary)
 now returns instruction contributions, exact owner contracts and a reader report
-for captured unconditional rules. Connecting that producer to source
-orchestration and production command activation remains separate work.
+for captured unconditional rules. The explicit Codex source route now connects
+that producer to guarded orchestration; production command activation remains
+separate work.
 
 The inactive `plan_shared_upsert` entrypoint uses the same complete desired
 sets, selection, graph authority, legacy checks and evidence propagation as
@@ -233,10 +234,11 @@ every recovery report stops the new request. Complete selection preflight then
 rejects unsupported selected work before resolution. Explicit rule-source
 orchestration retains local/Git captures, actual commits, compiler bindings and
 owner contracts throughout scoped preparation and consuming application.
-Caller-authorized instruction contributions use the captured adapter directly.
-Both paths observe affected destinations, plan the complete operation and
-revalidate exact state, source and destination evidence before applying through
-the same origin-bound qualified executor.
+Explicit Codex instruction sources now use the same guarded orchestration engine
+through `with_prepared_codex`. Caller-supplied contributions remain available
+through the captured adapter. Both paths observe affected destinations, plan the
+complete operation and revalidate exact state, source and destination evidence
+before applying through the same origin-bound qualified executor.
 
 Migrated origin binds the original schema-1 bytes to a restricted create-only
 backup. Fresh origin requires absent state and backup without creating imaginary
@@ -437,13 +439,13 @@ complete desired sets and selected graph changes to mixed-artifact planning. The
 separate
 [explicit shared upsert](#architecture-lifecycle-upsert-explicit-shared-upsert)
 now consumes recorded contracts and supplied observations. Source/scoped
-selectors and CLI precedence, Codex instruction source integration and complete
-lifecycle integration remain task 2b work. Existing mixed and instruction
-planners keep their affected multi-owner rejection. Guarded lifecycle
-backup/application/recovery and observational adapters are available through
-separate library boundaries; complete command integration and native activation
-remain separate gates. This boundary alone does not complete task 2b, Gate 5, M1
-or the updater prerequisite.
+selectors and CLI precedence and complete command lifecycle integration remain
+task 2b work. Codex rule source integration now has an explicit library route.
+Existing mixed and instruction planners keep their affected multi-owner
+rejection. Guarded lifecycle backup/application/recovery and observational
+adapters are available through separate library boundaries; complete command
+integration and native activation remain separate gates. This boundary alone
+does not complete task 2b, Gate 5, M1 or the updater prerequisite.
 
 <a id="architecture-lifecycle-reference-reconciliation-trace"></a>
 
@@ -709,12 +711,12 @@ operation-level conflict aggregation remains pending. The
 supplied source snapshots, qualified destinations and guarded application. The
 [source-backed adapter](#source-backed-lifecycle-orchestration) now resolves
 explicit rule roots and applies invocation/configuration/recorded target
-precedence. Source/scoped selectors, Codex instruction source integration,
-registry discovery and production CLI integration remain. Captured
-[preview](#read-only-lifecycle-preview) is available as an opt-in supplied-value
-boundary. Read-only captured list/doctor and qualified scope inspection are
-available through the [inspection boundary](#read-only-lifecycle-inspection).
-The opt-in
+precedence. Codex rule source integration now has an explicit library route.
+Source/scoped selectors, registry discovery and production CLI integration
+remain. Captured [preview](#read-only-lifecycle-preview) is available as an
+opt-in supplied-value boundary. Read-only captured list/doctor and qualified
+scope inspection are available through the
+[inspection boundary](#read-only-lifecycle-inspection). The opt-in
 [guarded application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
 now provides migration-only first-write backup, fresh backup-absence guards and
 executor/recovery integration. Gate 6 must qualify native targets before
@@ -924,12 +926,12 @@ Updates preserve installation IDs, aliases and the existing reference graph
 while recapturing the requested source binding and recording actual Git commits
 and exact manifest digests. Repeated add of the same binding reuses its recorded
 ID and adds no duplicate direct reference. A different binding cannot reuse an
-installed alias, and an add alias cannot collide with an owned bundle name.
-Selected instruction-backed owners reject source-backed updates and repeated
-adds before parsing or resolving sources; their updates retain the captured
-instruction adapter. Recorded removal remains source-free. Caller-supplied
-complete graphs and manual/shared instruction contributions remain on the
-captured command API.
+installed alias, and an add alias cannot collide with an owned bundle name. The
+historical source route rejects instruction-backed owners, including
+artifact-free Codex installations, before parsing or resolving sources. The
+explicit Codex source route accepts its supported retained representation.
+Recorded removal remains source-free. Caller-supplied complete graphs and
+manual/shared instruction contributions remain on the captured command API.
 
 Nonempty invocation targets override nonempty project configuration, then
 nonempty global configuration. Update otherwise uses recorded targets; add uses
@@ -937,7 +939,8 @@ caller-supplied defaults. Empty selections are absent overrides. No effective
 selection or duplicate requested targets rejects rather than inventing defaults.
 Requested targets, audience exclusions and actual artifact consumers remain
 separate. Compilation requires explicit compiler bindings and profiles and is
-limited to the existing Claude, Copilot and OpenCode families. Native Codex
+limited to the existing Claude, Copilot and OpenCode families on the historical
+route. The separate Codex route accepts only Codex CLI revision 1. Native Codex
 qualification and production schema-2 activation remain Gate 6 work.
 
 ### Architecture
@@ -989,3 +992,42 @@ IDs independently of resolved commit evidence. The
 [validation note](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-orchestration-validation.md)
 records local checks and review evidence. These examples alone establish neither
 whole-lifecycle interruption acceptance nor hosted delivery or native behavior.
+
+#### Explicit Codex route and retained representation
+
+`with_prepared_codex` shares session recovery, complete selection preflight,
+source resolution, captured lifetimes and application with `with_prepared`.
+`CodexSourceOptions` supplies target precedence and defaults, an explicit
+profile and execution policy. Profile and effective selection failures return
+typed Instructions capability errors before source resolution. Recovery and
+Remove precede these checks; Remove uses recorded ownership even after source
+deletion or with unavailable compiler options.
+
+Every retained selected owner, including same-alias Add refreshes, must be a
+rule requested exactly for Codex CLI. Its scope and raw root path must exactly
+match the declared session root before any selected source is resolved. It may
+own no artifacts when excluded, or one Markdown contribution at project
+`AGENTS.md` or user `.codex/AGENTS.md`. That contribution must have the
+producer-derived identity, sole installation ownership, exact Codex CLI
+per-owner consumers and its matching revision-1 contract. Arbitrary identities,
+multiple contributions, shared ownership, whole-file conversion and malformed
+bindings reject before any selected source is resolved. This conservative rule
+does not migrate hand-constructed or historical adapter state.
+
+`SourcePrepared::instruction_readers()` exposes complete per-installation
+reports sorted by installation ID, including excluded output with NotEvaluated
+compatibility. Historical and Remove callbacks expose no newly compiled reports.
+Potential incidental readers never enter ownership, references, contracts,
+combined state or execution receipts. A caller can inspect or clone reports
+before applying, or discard preparation without publication.
+
+The declared root determines the exact destination. Qualified filesystem access
+does not establish native user-home selection or client discovery. All selected
+sources compile before the callback, and application rechecks original capture
+bytes and actual Git revision. Local/Git project/user examples, stable exclusion
+and reinclusion, complete preflight failures, manual bytes/modes, and a
+revision-only private-checkout mutation are covered by
+[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
+Production commands and schema 1 remain unchanged; all-kind adapters, native
+qualification, conflict aggregation, activation and staging accounting in #316
+remain separate gates.
