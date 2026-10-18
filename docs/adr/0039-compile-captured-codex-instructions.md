@@ -55,11 +55,14 @@ Remove needs no source or current compiler. Unsupported profile/selection
 failures retain typed Instructions capability errors.
 
 Preflight all retained selected owners before any source resolution, including
-same-alias Add refreshes. Require exact Codex CLI rule intent, zero artifacts or
-one canonical producer-ID contribution with sole ownership, Codex CLI per-owner
-consumers and a matching revision-1 contract. Reject shared/arbitrary/multiple
-contributions, whole-file conversion and other adapters. The historical route
-also rejects artifact-free Codex installations on Add/Update.
+same-alias Add refreshes. Require exact Codex CLI rule intent and the declared
+session root in both scope and raw path spelling, including artifact-free
+installations. Derive canonical instruction destinations from that declared
+root. Accept zero artifacts or one canonical producer-ID contribution with sole
+ownership, Codex CLI per-owner consumers and a matching revision-1 contract.
+Reject shared/arbitrary/multiple contributions, whole-file conversion and other
+adapters. The historical route also rejects artifact-free Codex installations on
+Add/Update.
 
 Expose complete reports sorted by installation identity through the borrowed
 `SourcePrepared::instruction_readers()` slice, including exclusions. Reports do
@@ -84,7 +87,10 @@ See the
 and [acceptance target](../../tests/codex_instruction_boundary.rs).
 
 Satisfies:
-[captured Codex instruction boundary](../topics/0002-generation.md#captured-codex-instruction-boundary).
+[captured Codex instruction boundary](../topics/0002-generation.md#captured-codex-instruction-boundary),
+[selected lifecycle rule sources](../topics/0003-sources.md#selected-lifecycle-rule-sources),
+and
+[source-backed lifecycle orchestration](../topics/0005-lifecycle-planning.md#source-backed-lifecycle-orchestration).
 Related: [AD-0013](0013-agent-customization-targets.md),
 [AD-0024](0024-pure-captured-item-compilation.md),
 [AD-0025](0025-reject-active-captured-overrides.md).
