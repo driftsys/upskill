@@ -1004,14 +1004,15 @@ Remove precede these checks; Remove uses recorded ownership even after source
 deletion or with unavailable compiler options.
 
 Every retained selected owner, including same-alias Add refreshes, must be a
-rule requested exactly for Codex CLI. It may own no artifacts when excluded, or
-one Markdown contribution at project `AGENTS.md` or user `.codex/AGENTS.md`.
-That contribution must have the producer-derived identity, sole installation
-ownership, exact Codex CLI per-owner consumers and its matching revision-1
-contract. Arbitrary identities, multiple contributions, shared ownership,
-whole-file conversion and malformed bindings reject before any selected source
-is resolved. This conservative rule does not migrate hand-constructed or
-historical adapter state.
+rule requested exactly for Codex CLI. Its scope and raw root path must exactly
+match the declared session root before any selected source is resolved. It may
+own no artifacts when excluded, or one Markdown contribution at project
+`AGENTS.md` or user `.codex/AGENTS.md`. That contribution must have the
+producer-derived identity, sole installation ownership, exact Codex CLI
+per-owner consumers and its matching revision-1 contract. Arbitrary identities,
+multiple contributions, shared ownership, whole-file conversion and malformed
+bindings reject before any selected source is resolved. This conservative rule
+does not migrate hand-constructed or historical adapter state.
 
 `SourcePrepared::instruction_readers()` exposes complete per-installation
 reports sorted by installation ID, including excluded output with NotEvaluated

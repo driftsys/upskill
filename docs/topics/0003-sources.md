@@ -622,7 +622,9 @@ have no newly compiled reports. All captures, including actual Git revisions,
 are checked again immediately before application without refreshing evidence.
 
 The separate opt-in route rejects unsupported retained representations and
-cross-adapter conversion before resolving any selected source. Production
+cross-adapter conversion before resolving any selected source. Retained owners
+must match the declared session root in both scope and raw path spelling;
+canonical instruction destinations derive from that declared root. Production
 commands, schema 1 and client defaults remain unchanged. Native qualification,
 all-kind adapters, conflict aggregation and activation remain later gates.
 Acceptance examples are in

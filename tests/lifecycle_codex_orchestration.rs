@@ -1265,3 +1265,185 @@ fn sorted_mixed_reports_identify_installations_on_reverse_order_refresh() {
     .unwrap();
     assert_eq!(state(dest.path()), installed);
 }
+
+fn retained_root_mismatch_preflight(defects: &[&str]) {
+    for defect in defects {
+        for excluded in [true, false] {
+            for same_alias_add in [false, true] {
+                let dest = tempfile::tempdir().unwrap();
+                let other = tempfile::tempdir().unwrap();
+                let a = tempfile::tempdir().unwrap();
+                let b = tempfile::tempdir().unwrap();
+                let audience = if excluded { "audience: [claude]\n" } else { "" };
+                write_rule(a.path(), "Alpha", audience);
+                write_rule(b.path(), "Beta", audience);
+                let root = root(dest.path(), OwnershipScope::Project);
+                apply(
+                    &root,
+                    SourceRequest::Add(vec![add(a.path(), "alpha"), add(b.path(), "beta")]),
+                );
+                let mut retained = state(dest.path());
+                let first = retained.installations.first().unwrap().owner.clone();
+                let last = retained.installations.last().unwrap().owner.clone();
+                let source = |alias: &str| match alias {
+                    "alpha" => a.path(),
+                    "beta" => b.path(),
+                    _ => panic!("unexpected alias"),
+                };
+                let foreign = match *defect {
+                    "path" => InstallationRoot {
+                        path: other.path().into(),
+                        ..root.clone()
+                    },
+                    "raw-path" => InstallationRoot {
+                        path: root.path.join("."),
+                        ..root.clone()
+                    },
+                    "scope" => InstallationRoot {
+                        scope: OwnershipScope::User,
+                        ..root.clone()
+                    },
+                    _ => panic!("unexpected defect"),
+                };
+                retained.installations.last_mut().unwrap().root = foreign.clone();
+                let path = if foreign.scope == OwnershipScope::User {
+                    ".codex/AGENTS.md"
+                } else {
+                    "AGENTS.md"
+                };
+                for artifact in &mut retained.artifacts {
+                    if artifact
+                        .owners
+                        .iter()
+                        .any(|owner| owner.installation_id == last.installation_id)
+                    {
+                        artifact.root = foreign.clone();
+                        artifact.path = path.into();
+                    }
+                }
+                for association in &mut retained.owner_consumers {
+                    if association.installation_id == last.installation_id {
+                        association.root = foreign.clone();
+                        association.path = path.into();
+                    }
+                }
+                for contract in &mut retained.owner_contracts {
+                    if contract.installation_id == last.installation_id {
+                        contract.root = foreign.clone();
+                        contract.path = path.into();
+                    }
+                }
+                // All retained associations/contracts align with the foreign root.
+                // Delete the first selected owner's source to expose premature resolution.
+                write_state(dest.path(), &retained);
+                std::fs::remove_dir_all(source(&first.installed_name)).unwrap();
+                let before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+                let instructions = std::fs::read(dest.path().join("AGENTS.md")).ok();
+                let request = if same_alias_add {
+                    SourceRequest::Add(vec![
+                        add(source(&first.installed_name), &first.installed_name),
+                        add(source(&last.installed_name), &last.installed_name),
+                    ])
+                } else {
+                    SourceRequest::Update(Selection::Names(vec![
+                        first.installed_name,
+                        last.installed_name,
+                    ]))
+                };
+                let scope = QualifiedScope::open(&root).unwrap();
+                let guard = writer(&scope);
+                let error = with_prepared_codex(
+                    &scope,
+                    &guard,
+                    root.clone(),
+                    request,
+                    options(),
+                    |_| -> anyhow::Result<()> {
+                        panic!("foreign retained root must reject before callback")
+                    },
+                )
+                .err()
+                .expect("foreign retained root must reject");
+                assert!(
+                    error.to_string().contains(
+                        "retained Codex installation root differs from declared session root"
+                    ),
+                    "{defect}, excluded={excluded}, add={same_alias_add}: {error:#}"
+                );
+                assert_eq!(
+                    std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+                    before
+                );
+                assert_eq!(
+                    std::fs::read(dest.path().join("AGENTS.md")).ok(),
+                    instructions
+                );
+                assert_eq!(std::fs::read_dir(other.path()).unwrap().count(), 0);
+                assert!(!dest.path().join(".codex").exists());
+                assert!(!scope.has_pending_operation().unwrap());
+            }
+        }
+    }
+}
+
+// Catches root checks against recorded state and normalized rather than raw root paths.
+#[test]
+fn retained_path_mismatch_preflights_complete_selection_before_source_resolution() {
+    retained_root_mismatch_preflight(&["path", "raw-path"]);
+}
+
+// Catches missing scope authority even when the foreign relative destination is canonical.
+#[test]
+fn retained_scope_mismatch_preflights_complete_selection_before_source_resolution() {
+    retained_root_mismatch_preflight(&["scope"]);
+}
+
+// Catches excluded root mismatches reaching compilation/callback on reinclusion.
+#[test]
+fn excluded_scope_mismatch_rejects_before_reinclusion_callback() {
+    for same_alias_add in [false, true] {
+        let dest = tempfile::tempdir().unwrap();
+        let source = tempfile::tempdir().unwrap();
+        write_rule(source.path(), "Excluded", "audience: [claude]\n");
+        let root = root(dest.path(), OwnershipScope::Project);
+        apply(&root, SourceRequest::Add(vec![add(source.path(), "alias")]));
+        let mut retained = state(dest.path());
+        assert!(retained.artifacts.is_empty());
+        retained.installations[0].root.scope = OwnershipScope::User;
+        write_state(dest.path(), &retained);
+        write_rule(source.path(), "Reincluded", "audience: [codex]\n");
+        let before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+        let request = if same_alias_add {
+            SourceRequest::Add(vec![add(source.path(), "alias")])
+        } else {
+            SourceRequest::Update(Selection::All)
+        };
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = writer(&scope);
+        let error = with_prepared_codex(
+            &scope,
+            &guard,
+            root.clone(),
+            request,
+            options(),
+            |_| -> anyhow::Result<()> {
+                panic!("scope-mismatched excluded owner reached callback")
+            },
+        )
+        .err()
+        .expect("scope mismatch must reject");
+        assert!(
+            error
+                .to_string()
+                .contains("retained Codex installation root differs from declared session root"),
+            "{error:#}"
+        );
+        assert_eq!(
+            std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+            before
+        );
+        assert!(!dest.path().join("AGENTS.md").exists());
+        assert!(!dest.path().join(".codex").exists());
+        assert!(!scope.has_pending_operation().unwrap());
+    }
+}

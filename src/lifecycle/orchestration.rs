@@ -262,7 +262,7 @@ fn with_prepared_route<T>(
                 SelectionOutcome::Ready(selected) => selected,
             };
             for id in &selected.installation_ids {
-                ensure_source_rule_owner(session.state(), id, route)?;
+                ensure_source_rule_owner(session.state(), id, route, &root)?;
             }
             // Selection and representation preflight is complete; validate targets
             // and parse the recorded binding for each installation.
@@ -314,7 +314,12 @@ fn with_prepared_route<T>(
                     .iter()
                     .filter(|prior| prior.owner.installed_name == item.installed_name)
                 {
-                    ensure_source_rule_owner(session.state(), &prior.owner.installation_id, route)?;
+                    ensure_source_rule_owner(
+                        session.state(),
+                        &prior.owner.installation_id,
+                        route,
+                        &root,
+                    )?;
                 }
             }
             for item in items {
@@ -444,7 +449,7 @@ fn with_prepared_route<T>(
                     })?
                 }
                 SourceRoute::Codex { profile, .. } => {
-                    let location = instruction_location(&binding.root);
+                    let location = instruction_location(&root);
                     let compiled = capture.compile_codex(CodexSourceBinding {
                         installation_id: &binding.id,
                         expected_source_name: &binding.source_name,
@@ -534,7 +539,12 @@ fn instruction_location(root: &InstallationRoot) -> InstructionLocation {
     }
 }
 
-fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<'_>) -> Result<()> {
+fn ensure_source_rule_owner(
+    state: &CombinedState,
+    id: &str,
+    route: SourceRoute<'_>,
+    root: &InstallationRoot,
+) -> Result<()> {
     let item = state
         .installations
         .iter()
@@ -565,6 +575,10 @@ fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<
         return Ok(());
     }
     ensure!(
+        item.root.scope == root.scope && item.root.path.as_os_str() == root.path.as_os_str(),
+        "retained Codex installation root differs from declared session root"
+    );
+    ensure!(
         item.owner.kind == ItemKind::Rule && item.requested == [TargetSurface::CodexCli],
         "retained installation requires an exact Codex CLI rule binding"
     );
@@ -572,14 +586,14 @@ fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<
         artifacts.len() <= 1,
         "retained Codex installation requires zero or one canonical contribution"
     );
-    let location = instruction_location(&item.root);
+    let location = instruction_location(root);
     for artifact in artifacts {
         let ArtifactContent::MarkdownContribution { contribution } = &artifact.content else {
             anyhow::bail!("retained Codex installation cannot convert whole-file ownership");
         };
         ensure!(
-            artifact.root.scope == item.root.scope
-                && artifact.root.path.as_os_str() == item.root.path.as_os_str()
+            artifact.root.scope == root.scope
+                && artifact.root.path.as_os_str() == root.path.as_os_str()
                 && artifact.path == location.path,
             "retained Codex contribution requires the canonical destination"
         );
@@ -592,8 +606,8 @@ fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<
             .iter()
             .find(|value| {
                 value.installation_id == id
-                    && value.root.scope == item.root.scope
-                    && value.root.path.as_os_str() == item.root.path.as_os_str()
+                    && value.root.scope == root.scope
+                    && value.root.path.as_os_str() == root.path.as_os_str()
                     && value.path == location.path
                     && value.contribution_id.as_deref() == Some(&contribution.id)
             })
@@ -607,8 +621,8 @@ fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<
             .iter()
             .find(|value| {
                 value.installation_id == id
-                    && value.root.scope == item.root.scope
-                    && value.root.path.as_os_str() == item.root.path.as_os_str()
+                    && value.root.scope == root.scope
+                    && value.root.path.as_os_str() == root.path.as_os_str()
                     && value.path == location.path
                     && value.contribution_id.as_deref() == Some(&contribution.id)
             })
