@@ -249,10 +249,7 @@ fn produce(request: CodexInstructionRequest<'_>) -> Result<CompiledCodexInstruct
             ));
         }
     }
-    let id = content_hash(&serde_json::to_vec(&(
-        "upskill-codex-contribution-v1",
-        &owner.installation_id,
-    ))?);
+    let id = contribution_id(&owner.installation_id)?;
     validate_contribution(&Contribution::new(&id, &markdown))
         .context("validate canonical instruction contribution")?;
     desired.contracts.push(OwnerContract {
@@ -279,6 +276,14 @@ fn produce(request: CodexInstructionRequest<'_>) -> Result<CompiledCodexInstruct
     ));
     readers.compatibility = InstructionCompatibility::UnconditionalMarkdown;
     Ok(CompiledCodexInstructions { desired, readers })
+}
+
+/// Stable identity shared by production and retained representation validation.
+pub(crate) fn contribution_id(installation_id: &str) -> Result<String> {
+    Ok(content_hash(&serde_json::to_vec(&(
+        "upskill-codex-contribution-v1",
+        installation_id,
+    ))?))
 }
 
 fn validate_name(name: &str) -> Result<()> {

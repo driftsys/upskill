@@ -1,10 +1,14 @@
 //! Applying-only selected rule sources. No discovery, destination writes or registration.
+use super::desired::codex::{
+    CodexInstructionRequest, CompiledCodexInstructions, compile_codex_instructions,
+};
 use super::desired::{
     CompilerBinding, ContractedDesiredSet, RuleDesiredSetRequest,
     compile_rule_desired_set_with_contracts,
 };
 use super::state::{Installation, SourceEvidence};
 use crate::filesystem::{QualifiedScope, SourceSnapshot};
+use crate::instructions::plan::InstructionLocation;
 use crate::ownership::{ArtifactOwner, InstallationRoot, OwnershipScope};
 use crate::pipeline::ItemKind;
 use crate::source::InstallSource;
@@ -32,6 +36,17 @@ pub struct RuleSourceBinding<'a> {
     pub requested: &'a [TargetSurface],
     pub bindings: &'a [CompilerBinding],
     pub profiles: &'a [TargetProfile],
+}
+
+/// Explicit Codex installation binding; source evidence comes only from capture.
+pub struct CodexSourceBinding<'a> {
+    pub installation_id: &'a str,
+    pub expected_source_name: &'a str,
+    pub installed_name: &'a str,
+    pub root: &'a InstallationRoot,
+    pub requested: &'a [TargetSurface],
+    pub profile: TargetProfile,
+    pub location: &'a InstructionLocation,
 }
 
 /// Evidence cannot be detached from the resolver that supplied its Git metadata.
@@ -184,6 +199,53 @@ impl CapturedRuleSource<'_> {
 
     /// Compile complete desired artifacts and contracts from captured source bytes.
     pub fn compile(&self, binding: RuleSourceBinding<'_>) -> Result<ContractedDesiredSet> {
+        let installation = self.installation(
+            binding.installation_id,
+            binding.expected_source_name,
+            binding.installed_name,
+            binding.root,
+            binding.requested,
+        )?;
+        compile_rule_desired_set_with_contracts(
+            RuleDesiredSetRequest {
+                installation: &installation,
+                source: self.snapshot.manifest(),
+                folder_name: &self.resolved.folder_name,
+                bindings: binding.bindings,
+            },
+            binding.profiles,
+        )
+    }
+
+    /// Compile captured Codex instructions with complete location reader exposure.
+    pub fn compile_codex(
+        &self,
+        binding: CodexSourceBinding<'_>,
+    ) -> Result<CompiledCodexInstructions> {
+        let installation = self.installation(
+            binding.installation_id,
+            binding.expected_source_name,
+            binding.installed_name,
+            binding.root,
+            binding.requested,
+        )?;
+        compile_codex_instructions(CodexInstructionRequest {
+            installation: &installation,
+            source: self.snapshot.manifest(),
+            folder_name: &self.resolved.folder_name,
+            profile: binding.profile,
+            location: binding.location,
+        })
+    }
+
+    fn installation(
+        &self,
+        installation_id: &str,
+        expected_source_name: &str,
+        installed_name: &str,
+        root: &InstallationRoot,
+        requested: &[TargetSurface],
+    ) -> Result<Installation> {
         self.verify_unchanged()?;
         let hash = self.snapshot.manifest().content_sha256.clone();
         let source_evidence = match &self.resolved.revision {
@@ -195,28 +257,19 @@ impl CapturedRuleSource<'_> {
                 manifest_sha256: hash,
             },
         };
-        let installation = Installation {
+        Ok(Installation {
             owner: ArtifactOwner {
-                installation_id: binding.installation_id.into(),
+                installation_id: installation_id.into(),
                 source: self.resolved.label.clone(),
                 source_revision: self.resolved.revision.clone(),
                 kind: ItemKind::Rule,
-                source_name: binding.expected_source_name.into(),
-                installed_name: binding.installed_name.into(),
+                source_name: expected_source_name.into(),
+                installed_name: installed_name.into(),
             },
-            root: binding.root.clone(),
-            requested: binding.requested.to_vec(),
+            root: root.clone(),
+            requested: requested.to_vec(),
             source_evidence,
-        };
-        compile_rule_desired_set_with_contracts(
-            RuleDesiredSetRequest {
-                installation: &installation,
-                source: self.snapshot.manifest(),
-                folder_name: &self.resolved.folder_name,
-                bindings: binding.bindings,
-            },
-            binding.profiles,
-        )
+        })
     }
 }
 
@@ -398,11 +451,26 @@ mod tests {
             bindings: &bindings,
             profiles: &profiles,
         };
+        let location = InstructionLocation {
+            root: destination.clone(),
+            path: "AGENTS.md".into(),
+        };
+        let codex_binding = || CodexSourceBinding {
+            installation_id: "revision-test",
+            expected_source_name: "source",
+            installed_name: "alias",
+            root: &destination,
+            requested: &[TargetSurface::CodexCli],
+            profile: TargetSurface::CodexCli.profile(),
+            location: &location,
+        };
         captured.compile(binding()).unwrap();
+        captured.compile_codex(codex_binding()).unwrap();
         git(&tree, &commit).unwrap();
         captured.snapshot().verify_unchanged().unwrap();
         assert!(captured.verify_unchanged().is_err());
         assert!(captured.compile(binding()).is_err());
+        assert!(captured.compile_codex(codex_binding()).is_err());
     }
     #[test]
     fn temporary_checkout_is_retained_and_removed_on_drop() {
