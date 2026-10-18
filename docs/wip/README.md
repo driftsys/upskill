@@ -30,10 +30,10 @@ references must be reconciled as part of that feature's review.
   [durable contract](../topics/0005-lifecycle-planning.md#combined-owned-content-lifecycle-contract)
   and [acceptance evidence](../technotes/m1-gate5-final-acceptance.md) record
   the implementation and remaining delivery requirements. Preview #312, origin
-  #314 and source resolution #315 are merged; captured adapters #317 and final
-  orchestration/acceptance still require their full review, hosted checks and
-  merge. Production schema-2 activation and native qualification remain Gate 6.
-  Other WIP retains its original paths and disposition under the user's accepted
+  #314, source resolution #315 and captured adapters #317 are merged. Final
+  orchestration/acceptance still requires full review, hosted checks and merge.
+  Production schema-2 activation and native qualification remain Gate 6. Other
+  WIP retains its original paths and disposition under the user's accepted
   sequencing of the broader M1 and updater work.
 
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)

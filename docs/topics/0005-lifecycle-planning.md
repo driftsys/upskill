@@ -693,7 +693,7 @@ physical-containment or native authority.
 
 <a id="architecture-lifecycle-upsert-remaining-gate-5-work"></a>
 
-#### Remaining Gate 5 work
+#### Boundary limits and later work
 
 These supplied-value boundaries plan supported rule outputs and explicit shared
 reconciliation. Graph and artifact errors currently report the first error; full
@@ -709,10 +709,10 @@ boundary. Read-only captured list/doctor and qualified scope inspection are
 available through the [inspection boundary](#read-only-lifecycle-inspection).
 The opt-in
 [guarded application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
-now provides first-write backup and executor/recovery integration. Gate 6 must
-qualify native targets before schema-2 production activation. This pure plan
-grants no execution, source authenticity, physical containment or native support
-authority.
+now provides migration-only first-write backup, fresh backup-absence guards and
+executor/recovery integration. Gate 6 must qualify native targets before
+schema-2 production activation. This pure plan grants no execution, source
+authenticity, physical containment or native support authority.
 
 <a id="architecture-lifecycle-upsert-components"></a>
 

@@ -132,9 +132,11 @@ activate production writes or qualify the Gate 6 Codex adapter and selector.
 
 The dispatcher reports preview PR #312 and origin PR #314 merged, followed by
 source PR #315 at `01fbe9a384a21e98483ac2a7e3116dd3f9c04d88`. Captured-command
-PR #317 is open for review and CI; final orchestration delivery review, hosted
-CI and merge remain separate delivery checkpoints. This record claims local
-implementation and acceptance completion only.
+PR #317 merged as `6e2978b2ff566b706b6c9a7604ed99a129a71c3a` after two full
+review passes and final-head hosted checks. Its transient bootstrap HTTP403
+passed on retry. Final orchestration delivery review, hosted CI and merge remain
+separate delivery checkpoints. This record claims local implementation and
+acceptance completion only.
 
 The unchanged
 [umbrella specification](../archive/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
