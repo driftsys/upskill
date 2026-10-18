@@ -1,7 +1,5 @@
 # AD-0039 — Compile captured Codex instructions with a separate reader report
 
-Status: Accepted
-
 ## Context
 
 Project `AGENTS.md` can expose one managed contribution to several client
@@ -10,6 +8,12 @@ Codex IDE readers. Treating exposure as intentional ownership would create false
 retention and compatibility claims. Existing captured lifecycle commands can
 preserve separate instruction contributions, but complete source integration and
 native qualification remain pending.
+
+## Options
+
+Alternatives not documented. The bounded source specification explicitly chooses
+strict extension rejection and reserves admission of proven optional fields for
+a later reviewed contract.
 
 ## Decision
 
@@ -54,3 +58,9 @@ conflict aggregation, native user/IDE/Linux/OpenCode qualification and staging
 accounting remain later gates. See the
 [generation concern](../topics/0002-generation.md#captured-codex-instruction-boundary)
 and [acceptance target](../../tests/codex_instruction_boundary.rs).
+
+Satisfies:
+[captured Codex instruction boundary](../topics/0002-generation.md#captured-codex-instruction-boundary).
+Related: [AD-0013](0013-agent-customization-targets.md),
+[AD-0024](0024-pure-captured-item-compilation.md),
+[AD-0025](0025-reject-active-captured-overrides.md).

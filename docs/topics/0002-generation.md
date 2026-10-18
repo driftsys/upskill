@@ -511,6 +511,33 @@ body digest. Updates retain the ID and change the body digest. Separate
 installation identities remain separate contributions; no cross-owner sharing is
 inferred.
 
+#### Interface and validation order
+
+The public declarations live in
+[`lifecycle::desired::codex`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/codex.rs).
+`CodexInstructionRequest` borrows the installation, captured manifest, folder
+name and instruction location, and supplies the intentional target profile.
+`CompiledCodexInstructions` owns the contracted desired set and reader report.
+The report retains the location, location-contract revision, ordered reader
+profiles and roles, and compatibility result. Emitted content reports
+`UnconditionalMarkdown`; excluded content reports `NotEvaluated`.
+
+The producer validates the rule installation, intentional profile and selection,
+combined-state binding, complete manifest and source topology before checking
+the manifest digest and destination binding. It then validates names, parses the
+canonical entrypoint and rejects unsupported scope, extensions, overrides and
+effective resources. These checks precede audience exclusion. Included content
+passes control-character checks, family directive processing and Markdown
+formatting for each reader. Contribution validation runs before the owner
+contract and artifact are returned. Errors carry installation context;
+capability rejections retain a downcastable `CapabilityError` in the error
+chain.
+
+The shared `Audience` vocabulary and `process_for_family` support Claude,
+Copilot, Codex and OpenCode families. Cursor, Gemini and unknown directive names
+remain errors. Existing `process(body, Client)` delegates through the family
+processor, preserving the historical three-client selection and rendering.
+
 The
 [acceptance target](https://github.com/driftsys/upskill/blob/main/tests/codex_instruction_boundary.rs)
 covers reader conflicts, ownership separation and captured lifecycle
