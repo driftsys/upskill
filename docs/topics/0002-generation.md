@@ -545,6 +545,7 @@ preservation of manual text, another installation and file mode during
 update/removal.
 [AD-0039](https://github.com/driftsys/upskill/blob/main/docs/adr/0039-compile-captured-codex-instructions.md)
 records the decision. Production CLI selection, schema 1 and historical
-generation layouts stay unchanged. Source integration, complete all-kind
-adapters, conflict aggregation, native user/IDE/Linux/OpenCode qualification and
-staging accounting in #316 remain later gates.
+generation layouts stay unchanged. Selected Codex rule sources now integrate
+with the opt-in library lifecycle route. Complete all-kind adapters, conflict
+aggregation, production activation, native user/IDE/Linux/OpenCode qualification
+and staging accounting in #316 remain later gates.

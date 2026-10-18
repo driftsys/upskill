@@ -1186,3 +1186,82 @@ fn historical_preparations_report_no_new_readers_and_cannot_convert_to_codex() {
         assert!(!scope.has_pending_operation().unwrap());
     }
 }
+
+// Catches alias-substituted report IDs and missing sorting independently of random paths.
+#[test]
+fn sorted_mixed_reports_identify_installations_on_reverse_order_refresh() {
+    let dest = tempfile::tempdir().unwrap();
+    let included = tempfile::tempdir().unwrap();
+    let excluded = tempfile::tempdir().unwrap();
+    write_rule(included.path(), "Included", "");
+    write_rule(excluded.path(), "Excluded", "audience: [claude]\n");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(vec![
+            add(included.path(), "included"),
+            add(excluded.path(), "excluded"),
+        ]),
+    );
+    let installed = state(dest.path());
+    let mut expected_ids = installed
+        .installations
+        .iter()
+        .map(|i| i.owner.installation_id.clone())
+        .collect::<Vec<_>>();
+    expected_ids.sort();
+    assert_eq!(expected_ids.len(), 2);
+    let requests = expected_ids
+        .iter()
+        .rev()
+        .map(|id| {
+            let item = installed
+                .installations
+                .iter()
+                .find(|i| &i.owner.installation_id == id)
+                .unwrap();
+            let path = match item.owner.installed_name.as_str() {
+                "included" => included.path(),
+                "excluded" => excluded.path(),
+                _ => panic!("unexpected alias"),
+            };
+            add(path, &item.owner.installed_name)
+        })
+        .collect();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    with_prepared_codex(
+        &scope,
+        &guard,
+        root.clone(),
+        SourceRequest::Add(requests),
+        options(),
+        |prepared| {
+            let reports = prepared.instruction_readers();
+            assert_eq!(
+                reports
+                    .iter()
+                    .map(|r| r.installation_id.clone())
+                    .collect::<Vec<_>>(),
+                expected_ids
+            );
+            for item in &installed.installations {
+                let report = reports
+                    .iter()
+                    .find(|r| r.installation_id == item.owner.installation_id)
+                    .expect("each installed owner has its own report");
+                let compatibility = match item.owner.installed_name.as_str() {
+                    "included" => InstructionCompatibility::UnconditionalMarkdown,
+                    "excluded" => InstructionCompatibility::NotEvaluated,
+                    _ => panic!("unexpected alias"),
+                };
+                assert_readers(std::slice::from_ref(report), PROJECT_READERS, compatibility);
+                assert_eq!(report.report.location.root, root);
+                assert_eq!(report.report.location.path, "AGENTS.md");
+            }
+            prepared.apply()
+        },
+    )
+    .unwrap();
+    assert_eq!(state(dest.path()), installed);
+}
