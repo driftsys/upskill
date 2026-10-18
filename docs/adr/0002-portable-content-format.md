@@ -91,8 +91,10 @@ blocks are stripped.
 
 `<!-- @client:X -->` / `<!-- @endclient -->` HTML comment blocks enable minor
 per-client body variations without separate files. Comma-separated client lists.
-Negation via `!` (`!opencode`). No nesting. Known client identifiers: `claude`,
-`copilot`, `opencode`.
+Negation via `!` (`!opencode`). No nesting. Known source family identifiers:
+`claude`, `copilot`, `codex`, `opencode`. The additive Codex source vocabulary
+does not change historical generation clients or default surfaces; see
+[AD-0039](0039-compile-captured-codex-instructions.md).
 
 ### Per-client override files
 

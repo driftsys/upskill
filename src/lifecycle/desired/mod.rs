@@ -2,6 +2,7 @@
 //!
 //! These pure values establish no ownership, containment or native conformance.
 mod batch;
+pub mod codex;
 mod contracts;
 pub use batch::{DesiredSetDiagnostic, DesiredSetsOutcome, compile_rule_desired_sets};
 pub use contracts::{ContractedDesiredSet, compile_rule_desired_set_with_contracts};

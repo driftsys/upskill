@@ -89,3 +89,5 @@ records its separate digest encoding.
 - [AD-0037 — Require create-only backup journals](0037-require-create-only-backup-journals.md)
 
 - [AD-0038 — Bind lifecycle origin to the original backup](0038-bind-lifecycle-origin-to-original-backup.md)
+
+- [AD-0039 — Compile captured Codex instructions with a separate reader report](0039-compile-captured-codex-instructions.md)

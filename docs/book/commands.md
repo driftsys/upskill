@@ -447,8 +447,13 @@ verifies managed regions through the shared body reader, and retains exact
 before bytes even for content no-ops. Last-region removal retains manual bytes
 and keeps the file, which is empty only when no content remains. Affected whole
 files and multi-owner regions conflict; unrelated records survive. This library
-prerequisite adds no command or Codex CLI support. The separate pure whole-file
-planner is implemented as described in the
+prerequisite adds no command. A separate pure
+[Codex instruction producer](topics/0002-generation.md#captured-codex-instruction-boundary)
+now supports an explicitly supplied Codex CLI revision-1 rule contract. It is
+library-only: existing commands have no Codex selection flag. Shared readers are
+reported separately from ownership; source integration and native qualification
+remain pending. The separate pure whole-file planner is implemented as described
+in the
 [specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
 The separate
 [captured item compiler](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation)
