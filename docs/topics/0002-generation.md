@@ -386,9 +386,10 @@ alias/resource handling and audience filtering. Each generated file contract
 binds the exact root/path/installation, captured source-manifest digest,
 rendered byte hash, optional mode and only that output's consumers with supplied
 revisions. Consumer profiles sort by surface name. Audience exclusions create no
-artifact contracts, including an empty desired set. Instruction compilation
-remains separate work. The original single and batch producers keep their
-existing behavior and shared-path rejections.
+artifact contracts, including an empty desired set. The separate
+[Codex instruction producer](#captured-codex-instruction-boundary) implements a
+restricted library-only subset. The original single and batch producers keep
+their existing behavior and shared-path rejections.
 
 The
 [contract producer](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/contracts.rs)
@@ -456,10 +457,94 @@ per-owner consumers. Pure
 now aggregates legacy/native conflicts for all/literal-name requests. The pure
 [single-owner upsert coordinator](0005-lifecycle-planning.md#architecture-lifecycle-upsert)
 now joins complete sets, selected graph changes and supplied destination
-observations. Source/scoped selectors and CLI precedence, instruction compiler
-adapters and complete lifecycle integration remain task 2b.
+observations. Source/scoped selectors and CLI precedence, complete instruction
+compiler adapters and lifecycle integration remain task 2b.
 [Explicit shared upsert](0005-lifecycle-planning.md#architecture-lifecycle-upsert-explicit-shared-upsert)
 now consumes recorded agreement through a separate inactive path. The mixed
 planner's affected multi-owner rejection remains intact. Guarded
 backup/application/recovery, observational adapters and native activation remain
 separate tasks.
+
+<a id="captured-codex-instruction-boundary"></a>
+
+### Captured Codex instruction boundary
+
+`lifecycle::desired::codex::compile_codex_instructions` is a pure library API
+for one explicitly requested `codex.cli` profile at revision 1. It accepts a
+validated captured `RULE.md`, its installation and folder binding, and an
+instruction location. It emits `ContractedDesiredSet` and a separate
+`InstructionReaderReport`. It performs no source reads, environment lookup,
+source orchestration or native qualification.
+
+The supported rule is unconditional and has no effective resources after the
+existing ignore filter. Nonempty scope, rule override entrypoints, native maps
+and unknown top-level fields fail closed with typed capability errors. Metadata,
+license and dependency declarations remain source information; the API does not
+resolve dependencies. Source and manifest mismatches, malformed names and roots,
+and impossible file/descendant source topology remain validation errors even
+when a conflicting resource would be ignored. Canonical family-filtered Markdown
+must be nonempty, representable, newline-terminated and free of managed markers.
+
+Location contract revision 1 accepts project `AGENTS.md` or default global
+`.codex/AGENTS.md`, bound to the installation's declared root and scope. It
+rejects custom, override and external destinations. The caller must separately
+qualify physical roots and the actual default native home; this producer does
+not resolve `CODEX_HOME`.
+
+Project readers are `codex.cli`, `codex.ide`, `copilot.cli`,
+`copilot.vscode-local` and `opencode.cli`, ordered by surface name. Global
+readers are `codex.cli` and `codex.ide`. The report records `codex.cli` as
+requested and the others as potential incidental readers. VS Code Local exposure
+includes the `chat.useAgentsMdFile` setting condition. Readers derive from the
+reviewed location contract; callers cannot omit them. Every reader must be
+audience-eligible and receive identical canonical Markdown after family
+directives. Equality establishes this structural subset, not equal runtime
+behavior. Codex audience exclusion retains installation history with no
+artifacts or contracts and reports `NotEvaluated` compatibility.
+
+Only `codex.cli` enters artifact consumers, owner profiles and retention
+associations. The reader report creates no ownership or references. Contribution
+IDs are lowercase SHA-256 of the JSON tuple
+`("upskill-codex-contribution-v1", installation_id)`, independent of body, alias
+and source revision. Owner contracts bind the original manifest and canonical
+body digest. Updates retain the ID and change the body digest. Separate
+installation identities remain separate contributions; no cross-owner sharing is
+inferred.
+
+#### Interface and validation order
+
+The public declarations live in
+[`lifecycle::desired::codex`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/codex.rs).
+`CodexInstructionRequest` borrows the installation, captured manifest, folder
+name and instruction location, and supplies the intentional target profile.
+`CompiledCodexInstructions` owns the contracted desired set and reader report.
+The report retains the location, location-contract revision, ordered reader
+profiles and roles, and compatibility result. Emitted content reports
+`UnconditionalMarkdown`; excluded content reports `NotEvaluated`.
+
+The producer validates the rule installation, intentional profile and selection,
+combined-state binding, complete manifest and source topology before checking
+the manifest digest and destination binding. It then validates names, parses the
+canonical entrypoint and rejects unsupported scope, extensions, overrides and
+effective resources. These checks precede audience exclusion. Included content
+passes control-character checks, family directive processing and Markdown
+formatting for each reader. Contribution validation runs before the owner
+contract and artifact are returned. Errors carry installation context;
+capability rejections retain a downcastable `CapabilityError` in the error
+chain.
+
+The shared `Audience` vocabulary and `process_for_family` support Claude,
+Copilot, Codex and OpenCode families. Cursor, Gemini and unknown directive names
+remain errors. Existing `process(body, Client)` delegates through the family
+processor, preserving the historical three-client selection and rendering.
+
+The
+[acceptance target](https://github.com/driftsys/upskill/blob/main/tests/codex_instruction_boundary.rs)
+covers reader conflicts, ownership separation and captured lifecycle
+preservation of manual text, another installation and file mode during
+update/removal.
+[AD-0039](https://github.com/driftsys/upskill/blob/main/docs/adr/0039-compile-captured-codex-instructions.md)
+records the decision. Production CLI selection, schema 1 and historical
+generation layouts stay unchanged. Source integration, complete all-kind
+adapters, conflict aggregation, native user/IDE/Linux/OpenCode qualification and
+staging accounting in #316 remain later gates.

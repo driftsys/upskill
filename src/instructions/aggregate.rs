@@ -42,7 +42,7 @@ fn content_hash(content: &str) -> String {
         .collect()
 }
 
-fn validate_contribution(contribution: &Contribution) -> Result<()> {
+pub(crate) fn validate_contribution(contribution: &Contribution) -> Result<()> {
     if contribution.id.is_empty()
         || !contribution
             .id

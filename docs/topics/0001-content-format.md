@@ -34,10 +34,12 @@ appear in all uppercase as shown.
 
 ## Client-name conventions
 
-This document uses the full client names — **Claude Code**, **GitHub Copilot**,
-and **opencode** — in prose. The short forms `claude`, `copilot`, and `opencode`
-are reserved as the lowercase identifiers used in passthrough block keys (§3.5),
-`audience` lists (§3.1), and conditional content directives (§6).
+This document uses **Claude Code**, **GitHub Copilot**, **Codex** and
+**opencode** in prose. The lowercase source family identifiers `claude`,
+`copilot`, `codex` and `opencode` appear in `audience` lists (§3.1) and
+conditional content directives (§6). Historical passthrough blocks (§3.5) use
+`claude`, `copilot` and `opencode`; the restricted Codex instruction producer
+rejects native extension maps.
 
 ---
 
@@ -186,7 +188,8 @@ Bundles are flat YAML manifest files, not directories:
 
 ### 2.3 Per-client override files
 
-Any entrypoint MAY have optional per-client body overrides alongside it in the
+For the three historical generation clients (`claude`, `copilot`, `opencode`),
+any entrypoint MAY have optional per-client body overrides alongside it in the
 same item directory:
 
 ```text
@@ -208,10 +211,14 @@ Override file rules:
 - Override files contain body content only; they MUST NOT include YAML
   frontmatter.
 - Frontmatter is always taken from the canonical entrypoint.
-- The `<client>` suffix MUST be one of the known client identifiers (see §6.1).
+- The `<client>` suffix MUST be one of `claude`, `copilot` or `opencode`. The
+  four audience/directive family identifiers in §3.1 and §6.1 do not extend this
+  override vocabulary. `codex` is not a supported override suffix; the bounded
+  Codex instruction producer rejects rule overrides.
 
-**Body-resolution order for a given client (canonical statement).**
-Implementations resolve the body for client `C` as follows:
+**Body-resolution order for a given client (canonical statement).** For
+historical generation client `C` (`claude`, `copilot` or `opencode`),
+implementations resolve the body as follows:
 
 1. If `<KIND>.<C>.md` exists, use its body verbatim. Directives in the canonical
    body are NOT processed for client `C`.
@@ -261,16 +268,16 @@ schema, but the file content IS the YAML, with no `---` wrapping and no body.
 
 ### 3.1 Common fields (all kinds and bundles)
 
-| Field         | Type     | Required | Description                                                                                                                                                          |
-| ------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                |
-| `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                               |
-| `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                      |
-| `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                           |
-| `audience`    | string[] | no       | Target clients (`claude`, `copilot`, `opencode`). When present, implementations MUST generate output only for listed clients. When absent, all clients are targeted. |
-| `metadata`    | map      | no       | Free-form governance block. See §3.6.                                                                                                                                |
-| `requires`    | map      | no       | Directed item dependencies (rules/skills/agents). See §3.7. Stripped from output.                                                                                    |
-| `ignore`      | string[] | no       | `.gitignore`-style subtractive copy-scope (§2.4). Stripped from output.                                                                                              |
+| Field         | Type     | Required | Description                                                                                                                                                                                                |
+| ------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                                                      |
+| `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                                                                     |
+| `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                                                            |
+| `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                                                                 |
+| `audience`    | string[] | no       | Target families (`claude`, `copilot`, `codex`, `opencode`). When present, output is limited to listed families and supported selected surfaces. When absent, all supported selected families are targeted. |
+| `metadata`    | map      | no       | Free-form governance block. See §3.6.                                                                                                                                                                      |
+| `requires`    | map      | no       | Directed item dependencies (rules/skills/agents). See §3.7. Stripped from output.                                                                                                                          |
+| `ignore`      | string[] | no       | `.gitignore`-style subtractive copy-scope (§2.4). Stripped from output.                                                                                                                                    |
 
 Example:
 
@@ -1101,7 +1108,9 @@ They are explicitly **permitted** inside:
   a client that would not understand it.
 - Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`,
   `AGENT.opencode.md`, etc. — when the filename suffix matches the construct's
-  client. Override files are loaded only by the matching client's generator.
+  historical generation client (`claude`, `copilot` or `opencode`). Override
+  files are loaded only by the matching client's generator; `codex` has no
+  override-file form.
 
 | Construct                       | Why prohibited (in always-rendered content) | Client         |
 | ------------------------------- | ------------------------------------------- | -------------- |
@@ -1115,8 +1124,9 @@ They are explicitly **permitted** inside:
 
 If an item needs one of these constructs in content that would otherwise reach
 every client, wrap it in a matching-client directive block (§6) or move it to a
-matching-client override file (§2.3). Items that genuinely target only one
-client end-to-end MAY instead be marked single-client via `audience` (§3.1).
+matching override file for a historical generation client (§2.3). Items that
+target only one client end-to-end MAY instead be marked single-client via
+`audience` (§3.1).
 
 ---
 
@@ -1141,7 +1151,14 @@ Content rendered only for Claude Code output.
 - `<client-list>` is a comma-separated list of client identifiers, optionally
   prefixed with `!` for negation.
 
-Known client identifiers: `claude`, `copilot`, `opencode`.
+Known audience/directive family identifiers: `claude`, `copilot`, `codex`,
+`opencode`. Override suffixes remain limited to the three historical generation
+clients in §2.3; `codex` does not add an override suffix.
+
+These identifiers describe source families. They do not add selectable surfaces
+or change historical default clients. The library-only Codex instruction subset
+is documented in
+[generation](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#captured-codex-instruction-boundary).
 
 ### 6.2 Forms
 
@@ -1175,7 +1192,7 @@ Implementations:
 - MUST preserve the content of matching blocks, removing only the delimiter
   lines.
 - MUST validate that all opened directives are closed (balanced blocks).
-- MUST validate that client identifiers in directives are from the known set.
+- MUST validate that family identifiers in directives are from the known set.
 - MUST reject nested directives. If nesting is detected, report an error.
 - SHOULD process directives before any other body transformation (formatting,
   rendering).
@@ -1184,8 +1201,10 @@ Implementations:
 
 Override-file precedence over directives is defined by §2.3 (per-client override
 file rules); this subsection exists only as a cross-reference. When generating
-output for a given client, implementations resolve the body per the rules in
-§2.3.
+output for a historical generation client (`claude`, `copilot` or `opencode`),
+implementations resolve the body per the rules in §2.3. The bounded Codex
+instruction producer rejects rule override entrypoints and processes directives
+only in the canonical body.
 
 ---
 

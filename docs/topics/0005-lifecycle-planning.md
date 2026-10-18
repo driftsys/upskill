@@ -141,7 +141,11 @@ compilation and returns the desired set plus exact per-artifact contracts
 binding source manifest, normalized content and only that artifact's consumers
 to the supplied revisions. Audience exclusions produce no artifact contracts. It
 never fills revisions from defaults. Original producer and batch behavior is
-unchanged; instruction compiler production remains separate work.
+unchanged. The separate
+[bounded Codex instruction producer](0002-generation.md#captured-codex-instruction-boundary)
+now returns instruction contributions, exact owner contracts and a reader report
+for captured unconditional rules. Connecting that producer to source
+orchestration and production command activation remains separate work.
 
 The inactive `plan_shared_upsert` entrypoint uses the same complete desired
 sets, selection, graph authority, legacy checks and evidence propagation as
@@ -433,7 +437,7 @@ complete desired sets and selected graph changes to mixed-artifact planning. The
 separate
 [explicit shared upsert](#architecture-lifecycle-upsert-explicit-shared-upsert)
 now consumes recorded contracts and supplied observations. Source/scoped
-selectors and CLI precedence, instruction compiler adapters and complete
+selectors and CLI precedence, Codex instruction source integration and complete
 lifecycle integration remain task 2b work. Existing mixed and instruction
 planners keep their affected multi-owner rejection. Guarded lifecycle
 backup/application/recovery and observational adapters are available through
@@ -705,8 +709,8 @@ operation-level conflict aggregation remains pending. The
 supplied source snapshots, qualified destinations and guarded application. The
 [source-backed adapter](#source-backed-lifecycle-orchestration) now resolves
 explicit rule roots and applies invocation/configuration/recorded target
-precedence. Source/scoped selectors, instruction compiler adapters, registry
-discovery and production CLI integration remain. Captured
+precedence. Source/scoped selectors, Codex instruction source integration,
+registry discovery and production CLI integration remain. Captured
 [preview](#read-only-lifecycle-preview) is available as an opt-in supplied-value
 boundary. Read-only captured list/doctor and qualified scope inspection are
 available through the [inspection boundary](#read-only-lifecycle-inspection).

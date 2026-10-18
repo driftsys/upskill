@@ -847,3 +847,36 @@ activation tasks in the raw plan remain unfinished. OpenCode discovery, user
 scopes and broader native coverage remain unqualified; these observations do not
 complete Gate 6 or activate schema 2. Production Rust and schema-1 command
 routing are unchanged. All other WIP retains its original paths and disposition.
+
+## Captured Codex instruction boundary
+
+Source paths: `docs/wip/specs/2026-10-18-codex-instruction-boundary.md` and
+`docs/wip/plans/2026-10-18-codex-instruction-boundary.md`. The raw
+[spec](specs/2026-10-18-codex-instruction-boundary.md) and
+[plan](plans/2026-10-18-codex-instruction-boundary.md) retain their original
+bytes. Their SHA-256 digests are, respectively,
+`1db4b78d3222e0ca2565dbf36a0b22cae7f01aabb3bc2df8f6c21f98e00041f4` and
+`658cd7817435af9653f660895bd0b5a0833f545245e1ba152166c78ebda6c975`. Historical
+WIP links and task checkboxes inside the raw documents are preserved.
+
+Local implementation commits: `e55ba39` (family audience/directives), `446c14b`
+(captured producer and acceptance), and `22bdaf8` (boundary hardening). Task
+#322 completion evidence includes 14 dedicated acceptance tests, eight semantic
+mutation controls, clean independent task reviews, and passing full
+verification, sanity and Rust 1.85 checks. These local checks do not claim a PR
+merge or hosted CI completion.
+
+Durable successors are the [content format](../topics/0001-content-format.md),
+[generation contract and detailed design](../topics/0002-generation.md#captured-codex-instruction-boundary),
+[AD-0039](../adr/0039-compile-captured-codex-instructions.md), and
+[command boundary](../book/commands.md). The implementation and acceptance
+contracts are in `src/lifecycle/desired/codex.rs` and
+`tests/codex_instruction_boundary.rs`.
+
+Only the bounded producer is complete. Source-orchestration integration,
+production activation, native qualification and staging accounting in #316
+remain separate gates. Delivery/review tasks in the archived plan remain
+pending; the archive records the finished implementation slice rather than whole
+M1 or Gate 6 completion. All other WIP, including the existing accepted
+sequencing marker in `docs/wip/README.md`, retains its original bytes, paths and
+disposition.

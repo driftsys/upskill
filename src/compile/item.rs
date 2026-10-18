@@ -210,7 +210,7 @@ fn portable_path(path: &Path) -> Result<String> {
     Ok(portable)
 }
 
-fn validate_topology<'a>(paths: impl Iterator<Item = &'a str>) -> Result<()> {
+pub(crate) fn validate_topology<'a>(paths: impl Iterator<Item = &'a str>) -> Result<()> {
     let mut seen = BTreeSet::new();
     for path in paths {
         if !seen.insert(path) {
