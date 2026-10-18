@@ -1891,14 +1891,19 @@ fn destination_only_block_keeps_compiled_readers() {
             .count(),
         1
     );
-    for compatibility in [
-        InstructionCompatibility::UnconditionalMarkdown,
-        InstructionCompatibility::NotEvaluated,
+    for (name, compatibility) in [
+        ("included", InstructionCompatibility::UnconditionalMarkdown),
+        ("excluded", InstructionCompatibility::NotEvaluated),
     ] {
+        let installation = prior
+            .installations
+            .iter()
+            .find(|i| i.owner.installed_name == name)
+            .unwrap();
         let readers = report
             .instruction_readers
             .iter()
-            .filter(|r| r.report.compatibility == compatibility)
+            .filter(|r| r.installation_id == installation.owner.installation_id)
             .cloned()
             .collect::<Vec<_>>();
         assert_eq!(readers.len(), 1);
