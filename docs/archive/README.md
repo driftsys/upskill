@@ -827,3 +827,23 @@ authority. The archived spec SHA-256 is
 `916606a7078be19fca4cafab69b0ae9b118d476bcdc9fd88a2441a5c08bef5ec`; the archived
 completion plan SHA-256 is
 `816ac4d108884b6ccc8d76d5713363f92757c7211db49969ec44d17a556d248f`.
+
+## Bounded Gate 6 native instruction qualification
+
+Source paths: `docs/wip/specs/2026-10-18-gate6-native-qualification.md` and
+`docs/wip/plans/2026-10-18-gate6-qualification.md`. The raw
+[spec](specs/2026-10-18-gate6-native-qualification.md) and
+[plan](plans/2026-10-18-gate6-qualification.md) retain their original bytes.
+
+Implementation base: local commit `26add38`; the final review-fix revision and
+delivery checks are pending. The durable successor is the informative
+[native qualification note](../technotes/m1-gate6-native-qualification.md),
+which preserves sanitized native observations, offline harness coverage and
+qualification limits. Final verification, review, hosted CI and merge remain
+separate delivery gates.
+
+Only this bounded harness and evidence pair is archived. Later delivery and
+activation tasks in the raw plan remain unfinished. OpenCode discovery, user
+scopes and broader native coverage remain unqualified; these observations do not
+complete Gate 6 or activate schema 2. Production Rust and schema-1 command
+routing are unchanged. All other WIP retains its original paths and disposition.

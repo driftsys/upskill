@@ -23,14 +23,14 @@ just build
 
 ## Daily workflow
 
-| Command       | Purpose                                             |
-| ------------- | --------------------------------------------------- |
-| `just sanity` | Fast pre-push code checks                           |
-| `just test`   | Run all tests                                       |
-| `just fmt`    | Format Rust + Markdown                              |
-| `just lint`   | Clippy + Rust format check + Prim lint + ShellCheck |
-| `just verify` | Full test, lint, docs, and build checks             |
-| `just build`  | Compile + check                                     |
+| Command       | Purpose                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| `just sanity` | Fast pre-push code checks                                                  |
+| `just test`   | Run all tests                                                              |
+| `just fmt`    | Format Rust + Markdown                                                     |
+| `just lint`   | Clippy + Rust format check + Prim lint + ShellCheck + offline Python tests |
+| `just verify` | Full test, lint, docs, and build checks                                    |
+| `just build`  | Compile + check                                                            |
 
 ## Branch model
 

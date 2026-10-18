@@ -17,6 +17,7 @@ lint:
     prim lint .
     shellcheck install.sh bootstrap
     python3 scripts/test-precommit-hook.py
+    PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 # Pre-push checks: changed-file hygiene, Clippy, and type checking.
 sanity:
