@@ -171,18 +171,23 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
         execution: ResourceExecutionPolicy,
         build: impl FnOnce(&CombinedState) -> Result<CapturedUpsert>,
     ) -> Result<PrepareOutcome<'session, 'scope, 'guard, 'source>> {
-        if let Some(selection) = selection {
-            if let SelectionOutcome::Blocked { diagnostics, .. } =
-                select_owned_nodes(&self.state, selection)?
-            {
-                return Ok(PrepareOutcome::Blocked(
-                    diagnostics
-                        .into_iter()
-                        .map(CommandDiagnostic::Selection)
-                        .collect(),
-                ));
-            }
-        }
+        let selected = match selection {
+            Some(selection) => match select_owned_nodes(&self.state, selection)? {
+                SelectionOutcome::Ready(selected) => selected,
+                SelectionOutcome::Blocked { diagnostics, .. } => {
+                    return Ok(PrepareOutcome::Blocked(
+                        diagnostics
+                            .into_iter()
+                            .map(CommandDiagnostic::Selection)
+                            .collect(),
+                    ));
+                }
+            },
+            None => super::selection::SelectedNodes {
+                installation_ids: vec![],
+                bundle_ids: vec![],
+            },
+        };
         self.metadata.verify_unchanged()?;
         for source in sources {
             source.verify_unchanged()?;
@@ -202,27 +207,60 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                 "desired installation lacks matching captured source snapshot"
             );
         }
+        // Only a complete request with valid bindings may project explicit graph
+        // retirements. Source-failed subset inspection never enters this branch.
+        let graph = if super::preflight::independent_request(&request).1.is_empty() {
+            for edge in request
+                .add_references
+                .iter()
+                .chain(&request.remove_references)
+            {
+                super::upsert::authorize_reference(&self.state, &selected, edge)?;
+            }
+            let graph = super::reconcile::reconcile_references(
+                &self.state,
+                &super::reconcile::GraphChanges {
+                    installations: request
+                        .sets
+                        .iter()
+                        .map(|s| s.installation.clone())
+                        .collect(),
+                    bundles: request.bundles.clone(),
+                    add_references: request.add_references.clone(),
+                    remove_references: request.remove_references.clone(),
+                },
+            )?;
+            ensure!(
+                graph
+                    .removed_installation_ids
+                    .iter()
+                    .all(|id| selected.installation_ids.contains(id)),
+                "graph retires unselected installation"
+            );
+            ensure!(
+                graph
+                    .removed_bundle_ids
+                    .iter()
+                    .all(|id| selected.bundle_ids.contains(id)),
+                "graph retires unselected bundle"
+            );
+            Some(graph)
+        } else {
+            None
+        };
+        let retiring = graph
+            .as_ref()
+            .map_or(&[][..], |g| g.removed_installation_ids.as_slice());
         let mut report = super::preflight::PreflightReport::default();
-        let destinations = self.collect_preflight(&mut request, execution, &mut report)?;
+        let destinations =
+            self.collect_preflight(&mut request, execution, retiring, &mut report)?;
         if !report.diagnostics.is_empty() {
             super::preflight::normalize_report(&mut report);
             return Ok(PrepareOutcome::Blocked(vec![CommandDiagnostic::Preflight(
                 report,
             )]));
         }
-        let graph = super::reconcile::reconcile_references(
-            &self.state,
-            &super::reconcile::GraphChanges {
-                installations: request
-                    .sets
-                    .iter()
-                    .map(|s| s.installation.clone())
-                    .collect(),
-                bundles: request.bundles.clone(),
-                add_references: request.add_references.clone(),
-                remove_references: request.remove_references.clone(),
-            },
-        )?;
+        let graph = graph.context("duplicate bindings lack preflight diagnostics")?;
         let changed: Vec<_> = request
             .sets
             .iter()
@@ -295,10 +333,11 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
         &self,
         request: &mut CapturedUpsert,
         execution: ResourceExecutionPolicy,
+        retiring: &[String],
         report: &mut super::preflight::PreflightReport,
     ) -> Result<DestinationSnapshot<'scope>> {
         self.metadata.verify_unchanged()?;
-        let (locations, _) = super::preflight::locations(&self.state, request);
+        let (locations, _) = super::preflight::locations(&self.state, request, retiring);
         let destinations = self.scope.observe_destinations(&locations)?;
         // Match production permission selection before comparing sharing contracts.
         // A permission failure is local to an observed location, never a reason to
@@ -363,17 +402,18 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                         .sets
                         .iter()
                         .filter(|set| {
-                            set.artifacts
-                                .iter()
-                                .any(|a| super::preflight::artifact_location(a) == before.location)
-                                || self.state.artifacts.iter().any(|a| {
-                                    a.root == before.location.root
-                                        && a.path == before.location.path
-                                        && a.owners.iter().any(|o| {
-                                            o.installation_id
-                                                == set.installation.owner.installation_id
-                                        })
-                                })
+                            set.artifacts.iter().any(|a| {
+                                super::preflight::same_location(
+                                    &super::preflight::artifact_location(a),
+                                    &before.location,
+                                )
+                            }) || self.state.artifacts.iter().any(|a| {
+                                a.root == before.location.root
+                                    && a.path == before.location.path
+                                    && a.owners.iter().any(|o| {
+                                        o.installation_id == set.installation.owner.installation_id
+                                    })
+                            })
                         })
                         .map(|set| set.installation.owner.installation_id.clone())
                         .collect::<Vec<_>>();
@@ -395,8 +435,12 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                 }
             }
         }
-        let conflicts =
-            super::preflight::collect_conflicts(&self.state, request, destinations.observations())?;
+        let conflicts = super::preflight::collect_with_retirements(
+            &self.state,
+            request,
+            destinations.observations(),
+            retiring,
+        )?;
         report.diagnostics.extend(
             conflicts
                 .into_iter()

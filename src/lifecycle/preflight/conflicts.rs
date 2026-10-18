@@ -22,6 +22,9 @@ fn location(k: &Key) -> FileLocation {
         path: k.2.clone(),
     }
 }
+pub(crate) fn same_location(a: &FileLocation, b: &FileLocation) -> bool {
+    key(&a.root, &a.path) == key(&b.root, &b.path)
+}
 pub(crate) fn artifact_location(artifact: &DesiredArtifact) -> FileLocation {
     match artifact {
         DesiredArtifact::File(f) => f.location.clone(),
@@ -45,16 +48,51 @@ fn diagnostic(
     }
 }
 
+/// Duplicate bindings cannot supply desired destinations or source authority.
+pub(crate) fn independent_request(
+    request: &CapturedUpsert,
+) -> (CapturedUpsert, Vec<PreflightDiagnostic>) {
+    let mut seen = BTreeSet::new();
+    let mut duplicates = BTreeSet::new();
+    for set in &request.sets {
+        let id = &set.installation.owner.installation_id;
+        if !seen.insert(id) {
+            duplicates.insert(id.clone());
+        }
+    }
+    let diagnostics = duplicates
+        .iter()
+        .map(|id| PreflightDiagnostic {
+            installation_ids: vec![id.clone()],
+            category: PreflightCategory::Binding,
+            location: None,
+            message: "duplicate complete desired set".into(),
+        })
+        .collect();
+    let mut independent = request.clone();
+    independent
+        .sets
+        .retain(|s| !duplicates.contains(&s.installation.owner.installation_id));
+    independent
+        .contracts
+        .retain(|c| !duplicates.contains(&c.installation_id));
+    (independent, diagnostics)
+}
+
 /// Structural checks precede qualified observation. Unsafe groups are excluded,
 /// allowing unrelated safe locations to be inspected without guessing their bytes.
 pub(crate) fn locations(
     prior: &CombinedState,
     request: &CapturedUpsert,
+    retiring: &[String],
 ) -> (Vec<FileLocation>, Vec<PreflightDiagnostic>) {
+    let (independent, _) = independent_request(request);
+    let request = &independent;
     let changed: BTreeSet<_> = request
         .sets
         .iter()
         .map(|s| s.installation.owner.installation_id.as_str())
+        .chain(retiring.iter().map(String::as_str))
         .collect();
     let mut owners: BTreeMap<Key, BTreeSet<String>> = BTreeMap::new();
     let mut affected = BTreeSet::new();
@@ -180,43 +218,33 @@ pub fn collect_conflicts(
     successful: &CapturedUpsert,
     observations: &[ObservedFile],
 ) -> Result<Vec<PreflightDiagnostic>> {
+    collect_with_retirements(prior, successful, observations, &[])
+}
+
+/// Retirement IDs come only from a complete, selected and authorized graph edit.
+/// Source-failed subset inspection must always use the conservative public form.
+pub(crate) fn collect_with_retirements(
+    prior: &CombinedState,
+    successful: &CapturedUpsert,
+    observations: &[ObservedFile],
+    retiring: &[String],
+) -> Result<Vec<PreflightDiagnostic>> {
     validate_state(prior)?;
-    let mut diagnostics = Vec::new();
-    let mut seen = BTreeSet::new();
-    let mut duplicates = BTreeSet::new();
+    let (independent, mut diagnostics) = independent_request(successful);
+    let successful = &independent;
     for set in &successful.sets {
-        let id = &set.installation.owner.installation_id;
-        if !seen.insert(id) {
-            duplicates.insert(id.clone());
-        }
         crate::lifecycle::upsert::validate_set(set)?;
     }
-    for id in &duplicates {
-        diagnostics.push(PreflightDiagnostic {
-            installation_ids: vec![id.clone()],
-            category: PreflightCategory::Binding,
-            location: None,
-            message: "duplicate complete desired set".into(),
-        });
-    }
-    // Duplicate bindings have no trustworthy desired destination. Retain their
-    // prior ownership and inspect only the independently compiled other items.
-    let mut independent = successful.clone();
-    independent
-        .sets
-        .retain(|s| !duplicates.contains(&s.installation.owner.installation_id));
-    independent
-        .contracts
-        .retain(|c| !duplicates.contains(&c.installation_id));
-    let successful = &independent;
-    let (locations, structural) = locations(prior, successful);
+    let (locations, structural) = locations(prior, successful, retiring);
     diagnostics.extend(structural);
     for output in locations {
         let changed_here = successful
             .sets
             .iter()
             .filter(|s| {
-                s.artifacts.iter().any(|a| artifact_location(a) == output)
+                s.artifacts
+                    .iter()
+                    .any(|a| same_location(&artifact_location(a), &output))
                     || prior.artifacts.iter().any(|a| {
                         key(&a.root, &a.path) == key(&output.root, &output.path)
                             && a.owners
@@ -225,10 +253,19 @@ pub fn collect_conflicts(
                     })
             })
             .collect::<Vec<_>>();
-        if changed_here.is_empty() {
+        let before = project(prior, &output);
+        let retired_here = retiring
+            .iter()
+            .filter(|id| {
+                before
+                    .artifacts
+                    .iter()
+                    .any(|a| a.owners.iter().any(|o| &o.installation_id == *id))
+            })
+            .collect::<Vec<_>>();
+        if changed_here.is_empty() && retired_here.is_empty() {
             continue;
         }
-        let before = project(prior, &output);
         let mut candidate = before.clone();
         let mut changes = Vec::new();
         let mut participants = before
@@ -236,6 +273,17 @@ pub fn collect_conflicts(
             .iter()
             .flat_map(|a| a.owners.iter().map(|o| o.installation_id.clone()))
             .collect::<BTreeSet<_>>();
+        for id in retired_here {
+            candidate
+                .owner_consumers
+                .retain(|a| a.installation_id != *id);
+            candidate
+                .owner_contracts
+                .retain(|a| a.installation_id != *id);
+            changes.push(InstallationChange::Remove {
+                installation_id: id.clone(),
+            });
+        }
         for set in changed_here {
             let id = &set.installation.owner.installation_id;
             participants.insert(id.clone());
@@ -272,7 +320,7 @@ pub fn collect_conflicts(
             let artifacts = set
                 .artifacts
                 .iter()
-                .filter(|a| artifact_location(a) == output)
+                .filter(|a| same_location(&artifact_location(a), &output))
                 .cloned()
                 .collect::<Vec<_>>();
             if artifacts.is_empty() {

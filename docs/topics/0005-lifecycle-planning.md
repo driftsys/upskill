@@ -123,9 +123,11 @@ planner's preservation contract.
 This inactive pure boundary provides no source authenticity, qualified
 filesystem or native authority. The separate shared entrypoint is specified in
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
-Full diagnostic aggregation and production CLI precedence remain pending. Opt-in
-inspection and preview provide observational adapters. Guarded backup,
-application and recovery are available through the opt-in
+This pure API retains first-error results; the opt-in session layer supplies
+[complete selected-set reporting](#421-complete-selected-set-preflight-reporting).
+Production CLI precedence remains pending. Opt-in inspection and preview provide
+observational adapters. Guarded backup, application and recovery are available
+through the opt-in
 [application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application).
 Production schema and commands stay unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert).
@@ -705,9 +707,10 @@ physical-containment or native authority.
 #### Boundary limits and later work
 
 These supplied-value boundaries plan supported rule outputs and explicit shared
-reconciliation. Graph and artifact errors currently report the first error; full
-operation-level conflict aggregation remains pending. The
-[captured command adapter](#captured-lifecycle-command-adapters) connects
+reconciliation. Their graph and artifact APIs retain first-error results. The
+opt-in session layer provides
+[complete safely observable selected-set reporting](#421-complete-selected-set-preflight-reporting).
+The [captured command adapter](#captured-lifecycle-command-adapters) connects
 supplied source snapshots, qualified destinations and guarded application. The
 [source-backed adapter](#source-backed-lifecycle-orchestration) now resolves
 explicit rule roots and applies invocation/configuration/recorded target
@@ -814,8 +817,10 @@ state write and backup, which remain guarded application responsibilities.
 Selection blockers return `PreviewOutcome::Blocked` with the existing typed
 diagnostics and no partial actions. Invalid state, missing/edited output
 evidence, and graph/artifact conflicts return an error without a successful
-partial preview. The underlying planners retain their first-error behavior;
-operation-wide conflict aggregation is not introduced here. Unrelated typed
+partial preview. The underlying planners retain their first-error behavior; this
+preview does not introduce operation-wide conflict aggregation. Applying
+source/session reporting has its
+[own contract](#421-complete-selected-set-preflight-reporting). Unrelated typed
 legacy/native rows survive in the proposed state, and unknown original schema-1
 fields remain available in the retained bytes rather than the typed projection.
 
@@ -1028,9 +1033,9 @@ bytes and actual Git revision. Local/Git project/user examples, stable exclusion
 and reinclusion, complete preflight failures, manual bytes/modes, and a
 revision-only private-checkout mutation are covered by
 [`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
-Production commands and schema 1 remain unchanged; all-kind adapters, native
-qualification, all-kind compatibility, activation and staging accounting in #316
-remain separate gates. Complete independently observable preflight reporting is
+Production commands and schema 1 remain unchanged; native qualification,
+all-kind compatibility, activation and staging accounting in #316 remain
+separate gates. Complete independently observable preflight reporting is
 implemented at the opt-in library boundary described below.
 
 <a id="421-complete-selected-set-preflight-reporting"></a>
@@ -1075,6 +1080,8 @@ the same normalized requested binding as installation identity. If normalization
 fails, tuple framing of the original requested source label supplies a
 report-only identity; it never establishes source evidence or persisted state.
 Duplicate selected aliases or identities are reported without choosing a winner.
+Their invalid desired topology is excluded consistently before observation and
+reporting; their recorded prior ownership remains protected.
 
 Structural and reserved-path checks precede filesystem observation. Conflicting
 locations are excluded from observation; unrelated safe locations remain
@@ -1086,7 +1093,10 @@ physical planning checks without constructing an applying operation. Structural
 failures suppress speculative content diagnostics at their locations. A mode
 failure likewise suppresses diagnostics that depend on a usable desired mode.
 
-Only a complete clean request enters reference reconciliation and opaque
+A complete captured request projects its authorized reference edits before
+location reporting so explicitly retired owners do not appear as untouched
+survivors. Duplicate bindings prevent that projection; failed-source subset
+reporting never infers retirements. Only a complete clean request enters opaque
 preparation. It retains the qualified destination snapshot through application,
 which still revalidates metadata, source bytes, Git revisions and destinations.
 Pure planners retain their first-error APIs; independent diagnostic collection

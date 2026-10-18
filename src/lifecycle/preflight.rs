@@ -66,4 +66,6 @@ pub fn normalize_report(report: &mut PreflightReport) {
 
 mod conflicts;
 pub use conflicts::collect_conflicts;
-pub(crate) use conflicts::{artifact_location, locations};
+pub(crate) use conflicts::{
+    artifact_location, collect_with_retirements, independent_request, locations, same_location,
+};

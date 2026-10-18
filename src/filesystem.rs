@@ -16,4 +16,5 @@ pub use sources::SourceSnapshot;
 
 pub use scope::{QualifiedScope, ScopeWriterGuard};
 
-pub(crate) use destinations::candidates::may_overlap as paths_may_overlap;
+mod paths;
+pub(crate) use paths::may_overlap as paths_may_overlap;

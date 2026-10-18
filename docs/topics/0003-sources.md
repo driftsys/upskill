@@ -625,9 +625,14 @@ The separate opt-in route rejects unsupported retained representations and
 cross-adapter conversion before resolving any selected source. Retained owners
 must match the declared session root in both scope and raw path spelling;
 canonical instruction destinations derive from that declared root. Production
-commands, schema 1 and client defaults remain unchanged. Native qualification,
-all-kind adapters, conflict aggregation and activation remain later gates.
-Acceptance examples are in
+commands, schema 1 and client defaults remain unchanged. Independently
+observable selected-set failures are collected by the library-only
+[complete preflight reporting contract](0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting),
+including compiled reader reports on blocked outcomes. A failed source supplies
+no speculative downstream diagnostics, and a blocked request cannot invoke the
+prepared callback or apply a successful subset. Native qualification, all-kind
+adapters and production activation remain later gates. Acceptance examples are
+in
 [`lifecycle_codex_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_sources.rs)
 and
 [`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).

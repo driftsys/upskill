@@ -1594,8 +1594,30 @@ fn blocked_preflight_keeps_excluded_and_incidental_readers() {
     let root = root(dest.path(), OwnershipScope::Project);
     apply(
         &root,
-        SourceRequest::Add(vec![add(&sources.path().join("retained"), "retained")]),
+        SourceRequest::Add(
+            ["retained", "included", "excluded"]
+                .into_iter()
+                .map(|name| add(&sources.path().join(name), name))
+                .collect(),
+        ),
     );
+    let installed = state(dest.path());
+    let included_id = installed
+        .installations
+        .iter()
+        .find(|i| i.owner.installed_name == "included")
+        .unwrap()
+        .owner
+        .installation_id
+        .clone();
+    let excluded_id = installed
+        .installations
+        .iter()
+        .find(|i| i.owner.installed_name == "excluded")
+        .unwrap()
+        .owner
+        .installation_id
+        .clone();
     let state_before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
     let instructions = std::fs::read(dest.path().join("AGENTS.md")).unwrap();
     let scope = QualifiedScope::open(&root).unwrap();
@@ -1640,6 +1662,8 @@ fn blocked_preflight_keeps_excluded_and_incidental_readers() {
             .collect::<Vec<_>>();
         assert_eq!(included.len(), 1);
         assert_eq!(excluded.len(), 1);
+        assert_eq!(included[0].installation_id, included_id);
+        assert_eq!(excluded[0].installation_id, excluded_id);
         assert_readers(
             &included,
             PROJECT_READERS,
@@ -1719,5 +1743,85 @@ fn instruction_mode_failure_does_not_hide_an_independent_source_failure() {
             & 0o7777,
         0o4640
     );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// A failed selected source keeps its existing contribution and contracts in a
+// successful neighbor's location checks. Neither capture failure nor tampering
+// may be hidden, and the surviving report belongs to the correct installation.
+#[test]
+fn capture_failure_keeps_failed_owner_in_shared_destination_report() {
+    use std::os::unix::fs::symlink;
+    use upskill::lifecycle::preflight::PreflightCategory;
+    let dest = tempfile::tempdir().unwrap();
+    let alpha = tempfile::tempdir().unwrap();
+    let beta = tempfile::tempdir().unwrap();
+    write_rule(alpha.path(), "Alpha", "");
+    write_rule(beta.path(), "Beta", "");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(vec![add(alpha.path(), "alpha"), add(beta.path(), "beta")]),
+    );
+    let prior = state(dest.path());
+    let id = |alias: &str| {
+        prior
+            .installations
+            .iter()
+            .find(|i| i.owner.installed_name == alias)
+            .unwrap()
+            .owner
+            .installation_id
+            .clone()
+    };
+    let alpha_id = id("alpha");
+    let beta_id = id("beta");
+    std::fs::remove_file(alpha.path().join("RULE.md")).unwrap();
+    symlink(beta.path().join("RULE.md"), alpha.path().join("RULE.md")).unwrap();
+    write_rule(beta.path(), "New beta", "");
+    let path = dest.path().join("AGENTS.md");
+    let before = std::fs::read_to_string(&path).unwrap();
+    let edited = before.replace("# Alpha", "# Manual alpha");
+    assert_ne!(edited, before);
+    std::fs::write(&path, &edited).unwrap();
+    let state_bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let report = blocked_report(
+        with_prepared_codex(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Update(Selection::All),
+            options(),
+            |_| -> anyhow::Result<()> { panic!("capture failure must not prepare") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    let capture = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == PreflightCategory::Capture)
+        .unwrap();
+    assert_eq!(capture.installation_ids, [alpha_id.clone()]);
+    assert!(capture.location.is_none());
+    let destination = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == PreflightCategory::Destination)
+        .unwrap();
+    let mut owners = vec![alpha_id, beta_id.clone()];
+    owners.sort();
+    assert_eq!(destination.installation_ids, owners);
+    assert_eq!(destination.location.as_ref().unwrap().path, "AGENTS.md");
+    assert_eq!(report.instruction_readers.len(), 1);
+    assert_eq!(report.instruction_readers[0].installation_id, beta_id);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_bytes
+    );
+    assert_eq!(state(dest.path()), prior);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), edited);
     assert!(!scope.has_pending_operation().unwrap());
 }

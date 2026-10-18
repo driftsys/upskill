@@ -106,7 +106,7 @@ pub(crate) fn validate_set(set: &DesiredInstallationSet) -> Result<Vec<OwnerCons
     Ok(rows)
 }
 
-fn authorize_reference(
+pub(crate) fn authorize_reference(
     prior: &CombinedState,
     selected: &SelectedNodes,
     edge: &Reference,

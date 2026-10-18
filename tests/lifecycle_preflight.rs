@@ -103,7 +103,7 @@ fn empty_state() -> CombinedState {
 fn file_set(id: &str, path: &str, bytes: &[u8]) -> DesiredInstallationSet {
     let root = InstallationRoot {
         scope: OwnershipScope::Project,
-        path: "/scope".into(),
+        path: std::env::temp_dir().join("upskill-preflight"),
     };
     DesiredInstallationSet {
         installation: Installation {
@@ -152,7 +152,7 @@ fn absent(path: &str) -> ObservedFile {
         location: FileLocation {
             root: InstallationRoot {
                 scope: OwnershipScope::Project,
-                path: "/scope".into(),
+                path: std::env::temp_dir().join("upskill-preflight"),
             },
             path: path.into(),
         },
@@ -485,4 +485,80 @@ fn duplicate_binding_does_not_hide_disjoint_conflicts() {
     assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
     assert_eq!(diagnostics[0].category, PreflightCategory::Binding);
     assert_eq!(diagnostics[1].installation_ids, ["c", "d"]);
+}
+
+// All grouping, not only report sorting, must preserve exact raw root spellings.
+#[test]
+fn independent_raw_roots_do_not_fabricate_shared_conflicts() {
+    let first = file_set("a", "same.md", b"one");
+    let mut second = file_set("b", "same.md", b"two");
+    second.installation.root.path = first.installation.root.path.join(".");
+    let DesiredArtifact::File(file) = &mut second.artifacts[0] else {
+        panic!()
+    };
+    file.location.root = second.installation.root.clone();
+    let observations = vec![
+        ObservedFile {
+            location: FileLocation {
+                root: first.installation.root.clone(),
+                path: "same.md".into(),
+            },
+            value: None,
+        },
+        ObservedFile {
+            location: FileLocation {
+                root: second.installation.root.clone(),
+                path: "same.md".into(),
+            },
+            value: None,
+        },
+    ];
+    let diagnostics = upskill::lifecycle::preflight::collect_conflicts(
+        &empty_state(),
+        &captured(vec![first, second]),
+        &observations,
+    )
+    .unwrap();
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+// Legacy reservations remain blockers even when a separate observed file also
+// conflicts, rather than disappearing behind the first reservation error.
+#[test]
+fn legacy_reservation_and_independent_destination_are_both_reported() {
+    let mut prior = empty_state();
+    let mut lock = upskill::lockfile::Lockfile::default();
+    lock.items.push(upskill::lockfile::LockedItem {
+        kind: ItemKind::Rule,
+        name: "old".into(),
+        source: "./old".into(),
+        git_ref: None,
+        hash: None,
+        source_name: None,
+        required_by: vec![],
+        group: None,
+        clients: vec!["claude".into()],
+    });
+    prior.legacy = Some(lock);
+    let request = captured(vec![
+        file_set("a", ".claude/rules/old.md", b"selected"),
+        file_set("b", "manual.md", b"selected"),
+    ]);
+    let mut manual = absent("manual.md");
+    manual.value = Some(FileValue {
+        bytes: b"Manual\n".to_vec(),
+        mode: Some(0o640),
+    });
+    let diagnostics =
+        upskill::lifecycle::preflight::collect_conflicts(&prior, &request, &[manual]).unwrap();
+    assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
+    assert_eq!(diagnostics[0].installation_ids, ["a"]);
+    assert_eq!(diagnostics[0].category, PreflightCategory::Ownership);
+    assert_eq!(
+        diagnostics[0].location.as_ref().unwrap().path,
+        ".claude/rules/old.md"
+    );
+    assert_eq!(diagnostics[1].installation_ids, ["b"]);
+    assert_eq!(diagnostics[1].category, PreflightCategory::Destination);
+    assert_eq!(diagnostics[1].location.as_ref().unwrap().path, "manual.md");
 }

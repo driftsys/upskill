@@ -7,7 +7,7 @@ use std::fmt;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod backend;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub(crate) mod candidates;
+mod candidates;
 
 /// Opaque, non-Clone evidence for exact values beneath a borrowed scope.
 ///

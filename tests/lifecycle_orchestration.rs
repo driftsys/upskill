@@ -1704,6 +1704,41 @@ fn unchanged_selection_does_not_hide_changed_conflict() {
         .unwrap(),
     );
     assert_eq!(report.diagnostics.len(), 3, "{report:?}");
+    for diagnostic in &report.diagnostics {
+        let alias = match &diagnostic.location {
+            None => {
+                assert_eq!(
+                    diagnostic.category,
+                    upskill::lifecycle::preflight::PreflightCategory::Resolution
+                );
+                "broken"
+            }
+            Some(location) => {
+                assert_eq!(
+                    diagnostic.category,
+                    upskill::lifecycle::preflight::PreflightCategory::Destination
+                );
+                if location.path == ".claude/rules/changed.md" {
+                    "changed"
+                } else {
+                    assert_eq!(location.path, ".claude/rules/unchanged.md");
+                    "unchanged"
+                }
+            }
+        };
+        assert_eq!(
+            diagnostic.installation_ids,
+            [prior
+                .installations
+                .iter()
+                .find(|i| i.owner.installed_name == alias)
+                .unwrap()
+                .owner
+                .installation_id
+                .clone()]
+        );
+    }
+
     assert_eq!(
         report
             .diagnostics
@@ -1731,6 +1766,159 @@ fn unchanged_selection_does_not_hide_changed_conflict() {
     assert_eq!(
         std::fs::metadata(&survivor).unwrap().permissions().mode(),
         survivor_mode
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Missing ancestors force diagnostic fallback framing; recorded binding identities
+// and deterministic ordering must survive without resolving or adopting sources.
+#[test]
+fn preflight_binding_identity_survives_failed_resolution() {
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    let mut paths = Vec::new();
+    for name in ["first", "second"] {
+        let path = sources.path().join(name).join("item");
+        std::fs::create_dir_all(&path).unwrap();
+        write_rule(&path, name);
+        paths.push(path.canonicalize().unwrap());
+    }
+    let root = root(dest.path());
+    run(
+        &root,
+        SourceRequest::Add(
+            paths
+                .iter()
+                .zip(["first", "second"])
+                .map(|(path, alias)| AddRule {
+                    source: InstallSource::LocalPath(path.clone()),
+                    source_name: "source".into(),
+                    installed_name: alias.into(),
+                })
+                .collect(),
+        ),
+    );
+    let prior = state(dest.path());
+    let bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    for path in &paths {
+        std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+    let mut expected_ids = prior
+        .installations
+        .iter()
+        .map(|i| i.owner.installation_id.clone())
+        .collect::<Vec<_>>();
+    expected_ids.sort();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let mut reports = vec![];
+    for order in [[0, 1], [1, 0]] {
+        let request = SourceRequest::Add(
+            order
+                .into_iter()
+                .map(|index| AddRule {
+                    source: InstallSource::LocalPath(paths[index].clone()),
+                    source_name: "source".into(),
+                    installed_name: ["first", "second"][index].into(),
+                })
+                .collect(),
+        );
+        let report = preflight_report(
+            with_prepared(
+                &scope,
+                &guard,
+                root.clone(),
+                request,
+                SourceOptions {
+                    targets: TargetSelection::default(),
+                    add_defaults: &[TargetSurface::ClaudeCli],
+                    compiler: &compiler,
+                },
+                |_| -> anyhow::Result<()> { panic!("unresolved fallback identity cannot prepare") },
+            )
+            .unwrap(),
+        );
+        assert_eq!(report.diagnostics.len(), 2);
+        assert_eq!(
+            report
+                .diagnostics
+                .iter()
+                .flat_map(|d| d.installation_ids.clone())
+                .collect::<Vec<_>>(),
+            expected_ids
+        );
+        assert!(report.diagnostics.iter().all(|d| d.category
+            == upskill::lifecycle::preflight::PreflightCategory::Binding
+            && d.location.is_none()));
+        reports.push(report);
+    }
+    assert_eq!(reports[0], reports[1]);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        bytes
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Choosing one duplicate alias, or resolving either failed binding, would fabricate
+// source/destination diagnostics and lose the complete alias participant inventory.
+#[test]
+fn duplicate_add_aliases_report_both_bindings_and_an_independent_conflict() {
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    std::fs::create_dir(sources.path().join("valid")).unwrap();
+    write_rule(&sources.path().join("valid"), "Valid");
+    std::fs::create_dir_all(dest.path().join(".claude/rules")).unwrap();
+    std::fs::write(dest.path().join(".claude/rules/valid.md"), b"Manual\n").unwrap();
+    let root = root(dest.path());
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let report = preflight_report(
+        with_prepared(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Add(
+                [
+                    ("missing-one", "duplicate"),
+                    ("missing-two", "duplicate"),
+                    ("valid", "valid"),
+                ]
+                .into_iter()
+                .map(|(source, alias)| AddRule {
+                    source: InstallSource::LocalPath(sources.path().join(source)),
+                    source_name: "source".into(),
+                    installed_name: alias.into(),
+                })
+                .collect(),
+            ),
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[TargetSurface::ClaudeCli],
+                compiler: &compiler,
+            },
+            |_| -> anyhow::Result<()> { panic!("duplicates must not prepare") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    let duplicate = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == upskill::lifecycle::preflight::PreflightCategory::Binding)
+        .unwrap();
+    assert_eq!(duplicate.installation_ids.len(), 2);
+    assert!(duplicate.location.is_none());
+    let independent = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == upskill::lifecycle::preflight::PreflightCategory::Destination)
+        .unwrap();
+    assert_eq!(
+        independent.location.as_ref().unwrap().path,
+        ".claude/rules/valid.md"
     );
     assert!(!scope.has_pending_operation().unwrap());
 }

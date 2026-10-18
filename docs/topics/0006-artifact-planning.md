@@ -691,6 +691,8 @@ is implemented;
 [qualified file execution and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
 consume selected modes as an opt-in library capability. Production lifecycle
 activation and native qualification remain pending. The API may return the first
-contextual conflict; complete diagnostic aggregation remains an activation gate.
-No production CLI selector, native support, schema-2 persistence or installation
-effects are activated. M1-A2, M1-A3 and M1 remain incomplete.
+contextual conflict. The opt-in source/session layer provides
+[complete safely observable selected-set reporting](0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting)
+without changing this pure API's first-error behavior. No production CLI
+selector, native support, schema-2 persistence or installation effects are
+activated. M1-A2, M1-A3 and M1 remain incomplete.

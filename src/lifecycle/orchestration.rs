@@ -399,6 +399,9 @@ fn with_prepared_route<T>(
             let names = items
                 .iter()
                 .map(|item| item.installed_name.clone())
+                .filter(|name| !name.is_empty())
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
                 .collect::<Vec<_>>();
             if let SelectionOutcome::Blocked { diagnostics, .. } =
                 select_owned_nodes(session.state(), &Selection::Names(names.clone()))?
@@ -559,7 +562,7 @@ fn with_prepared_route<T>(
     }
     report.instruction_readers = instruction_readers.clone();
     if !report.diagnostics.is_empty() {
-        session.collect_preflight(&mut request, execution, &mut report)?;
+        session.collect_preflight(&mut request, execution, &[], &mut report)?;
         normalize_report(&mut report);
         return Ok(OrchestrationOutcome::Blocked(vec![
             CommandDiagnostic::Preflight(report),
