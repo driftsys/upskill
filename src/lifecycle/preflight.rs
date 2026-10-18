@@ -63,3 +63,7 @@ pub fn normalize_report(report: &mut PreflightReport) {
         .instruction_readers
         .sort_by(|a, b| a.installation_id.cmp(&b.installation_id));
 }
+
+mod conflicts;
+pub use conflicts::collect_conflicts;
+pub(crate) use conflicts::{artifact_location, locations};

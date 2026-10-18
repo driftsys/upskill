@@ -294,7 +294,10 @@ fn reserved_destinations_and_unbound_sources_are_rejected_before_effects() {
                     file.location.path = path.into();
                     Ok(request)
                 })
-                .is_err()
+                .is_ok_and(|outcome| match outcome {
+                    PrepareOutcome::Blocked(diagnostics) => matches!(&diagnostics[..], [CommandDiagnostic::Preflight(report)] if report.diagnostics.len() == 1 && report.diagnostics[0].location.as_ref().is_some_and(|location| location.path == path)),
+                    _ => false,
+                })
         );
     }
     assert_eq!(std::fs::read_dir(&root.path).unwrap().count(), 0);

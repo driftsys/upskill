@@ -6,7 +6,7 @@ use anyhow::{Result, bail};
 fn may_match(a: &str, b: &str) -> bool {
     !a.is_ascii() || !b.is_ascii() || a.eq_ignore_ascii_case(b)
 }
-fn may_overlap(a: &str, b: &str) -> bool {
+pub(crate) fn may_overlap(a: &str, b: &str) -> bool {
     a.split('/').zip(b.split('/')).all(|(a, b)| may_match(a, b))
 }
 pub(super) fn prepare(locations: &[FileLocation]) -> Result<Vec<FileLocation>> {

@@ -293,7 +293,7 @@ fn manual_output_conflict_preserves_entire_state_and_files() {
             },
             |prepared| prepared.apply()
         )
-        .is_err()
+        .is_ok_and(|outcome| matches!(outcome, OrchestrationOutcome::Blocked(_)))
     );
     assert_eq!(
         std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -749,12 +749,10 @@ fn different_source_alias_reuse_rejects_before_resolver_fetch() {
         },
         |prepared| prepared.apply(),
     )
-    .err()
-    .unwrap();
-    assert!(
-        error.to_string().contains("alias already belongs"),
-        "{error:#}"
-    );
+    .map_err(|error| format!("{error:#}"))
+    .map(rejection_message)
+    .unwrap_or_else(|error| error);
+    assert!(error.contains("alias already belongs"), "{error:#}");
     assert_eq!(
         std::fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
         before
@@ -1132,10 +1130,7 @@ fn add_rejects_owned_bundle_alias_before_source_work() {
         },
         |_| panic!("bundle alias must reject before callback"),
     );
-    let error = result
-        .err()
-        .expect("bundle collision must reject")
-        .to_string();
+    let error = rejection_message(result.unwrap());
     assert!(error.contains("owned bundle"), "{error}");
     assert_eq!(
         std::fs::read(destination.path().join(".upskill-lock.json")).unwrap(),
@@ -1359,10 +1354,10 @@ fn add_preflights_later_instruction_and_bundle_aliases_before_resolving_any_sour
             },
             |_| panic!("complete namespace preflight must reject before callback"),
         );
-        let error = result
-            .err()
-            .expect("later namespace collision must reject")
-            .to_string();
+        let error = match result {
+            Err(error) => format!("{error:#}"),
+            Ok(outcome) => rejection_message(outcome),
+        };
         assert!(error.contains(diagnostic), "{error}");
         assert_eq!(state(destination.path()), before);
         assert_eq!(
@@ -1453,4 +1448,289 @@ fn source_rule_updates_beside_an_unselected_instruction_preserve_its_complete_ev
                 .contains(operation)
         );
     }
+}
+
+fn preflight_report<T>(
+    outcome: OrchestrationOutcome<T>,
+) -> upskill::lifecycle::preflight::PreflightReport {
+    match outcome {
+        OrchestrationOutcome::Blocked(diagnostics) => match diagnostics.into_iter().next().unwrap()
+        {
+            upskill::lifecycle::commands::CommandDiagnostic::Preflight(report) => report,
+            other => panic!("expected preflight report: {other:?}"),
+        },
+        _ => panic!("expected blocked preflight"),
+    }
+}
+
+// A fail-fast resolver, or planning only the first successful output, loses failures here.
+#[test]
+fn invalid_source_does_not_hide_two_destination_conflicts() {
+    use std::os::unix::fs::PermissionsExt;
+    use upskill::lifecycle::preflight::PreflightCategory;
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    for name in ["first", "second"] {
+        std::fs::create_dir(sources.path().join(name)).unwrap();
+        write_rule(&sources.path().join(name), "Selected");
+    }
+    let rules = dest.path().join(".claude/rules");
+    std::fs::create_dir_all(&rules).unwrap();
+    for name in ["first", "second"] {
+        std::fs::write(rules.join(format!("{name}.md")), format!("Manual {name}\n")).unwrap();
+        std::fs::set_permissions(
+            rules.join(format!("{name}.md")),
+            std::fs::Permissions::from_mode(0o640),
+        )
+        .unwrap();
+    }
+    let root = root(dest.path());
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let mut reports = Vec::new();
+    for names in [
+        ["missing", "first", "second"],
+        ["second", "first", "missing"],
+    ] {
+        let request = SourceRequest::Add(
+            names
+                .into_iter()
+                .map(|name| AddRule {
+                    source: InstallSource::LocalPath(sources.path().join(name)),
+                    source_name: "source".into(),
+                    installed_name: name.into(),
+                })
+                .collect(),
+        );
+        let outcome = with_prepared(
+            &scope,
+            &guard,
+            root.clone(),
+            request,
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[TargetSurface::ClaudeCli],
+                compiler: &compiler,
+            },
+            |_| -> anyhow::Result<()> { panic!("blocked selected set must never prepare") },
+        )
+        .unwrap();
+        let report = preflight_report(outcome);
+        assert_eq!(report.diagnostics.len(), 3, "{report:?}");
+        assert_eq!(
+            report
+                .diagnostics
+                .iter()
+                .filter(|d| d.category == PreflightCategory::Resolution && d.location.is_none())
+                .count(),
+            1
+        );
+        let mut paths = report
+            .diagnostics
+            .iter()
+            .filter_map(|d| d.location.as_ref().map(|v| v.path.as_str()))
+            .collect::<Vec<_>>();
+        paths.sort();
+        assert_eq!(paths, [".claude/rules/first.md", ".claude/rules/second.md"]);
+        reports.push(report);
+    }
+    assert_eq!(reports[0], reports[1]);
+    for name in ["first", "second"] {
+        let file = rules.join(format!("{name}.md"));
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            format!("Manual {name}\n")
+        );
+        assert_eq!(
+            std::fs::metadata(file).unwrap().permissions().mode() & 0o7777,
+            0o640
+        );
+    }
+    assert!(!dest.path().join(".upskill-lock.json").exists());
+    assert!(!dest.path().join(".upskill-lock.schema1.json").exists());
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Failed resolution must not suppress independent parse/capability failures or invent outputs.
+#[test]
+fn preflight_collects_independent_source_failures() {
+    use upskill::lifecycle::preflight::PreflightCategory;
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    for name in ["malformed", "valid"] {
+        std::fs::create_dir(sources.path().join(name)).unwrap();
+    }
+    std::fs::write(
+        sources.path().join("malformed/RULE.md"),
+        "---\ninvalid: [\n---\n",
+    )
+    .unwrap();
+    write_rule(&sources.path().join("valid"), "Valid control");
+    let root = root(dest.path());
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let report = preflight_report(
+        with_prepared(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Add(
+                ["missing", "malformed", "valid"]
+                    .into_iter()
+                    .map(|name| AddRule {
+                        source: InstallSource::LocalPath(sources.path().join(name)),
+                        source_name: "source".into(),
+                        installed_name: name.into(),
+                    })
+                    .collect(),
+            ),
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[TargetSurface::ClaudeCli],
+                compiler: &compiler,
+            },
+            |_| -> anyhow::Result<()> { panic!("no partial operation") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    assert!(
+        report
+            .diagnostics
+            .iter()
+            .any(|d| d.category == PreflightCategory::Resolution)
+    );
+    assert!(
+        report
+            .diagnostics
+            .iter()
+            .any(|d| d.category == PreflightCategory::Compilation)
+    );
+    assert!(report.diagnostics.iter().all(|d| d.location.is_none()));
+    assert_eq!(std::fs::read_dir(dest.path()).unwrap().count(), 0);
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+fn rejection_message<T>(outcome: OrchestrationOutcome<T>) -> String {
+    let report = preflight_report(outcome);
+    assert!(!report.diagnostics.is_empty());
+    report
+        .diagnostics
+        .iter()
+        .map(|d| d.message.as_str())
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+// A recorded source-label parse failure must not hide changed/unchanged destination
+// conflicts, and an unselected survivor's bytes, modes and complete state remain exact.
+#[test]
+fn unchanged_selection_does_not_hide_changed_conflict() {
+    use std::os::unix::fs::PermissionsExt;
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    for name in ["broken", "changed", "unchanged", "survivor"] {
+        std::fs::create_dir(sources.path().join(name)).unwrap();
+        write_rule(&sources.path().join(name), name);
+    }
+    let root = root(dest.path());
+    run(
+        &root,
+        SourceRequest::Add(
+            ["broken", "changed", "unchanged", "survivor"]
+                .into_iter()
+                .map(|name| AddRule {
+                    source: InstallSource::LocalPath(sources.path().join(name)),
+                    source_name: "source".into(),
+                    installed_name: name.into(),
+                })
+                .collect(),
+        ),
+    );
+    let mut prior = state(dest.path());
+    let broken = prior
+        .installations
+        .iter_mut()
+        .find(|i| i.owner.installed_name == "broken")
+        .unwrap();
+    broken.owner.source = "invalid recorded source".into();
+    let broken_owner = broken.owner.clone();
+    for artifact in &mut prior.artifacts {
+        for owner in &mut artifact.owners {
+            if owner.installation_id == broken_owner.installation_id {
+                *owner = broken_owner.clone();
+            }
+        }
+    }
+    let state_bytes = upskill::lifecycle::state::serialize_state(&prior).unwrap();
+    std::fs::write(
+        dest.path().join(".upskill-lock.json"),
+        state_bytes.as_bytes(),
+    )
+    .unwrap();
+    for name in ["changed", "unchanged"] {
+        std::fs::write(
+            dest.path().join(format!(".claude/rules/{name}.md")),
+            format!("Manual {name}\n"),
+        )
+        .unwrap();
+    }
+    write_rule(&sources.path().join("changed"), "New source bytes");
+    let survivor = dest.path().join(".claude/rules/survivor.md");
+    let survivor_bytes = std::fs::read(&survivor).unwrap();
+    let survivor_mode = std::fs::metadata(&survivor).unwrap().permissions().mode();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let report = preflight_report(
+        with_prepared(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Update(Selection::Names(vec![
+                "broken".into(),
+                "changed".into(),
+                "unchanged".into(),
+            ])),
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[],
+                compiler: &compiler,
+            },
+            |_| -> anyhow::Result<()> { panic!("blocked update") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 3, "{report:?}");
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .filter(|d| d.location.is_none())
+            .count(),
+        1
+    );
+    let mut paths = report
+        .diagnostics
+        .iter()
+        .filter_map(|d| d.location.as_ref().map(|l| l.path.as_str()))
+        .collect::<Vec<_>>();
+    paths.sort();
+    assert_eq!(
+        paths,
+        [".claude/rules/changed.md", ".claude/rules/unchanged.md"]
+    );
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_bytes.as_bytes()
+    );
+    assert_eq!(state(dest.path()), prior);
+    assert_eq!(std::fs::read(&survivor).unwrap(), survivor_bytes);
+    assert_eq!(
+        std::fs::metadata(&survivor).unwrap().permissions().mode(),
+        survivor_mode
+    );
+    assert!(!scope.has_pending_operation().unwrap());
 }

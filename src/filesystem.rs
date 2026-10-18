@@ -15,3 +15,5 @@ pub use execution::{ExecutionOutcome, ExecutionReport, ExecutionRequest};
 pub use sources::SourceSnapshot;
 
 pub use scope::{QualifiedScope, ScopeWriterGuard};
+
+pub(crate) use destinations::candidates::may_overlap as paths_may_overlap;

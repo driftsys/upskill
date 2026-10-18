@@ -202,55 +202,13 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                 "desired installation lacks matching captured source snapshot"
             );
         }
-        let mut locations = self.old_locations()?;
-        for set in &request.sets {
-            for artifact in &set.artifacts {
-                add_location(
-                    &mut locations,
-                    &match artifact {
-                        DesiredArtifact::File(f) => f.location.clone(),
-                        DesiredArtifact::Instruction(i) => {
-                            location(&i.location.root, &i.location.path)
-                        }
-                    },
-                )?;
-            }
-        }
-        let destinations = self.scope.observe_destinations(&locations)?;
-        for set in &mut request.sets {
-            for artifact in &mut set.artifacts {
-                if let DesiredArtifact::File(file) = artifact {
-                    let before = destinations
-                        .observations()
-                        .iter()
-                        .find(|o| o.location == file.location)
-                        .context("missing output observation")?;
-                    let source = match file.value.mode {
-                        None => PermissionSource::Generated,
-                        mode => PermissionSource::Resource {
-                            captured_mode: mode,
-                        },
-                    };
-                    let mode =
-                        select_file_mode(destination_mode(&before.value), source, execution)?;
-                    file.value.mode = Some(mode);
-                    for contract in &mut request.contracts {
-                        if contract.installation_id == set.installation.owner.installation_id
-                            && contract.root == file.location.root
-                            && contract.path == file.location.path
-                            && contract.contribution_id.is_none()
-                        {
-                            if let ContractContent::File {
-                                mode: contract_mode,
-                                ..
-                            } = &mut contract.content
-                            {
-                                *contract_mode = Some(mode);
-                            }
-                        }
-                    }
-                }
-            }
+        let mut report = super::preflight::PreflightReport::default();
+        let destinations = self.collect_preflight(&mut request, execution, &mut report)?;
+        if !report.diagnostics.is_empty() {
+            super::preflight::normalize_report(&mut report);
+            return Ok(PrepareOutcome::Blocked(vec![CommandDiagnostic::Preflight(
+                report,
+            )]));
         }
         let graph = super::reconcile::reconcile_references(
             &self.state,
@@ -328,6 +286,126 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                 })))
             }
         }
+    }
+
+    /// Reporting-only inspection may receive a successful subset, but never
+    /// reconciles or prepares it for application. The complete request is planned
+    /// separately only after every selected source and destination passes.
+    pub(crate) fn collect_preflight(
+        &self,
+        request: &mut CapturedUpsert,
+        execution: ResourceExecutionPolicy,
+        report: &mut super::preflight::PreflightReport,
+    ) -> Result<DestinationSnapshot<'scope>> {
+        self.metadata.verify_unchanged()?;
+        let (locations, _) = super::preflight::locations(&self.state, request);
+        let destinations = self.scope.observe_destinations(&locations)?;
+        // Match production permission selection before comparing sharing contracts.
+        // A permission failure is local to an observed location, never a reason to
+        // invent further diagnostics for its unqualified desired value.
+        let mut mode_failures = Vec::new();
+        for set in &mut request.sets {
+            for artifact in &mut set.artifacts {
+                let DesiredArtifact::File(file) = artifact else {
+                    continue;
+                };
+                let Some(before) = destinations
+                    .observations()
+                    .iter()
+                    .find(|o| o.location == file.location)
+                else {
+                    continue;
+                };
+                let source = match file.value.mode {
+                    None => PermissionSource::Generated,
+                    captured_mode => PermissionSource::Resource { captured_mode },
+                };
+                match select_file_mode(destination_mode(&before.value), source, execution) {
+                    Ok(mode) => {
+                        file.value.mode = Some(mode);
+                        for contract in &mut request.contracts {
+                            if contract.installation_id == set.installation.owner.installation_id
+                                && contract.root == file.location.root
+                                && contract.path == file.location.path
+                                && contract.contribution_id.is_none()
+                            {
+                                if let ContractContent::File { mode: value, .. } =
+                                    &mut contract.content
+                                {
+                                    *value = Some(mode);
+                                }
+                            }
+                        }
+                    }
+                    Err(error) => mode_failures.push(super::preflight::PreflightDiagnostic {
+                        installation_ids: vec![set.installation.owner.installation_id.clone()],
+                        category: super::preflight::PreflightCategory::Destination,
+                        location: Some(file.location.clone()),
+                        message: format!("{error:#}"),
+                    }),
+                }
+            }
+        }
+        for before in destinations.observations() {
+            let affected_instruction = request.sets.iter().any(|set| {
+                set.artifacts.iter().any(|artifact| matches!(artifact, DesiredArtifact::Instruction(i) if i.location.root == before.location.root && i.location.path == before.location.path))
+                || self.state.artifacts.iter().any(|a| a.root == before.location.root && a.path == before.location.path
+                    && matches!(a.content, crate::ownership::ArtifactContent::MarkdownContribution { .. })
+                    && a.owners.iter().any(|o| o.installation_id == set.installation.owner.installation_id))
+            });
+            if affected_instruction {
+                if let Err(error) = select_file_mode(
+                    destination_mode(&before.value),
+                    PermissionSource::Generated,
+                    ResourceExecutionPolicy::Disabled,
+                ) {
+                    let mut ids = request
+                        .sets
+                        .iter()
+                        .filter(|set| {
+                            set.artifacts
+                                .iter()
+                                .any(|a| super::preflight::artifact_location(a) == before.location)
+                                || self.state.artifacts.iter().any(|a| {
+                                    a.root == before.location.root
+                                        && a.path == before.location.path
+                                        && a.owners.iter().any(|o| {
+                                            o.installation_id
+                                                == set.installation.owner.installation_id
+                                        })
+                                })
+                        })
+                        .map(|set| set.installation.owner.installation_id.clone())
+                        .collect::<Vec<_>>();
+                    ids.extend(
+                        self.state
+                            .artifacts
+                            .iter()
+                            .filter(|a| {
+                                a.root == before.location.root && a.path == before.location.path
+                            })
+                            .flat_map(|a| a.owners.iter().map(|o| o.installation_id.clone())),
+                    );
+                    mode_failures.push(super::preflight::PreflightDiagnostic {
+                        installation_ids: ids,
+                        category: super::preflight::PreflightCategory::Destination,
+                        location: Some(before.location.clone()),
+                        message: format!("{error:#}"),
+                    });
+                }
+            }
+        }
+        let conflicts =
+            super::preflight::collect_conflicts(&self.state, request, destinations.observations())?;
+        report.diagnostics.extend(
+            conflicts
+                .into_iter()
+                .filter(|d| !mode_failures.iter().any(|f| f.location == d.location)),
+        );
+        report.diagnostics.extend(mode_failures);
+        destinations.verify_unchanged()?;
+        self.metadata.verify_unchanged()?;
+        Ok(destinations)
     }
 
     /// Remove only explicitly selected root references, preserving independent roots.
