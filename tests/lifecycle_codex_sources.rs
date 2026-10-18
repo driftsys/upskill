@@ -218,6 +218,48 @@ fn assert_contract(result: &CompiledCodexInstructions, path: &str) {
 }
 
 #[test]
+fn distinct_installation_bindings_preserve_owner_and_framed_contribution_identities() {
+    let tmp = tempfile::tempdir().unwrap();
+    let selected = tmp.path().join("rule");
+    write_rule(&selected, "", "Shared source body\n");
+    let source = ResolvedRuleSource::resolve(&InstallSource::LocalPath(selected)).unwrap();
+    let captured = source.capture().unwrap();
+    let root = root(tmp.path(), OwnershipScope::Project);
+    let location = location(&root);
+    let mut contribution_ids = Vec::new();
+    for (installation_id, expected_contribution_id) in [
+        (
+            "first-installation",
+            "b8eb67f246122d5eb00e370a45203b30b83e0d2898ac89f65e7d8ddb683898da",
+        ),
+        (
+            "second-installation",
+            "f0d7e7fbb9e0d6e9769741d911d8d4d5ccfb71692d4afe21044bbe7d4f71d109",
+        ),
+    ] {
+        let mut requested = binding(&root, &location);
+        requested.installation_id = installation_id;
+        let result = captured.compile_codex(requested).unwrap();
+        assert_eq!(
+            result.desired.set.installation.owner.installation_id,
+            installation_id
+        );
+        let [contract] = result.desired.contracts.as_slice() else {
+            panic!("one owner contract")
+        };
+        assert_eq!(contract.installation_id, installation_id);
+        assert_eq!(
+            contract.contribution_id.as_deref(),
+            Some(expected_contribution_id)
+        );
+        assert_eq!(contribution(&result).id, expected_contribution_id);
+        contribution_ids.push(contribution(&result).id.clone());
+    }
+    assert_ne!(contribution_ids[0], contribution_ids[1]);
+    assert!(!root.path.exists());
+}
+
+#[test]
 fn local_user_codex_audience_binds_exact_global_destination_and_two_readers() {
     let tmp = tempfile::tempdir().unwrap();
     let selected = tmp.path().join("rule");
