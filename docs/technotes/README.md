@@ -33,6 +33,8 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 native instruction discovery qualification](m1-gate6-native-qualification.md)
+
 - [Gate 5 captured rule desired-set validation](m1-gate5-desired-validation.md)
 - [Gate 5 selected-source resolution validation](m1-gate5-sources-validation.md)
 - [Gate 5 reference reconciliation validation](m1-gate5-reference-validation.md)

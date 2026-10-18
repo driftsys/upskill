@@ -1,0 +1,283 @@
+{
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "scope": "project",
+  "user_scope": "unqualified: real user instruction roots are never modified; isolated auth not provisioned",
+  "probes": [
+    {
+      "client": "codex",
+      "version": "0.163.0",
+      "discovery": "default",
+      "marker": "QUALIFIED_e9e9092ec5ff5079438a3d1e78e33f24",
+      "staging_marker": "STAGING_4e125df469d09a8e6b5cdf38db2e6f83",
+      "fallback": "ABSENT_0c32f7be0367edbcc1e17b2c9e53f446",
+      "result": "qualified",
+      "configuration": {
+        "instruction_path": "AGENTS.md",
+        "instructions_globs": null,
+        "tools": "available read-only; any observed tool event disqualifies",
+        "xdg_data_and_state": "isolated; OpenCode authentication may therefore be unavailable"
+      },
+      "outcomes": [
+        {
+          "state": "success",
+          "sha256": "64f2d1d85459996cb33893bdf6ebf615c832644271581b62739a57c5cdf8f641",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "tools_observed": false,
+          "response": "QUALIFIED_e9e9092ec5ff5079438a3d1e78e33f24",
+          "command": [
+            "codex",
+            "exec",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--ephemeral",
+            "--json",
+            "--sandbox",
+            "read-only",
+            "--skip-git-repo-check",
+            "--color",
+            "never",
+            "-o",
+            "$FIXTURE/codex-response",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_0c32f7be0367edbcc1e17b2c9e53f446. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "codex-default/positive"
+        },
+        {
+          "state": "success",
+          "sha256": "50eda298f7bfb10c38b1e511d4606d72d4d24638907ebcb3f18f58f5a4368da0",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "tools_observed": false,
+          "response": "ABSENT_0c32f7be0367edbcc1e17b2c9e53f446",
+          "command": [
+            "codex",
+            "exec",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--ephemeral",
+            "--json",
+            "--sandbox",
+            "read-only",
+            "--skip-git-repo-check",
+            "--color",
+            "never",
+            "-o",
+            "$FIXTURE/codex-response",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_0c32f7be0367edbcc1e17b2c9e53f446. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "codex-default/negative"
+        }
+      ]
+    },
+    {
+      "client": "claude",
+      "version": "2.1.292",
+      "discovery": "default",
+      "marker": "QUALIFIED_52f1e5f358340adea945d44494158df6",
+      "staging_marker": "STAGING_93feeb6b7bbedd4fa967a523c2d55a65",
+      "fallback": "ABSENT_d37160e157caadaef9dca310c1996967",
+      "result": "qualified",
+      "configuration": {
+        "instruction_path": ".claude/rules/probe.md",
+        "instructions_globs": null,
+        "tools": "disabled",
+        "xdg_data_and_state": "isolated; OpenCode authentication may therefore be unavailable"
+      },
+      "outcomes": [
+        {
+          "state": "success",
+          "sha256": "2cad596f44c3e0345a0ea7573cf77f4d3f962e87307c9b3b566fcfec17fb8ed8",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "response": "QUALIFIED_52f1e5f358340adea945d44494158df6",
+          "command": [
+            "claude",
+            "-p",
+            "--tools",
+            "",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "project",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_d37160e157caadaef9dca310c1996967. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "claude-default/positive"
+        },
+        {
+          "state": "success",
+          "sha256": "86593f33d439956385e642d6b56e48e0ea5c470961a30c6cce36a9fd998db572",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "response": "ABSENT_d37160e157caadaef9dca310c1996967",
+          "command": [
+            "claude",
+            "-p",
+            "--tools",
+            "",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "project",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_d37160e157caadaef9dca310c1996967. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "claude-default/negative"
+        }
+      ]
+    },
+    {
+      "client": "copilot",
+      "version": "1.0.98",
+      "discovery": "default",
+      "marker": "QUALIFIED_41ab8f71dea8874b3ae740e877d08544",
+      "staging_marker": "STAGING_524cd0ea6f20756edde67d8073ebd984",
+      "fallback": "ABSENT_9b723fe1031225b6a7023be0140dd53e",
+      "result": "qualified",
+      "configuration": {
+        "instruction_path": ".github/copilot-instructions.md",
+        "instructions_globs": null,
+        "tools": "disabled",
+        "xdg_data_and_state": "isolated; OpenCode authentication may therefore be unavailable"
+      },
+      "outcomes": [
+        {
+          "state": "success",
+          "sha256": "272e83a28c3c4c1c8eca082683a72101b5f4fedc3fad8e124934b41d26530b59",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "response": "QUALIFIED_41ab8f71dea8874b3ae740e877d08544",
+          "command": [
+            "copilot",
+            "--no-auto-update",
+            "--disable-builtin-mcps",
+            "--available-tools=",
+            "--no-ask-user",
+            "--silent",
+            "--log-level",
+            "none",
+            "-p",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_9b723fe1031225b6a7023be0140dd53e. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "copilot-default/positive"
+        },
+        {
+          "state": "success",
+          "sha256": "1289826c380c8b64e1f0ce3f0a7f6d3796970d252c7156ea61c2553627d2deaf",
+          "exit_code": 0,
+          "diagnostic_category": null,
+          "response": "ABSENT_9b723fe1031225b6a7023be0140dd53e",
+          "command": [
+            "copilot",
+            "--no-auto-update",
+            "--disable-builtin-mcps",
+            "--available-tools=",
+            "--no-ask-user",
+            "--silent",
+            "--log-level",
+            "none",
+            "-p",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_9b723fe1031225b6a7023be0140dd53e. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "copilot-default/negative"
+        }
+      ]
+    },
+    {
+      "client": "opencode",
+      "version": "success",
+      "discovery": "default",
+      "marker": "QUALIFIED_a6557eeec22d1eb5dd84d278b9ae04f8",
+      "staging_marker": "STAGING_6204e590fa5417e9c3fb9f76e0be4945",
+      "fallback": "ABSENT_ae6ef8cfd9b207ffc992626a032cc913",
+      "result": "positive_control_failed",
+      "configuration": {
+        "instruction_path": "AGENTS.md",
+        "instructions_globs": null,
+        "tools": "prompt prohibition only; unqualified without stronger tool evidence",
+        "xdg_data_and_state": "isolated; OpenCode authentication may therefore be unavailable"
+      },
+      "outcomes": [
+        {
+          "state": "failure",
+          "sha256": "9b2764b15f480a2d7bf751e94ff139d010f6b80e4f83c00c5843b11a7be2ac7d",
+          "exit_code": 1,
+          "diagnostic_category": null,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_ae6ef8cfd9b207ffc992626a032cc913. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-default/positive"
+        },
+        {
+          "state": "failure",
+          "sha256": "9b2764b15f480a2d7bf751e94ff139d010f6b80e4f83c00c5843b11a7be2ac7d",
+          "exit_code": 1,
+          "diagnostic_category": null,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_ae6ef8cfd9b207ffc992626a032cc913. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-default/negative"
+        }
+      ]
+    },
+    {
+      "client": "opencode",
+      "version": "success",
+      "discovery": "configured broad globs",
+      "marker": "QUALIFIED_3f52c2207077b3dc3168d4ba44bf4b3c",
+      "staging_marker": "STAGING_2c8d16fe68e7b8ea1beb29e7a73c6534",
+      "fallback": "ABSENT_adb6e81c4fbc62aad7c84970d739e757",
+      "result": "positive_control_failed",
+      "configuration": {
+        "instruction_path": "AGENTS.md",
+        "instructions_globs": [
+          "AGENTS.md",
+          ".upskill-stage-*"
+        ],
+        "tools": "prompt prohibition only; unqualified without stronger tool evidence",
+        "xdg_data_and_state": "isolated; OpenCode authentication may therefore be unavailable"
+      },
+      "outcomes": [
+        {
+          "state": "failure",
+          "sha256": "9b2764b15f480a2d7bf751e94ff139d010f6b80e4f83c00c5843b11a7be2ac7d",
+          "exit_code": 1,
+          "diagnostic_category": null,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_adb6e81c4fbc62aad7c84970d739e757. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-configured/positive"
+        },
+        {
+          "state": "failure",
+          "sha256": "9b2764b15f480a2d7bf751e94ff139d010f6b80e4f83c00c5843b11a7be2ac7d",
+          "exit_code": 1,
+          "diagnostic_category": null,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_adb6e81c4fbc62aad7c84970d739e757. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-configured/negative"
+        }
+      ]
+    }
+  ]
+}
