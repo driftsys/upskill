@@ -256,3 +256,29 @@ schema-1 CLI boundary. Hosted CI, final full review and merge remain separate
 delivery gates. Stage residue #316 remains explicitly accounted by regular-file
 bytes, mode and parent; no cleanup or native qualification claim follows from
 these results.
+
+## Final pass-2 assertion follow-up
+
+The final numbered review found three remaining regression gaps and no runtime
+defect. The author added mixed Add witnesses for a missing first source followed
+by either an instruction alias or owned bundle collision; both must report the
+namespace guard before source resolution. A disjoint rule beside a captured
+instruction now succeeds through add, repeated add and selected update while
+preserving exact instruction bytes and all its installation, artifact, direct
+reference and consumer evidence. Actual Add precedence uses four distinct
+surfaces for invocation, project, global and defaults.
+
+All eighteen orchestration examples passed. Each independent negative control
+failed its new witness: per-source namespace checks, instruction rejection
+without owner matching, and invocation replaced by defaults. `just fmt`,
+`just sanity` (all-target Clippy and locked checks) and Rust 1.85
+`just msrv-check` passed. Logs use
+`/private/tmp/upskill-pr318-pass2-fixes-{fmt,orchestration,sanity,msrv}.log` and
+`/private/tmp/upskill-pr318-pass2-fixes-{t1,t2,t3}-negative.log`.
+
+Production behavior is unchanged; the only implementation-file edit corrects a
+preflight-order comment. Full verification and the 270-checkpoint process matrix
+remain the preceding `f3aea77` evidence and were not rerun for this
+assertion/comment-only follow-up. Final hosted CI must validate the complete
+head. Pass 2 is the final numbered review; no third review cycle was opened.
+Archived evidence, schema-1 production behavior and Gate 6 limits are unchanged.

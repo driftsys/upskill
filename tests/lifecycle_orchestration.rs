@@ -1165,6 +1165,7 @@ fn add_applies_invocation_project_global_and_default_target_precedence() {
     let c = [TargetSurface::ClaudeCli];
     let o = [TargetSurface::OpenCodeCli];
     let p = [TargetSurface::CopilotCli];
+    let defaults = [TargetSurface::CopilotVscodeLocal];
     let compiler = CompilerContext {
         bindings: vec![
             CompilerBinding {
@@ -1177,10 +1178,10 @@ fn add_applies_invocation_project_global_and_default_target_precedence() {
             },
             CompilerBinding {
                 client: Client::Copilot,
-                consumers: p.to_vec(),
+                consumers: vec![p[0], defaults[0]],
             },
         ],
-        profiles: [c[0], o[0], p[0]]
+        profiles: [c[0], o[0], p[0], defaults[0]]
             .into_iter()
             .map(|surface| TargetProfile::new(surface.family(), surface, 1).unwrap())
             .collect(),
@@ -1202,7 +1203,13 @@ fn add_applies_invocation_project_global_and_default_target_precedence() {
             &p[..],
             ".github/instructions/alias.instructions.md",
         ),
-        (&[][..], &[][..], &[][..], &c[..], ".claude/rules/alias.md"),
+        (
+            &[][..],
+            &[][..],
+            &[][..],
+            &defaults[..],
+            ".github/instructions/alias.instructions.md",
+        ),
     ] {
         let compiler = CompilerContext {
             bindings: compiler.bindings.clone(),
@@ -1219,7 +1226,7 @@ fn add_applies_invocation_project_global_and_default_target_precedence() {
         let scope = QualifiedScope::open(&root).unwrap();
         let guard = scope.try_lock_writer().unwrap();
         assert!(
-            matches!(with_prepared(&scope, &guard, root.clone(), add(source.path()), SourceOptions { targets: TargetSelection { invocation, project, global }, add_defaults: &c, compiler: &compiler }, |prepared| prepared.apply()).unwrap(), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
+            matches!(with_prepared(&scope, &guard, root.clone(), add(source.path()), SourceOptions { targets: TargetSelection { invocation, project, global }, add_defaults: &defaults, compiler: &compiler }, |prepared| prepared.apply()).unwrap(), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
         );
         let installed = state(destination.path());
         assert_eq!(installed.installations[0].requested, expected);
@@ -1237,6 +1244,143 @@ fn add_applies_invocation_project_global_and_default_target_precedence() {
                 .map(|profile| profile.surface)
                 .collect::<Vec<_>>(),
             expected
+        );
+    }
+}
+
+#[test]
+fn add_preflights_later_instruction_and_bundle_aliases_before_resolving_any_source() {
+    for (alias, diagnostic) in [
+        ("alias", "captured instruction adapter"),
+        ("bundle-alias", "owned bundle"),
+    ] {
+        let destination = tempfile::tempdir().unwrap();
+        let source = tempfile::tempdir().unwrap();
+        write_rule(source.path(), "Captured");
+        let root = root(destination.path());
+        install_captured_instruction(&root, source.path(), true);
+        let before = state(destination.path());
+        let bytes = std::fs::read(destination.path().join(".upskill-lock.json")).unwrap();
+        let instructions = std::fs::read(destination.path().join("AGENTS.md")).unwrap();
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let result: anyhow::Result<OrchestrationOutcome<()>> = with_prepared(
+            &scope,
+            &guard,
+            root.clone(),
+            SourceRequest::Add(vec![
+                AddRule {
+                    source: InstallSource::LocalPath(
+                        destination.path().join("missing-first-source"),
+                    ),
+                    source_name: "source".into(),
+                    installed_name: "free-alias".into(),
+                },
+                AddRule {
+                    source: InstallSource::LocalPath(source.path().into()),
+                    source_name: "source".into(),
+                    installed_name: alias.into(),
+                },
+            ]),
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[TargetSurface::ClaudeCli],
+                compiler: &context(),
+            },
+            |_| panic!("complete namespace preflight must reject before callback"),
+        );
+        let error = result
+            .err()
+            .expect("later namespace collision must reject")
+            .to_string();
+        assert!(error.contains(diagnostic), "{error}");
+        assert_eq!(state(destination.path()), before);
+        assert_eq!(
+            std::fs::read(destination.path().join(".upskill-lock.json")).unwrap(),
+            bytes
+        );
+        assert_eq!(
+            std::fs::read(destination.path().join("AGENTS.md")).unwrap(),
+            instructions
+        );
+        assert!(!destination.path().join(".claude").exists());
+        assert!(!scope.has_pending_operation().unwrap());
+    }
+}
+
+#[test]
+fn source_rule_updates_beside_an_unselected_instruction_preserve_its_complete_evidence() {
+    let destination = tempfile::tempdir().unwrap();
+    let instruction_source = tempfile::tempdir().unwrap();
+    let rule_source = tempfile::tempdir().unwrap();
+    write_rule(instruction_source.path(), "Captured instruction source");
+    write_rule(rule_source.path(), "First rule");
+    let root = root(destination.path());
+    install_captured_instruction(&root, instruction_source.path(), false);
+    let before = state(destination.path());
+    let instructions = std::fs::read(destination.path().join("AGENTS.md")).unwrap();
+    let rule = || {
+        SourceRequest::Add(vec![AddRule {
+            source: InstallSource::LocalPath(rule_source.path().into()),
+            source_name: "source".into(),
+            installed_name: "separate-rule".into(),
+        }])
+    };
+    for operation in ["add", "repeated-add", "update"] {
+        write_rule(rule_source.path(), operation);
+        let request = if operation == "update" {
+            SourceRequest::Update(Selection::Names(vec!["separate-rule".into()]))
+        } else {
+            rule()
+        };
+        assert!(
+            matches!(run(&root, request), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
+        );
+        let current = state(destination.path());
+        assert_eq!(
+            std::fs::read(destination.path().join("AGENTS.md")).unwrap(),
+            instructions
+        );
+        assert_eq!(
+            current
+                .installations
+                .iter()
+                .filter(|item| item.owner.installation_id == "captured-owner")
+                .collect::<Vec<_>>(),
+            before.installations.iter().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            current
+                .artifacts
+                .iter()
+                .filter(|artifact| artifact
+                    .owners
+                    .iter()
+                    .any(|owner| owner.installation_id == "captured-owner"))
+                .collect::<Vec<_>>(),
+            before.artifacts.iter().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            current
+                .owner_consumers
+                .iter()
+                .filter(|value| value.installation_id == "captured-owner")
+                .collect::<Vec<_>>(),
+            before.owner_consumers.iter().collect::<Vec<_>>()
+        );
+        assert_eq!(current.references.iter().filter(|reference| matches!(reference, Reference::DirectInstallation { installation_id } if installation_id == "captured-owner")).collect::<Vec<_>>(), before.references.iter().collect::<Vec<_>>());
+        assert_eq!(
+            current
+                .owner_contracts
+                .iter()
+                .filter(|value| value.installation_id == "captured-owner")
+                .collect::<Vec<_>>(),
+            before.owner_contracts.iter().collect::<Vec<_>>()
+        );
+        assert!(
+            std::fs::read_to_string(destination.path().join(".claude/rules/separate-rule.md"))
+                .unwrap()
+                .contains(operation)
         );
     }
 }

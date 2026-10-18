@@ -158,7 +158,8 @@ pub fn with_prepared<T>(
             for id in &selected.installation_ids {
                 ensure_source_rule_owner(session.state(), id)?;
             }
-            // Finish all selection and target preflight before even parsing sources.
+            // Selection and representation preflight is complete; validate targets
+            // and parse the recorded binding for each installation.
             for id in selected.installation_ids {
                 let item = session
                     .state()
