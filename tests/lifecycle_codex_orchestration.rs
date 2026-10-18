@@ -1828,3 +1828,83 @@ fn capture_failure_keeps_failed_owner_in_shared_destination_report() {
     assert_eq!(std::fs::read_to_string(&path).unwrap(), edited);
     assert!(!scope.has_pending_operation().unwrap());
 }
+
+#[test]
+fn destination_only_block_keeps_compiled_readers() {
+    let dest = tempfile::tempdir().unwrap();
+    let included = tempfile::tempdir().unwrap();
+    let excluded = tempfile::tempdir().unwrap();
+    write_rule(included.path(), "Included", "");
+    write_rule(excluded.path(), "Excluded", "audience: [claude]\n");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(vec![
+            add(included.path(), "included"),
+            add(excluded.path(), "excluded"),
+        ]),
+    );
+    let prior = state(dest.path());
+    let mut expected_ids = prior
+        .installations
+        .iter()
+        .map(|i| i.owner.installation_id.clone())
+        .collect::<Vec<_>>();
+    expected_ids.sort();
+    let path = dest.path().join("AGENTS.md");
+    let original = std::fs::read_to_string(&path).unwrap();
+    let edited = original.replace("# Included", "# Edited");
+    assert_ne!(original, edited);
+    std::fs::write(&path, &edited).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let report = blocked_report(
+        with_prepared_codex(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Update(Selection::All),
+            options(),
+            |_| -> anyhow::Result<()> { panic!("blocked destination cannot prepare") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 1, "{report:?}");
+    assert_eq!(
+        report.diagnostics[0].category,
+        upskill::lifecycle::preflight::PreflightCategory::Destination
+    );
+    assert_eq!(
+        report
+            .instruction_readers
+            .iter()
+            .map(|r| r.installation_id.clone())
+            .collect::<Vec<_>>(),
+        expected_ids,
+        "destination-only blocker must preserve every compiled reader report"
+    );
+    assert_eq!(
+        report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.report.compatibility == InstructionCompatibility::NotEvaluated)
+            .count(),
+        1
+    );
+    for compatibility in [
+        InstructionCompatibility::UnconditionalMarkdown,
+        InstructionCompatibility::NotEvaluated,
+    ] {
+        let readers = report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.report.compatibility == compatibility)
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(readers.len(), 1);
+        assert_readers(&readers, PROJECT_READERS, compatibility);
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), edited.as_bytes());
+    assert_eq!(state(dest.path()), prior);
+    assert!(!scope.has_pending_operation().unwrap());
+}

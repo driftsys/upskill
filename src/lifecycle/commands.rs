@@ -397,6 +397,11 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
                 || self.state.artifacts.iter().any(|a| a.root == before.location.root && a.path == before.location.path
                     && matches!(a.content, crate::ownership::ArtifactContent::MarkdownContribution { .. })
                     && a.owners.iter().any(|o| o.installation_id == set.installation.owner.installation_id))
+            }) || self.state.artifacts.iter().any(|artifact| {
+                artifact.root == before.location.root
+                    && artifact.path == before.location.path
+                    && matches!(artifact.content, crate::ownership::ArtifactContent::MarkdownContribution { .. })
+                    && artifact.owners.iter().any(|owner| retiring.contains(&owner.installation_id))
             });
             if affected_instruction {
                 if let Err(error) = select_file_mode(

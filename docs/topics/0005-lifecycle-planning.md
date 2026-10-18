@@ -1120,8 +1120,9 @@ The following integration examples pin the reporting contract:
   exact unselected survivor.
 - `complete_conflict_inventory`, `mixed_artifact_and_sharing_conflict_matrix`
   and `duplicate_binding_does_not_hide_disjoint_conflicts` pin complete
-  participant inventories, legal sharing, mixed artifacts and independent
-  conflict groups.
+  participant inventories, mixed artifacts and independent conflict groups.
+- `compatible_shared_files_and_distinct_contributions_have_no_conflicts` pins
+  legal identical file sharing and distinct instruction contributions.
 - `blocked_preflight_keeps_excluded_and_incidental_readers` pins both compiled
   reader roles and unchanged retained ownership.
 - `instruction_mode_failure_does_not_hide_an_independent_source_failure` pins
