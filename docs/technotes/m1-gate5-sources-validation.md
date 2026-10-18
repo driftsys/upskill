@@ -65,10 +65,10 @@ native client qualification remain separate delivery evidence.
 The bounded implementation plan is preserved in
 [the archive](../archive/plans/2026-10-18-lifecycle-sources.md). The canonical
 [source contract and design](../topics/0003-sources.md#selected-lifecycle-rule-sources)
-describe the implemented boundary. The Gate 5 umbrella remains active because
-source-backed command orchestration and complete lifecycle acceptance are still
-pending. Captured applying adapters are implemented in the lifecycle command
-module.
+describe the implemented boundary. Source-backed orchestration and captured
+applying adapters are now implemented. The umbrella is archived after local
+combined acceptance; final review, hosted CI and merge remain required. See the
+[final acceptance record](m1-gate5-final-acceptance.md).
 
 A bounded coverage correction strengthened the same nine integration examples
 and three private unit examples. Git branch, tag and historic full SHA now

@@ -40,7 +40,23 @@ pub struct CapturedRuleSource<'a> {
     snapshot: SourceSnapshot<'a>,
 }
 
+/// Normalize a requested binding without fetching or capturing a source tree.
+/// Local ancestors resolve; the selected final entry remains for qualification.
+pub fn normalized_source_label(source: &InstallSource) -> Result<String> {
+    match source {
+        InstallSource::LocalPath(path) => {
+            Ok(InstallSource::LocalPath(absolute_selected_root(path)?).to_string())
+        }
+        _ => Ok(source.to_string()),
+    }
+}
+
 impl ResolvedRuleSource {
+    /// Normalized local label or original requested Git label, excluding resolved revision.
+    pub fn source_label(&self) -> &str {
+        &self.label
+    }
+
     /// Resolve one explicitly selected item root, with no application writes.
     pub fn resolve(source: &InstallSource) -> Result<Self> {
         if let InstallSource::LocalPath(path) = source {

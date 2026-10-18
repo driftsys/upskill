@@ -119,6 +119,28 @@ Combined lifecycle integration and M1 activation remain separate work. See
 [AD-0033](https://github.com/driftsys/upskill/blob/main/docs/adr/0033-qualified-file-execution-and-journals.md)
 and the [qualified execution design](#architecture-qualified-file-execution).
 
+### Combined lifecycle backup and recovery
+
+When the opt-in lifecycle migrates observed schema-1 state, its restricted,
+create-only backup must match the observed original bytes before any output
+effect. A mismatched existing backup rejects without changing state or outputs.
+Fresh initialization requires absent state and backup, creates private schema-2
+state and journals backup absence without inventing historical bytes.
+
+An interruption at an output or final-state checkpoint must recover the captured
+operation without duplicating unknown effects, losing retained records or
+overwriting unrelated edits. Recovery reuses the qualified executor's persisted
+intent and checkpoint protocol under a new matching writer guard. Late external
+edits requiring reconciliation remain preserved with pending recovery;
+successful recovery leaves no pending operation. Inspection never performs
+recovery.
+
+This contract is exercised through the opt-in lifecycle session and source
+orchestration boundaries. It does not activate schema-2 production writes or
+establish native-client behavior or hardware power-loss durability. The
+[process acceptance design](#lifecycle-process-acceptance) describes the
+evidence and accounted staging residue.
+
 ## Architecture
 
 <a id="architecture-file-recovery-model"></a>
@@ -479,7 +501,47 @@ recovery. The
 [captured command adapter](0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
 now recovers before state capture, retains session evidence and consumes its
 prepared operation through this bound writer. Recovery always stops the new
-request, including successful recovery; retry opens a new session. Source
-resolution, production activation and complete Gate 5 acceptance remain pending.
-See
+request, including successful recovery; retry opens a new session. The
+[source-backed orchestration adapter](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+now opens this session before resolution and retains full captures through
+scoped application, rechecking source trees and actual Git revisions immediately
+before the captured operation applies. It reuses this writer and recovery
+protocol. Production activation and complete Gate 5 delivery remain pending. See
 [AD-0038](https://github.com/driftsys/upskill/blob/main/docs/adr/0038-bind-lifecycle-origin-to-original-backup.md).
+
+## Lifecycle process acceptance
+
+The test-only
+[process driver](https://github.com/driftsys/upskill/blob/main/src/lifecycle/acceptance_tests.rs)
+records emitted executor events from successful source-backed fresh and migrated
+add, update and remove operations. It restores the before-state and starts a new
+child at each discovered event, including backup and final-state actions. The
+parent rejects a concurrent writer, terminates the child, changes source bytes
+and opens a new lifecycle session to recover persisted intent. Late output edits
+must instead produce reconciliation while preserving those edits, old combined
+state and pending recovery. Successful recovery must leave no pending operation
+and permit a subsequent ready session without replay.
+
+The comparison checks regular-file bytes and modes outside executor storage
+under `.upskill`, including outputs, combined state and migration backup. An
+observed sibling `.upskill-stage-<nonce>` is accounted separately only when it
+matches any expected final regular file's bytes, mode and parent directory. The
+match does not bind the stage to an interrupted action token. Backend staging
+writes and verifies the action's after value before its effect hook. Directory
+modes, symlinks and filesystem identity are outside this image comparison.
+
+Such stage residue remains tracked in
+[debt #316](https://github.com/driftsys/upskill/issues/316). These tests
+establish neither native-client handling of staging names nor hardware
+power-loss durability. The ignored subprocess probe introduces no production
+hook or flag. The separate
+[actual CLI test](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_end_to_end.rs)
+checks production schema 1 and backup absence with isolated HOME. The
+[acceptance evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md)
+maps all ten accepted criteria to tests and records validation and delivery
+limits.
+
+Satisfies:
+[combined lifecycle backup and recovery](#combined-lifecycle-backup-and-recovery)
+and the
+[combined lifecycle contract](0005-lifecycle-planning.md#combined-owned-content-lifecycle-contract).

@@ -45,6 +45,8 @@ snapshot; a stable name does not imply that external research remains current.
 - [Read-only lifecycle inspection validation](m1-lifecycle-inspection.md)
 - [Read-only lifecycle preview validation](m1-lifecycle-preview.md)
 - [Captured lifecycle command adapter validation](m1-captured-lifecycle-commands.md)
+- [Source-backed lifecycle command validation](m1-gate5-orchestration-validation.md)
+- [Gate 5 final acceptance evidence](m1-gate5-final-acceptance.md)
 - [Lifecycle state origin validation](m1-lifecycle-state-origin.md)
 
 Validation records retain their individual revision and platform limits. They

@@ -57,8 +57,11 @@ not authentication against someone editing both state and backup. Qualified
 snapshot, advisory lock and external namespace-race limits still apply. The
 [captured command adapter](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
 now retains origin-bound session evidence and prepares consuming writes through
-this boundary. Source resolution, complete lifecycle acceptance and Gate 6
-native qualification remain separate work. No new dependency is introduced.
+this boundary. Explicit source-backed rule orchestration now retains captures
+through this adapter. Complete local lifecycle acceptance is recorded in the
+[acceptance note](../technotes/m1-gate5-final-acceptance.md); final hosted
+delivery and Gate 6 native qualification remain pending. No new dependency is
+introduced.
 
 Satisfies:
 [Durable lifecycle origin](../topics/0004-state-and-ownership.md#durable-lifecycle-origin).

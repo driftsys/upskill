@@ -23,7 +23,9 @@ explicitly supplied whole-file sets is implemented in
 [owned whole-file operation plans](0006-artifact-planning.md#44-owned-whole-file-operation-plans).
 Captured-rule desired sets are implemented in
 [captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets);
-lifecycle reconciliation remains pending.
+opt-in lifecycle reconciliation and
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connect these sets to guarded application.
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
@@ -62,11 +64,11 @@ Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. The separate
-selected-source boundary records immutable Git evidence; integration of
-captured-rule desired sets
-([captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets))
-with lifecycle state and execution, and Codex activation remain pending.
-Qualified scope roots and writer locking
+selected-source boundary records immutable Git evidence. Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connects captured-rule desired sets with lifecycle state and guarded execution.
+Production commands retain schema 1; native Codex qualification and activation
+remain Gate 6 work. Qualified scope roots and writer locking
 ([qualified scope roots and advisory writer locking](0007-filesystem-access.md#47-qualified-scope-roots-and-advisory-writer-locking))
 and the inactive destination observation boundary
 ([qualified destination observations](0007-filesystem-access.md#48-qualified-destination-observations))
@@ -193,9 +195,10 @@ Git's native global/system configuration, credential helpers, SSH and askpass.
 Revalidation checks the retained source tree and checkout revision without
 refreshing evidence. The boundary performs no destination observation,
 registration, output or backup writes. Preview uses supplied captured evidence
-and does not call this resolver. Discovery, source-backed command orchestration,
-Codex qualification and schema-2 production activation remain pending. Captured
-applying adapters are described in the lifecycle planning topic.
+and does not call this resolver. The
+[source-backed orchestration boundary](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+now connects explicit rule roots to captured command preparation. Discovery,
+Codex qualification and schema-2 production activation remain pending.
 
 ## Architecture
 
@@ -515,8 +518,9 @@ The opt-in Gate 5 library resolves explicitly selected local or Git rule item
 roots through `lifecycle::sources::ResolvedRuleSource`. It retains a qualified
 source scope and any private temporary checkout. This boundary performs no
 registration, destination observation, output writes or backup writes. Read-only
-preview does not use it; registry discovery and command selection remain later
-orchestration.
+preview does not use it. Registry discovery remains separate; the
+[source-backed adapter](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+now supplies complete literal selection before resolution.
 
 `capture()` returns a private association between strict captured bytes and the
 resolved source metadata. `CapturedRuleSource::compile` accepts an explicit
@@ -573,3 +577,19 @@ The implementation lives in
 [`src/lifecycle/sources.rs`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/sources.rs),
 with public acceptance coverage in
 [`tests/lifecycle_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_sources.rs).
+
+#### Requested bindings and scoped application
+
+`normalized_source_label` derives a requested source binding without fetching or
+capturing the tree. Local labels canonicalize ancestors and preserve the final
+selected entry for qualification; Git labels retain their requested ref. The
+resolved commit remains separate evidence. The orchestration adapter uses this
+label to reject reuse of an installed alias by a different binding before source
+resolution.
+
+The source-backed adapter retains every resolver, temporary checkout and full
+`CapturedRuleSource` through a scoped prepared-operation callback. Immediately
+before consuming the captured command operation, it verifies the original tree
+and actual Git revision for every capture. The opaque preparation accepts no
+replacement source or compiled output. This connects compiler-produced rule sets
+to existing execution without changing preview or production dispatch.
