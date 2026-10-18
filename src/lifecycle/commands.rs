@@ -41,6 +41,7 @@ pub struct LifecycleSession<'scope, 'guard> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandDiagnostic {
+    Preflight(super::preflight::PreflightReport),
     Selection(SelectionDiagnostic),
     /// Select the declaring bundle instead of deleting its member implicitly.
     NoDirectReference(String),

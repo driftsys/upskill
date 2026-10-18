@@ -27,3 +27,5 @@ pub mod orchestration;
 
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
 mod acceptance_tests;
+
+pub mod preflight;
