@@ -76,10 +76,12 @@ Current commands, installer behavior and lockfile persistence remain unchanged.
 Returning an OpenCode rule file does not install its instruction registration.
 The API supplies no installation roots, ownership, destination observations,
 reference claims or application instructions and makes no native support claim.
-Connecting these outputs to lifecycle planning, registry/bundle resolution,
-requested-selection reconciliation, qualified source/filesystem evidence, writer
-locking, durable state, execution/recovery and Codex activation remain pending.
-The separate mixed coordinator in
+Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connects rule compilation to requested-selection reconciliation, qualified
+source/destination evidence, writer locking, durable state and
+execution/recovery. Registry/bundle discovery, production activation and native
+Codex qualification remain pending. The separate mixed coordinator in
 [mixed owned-artifact operation plans](0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
 accepts explicit desired ownership and observations; compilation does not
 produce those lifecycle inputs. This prerequisite completes neither M1-A2 nor
@@ -286,27 +288,20 @@ ignored output, invalid inputs, impossible topology and source deletion after
 capture. The tests establish supplied-value compilation and compatibility,
 without filesystem execution or native-target conformance.
 
-The producer prepares complete source-derived sets for future lifecycle
-coordination. The implemented
+The producer prepares complete source-derived sets. Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+supplies explicit roots, consumers and qualified evidence to lifecycle planning
+and guarded application. The
 [mixed coordinator](0006-artifact-planning.md#architecture-mixed-owned-artifact-planning)
-composes explicit complete file/contribution sets, without deriving ownership
-inputs from compiled outputs. Connecting them to ownership and planners still
-requires explicit roots, consumers and destination evidence. Qualified scope
-roots, writer locking,
-[destination observation](0007-filesystem-access.md#architecture-qualified-destination-observation)
-and
-[qualified source observation](0003-sources.md#architecture-qualified-source-observation)
-are implemented as separate inactive capabilities. Final-head hosted source
-qualification remains required. Registry/bundle resolution, integrating
-qualified source evidence into the lifecycle, combined durable state and native
-Codex activation remain pending. Pure
-[permission selection](0007-filesystem-access.md#architecture-file-permission-policy)
-and opt-in
-[qualified file execution and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
-are implemented as separate library capabilities. Returning an OpenCode rule
-file does not install its separate instruction registration. This prerequisite
-changes no commands, installer behavior or schema-1 persistence and completes
-neither M1-A2 nor M1-A3.
+still accepts explicit complete file/contribution sets; compilation alone grants
+no ownership or write authority. Qualified source/destination observations,
+writer locking, permission selection, combined state and execution/recovery are
+connected through the opt-in library adapters. Final-head hosted qualification
+remains required. Registry/bundle discovery, production activation and native
+Codex qualification remain pending. Returning an OpenCode rule file does not
+install its separate instruction registration. Current commands, installer
+behavior and schema-1 persistence remain unchanged; M1-A2 and M1-A3 are
+incomplete.
 
 <a id="architecture-captured-rule-desired-sets"></a>
 

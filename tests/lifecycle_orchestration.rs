@@ -779,16 +779,79 @@ fn complete_multi_source_add_update_and_remove_retains_each_installation() {
         .iter()
         .map(|artifact| destination.path().join(&artifact.path))
         .collect::<Vec<_>>();
-    for text in ["First source", "Second source"] {
+    for (alias, source, body) in [
+        ("first", first.path(), "First source"),
+        ("second", second.path(), "Second source"),
+    ] {
+        let item = initial
+            .installations
+            .iter()
+            .find(|item| item.owner.installed_name == alias)
+            .unwrap();
+        assert_eq!(
+            item.owner.source,
+            format!("local:{}", source.canonicalize().unwrap().display())
+        );
+        assert_eq!(item.owner.source_name, "source");
+        assert_eq!(item.root, root);
+        let artifact = initial
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.owners.contains(&item.owner))
+            .unwrap();
+        assert_eq!(artifact.path, format!(".claude/rules/{alias}.md"));
         assert!(
-            paths
+            std::fs::read_to_string(destination.path().join(&artifact.path))
+                .unwrap()
+                .contains(body)
+        );
+        assert!(initial.references.contains(&Reference::DirectInstallation {
+            installation_id: item.owner.installation_id.clone()
+        }));
+        let contract = initial
+            .owner_contracts
+            .iter()
+            .find(|contract| {
+                contract.installation_id == item.owner.installation_id
+                    && contract.path == artifact.path
+            })
+            .unwrap();
+        assert_eq!(contract.root, root);
+        assert_eq!(contract.contribution_id, None);
+        let upskill::lifecycle::state::SourceEvidence::Local { manifest_sha256 } =
+            &item.source_evidence
+        else {
+            panic!()
+        };
+        assert_eq!(&contract.source_manifest_sha256, manifest_sha256);
+        let upskill::ownership::ArtifactContent::File {
+            content_sha256,
+            mode,
+        } = &artifact.content
+        else {
+            panic!()
+        };
+        assert_eq!(
+            contract.content,
+            upskill::lifecycle::contracts::ContractContent::File {
+                content_sha256: content_sha256.clone(),
+                mode: *mode
+            }
+        );
+        assert_eq!(
+            contract
+                .profiles
                 .iter()
-                .any(|path| std::fs::read_to_string(path).unwrap().contains(text))
+                .map(|profile| profile.surface)
+                .collect::<Vec<_>>(),
+            vec![TargetSurface::ClaudeCli]
         );
     }
     write_rule(first.path(), "First refreshed");
-    write_rule(second.path(), "Second refreshed");
-    run(&root, SourceRequest::Update(Selection::All));
+    run(
+        &root,
+        SourceRequest::Update(Selection::Names(vec!["first".into()])),
+    );
     let updated = state(destination.path());
     assert_eq!(updated.references, initial.references);
     assert_eq!(updated.installations.len(), 2);
@@ -798,16 +861,382 @@ fn complete_multi_source_add_update_and_remove_retains_each_installation() {
             .iter()
             .find(|item| item.owner.installation_id == prior.owner.installation_id)
             .unwrap();
-        assert_ne!(current.source_evidence, prior.source_evidence);
+        assert_eq!(current.owner, prior.owner);
+        if prior.owner.installed_name == "first" {
+            assert_ne!(current.source_evidence, prior.source_evidence);
+        } else {
+            assert_eq!(current, prior);
+            assert_eq!(
+                updated
+                    .artifacts
+                    .iter()
+                    .find(|artifact| artifact.owners.contains(&current.owner)),
+                initial
+                    .artifacts
+                    .iter()
+                    .find(|artifact| artifact.owners.contains(&prior.owner))
+            );
+            assert_eq!(
+                updated
+                    .owner_contracts
+                    .iter()
+                    .filter(|contract| contract.installation_id == current.owner.installation_id)
+                    .collect::<Vec<_>>(),
+                initial
+                    .owner_contracts
+                    .iter()
+                    .filter(|contract| contract.installation_id == prior.owner.installation_id)
+                    .collect::<Vec<_>>()
+            );
+        }
     }
-    for text in ["First refreshed", "Second refreshed"] {
-        assert!(
-            paths
-                .iter()
-                .any(|path| std::fs::read_to_string(path).unwrap().contains(text))
-        );
-    }
+    assert!(
+        std::fs::read_to_string(destination.path().join(".claude/rules/first.md"))
+            .unwrap()
+            .contains("First refreshed")
+    );
+    assert!(
+        std::fs::read_to_string(destination.path().join(".claude/rules/second.md"))
+            .unwrap()
+            .contains("Second source")
+    );
     run(&root, SourceRequest::Remove(Selection::All));
     assert!(state(destination.path()).installations.is_empty());
     assert!(paths.iter().all(|path| !path.exists()));
+}
+
+fn install_captured_instruction(root: &InstallationRoot, source: &std::path::Path, bundle: bool) {
+    use upskill::instructions::plan::{DesiredInstructionContribution, InstructionLocation};
+    use upskill::lifecycle::commands::{
+        CapturedUpsert, LifecycleSession, PrepareOutcome, SessionOutcome,
+    };
+    use upskill::lifecycle::sources::{ResolvedRuleSource, RuleSourceBinding};
+    use upskill::operations::plan::DesiredArtifact;
+    let resolved = ResolvedRuleSource::resolve(&InstallSource::LocalPath(source.into())).unwrap();
+    let capture = resolved.capture().unwrap();
+    let compiler = context();
+    let compiled = capture
+        .compile(RuleSourceBinding {
+            installation_id: "captured-owner",
+            expected_source_name: "source",
+            installed_name: "alias",
+            root,
+            requested: &[TargetSurface::ClaudeCli],
+            bindings: &compiler.bindings,
+            profiles: &compiler.profiles,
+        })
+        .unwrap();
+    let mut set = compiled.set;
+    set.artifacts = vec![DesiredArtifact::Instruction(
+        DesiredInstructionContribution {
+            location: InstructionLocation {
+                root: root.clone(),
+                path: "AGENTS.md".into(),
+            },
+            id: "selected".into(),
+            markdown: "Captured instruction\n".into(),
+            consumers: vec![TargetSurface::ClaudeCli],
+        },
+    )];
+    let scope = QualifiedScope::open(root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let PrepareOutcome::Ready(prepared) = session
+        .prepare_upsert(
+            None,
+            &[capture.snapshot()],
+            ResourceExecutionPolicy::Disabled,
+            |_| {
+                let mut request = CapturedUpsert {
+                    sets: vec![set],
+                    add_references: vec![Reference::DirectInstallation {
+                        installation_id: "captured-owner".into(),
+                    }],
+                    ..Default::default()
+                };
+                if bundle {
+                    request.bundles.push(upskill::lifecycle::state::BundleNode {
+                        id: "bundle-id".into(),
+                        source: "local:bundle".into(),
+                        name: "bundle-alias".into(),
+                        source_revision: None,
+                    });
+                    request.add_references.push(Reference::DirectBundle {
+                        bundle_id: "bundle-id".into(),
+                    });
+                }
+                Ok(request)
+            },
+        )
+        .unwrap()
+    else {
+        panic!()
+    };
+    prepared.apply().unwrap();
+}
+
+#[test]
+fn source_upserts_reject_captured_instruction_owners_before_source_work_but_remove_is_allowed() {
+    for (repeated_add, unavailable) in [(false, false), (true, false), (false, true), (true, true)]
+    {
+        let destination = tempfile::tempdir().unwrap();
+        let source = tempfile::tempdir().unwrap();
+        write_rule(source.path(), "Captured");
+        let root = root(destination.path());
+        install_captured_instruction(&root, source.path(), false);
+        let before = std::fs::read(destination.path().join(".upskill-lock.json")).unwrap();
+        let instructions = std::fs::read(destination.path().join("AGENTS.md")).unwrap();
+        // An absent source makes source-resolution ordering observable.
+        if unavailable {
+            std::fs::remove_file(source.path().join("RULE.md")).unwrap();
+        }
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let request = if repeated_add {
+            add(source.path())
+        } else {
+            SourceRequest::Update(Selection::All)
+        };
+        let result: anyhow::Result<OrchestrationOutcome<()>> = with_prepared(
+            &scope,
+            &guard,
+            root.clone(),
+            request,
+            SourceOptions {
+                targets: TargetSelection::default(),
+                add_defaults: &[TargetSurface::ClaudeCli],
+                compiler: &context(),
+            },
+            |_| panic!("instruction owner must reject before callback"),
+        );
+        let error = result
+            .err()
+            .expect("instruction owner must be rejected")
+            .to_string();
+        assert!(error.contains("captured instruction adapter"), "{error}");
+        assert_eq!(
+            std::fs::read(destination.path().join(".upskill-lock.json")).unwrap(),
+            before
+        );
+        assert_eq!(
+            std::fs::read(destination.path().join("AGENTS.md")).unwrap(),
+            instructions
+        );
+        assert!(!destination.path().join(".claude").exists());
+        drop(guard);
+        assert!(
+            matches!(run(&root, SourceRequest::Remove(Selection::All)), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
+        );
+        assert!(state(destination.path()).installations.is_empty());
+    }
+}
+
+#[test]
+fn add_rejects_owned_bundle_alias_before_source_work() {
+    let destination = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    write_rule(source.path(), "Captured");
+    let root = root(destination.path());
+    install_captured_instruction(&root, source.path(), true);
+    let before = std::fs::read(destination.path().join(".upskill-lock.json")).unwrap();
+    let instructions = std::fs::read(destination.path().join("AGENTS.md")).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let result: anyhow::Result<OrchestrationOutcome<()>> = with_prepared(
+        &scope,
+        &guard,
+        root.clone(),
+        SourceRequest::Add(vec![AddRule {
+            source: InstallSource::LocalPath(destination.path().join("missing-source")),
+            source_name: "source".into(),
+            installed_name: "bundle-alias".into(),
+        }]),
+        SourceOptions {
+            targets: TargetSelection::default(),
+            add_defaults: &[TargetSurface::ClaudeCli],
+            compiler: &context(),
+        },
+        |_| panic!("bundle alias must reject before callback"),
+    );
+    let error = result
+        .err()
+        .expect("bundle collision must reject")
+        .to_string();
+    assert!(error.contains("owned bundle"), "{error}");
+    assert_eq!(
+        std::fs::read(destination.path().join(".upskill-lock.json")).unwrap(),
+        before
+    );
+    assert_eq!(
+        std::fs::read(destination.path().join("AGENTS.md")).unwrap(),
+        instructions
+    );
+    assert!(!destination.path().join(".claude").exists());
+}
+
+#[test]
+fn same_source_distinct_aliases_have_stable_independent_lifecycles() {
+    let destination = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    write_rule(source.path(), "Shared initial");
+    let root = root(destination.path());
+    let request = || {
+        SourceRequest::Add(
+            ["first", "second"]
+                .into_iter()
+                .map(|alias| AddRule {
+                    source: InstallSource::LocalPath(source.path().into()),
+                    source_name: "source".into(),
+                    installed_name: alias.into(),
+                })
+                .collect(),
+        )
+    };
+    run(&root, request());
+    let initial = state(destination.path());
+    assert_eq!(initial.installations.len(), 2);
+    assert_ne!(
+        initial.installations[0].owner.installation_id,
+        initial.installations[1].owner.installation_id
+    );
+    run(&root, request());
+    assert_eq!(state(destination.path()), initial);
+    write_rule(source.path(), "Selected refresh");
+    run(
+        &root,
+        SourceRequest::Update(Selection::Names(vec!["first".into()])),
+    );
+    let updated = state(destination.path());
+    for prior in &initial.installations {
+        let current = updated
+            .installations
+            .iter()
+            .find(|item| item.owner.installation_id == prior.owner.installation_id)
+            .unwrap();
+        if prior.owner.installed_name == "first" {
+            assert_ne!(current.source_evidence, prior.source_evidence);
+        } else {
+            assert_eq!(current, prior);
+        }
+    }
+    assert!(
+        std::fs::read_to_string(destination.path().join(".claude/rules/first.md"))
+            .unwrap()
+            .contains("Selected refresh")
+    );
+    assert!(
+        std::fs::read_to_string(destination.path().join(".claude/rules/second.md"))
+            .unwrap()
+            .contains("Shared initial")
+    );
+    run(
+        &root,
+        SourceRequest::Remove(Selection::Names(vec!["first".into()])),
+    );
+    let removed = state(destination.path());
+    assert_eq!(
+        removed.installations,
+        initial
+            .installations
+            .into_iter()
+            .filter(|item| item.owner.installed_name == "second")
+            .collect::<Vec<_>>()
+    );
+    assert!(!destination.path().join(".claude/rules/first.md").exists());
+    assert!(
+        std::fs::read_to_string(destination.path().join(".claude/rules/second.md"))
+            .unwrap()
+            .contains("Shared initial")
+    );
+    assert_eq!(
+        removed.references,
+        vec![Reference::DirectInstallation {
+            installation_id: removed.installations[0].owner.installation_id.clone()
+        }]
+    );
+}
+
+#[test]
+fn add_applies_invocation_project_global_and_default_target_precedence() {
+    let c = [TargetSurface::ClaudeCli];
+    let o = [TargetSurface::OpenCodeCli];
+    let p = [TargetSurface::CopilotCli];
+    let compiler = CompilerContext {
+        bindings: vec![
+            CompilerBinding {
+                client: Client::Claude,
+                consumers: c.to_vec(),
+            },
+            CompilerBinding {
+                client: Client::OpenCode,
+                consumers: o.to_vec(),
+            },
+            CompilerBinding {
+                client: Client::Copilot,
+                consumers: p.to_vec(),
+            },
+        ],
+        profiles: [c[0], o[0], p[0]]
+            .into_iter()
+            .map(|surface| TargetProfile::new(surface.family(), surface, 1).unwrap())
+            .collect(),
+        execution: ResourceExecutionPolicy::Disabled,
+    };
+    for (invocation, project, global, expected, route) in [
+        (&c[..], &o[..], &p[..], &c[..], ".claude/rules/alias.md"),
+        (
+            &[][..],
+            &o[..],
+            &p[..],
+            &o[..],
+            ".agents/rules/alias/RULE.md",
+        ),
+        (
+            &[][..],
+            &[][..],
+            &p[..],
+            &p[..],
+            ".github/instructions/alias.instructions.md",
+        ),
+        (&[][..], &[][..], &[][..], &c[..], ".claude/rules/alias.md"),
+    ] {
+        let compiler = CompilerContext {
+            bindings: compiler.bindings.clone(),
+            profiles: expected
+                .iter()
+                .map(|surface| TargetProfile::new(surface.family(), *surface, 1).unwrap())
+                .collect(),
+            execution: compiler.execution,
+        };
+        let destination = tempfile::tempdir().unwrap();
+        let source = tempfile::tempdir().unwrap();
+        write_rule(source.path(), "Target precedence");
+        let root = root(destination.path());
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        assert!(
+            matches!(with_prepared(&scope, &guard, root.clone(), add(source.path()), SourceOptions { targets: TargetSelection { invocation, project, global }, add_defaults: &c, compiler: &compiler }, |prepared| prepared.apply()).unwrap(), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
+        );
+        let installed = state(destination.path());
+        assert_eq!(installed.installations[0].requested, expected);
+        assert_eq!(installed.owner_consumers[0].consumers, expected);
+        assert_eq!(installed.artifacts[0].path, route);
+        assert!(
+            std::fs::read_to_string(destination.path().join(route))
+                .unwrap()
+                .contains("Target precedence")
+        );
+        assert_eq!(
+            installed.owner_contracts[0]
+                .profiles
+                .iter()
+                .map(|profile| profile.surface)
+                .collect::<Vec<_>>(),
+            expected
+        );
+    }
 }

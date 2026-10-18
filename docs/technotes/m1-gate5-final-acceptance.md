@@ -26,8 +26,16 @@ The names below identify executable tests, rather than inferred guarantees.
 
 The unit driver records actual executor events from successful source-backed
 operations, restores their exact before-state, then starts a fresh test process
-for each event. It covers fresh and migrated add, update and remove with a rule
-and resource output. Migration contains duplicate unresolved legacy rows.
+for each event. It preserves the fresh and migrated first-transition add, update
+and remove matrix with source-backed rule and resource outputs. An additional
+captured-adapter matrix covers instruction add, update and remove with a manual
+prefix and distinct selected/retained contributions sharing `AGENTS.md`. The
+retained installation, contribution ownership, consumer association, direct
+reference and ordinary mode 0640 are checked independently of the
+successful-operation image. An unrelated manual resource neighbor is checked
+independently too. Migration contains duplicate unresolved legacy rows; the
+instruction setup establishes the retained owner before the interrupted
+operation, while rule/resource cases retain first-transition coverage.
 
 Every emitted `before_pending`, `after_pending`, `before_effect`,
 `after_effect`, `after_effect_sync`, `before_done`, `after_done` and
@@ -44,13 +52,20 @@ checkpoint already has a persisted journal, so a ready result fails. Source
 bytes change after termination. Recovery must still match the successful
 operation's exact regular-file image outside executor storage, including
 combined-state bytes, output bytes, backup bytes and modes. A second session
-must be ready without replay. For update, an additional late external edit must
-produce reconciliation, preserve the edited output and old combined state, and
-retain pending recovery.
+must be ready without replay. In every instruction case the parent edits the
+unrelated manual neighbor after termination; only that neighbor's expected image
+is adjusted, and its new bytes must survive recovery. Manual prefix, retained
+body/records/reference and mode must still match independent assertions. For
+source-backed update, an additional late external edit must produce
+reconciliation, preserve the edited output and old combined state, and retain
+pending recovery.
 
 The ignored probe is invoked explicitly by the driver and clears inherited
 `GIT_*` variables. No production hook or command-line flag is introduced. This
 tests process termination and persisted recovery, not hardware power loss.
+Instruction desired sets are explicitly caller-authorized supplied payloads
+bound to actual qualified source captures. The snapshot guards source evidence;
+it does not prove an instruction compiler or native client discovery.
 
 ## Completion boundary
 
@@ -195,3 +210,49 @@ MVP epic #283 carry the exact hosted-head and merge evidence. Gate 5 delivery
 requires those checks and merges; no local result activates production schema 2
 or establishes native Codex discovery. Stage residue #316 and advisory debt
 #313, #311 and #309 remain tracked separately.
+
+## Final delivery review fix validation
+
+The final review fix wave closes C1, T1, T2, T3, B1, B2, D1 and D2.
+Source-backed upserts reject instruction-backed owners before source work, and
+add rejects owned bundle alias collisions. The captured instruction adapter
+remains the update path for instruction contributions; recorded removal remains
+source-free. No production activation, dependencies, native-discovery claims or
+stage-file cleanup are introduced. Canonical topic and command documentation now
+describe the implemented opt-in compiler/lifecycle connection and target
+precedence. Historical archived plans and the umbrella pair remain unchanged.
+
+The orchestration integration suite has sixteen examples, plus the private
+identity example. Focused regression runs passed. Three independent negative
+controls failed the strengthened tests: reversing source specs fails each
+alias's source assertion; omitting the alias from identity fails the same-source
+two-alias lifecycle; ignoring add target overrides fails the actual add
+precedence witness. B1 and B2 each had a failing regression before the guards
+were added. Logs are `/private/tmp/upskill-pr318-fixes-{b1,b2}-red.log`,
+`/private/tmp/upskill-pr318-fixes-{t1,t2,t3}-negative.log`,
+`/private/tmp/upskill-pr318-fixes-orchestration.log` and
+`/private/tmp/upskill-pr318-fixes-unit.log`.
+
+The expanded process matrix passed on macOS in 99.29 seconds: 270 discovered
+checkpoint interruptions and two additional late-edit reconciliation cases, 272
+killed processes in total. This retains all 162 source-backed first-transition
+rule/resource checkpoints and adds 108 captured instruction checkpoints across
+fresh and migrated add/update/remove. Each instruction checkpoint preserves the
+manual prefix, retained contribution/owner/reference, ordinary mode and a manual
+neighbor edited after termination. Counts come from the emitted event vectors,
+not assumed action counts. The log is
+`/private/tmp/upskill-pr318-fixes-process.log`. Unix sockets require an
+escalated run in this environment; the sandbox attempt stopped at socket
+creation.
+
+The complete wave passed `just fmt`, escalated `just verify`, `just sanity`
+(including all-target Clippy with `-D warnings`) and explicit Rust 1.85
+`just msrv-check`, using
+`CARGO_TARGET_DIR=/private/tmp/upskill-gate5-acceptance-target` and an empty
+`RUSTC_WRAPPER`. Logs are
+`/private/tmp/upskill-pr318-fixes-{fmt,verify,sanity,msrv}.log`. Full
+verification includes the expanded process matrix and the actual production
+schema-1 CLI boundary. Hosted CI, final full review and merge remain separate
+delivery gates. Stage residue #316 remains explicitly accounted by regular-file
+bytes, mode and parent; no cleanup or native qualification claim follows from
+these results.

@@ -68,6 +68,182 @@ fn run(root: &InstallationRoot, request: SourceRequest) -> OrchestrationOutcome 
     )
     .unwrap()
 }
+// Instruction payloads are caller-authorized captured inputs. A matching source
+// snapshot guards their evidence; this adapter does not infer instruction output
+// from a rule compiler or establish native client behavior.
+fn run_instruction(
+    root: &InstallationRoot,
+    source: &Path,
+    operation: &str,
+) -> OrchestrationOutcome {
+    use crate::instructions::plan::{DesiredInstructionContribution, InstructionLocation};
+    use crate::lifecycle::commands::{
+        CapturedUpsert, LifecycleSession, PrepareOutcome, SessionOutcome,
+    };
+    use crate::lifecycle::desired::DesiredInstallationSet;
+    use crate::lifecycle::state::{Installation, Reference, SourceEvidence};
+    use crate::operations::plan::DesiredArtifact;
+    use crate::ownership::ArtifactOwner;
+    use crate::pipeline::ItemKind;
+    let scope = QualifiedScope::open(root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let session = match LifecycleSession::open(&scope, &guard, root.clone()).unwrap() {
+        SessionOutcome::Recovery(report) => return OrchestrationOutcome::Recovery(report),
+        SessionOutcome::Ready(session) => session,
+    };
+    let name = if operation == "instruction-retained" {
+        "retained"
+    } else {
+        "selected"
+    };
+    let selection = Selection::Names(vec![name.into()]);
+    let prepared = if operation == "instruction-remove" {
+        session.prepare_remove(&selection).unwrap()
+    } else {
+        let source_root = InstallationRoot {
+            path: source.into(),
+            ..root.clone()
+        };
+        let source_scope = QualifiedScope::open(&source_root).unwrap();
+        let capture = source_scope.observe_source_tree().unwrap();
+        let markdown = if name == "retained" {
+            "Retained contribution\n".to_owned()
+        } else {
+            let entry = capture
+                .manifest()
+                .files
+                .iter()
+                .find(|file| file.path == "RULE.md")
+                .unwrap();
+            if String::from_utf8_lossy(&entry.bytes).contains("Second") {
+                "Selected second\n".into()
+            } else {
+                "Selected first\n".into()
+            }
+        };
+        let selection = (operation == "instruction-update").then_some(&selection);
+        let prepared = session
+            .prepare_upsert(
+                selection,
+                &[&capture],
+                ResourceExecutionPolicy::Disabled,
+                |_| {
+                    Ok(CapturedUpsert {
+                        sets: vec![DesiredInstallationSet {
+                            installation: Installation {
+                                owner: ArtifactOwner {
+                                    installation_id: name.into(),
+                                    source: format!("local:{}", source.display()),
+                                    source_revision: None,
+                                    kind: ItemKind::Rule,
+                                    source_name: "source".into(),
+                                    installed_name: name.into(),
+                                },
+                                root: root.clone(),
+                                requested: vec![TargetSurface::ClaudeCli],
+                                source_evidence: SourceEvidence::Local {
+                                    manifest_sha256: capture.manifest().content_sha256.clone(),
+                                },
+                            },
+                            artifacts: vec![DesiredArtifact::Instruction(
+                                DesiredInstructionContribution {
+                                    location: InstructionLocation {
+                                        root: root.clone(),
+                                        path: "AGENTS.md".into(),
+                                    },
+                                    id: name.into(),
+                                    markdown,
+                                    consumers: vec![TargetSurface::ClaudeCli],
+                                },
+                            )],
+                            audience_excluded: vec![],
+                        }],
+                        add_references: if selection.is_none() {
+                            vec![Reference::DirectInstallation {
+                                installation_id: name.into(),
+                            }]
+                        } else {
+                            vec![]
+                        },
+                        ..Default::default()
+                    })
+                },
+            )
+            .unwrap();
+        // Keep the source capture alive through application, as in the public
+        // captured API's scope contract.
+        return match prepared {
+            PrepareOutcome::Ready(prepared) => {
+                OrchestrationOutcome::Ready(prepared.apply().unwrap())
+            }
+            PrepareOutcome::Blocked(diagnostics) => OrchestrationOutcome::Blocked(diagnostics),
+        };
+    };
+    match prepared {
+        PrepareOutcome::Ready(prepared) => OrchestrationOutcome::Ready(prepared.apply().unwrap()),
+        PrepareOutcome::Blocked(diagnostics) => OrchestrationOutcome::Blocked(diagnostics),
+    }
+}
+fn run_operation(root: &InstallationRoot, source: &Path, operation: &str) -> OrchestrationOutcome {
+    if operation.starts_with("instruction-") {
+        run_instruction(root, source, operation)
+    } else {
+        run(root, request(source, operation))
+    }
+}
+fn assert_instruction_preservation(
+    path: &Path,
+    retained: &crate::lifecycle::state::CombinedState,
+    selected: bool,
+    neighbor: &[u8],
+) {
+    let text = std::fs::read_to_string(path.join("AGENTS.md")).unwrap();
+    assert!(text.starts_with("Manual prefix\n"));
+    assert!(text.contains("Retained contribution\n"));
+    assert_eq!(text.contains("Selected second\n"), selected);
+    assert!(!text.contains("Selected first\n"));
+    assert_eq!(
+        std::fs::metadata(path.join("AGENTS.md"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o640
+    );
+    assert_eq!(
+        std::fs::read(path.join("resources/manual.txt")).unwrap(),
+        neighbor
+    );
+    let current = state(path);
+    let owner = retained
+        .installations
+        .iter()
+        .find(|item| item.owner.installation_id == "retained")
+        .unwrap();
+    assert!(current.installations.contains(owner));
+    assert!(
+        current
+            .references
+            .contains(&crate::lifecycle::state::Reference::DirectInstallation {
+                installation_id: "retained".into()
+            })
+    );
+    let artifact = retained
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.owners.contains(&owner.owner))
+        .unwrap();
+    assert!(current.artifacts.contains(artifact));
+    assert!(
+        current.owner_consumers.contains(
+            retained
+                .owner_consumers
+                .iter()
+                .find(|value| value.installation_id == "retained")
+                .unwrap()
+        )
+    );
+}
 fn state(path: &std::path::Path) -> crate::lifecycle::state::CombinedState {
     parse_state(&std::fs::read_to_string(path.join(".upskill-lock.json")).unwrap()).unwrap()
 }
@@ -188,12 +364,22 @@ fn probe() {
             Ok(())
         }))
     });
-    run(&root(&path), request(&source, &operation));
+    run_operation(&root(&path), &source, &operation);
 }
 #[test]
 fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
+    let mut checkpoint_count = 0;
+    let mut interruption_count = 0;
     for migrated in [false, true] {
-        for operation in ["add", "update", "remove"] {
+        for operation in [
+            "add",
+            "update",
+            "remove",
+            "instruction-add",
+            "instruction-update",
+            "instruction-remove",
+        ] {
+            let instruction = operation.starts_with("instruction-");
             let temp = tempfile::Builder::new()
                 .prefix("upskill-gate5-")
                 .tempdir_in("/tmp")
@@ -208,9 +394,27 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
             if migrated {
                 std::fs::write(path.join(".upskill-lock.json"), br#"{"schema":1,"items":[{"kind":"skill","name":"legacy","source":"unresolved","required_by":[],"clients":[]},{"kind":"skill","name":"legacy","source":"unresolved","required_by":[],"clients":[]}],"bundles":[]}"#).unwrap();
             }
-            if operation != "add" {
-                run(&root(&path), add(&source));
-            }
+            let retained = if instruction {
+                std::fs::write(path.join("AGENTS.md"), b"Manual prefix\n").unwrap();
+                std::fs::set_permissions(
+                    path.join("AGENTS.md"),
+                    std::fs::Permissions::from_mode(0o640),
+                )
+                .unwrap();
+                std::fs::create_dir(path.join("resources")).unwrap();
+                std::fs::write(path.join("resources/manual.txt"), b"Manual neighbor").unwrap();
+                run_instruction(&root(&path), &source, "instruction-retained");
+                let retained = state(&path);
+                if operation != "instruction-add" {
+                    run_instruction(&root(&path), &source, "instruction-add");
+                }
+                Some(retained)
+            } else {
+                if operation != "add" {
+                    run(&root(&path), add(&source));
+                }
+                None
+            };
             write_rule(&source, "Second");
             std::fs::write(source.join("scripts/check.sh"), b"second resource").unwrap();
             let before = image(&path);
@@ -236,11 +440,19 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                 }))
             });
             assert!(
-                matches!(run(&root(&path), request(&source, operation)), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
+                matches!(run_operation(&root(&path), &source, operation), OrchestrationOutcome::Ready(report) if report.outcome == ExecutionOutcome::Complete)
             );
             TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
             let expected = image(&path);
             assert_eq!(state(&path).schema, 2);
+            if let Some(retained) = &retained {
+                assert_instruction_preservation(
+                    &path,
+                    retained,
+                    operation != "instruction-remove",
+                    b"Manual neighbor",
+                );
+            }
             let events = events.lock().unwrap().clone();
             assert!(!events.is_empty());
             let labels: std::collections::BTreeSet<_> =
@@ -264,6 +476,7 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                 "gate5 migrated={migrated} operation={operation}: {} checkpoints",
                 events.len()
             );
+            checkpoint_count += events.len();
             let sabotage_index = events
                 .iter()
                 .find(|(point, _)| point == "after_effect")
@@ -276,6 +489,7 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                 cases.push(("after_effect".into(), sabotage_index.unwrap(), true));
             }
             for (point, index, sabotage) in cases {
+                interruption_count += 1;
                 restore(&path, &before);
                 write_rule(&source, "Second");
                 std::fs::write(source.join("scripts/check.sh"), b"second resource").unwrap();
@@ -335,6 +549,18 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                 drop(listener);
                 std::fs::remove_file(path.join("probe.sock")).unwrap();
                 write_rule(&source, "Changed after journal");
+                let mut expected = expected.clone();
+                if instruction {
+                    std::fs::write(
+                        path.join("resources/manual.txt"),
+                        b"Manual neighbor edited after kill",
+                    )
+                    .unwrap();
+                    expected
+                        .get_mut(&PathBuf::from("resources/manual.txt"))
+                        .unwrap()
+                        .0 = b"Manual neighbor edited after kill".to_vec();
+                }
                 let edited = if sabotage {
                     let old = parse_state(
                         std::str::from_utf8(&before[&PathBuf::from(".upskill-lock.json")].0)
@@ -387,6 +613,14 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
                     }
                 }
                 assert_image(&path, &expected);
+                if let Some(retained) = &retained {
+                    assert_instruction_preservation(
+                        &path,
+                        retained,
+                        operation != "instruction-remove",
+                        b"Manual neighbor edited after kill",
+                    );
+                }
                 assert!(!scope.has_pending_operation().unwrap());
                 assert!(matches!(
                     crate::lifecycle::commands::LifecycleSession::open(&scope, &guard, root(&path))
@@ -396,4 +630,7 @@ fn every_observed_lifecycle_checkpoint_recovers_exact_captured_intent() {
             }
         }
     }
+    eprintln!(
+        "gate5 total: {checkpoint_count} observed checkpoints, {interruption_count} killed processes"
+    );
 }

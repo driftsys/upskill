@@ -27,9 +27,12 @@ raw root bytes, normalized requested source label, rule kind, source name and
 installed alias. Git commit evidence is excluded. Existing matching bindings
 reuse recorded IDs; different bindings with the computed ID reject. Repeated add
 selects existing owners and adds only absent direct references.
-Different-binding alias reuse rejects before resolver fetch/capture. Local
-preflight canonicalizes ancestors while preserving the selected final entry for
-qualification.
+Different-binding alias reuse and collisions with owned bundle names reject
+before resolver fetch/capture. Source-backed update and repeated add reject
+selected instruction-backed owners before source parsing or resolution; their
+updates retain the captured instruction adapter. Recorded removal remains
+source-free. Local preflight canonicalizes ancestors while preserving the
+selected final entry for qualification.
 
 Target precedence is invocation, nonempty project configuration, nonempty global
 configuration, then recorded update targets or caller-supplied add defaults.
@@ -42,12 +45,16 @@ keeps owner contracts consistent with resulting modes.
 
 Acceptance examples cover local add/update/remove, exact revision/manifest
 recording, alias and stable ID preservation, repeated add, Git branch
-advancement through isolated native Git URL rewrites, target precedence and
-configured update, source staleness after preparation, manual output conflict
-with no effects, disjoint migrated legacy preservation and selection blocking,
-audience-filtered empty output history, executable resources and manual
-neighbors. Private identity examples pin raw-root framing, collision rejection
-and prior-ID reuse independent of commit evidence.
+advancement through isolated native Git URL rewrites, actual add target
+precedence at the orchestration boundary and configured update, source staleness
+after preparation, manual output conflict with no effects, disjoint migrated
+legacy preservation and selection blocking, audience-filtered empty output
+history, executable resources and manual neighbors. Multi-source examples pin
+each alias to its own source, ownership, contract and output, then independently
+update one source. Same-source distinct aliases retain distinct stable IDs
+through repeated add, independent update and selective removal. Private identity
+examples pin alias and raw-root framing, collision rejection and prior-ID reuse
+independent of commit evidence.
 
 Manual/shared instruction contributions and caller-supplied complete graphs
 remain supported by the captured command API; this module does not introduce an
@@ -87,3 +94,49 @@ Durable requirements and design are in
 [requested source bindings](../topics/0003-sources.md#requested-bindings-and-scoped-application)
 and
 [origin-bound application](../topics/0008-execution-and-recovery.md#origin-bound-lifecycle-application).
+
+## Final delivery review fix validation
+
+The final review fix wave closes C1, T1, T2, T3, B1, B2, D1 and D2.
+Source-backed upserts reject instruction-backed owners before source work, and
+add rejects owned bundle alias collisions. The captured instruction adapter
+remains the update path for instruction contributions; recorded removal remains
+source-free. No production activation, dependencies, native-discovery claims or
+stage-file cleanup are introduced. Canonical topic and command documentation now
+describe the implemented opt-in compiler/lifecycle connection and target
+precedence. Historical archived plans and the umbrella pair remain unchanged.
+
+The orchestration integration suite has sixteen examples, plus the private
+identity example. Focused regression runs passed. Three independent negative
+controls failed the strengthened tests: reversing source specs fails each
+alias's source assertion; omitting the alias from identity fails the same-source
+two-alias lifecycle; ignoring add target overrides fails the actual add
+precedence witness. B1 and B2 each had a failing regression before the guards
+were added. Logs are `/private/tmp/upskill-pr318-fixes-{b1,b2}-red.log`,
+`/private/tmp/upskill-pr318-fixes-{t1,t2,t3}-negative.log`,
+`/private/tmp/upskill-pr318-fixes-orchestration.log` and
+`/private/tmp/upskill-pr318-fixes-unit.log`.
+
+The expanded process matrix passed on macOS in 99.29 seconds: 270 discovered
+checkpoint interruptions and two additional late-edit reconciliation cases, 272
+killed processes in total. This retains all 162 source-backed first-transition
+rule/resource checkpoints and adds 108 captured instruction checkpoints across
+fresh and migrated add/update/remove. Each instruction checkpoint preserves the
+manual prefix, retained contribution/owner/reference, ordinary mode and a manual
+neighbor edited after termination. Counts come from the emitted event vectors,
+not assumed action counts. The log is
+`/private/tmp/upskill-pr318-fixes-process.log`. Unix sockets require an
+escalated run in this environment; the sandbox attempt stopped at socket
+creation.
+
+The complete wave passed `just fmt`, escalated `just verify`, `just sanity`
+(including all-target Clippy with `-D warnings`) and explicit Rust 1.85
+`just msrv-check`, using
+`CARGO_TARGET_DIR=/private/tmp/upskill-gate5-acceptance-target` and an empty
+`RUSTC_WRAPPER`. Logs are
+`/private/tmp/upskill-pr318-fixes-{fmt,verify,sanity,msrv}.log`. Full
+verification includes the expanded process matrix and the actual production
+schema-1 CLI boundary. Hosted CI, final full review and merge remain separate
+delivery gates. Stage residue #316 remains explicitly accounted by regular-file
+bytes, mode and parent; no cleanup or native qualification claim follows from
+these results.

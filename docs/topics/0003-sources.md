@@ -23,7 +23,9 @@ explicitly supplied whole-file sets is implemented in
 [owned whole-file operation plans](0006-artifact-planning.md#44-owned-whole-file-operation-plans).
 Captured-rule desired sets are implemented in
 [captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets);
-lifecycle reconciliation remains pending.
+opt-in lifecycle reconciliation and
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connect these sets to guarded application.
 
 `SourceManifest` contains sorted `CapturedSourceFile` records and a lowercase
 `content_sha256`. Each file contains a UTF-8 relative `path` joined with `/`,
@@ -62,11 +64,11 @@ Standard synchronous filesystem observation is not an atomic snapshot,
 descriptor-relative containment or protection against concurrent replacement.
 Root ancestors may be symlinks. Lexical validation does not qualify destination
 case collisions, reserved names, aliases or filesystem limits. The separate
-selected-source boundary records immutable Git evidence; integration of
-captured-rule desired sets
-([captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets))
-with lifecycle state and execution, and Codex activation remain pending.
-Qualified scope roots and writer locking
+selected-source boundary records immutable Git evidence. Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connects captured-rule desired sets with lifecycle state and guarded execution.
+Production commands retain schema 1; native Codex qualification and activation
+remain Gate 6 work. Qualified scope roots and writer locking
 ([qualified scope roots and advisory writer locking](0007-filesystem-access.md#47-qualified-scope-roots-and-advisory-writer-locking))
 and the inactive destination observation boundary
 ([qualified destination observations](0007-filesystem-access.md#48-qualified-destination-observations))

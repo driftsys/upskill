@@ -52,11 +52,12 @@ coordinator is implemented in
 Reference-graph authority and per-owner consumer associations now support
 removal planning
 ([reference-driven shared-owner removal planning](0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning)).
-Integrating captured-rule desired sets
-([captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets))
-with complete add/update planning, state persistence and transactional execution
-remain pending. This prerequisite changes no CLI behavior, source format or
-lockfile format and enables no native client support.
+Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connects captured-rule desired sets to complete add/update planning, combined
+state persistence and guarded execution/recovery. This prerequisite changes no
+CLI behavior, source format or lockfile format and enables no native client
+support.
 
 See the
 [planner design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-instruction-planning)
@@ -162,11 +163,11 @@ new rows append in lexical order. The final record set is validated before
 return. Any failure returns no successful partial plan.
 
 This prerequisite leaves existing commands, CLI flags, lockfile persistence and
-native-client behavior unchanged. Integrating captured-rule desired sets
-([captured rule desired sets](0002-generation.md#414-captured-rule-desired-sets))
-with lifecycle planning, qualified observation, destination
-equivalence/containment, writer locking, permission policy, durable state,
-apply/recovery and Codex activation remain pending. The mixed coordinator in
+native-client behavior unchanged. Opt-in source-backed rule orchestration
+connects captured-rule desired sets to lifecycle planning, qualified
+source/destination observation, writer locking, permission policy, durable state
+and apply/recovery. Native destination qualification and Codex activation remain
+pending. The mixed coordinator in
 [mixed owned-artifact operation plans](#46-mixed-owned-artifact-operation-plans)
 composes complete sets across both forms; the individual planners do not
 authorize partial application of mixed installations. This API does not complete
@@ -384,9 +385,9 @@ qualification remains required. The
 [combined-state validator](0004-state-and-ownership.md#architecture-combined-lifecycle-state)
 provides reference-graph authority and explicit per-owner consumer associations.
 Removal planning integrates those associations and returns complete combined
-state. Integrating qualified source evidence and compiled outputs with complete
-add/update planning, persistence and guarded application remain pending. The
-opt-in
+state. Opt-in source-backed orchestration connects qualified source evidence and
+compiled rule outputs to complete add/update planning, persistence and guarded
+application. The opt-in
 [qualified file executor and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
 are implemented separately; hosted final-head qualification remains required.
 The implemented [mixed coordinator](#architecture-mixed-owned-artifact-planning)
@@ -412,7 +413,8 @@ separate inactive `plan_shared_upsert` entrypoint consumes explicit
 shared-output contracts. The opt-in
 [application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application)
 connects complete plans and state to guarded execution and recovery. Production
-command activation and observational adapters remain pending.
+command activation remains pending; opt-in inspection and preview provide
+observational adapters.
 
 <a id="architecture-owned-file-planning"></a>
 
@@ -530,16 +532,18 @@ complete explicit file/contribution sets; neither individual planner authorizes
 partial application of a mixed installation. Captured-rule desired sets are
 implemented in
 [captured-rule desired sets](0002-generation.md#architecture-captured-rule-desired-sets);
-lifecycle planning and reviewed adapters remain pending. Qualified scope roots,
-writer locking,
+opt-in lifecycle planning and
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connect these sets to guarded application. Qualified scope roots, writer
+locking,
 [destination observation](0007-filesystem-access.md#architecture-qualified-destination-observation)
 and
 [qualified source observation](0003-sources.md#architecture-qualified-source-observation)
 are implemented as separate inactive capabilities, including conservative
 destination overlap rejection and descriptor-relative source and destination
-observation. Final-head hosted source qualification remains required.
-Integrating qualified source evidence into the lifecycle, combined durable state
-and Codex activation remain pending. Pure
+observation. Final-head hosted source qualification remains required. The opt-in
+adapters integrate qualified source evidence and combined durable state.
+Production activation and native Codex qualification remain pending. Pure
 [permission selection](0007-filesystem-access.md#architecture-file-permission-policy)
 and opt-in
 [qualified file execution and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
@@ -669,22 +673,24 @@ than filesystem execution.
 
 The
 [captured compiler](0002-generation.md#architecture-captured-item-compilation)
-already derives complete per-client resource and entrypoint outputs. Connecting
-those outputs to lifecycle ownership, roots, consumers and destination
-observations remains pending. The
+already derives complete per-client resource and entrypoint outputs. Opt-in
+[source-backed orchestration](0005-lifecycle-planning.md#source-backed-lifecycle-orchestration)
+connects rule outputs to lifecycle ownership, roots, consumers and qualified
+destination observations. The
 [combined-state library](0004-state-and-ownership.md#architecture-combined-lifecycle-state)
 now validates reference authority and per-owner consumer associations. The
 separate
 [removal planner](0005-lifecycle-planning.md#architecture-lifecycle-reference-removal)
 integrates those records for shared-owner retirement. Complete add/update
-planning, integration of immutable source evidence and source/target adapters,
-qualification, writer locking, guarded durable state and physical apply/recovery
-remain later lifecycle gates. The pure
+planning, immutable source evidence, source/target adapters, writer locking,
+guarded durable state and physical apply/recovery are available through opt-in
+library boundaries. Production activation and native qualification remain later
+gates. The pure
 [permission-selection policy](0007-filesystem-access.md#architecture-file-permission-policy)
 is implemented;
 [qualified file execution and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
-consume selected modes as an opt-in library capability. Complete lifecycle
-integration and native qualification remain pending. The API may return the
-first contextual conflict; complete diagnostic aggregation remains an activation
-gate. No CLI selector, native support, schema-2 persistence or installation
+consume selected modes as an opt-in library capability. Production lifecycle
+activation and native qualification remain pending. The API may return the first
+contextual conflict; complete diagnostic aggregation remains an activation gate.
+No production CLI selector, native support, schema-2 persistence or installation
 effects are activated. M1-A2, M1-A3 and M1 remain incomplete.

@@ -14,7 +14,7 @@ use super::sources::{ResolvedRuleSource, RuleSourceBinding, normalized_source_la
 use super::state::{CombinedState, Installation, Reference};
 use crate::files::permissions::ResourceExecutionPolicy;
 use crate::filesystem::{ExecutionReport, QualifiedScope, ScopeWriterGuard};
-use crate::ownership::InstallationRoot;
+use crate::ownership::{ArtifactContent, InstallationRoot};
 use crate::pipeline::ItemKind;
 use crate::source::{InstallSource, parse_install_source_label};
 use crate::target::{TargetProfile, TargetSurface};
@@ -155,6 +155,9 @@ pub fn with_prepared<T>(
                 }
                 SelectionOutcome::Ready(selected) => selected,
             };
+            for id in &selected.installation_ids {
+                ensure_source_rule_owner(session.state(), id)?;
+            }
             // Finish all selection and target preflight before even parsing sources.
             for id in selected.installation_ids {
                 let item = session
@@ -190,6 +193,24 @@ pub fn with_prepared<T>(
                     aliases.insert(&item.installed_name),
                     "duplicate installed alias in add request"
                 );
+                ensure!(
+                    !session
+                        .state()
+                        .bundles
+                        .iter()
+                        .any(|bundle| bundle.name == item.installed_name),
+                    "installed alias already belongs to an owned bundle"
+                );
+                for prior in session
+                    .state()
+                    .installations
+                    .iter()
+                    .filter(|prior| prior.owner.installed_name == item.installed_name)
+                {
+                    ensure_source_rule_owner(session.state(), &prior.owner.installation_id)?;
+                }
+            }
+            for item in items {
                 bindings.push(Binding {
                     id: String::new(),
                     source_name: item.source_name.clone(),
@@ -341,6 +362,22 @@ pub fn with_prepared<T>(
     }
 }
 
+fn ensure_source_rule_owner(state: &CombinedState, id: &str) -> Result<()> {
+    ensure!(
+        !state.artifacts.iter().any(|artifact| {
+            matches!(
+                artifact.content,
+                ArtifactContent::MarkdownContribution { .. }
+            ) && artifact
+                .owners
+                .iter()
+                .any(|owner| owner.installation_id == id)
+        }),
+        "instruction-backed installation requires the captured instruction adapter"
+    );
+    Ok(())
+}
+
 fn same_binding(item: &Installation, binding: &Binding, source: &str) -> bool {
     item.root.scope == binding.root.scope
         && item.root.path.as_os_str() == binding.root.path.as_os_str()
@@ -422,6 +459,14 @@ mod tests {
         let binding = binding();
         let mut prior = prior();
         let id = installation_id(&prior, &binding, "local:/source").unwrap();
+        let alias = Binding {
+            installed_name: "other-alias".into(),
+            ..self::binding()
+        };
+        assert_ne!(
+            id,
+            installation_id(&prior, &alias, "local:/source").unwrap()
+        );
         let lexical = Binding {
             root: InstallationRoot {
                 path: "/scope/.".into(),

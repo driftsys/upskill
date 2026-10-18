@@ -63,8 +63,9 @@ Add/update sharing is a separate opt-in supplied-value boundary in
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
 The opt-in guarded application boundary now covers first and subsequent schema-2
 writes, exact schema-1 backup validation, captured-source freshness, and
-recovery through the qualified executor journal. Production commands, source
-resolution, client adapters and native qualification remain later work.
+recovery through the qualified executor journal. The opt-in source-backed rule
+adapter resolves explicit local/Git sources. Production commands and native
+qualification remain later work.
 
 <a id="417-captured-lifecycle-selection-preflight"></a>
 
@@ -122,9 +123,9 @@ planner's preservation contract.
 This inactive pure boundary provides no source authenticity, qualified
 filesystem or native authority. The separate shared entrypoint is specified in
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
-Full diagnostic aggregation, CLI precedence and observational adapters remain
-pending. Guarded backup, application and recovery are available through the
-opt-in
+Full diagnostic aggregation and production CLI precedence remain pending. Opt-in
+inspection and preview provide observational adapters. Guarded backup,
+application and recovery are available through the opt-in
 [application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application).
 Production schema and commands stay unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert).
@@ -313,13 +314,15 @@ nodes and their bundle closure even when other selection work blocks.
 
 Ready means this selection preflight passed. It establishes no source
 authenticity, filesystem containment, native support, compatible sharing, or
-authority to remove references or apply outputs. Later orchestration must
-enforce this outcome, complete desired-set/reference planning, qualified
-observation and execution. Source/scope selectors and flag/config/history
-precedence remain later work; production CLI selection behavior is unchanged.
-Production schema remains 1. The captured command adapter now connects this
-preflight to guarded application and executor recovery. Local full Gate 5
-acceptance is recorded in the
+authority to remove references or apply outputs. Opt-in orchestration enforces
+this outcome and connects complete desired-set/reference planning, qualified
+observation and execution. Its target precedence is nonempty invocation,
+nonempty project configuration, nonempty global configuration, then recorded
+update targets or caller-supplied add defaults. Empty lists do not override the
+fallback. Production source/scope selectors and CLI selection behavior remain
+unchanged. Production schema remains 1. The captured command adapter now
+connects this preflight to guarded application and executor recovery. Local full
+Gate 5 acceptance is recorded in the
 [acceptance matrix](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md);
 final delivery, M1 activation and Codex qualification remain pending.
 
@@ -917,8 +920,12 @@ Updates preserve installation IDs, aliases and the existing reference graph
 while recapturing the requested source binding and recording actual Git commits
 and exact manifest digests. Repeated add of the same binding reuses its recorded
 ID and adds no duplicate direct reference. A different binding cannot reuse an
-installed alias. Caller-supplied complete graphs and manual/shared instruction
-contributions remain on the captured command API.
+installed alias, and an add alias cannot collide with an owned bundle name.
+Selected instruction-backed owners reject source-backed updates and repeated
+adds before parsing or resolving sources; their updates retain the captured
+instruction adapter. Recorded removal remains source-free. Caller-supplied
+complete graphs and manual/shared instruction contributions remain on the
+captured command API.
 
 Nonempty invocation targets override nonempty project configuration, then
 nonempty global configuration. Update otherwise uses recorded targets; add uses
