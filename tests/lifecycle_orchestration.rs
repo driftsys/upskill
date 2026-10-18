@@ -1865,10 +1865,119 @@ fn preflight_binding_identity_survives_failed_resolution() {
 // source/destination diagnostics and lose the complete alias participant inventory.
 #[test]
 fn duplicate_add_aliases_report_both_bindings_and_an_independent_conflict() {
+    use upskill::lifecycle::preflight::PreflightCategory;
     let dest = tempfile::tempdir().unwrap();
     let sources = tempfile::tempdir().unwrap();
-    std::fs::create_dir(sources.path().join("valid")).unwrap();
-    write_rule(&sources.path().join("valid"), "Valid");
+    let root = root(dest.path());
+    let bindings = [
+        ("first", "duplicate"),
+        ("second", "duplicate"),
+        ("valid", "valid"),
+    ];
+    let mut ids = Vec::new();
+    for (name, alias) in bindings {
+        let path = sources.path().join(name);
+        std::fs::create_dir(&path).unwrap();
+        write_rule(&path, name);
+        run(
+            &root,
+            SourceRequest::Add(vec![AddRule {
+                source: InstallSource::LocalPath(path),
+                source_name: "source".into(),
+                installed_name: alias.into(),
+            }]),
+        );
+        ids.push(
+            state(dest.path())
+                .installations
+                .iter()
+                .find(|i| i.owner.installed_name == alias)
+                .unwrap()
+                .owner
+                .installation_id
+                .clone(),
+        );
+        run(
+            &root,
+            SourceRequest::Remove(Selection::Names(vec![alias.into()])),
+        );
+    }
+    for name in ["first", "second"] {
+        std::fs::remove_dir_all(sources.path().join(name)).unwrap();
+    }
+    std::fs::write(dest.path().join(".claude/rules/valid.md"), b"Manual\n").unwrap();
+    let mut duplicate_ids = ids[..2].to_vec();
+    duplicate_ids.sort();
+    let state_bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = fixture_writer(&scope).unwrap();
+    let compiler = context();
+    let mut reports = vec![];
+    for order in [[0, 1, 2], [2, 1, 0]] {
+        let request = SourceRequest::Add(
+            order
+                .into_iter()
+                .map(|index| AddRule {
+                    source: InstallSource::LocalPath(sources.path().join(bindings[index].0)),
+                    source_name: "source".into(),
+                    installed_name: bindings[index].1.into(),
+                })
+                .collect(),
+        );
+        let report = preflight_report(
+            with_prepared(
+                &scope,
+                &guard,
+                root.clone(),
+                request,
+                SourceOptions {
+                    targets: TargetSelection::default(),
+                    add_defaults: &[TargetSurface::ClaudeCli],
+                    compiler: &compiler,
+                },
+                |_| -> anyhow::Result<()> { panic!("duplicates must not prepare") },
+            )
+            .unwrap(),
+        );
+        assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+        let duplicate = report
+            .diagnostics
+            .iter()
+            .find(|d| d.category == PreflightCategory::Binding)
+            .unwrap();
+        assert_eq!(duplicate.installation_ids, duplicate_ids);
+        assert!(duplicate.location.is_none());
+        let independent = report
+            .diagnostics
+            .iter()
+            .find(|d| d.category == PreflightCategory::Destination)
+            .unwrap();
+        assert_eq!(
+            independent.installation_ids.as_slice(),
+            std::slice::from_ref(&ids[2])
+        );
+        assert_eq!(
+            independent.location.as_ref().unwrap().path,
+            ".claude/rules/valid.md"
+        );
+        reports.push(report);
+    }
+    assert_eq!(reports[0], reports[1]);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_bytes
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// An invalid empty alias is a local binding failure, not an operation-level
+// selector error that hides independently observable destination conflicts.
+#[test]
+fn empty_alias_does_not_hide_independent_destination_conflict() {
+    use upskill::lifecycle::preflight::PreflightCategory;
+    let dest = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    write_rule(source.path(), "Valid");
     std::fs::create_dir_all(dest.path().join(".claude/rules")).unwrap();
     std::fs::write(dest.path().join(".claude/rules/valid.md"), b"Manual\n").unwrap();
     let root = root(dest.path());
@@ -1881,44 +1990,43 @@ fn duplicate_add_aliases_report_both_bindings_and_an_independent_conflict() {
             &guard,
             root,
             SourceRequest::Add(
-                [
-                    ("missing-one", "duplicate"),
-                    ("missing-two", "duplicate"),
-                    ("valid", "valid"),
-                ]
-                .into_iter()
-                .map(|(source, alias)| AddRule {
-                    source: InstallSource::LocalPath(sources.path().join(source)),
-                    source_name: "source".into(),
-                    installed_name: alias.into(),
-                })
-                .collect(),
+                ["", "valid"]
+                    .into_iter()
+                    .map(|alias| AddRule {
+                        source: InstallSource::LocalPath(source.path().into()),
+                        source_name: "source".into(),
+                        installed_name: alias.into(),
+                    })
+                    .collect(),
             ),
             SourceOptions {
                 targets: TargetSelection::default(),
                 add_defaults: &[TargetSurface::ClaudeCli],
                 compiler: &compiler,
             },
-            |_| -> anyhow::Result<()> { panic!("duplicates must not prepare") },
+            |_| -> anyhow::Result<()> { panic!("invalid alias must block") },
         )
         .unwrap(),
     );
     assert_eq!(report.diagnostics.len(), 2, "{report:?}");
-    let duplicate = report
-        .diagnostics
-        .iter()
-        .find(|d| d.category == upskill::lifecycle::preflight::PreflightCategory::Binding)
-        .unwrap();
-    assert_eq!(duplicate.installation_ids.len(), 2);
-    assert!(duplicate.location.is_none());
-    let independent = report
-        .diagnostics
-        .iter()
-        .find(|d| d.category == upskill::lifecycle::preflight::PreflightCategory::Destination)
-        .unwrap();
     assert_eq!(
-        independent.location.as_ref().unwrap().path,
-        ".claude/rules/valid.md"
+        report
+            .diagnostics
+            .iter()
+            .filter(|d| d.category == PreflightCategory::Binding && d.location.is_none())
+            .count(),
+        1
+    );
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .filter(|d| d.category == PreflightCategory::Destination
+                && d.location
+                    .as_ref()
+                    .is_some_and(|l| l.path == ".claude/rules/valid.md"))
+            .count(),
+        1
     );
     assert!(!scope.has_pending_operation().unwrap());
 }

@@ -1804,7 +1804,10 @@ fn capture_failure_keeps_failed_owner_in_shared_destination_report() {
         .iter()
         .find(|d| d.category == PreflightCategory::Capture)
         .unwrap();
-    assert_eq!(capture.installation_ids, [alpha_id.clone()]);
+    assert_eq!(
+        capture.installation_ids.as_slice(),
+        std::slice::from_ref(&alpha_id)
+    );
     assert!(capture.location.is_none());
     let destination = report
         .diagnostics

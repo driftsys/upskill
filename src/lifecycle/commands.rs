@@ -162,7 +162,8 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
         &self.state
     }
 
-    /// Complete preflight precedes the callback, which may compile supplied snapshots.
+    /// Complete selection preflight precedes the compiler callback; destination
+    /// reporting uses its supplied values before preparing any operation.
     /// None selects no existing roots (add); Some selects complete update roots.
     pub fn prepare_upsert<'session, 'source>(
         &'session self,
@@ -337,6 +338,11 @@ impl<'scope, 'guard> LifecycleSession<'scope, 'guard> {
         report: &mut super::preflight::PreflightReport,
     ) -> Result<DestinationSnapshot<'scope>> {
         self.metadata.verify_unchanged()?;
+        // Normalize once before every downstream use, including permission
+        // selection: failed duplicate bindings supply no desired observations.
+        let (independent, binding_diagnostics) = super::preflight::independent_request(request);
+        *request = independent;
+        report.diagnostics.extend(binding_diagnostics);
         let (locations, _) = super::preflight::locations(&self.state, request, retiring);
         let destinations = self.scope.observe_destinations(&locations)?;
         // Match production permission selection before comparing sharing contracts.
