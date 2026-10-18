@@ -1,0 +1,78 @@
+{
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "scope": "project",
+  "user_scope": "unqualified: real user instruction roots are never modified; isolated auth not provisioned",
+  "probes": [
+    {
+      "client": "opencode",
+      "version": "2.0.25",
+      "version_state": "available",
+      "version_sha256": "95402cee554b8ce7620fde6f9a31a53155b22896966d44382de47301986b68bb",
+      "pair_result": "positive_control_failed",
+      "discovery": "default",
+      "marker": "QUALIFIED_cd033aff4c3eceb8eae717d95c74ae14",
+      "staging_marker": "STAGING_ca896d6d2dc1b701570c403fbc788a13",
+      "fallback": "ABSENT_a4d6ac701a8958642416956a0c4f7580",
+      "result": "positive_control_failed",
+      "configuration": {
+        "instruction_path": "AGENTS.md",
+        "project_identity": "distinct empty root commit; local identity, hooks and signing disabled",
+        "discovery_environment": {
+          "OPENCODE_CONFIG_PROJECT_DISABLE": "0",
+          "OPENCODE_DISABLE_PROJECT_CONFIG": "0",
+          "removed_overrides": [
+            "OPENCODE_CONFIG_CONTENT",
+            "OPENCODE_CONFIG",
+            "OPENCODE_CONFIG_DIR"
+          ]
+        },
+        "permissions": [
+          {
+            "action": "*",
+            "resource": "*",
+            "effect": "deny"
+          }
+        ],
+        "instructions_globs": null,
+        "tools": "v2 permissions deny all; observed tool events disqualify",
+        "xdg_data_and_state": "state isolated; data isolated except OpenCode uses existing data/authentication"
+      },
+      "outcomes": [
+        {
+          "state": "failure",
+          "sha256": "05a161b85dc95d51c50cdfb5dbe1858b0db3531e4d5385d53c84f25914c8dda2",
+          "exit_code": 1,
+          "diagnostic_category": "configuration_error",
+          "tools_observed": false,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "--format",
+            "json",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_a4d6ac701a8958642416956a0c4f7580. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-default/positive"
+        },
+        {
+          "state": "failure",
+          "sha256": "b690b6b8d5572bcb4dd5856165afc046fdaafd276f1f51d8fab254a7c3fab952",
+          "exit_code": 1,
+          "diagnostic_category": "configuration_error",
+          "tools_observed": false,
+          "response": "[nonmatching response omitted]",
+          "command": [
+            "opencode",
+            "run",
+            "--standalone",
+            "--format",
+            "json",
+            "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_a4d6ac701a8958642416956a0c4f7580. Do not read files or use tools. Return only the required response."
+          ],
+          "fixture": "opencode-default/negative"
+        }
+      ]
+    }
+  ]
+}

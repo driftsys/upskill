@@ -33,11 +33,12 @@ def fixtures(root, client, configured=False):
         fixture_marker = marker if kind == 'positive' else staging_marker
         target.write_text('For the discovery qualification question, respond with exactly ' + fixture_marker + ' and nothing else.\n')
         if client == 'opencode':
-            config = {'permission': {'*': 'deny'}}
+            config = {'permissions': [{'action': '*', 'resource': '*', 'effect': 'deny'}]}
             if configured:
                 config['instructions'] = ['AGENTS.md', '.upskill-stage-*']
             (project / 'opencode.json').write_text(json.dumps(config))
         subprocess.run(['git', 'init', '-q', str(project)], check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize fixture ' + secrets.token_hex(16)], check=True)
     return root / 'positive', root / 'negative', marker, staging_marker
 
 
@@ -57,9 +58,15 @@ def invoke(command, cwd, timeout, env):
         try:
             stdout, stderr = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.communicate()
             return {'state': 'timeout', 'response': '', 'sha256': None}
+        finally:
+            # The child owns this new session. Reap it and stop any surviving
+            # descendants before returning or propagating cancellation.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate()
         result = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
     except FileNotFoundError:
         return {'state': 'unavailable', 'response': '', 'sha256': None}
@@ -84,6 +91,38 @@ def command(client, prompt, output):
     if client == 'copilot':
         return ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=', '--no-ask-user', '--silent', '--log-level', 'none', '-p', prompt]
     return ['opencode', 'run', '--standalone', '--format', 'json', prompt]
+
+
+def codex_response(stdout):
+    response = None
+    completed = False
+    tool_seen = False
+    event_types = set()
+    safe_items = {'agent_message', 'reasoning', 'todo_list'}
+    known_events = {'thread.started', 'turn.started', 'turn.completed', 'turn.failed', 'item.started', 'item.updated', 'item.completed', 'error'}
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            return None, True, {'completed_response': False, 'event_types': ['invalid']}
+        if not isinstance(event, dict):
+            return None, True, {'completed_response': False, 'event_types': ['invalid']}
+        kind = event.get('type')
+        known = isinstance(kind, str) and kind in known_events
+        event_types.add(kind if known else 'unknown')
+        if not known:
+            tool_seen = True
+        if kind == 'turn.completed':
+            completed = True
+        if kind in ('turn.failed', 'error'):
+            tool_seen = True
+        if 'item' in event:
+            item = event['item']
+            if not isinstance(item, dict) or item.get('type') not in safe_items:
+                tool_seen = True
+            elif kind == 'item.completed' and item.get('type') == 'agent_message':
+                response = item.get('text') if isinstance(item.get('text'), str) else None
+    return response, tool_seen, {'completed_response': completed and response is not None, 'event_types': sorted(event_types)}
 
 
 def opencode_response(stdout):
@@ -128,6 +167,10 @@ def run(args):
         for client in args.clients:
             client_env = env.copy()
             if client == 'opencode':
+                client_env['OPENCODE_CONFIG_PROJECT_DISABLE'] = '0'
+                client_env['OPENCODE_DISABLE_PROJECT_CONFIG'] = '0'
+                for override in ('OPENCODE_CONFIG_CONTENT', 'OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR'):
+                    client_env.pop(override, None)
                 if 'XDG_DATA_HOME' in os.environ:
                     client_env['XDG_DATA_HOME'] = os.environ['XDG_DATA_HOME']
                 else:
@@ -136,8 +179,10 @@ def run(args):
             # Version text is restricted to the first printable version line.
             version_text = version.get('stdout', '').strip().splitlines()
             version_match = re.search(r'(?<!\d)\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', version_text[0]) if version_text else None
-            version_label = version_match.group(0) if version_match else version['state']
-            modes = (False, True) if client == 'opencode' else (False,)
+            version_label = version_match.group(0) if version_match and version['state'] == 'success' else None
+            version_state = version['state'] if version['state'] != 'success' else ('available' if version_label else 'unparseable')
+            discovery = getattr(args, 'opencode_discovery', 'both')
+            modes = ((False, True) if discovery == 'both' else (discovery == 'configured',)) if client == 'opencode' else (False,)
             for configured in modes:
                 root = base / (client + ('-configured' if configured else '-default'))
                 positive, negative, marker, staging_marker = fixtures(root, client, configured)
@@ -151,16 +196,10 @@ def run(args):
                     result = invoke(cmd, project, args.timeout, client_env)
                     response = output.read_text().strip() if client == 'codex' and output.exists() else result.get('stdout', '').strip()
                     if client == 'codex':
-                        events = []
-                        for line in result.get('stdout', '').splitlines():
-                            try:
-                                events.append(json.loads(line))
-                            except json.JSONDecodeError:
-                                result['state'] = 'failure'
-                        safe_types = {'agent_message', 'reasoning', 'todo_list'}
-                        tools_observed = any(event.get('item', {}).get('type') not in safe_types for event in events if 'item' in event)
+                        event_response, tools_observed, event_evidence = codex_response(result.get('stdout', ''))
                         result['tools_observed'] = tools_observed
-                        if tools_observed:
+                        result['response_events'] = event_evidence
+                        if tools_observed or not event_evidence['completed_response'] or event_response != response:
                             result['state'] = 'failure'
                     if client == 'opencode':
                         response, tools_observed = opencode_response(result.get('stdout', ''))
@@ -173,7 +212,8 @@ def run(args):
                     result['fixture'] = str(project.relative_to(base))
                     outcomes.append(result)
                 values = [item['response'] if item['state'] == 'success' else item['state'] for item in outcomes]
-                report['probes'].append({'client': client, 'version': version_label, 'discovery': 'configured broad globs' if configured else 'default', 'marker': marker, 'staging_marker': staging_marker, 'fallback': fallback, 'result': classify(*values, marker, fallback, staging_marker), 'configuration': {'instruction_path': CLIENTS[client], 'instructions_globs': ['AGENTS.md', '.upskill-stage-*'] if configured else None, 'tools': 'available read-only; any observed tool event disqualifies' if client == 'codex' else ('disabled' if client in ('claude', 'copilot') else 'permission * deny; observed tool events disqualify'), 'xdg_data_and_state': 'state isolated; data isolated except OpenCode uses existing data/authentication'}, 'outcomes': outcomes})
+                pair_result = classify(*values, marker, fallback, staging_marker)
+                report['probes'].append({'client': client, 'version': version_label, 'version_state': version_state, 'version_sha256': version.get('sha256'), 'pair_result': pair_result, 'discovery': 'configured broad globs' if configured else 'default', 'marker': marker, 'staging_marker': staging_marker, 'fallback': fallback, 'result': pair_result if version_label else 'version_unqualified', 'configuration': {'instruction_path': CLIENTS[client], 'project_identity': 'distinct empty root commit; local identity, hooks and signing disabled', 'discovery_environment': {'OPENCODE_CONFIG_PROJECT_DISABLE': '0', 'OPENCODE_DISABLE_PROJECT_CONFIG': '0', 'removed_overrides': ['OPENCODE_CONFIG_CONTENT', 'OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR']} if client == 'opencode' else None, 'permissions': [{'action': '*', 'resource': '*', 'effect': 'deny'}] if client == 'opencode' else None, 'instructions_globs': ['AGENTS.md', '.upskill-stage-*'] if configured else None, 'tools': 'available read-only; any observed tool event disqualifies' if client == 'codex' else ('disabled' if client in ('claude', 'copilot') else 'v2 permissions deny all; observed tool events disqualify'), 'xdg_data_and_state': 'state isolated; data isolated except OpenCode uses existing data/authentication'}, 'outcomes': outcomes})
     destination = evidence / 'summary.json'
     destination.write_text(json.dumps(report, indent=2) + '\n')
     print(destination)
@@ -183,6 +223,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true', help='Explicitly opt in to native model requests')
     parser.add_argument('--clients', nargs='+', choices=CLIENTS, default=list(CLIENTS))
+    parser.add_argument('--opencode-discovery', choices=('default', 'configured', 'both'), default='both')
     parser.add_argument('--timeout', type=int, default=90)
     parser.add_argument('--evidence', type=Path, required=True)
     args = parser.parse_args()
