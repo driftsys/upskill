@@ -1083,8 +1083,8 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
         );
         assert_eq!(resolved_revision, &git(&repo, &["rev-parse", "HEAD"]));
         assert_eq!(manifest_sha256.len(), 64);
-        // A separate selected Git item creates a second private capture. Only its
-        // revision changes below, so checking only the first capture must fail this test.
+        // Each private capture is mutated in a separate preparation, so checking
+        // only the first or only the last capture must fail this test.
         apply(
             &root,
             SourceRequest::Add(vec![AddRule {
@@ -1102,98 +1102,113 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
         let output = std::fs::read(&output_path).unwrap();
         let scope = QualifiedScope::open(&root).unwrap();
         let guard = writer(&scope);
-        let trace_path = std::env::var_os("GIT_TRACE2_EVENT").unwrap();
-        std::fs::remove_file(&trace_path).unwrap();
-        let result = with_prepared_codex(
-            &scope,
-            &guard,
-            root.clone(),
-            SourceRequest::Update(Selection::All),
-            options(),
-            |prepared| {
-                // Git trace records the real private checkout commands; mutate only HEAD,
-                // leaving captured tree bytes unchanged so lower snapshot checks cannot catch it.
-                let trace =
-                    std::fs::read_to_string(std::env::var_os("GIT_TRACE2_EVENT").unwrap()).unwrap();
-                let mut captures = Vec::new();
-                for capture in trace.lines().filter_map(|line| {
-                    let event: serde_json::Value = serde_json::from_str(line).ok()?;
-                    let argv = event.get("argv")?.as_array()?;
-                    let at = argv.iter().position(|a| a.as_str() == Some("--git-dir"))?;
-                    let wt = argv
-                        .iter()
-                        .position(|a| a.as_str() == Some("--work-tree"))?;
-                    Some((
-                        argv.get(at + 1)?.as_str()?.to_owned(),
-                        argv.get(wt + 1)?.as_str()?.to_owned(),
-                    ))
-                }) {
-                    if !captures.contains(&capture) {
-                        captures.push(capture);
+        for changed_capture in 0..2 {
+            let trace_path = std::env::var_os("GIT_TRACE2_EVENT").unwrap();
+            std::fs::remove_file(&trace_path).unwrap();
+            let result = with_prepared_codex(
+                &scope,
+                &guard,
+                root.clone(),
+                SourceRequest::Update(Selection::All),
+                options(),
+                |prepared| {
+                    // Git trace records the real private checkout commands; mutate only HEAD,
+                    // leaving captured tree bytes unchanged so lower snapshot checks cannot catch it.
+                    let trace =
+                        std::fs::read_to_string(std::env::var_os("GIT_TRACE2_EVENT").unwrap())
+                            .unwrap();
+                    let mut captures = Vec::new();
+                    for capture in trace.lines().filter_map(|line| {
+                        let event: serde_json::Value = serde_json::from_str(line).ok()?;
+                        let argv = event.get("argv")?.as_array()?;
+                        let at = argv.iter().position(|a| a.as_str() == Some("--git-dir"))?;
+                        let wt = argv
+                            .iter()
+                            .position(|a| a.as_str() == Some("--work-tree"))?;
+                        Some((
+                            argv.get(at + 1)?.as_str()?.to_owned(),
+                            argv.get(wt + 1)?.as_str()?.to_owned(),
+                        ))
+                    }) {
+                        if !captures.contains(&capture) {
+                            captures.push(capture);
+                        }
                     }
-                }
-                assert_eq!(captures.len(), 2, "two distinct private Git captures");
-                let first_revision =
-                    git(&repo, &["--git-dir", &captures[0].0, "rev-parse", "HEAD"]);
-                let tree_before: Vec<_> = captures
-                    .iter()
-                    .map(|(_, tree)| {
-                        ["item/RULE.md", "later/RULE.md"]
-                            .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap())
-                    })
-                    .collect();
-                let (metadata, _) = &captures[1];
-                let old = git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]);
-                let new = git(
-                    &repo,
-                    &[
-                        "--git-dir",
-                        metadata,
-                        "-c",
-                        "user.name=Test",
-                        "-c",
-                        "user.email=test@example.invalid",
-                        "commit-tree",
-                        "HEAD^{tree}",
-                        "-p",
-                        "HEAD",
-                        "-m",
-                        "same tree different revision",
-                    ],
-                );
-                assert_ne!(old, new);
-                git(&repo, &["--git-dir", metadata, "update-ref", "HEAD", &new]);
-                assert_eq!(
-                    git(&repo, &["--git-dir", &captures[0].0, "rev-parse", "HEAD"]),
-                    first_revision
-                );
-                assert_eq!(
-                    git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]),
-                    new
-                );
-                for ((_, tree), before) in captures.iter().zip(tree_before) {
-                    assert_eq!(
-                        ["item/RULE.md", "later/RULE.md"]
-                            .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap()),
-                        before
+                    assert_eq!(captures.len(), 2, "two distinct private Git captures");
+                    let revisions_before: Vec<_> = captures
+                        .iter()
+                        .map(|(metadata, _)| {
+                            git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"])
+                        })
+                        .collect();
+                    let tree_before: Vec<_> = captures
+                        .iter()
+                        .map(|(_, tree)| {
+                            ["item/RULE.md", "later/RULE.md"]
+                                .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap())
+                        })
+                        .collect();
+                    let (metadata, _) = &captures[changed_capture];
+                    let old = git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]);
+                    let new = git(
+                        &repo,
+                        &[
+                            "--git-dir",
+                            metadata,
+                            "-c",
+                            "user.name=Test",
+                            "-c",
+                            "user.email=test@example.invalid",
+                            "commit-tree",
+                            "HEAD^{tree}",
+                            "-p",
+                            "HEAD",
+                            "-m",
+                            "same tree different revision",
+                        ],
                     );
-                }
-                prepared.apply()
-            },
-        );
-        assert!(
-            format!(
-                "{:#}",
-                result.err().expect("changed private revision must reject")
-            )
-            .contains("source checkout revision changed")
-        );
-        assert_eq!(
-            std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
-            bytes
-        );
-        assert_eq!(std::fs::read(&output_path).unwrap(), output);
-        assert!(!scope.has_pending_operation().unwrap());
+                    assert_ne!(old, new);
+                    git(&repo, &["--git-dir", metadata, "update-ref", "HEAD", &new]);
+                    for (index, ((metadata, _), before)) in
+                        captures.iter().zip(&revisions_before).enumerate()
+                    {
+                        assert_eq!(
+                            git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]),
+                            if index == changed_capture {
+                                &new
+                            } else {
+                                before
+                            }
+                            .as_str(),
+                            "only capture {changed_capture} may change revision; checking capture {index}"
+                        );
+                    }
+                    for ((_, tree), before) in captures.iter().zip(tree_before) {
+                        assert_eq!(
+                            ["item/RULE.md", "later/RULE.md"]
+                                .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap()),
+                            before
+                        );
+                    }
+                    prepared.apply()
+                },
+            );
+            assert!(
+                format!(
+                    "{:#}",
+                    result.err().unwrap_or_else(|| panic!(
+                        "changed private revision for capture {changed_capture} must reject"
+                    ))
+                )
+                .contains("source checkout revision changed")
+            );
+            assert_eq!(
+                std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+                bytes
+            );
+            assert_eq!(std::fs::read(&output_path).unwrap(), output);
+            assert!(!scope.has_pending_operation().unwrap());
+        }
     }
 }
 
