@@ -751,3 +751,82 @@ fn impossible_captured_file_topology_rejects_before_resource_ignore_filtering() 
         "{error:#}"
     );
 }
+
+#[test]
+fn rejects_scope_only_destination_mismatch_and_relative_installation_root() {
+    let source = captured("", "Generic\n", &[]);
+    let item = installation(&source, OwnershipScope::Project);
+    let mut destination = location(&item);
+    destination.root.scope = OwnershipScope::User;
+    assert!(
+        compile_codex_instructions(CodexInstructionRequest {
+            installation: &item,
+            source: &source,
+            folder_name: "folder",
+            profile: TargetSurface::CodexCli.profile(),
+            location: &destination,
+        })
+        .is_err()
+    );
+    let mut invalid = item;
+    invalid.root.path = "relative-output".into();
+    assert!(compile(&invalid, &source).is_err());
+}
+
+#[test]
+fn canonical_formatting_and_compatible_directives_bind_literal_output_digest() {
+    for (scope, body, expected) in [
+        (
+            OwnershipScope::Project,
+            "## Heading\nUse `clear` names.",
+            "## Heading\n\nUse `clear` names.\n",
+        ),
+        (
+            OwnershipScope::Project,
+            "<!-- @client:codex,copilot,opencode -->\n# Shared\n\nShared text.\n<!-- @endclient -->\n<!-- @client:claude -->\nExcluded text.\n<!-- @endclient -->",
+            "# Shared\n\nShared text.\n",
+        ),
+        (
+            OwnershipScope::User,
+            "<!-- @client:codex -->\nGlobal Codex text.\n<!-- @endclient -->",
+            "Global Codex text.\n",
+        ),
+    ] {
+        let source = captured("", body, &[]);
+        let result = compile(&installation(&source, scope), &source).unwrap();
+        assert_eq!(contribution(&result).markdown, expected);
+        assert_eq!(
+            result.desired.contracts[0].content,
+            ContractContent::Instruction {
+                content_sha256: hash(expected.as_bytes())
+            }
+        );
+        assert_eq!(
+            result.readers.compatibility,
+            InstructionCompatibility::UnconditionalMarkdown
+        );
+    }
+}
+
+#[test]
+fn absent_declared_source_name_uses_captured_folder_binding() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("RULE.md"),
+        "---\nschema: 1\ndescription: demo\n---\nGeneric\n",
+    )
+    .unwrap();
+    let source = capture_source(tmp.path()).unwrap();
+    let mut item = installation(&source, OwnershipScope::Project);
+    item.owner.source_name = "folder".into();
+    assert_eq!(
+        compile(&item, &source)
+            .unwrap()
+            .desired
+            .set
+            .installation
+            .owner
+            .source_name,
+        "folder"
+    );
+}
