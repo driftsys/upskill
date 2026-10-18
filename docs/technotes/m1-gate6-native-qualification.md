@@ -14,12 +14,18 @@ extensionless `.upskill-stage-<nonce>` sibling in the same directory. Distinct
 unpredictable positive, staging and fallback markers prevent a response from
 carrying evidence between controls. Current fixtures have distinct empty root
 commits so native clients can identify separate Git projects; fixture-only
-identity overrides disable Git hooks and commit signing. Each request starts a
-new session. Only exact final responses qualify; failed positive controls,
+identity overrides disable Git hooks and commit signing. Current fixture Git
+commands and native/version children receive an owned environment copy with
+inherited `GIT_*` variables removed, preventing repository selectors, index
+overrides or injected Git configuration from redirecting the disposable
+projects. The parent environment is preserved. Each request starts a new
+session. Only exact final responses qualify; failed positive controls,
 nonmatching responses, authentication errors and timeouts never qualify a
 negative. Requests without a successful, parseable version probe remain
-`version_unqualified`. Timeout and interruption cleanup terminates and reaps the
-owned process group before the harness returns or propagates cancellation.
+`version_unqualified`. Structured event validation preserves invocation failure
+states, including authentication failure, timeout and unavailable clients.
+Timeout and interruption cleanup terminates and reaps the owned process group
+before the harness returns or propagates cancellation.
 
 Codex runs with ignored user configuration, ignored exec policy rules, ephemeral
 sessions and a read-only sandbox. Its JSON events must contain a completed
@@ -64,20 +70,27 @@ staging siblings, independent staging detection, exact response matching,
 rejection of failed controls and OpenCode text-event parsing with tool-event
 rejection. `just lint` runs these tests without invoking native clients. They
 validate harness mechanics; native discovery conclusions come only from the
-paired observations below. Fourteen offline tests also pin exact canonical paths
-and staging parents, distinct root commits, interrupt and timeout descendant
-cleanup, version gating, state-aware orchestration, Codex completion evidence,
-OpenCode v2 rule shape and controlled discovery settings. Mutation checks
-confirm the tests reject altered canonical paths, discarded invocation states,
-deleted tool-event rejection and a removed version gate. Every client flag and
-all diagnostic classification paths remain outside this offline coverage.
+paired observations below. The current offline tests use independent literal
+canonical paths and staging parents, check distinct root commits and
+preservation of an unrelated repository's HEAD, staged index and worktree
+sentinel, and check native/version environment isolation. They also cover
+interrupt and timeout descendant cleanup, version gating and exact invocation
+failure states. Codex turn completion and event/output identity are tested
+separately for both controls. OpenCode tests cover its v2 rule shape, removal of
+all three config overrides from version and model calls, exact
+default/configured inventory and explicit mode selection. These checks describe
+current harness mechanics; they do not retroactively establish these guarantees
+for historical native runs. Every client flag and all diagnostic classification
+paths remain outside this offline coverage.
 
 The bounded implementation is recorded in local commit `26add38`, based on
-`26ab826`. The dispatcher supplies passing baseline full-suite and Rust 1.85
-checks; the original five offline examples passed during reconciliation. Review
-fixes expanded the focused suite to fourteen passing tests. Final repository
-verification, review, hosted CI and merge remain separate delivery evidence. No
-production Rust code changes belong to this qualification slice.
+`26ab826`. Earlier local full-suite, Rust 1.85 and mutation-check claims have no
+linked receipts here and are not asserted as verified history. The
+[hosted CI run](https://github.com/driftsys/upskill/actions/runs/39106863982)
+validated reviewed head `2bc35332c32a57b177ea3fab4e6e92e8633fc3a7`; it does not
+prove those earlier local checks or validate subsequent fixes. Final repository
+verification, numbered review, hosted CI and merge remain separate delivery
+evidence. No production Rust code changes belong to this qualification slice.
 
 The original
 [qualification spec](../archive/specs/2026-10-18-gate6-native-qualification.md)
@@ -139,10 +152,13 @@ generic sanitized category. The specific cause remains unknown. The positive
 control failed, so OpenCode remains unqualified. The corrected configured-glob
 case was not rerun and remains unqualified.
 
+All preserved native summaries predate the current Git environment isolation.
 The three historical successful clients were not rerun during these fixes; their
-recorded controls predate the stricter completion-event and root-identity
-checks. Offline regressions do not upgrade those native observations to a new
-version or configuration claim. No further model calls were made after the
+recorded controls predate the stricter completion-event, root-identity and Git
+environment isolation checks. The preserved summaries establish only the paired
+responses and method recorded at the time, without these later guarantees.
+Offline regressions do not upgrade those native observations to a new version,
+configuration or isolation claim. No further model calls were made after the
 bounded corrected OpenCode pair.
 
 ## Interpretation and remaining gates

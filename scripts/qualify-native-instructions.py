@@ -21,9 +21,16 @@ CLIENTS = {
 FAILURES = {'failure', 'timeout', 'authentication_failure', 'unavailable'}
 
 
+def isolated_git_environment():
+    # Repository selectors and injected Git configuration must not redirect
+    # disposable fixtures or the native clients' project discovery.
+    return {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+
+
 def fixtures(root, client, configured=False):
     marker = 'QUALIFIED_' + secrets.token_hex(16)
     staging_marker = 'STAGING_' + secrets.token_hex(16)
+    env = isolated_git_environment()
     for kind in ('positive', 'negative'):
         project = root / kind
         project.mkdir(parents=True)
@@ -37,8 +44,8 @@ def fixtures(root, client, configured=False):
             if configured:
                 config['instructions'] = ['AGENTS.md', '.upskill-stage-*']
             (project / 'opencode.json').write_text(json.dumps(config))
-        subprocess.run(['git', 'init', '-q', str(project)], check=True)
-        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize fixture ' + secrets.token_hex(16)], check=True)
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize fixture ' + secrets.token_hex(16)], env=env, check=True)
     return root / 'positive', root / 'negative', marker, staging_marker
 
 
@@ -160,7 +167,7 @@ def run(args):
     report = {'platform': platform.platform(), 'scope': 'project', 'user_scope': 'unqualified: real user instruction roots are never modified; isolated auth not provisioned', 'probes': []}
     with tempfile.TemporaryDirectory(prefix='upskill-native-') as temporary:
         base = Path(temporary)
-        env = os.environ.copy()
+        env = isolated_git_environment()
         env['XDG_DATA_HOME'] = str(base / 'xdg-data')
         env['XDG_STATE_HOME'] = str(base / 'xdg-state')
         env.pop('CLAUDECODE', None)
@@ -199,12 +206,12 @@ def run(args):
                         event_response, tools_observed, event_evidence = codex_response(result.get('stdout', ''))
                         result['tools_observed'] = tools_observed
                         result['response_events'] = event_evidence
-                        if tools_observed or not event_evidence['completed_response'] or event_response != response:
+                        if result['state'] == 'success' and (tools_observed or not event_evidence['completed_response'] or event_response != response):
                             result['state'] = 'failure'
                     if client == 'opencode':
                         response, tools_observed = opencode_response(result.get('stdout', ''))
                         result['tools_observed'] = tools_observed
-                        if tools_observed:
+                        if result['state'] == 'success' and tools_observed:
                             result['state'] = 'failure'
                     result.pop('stdout', None)
                     result['response'] = response if response in (marker, staging_marker, fallback) else '[nonmatching response omitted]'

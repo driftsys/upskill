@@ -18,16 +18,28 @@ spec = importlib.util.spec_from_file_location('qualification', Path(__file__).pa
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
 
+CANONICAL_PATHS = {
+    'codex': 'AGENTS.md',
+    'claude': '.claude/rules/probe.md',
+    'copilot': '.github/copilot-instructions.md',
+    'opencode': 'AGENTS.md',
+}
+
+
+def fixture_git(project, *args):
+    env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+    return subprocess.run(['git', '-C', str(project), *args], env=env, check=True, capture_output=True, text=True).stdout
+
 
 class QualificationTests(unittest.TestCase):
     def test_fixture_markers_are_separated(self):
         with tempfile.TemporaryDirectory() as tmp:
-            for client in q.CLIENTS:
+            for client in CANONICAL_PATHS:
                 root = Path(tmp) / client
                 positive, negative, marker, staging_marker = q.fixtures(root, client, False)
                 positives = [p for p in positive.rglob('*') if '.git' not in p.relative_to(positive).parts]
                 negatives = [p for p in negative.rglob('*') if '.git' not in p.relative_to(negative).parts]
-                canonical = Path(q.CLIENTS[client])
+                canonical = Path(CANONICAL_PATHS[client])
                 positive_marked = [p.relative_to(positive) for p in positives if p.is_file() and marker in p.read_text()]
                 self.assertEqual(positive_marked, [canonical])
                 marked = [p for p in negatives if p.is_file() and staging_marker in p.read_text()]
@@ -44,11 +56,36 @@ class QualificationTests(unittest.TestCase):
             positive, negative, _, _ = q.fixtures(Path(tmp), 'opencode')
             heads = []
             for fixture in (positive, negative):
-                result = subprocess.run(['git', '-C', str(fixture), 'rev-parse', '--verify', 'HEAD'], capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0, 'fixture needs a committed root for native project discovery')
-                heads.append(result.stdout.strip())
-                status = subprocess.run(['git', '-C', str(fixture), 'ls-tree', '--name-only', 'HEAD'], capture_output=True, text=True, check=True)
-                self.assertEqual(status.stdout, '')
+                heads.append(fixture_git(fixture, 'rev-parse', '--verify', 'HEAD').strip())
+                self.assertEqual(fixture_git(fixture, 'ls-tree', '--name-only', 'HEAD'), '')
+            self.assertNotEqual(*heads)
+
+    def test_fixture_git_cannot_modify_inherited_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            external = root / 'external'
+            external.mkdir()
+            fixture_git(external, 'init', '-q')
+            fixture_git(external, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: external sentinel')
+            sentinel = external / 'sentinel'
+            sentinel.write_text('staged sentinel\n')
+            fixture_git(external, 'add', 'sentinel')
+            sentinel.write_text('worktree sentinel\n')
+            before_head = fixture_git(external, 'rev-parse', 'HEAD')
+            before_index = (external / '.git/index').read_bytes()
+            inherited = {'GIT_DIR': str(external / '.git'), 'GIT_WORK_TREE': str(external), 'GIT_INDEX_FILE': str(external / '.git/index')}
+            with mock.patch.dict(os.environ, inherited):
+                positive, negative, _, _ = q.fixtures(root / 'fixtures', 'opencode')
+                self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
+            self.assertEqual(fixture_git(external, 'rev-parse', 'HEAD'), before_head)
+            self.assertEqual((external / '.git/index').read_bytes(), before_index)
+            self.assertEqual(sentinel.read_text(), 'worktree sentinel\n')
+            heads = []
+            for project in (positive, negative):
+                self.assertTrue((project / '.git').is_dir())
+                self.assertEqual(Path(fixture_git(project, 'rev-parse', '--show-toplevel').strip()).resolve(), project.resolve())
+                heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
+                self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
             self.assertNotEqual(*heads)
 
     def test_distinct_negative_marker(self):
@@ -74,55 +111,63 @@ class OpenCodeEvents(unittest.TestCase):
 
 
 class OrchestrationTests(unittest.TestCase):
-    def controlled_run(self, client='claude', failed=None, tool=False, version_state='success', version_text='v1.2.3', events='valid'):
+    def controlled_run(self, client='claude', failed=None, tool=False, version_state='success', version_text='v1.2.3', events='valid', events_fixture=None, discovery='both'):
         with tempfile.TemporaryDirectory() as tmp:
             evidence = Path(tmp) / 'evidence'
             calls = []
 
             def invocation(command, cwd, timeout, env):
+                is_version = '--version' in command
+                calls.append({'command': command, 'env': dict(env), 'fixture': None if is_version else cwd.parent.name + '/' + cwd.name, 'config': json.loads((cwd / 'opencode.json').read_text()) if client == 'opencode' and not is_version else None})
                 if '--version' in command:
                     return {'state': version_state, 'stdout': version_text, 'sha256': 'version-hash'}
-                calls.append((command, dict(env)))
                 if cwd.name == 'positive':
-                    marker = re.search(r'QUALIFIED_[a-f0-9]+', (cwd / q.CLIENTS[client]).read_text()).group()
+                    marker = re.search(r'QUALIFIED_[a-f0-9]+', (cwd / CANONICAL_PATHS[client]).read_text()).group()
                 else:
                     marker = re.search(r'ABSENT_[a-f0-9]+', command[-1]).group()
                 for secret_marker in ('QUALIFIED_', 'STAGING_'):
                     self.assertNotIn(secret_marker, command[-1])
                 state = failed[1] if failed and cwd.name == failed[0] else 'success'
+                current_events = events if events_fixture in (None, cwd.name) else 'valid'
                 if client == 'codex':
                     Path(command[command.index('-o') + 1]).write_text(marker)
                     stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution' if tool else 'agent_message', 'text': marker}}), json.dumps({'type': 'turn.completed'})])
-                    if events == 'empty':
+                    if current_events == 'empty':
                         stdout = ''
-                    elif events == 'malformed':
+                    elif current_events == 'malformed':
                         stdout = 'not json'
-                    elif events == 'unknown':
+                    elif current_events == 'unknown':
                         stdout += '\n' + json.dumps({'type': 'unrecognized_event'})
-                    elif events == 'incomplete':
-                        stdout = json.dumps({'type': 'item.started', 'item': {'type': 'agent_message'}})
+                    elif current_events == 'incomplete':
+                        stdout = json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': marker}})
+                    elif current_events == 'mismatch':
+                        stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'different response'}}), json.dumps({'type': 'turn.completed'})])
                 elif client == 'opencode':
-                    stdout = json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
+                    stdout = 'not json' if current_events == 'malformed' else json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
                 else:
                     stdout = marker
                 return {'state': state, 'stdout': stdout, 'sha256': 'output-hash'}
 
             with mock.patch.object(q, 'invoke', side_effect=invocation), contextlib.redirect_stdout(io.StringIO()):
-                q.run(argparse.Namespace(evidence=evidence, clients=[client], timeout=1))
+                q.run(argparse.Namespace(evidence=evidence, clients=[client], timeout=1, opencode_discovery=discovery))
             return json.loads((evidence / 'summary.json').read_text()), calls
 
     def test_successful_orchestration_qualifies(self):
-        for client in q.CLIENTS:
+        for client in CANONICAL_PATHS:
             with self.subTest(client=client):
                 report, _ = self.controlled_run(client)
                 self.assertTrue(all(probe['result'] == 'qualified' for probe in report['probes']))
 
     def test_exact_responses_with_failed_invocation_never_qualify(self):
-        for state in ('failure', 'authentication_failure', 'timeout', 'unavailable'):
-            for fixture in ('positive', 'negative'):
-                with self.subTest(state=state, fixture=fixture):
-                    report, _ = self.controlled_run(failed=(fixture, state))
-                    self.assertNotEqual(report['probes'][0]['result'], 'qualified')
+        for client in CANONICAL_PATHS:
+            for state in ('failure', 'authentication_failure', 'timeout', 'unavailable'):
+                for fixture in ('positive', 'negative'):
+                    for events in ('valid', 'empty', 'malformed'):
+                        with self.subTest(client=client, state=state, fixture=fixture, events=events):
+                            report, _ = self.controlled_run(client, failed=(fixture, state), events=events, events_fixture=fixture)
+                            for probe in report['probes']:
+                                self.assertEqual(probe['outcomes'][0 if fixture == 'positive' else 1]['state'], state)
+                                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else state)
 
     def test_exact_responses_with_observed_tools_never_qualify(self):
         for client in ('codex', 'opencode'):
@@ -137,13 +182,73 @@ class OrchestrationTests(unittest.TestCase):
                 report, _ = self.controlled_run('codex', events=events)
                 self.assertNotEqual(report['probes'][0]['result'], 'qualified')
 
+    def test_codex_requires_completed_turn_for_each_control(self):
+        for fixture in ('positive', 'negative'):
+            with self.subTest(fixture=fixture):
+                report, _ = self.controlled_run('codex', events='incomplete', events_fixture=fixture)
+                probe = report['probes'][0]
+                outcome = probe['outcomes'][0 if fixture == 'positive' else 1]
+                self.assertEqual(outcome['state'], 'failure')
+                self.assertFalse(outcome['response_events']['completed_response'])
+                self.assertEqual(outcome['response'], probe['marker'] if fixture == 'positive' else probe['fallback'])
+                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'failure')
+
+    def test_codex_requires_event_and_output_identity_for_each_control(self):
+        for fixture in ('positive', 'negative'):
+            with self.subTest(fixture=fixture):
+                report, _ = self.controlled_run('codex', events='mismatch', events_fixture=fixture)
+                probe = report['probes'][0]
+                outcome = probe['outcomes'][0 if fixture == 'positive' else 1]
+                self.assertEqual(outcome['state'], 'failure')
+                self.assertTrue(outcome['response_events']['completed_response'])
+                self.assertEqual(outcome['response'], probe['marker'] if fixture == 'positive' else probe['fallback'])
+                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'failure')
+
     def test_version_failure_or_missing_semver_never_qualifies(self):
         for state, text in [('success', 'not a version'), ('failure', 'v1.2.3'), ('timeout', ''), ('unavailable', '')]:
             with self.subTest(state=state, text=text):
                 report, calls = self.controlled_run(version_state=state, version_text=text)
                 self.assertEqual(report['probes'][0]['result'], 'version_unqualified')
                 self.assertIsNone(report['probes'][0]['version'])
-                self.assertEqual(len(calls), 2)
+                self.assertEqual(len(calls), 3)
+
+    def test_native_and_version_environments_exclude_inherited_git_authority(self):
+        inherited = {'GIT_DIR': '/unrelated/repository.git', 'GIT_WORK_TREE': '/unrelated/worktree', 'GIT_INDEX_FILE': '/unrelated/index', 'GIT_COMMON_DIR': '/unrelated/common', 'GIT_OBJECT_DIRECTORY': '/unrelated/objects', 'GIT_ALTERNATE_OBJECT_DIRECTORIES': '/unrelated/alternates', 'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'core.worktree', 'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree'}
+        # Real fixture Git isolation is covered separately; this boundary test
+        # records version and model environments without executing a native CLI.
+        with mock.patch.dict(os.environ, inherited), mock.patch.object(q.subprocess, 'run'):
+            for client in CANONICAL_PATHS:
+                with self.subTest(client=client):
+                    report, calls = self.controlled_run(client)
+                    for call in calls:
+                        self.assertFalse(set(inherited) & call['env'].keys())
+                    self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
+                    self.assertTrue(all(probe['result'] == 'qualified' for probe in report['probes']))
+
+    def test_opencode_discovery_inventory_and_explicit_selections(self):
+        deny = [{'action': '*', 'resource': '*', 'effect': 'deny'}]
+        for discovery, modes in [('both', ['default', 'configured broad globs']), ('default', ['default']), ('configured', ['configured broad globs'])]:
+            with self.subTest(discovery=discovery):
+                report, calls = self.controlled_run('opencode', discovery=discovery)
+                self.assertEqual([probe['discovery'] for probe in report['probes']], modes)
+                self.assertEqual(len(calls), 1 + 2 * len(modes))
+                self.assertEqual(calls[0]['command'], ['opencode', '--version'])
+                expected_fixtures = []
+                for probe, mode in zip(report['probes'], modes):
+                    root = 'opencode-configured' if mode == 'configured broad globs' else 'opencode-default'
+                    fixtures = [root + '/positive', root + '/negative']
+                    expected_fixtures.extend(fixtures)
+                    self.assertEqual([outcome['fixture'] for outcome in probe['outcomes']], fixtures)
+                    self.assertEqual(probe['configuration']['instruction_path'], 'AGENTS.md')
+                    self.assertEqual(probe['configuration']['instructions_globs'], ['AGENTS.md', '.upskill-stage-*'] if mode == 'configured broad globs' else None)
+                    self.assertEqual(probe['result'], 'qualified')
+                    self.assertEqual(probe['configuration']['permissions'], deny)
+                self.assertEqual([call['fixture'] for call in calls[1:]], expected_fixtures)
+                for call in calls[1:]:
+                    expected = {'permissions': deny}
+                    if call['fixture'].startswith('opencode-configured/'):
+                        expected['instructions'] = ['AGENTS.md', '.upskill-stage-*']
+                    self.assertEqual(call['config'], expected)
 
     def test_opencode_v2_fixture_and_controlled_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -155,17 +260,24 @@ class OrchestrationTests(unittest.TestCase):
                     deny = [{'action': '*', 'resource': '*', 'effect': 'deny'}]
                     self.assertEqual(config['permissions'], deny)
                     self.assertEqual(config.get('instructions'), ['AGENTS.md', '.upskill-stage-*'] if configured else None)
-        with mock.patch.dict(os.environ, {'OPENCODE_CONFIG_PROJECT_DISABLE': '1', 'OPENCODE_DISABLE_PROJECT_CONFIG': '1', 'OPENCODE_CONFIG_CONTENT': 'arbitrary-sensitive-config'}):
+        overrides = {'OPENCODE_CONFIG_CONTENT': 'inline-sensitive-sentinel', 'OPENCODE_CONFIG': '/file-sensitive-sentinel', 'OPENCODE_CONFIG_DIR': '/directory-sensitive-sentinel'}
+        with mock.patch.dict(os.environ, {'OPENCODE_CONFIG_PROJECT_DISABLE': '1', 'OPENCODE_DISABLE_PROJECT_CONFIG': '1', **overrides}):
             report, calls = self.controlled_run('opencode')
-        for _, env in calls:
+            self.assertEqual({key: os.environ[key] for key in overrides}, overrides)
+        self.assertEqual(len(calls), 5)
+        for call in calls:
+            env = call['env']
             self.assertEqual(env['OPENCODE_CONFIG_PROJECT_DISABLE'], '0')
             self.assertEqual(env['OPENCODE_DISABLE_PROJECT_CONFIG'], '0')
-            self.assertNotIn('OPENCODE_CONFIG_CONTENT', env)
+            for key in overrides:
+                self.assertNotIn(key, env)
         for probe in report['probes']:
             settings = probe['configuration']['discovery_environment']
             self.assertEqual(settings['OPENCODE_CONFIG_PROJECT_DISABLE'], '0')
             self.assertEqual(settings['OPENCODE_DISABLE_PROJECT_CONFIG'], '0')
-            self.assertNotIn('arbitrary-sensitive-config', json.dumps(probe))
+            self.assertEqual(settings['removed_overrides'], ['OPENCODE_CONFIG_CONTENT', 'OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR'])
+            for value in overrides.values():
+                self.assertNotIn(value, json.dumps(probe))
 
 
 @unittest.skipUnless(hasattr(os, 'killpg'), 'POSIX process groups are required')
