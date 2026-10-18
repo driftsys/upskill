@@ -89,9 +89,79 @@ fn write_rule(path: &std::path::Path, body: &str) {
     )
     .unwrap();
 }
+fn fixture_writer(
+    scope: &QualifiedScope,
+) -> anyhow::Result<upskill::filesystem::ScopeWriterGuard<'_>> {
+    // Concurrent Git subprocesses can briefly inherit a CLOEXEC lock before exec.
+    // This helper expects no competing writer; real contention assertions use
+    // try_lock_writer directly. Persistent busy and all other errors still fail.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    loop {
+        match scope.try_lock_writer() {
+            Ok(guard) => return Ok(guard),
+            Err(error) => {
+                if !error.to_string().contains("busy") || std::time::Instant::now() >= deadline {
+                    return Err(error);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }
+    }
+}
+
+#[test]
+fn fixture_writer_waits_for_a_transient_lease() {
+    let dest = tempfile::tempdir().unwrap();
+    let scope = QualifiedScope::open(&root(dest.path())).unwrap();
+    let held = scope.try_lock_writer().unwrap();
+    assert!(
+        scope
+            .try_lock_writer()
+            .unwrap_err()
+            .to_string()
+            .contains("busy")
+    );
+    std::thread::scope(|threads| {
+        threads.spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            drop(held);
+        });
+        let acquired = fixture_writer(&scope);
+        assert!(
+            acquired.is_ok(),
+            "transient lease must be retried: {acquired:?}"
+        );
+    });
+}
+
+#[test]
+fn fixture_writer_does_not_steal_a_live_lease_and_preserves_binding_errors() {
+    let dest = tempfile::tempdir().unwrap();
+    let path = dest.path().join("scope");
+    std::fs::create_dir(&path).unwrap();
+    let scope = QualifiedScope::open(&root(&path)).unwrap();
+    let held = scope.try_lock_writer().unwrap();
+    let error = fixture_writer(&scope).unwrap_err();
+    assert!(error.to_string().contains("busy"), "{error:#}");
+    held.verify_binding().unwrap();
+    assert!(
+        scope
+            .try_lock_writer()
+            .unwrap_err()
+            .to_string()
+            .contains("busy")
+    );
+    drop(held);
+    drop(fixture_writer(&scope).unwrap());
+    std::fs::rename(&path, dest.path().join("moved")).unwrap();
+    std::fs::create_dir(&path).unwrap();
+    let error = fixture_writer(&scope).unwrap_err();
+    assert!(error.to_string().contains("binding"), "{error:#}");
+}
+
 fn run(root: &InstallationRoot, request: SourceRequest) -> OrchestrationOutcome {
     let scope = QualifiedScope::open(root).unwrap();
-    let guard = scope.try_lock_writer().unwrap();
+    let guard = fixture_writer(&scope).unwrap();
     with_prepared(
         &scope,
         &guard,

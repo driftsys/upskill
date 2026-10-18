@@ -37,9 +37,10 @@ contribution.
 Return a reader report separately from complete desired artifacts and owner
 contracts. Only requested Codex CLI enters consumers and owner profiles.
 Excluded Codex output retains installation history, emits no artifact or
-contract, and reports compatibility as not evaluated. Reject empty or
-unrepresentable bodies and managed-marker injection before returning desired
-output.
+contract, and reports compatibility as `NotEvaluated`. For emitted
+contributions, reject empty or unrepresentable bodies and managed-marker
+injection before returning desired output. These body and marker checks do not
+apply to excluded output.
 
 Derive a stable contribution ID as lowercase SHA-256 of the JSON tuple
 `("upskill-codex-contribution-v1", installation_id)`. Body, alias and source

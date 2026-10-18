@@ -605,6 +605,57 @@ fn effective_intent_and_profile_fail_with_typed_instructions_error_before_resolu
     );
 }
 
+// Catches Add-only profile preflight allowing Update to resolve an unavailable source.
+#[test]
+fn update_invalid_profile_rejects_before_resolving_missing_retained_source() {
+    use upskill::target::{CapabilityCategory, CapabilityError};
+    let dest = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    write_rule(source.path(), "Retained", "");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(&root, SourceRequest::Add(vec![add(source.path(), "alias")]));
+    let before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let instructions = std::fs::read(dest.path().join("AGENTS.md")).unwrap();
+    std::fs::remove_dir_all(source.path()).unwrap();
+    for profile in [
+        TargetProfile {
+            contract_revision: 2,
+            ..TargetSurface::CodexCli.profile()
+        },
+        TargetSurface::CodexIde.profile(),
+    ] {
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = writer(&scope);
+        let error = with_prepared_codex(
+            &scope,
+            &guard,
+            root.clone(),
+            SourceRequest::Update(Selection::Names(vec!["alias".into()])),
+            CodexSourceOptions {
+                profile,
+                ..options()
+            },
+            |_| -> anyhow::Result<()> { panic!("invalid Update profile reached callback") },
+        )
+        .err()
+        .expect("invalid Update profile must reject");
+        let typed = error.downcast_ref::<CapabilityError>().unwrap_or_else(|| {
+            panic!("expected typed profile error before source resolution: {error:#}")
+        });
+        assert_eq!(typed.key.category, CapabilityCategory::Instructions);
+        assert_eq!(typed.key.name, "profile");
+        assert_eq!(
+            std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+            before
+        );
+        assert_eq!(
+            std::fs::read(dest.path().join("AGENTS.md")).unwrap(),
+            instructions
+        );
+        assert!(!scope.has_pending_operation().unwrap());
+    }
+}
+
 // Catches partial application when a later captured source conflicts with incidental readers.
 #[test]
 fn later_incompatible_source_prevents_callback_and_all_writes() {
@@ -922,6 +973,8 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
         git(repo.path(), &["init", "--quiet", "--initial-branch=main"]);
         std::fs::create_dir(repo.path().join("item")).unwrap();
         write_rule(&repo.path().join("item"), "Initial", "");
+        std::fs::create_dir(repo.path().join("later")).unwrap();
+        write_rule(&repo.path().join("later"), "Later capture", "");
         commit(repo.path());
         std::fs::write(
             home.path().join(".gitconfig"),
@@ -1030,10 +1083,27 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
         );
         assert_eq!(resolved_revision, &git(&repo, &["rev-parse", "HEAD"]));
         assert_eq!(manifest_sha256.len(), 64);
+        // A separate selected Git item creates a second private capture. Only its
+        // revision changes below, so checking only the first capture must fail this test.
+        apply(
+            &root,
+            SourceRequest::Add(vec![AddRule {
+                source: InstallSource::Git(upskill::source::GitRepo {
+                    url: "https://example.invalid/codex-rules".into(),
+                    git_ref: Some("main".into()),
+                    subfolder: Some("later".into()),
+                }),
+                source_name: "source".into(),
+                installed_name: "later".into(),
+            }]),
+        );
+        assert_eq!(state(dest.path()).installations.len(), 2);
         let bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
         let output = std::fs::read(&output_path).unwrap();
         let scope = QualifiedScope::open(&root).unwrap();
         let guard = writer(&scope);
+        let trace_path = std::env::var_os("GIT_TRACE2_EVENT").unwrap();
+        std::fs::remove_file(&trace_path).unwrap();
         let result = with_prepared_codex(
             &scope,
             &guard,
@@ -1045,29 +1115,40 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
                 // leaving captured tree bytes unchanged so lower snapshot checks cannot catch it.
                 let trace =
                     std::fs::read_to_string(std::env::var_os("GIT_TRACE2_EVENT").unwrap()).unwrap();
-                let (metadata, tree) = trace
-                    .lines()
-                    .filter_map(|line| {
-                        let event: serde_json::Value = serde_json::from_str(line).ok()?;
-                        let argv = event.get("argv")?.as_array()?;
-                        let at = argv.iter().position(|a| a.as_str() == Some("--git-dir"))?;
-                        let wt = argv
-                            .iter()
-                            .position(|a| a.as_str() == Some("--work-tree"))?;
-                        Some((
-                            argv.get(at + 1)?.as_str()?.to_owned(),
-                            argv.get(wt + 1)?.as_str()?.to_owned(),
-                        ))
+                let mut captures = Vec::new();
+                for capture in trace.lines().filter_map(|line| {
+                    let event: serde_json::Value = serde_json::from_str(line).ok()?;
+                    let argv = event.get("argv")?.as_array()?;
+                    let at = argv.iter().position(|a| a.as_str() == Some("--git-dir"))?;
+                    let wt = argv
+                        .iter()
+                        .position(|a| a.as_str() == Some("--work-tree"))?;
+                    Some((
+                        argv.get(at + 1)?.as_str()?.to_owned(),
+                        argv.get(wt + 1)?.as_str()?.to_owned(),
+                    ))
+                }) {
+                    if !captures.contains(&capture) {
+                        captures.push(capture);
+                    }
+                }
+                assert_eq!(captures.len(), 2, "two distinct private Git captures");
+                let first_revision =
+                    git(&repo, &["--git-dir", &captures[0].0, "rev-parse", "HEAD"]);
+                let tree_before: Vec<_> = captures
+                    .iter()
+                    .map(|(_, tree)| {
+                        ["item/RULE.md", "later/RULE.md"]
+                            .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap())
                     })
-                    .next_back()
-                    .expect("recorded private Git metadata and work tree");
-                let tree_before = std::fs::read(Path::new(&tree).join("item/RULE.md")).unwrap();
-                let old = git(&repo, &["--git-dir", &metadata, "rev-parse", "HEAD"]);
+                    .collect();
+                let (metadata, _) = &captures[1];
+                let old = git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]);
                 let new = git(
                     &repo,
                     &[
                         "--git-dir",
-                        &metadata,
+                        metadata,
                         "-c",
                         "user.name=Test",
                         "-c",
@@ -1081,11 +1162,22 @@ fn git_updates_exclusions_and_revision_only_change_rejects_before_apply() {
                     ],
                 );
                 assert_ne!(old, new);
-                git(&repo, &["--git-dir", &metadata, "update-ref", "HEAD", &new]);
+                git(&repo, &["--git-dir", metadata, "update-ref", "HEAD", &new]);
                 assert_eq!(
-                    std::fs::read(Path::new(&tree).join("item/RULE.md")).unwrap(),
-                    tree_before
+                    git(&repo, &["--git-dir", &captures[0].0, "rev-parse", "HEAD"]),
+                    first_revision
                 );
+                assert_eq!(
+                    git(&repo, &["--git-dir", metadata, "rev-parse", "HEAD"]),
+                    new
+                );
+                for ((_, tree), before) in captures.iter().zip(tree_before) {
+                    assert_eq!(
+                        ["item/RULE.md", "later/RULE.md"]
+                            .map(|path| std::fs::read(Path::new(tree).join(path)).unwrap()),
+                        before
+                    );
+                }
                 prepared.apply()
             },
         );

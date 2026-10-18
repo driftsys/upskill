@@ -716,6 +716,115 @@ mod tests {
             legacy: None,
         }
     }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[test]
+    fn codex_pending_recovery_stops_invalid_options_and_missing_source_request() {
+        use crate::filesystem::execution::{ExecutionOutcome, TEST_HOOK};
+        for stale in [false, true] {
+            for defect in ["profile", "selection", "missing-source"] {
+                let dest = tempfile::tempdir().unwrap();
+                let root = InstallationRoot {
+                    scope: OwnershipScope::Project,
+                    path: dest.path().into(),
+                };
+                std::fs::write(dest.path().join("AGENTS.md"), b"Manual instructions.\n").unwrap();
+                let scope = QualifiedScope::open(&root).unwrap();
+                let guard = scope.try_lock_writer().unwrap();
+                let SessionOutcome::Ready(session) =
+                    LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+                else {
+                    panic!("expected initial session")
+                };
+                let PrepareOutcome::Ready(operation) = session
+                    .prepare_upsert(None, &[], ResourceExecutionPolicy::Disabled, |_| {
+                        Ok(CapturedUpsert::default())
+                    })
+                    .unwrap()
+                else {
+                    panic!("expected initial preparation")
+                };
+                TEST_HOOK.with(|hook| {
+                    *hook.borrow_mut() = Some(Box::new(|point, _| {
+                        if point == "after_initial_journal" {
+                            anyhow::bail!("interrupt before effects");
+                        }
+                        Ok(())
+                    }));
+                });
+                let interrupted = operation.apply();
+                TEST_HOOK.with(|hook| *hook.borrow_mut() = None);
+                assert!(
+                    interrupted
+                        .unwrap_err()
+                        .to_string()
+                        .contains("interrupt before effects")
+                );
+                assert!(scope.has_pending_operation().unwrap());
+                if stale {
+                    std::fs::write(
+                        dest.path().join(crate::lockfile::LOCKFILE_NAME),
+                        b"late unrelated state",
+                    )
+                    .unwrap();
+                }
+                let outcome = with_prepared_codex(
+                    &scope,
+                    &guard,
+                    root.clone(),
+                    SourceRequest::Add(vec![AddRule {
+                        source: InstallSource::LocalPath(dest.path().join("missing-source")),
+                        source_name: "source".into(),
+                        installed_name: "alias".into(),
+                    }]),
+                    CodexSourceOptions {
+                        targets: TargetSelection {
+                            invocation: if defect == "selection" {
+                                &[TargetSurface::ClaudeCli]
+                            } else {
+                                &[]
+                            },
+                            ..Default::default()
+                        },
+                        add_defaults: &[TargetSurface::CodexCli],
+                        profile: TargetProfile {
+                            contract_revision: if defect == "profile" { 2 } else { 1 },
+                            ..TargetSurface::CodexCli.profile()
+                        },
+                        execution: ResourceExecutionPolicy::Disabled,
+                    },
+                    |_| -> Result<()> { panic!("recovery must stop the new Codex request") },
+                )
+                .unwrap();
+                let OrchestrationOutcome::Recovery(report) = outcome else {
+                    panic!("pending recovery must precede {defect}")
+                };
+                if stale {
+                    assert!(matches!(report.outcome, ExecutionOutcome::Reconcile { .. }));
+                    assert_eq!(
+                        std::fs::read(dest.path().join(crate::lockfile::LOCKFILE_NAME)).unwrap(),
+                        b"late unrelated state"
+                    );
+                    assert!(scope.has_pending_operation().unwrap());
+                } else {
+                    assert_eq!(report.outcome, ExecutionOutcome::Complete);
+                    assert!(!scope.has_pending_operation().unwrap());
+                    let recovered = super::super::state::parse_state(
+                        &std::fs::read_to_string(dest.path().join(crate::lockfile::LOCKFILE_NAME))
+                            .unwrap(),
+                    )
+                    .unwrap();
+                    assert!(recovered.installations.is_empty());
+                    assert!(recovered.artifacts.is_empty());
+                }
+                assert_eq!(
+                    std::fs::read(dest.path().join("AGENTS.md")).unwrap(),
+                    b"Manual instructions.\n"
+                );
+                assert!(!dest.path().join("missing-source").exists());
+            }
+        }
+    }
+
     #[test]
     fn identity_framing_distinguishes_raw_roots_and_rejects_different_binding_collision() {
         let binding = binding();
