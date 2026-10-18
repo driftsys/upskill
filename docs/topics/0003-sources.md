@@ -193,8 +193,9 @@ Git's native global/system configuration, credential helpers, SSH and askpass.
 Revalidation checks the retained source tree and checkout revision without
 refreshing evidence. The boundary performs no destination observation,
 registration, output or backup writes. Preview uses supplied captured evidence
-and does not call this resolver. Discovery, applying command adapters, Codex
-qualification and schema-2 production activation remain pending.
+and does not call this resolver. Discovery, source-backed command orchestration,
+Codex qualification and schema-2 production activation remain pending. Captured
+applying adapters are described in the lifecycle planning topic.
 
 ## Architecture
 

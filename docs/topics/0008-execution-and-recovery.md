@@ -441,12 +441,13 @@ Validation results and tested source identities are retained in the
 
 The opt-in `lifecycle::application` boundary binds a complete owned-artifact
 plan to the combined state written by the same qualified execution request. It
-requires exact schema-1 evidence for migration, or explicit absence of state and
-backup for fresh initialization. The resulting state's artifact records must
-equal the planner output. The request is applied under the matching
-`QualifiedScope` writer guard. The existing executor creates the private
-exact-byte backup before output actions and uses its durable journal for
-state-last recovery.
+requires exact schema-1 state evidence when migrating an observed schema-1
+lockfile and requires the resulting state's artifact records to equal the
+planner output. The request is applied under the matching `QualifiedScope`
+writer guard. The existing executor creates the private exact-byte backup before
+output actions for that schema-1 migration and uses its durable journal for
+state-last recovery. Fresh initialization uses the origin-bound boundary below
+and journals backup absence instead of creating historical bytes.
 
 `lifecycle::application::recover` delegates to the same qualified executor
 recovery API under its matching writer guard. It does not perform inspection or
@@ -474,7 +475,11 @@ cannot change. A migrated backup must match the original digest/length and mode
 requires reconciliation rather than a guessed migration.
 
 This entrypoint reuses existing source/destination rechecks and checkpointed
-recovery. It does not recover before preparation, resolve sources or activate
-production commands. Those applying adapter responsibilities and complete Gate 5
-acceptance remain pending. See
+recovery. The
+[captured command adapter](0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+now recovers before state capture, retains session evidence and consumes its
+prepared operation through this bound writer. Recovery always stops the new
+request, including successful recovery; retry opens a new session. Source
+resolution, production activation and complete Gate 5 acceptance remain pending.
+See
 [AD-0038](https://github.com/driftsys/upskill/blob/main/docs/adr/0038-bind-lifecycle-origin-to-original-backup.md).

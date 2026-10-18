@@ -54,9 +54,11 @@ backup for unknown historical evidence.
 
 The origin is integrity evidence relative to the authoritative captured state,
 not authentication against someone editing both state and backup. Qualified
-snapshot, advisory lock and external namespace-race limits still apply. Source
-resolution, command preparation, complete lifecycle acceptance and Gate 6 native
-qualification remain separate work. No new dependency is introduced.
+snapshot, advisory lock and external namespace-race limits still apply. The
+[captured command adapter](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+now retains origin-bound session evidence and prepares consuming writes through
+this boundary. Source resolution, complete lifecycle acceptance and Gate 6
+native qualification remain separate work. No new dependency is introduced.
 
 Satisfies:
 [Durable lifecycle origin](../topics/0004-state-and-ownership.md#durable-lifecycle-origin).

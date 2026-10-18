@@ -736,9 +736,10 @@ tests were denied permissions. This is local completion evidence, not a merge or
 hosted qualification claim.
 
 Only this completed plan is archived. The Gate 5 umbrella remains active:
-source-resolution orchestration, preview, applying command adapters and complete
-lifecycle acceptance remain pending. Production commands and schema 1 stay
-unchanged. All other WIP retains its original paths and unresolved disposition.
+Source-backed command orchestration and complete lifecycle acceptance remain
+pending. Captured preview and applying adapters are implemented. Production
+commands and schema 1 stay unchanged. All other WIP retains its original paths
+and unresolved disposition.
 
 ## Read-only lifecycle preview
 
@@ -759,10 +760,10 @@ These are local completion checks, not merged or hosted qualification evidence.
 
 Only this completed bounded plan is archived. The
 [Gate 5 umbrella](../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
-remains active: applying command adapters, source-resolution orchestration and
-complete lifecycle acceptance remain pending. Production commands and schema 1
-stay unchanged. All other WIP retains its original paths and unresolved
-disposition.
+remains active: source-backed command orchestration and complete lifecycle
+acceptance remain pending. Captured applying adapters are implemented.
+Production commands and schema 1 stay unchanged. All other WIP retains its
+original paths and unresolved disposition.
 
 ## Selected lifecycle source resolution
 
@@ -776,3 +777,22 @@ inherited Git index confinement defect was reproduced and corrected before
 delivery. Hosted final-head checks remain separate evidence. Command
 orchestration and whole-lane acceptance remain under the active Gate 5 umbrella;
 production commands remain on schema 1.
+
+## Lifecycle origin and captured command adapters
+
+The [origin plan](plans/2026-10-18-lifecycle-state-origin.md) is retained after
+its bounded delivery in PR #314, merged as
+`77181b90222473345dab6b46a3665828649361b9`. Its durable records are
+[AD-0038](../adr/0038-bind-lifecycle-origin-to-original-backup.md),
+[origin state](../topics/0004-state-and-ownership.md#durable-lifecycle-origin),
+[bound application](../topics/0008-execution-and-recovery.md#origin-bound-lifecycle-application)
+and the [validation note](../technotes/m1-lifecycle-state-origin.md).
+
+The [captured adapter plan](plans/2026-10-18-lifecycle-commands.md) is retained
+after local implementation and independent review. Its durable successors are
+the
+[adapter design](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+and [validation note](../technotes/m1-captured-lifecycle-commands.md). The
+shared Gate 5 umbrella and completion lane remain active for source-backed
+command orchestration and full lifecycle acceptance. Production writes remain on
+schema 1 pending Gate 6 qualification.

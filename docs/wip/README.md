@@ -68,9 +68,10 @@ references must be reconciled as part of that feature's review.
   its [validation limits](../technotes/m1-lifecycle-preview.md) distinguish
   supplied evidence from qualified application authority. Selected local/Git
   rule-source resolution and retained captures are implemented; see the
-  [validation record](../technotes/m1-gate5-sources-validation.md). Command
-  orchestration, applying adapters and complete lifecycle acceptance remain
-  pending. Gate 5 remains incomplete; production activation remains Gate 6.
+  [validation record](../technotes/m1-gate5-sources-validation.md).
+  Source-backed command orchestration and complete lifecycle acceptance remain
+  pending; captured applying adapters are implemented as described below. Gate 5
+  remains incomplete; production activation remains Gate 6.
 
 - Origin/fresh-state prerequisite: the bounded
   [origin plan](../archive/plans/2026-10-18-lifecycle-state-origin.md) is
@@ -85,6 +86,14 @@ references must be reconciled as part of that feature's review.
   [completion lane](plans/2026-10-18-gate5-completion.md) remain active; their
   presence is accepted within this bounded delivery under the user's delegated
   Gate 5 sequencing. All other WIP retains its original paths and disposition.
+
+- Captured command adapters: the bounded
+  [plan](../archive/plans/2026-10-18-lifecycle-commands.md) is archived after
+  local verification and independent review. The
+  [adapter design](../topics/0005-lifecycle-planning.md#captured-lifecycle-command-adapters)
+  and [validation record](../technotes/m1-captured-lifecycle-commands.md)
+  describe the inactive library boundary. Source-backed command orchestration
+  and complete lifecycle acceptance remain active under the shared umbrella.
 
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)
   — opt-in library implementation and durable records; hosted Linux/macOS
