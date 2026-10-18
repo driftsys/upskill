@@ -278,7 +278,7 @@ fn produce(request: CodexInstructionRequest<'_>) -> Result<CompiledCodexInstruct
     Ok(CompiledCodexInstructions { desired, readers })
 }
 
-/// Stable identity shared by production and retained representation validation.
+/// Stable identity shared by the producer and retained representation validation.
 pub(crate) fn contribution_id(installation_id: &str) -> Result<String> {
     Ok(content_hash(&serde_json::to_vec(&(
         "upskill-codex-contribution-v1",

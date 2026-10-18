@@ -50,10 +50,11 @@ exactly one observation per affected location. The combined result preserves
 manual bytes, aggregate modes, no-op actions and interleaved prior record order;
 cross-form collisions and affected ancestor paths conflict. Current commands do
 not invoke this coordinator. The opt-in source-backed rule library adapter now
-connects captured-rule desired sets to lifecycle planning, qualified
-source/destination evidence, combined state and guarded execution/recovery.
-Production commands retain schema 1; production activation and native Codex
-qualification remain Gate 6 work. See the
+connects historical and explicitly selected Codex rule desired sets to lifecycle
+planning, qualified source/destination evidence, combined state and guarded
+execution/recovery. The Codex library route exposes reader reports separately
+from ownership; it adds no CLI flag. Production commands retain schema 1;
+production activation and native Codex qualification remain Gate 6 work. See the
 [mixed owned-artifact planning specification](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans).
 
 ## Global flags
@@ -451,9 +452,11 @@ prerequisite adds no command. A separate pure
 [Codex instruction producer](topics/0002-generation.md#captured-codex-instruction-boundary)
 now supports an explicitly supplied Codex CLI revision-1 rule contract. It is
 library-only: existing commands have no Codex selection flag. Shared readers are
-reported separately from ownership; source integration and native qualification
-remain pending. The separate pure whole-file planner is implemented as described
-in the
+reported separately from ownership. The opt-in library `with_prepared_codex`
+route now resolves selected local/Git rule sources, exposes complete reader
+reports and applies guarded add/update/remove operations. It requires exactly
+Codex CLI revision 1; native qualification and production activation remain
+pending. The separate pure whole-file planner is implemented as described in the
 [specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
 The separate
 [captured item compiler](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation)

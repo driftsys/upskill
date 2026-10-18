@@ -8,16 +8,23 @@ use sha2::{Digest, Sha256};
 use super::commands::{
     CapturedUpsert, CommandDiagnostic, LifecycleSession, PrepareOutcome, SessionOutcome,
 };
+use super::contracts::{ConsumerContract, ContractContent};
 use super::desired::CompilerBinding;
+use super::desired::codex::{InstructionReaderReport, contribution_id};
 use super::selection::{Selection, SelectionDiagnostic, SelectionOutcome, select_owned_nodes};
-use super::sources::{ResolvedRuleSource, RuleSourceBinding, normalized_source_label};
+use super::sources::{
+    CodexSourceBinding, ResolvedRuleSource, RuleSourceBinding, normalized_source_label,
+};
 use super::state::{CombinedState, Installation, Reference};
 use crate::files::permissions::ResourceExecutionPolicy;
 use crate::filesystem::{ExecutionReport, QualifiedScope, ScopeWriterGuard};
-use crate::ownership::{ArtifactContent, InstallationRoot};
+use crate::instructions::plan::InstructionLocation;
+use crate::ownership::{ArtifactContent, InstallationRoot, OwnershipScope};
 use crate::pipeline::ItemKind;
 use crate::source::{InstallSource, parse_install_source_label};
-use crate::target::{TargetProfile, TargetSurface};
+use crate::target::{
+    CapabilityCategory, CapabilityError, CapabilityKey, TargetProfile, TargetSurface,
+};
 
 /// Nonempty selections override lower-precedence selections. Empty means absent.
 #[derive(Debug, Clone, Copy, Default)]
@@ -80,11 +87,24 @@ pub enum OrchestrationOutcome<T = ExecutionReport> {
     Blocked(Vec<CommandDiagnostic>),
 }
 
+/// Complete newly compiled instruction exposure for one installation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceInstructionReaders {
+    pub installation_id: String,
+    pub report: InstructionReaderReport,
+}
+
 /// An opaque source-bound operation. No replacement state or output is accepted.
 pub struct SourcePrepared<'a> {
+    instruction_readers: Vec<SourceInstructionReaders>,
     apply: Box<dyn FnOnce() -> Result<ExecutionReport> + 'a>,
 }
 impl SourcePrepared<'_> {
+    /// Complete newly compiled reader reports, separate from recorded ownership.
+    pub fn instruction_readers(&self) -> &[SourceInstructionReaders] {
+        &self.instruction_readers
+    }
+
     /// Revalidate retained captures, including Git identity, immediately before apply.
     pub fn apply(self) -> Result<ExecutionReport> {
         (self.apply)()
@@ -120,10 +140,82 @@ pub fn with_prepared<T>(
     options: SourceOptions<'_>,
     use_prepared: impl FnOnce(SourcePrepared<'_>) -> Result<T>,
 ) -> Result<OrchestrationOutcome<T>> {
-    let SourceOptions {
+    with_prepared_route(
+        scope,
+        guard,
+        root,
+        request,
+        RouteOptions {
+            targets: options.targets,
+            add_defaults: options.add_defaults,
+            route: SourceRoute::Historical(options.compiler),
+        },
+        use_prepared,
+    )
+}
+
+/// Explicit authority for captured Codex CLI revision-1 source compilation.
+pub struct CodexSourceOptions<'a> {
+    pub targets: TargetSelection<'a>,
+    pub add_defaults: &'a [TargetSurface],
+    pub profile: TargetProfile,
+    pub execution: ResourceExecutionPolicy,
+}
+
+/// Prepare selected Codex instruction sources and expose their complete readers.
+/// A qualified declared user root does not certify native HOME/CODEX_HOME loading.
+pub fn with_prepared_codex<T>(
+    scope: &QualifiedScope,
+    guard: &ScopeWriterGuard<'_>,
+    root: InstallationRoot,
+    request: SourceRequest,
+    options: CodexSourceOptions<'_>,
+    use_prepared: impl FnOnce(SourcePrepared<'_>) -> Result<T>,
+) -> Result<OrchestrationOutcome<T>> {
+    with_prepared_route(
+        scope,
+        guard,
+        root,
+        request,
+        RouteOptions {
+            targets: options.targets,
+            add_defaults: options.add_defaults,
+            route: SourceRoute::Codex {
+                profile: options.profile,
+                execution: options.execution,
+            },
+        },
+        use_prepared,
+    )
+}
+
+#[derive(Clone, Copy)]
+enum SourceRoute<'a> {
+    Historical(&'a CompilerContext),
+    Codex {
+        profile: TargetProfile,
+        execution: ResourceExecutionPolicy,
+    },
+}
+
+struct RouteOptions<'a> {
+    targets: TargetSelection<'a>,
+    add_defaults: &'a [TargetSurface],
+    route: SourceRoute<'a>,
+}
+
+fn with_prepared_route<T>(
+    scope: &QualifiedScope,
+    guard: &ScopeWriterGuard<'_>,
+    root: InstallationRoot,
+    request: SourceRequest,
+    options: RouteOptions<'_>,
+    use_prepared: impl FnOnce(SourcePrepared<'_>) -> Result<T>,
+) -> Result<OrchestrationOutcome<T>> {
+    let RouteOptions {
         targets,
         add_defaults,
-        compiler,
+        route,
     } = options;
     let session = match LifecycleSession::open(scope, guard, root.clone())? {
         SessionOutcome::Recovery(report) => return Ok(OrchestrationOutcome::Recovery(report)),
@@ -134,11 +226,25 @@ pub fn with_prepared<T>(
             PrepareOutcome::Blocked(diagnostics) => Ok(OrchestrationOutcome::Blocked(diagnostics)),
             PrepareOutcome::Ready(prepared) => {
                 Ok(OrchestrationOutcome::Ready(use_prepared(SourcePrepared {
+                    instruction_readers: vec![],
                     apply: Box::new(move || prepared.apply()),
                 })?))
             }
         };
     }
+    if let SourceRoute::Codex { profile, .. } = route {
+        if profile != TargetSurface::CodexCli.profile() {
+            return Err(codex_capability(
+                profile.surface,
+                "profile",
+                "only Codex CLI contract revision 1 is supported",
+            ));
+        }
+    }
+    let execution = match route {
+        SourceRoute::Historical(compiler) => compiler.execution,
+        SourceRoute::Codex { execution, .. } => execution,
+    };
     let is_add = matches!(&request, SourceRequest::Add(_));
     let mut specs = Vec::new();
     let mut bindings = Vec::new();
@@ -156,7 +262,7 @@ pub fn with_prepared<T>(
                 SelectionOutcome::Ready(selected) => selected,
             };
             for id in &selected.installation_ids {
-                ensure_source_rule_owner(session.state(), id)?;
+                ensure_source_rule_owner(session.state(), id, route)?;
             }
             // Selection and representation preflight is complete; validate targets
             // and parse the recorded binding for each installation.
@@ -172,7 +278,7 @@ pub fn with_prepared<T>(
                     source_name: item.owner.source_name.clone(),
                     installed_name: item.owner.installed_name.clone(),
                     root: item.root.clone(),
-                    targets: effective_targets(targets, &item.requested)?,
+                    targets: route_targets(route, targets, &item.requested)?,
                 });
                 specs.push(parse_install_source_label(&item.owner.source)?);
             }
@@ -183,7 +289,7 @@ pub fn with_prepared<T>(
                 !items.is_empty(),
                 "add requires at least one selected rule root"
             );
-            let requested = effective_targets(targets, add_defaults)?;
+            let requested = route_targets(route, targets, add_defaults)?;
             let mut aliases = std::collections::BTreeSet::new();
             for item in items {
                 ensure!(
@@ -208,7 +314,7 @@ pub fn with_prepared<T>(
                     .iter()
                     .filter(|prior| prior.owner.installed_name == item.installed_name)
                 {
-                    ensure_source_rule_owner(session.state(), &prior.owner.installation_id)?;
+                    ensure_source_rule_owner(session.state(), &prior.owner.installation_id, route)?;
                 }
             }
             for item in items {
@@ -305,53 +411,76 @@ pub fn with_prepared<T>(
         .iter()
         .map(|capture| capture.snapshot())
         .collect::<Vec<_>>();
-    let prepared =
-        session.prepare_upsert(selection.as_ref(), &snapshots, compiler.execution, |_| {
-            let mut request = CapturedUpsert::default();
-            for (binding, capture) in bindings.iter().zip(&captures) {
-                let compiler_bindings = compiler
-                    .bindings
-                    .iter()
-                    .filter_map(|value| {
-                        let consumers = value
-                            .consumers
-                            .iter()
-                            .copied()
-                            .filter(|surface| binding.targets.contains(surface))
-                            .collect::<Vec<_>>();
-                        (!consumers.is_empty()).then_some(CompilerBinding {
-                            client: value.client,
-                            consumers,
+    let mut instruction_readers = Vec::new();
+    let prepared = session.prepare_upsert(selection.as_ref(), &snapshots, execution, |_| {
+        let mut request = CapturedUpsert::default();
+        for (binding, capture) in bindings.iter().zip(&captures) {
+            let compiled = match route {
+                SourceRoute::Historical(compiler) => {
+                    let compiler_bindings = compiler
+                        .bindings
+                        .iter()
+                        .filter_map(|value| {
+                            let consumers = value
+                                .consumers
+                                .iter()
+                                .copied()
+                                .filter(|surface| binding.targets.contains(surface))
+                                .collect::<Vec<_>>();
+                            (!consumers.is_empty()).then_some(CompilerBinding {
+                                client: value.client,
+                                consumers,
+                            })
                         })
-                    })
-                    .collect::<Vec<_>>();
-                let compiled = capture.compile(RuleSourceBinding {
-                    installation_id: &binding.id,
-                    expected_source_name: &binding.source_name,
-                    installed_name: &binding.installed_name,
-                    root: &binding.root,
-                    requested: &binding.targets,
-                    bindings: &compiler_bindings,
-                    profiles: &compiler.profiles,
-                })?;
-                request.sets.push(compiled.set);
-                request.contracts.extend(compiled.contracts);
-                if is_add {
-                    let edge = Reference::DirectInstallation {
+                        .collect::<Vec<_>>();
+                    capture.compile(RuleSourceBinding {
+                        installation_id: &binding.id,
+                        expected_source_name: &binding.source_name,
+                        installed_name: &binding.installed_name,
+                        root: &binding.root,
+                        requested: &binding.targets,
+                        bindings: &compiler_bindings,
+                        profiles: &compiler.profiles,
+                    })?
+                }
+                SourceRoute::Codex { profile, .. } => {
+                    let location = instruction_location(&binding.root);
+                    let compiled = capture.compile_codex(CodexSourceBinding {
+                        installation_id: &binding.id,
+                        expected_source_name: &binding.source_name,
+                        installed_name: &binding.installed_name,
+                        root: &binding.root,
+                        requested: &binding.targets,
+                        profile,
+                        location: &location,
+                    })?;
+                    instruction_readers.push(SourceInstructionReaders {
                         installation_id: binding.id.clone(),
-                    };
-                    if !session.state().references.contains(&edge) {
-                        request.add_references.push(edge);
-                    }
+                        report: compiled.readers,
+                    });
+                    compiled.desired
+                }
+            };
+            request.sets.push(compiled.set);
+            request.contracts.extend(compiled.contracts);
+            if is_add {
+                let edge = Reference::DirectInstallation {
+                    installation_id: binding.id.clone(),
+                };
+                if !session.state().references.contains(&edge) {
+                    request.add_references.push(edge);
                 }
             }
-            Ok(request)
-        })?;
+        }
+        Ok(request)
+    })?;
+    instruction_readers.sort_by(|a, b| a.installation_id.cmp(&b.installation_id));
     let captures = &captures;
     match prepared {
         PrepareOutcome::Blocked(diagnostics) => Ok(OrchestrationOutcome::Blocked(diagnostics)),
         PrepareOutcome::Ready(prepared) => {
             Ok(OrchestrationOutcome::Ready(use_prepared(SourcePrepared {
+                instruction_readers,
                 apply: Box::new(move || {
                     for capture in captures {
                         capture.verify_unchanged()?;
@@ -363,19 +492,137 @@ pub fn with_prepared<T>(
     }
 }
 
-fn ensure_source_rule_owner(state: &CombinedState, id: &str) -> Result<()> {
-    ensure!(
-        !state.artifacts.iter().any(|artifact| {
-            matches!(
-                artifact.content,
-                ArtifactContent::MarkdownContribution { .. }
-            ) && artifact
+fn codex_capability(
+    surface: TargetSurface,
+    name: &'static str,
+    reason: &'static str,
+) -> anyhow::Error {
+    CapabilityError {
+        surface,
+        key: CapabilityKey::new(CapabilityCategory::Instructions, name),
+        reason,
+    }
+    .into()
+}
+
+fn route_targets(
+    route: SourceRoute<'_>,
+    selection: TargetSelection<'_>,
+    fallback: &[TargetSurface],
+) -> Result<Vec<TargetSurface>> {
+    let requested = effective_targets(selection, fallback);
+    if matches!(route, SourceRoute::Codex { .. })
+        && !matches!(&requested, Ok(values) if values == &[TargetSurface::CodexCli])
+    {
+        return Err(codex_capability(
+            TargetSurface::CodexCli,
+            "selection",
+            "exactly one intentional Codex CLI surface is required",
+        ));
+    }
+    requested
+}
+
+fn instruction_location(root: &InstallationRoot) -> InstructionLocation {
+    InstructionLocation {
+        root: root.clone(),
+        path: match root.scope {
+            OwnershipScope::Project => "AGENTS.md",
+            OwnershipScope::User => ".codex/AGENTS.md",
+        }
+        .into(),
+    }
+}
+
+fn ensure_source_rule_owner(state: &CombinedState, id: &str, route: SourceRoute<'_>) -> Result<()> {
+    let item = state
+        .installations
+        .iter()
+        .find(|item| item.owner.installation_id == id)
+        .context("selected installation is missing")?;
+    let artifacts = state
+        .artifacts
+        .iter()
+        .filter(|artifact| {
+            artifact
                 .owners
                 .iter()
                 .any(|owner| owner.installation_id == id)
-        }),
-        "instruction-backed installation requires the captured instruction adapter"
+        })
+        .collect::<Vec<_>>();
+    if matches!(route, SourceRoute::Historical(_)) {
+        ensure!(
+            !item
+                .requested
+                .iter()
+                .any(|target| target.family() == TargetSurface::CodexCli.family())
+                && !artifacts.iter().any(|artifact| matches!(
+                    artifact.content,
+                    ArtifactContent::MarkdownContribution { .. }
+                )),
+            "instruction-backed installation requires the captured instruction adapter"
+        );
+        return Ok(());
+    }
+    ensure!(
+        item.owner.kind == ItemKind::Rule && item.requested == [TargetSurface::CodexCli],
+        "retained installation requires an exact Codex CLI rule binding"
     );
+    ensure!(
+        artifacts.len() <= 1,
+        "retained Codex installation requires zero or one canonical contribution"
+    );
+    let location = instruction_location(&item.root);
+    for artifact in artifacts {
+        let ArtifactContent::MarkdownContribution { contribution } = &artifact.content else {
+            anyhow::bail!("retained Codex installation cannot convert whole-file ownership");
+        };
+        ensure!(
+            artifact.root.scope == item.root.scope
+                && artifact.root.path.as_os_str() == item.root.path.as_os_str()
+                && artifact.path == location.path,
+            "retained Codex contribution requires the canonical destination"
+        );
+        ensure!(
+            artifact.owners.len() == 1 && contribution.id == contribution_id(id)?,
+            "retained Codex contribution requires its producer identity and sole installation ownership"
+        );
+        let association = state
+            .owner_consumers
+            .iter()
+            .find(|value| {
+                value.installation_id == id
+                    && value.root.scope == item.root.scope
+                    && value.root.path.as_os_str() == item.root.path.as_os_str()
+                    && value.path == location.path
+                    && value.contribution_id.as_deref() == Some(&contribution.id)
+            })
+            .context("retained Codex contribution is missing owner consumers")?;
+        ensure!(
+            association.consumers == [TargetSurface::CodexCli],
+            "retained Codex owner consumers must be exactly Codex CLI"
+        );
+        let contract = state
+            .owner_contracts
+            .iter()
+            .find(|value| {
+                value.installation_id == id
+                    && value.root.scope == item.root.scope
+                    && value.root.path.as_os_str() == item.root.path.as_os_str()
+                    && value.path == location.path
+                    && value.contribution_id.as_deref() == Some(&contribution.id)
+            })
+            .context("retained Codex contribution is missing its owner contract")?;
+        ensure!(
+            contract.profiles
+                == [ConsumerContract {
+                    surface: TargetSurface::CodexCli,
+                    contract_revision: 1
+                }]
+                && matches!(&contract.content, ContractContent::Instruction { content_sha256 } if content_sha256 == &contribution.content_sha256),
+            "retained Codex owner contract must match revision 1"
+        );
+    }
     Ok(())
 }
 

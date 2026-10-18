@@ -527,8 +527,12 @@ resolved source metadata. `CapturedRuleSource::compile` accepts an explicit
 installation binding, compiler consumers and target profiles, and produces a
 complete desired set with matching owner contracts. Requested branches, tags and
 full commit SHAs become the actual immutable checkout commit in installation
-evidence. Supported compiler families remain Claude, Copilot and OpenCode; Codex
-compiler surfaces are rejected until Gate 6.
+evidence. This historical compiler supports Claude, Copilot and OpenCode. The
+explicit `CapturedRuleSource::compile_codex` path accepts a `CodexSourceBinding`
+for exactly Codex CLI contract revision 1 and returns desired instruction
+contributions, owner contracts and the complete location reader report. Both
+compilers construct source evidence from the retained capture and revalidate the
+original tree and actual checkout revision before compilation.
 
 The retained `snapshot()` can be supplied to later executor revalidation.
 `verify_unchanged()` samples the original source tree and checkout revision
@@ -593,3 +597,35 @@ before consuming the captured command operation, it verifies the original tree
 and actual Git revision for every capture. The opaque preparation accepts no
 replacement source or compiled output. This connects compiler-produced rule sets
 to existing execution without changing preview or production dispatch.
+
+#### Explicit Codex source integration
+
+`lifecycle::orchestration::with_prepared_codex` resolves selected rule roots
+using `CodexSourceOptions`: target precedence inputs, add defaults, one explicit
+profile and resource execution policy. The effective selection must be exactly
+`[CodexCli]`, and the profile must be Codex CLI revision 1. Unsupported profile
+or selection returns an Instructions `CapabilityError` before any source
+resolution. Recovery and recorded removal run before adapter validation.
+
+The destination follows the declared installation root: project `AGENTS.md` or
+user `.codex/AGENTS.md`. Qualified access to a declared user root does not
+identify real `HOME`/`CODEX_HOME` or certify native loading. Generic project
+rules must agree across all five declared readers; global rules have two Codex
+readers and may use a Codex-only audience. Audience-excluded rules retain source
+history without output and still expose a complete NotEvaluated reader report.
+
+`SourcePrepared::instruction_readers()` borrows reports sorted by installation
+identity. Reports are presentation data: only desired sets, owner contracts and
+direct references enter the captured upsert. The callback may clone the reports,
+discard preparation or consume `apply()`. Historical and remove preparations
+have no newly compiled reports. All captures, including actual Git revisions,
+are checked again immediately before application without refreshing evidence.
+
+The separate opt-in route rejects unsupported retained representations and
+cross-adapter conversion before resolving any selected source. Production
+commands, schema 1 and client defaults remain unchanged. Native qualification,
+all-kind adapters, conflict aggregation and activation remain later gates.
+Acceptance examples are in
+[`lifecycle_codex_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_sources.rs)
+and
+[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
