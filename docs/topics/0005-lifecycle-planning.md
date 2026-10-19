@@ -123,9 +123,11 @@ planner's preservation contract.
 This inactive pure boundary provides no source authenticity, qualified
 filesystem or native authority. The separate shared entrypoint is specified in
 [explicit shared-output reconciliation](0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation).
-Full diagnostic aggregation and production CLI precedence remain pending. Opt-in
-inspection and preview provide observational adapters. Guarded backup,
-application and recovery are available through the opt-in
+This pure API retains first-error results; the opt-in session layer supplies
+[complete selected-set reporting](#421-complete-selected-set-preflight-reporting).
+Production CLI precedence remains pending. Opt-in inspection and preview provide
+observational adapters. Guarded backup, application and recovery are available
+through the opt-in
 [application boundary](0008-execution-and-recovery.md#guarded-lifecycle-application).
 Production schema and commands stay unchanged. See the
 [lifecycle upsert design](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert).
@@ -705,9 +707,10 @@ physical-containment or native authority.
 #### Boundary limits and later work
 
 These supplied-value boundaries plan supported rule outputs and explicit shared
-reconciliation. Graph and artifact errors currently report the first error; full
-operation-level conflict aggregation remains pending. The
-[captured command adapter](#captured-lifecycle-command-adapters) connects
+reconciliation. Their graph and artifact APIs retain first-error results. The
+opt-in session layer provides
+[complete safely observable selected-set reporting](#421-complete-selected-set-preflight-reporting).
+The [captured command adapter](#captured-lifecycle-command-adapters) connects
 supplied source snapshots, qualified destinations and guarded application. The
 [source-backed adapter](#source-backed-lifecycle-orchestration) now resolves
 explicit rule roots and applies invocation/configuration/recorded target
@@ -814,8 +817,10 @@ state write and backup, which remain guarded application responsibilities.
 Selection blockers return `PreviewOutcome::Blocked` with the existing typed
 diagnostics and no partial actions. Invalid state, missing/edited output
 evidence, and graph/artifact conflicts return an error without a successful
-partial preview. The underlying planners retain their first-error behavior;
-operation-wide conflict aggregation is not introduced here. Unrelated typed
+partial preview. The underlying planners retain their first-error behavior; this
+preview does not introduce operation-wide conflict aggregation. Applying
+source/session reporting has its
+[own contract](#421-complete-selected-set-preflight-reporting). Unrelated typed
 legacy/native rows survive in the proposed state, and unknown original schema-1
 fields remain available in the retained bytes rather than the typed projection.
 
@@ -1028,6 +1033,109 @@ bytes and actual Git revision. Local/Git project/user examples, stable exclusion
 and reinclusion, complete preflight failures, manual bytes/modes, and a
 revision-only private-checkout mutation are covered by
 [`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
-Production commands and schema 1 remain unchanged; all-kind adapters, native
-qualification, conflict aggregation, activation and staging accounting in #316
-remain separate gates.
+Production commands and schema 1 remain unchanged; native qualification,
+all-kind compatibility, activation and staging accounting in #316 remain
+separate gates. Complete independently observable preflight reporting is
+implemented at the opt-in library boundary described below.
+
+<a id="421-complete-selected-set-preflight-reporting"></a>
+
+## Complete selected-set preflight reporting
+
+### Requirements
+
+Source-backed Add and Update collect independently observable binding,
+resolution, source-capture, compilation, capability, destination and ownership
+failures across the complete selected set. An invalid source does not hide
+conflicts in independently compiled sources. An item that fails one preparation
+stage supplies no speculative downstream destination diagnostics.
+
+Root qualification, writer-lock acquisition, recovery, invalid authoritative
+state and unsafe destination observation remain operation-level boundaries.
+Recovery stops the new request. Invalid retained root or representation
+authority is rejected before selected sources are resolved. Collection stops
+when safe inspection cannot proceed; a report is complete only for observations
+that can be obtained safely. The existing selection blockers retain their own
+typed outcomes.
+
+A blocked request cannot invoke the prepared callback, create a new operation
+journal, publish outputs, migrate state or execute a successful subset. Valid
+sharing remains permitted under the existing complete owner-contract agreement.
+Retained owners, manual instruction text, exact modes, unrelated references and
+schema-1 backup evidence remain protected by the existing planner and executor.
+
+### Architecture and report contract
+
+`CommandDiagnostic::Preflight(PreflightReport)` carries structured diagnostics
+and available compiled instruction-reader reports inside the existing `Blocked`
+outcome. Diagnostics contain installation participants, category, optional
+location and explanatory text. Participant IDs are sorted and deduplicated.
+Diagnostics sort by participant IDs, then category in the order Binding,
+Resolution, Capture, Compilation, Capability, Destination, Ownership; ties sort
+by scope, raw root, relative path and message. Only exact diagnostic records are
+deduplicated. Error wording is descriptive rather than a stable machine code.
+
+Update diagnostics use recorded installation IDs. Add diagnostics normally use
+the same normalized requested binding as installation identity. If normalization
+fails, tuple framing of the original requested source label supplies a
+report-only identity; it never establishes source evidence or persisted state.
+Duplicate selected aliases or identities are reported without choosing a winner.
+Their invalid desired topology is excluded consistently before observation and
+reporting; their recorded prior ownership remains protected.
+
+Structural and reserved-path checks precede filesystem observation. Conflicting
+locations are excluded from observation; unrelated safe locations remain
+inspectable. The qualified session captures their union once and selects modes
+before comparing desired file contracts. Location-level reporting retains every
+recorded owner, consumer association and contract at that location, including
+owners whose selected source failed preparation. It reuses shared ownership and
+physical planning checks without constructing an applying operation. Structural
+failures suppress speculative content diagnostics at their locations. A mode
+failure likewise suppresses diagnostics that depend on a usable desired mode.
+
+A complete captured request projects its authorized reference edits before
+location reporting so explicitly retired owners do not appear as untouched
+survivors. Duplicate bindings prevent that projection; failed-source subset
+reporting never infers retirements. Only a complete clean request enters opaque
+preparation. It retains the qualified destination snapshot through application,
+which still revalidates metadata, source bytes, Git revisions and destinations.
+Pure planners retain their first-error APIs; independent diagnostic collection
+belongs to the orchestration/session boundary.
+
+Compiled reader inventories sort by installation ID on blocked and ready
+outcomes. Excluded content retains its NotEvaluated report; failed compilation
+creates no report. Potential incidental readers grant no ownership, consumer
+association, contract, reference or execution authority. Historical compilation
+and recorded removal introduce no new instruction-reader inventory.
+
+### Executable examples and limits
+
+The following integration examples pin the reporting contract:
+
+- `invalid_source_does_not_hide_two_destination_conflicts` reports one
+  resolution failure and two independent occupied destinations, with no callback
+  or effects.
+- `unchanged_selection_does_not_hide_changed_conflict` retains a source-label
+  parse failure alongside changed and unchanged selected-source conflicts and an
+  exact unselected survivor.
+- `complete_conflict_inventory`, `mixed_artifact_and_sharing_conflict_matrix`
+  and `duplicate_binding_does_not_hide_disjoint_conflicts` pin complete
+  participant inventories, mixed artifacts and independent conflict groups.
+- `compatible_shared_files_and_distinct_contributions_have_no_conflicts` pins
+  legal identical file sharing and distinct instruction contributions.
+- `blocked_preflight_keeps_excluded_and_incidental_readers` pins both compiled
+  reader roles and unchanged retained ownership.
+- `instruction_mode_failure_does_not_hide_an_independent_source_failure` pins
+  special-mode rejection alongside an independently failed source.
+
+Run
+`cargo test --test lifecycle_preflight --test lifecycle_orchestration
+--test lifecycle_codex_orchestration --test lifecycle_commands`
+to exercise these examples and the existing capture/authority regressions.
+Process and special-mode fixtures require an environment that permits their OS
+operations.
+
+This is library-only G6-03 reporting support. Production commands still use
+schema 1; production schema-2 migration, all-kind compatibility, native client
+qualification and activation remain separate gates. The roadmap remains Gate 6,
+then owned-skill lifecycle support, then automatic maintenance.

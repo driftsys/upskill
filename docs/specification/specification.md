@@ -391,6 +391,12 @@ See
 [Explicit shared-output reconciliation](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation)
 for the canonical requirements and architecture.
 
+### 4.21 Complete selected-set preflight reporting
+
+See
+[Complete selected-set preflight reporting](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting)
+for the opt-in library diagnostic contract and its production activation limits.
+
 ## 5. Source format and authentication
 
 Source format: see [§2.1](#21-add).

@@ -294,7 +294,10 @@ fn reserved_destinations_and_unbound_sources_are_rejected_before_effects() {
                     file.location.path = path.into();
                     Ok(request)
                 })
-                .is_err()
+                .is_ok_and(|outcome| match outcome {
+                    PrepareOutcome::Blocked(diagnostics) => matches!(&diagnostics[..], [CommandDiagnostic::Preflight(report)] if report.diagnostics.len() == 1 && report.diagnostics[0].location.as_ref().is_some_and(|location| location.path == path)),
+                    _ => false,
+                })
         );
     }
     assert_eq!(std::fs::read_dir(&root.path).unwrap().count(), 0);
@@ -1199,4 +1202,505 @@ fn generated_and_resource_paths_keep_distinct_selected_modes_and_contracts() {
             expected
         );
     }
+}
+
+// Preflight must account for authorized graph retirement rather than treating the
+// old owner as an unselected survivor. Pin direct and bundle-root replacement.
+#[test]
+fn complete_preflight_allows_authorized_owner_replacement() {
+    for bundled in [false, true] {
+        let dest = tempfile::tempdir().unwrap();
+        let source_dir = tempfile::tempdir().unwrap();
+        std::fs::write(source_dir.path().join("RULE.md"), b"captured").unwrap();
+        let root = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: dest.path().into(),
+        };
+        let source_scope = QualifiedScope::open(&InstallationRoot {
+            path: source_dir.path().into(),
+            ..root.clone()
+        })
+        .unwrap();
+        let source = source_scope.observe_source_tree().unwrap();
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let SessionOutcome::Ready(session) =
+            LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+        else {
+            panic!()
+        };
+        let mut initial = supplied(&root, &source, b"original");
+        if bundled {
+            initial.bundles.push(BundleNode {
+                id: "bundle".into(),
+                source: "./bundle".into(),
+                source_revision: None,
+                name: "bundle".into(),
+            });
+            initial.add_references = vec![
+                Reference::DirectBundle {
+                    bundle_id: "bundle".into(),
+                },
+                Reference::BundleInstallation {
+                    bundle_id: "bundle".into(),
+                    installation_id: "owner".into(),
+                },
+            ];
+        }
+        let mut survivor = supplied(&root, &source, b"survivor").sets.remove(0);
+        survivor.installation.owner.installation_id = "survivor".into();
+        survivor.installation.owner.installed_name = "survivor".into();
+        let DesiredArtifact::File(file) = &mut survivor.artifacts[0] else {
+            panic!()
+        };
+        file.location.path = "rules/survivor.md".into();
+        initial.sets.push(survivor);
+        initial.add_references.push(Reference::DirectInstallation {
+            installation_id: "survivor".into(),
+        });
+        for (id, path, bytes) in [
+            ("owner", "rules/example.md", b"original".as_slice()),
+            ("survivor", "rules/survivor.md", b"survivor".as_slice()),
+        ] {
+            initial.contracts.push(OwnerContract {
+                root: root.clone(),
+                path: path.into(),
+                contribution_id: None,
+                installation_id: id.into(),
+                source_manifest_sha256: source.manifest().content_sha256.clone(),
+                content: ContractContent::File {
+                    content_sha256: hash(bytes),
+                    mode: None,
+                },
+                profiles: vec![ConsumerContract {
+                    surface: TargetSurface::ClaudeCli,
+                    contract_revision: 1,
+                }],
+            });
+        }
+        let PrepareOutcome::Ready(operation) = session
+            .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+                Ok(initial)
+            })
+            .unwrap()
+        else {
+            panic!("fixture install")
+        };
+        operation.apply().unwrap();
+        drop(session);
+        let SessionOutcome::Ready(session) =
+            LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+        else {
+            panic!()
+        };
+        let survivor_contract = session
+            .state()
+            .owner_contracts
+            .iter()
+            .find(|c| c.installation_id == "survivor")
+            .unwrap()
+            .clone();
+        let mut replacement = supplied(&root, &source, b"replacement");
+        replacement.sets[0].installation.owner.installation_id = "new".into();
+        replacement.sets[0].installation.owner.installed_name = "replacement".into();
+        replacement.add_references = vec![Reference::DirectInstallation {
+            installation_id: "new".into(),
+        }];
+        replacement.remove_references = vec![if bundled {
+            Reference::DirectBundle {
+                bundle_id: "bundle".into(),
+            }
+        } else {
+            Reference::DirectInstallation {
+                installation_id: "owner".into(),
+            }
+        }];
+        let selection = Selection::Names(vec![if bundled { "bundle" } else { "example" }.into()]);
+        let operation = match session
+            .prepare_upsert(
+                Some(&selection),
+                &[&source],
+                ResourceExecutionPolicy::Disabled,
+                |_| Ok(replacement),
+            )
+            .unwrap()
+        {
+            PrepareOutcome::Ready(operation) => operation,
+            PrepareOutcome::Blocked(report) => panic!("authorized replacement blocked: {report:?}"),
+        };
+        operation.apply().unwrap();
+        let state = upskill::lifecycle::state::parse_state(
+            &std::fs::read_to_string(dest.path().join(".upskill-lock.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(state.installations.len(), 2);
+        assert!(
+            state
+                .installations
+                .iter()
+                .any(|i| i.owner.installation_id == "new")
+        );
+        assert!(
+            state
+                .installations
+                .iter()
+                .any(|i| i.owner.installation_id == "survivor")
+        );
+        assert!(
+            !state
+                .installations
+                .iter()
+                .any(|i| i.owner.installation_id == "owner")
+        );
+        assert!(state.bundles.is_empty());
+        assert_eq!(
+            state.references,
+            [
+                Reference::DirectInstallation {
+                    installation_id: "new".into()
+                },
+                Reference::DirectInstallation {
+                    installation_id: "survivor".into()
+                }
+            ]
+        );
+        assert_eq!(state.owner_contracts, [survivor_contract]);
+        assert_eq!(
+            std::fs::read(dest.path().join("rules/survivor.md")).unwrap(),
+            b"survivor"
+        );
+        assert_eq!(
+            std::fs::read(dest.path().join("rules/example.md")).unwrap(),
+            b"replacement"
+        );
+        assert_eq!(
+            std::fs::metadata(dest.path().join("rules/example.md"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o7777,
+            0o600
+        );
+    }
+}
+
+// Invalid duplicate bindings supply no desired topology. Their fictitious parent
+// path must not suppress observation of a valid independent nested destination.
+#[test]
+fn duplicate_binding_does_not_fabricate_missing_observation() {
+    let dest = tempfile::tempdir().unwrap();
+    let source_dir = tempfile::tempdir().unwrap();
+    std::fs::write(source_dir.path().join("RULE.md"), b"captured").unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: dest.path().into(),
+    };
+    let source_scope = QualifiedScope::open(&InstallationRoot {
+        path: source_dir.path().into(),
+        ..root.clone()
+    })
+    .unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let mut request = supplied(&root, &source, b"duplicate");
+    let DesiredArtifact::File(file) = &mut request.sets[0].artifacts[0] else {
+        panic!()
+    };
+    file.location.path = "nested".into();
+    request.sets.push(request.sets[0].clone());
+    let mut valid = supplied(&root, &source, b"valid").sets.remove(0);
+    valid.installation.owner.installation_id = "valid".into();
+    valid.installation.owner.installed_name = "valid".into();
+    let DesiredArtifact::File(file) = &mut valid.artifacts[0] else {
+        panic!()
+    };
+    file.location.path = "nested/valid.md".into();
+    request.sets.push(valid);
+    request.add_references.push(Reference::DirectInstallation {
+        installation_id: "valid".into(),
+    });
+    let PrepareOutcome::Blocked(diagnostics) = session
+        .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+            Ok(request)
+        })
+        .unwrap()
+    else {
+        panic!("duplicate request must block")
+    };
+    let [CommandDiagnostic::Preflight(report)] = &diagnostics[..] else {
+        panic!("typed report")
+    };
+    assert_eq!(report.diagnostics.len(), 1, "{report:?}");
+    assert_eq!(
+        report.diagnostics[0].category,
+        upskill::lifecycle::preflight::PreflightCategory::Binding
+    );
+    assert_eq!(report.diagnostics[0].installation_ids, ["owner"]);
+    assert!(!dest.path().join("nested").exists());
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Failed duplicate bindings cannot contribute mode diagnostics or suppress a
+// valid item's independently observed occupied-destination conflict.
+#[test]
+fn duplicate_modes_do_not_replace_a_valid_destination_diagnostic() {
+    let dest = tempfile::tempdir().unwrap();
+    let source_dir = tempfile::tempdir().unwrap();
+    std::fs::write(source_dir.path().join("RULE.md"), b"captured").unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: dest.path().into(),
+    };
+    std::fs::create_dir(dest.path().join("rules")).unwrap();
+    std::fs::write(dest.path().join("rules/example.md"), b"Manual\n").unwrap();
+    let source_scope = QualifiedScope::open(&InstallationRoot {
+        path: source_dir.path().into(),
+        ..root.clone()
+    })
+    .unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let mut request = supplied(&root, &source, b"duplicate");
+    let DesiredArtifact::File(file) = &mut request.sets[0].artifacts[0] else {
+        panic!()
+    };
+    file.value.mode = Some(0o10000);
+    request.sets.push(request.sets[0].clone());
+    let mut valid = supplied(&root, &source, b"valid").sets.remove(0);
+    valid.installation.owner.installation_id = "valid".into();
+    valid.installation.owner.installed_name = "valid".into();
+    request.sets.push(valid);
+    request.add_references.push(Reference::DirectInstallation {
+        installation_id: "valid".into(),
+    });
+    let PrepareOutcome::Blocked(diagnostics) = session
+        .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+            Ok(request)
+        })
+        .unwrap()
+    else {
+        panic!("must block")
+    };
+    let [CommandDiagnostic::Preflight(report)] = &diagnostics[..] else {
+        panic!("typed report")
+    };
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    assert_eq!(report.diagnostics[0].installation_ids, ["owner"]);
+    assert_eq!(
+        report.diagnostics[0].category,
+        upskill::lifecycle::preflight::PreflightCategory::Binding
+    );
+    assert_eq!(report.diagnostics[1].installation_ids, ["valid"]);
+    assert_eq!(
+        report.diagnostics[1].category,
+        upskill::lifecycle::preflight::PreflightCategory::Destination
+    );
+    assert_eq!(
+        std::fs::read(dest.path().join("rules/example.md")).unwrap(),
+        b"Manual\n"
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Complete graph retirement must inspect old destinations even when every new
+// desired artifact moves elsewhere; edited retired files remain independent blockers.
+#[test]
+fn retired_only_destinations_are_all_inspected_before_replacement() {
+    let dest = tempfile::tempdir().unwrap();
+    let source_dir = tempfile::tempdir().unwrap();
+    std::fs::write(source_dir.path().join("RULE.md"), b"captured").unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: dest.path().into(),
+    };
+    let source_scope = QualifiedScope::open(&InstallationRoot {
+        path: source_dir.path().into(),
+        ..root.clone()
+    })
+    .unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let mut initial = supplied(&root, &source, b"original");
+    let mut second = initial.sets[0].artifacts[0].clone();
+    let DesiredArtifact::File(file) = &mut second else {
+        panic!()
+    };
+    file.location.path = "rules/second.md".into();
+    initial.sets[0].artifacts.push(second);
+    let PrepareOutcome::Ready(operation) = session
+        .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+            Ok(initial)
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    operation.apply().unwrap();
+    drop(session);
+    for path in ["rules/example.md", "rules/second.md"] {
+        std::fs::write(dest.path().join(path), b"Manual\n").unwrap();
+    }
+    let state_bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let mut request = supplied(&root, &source, b"new");
+    request.sets[0].installation.owner.installation_id = "new".into();
+    request.sets[0].installation.owner.installed_name = "new".into();
+    let DesiredArtifact::File(file) = &mut request.sets[0].artifacts[0] else {
+        panic!()
+    };
+    file.location.path = "rules/new.md".into();
+    request.add_references = vec![Reference::DirectInstallation {
+        installation_id: "new".into(),
+    }];
+    request.remove_references = vec![Reference::DirectInstallation {
+        installation_id: "owner".into(),
+    }];
+    let PrepareOutcome::Blocked(diagnostics) = session
+        .prepare_upsert(
+            Some(&Selection::Names(vec!["example".into()])),
+            &[&source],
+            ResourceExecutionPolicy::Disabled,
+            |_| Ok(request),
+        )
+        .unwrap()
+    else {
+        panic!("edited retirement must block")
+    };
+    let [CommandDiagnostic::Preflight(report)] = &diagnostics[..] else {
+        panic!()
+    };
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .map(|d| d.location.as_ref().unwrap().path.as_str())
+            .collect::<Vec<_>>(),
+        ["rules/example.md", "rules/second.md"]
+    );
+    for diagnostic in &report.diagnostics {
+        assert_eq!(diagnostic.installation_ids, ["owner"]);
+        assert_eq!(
+            diagnostic.category,
+            upskill::lifecycle::preflight::PreflightCategory::Destination
+        );
+    }
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_bytes
+    );
+    for path in ["rules/example.md", "rules/second.md"] {
+        assert_eq!(std::fs::read(dest.path().join(path)).unwrap(), b"Manual\n");
+    }
+    assert!(!dest.path().join("rules/new.md").exists());
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+#[test]
+fn retired_instruction_mode_failure_is_reported() {
+    let dest = tempfile::tempdir().unwrap();
+    let source_dir = tempfile::tempdir().unwrap();
+    std::fs::write(source_dir.path().join("RULE.md"), b"captured").unwrap();
+    std::fs::write(dest.path().join("AGENTS.md"), b"Manual\n").unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: dest.path().into(),
+    };
+    let source_scope = QualifiedScope::open(&InstallationRoot {
+        path: source_dir.path().into(),
+        ..root.clone()
+    })
+    .unwrap();
+    let source = source_scope.observe_source_tree().unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let PrepareOutcome::Ready(operation) = session
+        .prepare_upsert(None, &[&source], ResourceExecutionPolicy::Disabled, |_| {
+            Ok(instruction_request(&root, &source, "Owned\n"))
+        })
+        .unwrap()
+    else {
+        panic!()
+    };
+    operation.apply().unwrap();
+    drop(session);
+    let path = dest.path().join("AGENTS.md");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o4640)).unwrap();
+    assert_eq!(
+        std::fs::metadata(&path).unwrap().permissions().mode() & 0o7777,
+        0o4640,
+        "special mode fixture"
+    );
+    std::fs::create_dir_all(dest.path().join("rules")).unwrap();
+    std::fs::write(dest.path().join("rules/example.md"), b"Manual other\n").unwrap();
+    let SessionOutcome::Ready(session) =
+        LifecycleSession::open(&scope, &guard, root.clone()).unwrap()
+    else {
+        panic!()
+    };
+    let mut request = supplied(&root, &source, b"Replacement");
+    request.sets[0].installation.owner.installation_id = "new".into();
+    request.sets[0].installation.owner.installed_name = "new".into();
+    request.add_references = vec![Reference::DirectInstallation {
+        installation_id: "new".into(),
+    }];
+    request.remove_references = vec![Reference::DirectInstallation {
+        installation_id: "owner".into(),
+    }];
+    let before = std::fs::read(&path).unwrap();
+    let state_before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let PrepareOutcome::Blocked(diagnostics) = session
+        .prepare_upsert(
+            Some(&Selection::Names(vec!["example".into()])),
+            &[&source],
+            ResourceExecutionPolicy::Disabled,
+            |_| Ok(request),
+        )
+        .unwrap()
+    else {
+        panic!("conflicts must block preparation")
+    };
+    let [CommandDiagnostic::Preflight(report)] = &diagnostics[..] else {
+        panic!("expected preflight report")
+    };
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    assert!(
+        report
+            .diagnostics
+            .iter()
+            .any(|d| d.message.contains("special permission bits")
+                && d.installation_ids == ["owner"])
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_before
+    );
 }

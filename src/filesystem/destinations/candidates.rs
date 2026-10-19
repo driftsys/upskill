@@ -3,12 +3,7 @@ use crate::files::plan::FileLocation;
 use crate::ownership::validate_relative_path;
 use anyhow::{Result, bail};
 
-fn may_match(a: &str, b: &str) -> bool {
-    !a.is_ascii() || !b.is_ascii() || a.eq_ignore_ascii_case(b)
-}
-fn may_overlap(a: &str, b: &str) -> bool {
-    a.split('/').zip(b.split('/')).all(|(a, b)| may_match(a, b))
-}
+use crate::filesystem::paths_may_overlap as may_overlap;
 pub(super) fn prepare(locations: &[FileLocation]) -> Result<Vec<FileLocation>> {
     for location in locations {
         validate_relative_path(&location.path)?;
@@ -37,14 +32,6 @@ pub(super) fn prepare(locations: &[FileLocation]) -> Result<Vec<FileLocation>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn potential_overlap_examples() {
-        assert!(may_overlap("a/X", "a/x"));
-        assert!(may_overlap("a/é", "a/e"));
-        assert!(may_overlap("a/x", "a/x/y"));
-        assert!(!may_overlap("a/é", "b/e"));
-        assert!(!may_overlap("a/b", "ab/c"));
-    }
     #[test]
     fn exact_location_tuple_determines_order() {
         use crate::ownership::{InstallationRoot, OwnershipScope};
