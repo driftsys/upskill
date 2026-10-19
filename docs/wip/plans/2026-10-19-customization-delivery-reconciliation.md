@@ -52,20 +52,20 @@ human-readable evidence note. Add schema/fixture tests in
 `scripts/tests/test_customization_delivery_matrix.py` only when the matrix
 becomes executable input; do not invent a new product manifest format.
 
-- [ ] Resolve exact released versions common to macOS arm64/Linux x86_64 and
+- [x] Resolve exact released versions common to macOS arm64/Linux x86_64 and
       freeze the campaign. Inventory each applicable project/user matrix cell
       for rules, skills/resources, agents, bundles, plugins and MCP, plus
       explicit deferred hook/tool/permission obligations. Record
       IDE/other-platform regression obligations separately.
-- [ ] For every cell, list entrypoints, native/config/package roots,
+- [x] For every cell, list entrypoints, native/config/package roots,
       compatibility directories, imports/globs, nested/ancestor discovery,
       potential readers, intended consumers, activation conditions, duplicate
       paths, preservation strategy and evidence status. Unknowns are unresolved,
       never empty sets.
-- [ ] Include the existing actual `.claude/skills`, `.github/skills`,
+- [x] Include the existing actual `.claude/skills`, `.github/skills`,
       `.agents/skills`, `.agents/rules`, agent and MCP/plugin paths in the
       inventory; do not assert historical layouts implement the intended route.
-- [ ] Record the exact supported installed-plugin rule event/API and trust
+- [x] Record the exact supported installed-plugin rule event/API and trust
       requirements. A model-invoked skill is not evidence of always-on rule
       delivery. If the released runtime cannot provide the required route, mark
       it blocked; do not substitute managed team instructions or narrow scope.
@@ -204,6 +204,8 @@ Architecture check: an isolated builder review found nothing important left in
 the corrected contract/design/plan. Documentation checks establish link/render
 consistency only. Initial version/plugin-help observations are retained in the
 [reconciliation note](../../technotes/customization-architecture-reconciliation.md);
-Task 1 is still incomplete until common released versions, complete profile
-inventories and native rule event contracts are pinned. No later task is marked
-complete or qualified by those interface observations.
+Task 1 records the frozen campaign, explicit reader/profile inventory and pinned
+API candidates in the
+[profile inventory](../../technotes/gate6-plugin-profile-inventory.md).
+Unresolved native roots, trust and execution are Task 2 prerequisites; no later
+task is complete or qualified by static inventory evidence.
