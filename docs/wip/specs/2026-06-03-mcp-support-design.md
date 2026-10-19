@@ -1,5 +1,15 @@
 # Design: MCP server support — config-write install + lazy provisioning
 
+Architecture reconciliation (2026-10-19): apply the
+[delivery/discovery/activation contract](../../topics/0009-customization-delivery.md)
+before extending this proposal. Each affected customization/client needs its
+intended route, known compatibility/import/glob/shared-path readers, explicit
+consumption intent, unintended-loading and duplicate-activation negatives,
+manual configuration/ownership preservation and separate I/X/O/Q/P status. This
+adds acceptance obligations, not implementation scope or native support. Rule
+delivery and corrected M1 activation precede owned skills and automatic
+maintenance; general hooks/tools/permissions retain their later scope.
+
 **Date**: 2026-06-03 **Status**: Approved (brainstorming) **Relates to**:
 [ADR-0008](../../adr/0008-plugin-install-shellout.md) (plugin shellout — the
 structural precedent),

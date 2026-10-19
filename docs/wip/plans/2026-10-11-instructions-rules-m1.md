@@ -5,9 +5,17 @@
 > F-A target identities are its base. Keep each reviewable task in its own PR,
 > with code, tests, and documentation together.
 
-**Goal:** Install, update, inspect, and remove instruction contributions for
-Claude Code, Copilot CLI/VS Code Local, and Codex CLI without overwriting manual
-content or silently weakening scope.
+Reconciled 2026-10-19: the
+[delivery contract](../../topics/0009-customization-delivery.md), AD-0040 and
+[corrected Gate 6 design](../specs/2026-10-18-gate6-activation-design.md)
+supersede earlier production use of managed `AGENTS.md` contributions. Completed
+foundation tasks retain their implementation evidence, not native route
+approval.
+
+**Goal:** Install, update, inspect and remove rules for Claude Code, Copilot
+CLI, Codex CLI and OpenCode v2 without changing manual content or weakening
+scope. Codex/OpenCode independent rules require qualified plugin delivery.
+Copilot VS Code Local remains a separately qualified existing surface.
 
 **Contract:** Follow the
 [foundation design](../specs/2026-10-11-agent-customization-foundation-design.md),
@@ -16,26 +24,29 @@ schema-1 migration. Preserve OpenCode behavior and the fixed default selection.
 
 ## Acceptance examples
 
-1. A project with manual `AGENTS.md` text adds two unconditional rules for
-   Codex. The file retains the manual bytes and receives two deterministic,
-   individually owned contributions. Updating one rule changes only its
-   contribution; removing it retains the other and the manual text.
-2. An item selected for Codex only never claims that other clients cannot
-   discover a shared `AGENTS.md`. Preview and reports name known incidental
-   readers. Codex remains outside the implicit default.
-3. A Claude and Copilot scoped rule maps to their native path-specific
-   instruction formats. Codex rejects an arbitrary file glob unless the author
-   provides a native alternative with equivalent behavior; it does not widen the
-   rule to repository-wide guidance.
-4. A pre-existing unmarked output at a destination is a conflict. An edited
-   owned contribution is a conflict on update/removal. A second bundle's
-   contribution survives removal of the first.
-5. A legacy schema-1 lockfile remains readable. Inspection does not rewrite it;
-   schema-2 migration preserves old entries and blocks ambiguous ownership
-   changes rather than deleting guessed paths.
-6. Native discovery is tested in fresh Claude, Copilot, and Codex sessions at
-   the recorded supported versions and scopes. The release claim is limited to
-   combinations actually exercised.
+1. A project with manual team `AGENTS.md` installs two independent rules through
+   each intended Codex/OpenCode plugin. Team bytes/modes stay identical;
+   updating or removing one rule preserves the other. Disabling/removing the
+   plugin stops managed-rule activation while team guidance remains available.
+2. For each customization/client inventory compatibility directories, imports,
+   globs, package exports and shared paths. Unintended consumers must pass
+   native negative controls. Identical output or incidental-reader reporting
+   does not authorize cross-client consumption. Test standalone-plus-plugin and
+   project/user duplicate activation.
+3. Claude/Copilot scoped rules retain native matching/nonmatching semantics;
+   independent Codex/OpenCode plugins must prove equivalent scope or reject the
+   profile. Nested team instructions do not substitute for arbitrary rule globs.
+4. Unmarked destinations and edited owned artifacts conflict. Aliases,
+   resources, direct and multiple-bundle references preserve manual content,
+   existing configuration and unrelated ownership through update/removal.
+5. Every installed-state command preserves mixed rule/skill/resource/agent/
+   bundle/plugin/MCP state through guarded migration/recovery. Exact original
+   schema-1 bytes survive in the backup; typed legacy projection is not an
+   authorization to overwrite outer schema-2 ownership.
+6. All four clients pass applicable native version/OS/scope/kind cells and CD-01
+   through CD-10. Existing IDE and binary-platform obligations remain separate.
+   Canonical-file/generated-output checks cannot qualify plugin delivery.
+   Missing cells block activation without reducing four-client scope.
 
 ## Task sequence
 
@@ -198,34 +209,35 @@ candidate implementation. Hosted Linux/macOS qualification remains pending; gate
 remain separate, and M1-A2, M1-A3 and M1 remain incomplete. This executor does
 not activate the current schema-1 commands or adopt legacy ownership.
 
-### M1-B: Project and user unconditional instructions
+### M1-B: Independent rules alongside team instructions
 
-- Start with CLI examples: `--codex` opt-in, no-selection unchanged; add two
-  rules to a manual `AGENTS.md`; update/remove one contribution; project/user
-  scope paths; existing Claude/Copilot/OpenCode outputs remain sound.
-- Add Codex CLI to selection and profile dispatch. Keep Codex IDE a separate
-  observed surface, not a second CLI flag. Validate source audience and
-  directives for every selected surface.
-- Map native roots from the pinned contracts: Codex `AGENTS.md` and global Codex
-  home; Claude `CLAUDE.md`/rules; Copilot CLI repository and personal
-  instructions; Copilot VS Code Local separately. Reject unsupported
-  scope/override combinations.
-- Share an artifact only after validating its content for known readers. Report
-  incidental discovery and conflicts. Preflight the whole operation before
-  writing any instruction file.
-- Test fresh native session discovery at each supported scope; record exact
-  client versions and OS. Do not label file generation alone as native
-  conformance.
-- Update usage, format specification, and ADRs; run `just fmt` and
-  `just verify`.
+- Execute the
+  [corrected implementation plan](2026-10-19-customization-delivery-reconciliation.md)
+  after architecture review, starting with installed-plugin entrypoint probes
+  and failing CD-02/CD-03/CD-04 examples. Production schema-2 dispatch stays
+  off.
+- Use qualified native rule loading for Claude/Copilot and independently
+  registered plugin rule delivery for Codex/OpenCode. Define effective root,
+  package identity, lifecycle event/API, trust, reload and rule activation scope
+  before implementing the adapter. Never silently rewrite team `AGENTS.md`.
+- Bind requested consumers separately from potential readers. Require explicit
+  intended sharing and successful unintended-reader/duplicate controls,
+  including compatibility directories, imports/globs and packaged resources.
+- Reuse captured source evidence, owner contracts, complete preflight and
+  qualified application/recovery. Experimental contribution code remains
+  available only within its stated library boundary; recorded removal/recovery
+  retains safety without converting an installation to plugin ownership.
+- Complete all-kind command/configuration compatibility and native-effect
+  recovery before the combined production routing/migration task.
 
 ### M1-C: Scoped rules and lifecycle completion
 
 - Start with matching and nonmatching native-session examples and CLI tests for
   update/remove preserving unrelated content.
-- Keep Claude `paths` and Copilot `applyTo` semantics explicit. Codex nested
-  `AGENTS.md` is directory-context guidance, not arbitrary file-glob activation.
-  Reject unmappable globs or require an explicit author alternative.
+- Keep Claude `paths` and Copilot `applyTo` semantics explicit. Qualified
+  Codex/OpenCode plugin rules must establish matching scope independently of
+  nested team `AGENTS.md`, which is not arbitrary file-glob activation. Reject
+  unmappable globs or require an explicit author alternative.
 - Test nested instruction discovery, override files, size limits, path
   traversal/symlink protections, shared output collisions, and two-bundle
   ownership.
@@ -236,11 +248,14 @@ not activate the current schema-1 commands or adopt legacy ownership.
 
 ## Scope boundaries
 
-M1 handles prose instructions and rules. Codex `.rules` command policy belongs
-to permissions; hooks, MCP, skills, agents, and marketplace operations keep
-their later milestones. No automatic execution of source scripts is part of
-instruction installation. Existing bridge files and unmarked legacy output
-remain user-owned until explicit migration evidence proves otherwise.
+M1 handles rules and their required internal plugin delivery. Codex `.rules`
+command policy belongs to permissions. General hooks/tools/permissions, expanded
+MCP management and owned skill/agent lifecycle retain their roadmap milestones;
+existing skill/resource/agent/bundle/plugin/MCP behavior remains a regression
+obligation. Internal rule hooks are qualified plugin implementation, not a new
+general hook-management feature. No automatic execution of source scripts is
+part of instruction installation. Existing bridge files and unmarked legacy
+output remain user-owned until explicit migration evidence proves otherwise.
 
 Validation results and tested source identities are retained in the
 [gate-4 evidence record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate4-validation.md).

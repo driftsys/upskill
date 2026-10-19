@@ -1,0 +1,83 @@
+{
+  "scope": "installed CLI interface observation only; no installation, activation, model request or native discovery qualification",
+  "platform": "macOS 15.6.1 arm64",
+  "upstream_common_platform_version_selection": "not completed",
+  "probes": [
+    {
+      "command": [
+        "codex",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/00-codex.txt"
+    },
+    {
+      "command": [
+        "codex",
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "sha256": "a517a3a2d1801d812751d98c8bc4d27de6bb5367aafc67495e0cde3a99680124",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/01-codex.txt"
+    },
+    {
+      "command": [
+        "claude",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "46ef67828dfb9d34aef4d5df24d529825edb3cfa334f333e445fe5d0f1b14cc2",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/02-claude.txt"
+    },
+    {
+      "command": [
+        "claude",
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "sha256": "afc319633b0e4fbbafbb4160e4b120bd459e2073bd30f4f6182d4a1faaf7172a",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/03-claude.txt"
+    },
+    {
+      "command": [
+        "copilot",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "dee34728b63061e7f0705b53da695223bb686122f104dea5b4670d9905dcc2a1",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/04-copilot.txt"
+    },
+    {
+      "command": [
+        "copilot",
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "sha256": "4922a4b7f40d06553271a113b3a51ee080e706176e3955dada27a7fe4a7b5c20",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/05-copilot.txt"
+    },
+    {
+      "command": [
+        "opencode",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "95402cee554b8ce7620fde6f9a31a53155b22896966d44382de47301986b68bb",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/06-opencode.txt"
+    },
+    {
+      "command": [
+        "opencode",
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "sha256": "2e19047931ef5e19b48ae6426a40dd781c772b5e9322acdc93caa8df7d3c92e2",
+      "receipt": "/private/tmp/upskill-plugin-interface-20261019/07-opencode.txt"
+    }
+  ]
+}

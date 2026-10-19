@@ -1,5 +1,14 @@
 # Sources and captured evidence
 
+Architecture reconciliation (2026-10-19): the
+[delivery, discovery and activation contract](0009-customization-delivery.md)
+controls intended production routes and reader intent. Existing Codex
+`AGENTS.md` contribution APIs described here are experimental library
+boundaries, not production independent-rule delivery. Independent Codex/OpenCode
+rules require qualified plugins alongside unchanged team guidance. Reusable
+ownership, preflight and recovery mechanisms do not select a runtime delivery
+route.
+
 This concern owns the requirements and implemented architecture below. Moving
 these records does not change their implementation or approval status.
 Library-only capabilities remain separate from production CLI activation; each

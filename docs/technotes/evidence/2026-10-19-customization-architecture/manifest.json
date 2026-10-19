@@ -1,0 +1,39 @@
+{
+  "base": "4d26d640919469febd56b6b6783bbfbbed12dd5b",
+  "scope": "local documentation-branch verification; no native plugin activation qualification",
+  "rust_tests": {
+    "passed": 1418,
+    "ignored": 2,
+    "result_groups": 89
+  },
+  "receipts": [
+    {
+      "file": "verify.log.gz",
+      "sha256": "16c0683f4deae8dc9dc127fc4b0407b853fdd8da542e308c1b14d867292c1200",
+      "uncompressed_sha256": "e29fa0da34490d9a39f85f8f03407bb69d6d27c2dc5435a32db4e44eeb504f24",
+      "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=<shared local build cache> just verify",
+      "observed_exit_code": 0
+    },
+    {
+      "file": "sanity.log.gz",
+      "sha256": "675aa183b01650231f905eabc573401e5f90e5ea5785d3f15b27e63cbb371a1a",
+      "uncompressed_sha256": "8f8a3c84e2a160841baed7181d08063f00071b07e453ee5ec88923e07a74c2f2",
+      "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=<shared local build cache> just sanity",
+      "observed_exit_code": 0
+    },
+    {
+      "file": "docs.log.gz",
+      "sha256": "6aa33aa18c4118fa7a759b3a5797390c0022dfcce7388bd83143cf0ad079fc1d",
+      "uncompressed_sha256": "364158bef844ee128f3229d02911bf881d106a7236b966a0983ab4a70da2ee3c",
+      "command": "just docs-check",
+      "observed_exit_code": 0
+    },
+    {
+      "file": "book.log.gz",
+      "sha256": "26d116855ea7c734e926a7c7bf1a0d0ee8ff09ae9cec7b4c0dfeae344b4a1b73",
+      "uncompressed_sha256": "1250075ab495138a110d9176cfd9daf477251349c6fde9a394b28c53ca5b4b8a",
+      "command": "just book",
+      "observed_exit_code": 0
+    }
+  ]
+}

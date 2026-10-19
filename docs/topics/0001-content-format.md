@@ -1210,6 +1210,15 @@ only in the canonical body.
 
 ## 7. Generation: client-specific output
 
+Delivery clarification (2026-10-19): the client output layouts below describe
+format/generation mappings, not exclusive native discovery or qualified runtime
+support. Compatibility directories, imports, globs and shared paths can expose
+those outputs to other clients. Future production activation must satisfy the
+[delivery/discovery/activation contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md),
+including explicit intended consumers, negative/duplicate controls and ownership
+preservation. Independent Codex/OpenCode plugin rules must not be inferred from
+these historical file layouts or implemented by rewriting team `AGENTS.md`.
+
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
 each client's frontmatter shape. It is informational; client conventions may
