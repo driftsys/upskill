@@ -184,3 +184,12 @@ Every proposed route needs a pinned released-client test. Record documentation
 support, emitted-file validation, native discovery and observed behavior as
 different evidence levels. The proposed roadmap uses these gates without
 claiming that the refreshed capability inventory is already implemented.
+
+## Gate 6 pinned inventory follow-up — 2026-10-19
+
+The [pinned profile and reader inventory](gate6-plugin-profile-inventory.md)
+records the corrected independent-plugin rule candidates, all customization
+reader/root conditions and campaign pins after architecture PR #334. It
+supplements this dated research without rewriting earlier observations. Released
+Codex parser/hook source and the integrity-verified OpenCode v2 SDK declarations
+were inspected; no native plugin activation is qualified by those inspections.

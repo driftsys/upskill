@@ -33,6 +33,8 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 pinned profiles and reader inventory](gate6-plugin-profile-inventory.md)
+
 - [Customization architecture reconciliation](customization-architecture-reconciliation.md)
 
 - [Gate 6 native instruction discovery qualification](m1-gate6-native-qualification.md)

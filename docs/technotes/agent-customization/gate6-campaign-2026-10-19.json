@@ -1,0 +1,135 @@
+{
+  "campaign_id": "gate6-2026-10-19",
+  "frozen_on": "2026-10-19",
+  "base_commit": "44a5e2fa5c3fb64e4ff28083800d2ac2fac7aa8e",
+  "policy": "Versions are fixed for this campaign; updates require a new evidence revision and affected-cell reruns. Artifact availability is not runtime support.",
+  "platforms": [
+    "macos-arm64",
+    "linux-x86_64"
+  ],
+  "scopes": [
+    "project",
+    "user"
+  ],
+  "clients": [
+    {
+      "client": "codex",
+      "version": "0.163.0",
+      "release": "https://github.com/openai/codex/releases/tag/rust-v0.163.0",
+      "published_at": "2026-10-15T21:30:38Z",
+      "prerelease": false,
+      "platform_artifacts": [
+        {
+          "name": "codex-aarch64-apple-darwin.tar.gz",
+          "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-aarch64-apple-darwin.tar.gz",
+          "digest": "sha256:61c4d9a92521bdb42b0c1d9f87c673f6da628a06de5945cbdd9a0010632f6d10",
+          "size": 99551880,
+          "execution": "not-run"
+        },
+        {
+          "name": "codex-x86_64-unknown-linux-musl.tar.gz",
+          "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-x86_64-unknown-linux-musl.tar.gz",
+          "digest": "sha256:beb339e8ecd9ba057a6bb2dc81ad8ca474812edfbf0fc5056ca818797648dde4",
+          "size": 112589966,
+          "execution": "not-run"
+        }
+      ],
+      "support": "unqualified"
+    },
+    {
+      "client": "claude",
+      "version": "2.1.303",
+      "release": "https://github.com/anthropics/claude-code/releases/tag/v2.1.303",
+      "published_at": "2026-10-18T22:26:54Z",
+      "prerelease": false,
+      "platform_artifacts": [
+        {
+          "name": "claude-darwin-arm64.tar.gz",
+          "url": "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-darwin-arm64.tar.gz",
+          "digest": "sha256:cf40802aba7ff81f3c9085b7016e181a9ad2bc2ea9afa0853bff2fd2b496855c",
+          "size": 117029790,
+          "execution": "not-run"
+        },
+        {
+          "name": "claude-linux-x64.tar.gz",
+          "url": "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-x64.tar.gz",
+          "digest": "sha256:9ef730488e8b75d47f23c156282a73c89db3342aaf756ed7ec0b78a88fb31f3e",
+          "size": 127566919,
+          "execution": "not-run"
+        }
+      ],
+      "support": "unqualified"
+    },
+    {
+      "client": "copilot",
+      "version": "1.0.98",
+      "release": "https://github.com/github/copilot-cli/releases/tag/v1.0.98",
+      "published_at": "2026-10-14T19:52:33Z",
+      "prerelease": false,
+      "platform_artifacts": [
+        {
+          "name": "copilot-darwin-arm64.tar.gz",
+          "url": "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-darwin-arm64.tar.gz",
+          "digest": "sha256:a87018a0194789313c979906e45e8874699fee50549ea11d0be7bdde88b6b3c8",
+          "size": 105462854,
+          "execution": "not-run"
+        },
+        {
+          "name": "copilot-linux-x64.tar.gz",
+          "url": "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-linux-x64.tar.gz",
+          "digest": "sha256:87ddb4b3f98462b7cb13c0a6857c68ee410ec9673e2e5f64ee5bedad45825b05",
+          "size": 116812784,
+          "execution": "not-run"
+        }
+      ],
+      "support": "unqualified"
+    },
+    {
+      "client": "opencode",
+      "version": "2.0.32",
+      "release_line": "v2; npm latest metadata was separately observed at 2.0.32",
+      "packages": [
+        {
+          "name": "@opencode/cli",
+          "version": "2.0.32",
+          "metadata_url": "https://registry.npmjs.org/@opencode%2fcli/2.0.32",
+          "metadata_sha256": "463be99485641a002b5854d0662ecc2f9ff50d2447b012807b4068611f3d3227",
+          "tarball": "https://registry.npmjs.org/@opencode/cli/-/cli-2.0.32.tgz",
+          "integrity": "sha512-nhRlQGFLMoqx50VtIvUmCV/43W6dR8Y+OXzXq17zstSjzLIUdwfBZG6zP3Mpzo0cmLQ2hvXW4/PbhvlLyhwGGg==",
+          "execution": "not-run"
+        },
+        {
+          "name": "@opencode/cli-darwin-arm64",
+          "version": "2.0.32",
+          "metadata_url": "https://registry.npmjs.org/@opencode%2fcli-darwin-arm64/2.0.32",
+          "metadata_sha256": "3317ba7e935a67cb0cda11764ccab49f51fe4b93dd784c362d81ba7a25c636b1",
+          "tarball": "https://registry.npmjs.org/@opencode/cli-darwin-arm64/-/cli-darwin-arm64-2.0.32.tgz",
+          "integrity": "sha512-wASwXBsWaOAYcZrh4ZLl4oaVxPCUAGVb7zZvXBBF8TjWE4uWgY0D2tj6gn80JfcO3b/s9woM6dP/gKqYKK2EdQ==",
+          "execution": "not-run"
+        },
+        {
+          "name": "@opencode/cli-linux-x64",
+          "version": "2.0.32",
+          "metadata_url": "https://registry.npmjs.org/@opencode%2fcli-linux-x64/2.0.32",
+          "metadata_sha256": "c1d19b36b429615adf76afb504c18e9a3c9a8797de2788617097d2812f7eeed1",
+          "tarball": "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.0.32.tgz",
+          "integrity": "sha512-Q50ofBQ3gdwjD6ZQhrVR8fVlm8D2xPMshy4dynY6l6b+qLdKgBSJ9WpoaDyrQX1YWmf2s7IN4RbXmoXXdJitDA==",
+          "execution": "not-run"
+        },
+        {
+          "name": "@opencode/plugin",
+          "version": "2.0.32",
+          "metadata_url": "https://registry.npmjs.org/@opencode%2fplugin/2.0.32",
+          "metadata_sha256": "254531ff371c02e6ff95691e1a62afd5291abe01d9409112579a738bf104f6e3",
+          "tarball": "https://registry.npmjs.org/@opencode/plugin/-/plugin-2.0.32.tgz",
+          "integrity": "sha512-S83qCwl6VTiRxtpqEmrNr5SHXJDS2FHP9XarTazlSWoccKpefDOdWxwCzF/qkgwQRq09T2t9vVbzv4UuzgFXEw==",
+          "execution": "not-run",
+          "tarball_integrity_verified": true,
+          "tarball_sha256": "a84c0d20c043fc8cef4338c2759724e635af658c352afa7709161a916ec827ad",
+          "inspection": "type declarations only; no SDK install or runtime execution"
+        }
+      ],
+      "support": "unqualified"
+    }
+  ]
+}
