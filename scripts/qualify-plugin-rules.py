@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import secrets
 import shutil
+import stat
 
 
 REPO = next((p for p in Path(__file__).resolve().parents if (p / '.git').is_dir()),
@@ -19,7 +20,7 @@ def snapshot(path):
     if path.is_symlink() or not path.is_file():
         raise ValueError('Team instructions must be a regular owned fixture file')
     return {'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-            'mode': path.stat().st_mode & 0o777}
+            'mode': stat.S_IMODE(path.stat().st_mode)}
 
 
 def classify_pair(positive, control, *, expected_positive, expected_control,

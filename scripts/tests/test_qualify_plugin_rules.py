@@ -127,7 +127,11 @@ class PluginRuleTests(unittest.TestCase):
                     input=json.dumps({'cwd': fixture['project'], 'session_id': 'test-session',
                                       'source': 'startup', 'hook_event_name': 'SessionStart'}),
                     text=True, capture_output=True, check=True)
-                context = json.loads(result.stdout)['hookSpecificOutput']['additionalContext']
+                output = json.loads(result.stdout)
+                self.assertEqual(output, {'hookSpecificOutput': {
+                    'hookEventName': 'SessionStart',
+                    'additionalContext': (Path(package) / 'rule.txt').read_text()}})
+                context = output['hookSpecificOutput']['additionalContext']
                 self.assertEqual(context.count(fixture['rule_markers'][i]), 1)
                 self.assertNotIn(fixture['rule_markers'][1-i], context)
             self.assertEqual((team.read_bytes(), team.stat().st_mode & 0o777), before)
@@ -189,6 +193,68 @@ class PluginRuleTests(unittest.TestCase):
         finally:
             if path.exists():
                 shutil.rmtree(path)
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX special permission bits are unavailable')
+    def test_snapshot_rejects_real_special_mode_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            team = Path(tmp) / 'AGENTS.md'
+            team.write_text('manual instructions')
+            team.chmod(0o640)
+            before = self.q.snapshot(team)
+            for mode in (0o1640,):
+                team.chmod(mode)
+                self.assertEqual(team.stat().st_mode & 0o7777, mode)
+                after = self.q.snapshot(team)
+                self.assertEqual(after['mode'], mode)
+                for side in ('positive', 'control'):
+                    positive = self.observation(['A', 'B'], {'a': 1, 'b': 1})
+                    control = self.observation([], {})
+                    positive['team'] = control['team'] = before
+                    (positive if side == 'positive' else control)['team'] = after
+                    self.assertEqual(self.q.classify_pair(positive, control,
+                        expected_positive=positive['response'], expected_control=control['response'],
+                        positive_counts={'a': 1, 'b': 1}, control_counts={},
+                        team_before=before, version='0.163.0'), 'team_changed')
+
+    def test_packages_register_exact_pinned_native_entrypoints(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for client, version in (('codex', '0.163.0'), ('opencode', '2.0.32')):
+                fixture = self.q.prepare(Path(tmp) / client, client)
+                self.assertEqual((fixture['client'], fixture['version']), (client, version))
+                root = Path(fixture['root'])
+                packages = [root / 'marketplace/plugins' / ('upskill-probe-' + rule)
+                            for rule in ('a', 'b')]
+                self.assertEqual(fixture['packages'], [str(p) for p in packages])
+                for rule, package in zip(('a', 'b'), packages):
+                    config = json.loads((package / 'fixture.json').read_text())
+                    self.assertEqual(config, {'project': fixture['project'], 'rule': rule,
+                        'trace': fixture['trace'], 'agent': 'build'})
+                    if client == 'codex':
+                        self.assertEqual(json.loads((package / '.codex-plugin/plugin.json').read_text()),
+                            {'name': 'upskill-probe-' + rule, 'version': '0.0.0',
+                             'hooks': './hooks/hooks.json'})
+                        self.assertEqual(json.loads((package / 'hooks/hooks.json').read_text()),
+                            {'hooks': {'SessionStart': [{'hooks': [{'type': 'command',
+                                'command': 'python3 "${PLUGIN_ROOT}/hook.py"'}]}]}})
+                        self.assertEqual((package / 'hook.py').read_bytes(),
+                            (self.q.TEMPLATES / 'codex/hook.py').read_bytes())
+                    else:
+                        self.assertEqual(json.loads((package / 'package.json').read_text()),
+                            {'name': 'upskill-probe-' + rule, 'version': '0.0.0',
+                             'type': 'module', 'exports': './index.ts',
+                             'dependencies': {'@opencode/plugin': '2.0.32'}})
+                        self.assertEqual((package / 'index.ts').read_bytes(),
+                            (self.q.TEMPLATES / 'opencode/index.ts').read_bytes())
+                if client == 'codex':
+                    self.assertEqual(json.loads((root / 'marketplace/.agents/plugins/marketplace.json').read_text()),
+                        {'name': 'upskill-qualification', 'plugins': [
+                            {'name': 'upskill-probe-' + rule,
+                             'source': {'source': 'local', 'path': './plugins/upskill-probe-' + rule}}
+                            for rule in ('a', 'b')]})
+                else:
+                    self.assertEqual(json.loads((Path(fixture['project']) / 'opencode.json').read_text()),
+                        {'plugins': [str(p) for p in packages],
+                         'permissions': [{'action': '*', 'resource': '*', 'effect': 'deny'}]})
 
     def test_prepared_descriptors_never_claim_qualification(self):
         with tempfile.TemporaryDirectory() as tmp:

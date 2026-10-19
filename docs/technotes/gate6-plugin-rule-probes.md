@@ -32,9 +32,16 @@ event counts; equal model responses cannot prove one activation. `observed`
 describes one pair only and never means campaign qualification. These tests use
 synthetic observations and do not establish native discovery.
 [Mutation controls](evidence/2026-10-19-gate6-plugin-fixtures/offline-mutations.json)
-show that 14 deliberately broken variants are rejected, including team/payload
-contamination, failed control validation, wrong rule identities, constant
-snapshots, inherited credentials and weakened hook filters.
+show that the original 14 deliberately broken variants are rejected, including
+team/payload contamination, failed control validation, wrong rule identities,
+constant snapshots, inherited credentials and weakened hook filters.
+[Review corrections](evidence/2026-10-19-gate6-plugin-fixtures/review-validation.json)
+retain all POSIX permission bits and pin the Codex response event plus native
+package registration/version declarations. The current 21 offline tests reject
+[18 mutation controls](evidence/2026-10-19-gate6-plugin-fixtures/review-mutations.json),
+including the four review regressions. Callback execution and fresh-marker test
+follow-ups remain [#340](https://github.com/driftsys/upskill/issues/340) and
+[#342](https://github.com/driftsys/upskill/issues/342).
 
 The Codex hook filters its declared fixture directory and SessionStart event,
 records its rule/session/source and emits only its own independent context. The
