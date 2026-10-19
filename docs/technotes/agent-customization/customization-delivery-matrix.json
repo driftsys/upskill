@@ -351,7 +351,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.skills",
@@ -422,7 +433,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.resources",
@@ -503,7 +525,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.agents",
@@ -570,7 +603,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.bundles",
@@ -623,7 +667,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.plugins",
@@ -691,7 +746,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.mcp",
@@ -759,7 +825,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.hooks",
@@ -821,7 +898,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.tools",
@@ -883,7 +971,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "claude.permissions",
@@ -945,7 +1044,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.rules",
@@ -1023,7 +1133,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.skills",
@@ -1104,7 +1225,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.resources",
@@ -1195,7 +1327,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.agents",
@@ -1262,7 +1405,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.bundles",
@@ -1315,7 +1469,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.plugins",
@@ -1382,7 +1547,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.mcp",
@@ -1449,7 +1625,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.hooks",
@@ -1511,7 +1698,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.tools",
@@ -1573,7 +1771,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "copilot.permissions",
@@ -1635,7 +1844,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.rules",
@@ -1715,7 +1935,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.skills",
@@ -1785,7 +2016,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.resources",
@@ -1863,7 +2105,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.agents",
@@ -1933,7 +2186,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.bundles",
@@ -1987,7 +2251,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.plugins",
@@ -2057,7 +2332,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.mcp",
@@ -2124,7 +2410,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.hooks",
@@ -2187,7 +2484,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.tools",
@@ -2250,7 +2558,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "codex.permissions",
@@ -2313,7 +2632,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.rules",
@@ -2384,7 +2714,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.skills",
@@ -2453,7 +2794,19 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Documented project discovery checks skill directories at every level between the working directory and project root, including compatibility sources. User roots remain separate; pinned native behavior not run.",
+        "nested_roots": "Documented nested skill grouping directories beneath discovered skill roots are additional catalog paths; matching, duplicate and boundary behavior requires native controls.",
+        "configured_sources": "Documented additional local paths and HTTP sources in the skills configuration can add catalogs. Bind source resolution and cache roots and test each configured exposure separately.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims",
+        "source": "https://dev.opencode.ai/v2/docs/skills/"
+      }
     },
     {
       "id": "opencode.resources",
@@ -2532,7 +2885,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.agents",
@@ -2603,7 +2967,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.bundles",
@@ -2658,7 +3033,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Inherited from each consuming child/parent route; no independent activation. Resolve parent/child ancestor and config precedence before qualifying this row.",
+        "nested_roots": "Nested resource paths and bundle children retain the consuming route discovery rules; a resource link is not consent to instruction injection or execution.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.plugins",
@@ -2727,7 +3113,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.mcp",
@@ -2795,7 +3192,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.hooks",
@@ -2859,7 +3267,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.tools",
@@ -2923,7 +3342,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     },
     {
       "id": "opencode.permissions",
@@ -2987,7 +3417,18 @@
           "intent": "unintended unless explicitly selected",
           "implementation": "deferred design target; no new support claim"
         }
-      ]
+      ],
+      "discovery_boundaries": {
+        "ancestor_roots": "Unresolved for this route and pinned runtime: enumerate each inherited project/config root between working directory and project boundary; user/system roots are separate. No root-only isolation claim.",
+        "nested_roots": "Unresolved for this route and pinned runtime: test nested projects, package exports and any recursive discovery independently; do not infer recursion or a boundary from the directory name.",
+        "configured_sources": "Inventory explicitly configured imports, globs, additional directories, local/HTTP sources and plugin exports when the route supports them. Unsupported forms require evidence, not an inferred empty reader set.",
+        "controls": [
+          "working directory below project root",
+          "nested project with a separate root",
+          "same payload exposed through direct, ancestor and configured sources"
+        ],
+        "evidence": "not-run; unresolved conditions block affected claims"
+      }
     }
   ],
   "cells": [

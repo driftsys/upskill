@@ -56,7 +56,12 @@ Root variables denote declared qualified roots, not instructions to write into
 personal homes. Native cache and registration roots remain unresolved until
 observed. External-home authority cannot be inferred from an accessible path.
 Every unresolved reader/root remains a blocker for the affected isolation or
-write-authority claim. Unknowns are explicit, not empty reader sets.
+write-authority claim. Unknowns are explicit, not empty reader sets. Each route
+separately records ancestor roots, nested roots and configured-source
+boundaries. OpenCode skills include documented ancestor traversal, nested groups
+and additional local/HTTP sources; exact pinned-runtime behavior remains
+unqualified. Other unresolved traversal boundaries require their own controls
+before isolation can pass.
 
 The matrix shares the F/R/N/B preservation contracts from the canonical
 [delivery contract](../topics/0009-customization-delivery.md): exact owned
