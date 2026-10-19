@@ -1,5 +1,13 @@
 # M1 Gate 6 native instruction discovery qualification
 
+Architecture limit (2026-10-19): these canonical instruction-file probes are
+background discovery experiments. They do not qualify the independent
+Codex/OpenCode plugin rule route required by the
+[delivery contract](../topics/0009-customization-delivery.md), unintended-reader
+isolation, duplicate activation or other customization kinds. Historical
+observations and archived plans retain their original provenance; production
+activation requires the corrected G6/CD matrix.
+
 This qualification supports
 [task #319](https://github.com/driftsys/upskill/issues/319) and investigates
 [debt #316](https://github.com/driftsys/upskill/issues/316). It does not

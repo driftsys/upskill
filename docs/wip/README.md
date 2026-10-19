@@ -12,6 +12,17 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md) and
+  [corrected customization delivery plan](plans/2026-10-19-customization-delivery-reconciliation.md)
+  — architecture reconciliation requested on 2026-10-19. Independent
+  Codex/OpenCode rules require qualified plugins beside unchanged team
+  `AGENTS.md`. Contribution experiments do not approve the production route.
+  CD-01 through CD-10 cover every customization's discovery, intended readers,
+  preservation and evidence. Implementation/native qualification remain active;
+  production schema-2 activation stays blocked. Earlier original Gate 6 drafts
+  remain preserved in the prior planning worktree; this revised design is the
+  current planning copy.
+
 - [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
   — four-client MVP sequencing and proposed qualification gates; retained
   planning.

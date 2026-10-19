@@ -1,5 +1,13 @@
 # Agent customization foundation design
 
+Reconciled 2026-10-19: the
+[delivery/discovery/activation contract](../../topics/0009-customization-delivery.md)
+and AD-0040 control production representation and evidence gates. The initial
+clients are Claude Code, Copilot CLI, Codex CLI and OpenCode v2 equally. Managed
+Codex `AGENTS.md` contributions remain experimental, not the independent-rule
+route. Shared discovery requires explicit intended consumers, unintended-reader
+negatives and duplicate-activation controls across every customization.
+
 Date: 2026-10-11. Status: **Proposed**. Roadmap:
 [AC-00 / M0](2026-10-11-agent-customization-roadmap.md). Code baseline:
 `b866f5e`. This document specifies future behavior; it does not claim
@@ -197,17 +205,20 @@ identity or tracked contributions, never a stored numeric position alone.
 ### Shared discovery
 
 Resolve destinations before deduplication. Two selected surfaces may share an
-artifact only if their rendered bytes, resources, and behavioral requirements
-are compatible. Equal bytes alone do not prove equal runtime interpretation.
+artifact only when cross-client consumption is explicitly intended and their
+rendered bytes, resources and behavioral requirements are qualified as
+compatible. Equal bytes alone do not prove equal runtime interpretation.
 Otherwise use verified client-specific locations where possible, or stop with a
 conflict requiring an author/consumer choice.
 
 Selection controls upskill's writes; it cannot stop an unselected client from
 discovering a native shared directory. Preview must identify known incidental
 consumers of shared paths. Client-specialized output must not enter a shared
-path without validating it for the profile's known discovery consumers. This
-includes compatibility directories, not just `.agents/skills`. Unknown future
-clients cannot be guaranteed compatible and remain outside the contract.
+path merely because its bytes validate for known readers. Unintended readers
+require successful native negative controls or a different qualified route;
+unresolved readers block the profile. This includes compatibility directories,
+not just `.agents/skills`. Unknown future clients cannot be guaranteed
+compatible and remain outside the contract.
 
 Incidental discovery is exposure metadata, not a retention reference. Only
 recorded installation owners and their requested consumers keep an artifact

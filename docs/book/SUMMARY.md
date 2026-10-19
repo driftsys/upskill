@@ -25,6 +25,7 @@
 - [Artifact planning](topics/0006-artifact-planning.md)
 - [Filesystem access](topics/0007-filesystem-access.md)
 - [Execution and recovery](topics/0008-execution-and-recovery.md)
+- [Customization delivery, discovery and activation](topics/0009-customization-delivery.md)
 
 # Compatibility
 

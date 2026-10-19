@@ -1,6 +1,6 @@
 # Upskill roadmap
 
-Updated: **2026-10-14**. Status: **planned delivery scope**. This roadmap
+Updated: **2026-10-19**. Status: **planned delivery scope**. This roadmap
 describes upcoming work, not implemented support. Release numbers and dates will
 be assigned separately.
 
@@ -70,15 +70,23 @@ is required. Measure startup overhead against an agreed baseline and budget.
 
 ### Rules and skills
 
-Start with native rule loading for Claude and Copilot. Validate active plugin
-delivery for independent Codex/OpenCode rules alongside team `AGENTS.md` before
-committing to that route. Use explicit default/override semantics in the rule
-text; numeric rule priorities are not an MVP requirement.
+Use qualified native rule loading for Claude and Copilot. Independent
+Codex/OpenCode rules require qualified plugin delivery alongside unchanged team
+`AGENTS.md`. Managed contributions to that file remain experimental library
+work, not the production route or an automatic fallback. Use explicit
+default/override semantics in the rule text; numeric rule priorities are not an
+MVP requirement.
 
 Keep native skill loading where it meets the requirements. Adapt client metadata
 and resources without duplicating content discovery in runtime hooks. Avoid
 duplicate activation when content is installed both directly and through a
-plugin.
+plugin. All customizations follow the
+[delivery/discovery/activation contract](topics/0009-customization-delivery.md):
+explicit reader/consumption intent, compatibility-directory/import/glob
+inventories, unintended-loading and duplicate-activation controls, and
+ownership/configuration preservation. Existing agents and MCP integrations
+remain regression obligations; planned general hooks/tools/permissions retain
+later scope.
 
 ### MVP release gate
 
@@ -86,6 +94,10 @@ plugin.
   systems; distinguish OpenCode v1 compatibility from v2 support.
 - Verify installed updater execution and real CLI/skill updates on all four
   clients, including offline, concurrent and interrupted runs.
+- Require independent installed-plugin rule delivery for Codex/OpenCode, with
+  unchanged team guidance and disabled/removed-plugin negative controls.
+- Apply CD-01 through CD-10 per customization/client/scope: qualify intended
+  discovery/activation and reject unintended readers or duplicate activation.
 - Verify rules, skills, bundle dependencies and plugin lifecycle through native
   discovery and representative behavior, not generated-file checks alone.
 - Preserve existing configurations, restrictions and supported agent/MCP

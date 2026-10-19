@@ -1,5 +1,13 @@
 # Agent customization delivery roadmap
 
+Architecture reconciliation (2026-10-19): this older three-client-first roadmap
+is historical planning, not current release sequencing. The
+[product roadmap](../../roadmap.md) and
+[delivery contract](../../topics/0009-customization-delivery.md) require the
+four-client scope and independent Codex/OpenCode plugin rules. Earlier
+canonical-instruction milestone descriptions do not authorize production
+`AGENTS.md` contributions or qualify other customizations.
+
 Date: 2026-10-11. Status: **Proposed delivery roadmap**. Baseline: `b866f5e` (PR
 #250); no adapter implementation is included here.
 

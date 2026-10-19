@@ -1,5 +1,12 @@
 # M1 owned-content lifecycle design
 
+Reconciled 2026-10-19 against the
+[delivery/discovery/activation contract](../../topics/0009-customization-delivery.md).
+The state/ownership/preflight/recovery foundations remain applicable. Any
+production interpretation of managed Codex `AGENTS.md` contributions is
+superseded by independent qualified Codex/OpenCode plugin rule delivery.
+Canonical-file experiments retain their bounded historical meaning.
+
 Date: 2026-10-12. Status: **Proposed implementation contract**. Baseline:
 `f7d36bf` (PR #258). Authority:
 [foundation](2026-10-11-agent-customization-foundation-design.md) and
@@ -7,11 +14,14 @@ Date: 2026-10-12. Status: **Proposed implementation contract**. Baseline:
 
 ## Intent and current boundary
 
-Deliver instruction installation for Claude Code, Copilot and Codex while
-preserving manual content and existing OpenCode behavior. The user delegated
-routine design and delivery decisions and the continuing review/merge loop. This
-document selects the operational direction and decomposes its prerequisites; it
-does not claim a schema-2 reader, writer, executor or Codex CLI flag exists.
+Deliver rule installation for Claude Code, Copilot CLI, Codex CLI and OpenCode
+v2 while preserving manual content and existing behavior for every client.
+Independent Codex/OpenCode rules use qualified plugins alongside team
+`AGENTS.md`; shared contributions are an experimental mechanism only. The user
+delegated routine design and delivery decisions and the continuing review/merge
+loop. This document selects the operational direction and decomposes its
+prerequisites; it does not claim a schema-2 reader, writer, executor or Codex
+CLI flag exists.
 
 The merged library supplies target identities, a pure Markdown contribution
 editor, validated owned-artifact records and a pure legacy-state projection.
@@ -70,9 +80,9 @@ when its bytes match. A shared instruction aggregate may contain manual text:
 only new marked contributions become owned, and all other bytes stay user-owned.
 
 The native surface set and default selection remain the foundation's fixed
-contract. An explicit Codex selector is enabled only with its instruction
-adapter and complete lifecycle. Incidental discovery is exposure metadata, not
-an owner or an additional retention reference.
+contract. An explicit Codex selector is enabled only with its qualified
+independent-rule plugin adapter and complete lifecycle. Incidental discovery is
+exposure metadata, not an owner or an additional retention reference.
 
 ## Mixed-state operation contract
 
@@ -204,7 +214,7 @@ hosted CI and squash merge. Later tasks consume explicit reviewed interfaces.
    and preservation of manual bytes; no native-success inference.
 5. Combined state and all five lifecycle adapters, including tagged native
    records, preview, exact migration backup and no legacy recursive removal.
-6. Codex unconditional instruction adapter and selector, native target
+6. Independent Codex/OpenCode plugin rule adapters and selectors, native target
    qualification, fixed defaults and documented incidental readers. Scoped rules
    remain M1-C.
 
@@ -215,20 +225,20 @@ gates.
 
 ## Acceptance examples
 
-| ID  | Example and required result                                                                                                                  |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| L01 | Add two owned contributions to manual text; update/remove one preserves the other and all manual bytes                                       |
-| L02 | Remove one of two references; shared content survives; changing content for an untouched owner conflicts                                     |
-| L03 | Edited region, unknown marker, invalid UTF-8 or affected unsupported artifact form yields a conflict with no partial plan                    |
-| L04 | New owned install beside an unrelated unresolved legacy row preserves that row; selected ambiguous legacy update/remove performs no effects  |
-| L05 | Bare update selecting owned and blocked legacy work reports the complete conflict before any write; named disjoint update can proceed        |
-| L06 | List, doctor and preview preserve exact state bytes and create no backup/journal/migration                                                   |
-| L07 | First migration backup matches exact original schema-1 bytes; a pre-existing different backup conflicts and is not overwritten               |
-| L08 | Extra resource files and edited owned files survive removal; no name-based recursive deletion                                                |
-| L09 | Changed state/source/destination after preview rejects the plan; a second upskill writer cannot apply concurrently                           |
-| L10 | Interrupt every file/state checkpoint; recovery recognizes pre/post states, preserves unrelated edits and does not duplicate unknown effects |
-| L11 | Schema-2 add/update/remove/list/doctor retain all tagged legacy/native rows and all unrelated owned references                               |
-| L12 | Explicit Codex instructions use qualified native roots; implicit defaults remain unchanged and incidental discovery is reported              |
+| ID  | Example and required result                                                                                                                                                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L01 | Add two owned contributions to manual text; update/remove one preserves the other and all manual bytes                                                                       |
+| L02 | Remove one of two references; shared content survives; changing content for an untouched owner conflicts                                                                     |
+| L03 | Edited region, unknown marker, invalid UTF-8 or affected unsupported artifact form yields a conflict with no partial plan                                                    |
+| L04 | New owned install beside an unrelated unresolved legacy row preserves that row; selected ambiguous legacy update/remove performs no effects                                  |
+| L05 | Bare update selecting owned and blocked legacy work reports the complete conflict before any write; named disjoint update can proceed                                        |
+| L06 | List, doctor and preview preserve exact state bytes and create no backup/journal/migration                                                                                   |
+| L07 | First migration backup matches exact original schema-1 bytes; a pre-existing different backup conflicts and is not overwritten                                               |
+| L08 | Extra resource files and edited owned files survive removal; no name-based recursive deletion                                                                                |
+| L09 | Changed state/source/destination after preview rejects the plan; a second upskill writer cannot apply concurrently                                                           |
+| L10 | Interrupt every file/state checkpoint; recovery recognizes pre/post states, preserves unrelated edits and does not duplicate unknown effects                                 |
+| L11 | Schema-2 add/update/remove/list/doctor retain all tagged legacy/native rows and all unrelated owned references                                                               |
+| L12 | Independent Codex/OpenCode plugin rules preserve team instructions; qualified roots, reader intent, negative/duplicate controls and unchanged implicit defaults are required |
 
 ## Evidence limits
 

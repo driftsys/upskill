@@ -2,6 +2,13 @@
 
 > Upskill your coding agents.
 
+Production-architecture direction is specified by the
+[customization delivery contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md).
+Independent Codex/OpenCode rules require qualified plugins beside unchanged team
+`AGENTS.md`; experimental contribution APIs and generated-file tests do not
+activate that route or schema 2. Current released command behavior below remains
+separate from those planned activation gates.
+
 ## 1. Overview
 
 `upskill` is a single-binary CLI that lets authors **create, manage, and

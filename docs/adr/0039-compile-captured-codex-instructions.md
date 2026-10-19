@@ -1,5 +1,10 @@
 # AD-0039 — Compile captured Codex instructions with a separate reader report
 
+Production-route clarification (2026-10-19):
+[AD-0040](0040-separate-customization-delivery-from-discovery.md) limits this
+decision to the experimental library boundary. It does not approve managed
+`AGENTS.md` contributions as the production independent-rule architecture.
+
 ## Context
 
 Project `AGENTS.md` can expose one managed contribution to several client
