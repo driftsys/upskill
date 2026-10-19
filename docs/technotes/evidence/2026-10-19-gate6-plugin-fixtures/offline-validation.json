@@ -1,7 +1,7 @@
 {
   "evidence_class": "offline harness and repository checks; no native qualification",
   "qualified": false,
-  "tests": "11 harness tests; 30 Python tests and Rust suite in just verify",
+  "tests": "19 current harness tests; final unrestricted just verify ran 38 Python tests, Rust suite and docs checks; original 11-test/30-test receipts retained as initial history",
   "sandbox_attempt": "The initial Python run had PermissionError in existing test_timeout_terminates_owned_process_group and test_interrupt_terminates_owned_process_group_and_propagates; unrestricted just verify passed all 30 Python tests.",
   "receipts": [
     {
@@ -31,6 +31,13 @@
       "raw_sha256": "23f126fbbeedfd42c52e869a3a3a432a0e3484ff2f11133732be460b5a9ee215",
       "retained": "offline-sanity.log.gz",
       "retained_sha256": "8ae9e201230485c1356a87ad1b6a173131223d3777015f46b09dbd61f143286d"
+    },
+    {
+      "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=$CARGO_TARGET_DIR just verify",
+      "exit_code": 0,
+      "raw_sha256": "c85b79db1b363e7d513944f48b7cc52d4757502a14df56335a5d761626bcec7f",
+      "retained": "offline-final-verify.log.gz",
+      "retained_sha256": "a0a587ce12f689cc57ae4a438bc4805de0c7879fdf0d799b185a7f91abcec49e"
     }
   ]
 }

@@ -103,5 +103,8 @@
     "classification": "authentication prerequisite only; no model controls run",
     "receipt": "codex-authentication-status.txt",
     "sanitized_sha256": "a06d5ca8261150a5175e866fc3dc401070fb4ea30e849a1b9394b7e252fa1677"
-  }
+  },
+  "working_directory_scope": "project fixture",
+  "registration_scope": "fixture user CODEX_HOME configuration and cache",
+  "authority_limit": "Does not qualify project-only native registration or authorize production project commands to write user state."
 }

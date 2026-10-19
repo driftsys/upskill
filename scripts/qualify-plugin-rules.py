@@ -62,7 +62,7 @@ def fixture_environment(root):
                CLAUDE_CONFIG_DIR=str(home / '.claude'), COPILOT_HOME=str(home / '.copilot'),
                XDG_CONFIG_HOME=str(home / '.config'), XDG_DATA_HOME=str(home / '.local/share'),
                XDG_STATE_HOME=str(home / '.local/state'), XDG_CACHE_HOME=str(home / '.cache'),
-               OPENCODE_CONFIG=str(home / '.config/opencode'), DISABLE_AUTOUPDATER='1')
+               DISABLE_AUTOUPDATER='1')
     return env
 
 
@@ -88,7 +88,7 @@ def prepare(root, client):
     instructions.chmod(0o640)
     env = fixture_environment(root)
     for key in ('HOME', 'CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'COPILOT_HOME',
-                'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME', 'OPENCODE_CONFIG'):
+                'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME'):
         Path(env[key]).mkdir(parents=True, exist_ok=True)
     packages = []
     trace = root / 'activation.jsonl'

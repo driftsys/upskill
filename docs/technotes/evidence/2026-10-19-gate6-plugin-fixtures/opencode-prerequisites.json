@@ -18,8 +18,9 @@
     "classification": "registration/listing only; no model controls run",
     "receipt": "plugin-list.txt",
     "retained_receipt": "plugin-list-diagnostic.txt",
-    "retained_sha256": "261a467c06a92d0973ad31e9ebf7cc654cd0eb33750ec37541fc2469d1b999b1",
-    "diagnostic_note": "Separate diagnostic rerun: managed service port already occupied; existing listener untouched."
+    "retained_sha256": "b5cca67c28e41466d93dae0210c5906ca74ca4fcb327a319ff1265d2f4d6d8a7",
+    "diagnostic_note": "Separate diagnostic rerun: managed service port already occupied; existing listener untouched. Repository formatting removes trailing whitespace; retained hash identifies that sanitized file.",
+    "diagnostic_raw_sha256": "261a467c06a92d0973ad31e9ebf7cc654cd0eb33750ec37541fc2469d1b999b1"
   },
   "standalone": {
     "state": "failure",
@@ -47,5 +48,6 @@
     "ordinary trust where applicable",
     "all native matching/negative/duplicate/resume/compaction controls",
     "all user and Linux x86_64 cells"
-  ]
+  ],
+  "diagnostic_followup": "Initial 500 traced to fixture directory/file confusion; corrected candidate observations are retained in opencode-corrected.json. No model pair qualified."
 }

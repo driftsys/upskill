@@ -31,14 +31,19 @@ counts cannot produce `observed`. Duplicate checks require independent native
 event counts; equal model responses cannot prove one activation. `observed`
 describes one pair only and never means campaign qualification. These tests use
 synthetic observations and do not establish native discovery.
+[Mutation controls](evidence/2026-10-19-gate6-plugin-fixtures/offline-mutations.json)
+show that 14 deliberately broken variants are rejected, including team/payload
+contamination, failed control validation, wrong rule identities, constant
+snapshots, inherited credentials and weakened hook filters.
 
 The Codex hook filters its declared fixture directory and SessionStart event,
 records its rule/session/source and emits only its own independent context. The
 OpenCode package is an unqualified v2 SDK candidate using a session-directory
-and agent filter, a context hook and disposable registration. Native
-compilation, hook execution, provider delivery, compaction and reload/disposal
-remain unproven. No Node/npm dependency is added to the Rust project; the SDK
-declaration belongs only to the disposable native package.
+and agent filter, a context hook and disposable registration. One corrected
+native request executed both matching context callbacks before provider
+rejection. Provider delivery, unmatched-directory/agent controls, compaction and
+reload/disposal remain unproven. No Node/npm dependency is added to the Rust
+project; the SDK declaration belongs only to the disposable native package.
 
 ## Native observations and blockers
 
@@ -49,7 +54,10 @@ environment active, `plugin marketplace add`, both `plugin add` commands and
 `plugin list` succeeded. The installed copies were reported beneath
 `$FIXTURE/home/.codex/plugins/cache/upskill-qualification/<plugin>/0.0.0`. Team
 bytes and mode matched the preparation snapshot after installation. This
-establishes package installation, not hook trust or rule delivery.
+establishes package installation, not hook trust or rule delivery. Registration
+and cache writes used the fixture user `CODEX_HOME` while the working directory
+was the project. Project-only registration and production project write
+authority remain unqualified.
 
 `codex login status` in that root reported an authentication failure. Ordinary
 hook trust has not been reviewed/provisioned for these definitions. No Codex
@@ -57,27 +65,45 @@ model pair was run. The trust-bypass flag is not used to manufacture a pass.
 
 The pinned Claude 2.1.303 and OpenCode 2.0.32 binaries were fetched into
 temporary storage and verified against the campaign's digest/integrity values.
-All four CLI pins reported their expected versions in separate credential-free
-temporary homes. This is executable availability only. Existing personal
-binaries and configuration were not replaced.
+[All four CLI pins](evidence/2026-10-19-gate6-plugin-fixtures/pinned-interfaces.json)
+reported their expected versions in separate credential-free temporary homes.
+This is executable availability only. Existing personal binaries and
+configuration were not replaced.
 
 [OpenCode prerequisite receipts](evidence/2026-10-19-gate6-plugin-fixtures/opencode-prerequisites.json)
 record two unsuccessful 2.0.32 observations. Managed `plugin list` could not
 start because its default service port was occupied. The existing listener was
 left untouched. A private `run --standalone --format json` with deny-all fixture
 permissions emitted an error with status 500, with no successful completed
-positive turn. Its cause remains unresolved; it does not establish an
-authentication diagnosis or plugin injection. Neither failure qualifies a
-negative. Native probes stopped at these blockers.
+positive turn. Its cause was traced to a fixture error: the optional
+`OPENCODE_CONFIG` file override pointed at a directory. The fixture now leaves
+that override unset and uses its isolated XDG directory. The inventory names the
+directory placeholder `$OPENCODE_CONFIG_ROOT` to distinguish these mechanisms.
+The regression failed before the fix and passed afterward. Neither original
+failure qualifies a negative.
+
+[Corrected native observations](evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json)
+first reached routing but found the selected OpenAI model unavailable. The
+native catalog listed anonymous free routes. A listed route exposed a second
+fixture error: pinned `SessionInfo` stores the directory under
+`session.location.directory`. Verified 2.0.32 client/schema declarations and the
+recorded native error established that correction. After it, the matching rule
+callbacks each recorded one context event for the same session and team
+bytes/mode remained unchanged. The provider returned `provider.auth` status 403
+without a completed positive turn. No negative controls were run from that
+failed positive; authenticated provider provisioning still blocks model behavior
+qualification. Native callback execution does not establish provider consumption
+or whole-profile support.
 
 The external receipt roots are
 `/private/tmp/upskill-gate6-codex-installed-20261019`,
-`/private/tmp/upskill-gate6-opencode-prepared-20261019` and
+`/private/tmp/upskill-gate6-opencode-prepared-20261019`,
+`/private/tmp/upskill-gate6-opencode-corrected-20261019` and
 `/private/tmp/upskill-gate6-interface-20261019`. The retained JSON includes
 exact sanitized commands, outcomes and hashes. Retained stdout receipts match
 their recorded hashes; the OpenCode managed-port diagnostic is a separately
 labeled rerun. Raw arbitrary client output is not treated as model evidence.
-Temporary invocations used the existing process-group cleanup helper; the new
+Temporary invocations killed and reaped the process groups they created; the new
 preparation command starts no subprocess. A future automated model runner still
 needs its own timeout/interruption acceptance cases.
 

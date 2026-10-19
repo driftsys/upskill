@@ -11,10 +11,11 @@
     "$SCOPE": "the selected authoritative project/user root",
     "$CODEX_HOME": "default $USER/.codex only for initial policy; external override requires separate authority contract",
     "$COPILOT_HOME": "native override or $USER/.copilot; override authority must be bound before effects",
-    "$OPENCODE_CONFIG": "native XDG/config override or $USER/.config/opencode; exact override authority must be bound",
+    "$OPENCODE_CONFIG_ROOT": "native user configuration directory, normally $XDG_CONFIG_HOME/opencode or $USER/.config/opencode; this inventory placeholder is not the OPENCODE_CONFIG environment variable",
     "$PLUGIN_ROOT": "observed package root, with separately owned payload and registration",
     "$NATIVE_CACHE": "unresolved native-managed cache location; never inferred owned by upskill",
-    "$NATIVE_CLI_REGISTRATION": "observed native registration identity/scope, not a guessed file"
+    "$NATIVE_CLI_REGISTRATION": "observed native registration identity/scope, not a guessed file",
+    "$OPENCODE_CONFIG_FILE": "optional explicit OPENCODE_CONFIG file override; keep unset for default-discovery probes; never use it as a directory root"
   },
   "sources": {
     "contract": "../../topics/0009-customization-delivery.md",
@@ -79,7 +80,7 @@
       "native_support": "unqualified",
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -93,7 +94,7 @@
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Isolated authenticated user-root fixture not provisioned; no auth copying permitted",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -107,7 +108,7 @@
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Authenticated Linux runtime not provisioned by this local session",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -122,7 +123,7 @@
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Authenticated Linux runtime not provisioned by this local session",
         "Isolated authenticated user-root fixture not provisioned; no auth copying permitted",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -239,7 +240,7 @@
       "native_support": "unqualified",
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -253,7 +254,7 @@
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Isolated authenticated user-root fixture not provisioned; no auth copying permitted",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -267,7 +268,7 @@
       "blockers": [
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Authenticated Linux runtime not provisioned by this local session",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     },
     {
@@ -282,7 +283,7 @@
         "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
         "Authenticated Linux runtime not provisioned by this local session",
         "Isolated authenticated user-root fixture not provisioned; no auth copying permitted",
-        "Pinned campaign binary not yet provisioned; installed version differs"
+        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
       ]
     }
   ],
@@ -2682,8 +2683,8 @@
           "$PROJECT/opencode.json(c)::plugins"
         ],
         "user": [
-          "$OPENCODE_CONFIG/plugins/{plugin}/index.ts",
-          "$OPENCODE_CONFIG/opencode.json(c)::plugins"
+          "$OPENCODE_CONFIG_ROOT/plugins/{plugin}/index.ts",
+          "$OPENCODE_CONFIG_ROOT/opencode.json(c)::plugins"
         ]
       },
       "implementation_status": "historical generation/integration code exists; corrected lifecycle unqualified",
@@ -2763,7 +2764,7 @@
           "$PROJECT/.opencode/skills/{name}/SKILL.md"
         ],
         "user": [
-          "$OPENCODE_CONFIG/skills/{name}/SKILL.md"
+          "$OPENCODE_CONFIG_ROOT/skills/{name}/SKILL.md"
         ]
       },
       "implementation_status": "historical generation/integration code exists; corrected lifecycle unqualified",
@@ -2846,7 +2847,7 @@
           "$PROJECT/.opencode/agents/{name}/{resource} (historical output)"
         ],
         "user": [
-          "$OPENCODE_CONFIG/skills/{name}/{resource}",
+          "$OPENCODE_CONFIG_ROOT/skills/{name}/{resource}",
           "$USER/.agents/rules/{name}/{resource} (historical output)",
           "$USER/.opencode/agents/{name}/{resource} (historical output)"
         ]
@@ -2935,8 +2936,8 @@
           "$PROJECT/opencode.json(c)::agents"
         ],
         "user": [
-          "$OPENCODE_CONFIG/agents/{name}.md",
-          "$OPENCODE_CONFIG/opencode.json(c)::agents"
+          "$OPENCODE_CONFIG_ROOT/agents/{name}.md",
+          "$OPENCODE_CONFIG_ROOT/opencode.json(c)::agents"
         ]
       },
       "implementation_status": "historical generation/integration code exists; corrected lifecycle unqualified",
@@ -3083,8 +3084,8 @@
           "$PROJECT/opencode.json(c)::plugins"
         ],
         "user": [
-          "$OPENCODE_CONFIG/plugins/{plugin}/index.ts",
-          "$OPENCODE_CONFIG/opencode.json(c)::plugins"
+          "$OPENCODE_CONFIG_ROOT/plugins/{plugin}/index.ts",
+          "$OPENCODE_CONFIG_ROOT/opencode.json(c)::plugins"
         ]
       },
       "implementation_status": "historical generation/integration code exists; corrected lifecycle unqualified",
@@ -3162,7 +3163,7 @@
           "$PROJECT/opencode.json(c)::mcp.servers"
         ],
         "user": [
-          "$OPENCODE_CONFIG/opencode.json(c)::mcp.servers"
+          "$OPENCODE_CONFIG_ROOT/opencode.json(c)::mcp.servers"
         ]
       },
       "implementation_status": "historical generation/integration code exists; corrected lifecycle unqualified",
@@ -3996,8 +3997,10 @@
       "profile": "codex.macos-arm64.project",
       "customization": "rules",
       "route": "codex.rules",
-      "status": "not-run",
-      "qualified": false
+      "status": "blocked",
+      "qualified": false,
+      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json",
+      "observation": "Two packages install; isolated authentication and ordinary hook trust not provisioned."
     },
     {
       "profile": "codex.macos-arm64.project",
@@ -4031,8 +4034,10 @@
       "profile": "codex.macos-arm64.project",
       "customization": "plugins",
       "route": "codex.plugins",
-      "status": "not-run",
-      "qualified": false
+      "status": "blocked",
+      "qualified": false,
+      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json",
+      "observation": "Two packages install; isolated authentication and ordinary hook trust not provisioned."
     },
     {
       "profile": "codex.macos-arm64.project",
@@ -4276,8 +4281,10 @@
       "profile": "opencode.macos-arm64.project",
       "customization": "rules",
       "route": "opencode.rules",
-      "status": "not-run",
-      "qualified": false
+      "status": "blocked",
+      "qualified": false,
+      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json",
+      "observation": "Two matching context callbacks observed; provider.auth 403 prevents successful positive/model proof."
     },
     {
       "profile": "opencode.macos-arm64.project",
@@ -4311,8 +4318,10 @@
       "profile": "opencode.macos-arm64.project",
       "customization": "plugins",
       "route": "opencode.plugins",
-      "status": "not-run",
-      "qualified": false
+      "status": "blocked",
+      "qualified": false,
+      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json",
+      "observation": "Two matching context callbacks observed; provider.auth 403 prevents successful positive/model proof."
     },
     {
       "profile": "opencode.macos-arm64.project",
@@ -4610,5 +4619,10 @@
     "Historical OpenCode plugin verb and MCP config shapes differ from the v2 candidate contract; compatible adapters required",
     "Cursor/Gemini and other known compatibility readers remain design/inventory obligations, not new implementation/native claims",
     "Copilot MCP current fallback uses real HOME/.copilot independently of selected project target/COPILOT_HOME; a compatible adapter must bind scope before effects."
+  ],
+  "follow_up_evidence": "../gate6-plugin-rule-probes.md; Task #339 native prerequisites/callback observations only; no qualified cells",
+  "observed_root_constraints": [
+    "Native OpenCode 2.0.32 observed OPENCODE_CONFIG as a file input: using a directory caused EISDIR/HTTP 500. The fixture now uses isolated XDG_CONFIG_HOME and leaves that optional override unset; all loading/activation cells remain unqualified.",
+    "Codex installation-only fixture used user CODEX_HOME registration/cache while invoked from the project directory. Project-only native registration/write authority remains unqualified."
   ]
 }

@@ -111,7 +111,7 @@
       "artifact": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-x86_64-unknown-linux-musl.tar.gz",
       "verified": "sha256",
       "archive_sha256": "beb339e8ecd9ba057a6bb2dc81ad8ca474812edfbf0fc5056ca818797648dde4",
-      "execution": "not-run"
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
     },
     {
       "client": "claude",
@@ -119,7 +119,7 @@
       "artifact": "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-x64.tar.gz",
       "verified": "sha256",
       "archive_sha256": "9ef730488e8b75d47f23c156282a73c89db3342aaf756ed7ec0b78a88fb31f3e",
-      "execution": "not-run"
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
     },
     {
       "client": "copilot",
@@ -127,7 +127,7 @@
       "artifact": "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-linux-x64.tar.gz",
       "verified": "sha256",
       "archive_sha256": "87ddb4b3f98462b7cb13c0a6857c68ee410ec9673e2e5f64ee5bedad45825b05",
-      "execution": "not-run"
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
     },
     {
       "client": "opencode",
@@ -135,7 +135,7 @@
       "artifact": "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.0.32.tgz",
       "verified": "sha512",
       "archive_sha256": "64a1f4b381c2d2efc18c8d76b2ce399141778b421b54c98b94be8e80803606dc",
-      "execution": "not-run"
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
     }
   ]
 }

@@ -13,7 +13,7 @@ export default Plugin.define({
   async setup(ctx) {
     const registration = await ctx.session.hook("context", async (event) => {
       const session = await ctx.session.get({ sessionID: event.sessionID });
-      if (resolve(session.directory) !== resolve(config.project) || event.agent !== config.agent) return;
+      if (resolve(session.location.directory) !== resolve(config.project) || event.agent !== config.agent) return;
       event.system.push({ type: "text", text });
       appendFileSync(config.trace, JSON.stringify({
         rule: config.rule, session: event.sessionID, source: "context",
