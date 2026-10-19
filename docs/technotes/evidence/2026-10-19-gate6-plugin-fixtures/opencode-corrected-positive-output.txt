@@ -1,0 +1,1 @@
+{"type":"error","timestamp":1792445714139,"sessionID":"ses_ea9e8f1f1ffenSoOQ2eIZxZR1P","error":{"type":"unknown","message":"The \"paths[0]\" property must be of type string, got undefined"}}

@@ -1,0 +1,46 @@
+{
+  "evidence_class": "native version/interface only",
+  "qualified": false,
+  "receipts": [
+    {
+      "command": [
+        "$PINNED_CODEX",
+        "--version"
+      ],
+      "exit_code": 0,
+      "raw_sha256": "3711dcc1452d27f87245cfe7e9aeb67f519f4d259863312f1e7d35b750d613de",
+      "sanitized_sha256": "eef47905c5aba9d6b5622489ae75f138ad03c160e4b8516731155c1fd4c347ad",
+      "receipt": "codex-version.txt"
+    },
+    {
+      "command": [
+        "$PINNED_CLAUDE",
+        "--version"
+      ],
+      "exit_code": 0,
+      "raw_sha256": "d4986f1082ce2754694f97ceb54fb0c0dd3a49ec43a2031ea9c39648fabd5e1b",
+      "sanitized_sha256": "d4986f1082ce2754694f97ceb54fb0c0dd3a49ec43a2031ea9c39648fabd5e1b",
+      "receipt": "claude-version.txt"
+    },
+    {
+      "command": [
+        "$PINNED_OPENCODE",
+        "--version"
+      ],
+      "exit_code": 0,
+      "raw_sha256": "db7075c6765852e2fff7cc6d0eb7e0ed1dd6cc2414af3606998f423d93b1c639",
+      "sanitized_sha256": "db7075c6765852e2fff7cc6d0eb7e0ed1dd6cc2414af3606998f423d93b1c639",
+      "receipt": "opencode-version.txt"
+    },
+    {
+      "command": [
+        "$PINNED_COPILOT",
+        "--version"
+      ],
+      "exit_code": 0,
+      "raw_sha256": "dee34728b63061e7f0705b53da695223bb686122f104dea5b4670d9905dcc2a1",
+      "sanitized_sha256": "dee34728b63061e7f0705b53da695223bb686122f104dea5b4670d9905dcc2a1",
+      "receipt": "copilot-version.txt"
+    }
+  ]
+}

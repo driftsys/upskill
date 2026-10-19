@@ -1,0 +1,134 @@
+{
+  "kind": "offline mutation controls only",
+  "qualified": false,
+  "source_sha256": "5ea0c4e5e9bce0eb9b5695fec785937abe791832a458ae329aa3d39c1aca641e",
+  "tests_sha256": "3142c148f1708996065a5f4e71e599dd4ec7cfa593ced9fb6b549b0c59c9b27a",
+  "receipts": [
+    {
+      "mutation": "positive-team",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "d31a2638ea1303f5e6b511b23005052e7d659ff947f2c79d4d23ca1660ec02a4",
+      "receipt": "positive-team.log",
+      "retained": "mutation-positive-team.log.gz",
+      "retained_sha256": "b16d8bf2f1838800d5a67d2be2772b0ccb5e8fbe17dff7253c8865df176de2b8"
+    },
+    {
+      "mutation": "positive-response",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "026bb1e2f780b49cb96f341766fdbdc58962880a4d3ff6be383b0f508e06266a",
+      "receipt": "positive-response.log",
+      "retained": "mutation-positive-response.log.gz",
+      "retained_sha256": "4ed0e5daaada54e4da0ce4c2f9e589d2032154964661075f282b2c180db88fb5"
+    },
+    {
+      "mutation": "control-completion-tools-version",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "f2be87555ae02286626b35954b83dbbdbb4813e34d95632d9f33a2c66f234382",
+      "receipt": "control-completion-tools-version.log",
+      "retained": "mutation-control-completion-tools-version.log.gz",
+      "retained_sha256": "25618f0f9219338da297388bc1de2e7a67c52781bb00c0464a2d5dd472d6dcf4"
+    },
+    {
+      "mutation": "activation-rule-identity",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "66063477db6fb83cfa2666122f18b11bd9dfb216161ed9cf098ea0bad45c0fd3",
+      "receipt": "activation-rule-identity.log",
+      "retained": "mutation-activation-rule-identity.log.gz",
+      "retained_sha256": "eec00438d74d3907557dd29c6f8fc742792be9bf8efe9646eb1acca7ef7afa59"
+    },
+    {
+      "mutation": "qualified-descriptor",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "a807ddfa80fca03b00637dfa042907eacf28c9f2ed3afd12f59523e82cda838b",
+      "receipt": "qualified-descriptor.log",
+      "retained": "mutation-qualified-descriptor.log.gz",
+      "retained_sha256": "1baefc5a09fc152288f61a3c554410c7394d77937e4946435ae154f8be711746"
+    },
+    {
+      "mutation": "team-payload-contamination",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "f8595ccfe457738edf7ecbf993a63351e7cdb4037853e88d1237f090c1d77d41",
+      "receipt": "team-payload-contamination.log",
+      "retained": "mutation-team-payload-contamination.log.gz",
+      "retained_sha256": "fa983b94f46c195c63a75eeaf2fe298ed33ba4174381d11a62919b6b6ca52b9c"
+    },
+    {
+      "mutation": "independent-second-rule",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "c50e80cbf0ca6cf12a71090d43e35bc8407bbbff2841564be26c4c175deeaf02",
+      "receipt": "independent-second-rule.log",
+      "retained": "mutation-independent-second-rule.log.gz",
+      "retained_sha256": "101fc8bc7588d71acb80aba0827eee13639b7b8a07056ca88699301566d46d8b"
+    },
+    {
+      "mutation": "snapshot-digest",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "f6fc092090e62ba6518128a0e541fa5fd364592d3da91c4f4d95acfcad104f4a",
+      "receipt": "snapshot-digest.log",
+      "retained": "mutation-snapshot-digest.log.gz",
+      "retained_sha256": "ece03323571cbdf3593d59c6a5973e927cbdd3f6985dd917b104c2b166a6dc96"
+    },
+    {
+      "mutation": "repository-root-boundary",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "2bd0337e765553b1c195591852f4fc3811733a84118f575bc07eafdbb7cb9c1f",
+      "receipt": "repository-root-boundary.log",
+      "retained": "mutation-repository-root-boundary.log.gz",
+      "retained_sha256": "8d0805d7a660edb18fad0be79ca7529824bd41720173b3579b4363ecbe37dfaa"
+    },
+    {
+      "mutation": "ambient-credential",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "b6a38363cffee71f14a22bdecdc93215172ef6e9a253da76ca60dc999869aa38",
+      "receipt": "ambient-credential.log",
+      "retained": "mutation-ambient-credential.log.gz",
+      "retained_sha256": "9bc1f0d8c547ecc63be70fcdb090e5aab1bf606bcc2f018708dd801417c36bc6"
+    },
+    {
+      "mutation": "hook-source",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "72574dac47ff5c2598344972bce7ffee8eaacefa11efb2a04906568cc742d3c1",
+      "receipt": "hook-source.log",
+      "retained": "mutation-hook-source.log.gz",
+      "retained_sha256": "c6fcdc0c3b1db40fac7e80a59e4242c57d3230ade63ad052c19eae71aa853273"
+    },
+    {
+      "mutation": "hook-session-type",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "1265b8386f765fbcfd30fd308650c33b730f78af5780a081552aa5a3ffcd5fb4",
+      "receipt": "hook-session-type.log",
+      "retained": "mutation-hook-session-type.log.gz",
+      "retained_sha256": "c534e329f22c45d7b7f0a6489b6d5bb2204a1495071c5cb680e33317d85e5f31"
+    },
+    {
+      "mutation": "trace-session",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "828763fa274f6ee7f0f8cdf73b77bf76affd7915091ff0a8e05cd4b3a2882c2a",
+      "receipt": "trace-session.log",
+      "retained": "mutation-trace-session.log.gz",
+      "retained_sha256": "3f63c226795bd0878a87ba39c4e39646191f674f2eb9e706280846ed8e98fab8"
+    },
+    {
+      "mutation": "opencode-directory-override",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "sha256": "fbca17f62483d66409770d8790f2f27a742d852168e31fb856b30589fe3b50a8",
+      "receipt": "opencode-directory-override.log",
+      "retained": "mutation-opencode-directory-override.log.gz",
+      "retained_sha256": "2a9d419c042088cf3eca641ebe731cd61da14ff29cc33717df9cee6729f08d18"
+    }
+  ]
+}

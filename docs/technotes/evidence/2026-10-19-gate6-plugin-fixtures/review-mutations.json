@@ -1,0 +1,153 @@
+{
+  "kind": "offline mutation controls only",
+  "qualified": false,
+  "source_sha256": "d25e204efbaf243b6e66e4eddb356fdeb98f9014d897354d7dbd8a19701a8399",
+  "tests_sha256": "4a740a643c76d8224f42967cf7f455dae2ecab5e960e956974c4a8a5ff82cf8c",
+  "receipts": [
+    {
+      "mutation": "special-mode-snapshot",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-special-mode-snapshot.log.gz",
+      "raw_sha256": "afbbdf2f32469924ede85972a7a1f11b0622b22a197517021b6c41d69d5bfb35",
+      "retained_sha256": "01eb1b74eae00167ee3dbc68a0bfb4607f9bbe5ce257ff4868f18dbffa5ac600"
+    },
+    {
+      "mutation": "hook-response-event",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-hook-response-event.log.gz",
+      "raw_sha256": "4facbb27e40bae9bf14be13fe95fdf8ab3f554385bf894830e29ade43dddd113",
+      "retained_sha256": "0ed1500eef44468d2527c86d4e2e95fcbb6e946dea127eb89f5be1b86054d5aa"
+    },
+    {
+      "mutation": "opencode-version-pin",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-opencode-version-pin.log.gz",
+      "raw_sha256": "31e4459fb99ac24f7bd91a72911ccb0e2b6688f77c5ed9ceba9e7e64f61cfce4",
+      "retained_sha256": "fe41459505deb9741151566f6cb7ba3dfd0e8bbd2804ba07d52a328e17e1e91a"
+    },
+    {
+      "mutation": "opencode-registration",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-opencode-registration.log.gz",
+      "raw_sha256": "4632d36ea2a0779b2d0230774fa6be025aa2e63b7157d7e88c2a26694c6052c6",
+      "retained_sha256": "f906d70df4f1066a1fdb28947b966d6f72ef6446313ce2df5eb93282200315a7"
+    },
+    {
+      "mutation": "positive-team",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-positive-team.log.gz",
+      "raw_sha256": "f32a70fa723cd0a176fca5257186c79a4d35b6ab3268a7e17d0417ba4ca3ff48",
+      "retained_sha256": "95231cb11ecd4148a118885785c92457fdff730e8d826f64f8e29bd89d56e9e2"
+    },
+    {
+      "mutation": "positive-response",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-positive-response.log.gz",
+      "raw_sha256": "e42cb0c71a4fce34c32523555cdd43a577c95ea818c084d8b3fbd9bb1900f29a",
+      "retained_sha256": "78fda04bcc9105c2e5be3426ff2d88c2345cd9e64d0cee2686a65125a2773a27"
+    },
+    {
+      "mutation": "control-completion-tools-version",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-control-completion-tools-version.log.gz",
+      "raw_sha256": "a5131ed21671b397896729d20a9e3ea7b9f7ef5a50e8a974b4defad40cae28f5",
+      "retained_sha256": "0c059ff326c5666629c2455022fd28a304eebf3bcfb22d3486ca6d4c00bf48f0"
+    },
+    {
+      "mutation": "activation-rule-identity",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-activation-rule-identity.log.gz",
+      "raw_sha256": "87596d39d0c470e09a177ccb4d9f69b08f0f6147244f164f7aae15e245b8cb7a",
+      "retained_sha256": "c57a6611f086a688558b6c15701a23a6ea0757c794ed7203cebfe8832484bf5d"
+    },
+    {
+      "mutation": "qualified-descriptor",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-qualified-descriptor.log.gz",
+      "raw_sha256": "cef7880f48aae1341f8586df89ae156c0870049a2d97ee4733ee8bf812b0c575",
+      "retained_sha256": "294fcd5c50d26ba736c01e683f50e251fb01387224781ab78e2c8f1d2bb9c54b"
+    },
+    {
+      "mutation": "team-payload-contamination",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-team-payload-contamination.log.gz",
+      "raw_sha256": "b5516a4387dd73ce2d2004a7a420818f4873d365193274667fa60bd4ecfdc3c4",
+      "retained_sha256": "42efe31235347f5318e09ab5ab8173f4a9198b827046c30a1304bc5e5b3ce593"
+    },
+    {
+      "mutation": "independent-second-rule",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-independent-second-rule.log.gz",
+      "raw_sha256": "1ea110684f53c1c26ae9ea221da273a09315e02a1994bb4abe27472cbb426d88",
+      "retained_sha256": "605e165b540a3b76b30ebb16e1a640cd5eb39618c71507605e754c015672e749"
+    },
+    {
+      "mutation": "snapshot-digest",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-snapshot-digest.log.gz",
+      "raw_sha256": "8d4e47bc743d655130fdb41ea1cd644dc92c8c5693c527e1dab2ec3ab2edfe94",
+      "retained_sha256": "3d53cbffea2f055e96fa8126fc1f9a95ba160d4d86dae0f9e36176aecd1a91c1"
+    },
+    {
+      "mutation": "repository-root-boundary",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-repository-root-boundary.log.gz",
+      "raw_sha256": "67dd10f816fd5e5a9e7b880b1d0ed62055a80bd6b7824bc400fbe511524fb2b3",
+      "retained_sha256": "e9e4ece964107720e27d5b4300b63a566912cba077498972c004519aabfc5330"
+    },
+    {
+      "mutation": "ambient-credential",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-ambient-credential.log.gz",
+      "raw_sha256": "1547842d890e7573f7922bc5a1016a36578ed5ea2f50b4ed1138fe074bf5e9cc",
+      "retained_sha256": "fd3d59e66edfc458e79be8a31d2b99330f73343ff5a6090b252e1b23edc4b88e"
+    },
+    {
+      "mutation": "hook-source",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-hook-source.log.gz",
+      "raw_sha256": "a046a39ce8ff88a4be256838273028a167c95a8bd16d9bd004e1a6032be713cf",
+      "retained_sha256": "e8d514063e3667b20ad65bbcdf5b9d2b8cbfbaaa99ba04e0d01f5d0cfa214c95"
+    },
+    {
+      "mutation": "hook-session-type",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-hook-session-type.log.gz",
+      "raw_sha256": "3ed5db0dd108570b82f7063486e3fb84d04e99eb2107444e97bc4eb881e1fd89",
+      "retained_sha256": "1d936fa06476ebe3f4a2a87c411ab3525d1f8dcdfbad1938628f86d53a234f3c"
+    },
+    {
+      "mutation": "trace-session",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-trace-session.log.gz",
+      "raw_sha256": "3b6b7d7275905c7c87b6da3ee068f8792e2292fb2aaabd08fdd59dc8fac30feb",
+      "retained_sha256": "6bd2f42694e5550db23aee60335c263bf084595285e1f59a936eb66f4692287f"
+    },
+    {
+      "mutation": "opencode-directory-override",
+      "exit_code": 1,
+      "expected": "tests fail with assertion failure",
+      "receipt": "review-mutation-opencode-directory-override.log.gz",
+      "raw_sha256": "777d47dda9ecedcb921acdcef9f18e701c8a94ad9dfd0f957cc9c3548404e7e9",
+      "retained_sha256": "7f7de6ff4d4f74063e5c4f843a7bba1a8576088b768a2b257a88c0a1dfc36f77"
+    }
+  ],
+  "tests": 21
+}
