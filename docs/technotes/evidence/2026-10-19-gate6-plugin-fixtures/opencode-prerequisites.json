@@ -1,0 +1,51 @@
+{
+  "client": "opencode",
+  "version": "2.0.32",
+  "scope": "project",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "qualified": false,
+  "evidence_class": "native prerequisite diagnostics only",
+  "managed_listing": {
+    "state": "failure",
+    "sha256": "261a467c06a92d0973ad31e9ebf7cc654cd0eb33750ec37541fc2469d1b999b1",
+    "exit_code": 1,
+    "diagnostic_category": null,
+    "command": [
+      "$PINNED_OPENCODE",
+      "plugin",
+      "list"
+    ],
+    "classification": "registration/listing only; no model controls run",
+    "receipt": "plugin-list.txt",
+    "retained_receipt": "plugin-list-diagnostic.txt",
+    "retained_sha256": "261a467c06a92d0973ad31e9ebf7cc654cd0eb33750ec37541fc2469d1b999b1",
+    "diagnostic_note": "Separate diagnostic rerun: managed service port already occupied; existing listener untouched."
+  },
+  "standalone": {
+    "state": "failure",
+    "sha256": "12928cb50113620ccba570479245aa75c1faed49eafb8cc61dea100119ffc725",
+    "exit_code": 1,
+    "diagnostic_category": null,
+    "command": [
+      "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "--model",
+      "openai/gpt-6.1-sol",
+      "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Do not use tools."
+    ],
+    "classification": "prerequisite diagnostic only; no paired model controls or qualification",
+    "receipt": "standalone-output.txt",
+    "retained_receipt": "standalone-output.txt",
+    "retained_sha256": "12928cb50113620ccba570479245aa75c1faed49eafb8cc61dea100119ffc725"
+  },
+  "native_controls": "blocked/inconclusive; no successful positive/fallback pair",
+  "remaining": [
+    "authentication/provider provisioning",
+    "ordinary trust where applicable",
+    "all native matching/negative/duplicate/resume/compaction controls",
+    "all user and Linux x86_64 cells"
+  ]
+}

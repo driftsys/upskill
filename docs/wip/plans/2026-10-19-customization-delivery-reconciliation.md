@@ -81,7 +81,7 @@ under `tests/fixtures/native-plugins/`, and a dedicated technote. Keep
 `scripts/qualify-native-instructions.py` identified as canonical-file background
 probes; no reinterpretation of old summaries.
 
-- [ ] First write failing offline examples named `team_instructions_unchanged`,
+- [x] First write failing offline examples named `team_instructions_unchanged`,
       `failed_positive_cannot_qualify_negative`,
       `disabled_plugin_retains_team_guidance`,
       `unintended_reader_never_activates_payload` and
@@ -107,6 +107,13 @@ probes; no reinterpretation of old summaries.
 
 Produces: qualified adapter constraints or explicit blocking evidence. No
 production CLI switch, schema migration or public plugin publication.
+
+Preparation progress:
+[fixture task #339](https://github.com/driftsys/upskill/issues/339) adds offline
+controls and disposable packages. The
+[probe note](../../technotes/gate6-plugin-rule-probes.md) records installation
+observations and authentication/runtime blockers. Task 2 remains incomplete; no
+native route is qualified.
 
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 

@@ -1,0 +1,36 @@
+{
+  "evidence_class": "offline harness and repository checks; no native qualification",
+  "qualified": false,
+  "tests": "11 harness tests; 30 Python tests and Rust suite in just verify",
+  "sandbox_attempt": "The initial Python run had PermissionError in existing test_timeout_terminates_owned_process_group and test_interrupt_terminates_owned_process_group_and_propagates; unrestricted just verify passed all 30 Python tests.",
+  "receipts": [
+    {
+      "command": "python3 -m unittest discover -s scripts/tests -p test_qualify_plugin_rules.py (before implementation)",
+      "exit_code": 1,
+      "raw_sha256": "67f46c424612d95179753b132774d5aef7ebac8a92b58f7266728acdbbb22df3",
+      "retained": "offline-red.log.gz",
+      "retained_sha256": "7c746ebfaffbf77cb2e756345c977872d1f135c2ff211b2a0819f9b71f698b28"
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts/tests -p test_qualify_plugin_rules.py (before strict count types)",
+      "exit_code": 1,
+      "raw_sha256": "f61b23e25e38118957ad7c9770ba8622c7615cc55efd7a984becad16cea56483",
+      "retained": "offline-count-red.log.gz",
+      "retained_sha256": "5cf8fb9c997e3e8f63374de9af39c70b54818f85072882877152cad14af9c5cf"
+    },
+    {
+      "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=$CARGO_TARGET_DIR just verify",
+      "exit_code": 0,
+      "raw_sha256": "50f50b9b6d01b720f4f3c3ff53f81667ee6737cb8b2e864b0106c6358076ff0f",
+      "retained": "offline-verify.log.gz",
+      "retained_sha256": "0ca4f2bea2a981e64ebe3f72f08e31bce2c4ffe4cf7faf88fbc5aa8aa46e5c60"
+    },
+    {
+      "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=$CARGO_TARGET_DIR just sanity",
+      "exit_code": 0,
+      "raw_sha256": "23f126fbbeedfd42c52e869a3a3a432a0e3484ff2f11133732be460b5a9ee215",
+      "retained": "offline-sanity.log.gz",
+      "retained_sha256": "8ae9e201230485c1356a87ad1b6a173131223d3777015f46b09dbd61f143286d"
+    }
+  ]
+}

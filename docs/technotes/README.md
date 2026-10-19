@@ -60,3 +60,7 @@ are not proof of production activation or complete lifecycle qualification. Keep
 schema bytes, licenses and provenance manifests together. Preserve captured
 evidence and its hashes; update research explicitly when upstream contracts
 change. Technical notes and evidence assets are outside the published book.
+
+- [Gate 6 independent plugin fixture preparation](gate6-plugin-rule-probes.md) —
+  Offline controls, bounded native installation observations and activation
+  blockers.
