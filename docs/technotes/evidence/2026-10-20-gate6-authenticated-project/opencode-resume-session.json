@@ -1,0 +1,80 @@
+{
+  "info": {
+    "id": "ses_ea89bd0b7ffeueG2J6PwOwLMON",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    },
+    "outcome": "succeeded",
+    "time": {
+      "created": 1792467546097,
+      "updated": 1792467745335,
+      "idle": 1792467745341
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_157642ff6001FzJ1ohcj27gwkc",
+      "type": "user",
+      "time": {
+        "created": 1792467546181
+      }
+    },
+    {
+      "id": "msg_157643051001nxdGWsfkP5HOTu",
+      "type": "assistant",
+      "time": {
+        "created": 1792467546200,
+        "streamed": 1792467549189,
+        "completed": 1792467549208
+      },
+      "finish": "stop",
+      "agent": "build",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    {
+      "id": "msg_157643c1a001IDSLClS1ui2k5p",
+      "type": "idle",
+      "time": {
+        "created": 1792467549210
+      },
+      "outcome": "succeeded"
+    },
+    {
+      "id": "msg_157672eeb001Cwu1cn7HycGVD1",
+      "type": "user",
+      "time": {
+        "created": 1792467742653
+      }
+    },
+    {
+      "id": "msg_157672fc8001X2EEGNNbrT6bZ5",
+      "type": "assistant",
+      "time": {
+        "created": 1792467742670,
+        "streamed": 1792467745303,
+        "completed": 1792467745335
+      },
+      "finish": "stop",
+      "agent": "build",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    {
+      "id": "msg_157673a3d0010YpBPQjtRd7LvJ",
+      "type": "idle",
+      "time": {
+        "created": 1792467745341
+      },
+      "outcome": "succeeded"
+    }
+  ]
+}

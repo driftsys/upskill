@@ -9,6 +9,10 @@ nor a production activation gate. The
 [frozen inventory](gate6-plugin-profile-inventory.md) still requires all four
 clients, both platforms and project/user scopes.
 
+The [authenticated project follow-up](gate6-authenticated-project-controls.md)
+records later successful turns after normal user login and hook review. The
+initial blockers below are historical; the full campaign remains incomplete.
+
 ## Implemented mechanics
 
 `scripts/qualify-plugin-rules.py --prepare --client codex --root /tmp/new-probe`
@@ -52,7 +56,7 @@ rejection. Provider delivery, unmatched-directory/agent controls, compaction and
 reload/disposal remain unproven. No Node/npm dependency is added to the Rust
 project; the SDK declaration belongs only to the disposable native package.
 
-## Native observations and blockers
+## Initial native observations and blockers (2026-10-19)
 
 Sanitized
 [Codex installation receipts](evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json)
@@ -116,18 +120,18 @@ needs its own timeout/interruption acceptance cases.
 
 ## Remaining activation gates
 
-| Gate  | Current evidence                                              | Remaining requirement                                                                  |
-| ----- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| G6-01 | Existing selection/library tests                              | Qualified production command dispatch and unchanged defaults                           |
-| G6-02 | Two Codex packages install without changing team instructions | Native update/remove and other-rule preservation                                       |
-| G6-03 | Merged complete-preflight foundation                          | Reader-intent and qualified package/native-effect integration                          |
-| G6-04 | Existing qualified writer, backup and recovery foundation     | Production dispatch and explicit native-effect recovery                                |
-| G6-05 | Schema-1 production remains in use                            | Lossless mixed-kind migration and every installed-state command                        |
-| G6-06 | Version/interface and installation observations               | Successful fresh/resume/compaction plugin controls; authentication/trust prerequisites |
-| G6-07 | Explicit reader inventory and offline classifiers             | Native unintended-reader, matching and duplicate controls                              |
-| G6-08 | Disposable project/home roots prepared                        | Authenticated user-root and external-home authority evidence                           |
-| G6-09 | All-kind/four-client inventory                                | Applicable mixed-kind native compatibility and IDE regression evidence                 |
-| G6-10 | Corrected architecture/contracts merged                       | Qualified support/migration guidance and exact-head activation review/CI               |
+| Gate  | Current evidence                                             | Remaining requirement                                                                  |
+| ----- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| G6-01 | Existing selection/library tests                             | Qualified production command dispatch and unchanged defaults                           |
+| G6-02 | Mac project remove/reinstall and rule-selection observations | Native update/remove and other-rule preservation                                       |
+| G6-03 | Merged complete-preflight foundation                         | Reader-intent and qualified package/native-effect integration                          |
+| G6-04 | Existing qualified writer, backup and recovery foundation    | Production dispatch and explicit native-effect recovery                                |
+| G6-05 | Schema-1 production remains in use                           | Lossless mixed-kind migration and every installed-state command                        |
+| G6-06 | Authenticated macOS project fresh/resume observations        | Successful fresh/resume/compaction plugin controls; authentication/trust prerequisites |
+| G6-07 | Explicit reader inventory and offline classifiers            | Native unintended-reader, matching and duplicate controls                              |
+| G6-08 | Two macOS project fixtures authenticated normally            | Authenticated user-root and external-home authority evidence                           |
+| G6-09 | All-kind/four-client inventory                               | Applicable mixed-kind native compatibility and IDE regression evidence                 |
+| G6-10 | Corrected architecture/contracts merged                      | Qualified support/migration guidance and exact-head activation review/CI               |
 
 None of these rows is an activation pass. A network-disabled Debian 12 x86_64
 container on the Linux arm64 Docker host ran all four pinned binaries with
@@ -135,9 +139,9 @@ container on the Linux arm64 Docker host ran all four pinned binaries with
 [receipts](evidence/2026-10-19-gate6-plugin-fixtures/linux-pinned-interfaces.json)
 record the exact image digest, emulation, artifact hashes, output and container
 removal. These are executable checks under emulation only. The authenticated
-Linux campaign and isolated authenticated roots remain prerequisites, with no
-credentials copied from real homes. The preparation CLI has no model runner or
-native receipt parser yet. After the roots, provider and ordinary trust are
-available, finish the native runner, paired lifecycle controls and remaining
-reader cases in #337 before selecting adapters. Production stays schema 1; no
-plugin is published.
+Linux campaign and remaining platform/client/scope controls remain
+prerequisites. The follow-up records normal isolated authentication for the two
+macOS project fixtures without copying credentials from real homes. The
+preparation CLI still has no automated model runner or native receipt parser.
+Finish the native runner, lifecycle controls and remaining reader cases in #337
+before selecting adapters. Production stays schema 1; no plugin is published.

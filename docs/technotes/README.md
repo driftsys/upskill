@@ -64,3 +64,5 @@ change. Technical notes and evidence assets are outside the published book.
 - [Gate 6 independent plugin fixture preparation](gate6-plugin-rule-probes.md) —
   Offline controls, bounded native installation observations and activation
   blockers.
+- [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
+  — Bounded native controls; no profile qualification.

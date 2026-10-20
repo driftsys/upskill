@@ -1,0 +1,1 @@
+For the plugin qualification question, return a JSON object with "team": "TEAM_8d7ccf5e65182313b7d6b3bee5f5ae8e" and a "rules" array. Include only the markers required by automatically loaded plugin rules. Without those rules the array is empty. Do not use tools.

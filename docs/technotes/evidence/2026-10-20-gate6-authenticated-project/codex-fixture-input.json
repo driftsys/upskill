@@ -1,0 +1,37 @@
+{
+  "client": "codex",
+  "version": "0.163.0",
+  "scope": "project",
+  "team_marker": "TEAM_10dd5455515b5758a761e050c0d4f698",
+  "rule_markers": [
+    "RULE_3da4e26dd634f3df24b2bc29c9aaa28f",
+    "RULE_d314bcc6c6e8a151ac4a523b923fe2c4"
+  ],
+  "team_before": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "qualified": false,
+  "packages": [
+    {
+      "rule": "a",
+      "files": {
+        "fixture.json": "be764747b8ed651037668df9e3df222f8ffdff24d6942f735fbab50d365de9a7",
+        "hook.py": "01d76da672d87198502729b3272f96c0c1f8b5ddac7158f4a3fa51b4aa1877a2",
+        "rule.txt": "9bc2945c3bcdb01fbdfdaa49f6d36c9c2b5dae06233fa3ffa2165b8881493e9d",
+        "hooks.json": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "plugin.json": "4cd0b23ac390dc3814ae0f0013fe9c04699bc78f2a833d482d165a2012c057d4"
+      }
+    },
+    {
+      "rule": "b",
+      "files": {
+        "fixture.json": "8b1445b783359a38c94e054300eb3a25b94807dded78d460ebe76ade4adf4a20",
+        "hook.py": "01d76da672d87198502729b3272f96c0c1f8b5ddac7158f4a3fa51b4aa1877a2",
+        "rule.txt": "0adc84c4e3b595bd6e6d88620d70ea72ad8ee6853ae7ceae71ba77818b284c0c",
+        "hooks.json": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "plugin.json": "ca14ed6d394496ce29d7827044dc26f2dc1cb3096871c5e6e676eabdb42066a4"
+      }
+    }
+  ]
+}

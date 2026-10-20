@@ -187,7 +187,8 @@
       "qualified_root": "$PROJECT",
       "native_support": "unqualified",
       "blockers": [
-        "Corrected plugin/native positive, unintended-reader and duplicate controls not run"
+        "Authenticated fresh/registration-selection/resume observations exist; compaction, reader, duplicate, update and authority controls remain incomplete",
+        "All-kind and full four-client/platform/scope qualification remains incomplete"
       ]
     },
     {
@@ -199,8 +200,8 @@
       "qualified_root": "$USER",
       "native_support": "unqualified",
       "blockers": [
-        "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
-        "Isolated authenticated user-root fixture not provisioned; no auth copying permitted"
+        "Authenticated isolated home exists for project observations; user-scope delivery, registration authority and controls have not been run",
+        "All-kind and full four-client/platform/scope qualification remains incomplete"
       ]
     },
     {
@@ -239,8 +240,8 @@
       "qualified_root": "$PROJECT",
       "native_support": "unqualified",
       "blockers": [
-        "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
-        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
+        "Authenticated fresh/registration-selection/resume observations exist; compaction, reader, duplicate, update and authority controls remain incomplete",
+        "All-kind and full four-client/platform/scope qualification remains incomplete"
       ]
     },
     {
@@ -252,9 +253,8 @@
       "qualified_root": "$USER",
       "native_support": "unqualified",
       "blockers": [
-        "Corrected plugin/native positive, unintended-reader and duplicate controls not run",
-        "Isolated authenticated user-root fixture not provisioned; no auth copying permitted",
-        "Pinned executables have version-only observations; native positive/negative, root and lifecycle campaign evidence remains incomplete (Linux version checks were emulated)."
+        "Authenticated isolated home exists for project observations; user-scope delivery, registration authority and controls have not been run",
+        "All-kind and full four-client/platform/scope qualification remains incomplete"
       ]
     },
     {
@@ -3999,8 +3999,8 @@
       "route": "codex.rules",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json",
-      "observation": "Two packages install; isolated authentication and ordinary hook trust not provisioned."
+      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
       "profile": "codex.macos-arm64.project",
@@ -4036,8 +4036,8 @@
       "route": "codex.plugins",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json",
-      "observation": "Two packages install; isolated authentication and ordinary hook trust not provisioned."
+      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
       "profile": "codex.macos-arm64.project",
@@ -4283,8 +4283,8 @@
       "route": "opencode.rules",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json",
-      "observation": "Two matching context callbacks observed; provider.auth 403 prevents successful positive/model proof."
+      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
       "profile": "opencode.macos-arm64.project",
@@ -4320,8 +4320,8 @@
       "route": "opencode.plugins",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json",
-      "observation": "Two matching context callbacks observed; provider.auth 403 prevents successful positive/model proof."
+      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
       "profile": "opencode.macos-arm64.project",
@@ -4618,7 +4618,8 @@
     "OpenCode context hooks must filter actual session directory/agent; ctx.location is plugin instance location, not universal session authority",
     "Historical OpenCode plugin verb and MCP config shapes differ from the v2 candidate contract; compatible adapters required",
     "Cursor/Gemini and other known compatibility readers remain design/inventory obligations, not new implementation/native claims",
-    "Copilot MCP current fallback uses real HOME/.copilot independently of selected project target/COPILOT_HOME; a compatible adapter must bind scope before effects."
+    "Copilot MCP current fallback uses real HOME/.copilot independently of selected project target/COPILOT_HOME; a compatible adapter must bind scope before effects.",
+    "Authenticated macOS project observations resolve prior Codex login/hook-trust and OpenCode provider prerequisites for these two fixtures only. Codex CLI enablement overrides did not disable hooks; persisted configuration did. Account-level cloud plugin discovery remains visible and unchanged. Full profiles remain unqualified."
   ],
   "follow_up_evidence": "../gate6-plugin-rule-probes.md; Task #339 native prerequisites/callback observations only; no qualified cells",
   "observed_root_constraints": [

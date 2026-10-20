@@ -1,0 +1,78 @@
+{
+  "state": "success",
+  "sha256": "cf9591829f8c534b0b4fc6b2e1c8b331a3a783478c4d00149c1871ae68f45af2",
+  "exit_code": 0,
+  "diagnostic_category": null,
+  "command": [
+    "$OPENCODE",
+    "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--model",
+    "github-copilot/gpt-6.1-sol",
+    "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Sort the rules array lexicographically. Do not use tools."
+  ],
+  "team_before": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "team_after": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "native_events": [
+    {
+      "rule": "b",
+      "session": "ses_ea898e98fffewNNFLSyv2aUJ3X",
+      "source": "context"
+    }
+  ],
+  "qualified": false,
+  "session_export": {
+    "state": "success",
+    "sha256": "cad730012b6f18725b8663e54d67c5ef0c8b899fec027dbf4fc528dec411d14b",
+    "exit_code": 0,
+    "diagnostic_category": null
+  },
+  "config_before": {
+    "sha256": "89905410a7f91fab47944f4e1d75035acfff0a794e31c157184b98fe0704ccd6",
+    "mode": 420
+  },
+  "config_restored": {
+    "sha256": "89905410a7f91fab47944f4e1d75035acfff0a794e31c157184b98fe0704ccd6",
+    "mode": 420
+  },
+  "digest_scope": "sha256 is the capture helper combined stdout/stderr digest; the separate JSONL receipt hashes captured stdout only. Raw stderr was not retained by the helper.",
+  "native_session": "ses_ea898e98fffewNNFLSyv2aUJ3X",
+  "completion": {
+    "outcome": "succeeded",
+    "finish": "stop",
+    "assistant_completed": 1792467739004,
+    "idle_outcome": "succeeded",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    }
+  },
+  "normalized_observation": {
+    "state": "success",
+    "completed": true,
+    "tools_observed": false,
+    "version": "2.0.32",
+    "response": {
+      "team": "TEAM_8d7ccf5e65182313b7d6b3bee5f5ae8e",
+      "rules": [
+        "RULE_f71518e0fa2c5ae8c95a2575cb34d363"
+      ]
+    },
+    "activation_counts": {
+      "b": 1
+    },
+    "team": {
+      "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+      "mode": 416
+    }
+  }
+}

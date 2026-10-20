@@ -1,0 +1,71 @@
+{
+  "state": "success",
+  "sha256": "bfe689538af23131a6292ea5004a3c34a780955507337245cb0f5bd9dc55f75e",
+  "exit_code": 0,
+  "diagnostic_category": null,
+  "command": [
+    "$OPENCODE",
+    "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--model",
+    "github-copilot/gpt-6.1-sol",
+    "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Sort the rules array lexicographically. Do not use tools."
+  ],
+  "team_before": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "team_after": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "native_events": [
+    {
+      "rule": "a",
+      "session": "ses_ea89bd0b7ffeueG2J6PwOwLMON",
+      "source": "context"
+    },
+    {
+      "rule": "b",
+      "session": "ses_ea89bd0b7ffeueG2J6PwOwLMON",
+      "source": "context"
+    }
+  ],
+  "qualified": false,
+  "digest_scope": "sha256 is the capture helper combined stdout/stderr digest; the separate JSONL receipt hashes captured stdout only. Raw stderr was not retained by the helper.",
+  "native_session": "ses_ea89bd0b7ffeueG2J6PwOwLMON",
+  "completion": {
+    "outcome": "succeeded",
+    "finish": "stop",
+    "assistant_completed": 1792467549208,
+    "idle_outcome": "succeeded",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    }
+  },
+  "normalized_observation": {
+    "state": "success",
+    "completed": true,
+    "tools_observed": false,
+    "version": "2.0.32",
+    "response": {
+      "team": "TEAM_8d7ccf5e65182313b7d6b3bee5f5ae8e",
+      "rules": [
+        "RULE_ae0c745525e3f27768c457426ac31128",
+        "RULE_f71518e0fa2c5ae8c95a2575cb34d363"
+      ]
+    },
+    "activation_counts": {
+      "a": 1,
+      "b": 1
+    },
+    "team": {
+      "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+      "mode": 416
+    }
+  }
+}
