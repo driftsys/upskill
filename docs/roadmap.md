@@ -90,13 +90,20 @@ later scope.
 
 ### MVP release gate
 
+- Compare intentional `.agents` sharing, intentional `.claude` sharing and
+  selective compatibility exclusions. Establish native feasibility before
+  selecting adapters and integrated coexistence before adopting a root. Keep new
+  owned-skill lifecycle after Gate 6; preserve existing kinds during Gate 6 and
+  qualify the new layout before its adoption and combined MVP release under the
+  [shared-root evaluation](technotes/shared-content-root-evaluation.md).
+
 - Select and record supported released-client versions, scopes and operating
   systems; distinguish OpenCode v1 compatibility from v2 support.
 - Verify installed updater execution and real CLI/skill updates on all four
   clients, including offline, concurrent and interrupted runs.
 - Require independent installed-plugin rule delivery for Codex/OpenCode, with
   unchanged team guidance and disabled/removed-plugin negative controls.
-- Apply CD-01 through CD-10 per customization/client/scope: qualify intended
+- Apply CD-01 through CD-11 per customization/client/scope: qualify intended
   discovery/activation and reject unintended readers or duplicate activation.
 - Verify rules, skills, bundle dependencies and plugin lifecycle through native
   discovery and representative behavior, not generated-file checks alone.

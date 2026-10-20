@@ -36,7 +36,7 @@
     "N": "F plus separately observed native registration/scope/trust/enablement and reversible/recoverable outcomes; preserve manual config keys/comments, credentials and unrelated registrations; no automatic ownership adoption.",
     "B": "Keep dependency/source/ref/alias identity and all direct/bundle reference edges; removing one edge cannot uninstall still-referenced content or native registrations; preserve existing explicit integration-removal policy."
   },
-  "intent_policy": "Only requested client is intended by default. Potential reader compatibility or equal bytes never authorizes sharing. Unresolved readers block isolation claims.",
+  "intent_policy": "A declared shared portable skill catalog intentionally authorizes its recorded compatible consumers; client variants remain outside shared catalogs. Other consumption is unintended unless explicitly selected for that installation/profile. Incidental readers do not gain ownership; unresolved readers block isolation claims.",
   "required_controls": [
     "same-client calibrated native positive",
     "native catalog plus relevant explicit invocation where applicable",
@@ -4625,5 +4625,18 @@
   "observed_root_constraints": [
     "Native OpenCode 2.0.32 observed OPENCODE_CONFIG as a file input: using a directory caused EISDIR/HTTP 500. The fixture now uses isolated XDG_CONFIG_HOME and leaves that optional override unset; all loading/activation cells remain unqualified.",
     "Codex installation-only fixture used user CODEX_HOME registration/cache while invoked from the project directory. Project-only native registration/write authority remains unqualified."
-  ]
+  ],
+  "shared_root_evaluation": {
+    "status": "planned/unqualified; experiment order only, no adoption or production effects",
+    "reference": "../shared-content-root-evaluation.md",
+    "first_candidate": "A: portable .agents/skills plus one self-contained Claude adapter where required",
+    "alternatives": [
+      "B: intentionally shared .claude skills with qualified Codex route",
+      "C: per-component selective compatibility exclusions in explicitly provisioned profiles",
+      "baseline: one source with generated client-native outputs"
+    ],
+    "rules_and_agents": "Capability-aware native representations; no universal format or inert source assumption. Existing .agents/rules glob, Claude plugin-agent ignored fields and legacy OpenCode permission mapping require controls.",
+    "milestones": "Native feasibility before adapter selection; Gate 6 M1 rule lifecycle and existing-kind preservation; new owned-skill lifecycle after Gate 6; integrated qualification before adoption and combined MVP release.",
+    "qualification": "No cell qualified by documentation or this inventory change"
+  }
 }

@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Shared customization roots and client adapters](shared-content-root-evaluation.md):
+  alternative catalogs, compatibility exclusions and adoption controls.
+
 - [Customization adapter capability refresh](customization-adapter-evidence.md):
   source-pinned client mapping and packaging evidence.
 - [Updater plugin startup probes](updater-plugin-probes.md): partial

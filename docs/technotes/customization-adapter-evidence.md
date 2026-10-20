@@ -16,6 +16,18 @@ the relevant official documentation and runtime evidence when implementing each
 adapter. Historical research remains informative and does not override the
 active lifecycle plan or its activation gates.
 
+## Rolling-documentation discrepancy recorded on 2026-10-20
+
+The 2026-10-14 OpenCode statements below describe that dated research, not a
+current support claim. The current v2 instructions page now documents configured
+files/globs/URLs and explicitly no `CLAUDE.md` fallback. This differs from the
+earlier page description; neither establishes pinned 2.0.32 behavior. Retain
+separate default/configured native controls. Current v2 agent documentation also
+uses ordered `permissions`; existing legacy singular `permission` generation
+must not be promoted to v2 permission evidence. See the
+[shared-root evaluation](shared-content-root-evaluation.md) for candidate
+limits.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |

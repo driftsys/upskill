@@ -11,7 +11,7 @@ preservation for every customization.
 
 **Spec:**
 [corrected Gate 6 design](../specs/2026-10-18-gate6-activation-design.md),
-[delivery contract](../../topics/0009-customization-delivery.md) CD-01–CD-10 and
+[delivery contract](../../topics/0009-customization-delivery.md) CD-01–CD-11 and
 [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md). The
 product roadmap alone owns release ordering.
 
@@ -42,6 +42,38 @@ Review focus: compatibility directories are not private; payload equality is not
 consent; canonical-file discovery is not plugin activation; file journaling does
 not recover unknown native side effects; scope/order/status labels cannot reduce
 the four-client gate or turn planned agent/MCP/hooks/tool work into M1 features.
+
+## Shared-root comparison follow-up (#349)
+
+This extends the completed inventory without adopting a root or resetting
+historical checks. Qualify native feasibility before adapter selection; qualify
+integrated lifecycle after implementation and before route adoption. Gate 6
+retains existing-kind preservation; new owned-skill lifecycle follows it and
+blocks new skill-layout adoption and combined MVP release until qualified. No
+unadopted route gains production effects.
+
+Documentation reconciliation is the bounded deliverable of #349. Unchecked
+native feasibility work continues under #337; new owned-skill lifecycle and its
+integrated adoption controls remain with the later skill milestone (#287).
+
+- [ ] Review the
+      [alternative-root evaluation](../../technotes/shared-content-root-evaluation.md):
+      intentional `.agents` sharing, intentional `.claude` sharing and selective
+      Copilot/OpenCode compatibility exclusions.
+- [ ] Record frozen-version exclusion support and effective configuration scope.
+      Skills, agents, rules, commands and imports require separate controls.
+- [ ] Qualify CD-11 native feasibility across all four clients and applicable
+      platform/scope profiles: one shared item per client, no direct/plugin
+      duplicates, variants outside shared catalogs and exclusions with working
+      native/shared positives. Qualify scoped rules and actual delegated child
+      restrictions; reject unsupported mappings.
+- [ ] After each adapter is implemented, qualify integrated ownership,
+      update/removal and recovery at its roadmap milestone before adoption.
+      Preserve manual configuration, existing kinds and unrelated registrations.
+- [ ] Reconcile every customization/client route and informative matrix
+      candidate before implementation. Generated files and prior plugin-rule
+      observations do not satisfy these controls. Production activation remains
+      blocked.
 
 ## Task 1: Pin profile and reader inventories before choosing plugin events
 

@@ -1,7 +1,8 @@
 # Customization delivery, discovery and activation
 
 Status: intended architecture and acceptance contract, reconciled on 2026-10-19
-under explicit user direction. This contract does not describe newly implemented
+and extended with shared-catalog evaluation requirements on 2026-10-20 under
+explicit user direction. This contract does not describe newly implemented
 adapters or qualify a client. The
 [roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md) owns
 release order;
@@ -41,6 +42,49 @@ references; native plugins remain separate packages. Existing plugin/MCP
 functionality must remain compatible without advancing general hooks, tools,
 permissions or expanded MCP management into this implementation.
 
+## Shared content root evaluation
+
+Evaluate `.agents/{rules,skills,agents}` with client-specific adapters under
+[#349](https://github.com/driftsys/upskill/issues/349). This is a candidate
+content layout, not an adopted production default. Compare intentional `.claude`
+sharing and selective Copilot/OpenCode Claude-compatibility exclusions as
+alternative profiles before selecting a root. A skill-directory exclusion does
+not establish exclusion of rules, agents, commands or explicit imports. The
+repository research note `docs/technotes/shared-content-root-evaluation.md`
+records current source evidence and route candidates. CD-11 below defines the
+coexistence gate.
+
+Treat `.agents/skills` as intentionally shared discovery space for a declared
+shared-catalog installation. Prefer one shared native entrypoint per logical
+skill and client; a client lacking qualified direct discovery needs one adapter
+route, not an additional private-looking compatibility copy visible to other
+clients. Client-specific variants stay outside all shared catalogs. A variant
+and shared base may not both remain exposed to the same client. Native source
+namespaces, aliases and package exports do not redefine logical identity to hide
+duplicates.
+
+`.agents/rules` and `.agents/agents` are source-catalog candidates, not
+universal native formats or proven inert storage. Each adapter retains qualified
+native scoping and restrictions. Codex/OpenCode rules still require independent
+plugin delivery beside unchanged team `AGENTS.md`. Shared skills must be
+directly consumption-ready; raw client directives or silently weakened
+permission semantics cannot be placed there. An audience exclusion chooses
+another qualified representation or fails preflight rather than silently
+publishing to shared discovery.
+
+This intent does not adopt existing schema-1 outputs or manual content, add
+owners from compatibility readers, or authorize moving installed files. Select
+one effective native route per logical item/client before effects and preserve
+manual/third-party entries and surviving direct/bundle references. Require
+all-four-client native feasibility before selecting a candidate adapter and
+integrated qualification before adopting its route. Gate 6 qualifies selected M1
+rules and preservation of existing kinds; new owned-skill lifecycle remains
+after Gate 6 under the roadmap and blocks adoption of that new skill layout and
+the combined MVP release until qualified. An unadopted layout has no production
+effects. All applicable platform/scope and existing regression obligations still
+apply to schema-2 activation. Generated files and earlier independent-rule
+probes do not satisfy shared-layout qualification.
+
 ## Reader and activation policy
 
 Every adapter/profile must declare the client/runtime/surface, exact version,
@@ -52,11 +96,13 @@ Inventory all four clients, plus known supported IDE/compatibility surfaces.
 Unknown behavior is a blocker for an isolation claim, not an empty reader set.
 
 For each possible reader record `intended`, `unintended` or `unresolved`, with
-its discovery condition. Cross-client consumption defaults to unintended unless
-explicitly selected and accepted for that installation/profile. Audience/body
-compatibility, equal bytes, a directory name or a warning alone never supplies
-that consent. A requested audience exclusion must prevent activation, not just
-omit one generated copy. Incidental readers gain neither owners nor references.
+its discovery condition. Declared shared-catalog consumption under the policy
+above is intentional; other cross-client consumption defaults to unintended
+unless explicitly selected and accepted for that installation/profile.
+Audience/body compatibility, equal bytes, a directory name or a warning alone
+never supplies that consent. A requested audience exclusion must prevent
+activation, not just omit one generated copy. Incidental readers gain neither
+owners nor references.
 
 A shared artifact is permissible only for explicitly intended consumers with
 qualified equivalent behavior, compatible resources and recorded owner
@@ -135,14 +181,22 @@ method/version, never automatically to this corrected delivery route.
 | Codex CLI       | Client plugin with independent rule payload; qualified event/API adds guidance beside unchanged team `AGENTS.md`              | Other clients must not discover payload through `.agents`, `.claude`, imports, package compatibility or shared paths; cross-client activation unintended by default                                   | R + N; preserve team file and native plugin/config ownership            | X managed `AGENTS.md` contributions; O/Q canonical-file probes only; independent plugin delivery P and unqualified                      |
 | OpenCode v2 CLI | Client plugin API supplies independent rules beside unchanged team `AGENTS.md`; qualify initial, resume and scoped activation | Broad `instructions` globs/imports, shared payload paths or other package loaders can expose it; other-client activation unintended                                                                   | R + N; preserve manual `instructions` and other plugin entries          | I legacy `.agents/rules` plus config registration; O incomplete canonical probes; independent plugin delivery P and unqualified         |
 
+Scoped rules require native matching and nonmatching controls as files change
+within a session and during actual child delegation where applicable. A startup
+hook that always injects conditional prose does not qualify native scoping.
+Reject an unsupported scope rather than widening it. Keep rule source outside
+scanned compatibility catalogs unless a qualified representation prevents
+incidental activation; `.agents/rules` is already a legacy OpenCode destination
+registered through an instruction glob.
+
 ### Skills and supporting resources
 
-| Client          | Intended delivery, discovery and activation                                                                            | Potential other readers and sharing intent                                                                                                                                  | Preservation                                                                 | Current status                                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code     | Native skill entrypoint and adjacent resources, standalone or plugin-packaged; qualified explicit/automatic invocation | `.claude/skills` is a Copilot/OpenCode compatibility source; those consumers are unintended unless explicitly selected; imported/shared paths need their own inventory      | F + N for packaging; resources never auto-executed on install                | I `.claude/skills`; owned lifecycle and cross-client/duplicate qualification P                                           |
-| Copilot CLI     | Native skill discovery/invocation with resources; package location chosen by scope/profile                             | `.github/skills` can serve Copilot IDE/cloud surfaces; `.claude/skills` and `.agents/skills` compatibility copies may duplicate another installation; explicit sharing only | F; preserve other catalogs and manual skills                                 | I `.github/skills`; user-root mapping, owned lifecycle and native matrix P                                               |
-| Codex CLI       | Qualified native skill discovery from profile-declared roots or plugin catalog, with resources                         | `.agents/skills` is also a Copilot/OpenCode source; plugin or extra-root exposure must be measured; other consumers unintended by default                                   | F + N if plugin; preserve resource paths/modes and independent manual config | P Codex adapter; portable skill format support is not installed upskill support                                          |
-| OpenCode v2 CLI | Qualified native skill source or plugin-provided catalog, resources loaded only when needed                            | Current `.agents/skills` is shared with Codex/Copilot; `.claude/skills` compatibility can add a second copy; unintended exposure and duplicates block the profile           | F + N if plugin; no claim that current shared location is private            | I legacy `.agents/skills`; client-specific candidate `.opencode/skills` and exact v2/root behavior require qualification |
+| Client          | Intended delivery, discovery and activation                                                                            | Potential other readers and sharing intent                                                                                                                                                                                      | Preservation                                                                 | Current status                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code     | Native skill entrypoint and adjacent resources, standalone or plugin-packaged; qualified explicit/automatic invocation | `.claude/skills` is a Copilot/OpenCode compatibility source; shared-catalog consumers are intentional, but a Claude adapter must not add a second visible copy; other imports/readers retain explicit intent                    | F + N for packaging; resources never auto-executed on install                | I `.claude/skills`; owned lifecycle and cross-client/duplicate qualification P                                           |
+| Copilot CLI     | Native skill discovery/invocation with resources; package location chosen by scope/profile                             | `.github/skills` can serve Copilot IDE/cloud surfaces; `.agents/skills` is intentionally shared for the evaluated catalog; `.claude/skills` and direct/plugin copies can duplicate one logical item; qualify one selected route | F; preserve other catalogs and manual skills                                 | I `.github/skills`; user-root mapping, owned lifecycle and native matrix P                                               |
+| Codex CLI       | Qualified native skill discovery from profile-declared roots or plugin catalog, with resources                         | `.agents/skills` is intentionally shared for the evaluated catalog; plugin or extra-root exports must not expose the same logical item again; other readers retain explicit intent                                              | F + N if plugin; preserve resource paths/modes and independent manual config | P Codex adapter; portable skill format support is not installed upskill support                                          |
+| OpenCode v2 CLI | Qualified native skill source or plugin-provided catalog, resources loaded only when needed                            | `.agents/skills` is intentionally shared for the evaluated catalog; `.claude/skills`, configured sources and plugins can add duplicates; other-reader intent remains explicit                                                   | F + N if plugin; no claim that current shared location is private            | I legacy `.agents/skills`; client-specific candidate `.opencode/skills` and exact v2/root behavior require qualification |
 
 Every resource inherits its parent installation's consumer classification. Test
 relative links after relocation/aliasing, executable modes, ignored files,
@@ -152,6 +206,18 @@ the same skill/resources to activate twice. A valid entrypoint cannot qualify
 missing or differently interpreted supporting files.
 
 ### Agents
+
+Require real delegated execution with model, tool, permission, instruction and
+MCP inheritance controls. A registered prompt or parent response is
+insufficient. Claude plugin agents ignore `hooks`, `mcpServers` and
+`permissionMode`; do not replace these with broader plugin/session settings.
+Reject unsupported mappings. Codex instructions do not establish a child sandbox
+override. OpenCode v2's ordered permission/agent-merging contract needs a
+qualified adapter; existing legacy generated output is not proof. Copilot
+project `.claude/agents` is a known compatibility reader with no established
+selective directory exclusion. Keep client variants outside shared catalogs and
+preserve manual registrations. These are capability/regression requirements, not
+new agent management in M1.
 
 | Client          | Intended delivery, discovery and activation                                                    | Potential other readers and sharing intent                                                                                                 | Preservation                                                        | Current status                                                                       |
 | --------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -213,26 +279,28 @@ obligations.
 
 ## Acceptance and evidence gates
 
-| ID    | Required executable example and evidence                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CD-01 | For each applicable matrix cell, record delivery, discovery, activation, complete known reader conditions, intentional consumers, F/R/N/B preservation, status and exact evidence/version/OS/scope. Missing/unresolved entries block that claim.                                                                                                                                                                                                                  |
-| CD-02 | With manual team `AGENTS.md` present, install two independent Codex/OpenCode plugin rules, update/remove one and observe the other. Team bytes/modes remain identical; rule behavior loads through the installed plugin, including new/resumed sessions and compaction where required. Disable/remove the plugin as a negative: team guidance remains, managed rule guidance does not activate.                                                                   |
-| CD-03 | For each intended client run an unpredictable positive control; for every unintended reader run a successful native session without that activation marker. Exercise compatibility dirs, imports, broad globs, nested roots and configured overrides separately. Each negative requires a successful same-client positive; skills/agents need native catalog and explicit-invocation controls. Failed positives/auth/timeouts are blocked, never negative passes. |
-| CD-04 | Install standalone plus plugin, duplicate aliases, same-name project/user content and two bundles. Observe one logical activation, retain correct references on partial removal, and preserve manual catalogs/configuration. Use native registration/catalog/event counts, not final-response equality alone, to establish no duplication. Explicit intended sharing has matching behavior controls.                                                              |
-| CD-05 | Resource link/mode and agent tool/model/delegation restrictions survive install/update/remove; an excluded client cannot activate them through a compatible catalog, imported resource or alternate agent registration.                                                                                                                                                                                                                                           |
-| CD-06 | Mixed rule/skill/resource/agent/bundle/plugin/MCP state remains lossless through schema-1 backup/migration and every current installed-state command, including `remove-mcp`. Manual edits, unselected owners, unknown legacy rows and unresolved native effects reject safely or remain inspectable.                                                                                                                                                             |
-| CD-07 | Whole selected-set preflight, lock contention, source/destination drift and process interruption preserve recoverability. Native effects have observed pre/post state and safe replay/compensation evidence; file-only receipts cannot substitute.                                                                                                                                                                                                                |
-| CD-08 | Package registration, trust, enablement, authentication, discovery and actual use have separate outcomes; test disabled/denied/offline cases. Hook/tool/permission negative controls prove no unintended execution, exposure or grant without expanding the implementation scope.                                                                                                                                                                                 |
-| CD-09 | All four CLI clients pass applicable pinned macOS arm64 and Linux x86_64 project/user cells. Existing binary platforms and supported IDE behavior retain regression obligations; CLI tests cannot qualify an IDE. No automatic single-client/project-only fallback.                                                                                                                                                                                               |
-| CD-10 | Generated-file, offline harness, experimental-library, native-observed and native-qualified evidence stay separately labeled. Link sanitized raw/summary receipts and their hashes; reproducible commands alone do not substantiate historical passes. Publish unsupported cells and reload requirements.                                                                                                                                                         |
+| ID    | Required executable example and evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CD-01 | For each applicable matrix cell, record delivery, discovery, activation, complete known reader conditions, intentional consumers, F/R/N/B preservation, status and exact evidence/version/OS/scope. Missing/unresolved entries block that claim.                                                                                                                                                                                                                                                                                                                                                                       |
+| CD-02 | With manual team `AGENTS.md` present, install two independent Codex/OpenCode plugin rules, update/remove one and observe the other. Team bytes/modes remain identical; rule behavior loads through the installed plugin, including new/resumed sessions and compaction where required. Disable/remove the plugin as a negative: team guidance remains, managed rule guidance does not activate.                                                                                                                                                                                                                        |
+| CD-03 | For each intended client run an unpredictable positive control; for every unintended reader run a successful native session without that activation marker. Exercise compatibility dirs, imports, broad globs, nested roots and configured overrides separately. Each negative requires a successful same-client positive; skills/agents need native catalog and explicit-invocation controls. Failed positives/auth/timeouts are blocked, never negative passes.                                                                                                                                                      |
+| CD-04 | Install standalone plus plugin, duplicate aliases, same-name project/user content and two bundles. Observe one logical activation, retain correct references on partial removal, and preserve manual catalogs/configuration. Use native registration/catalog/event counts, not final-response equality alone, to establish no duplication. Explicit intended sharing has matching behavior controls.                                                                                                                                                                                                                   |
+| CD-05 | Resource link/mode and agent tool/model/delegation restrictions survive install/update/remove; an excluded client cannot activate them through a compatible catalog, imported resource or alternate agent registration.                                                                                                                                                                                                                                                                                                                                                                                                |
+| CD-06 | Mixed rule/skill/resource/agent/bundle/plugin/MCP state remains lossless through schema-1 backup/migration and every current installed-state command, including `remove-mcp`. Manual edits, unselected owners, unknown legacy rows and unresolved native effects reject safely or remain inspectable.                                                                                                                                                                                                                                                                                                                  |
+| CD-07 | Whole selected-set preflight, lock contention, source/destination drift and process interruption preserve recoverability. Native effects have observed pre/post state and safe replay/compensation evidence; file-only receipts cannot substitute.                                                                                                                                                                                                                                                                                                                                                                     |
+| CD-08 | Package registration, trust, enablement, authentication, discovery and actual use have separate outcomes; test disabled/denied/offline cases. Hook/tool/permission negative controls prove no unintended execution, exposure or grant without expanding the implementation scope.                                                                                                                                                                                                                                                                                                                                      |
+| CD-09 | All four CLI clients pass applicable pinned macOS arm64 and Linux x86_64 project/user cells. Existing binary platforms and supported IDE behavior retain regression obligations; CLI tests cannot qualify an IDE. No automatic single-client/project-only fallback.                                                                                                                                                                                                                                                                                                                                                    |
+| CD-10 | Generated-file, offline harness, experimental-library, native-observed and native-qualified evidence stay separately labeled. Link sanitized raw/summary receipts and their hashes; reproducible commands alone do not substantiate historical passes. Publish unsupported cells and reload requirements.                                                                                                                                                                                                                                                                                                              |
+| CD-11 | Qualify all-four-client shared-root feasibility before selecting candidate adapters, then integrated scope/permission, ownership and lifecycle evidence before adopting each route. One logical item has one effective native entrypoint per client; variants stay outside shared catalogs. Gate 6 requires selected M1 rule qualification and existing-kind preservation/regressions. New owned-skill lifecycle follows Gate 6 and blocks new shared-skill layout adoption and combined MVP release until qualified. All applicable platform/scope and IDE controls remain required; no unadopted route may activate. |
 
 Qualification starts with a complete matrix and upstream contract refresh for
 pinned releases. The existing canonical-file discovery harness qualifies only
 its exact fixtures; it does not test installed independent plugin rule delivery,
 all customization kinds, unintended-reader isolation or duplicate activation.
 Existing observations retain their provenance but cannot pass CD-02 through
-CD-09 by implication. Production activation remains blocked until applicable G6
-and CD examples have evidence and exact-head review/hosted checks pass.
+CD-09 or CD-11 by implication. Production activation remains blocked until
+applicable G6 and CD examples have evidence and exact-head review/hosted checks
+pass.
 
 ## Documentation sources and limits
 
