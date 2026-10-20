@@ -1,6 +1,7 @@
 # Gate 6 qualification and production activation
 
-Status: revised on 2026-10-19 after the user's explicit architecture correction.
+Status: revised on 2026-10-19 after the user's explicit architecture correction;
+extended on 2026-10-20 with shared-root and rules/subagent review requirements.
 Original draft prepared against `eba3dae`; reconciled against `4d26d64` after
 complete preflight reporting (#331). Production/native gates remain incomplete.
 The [delivery contract](../../topics/0009-customization-delivery.md) and
@@ -24,6 +25,21 @@ owned-skill lifecycle, then automatic maintenance. The existing
 [qualification evidence](../../technotes/m1-gate6-native-qualification.md)
 remain authoritative. This proposal does not supersede their safeguards.
 
+## Shared-root candidates before adapter selection
+
+The [shared-root evaluation](../../technotes/shared-content-root-evaluation.md)
+compares intentional `.agents` sharing, intentional `.claude` sharing and
+selective compatibility exclusions. None is adopted. CD-11 adds native
+coexistence controls within G6-07/G6-09 without reducing the ten gates, four
+clients, platforms or scopes. Exclusions must preserve native positives, manual
+content and configuration ownership. A skill exclusion does not prove isolation
+of rules, agents, commands or imports. Feasibility fixtures precede adapter
+selection. Integrated lifecycle/recovery qualification follows implementation
+and precedes adoption/production effects. Gate 6 qualifies selected M1 rules and
+existing-kind preservation. New owned-skill lifecycle stays after Gate 6 and
+blocks adopting that new layout and the combined MVP release until qualified. Do
+not activate an unadopted layout as a fallback.
+
 ## Settled decisions
 
 The user delegated settlement of the remaining policies. The choices below are
@@ -32,7 +48,7 @@ implementation, not evidence of working support.
 
 1. Independent Codex/OpenCode rule delivery must use the qualified plugin route,
    never managed team `AGENTS.md` contributions as an implicit production
-   fallback. Apply CD-01 through CD-10 across every customization and reader.
+   fallback. Apply CD-01 through CD-11 across every customization and reader.
 2. Preserve the four-client MVP: Claude Code, Copilot CLI, Codex CLI and
    OpenCode. Record CLI and IDE observations separately. Keep Copilot VS Code
    Local and Codex IDE obligations visible wherever an existing contract
@@ -59,18 +75,18 @@ implementation, not evidence of working support.
 Each row needs named executable examples and evidence before it can pass.
 Existing tests are candidate reuse points, not new qualification results.
 
-| ID    | Required result                                                                                                                                                                                                             | Evidence and candidate coverage                                                                                                                                               |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G6-01 | Explicit Codex selection works; no-selection defaults and existing client outputs retain their contracts. Unsupported target/scope combinations fail before writes.                                                         | CLI acceptance tests covering add, update, remove, list, doctor and preview; reuse `lifecycle_selection` and `codex_instruction_boundary`.                                    |
-| G6-02 | Two independent plugin rules coexist alongside unchanged team `AGENTS.md`; update/remove preserves the other rule and all manual bytes/modes. Recorded removal/recovery needs no source or active adapter.                  | Installed-plugin project/user examples and CLI tests; existing lifecycle tests prove only reusable preservation/recovery foundations.                                         |
-| G6-03 | Complete selected-set conflicts are reported deterministically before any journal or publication. Reader reports include excluded content and incidental readers without granting ownership.                                | Multiple independent conflicts, changed and unchanged controls, exact report inventories, and no-effect filesystem/state assertions.                                          |
-| G6-04 | Production uses the qualified root, writer lock, exact schema-1 backup and guarded journal/recovery boundaries. Failed or interrupted operations retain recoverable state.                                                  | Process-termination checkpoints and lock contention on each supported executor platform; reuse `lifecycle_application` and `lifecycle_state_origin`.                          |
-| G6-05 | Schema-1 migration preserves original bytes; schema-2 reads and all existing commands preserve unrelated kinds and ownership. Unsupported states fail without mutation.                                                     | Mixed rule/skill/agent fixtures, current MCP/plugin command inventory, migration and regression tests. Record each command's supported state transitions explicitly.          |
-| G6-06 | Installed Codex/OpenCode plugins deliver independent rules in fresh and resumed sessions beside team guidance. Disabled/removed plugin controls suppress only managed rules; canonical-file probes are background evidence. | CD-02/CD-03 plugin, team-guidance, disabled/removed and unintended-reader controls at exact version/OS/scope/configuration; failed requests never qualify negatives.          |
-| G6-07 | All customization payloads have explicit intended/unintended/unresolved readers, including compatibility directories, imports, globs and shared paths; test negative loading, scoped matching and duplicate activation.     | CD-01/CD-03/CD-04 inventories and native matching/nonmatching controls; direct-plus-plugin, aliases, project/user copies and compatibility imports must not activate twice.   |
-| G6-08 | User-root and external-home authority is explicit and enforced before source resolution or mutation.                                                                                                                        | Isolated authenticated user-root fixtures and invalid-root/no-effect controls; never modify real personal instructions to obtain evidence.                                    |
-| G6-09 | Rules, skills/resources, agents, bundles, plugins and MCP retain command, configuration and native behavior; hooks/tools/permissions remain visible without expanding implementation scope.                                 | Per-client CD matrix with F/R/N/B preservation, configuration/native effects and status; mixed-state CD-05 through CD-08 controls. Missing applicable cells block activation. |
-| G6-10 | Published contracts, migration guidance, support matrix and failure/recovery guidance match the production routes.                                                                                                          | Specification, usage, ADR updates, rendered documentation checks and exact-head review/CI evidence.                                                                           |
+| ID    | Required result                                                                                                                                                                                                             | Evidence and candidate coverage                                                                                                                                                               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G6-01 | Explicit Codex selection works; no-selection defaults and existing client outputs retain their contracts. Unsupported target/scope combinations fail before writes.                                                         | CLI acceptance tests covering add, update, remove, list, doctor and preview; reuse `lifecycle_selection` and `codex_instruction_boundary`.                                                    |
+| G6-02 | Two independent plugin rules coexist alongside unchanged team `AGENTS.md`; update/remove preserves the other rule and all manual bytes/modes. Recorded removal/recovery needs no source or active adapter.                  | Installed-plugin project/user examples and CLI tests; existing lifecycle tests prove only reusable preservation/recovery foundations.                                                         |
+| G6-03 | Complete selected-set conflicts are reported deterministically before any journal or publication. Reader reports include excluded content and incidental readers without granting ownership.                                | Multiple independent conflicts, changed and unchanged controls, exact report inventories, and no-effect filesystem/state assertions.                                                          |
+| G6-04 | Production uses the qualified root, writer lock, exact schema-1 backup and guarded journal/recovery boundaries. Failed or interrupted operations retain recoverable state.                                                  | Process-termination checkpoints and lock contention on each supported executor platform; reuse `lifecycle_application` and `lifecycle_state_origin`.                                          |
+| G6-05 | Schema-1 migration preserves original bytes; schema-2 reads and all existing commands preserve unrelated kinds and ownership. Unsupported states fail without mutation.                                                     | Mixed rule/skill/agent fixtures, current MCP/plugin command inventory, migration and regression tests. Record each command's supported state transitions explicitly.                          |
+| G6-06 | Installed Codex/OpenCode plugins deliver independent rules in fresh and resumed sessions beside team guidance. Disabled/removed plugin controls suppress only managed rules; canonical-file probes are background evidence. | CD-02/CD-03 plugin, team-guidance, disabled/removed and unintended-reader controls at exact version/OS/scope/configuration; failed requests never qualify negatives.                          |
+| G6-07 | All customization payloads have explicit intended/unintended/unresolved readers, including compatibility directories, imports, globs and shared paths; test negative loading, scoped matching and duplicate activation.     | CD-01/CD-03/CD-04/CD-11 feasibility inventories and native matching/nonmatching controls; direct-plus-plugin, aliases, project/user copies and compatibility imports must not activate twice. |
+| G6-08 | User-root and external-home authority is explicit and enforced before source resolution or mutation.                                                                                                                        | Isolated authenticated user-root fixtures and invalid-root/no-effect controls; never modify real personal instructions to obtain evidence.                                                    |
+| G6-09 | Rules, skills/resources, agents, bundles, plugins and MCP retain command, configuration and native behavior; hooks/tools/permissions remain visible without expanding implementation scope.                                 | Per-client CD matrix with F/R/N/B preservation, configuration/native effects and status; mixed-state CD-05 through CD-08 controls. Missing applicable cells block activation.                 |
+| G6-10 | Published contracts, migration guidance, support matrix and failure/recovery guidance match the production routes.                                                                                                          | Specification, usage, ADR updates, rendered documentation checks and exact-head review/CI evidence.                                                                                           |
 
 ### Diagnostic boundary
 
@@ -173,6 +189,20 @@ be copied into fixtures or tracked evidence.
 | OpenCode only needs preservation of old rule behavior                        | OpenCode is an equal initial client; independent plugin rules and all applicable customization cells are required                        |
 | Schema-2 availability permits switching production dispatch                  | Every installed-state command, native side effect, configuration owner and corrected G6/CD gate must pass first                          |
 
+The 2026-10-20 option review also found two sequencing contradictions. They are
+resolved as follows:
+
+| Earlier shared-root wording                                             | Corrected requirement                                                                                                                                                              |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared-skill install/update/removal/recovery must pass before Gate 6    | Gate 6 preserves existing installed kinds and qualifies M1 rules; new owned-skill lifecycle follows Gate 6 and must pass before new skill-layout adoption and combined MVP release |
+| All integrated coexistence/recovery evidence precedes adapter selection | Native feasibility fixtures precede selection; integrated qualification follows implementation and precedes adoption/production effects                                            |
+
+Experiment order is portable `.agents/skills` with one self-contained Claude
+adapter first, while native rule/subagent adapters remain capability-aware.
+Intentional `.claude` sharing and selective compatibility exclusions remain
+alternatives. This selects experiments, not production paths or a narrowed
+support matrix.
+
 ## Delivery sequence
 
 1. Reconcile the roadmap, AD-0040, all active M1/Gate 6 plans and CD matrix;
@@ -215,7 +245,7 @@ preflight work stays completed as a foundation, not as route qualification.
 ## Activation exit gate
 
 Gate 6 passes only when the required matrix cells and G6-01 through G6-10 and
-applicable CD-01 through CD-10 have linked evidence, production schema-2 routing
+applicable CD-01 through CD-11 have linked evidence, production schema-2 routing
 has passed review and hosted checks, and the supported behavior is documented. A
 green library suite or merged source integration alone cannot satisfy this gate.
 
