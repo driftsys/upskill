@@ -115,6 +115,20 @@ controls and disposable packages. The
 observations and authentication/runtime blockers. Task 2 remains incomplete; no
 native route is qualified.
 
+### Authenticated project evidence slice (#345)
+
+After normal isolated-profile login and ordinary hook trust, retain the bounded
+macOS project controls in a separate evidence note and sanitized receipt set.
+Use the existing fixture and offline classifier unchanged. Record exact model
+routes, native completed-turn/session data, per-session hook counts and team
+snapshots. Separate unsuccessful CLI override controls from persisted native
+configuration controls. Record native remove/reinstall/cache effects and exact
+configuration restoration without claiming unknown cloud effects are recovered.
+Keep unrelated cloud plugin registrations visible and unchanged. No adapter,
+production dispatch or whole-profile qualification follows from this slice. The
+remainder of Task 2, including compaction, user scopes, Linux, unintended
+readers, duplicate paths and other clients, remains incomplete.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

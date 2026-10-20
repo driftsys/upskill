@@ -1,0 +1,75 @@
+{
+  "state": "success",
+  "sha256": "7b0edc2ff21c6b39adf64a5b674f5e39b12f298098bcaab60515fdcdd0181895",
+  "exit_code": 0,
+  "diagnostic_category": null,
+  "command": [
+    "$CODEX",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "--no-daemon",
+    "exec",
+    "--json",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--color",
+    "never",
+    "-o",
+    "$EVIDENCE/codex-response.txt",
+    "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Sort the rules array lexicographically. Do not use tools."
+  ],
+  "team_before": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "team_after": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "native_events": [
+    {
+      "rule": "b",
+      "session": "01a15763-c4b1-7782-ab07-58ca9450fedf",
+      "source": "startup"
+    },
+    {
+      "rule": "a",
+      "session": "01a15763-c4b1-7782-ab07-58ca9450fedf",
+      "source": "startup"
+    }
+  ],
+  "qualified": false,
+  "digest_scope": "sha256 is the capture helper combined stdout/stderr digest; the separate JSONL receipt hashes captured stdout only. Raw stderr was not retained by the helper.",
+  "native_session": "01a15763-c4b1-7782-ab07-58ca9450fedf",
+  "completion": {
+    "type": "turn.completed",
+    "event_types": [
+      "item.completed",
+      "thread.started",
+      "turn.completed",
+      "turn.started"
+    ]
+  },
+  "normalized_observation": {
+    "state": "success",
+    "completed": true,
+    "tools_observed": false,
+    "version": "0.163.0",
+    "response": {
+      "team": "TEAM_10dd5455515b5758a761e050c0d4f698",
+      "rules": [
+        "RULE_3da4e26dd634f3df24b2bc29c9aaa28f",
+        "RULE_d314bcc6c6e8a151ac4a523b923fe2c4"
+      ]
+    },
+    "activation_counts": {
+      "b": 1,
+      "a": 1
+    },
+    "team": {
+      "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+      "mode": 416
+    }
+  }
+}

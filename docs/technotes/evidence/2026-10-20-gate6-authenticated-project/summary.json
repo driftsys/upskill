@@ -1,0 +1,348 @@
+{
+  "scope": "macOS arm64 project observations only",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "qualified": false,
+  "production_schema": 1,
+  "task": "#345; full native campaign #337 remains incomplete",
+  "raw_evidence": "/private/tmp/upskill-gate6-authenticated-20261020",
+  "versions": {
+    "codex": "0.163.0",
+    "opencode": "2.0.32"
+  },
+  "model_routes": {
+    "codex": "gpt-6.1-sol explicitly selected except initial calibration-positive default",
+    "opencode": "github-copilot/gpt-6.1-sol"
+  },
+  "authentication": "User completed normal Codex ChatGPT login with file store in fixture and OpenCode GitHub Copilot OAuth in fixture XDG root; no credentials copied or exported",
+  "hook_trust": "User reviewed both existing definitions in /hooks; unchanged definitions retained across remove/reinstall/config restoration; no bypass",
+  "codex_registration": "Fixture user CODEX_HOME native cache/config; project-only write authority not qualified",
+  "opencode_registration": "Owned project opencode.json plugins array; selection omits entries, not a native hot-disable or disposal proof",
+  "counts": {
+    "native_turns": 13,
+    "successful_paired_controls": 6,
+    "failed_override_controls": 2,
+    "resume_observations": 2
+  },
+  "pairs": [
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-persisted-a-disabled",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-persisted-both-disabled",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-a-removed",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-both-removed",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "opencode",
+      "positive": "opencode-positive",
+      "control": "opencode-a-disabled",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "opencode",
+      "positive": "opencode-positive",
+      "control": "opencode-both-disabled",
+      "result": "observed",
+      "qualified": false
+    },
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-a-disabled",
+      "result": "control_response_mismatch",
+      "qualified": false,
+      "limitation": "CLI enabled=false overrides did not disable native plugins; do not reuse this mechanism for negative controls"
+    },
+    {
+      "client": "codex",
+      "positive": "codex-reinstalled",
+      "control": "codex-both-disabled",
+      "result": "control_response_mismatch",
+      "qualified": false,
+      "limitation": "CLI enabled=false overrides did not disable native plugins; do not reuse this mechanism for negative controls"
+    }
+  ],
+  "remaining": [
+    "all four clients and every platform/scope obligation",
+    "compaction and native disposal/hot reload",
+    "unintended/default/configured/ancestor/nested readers",
+    "direct-plus-packaged and project-plus-user duplicate cases",
+    "safe update and trust-definition-change controls",
+    "user-scope registration/write authority",
+    "native effect recovery and process cleanup trace qualification",
+    "all-kind compatibility and production adapters/migration"
+  ],
+  "capture_helper": {
+    "path": "scripts/qualify-native-instructions.py:invoke",
+    "sha256": "1ba2f347f14709b26c0ad0cbbef0a21a10077a2928d5879d5a3bb1a2e4f7dd3a",
+    "limits": "Existing process-group cleanup path used. No independent live process-cleanup trace or raw stderr was retained; combined digests are distinct from retained stdout hashes. No automated model runner is introduced."
+  },
+  "receipts": [
+    {
+      "receipt": "codex-positive.json",
+      "raw_sha256": "673af3577ec43d99954f521ad92eba0aef8c2729992ad264c0c0086e69fc2c1b",
+      "retained_sha256": "eadbf5c7628bfd10bf296891b774b6922004e86521650dffe1277e5bfd06d2f1"
+    },
+    {
+      "receipt": "codex-positive.jsonl",
+      "raw_sha256": "3b10fe49086848b1bdc490cb84d494b76aab30c08906a56526568720c8260e24",
+      "retained_sha256": "3b10fe49086848b1bdc490cb84d494b76aab30c08906a56526568720c8260e24"
+    },
+    {
+      "receipt": "codex-a-disabled.json",
+      "raw_sha256": "0db1fa038ec85fbc2cc9c8668473d03044b4167be9e638b27c7e0dcab4b18004",
+      "retained_sha256": "5553c0cc59ca3f309c4cae271ff03c5f537c25ac1fddd76acf4986ed862ae118"
+    },
+    {
+      "receipt": "codex-a-disabled.jsonl",
+      "raw_sha256": "cab33e59d4b18a31ab25c0f25620f88e87158cb9fede0bec5dde1393c6d37351",
+      "retained_sha256": "cab33e59d4b18a31ab25c0f25620f88e87158cb9fede0bec5dde1393c6d37351"
+    },
+    {
+      "receipt": "codex-both-disabled.json",
+      "raw_sha256": "768aa85b3ea2cd9de1f75b64fe74aa2ae34908d329539d17bf318ac662920c03",
+      "retained_sha256": "975a0e1e1085f06e371f6ffaeeb913c8b41f5af8caf7cacf3412a9e6b87172b1"
+    },
+    {
+      "receipt": "codex-both-disabled.jsonl",
+      "raw_sha256": "8a6e42088cfc1b0297c50ba15832a58d02561402b6ebc58e63e2836b99b5e398",
+      "retained_sha256": "8a6e42088cfc1b0297c50ba15832a58d02561402b6ebc58e63e2836b99b5e398"
+    },
+    {
+      "receipt": "codex-resume.json",
+      "raw_sha256": "73f1e3188c51f49ae71c74206b7162c70a560b91c3a11c4b3e55e22c6e588389",
+      "retained_sha256": "4314e5cf86943588a15b21989481f514de8946b267b6195944e96fba72bd85dc"
+    },
+    {
+      "receipt": "codex-resume.jsonl",
+      "raw_sha256": "2badfc69284e6c07bd9fa49f39501d70429547ca250b6593870d346f38937a92",
+      "retained_sha256": "2badfc69284e6c07bd9fa49f39501d70429547ca250b6593870d346f38937a92"
+    },
+    {
+      "receipt": "codex-persisted-a-disabled.json",
+      "raw_sha256": "ccb9bc063c401def5ef694486be929eb4cbfac2e810f692051d92a99c70086e5",
+      "retained_sha256": "5f26dbcc95439e718ea42862c34bf744be2e1e8dcf2804ebd5e3679e8a664f0f"
+    },
+    {
+      "receipt": "codex-persisted-a-disabled.jsonl",
+      "raw_sha256": "0aa55e8725ba52c26cd1b7bf8a88b04842d08f8e977746a0a51dc692c34075db",
+      "retained_sha256": "0aa55e8725ba52c26cd1b7bf8a88b04842d08f8e977746a0a51dc692c34075db"
+    },
+    {
+      "receipt": "codex-persisted-both-disabled.json",
+      "raw_sha256": "29f5efc696ea1094214c02ea6ebeab2cec9122a97b71924a944ed834bef90823",
+      "retained_sha256": "7cf9342f3ccbb35b5c938038d1c30d898a2262b697feb8744b82779d8a5df063"
+    },
+    {
+      "receipt": "codex-persisted-both-disabled.jsonl",
+      "raw_sha256": "9f610a820a65b89076d81aaf1c8530ce04c15d2baa46c834656ace34bfc2d3df",
+      "retained_sha256": "9f610a820a65b89076d81aaf1c8530ce04c15d2baa46c834656ace34bfc2d3df"
+    },
+    {
+      "receipt": "codex-a-removed.json",
+      "raw_sha256": "759faed6ab08c4a16f8460dd78f26a1fb70196e75843f79d8b80162124e76bcf",
+      "retained_sha256": "29b369d6879b06240c2a81175ee6ea55ef21b57c778c761eb78dbd1b5c231198"
+    },
+    {
+      "receipt": "codex-a-removed.jsonl",
+      "raw_sha256": "42a738d867ba3bf07132e15439bc0a4282ec883bf3dbd4e75a4555d011d79a0b",
+      "retained_sha256": "42a738d867ba3bf07132e15439bc0a4282ec883bf3dbd4e75a4555d011d79a0b"
+    },
+    {
+      "receipt": "codex-both-removed.json",
+      "raw_sha256": "e2e2c61b1f23c82585f303244b6f220c7cbd2f818f12f103bd09b7c68ddfa81e",
+      "retained_sha256": "af48fe0ced3dc2a0de6732d49c141126f44a1dac38f3e7e339a8c8622be9fad7"
+    },
+    {
+      "receipt": "codex-both-removed.jsonl",
+      "raw_sha256": "72eb0f4759585d733364c5fc38d4dacc68b539d515cad26b22546386e0de1606",
+      "retained_sha256": "72eb0f4759585d733364c5fc38d4dacc68b539d515cad26b22546386e0de1606"
+    },
+    {
+      "receipt": "codex-reinstalled.json",
+      "raw_sha256": "bcabaf629a838f3ba085b49060f43f3531bac9df81bb19e666c65784e39688fc",
+      "retained_sha256": "e13bdd08c9236d6eee680963e5b8b1b4d7cfabd3b54b0a6ad9a4c12d3d0f4d62"
+    },
+    {
+      "receipt": "codex-reinstalled.jsonl",
+      "raw_sha256": "77a14d778d1622dfa105c638abe43718a84a8d41120538bc994d88eb7c695ada",
+      "retained_sha256": "77a14d778d1622dfa105c638abe43718a84a8d41120538bc994d88eb7c695ada"
+    },
+    {
+      "receipt": "opencode-positive-session.json",
+      "raw_sha256": "31acbfdaef1bec579936aabec8bc933f0b67e8d6250cf5b3269823686fc6bf6a",
+      "retained_sha256": "820a473db5a47cb2c747dd59fc1eb30e40bd85b81c38237a83e980912f1bf101"
+    },
+    {
+      "receipt": "opencode-positive.json",
+      "raw_sha256": "8d6c5d3f2e8a19bb73d52b3ebd4cf10cc8167a8d4bd3f4229461835629046723",
+      "retained_sha256": "f1e241aa4d9f350810b1f1c9cdacd6c55a6af41c35d3413a621e60f3246605f0"
+    },
+    {
+      "receipt": "opencode-positive.jsonl",
+      "raw_sha256": "bfe689538af23131a6292ea5004a3c34a780955507337245cb0f5bd9dc55f75e",
+      "retained_sha256": "bfe689538af23131a6292ea5004a3c34a780955507337245cb0f5bd9dc55f75e"
+    },
+    {
+      "receipt": "opencode-a-disabled-session.json",
+      "raw_sha256": "cad730012b6f18725b8663e54d67c5ef0c8b899fec027dbf4fc528dec411d14b",
+      "retained_sha256": "4a3b139eddd0f2c66a5cae0de1df9b87f40f070fd83e924f51a65856222b2d1f"
+    },
+    {
+      "receipt": "opencode-a-disabled.json",
+      "raw_sha256": "930b7f6e7a5a580091fcae698f081743b151d8d8435d54f57f2c66454b28d843",
+      "retained_sha256": "20c29a99bbde78020045d14a8cb3d7a06023f90f30595644d28f8d0459c9137b"
+    },
+    {
+      "receipt": "opencode-a-disabled.jsonl",
+      "raw_sha256": "cf9591829f8c534b0b4fc6b2e1c8b331a3a783478c4d00149c1871ae68f45af2",
+      "retained_sha256": "cf9591829f8c534b0b4fc6b2e1c8b331a3a783478c4d00149c1871ae68f45af2"
+    },
+    {
+      "receipt": "opencode-both-disabled-session.json",
+      "raw_sha256": "a99978ab4b384b4e5afa776f7cd641d61b8f71ecaa9deaf34c4519f50bf9bfe1",
+      "retained_sha256": "dbf57056fd288b69d159f4d419258d361dbe92d1d3d484895d9c7ca1bfb0879e"
+    },
+    {
+      "receipt": "opencode-both-disabled.json",
+      "raw_sha256": "5696cec93c84a9e521759f466fd52d9c308d2e33d97432cdbdf00485e513ab4c",
+      "retained_sha256": "9756c4deab03530e6a3de0c3fd3fa2a05955c0a296d9686ae888e4f02ba871df"
+    },
+    {
+      "receipt": "opencode-both-disabled.jsonl",
+      "raw_sha256": "1de9ab84c870aaab9230bfa18ab55c838b90c34bfa527a0a0998d0571949e0fe",
+      "retained_sha256": "1de9ab84c870aaab9230bfa18ab55c838b90c34bfa527a0a0998d0571949e0fe"
+    },
+    {
+      "receipt": "opencode-resume-session.json",
+      "raw_sha256": "7f51595185b2057f21878e3d96f549f1d3e9a3949c5d0a3255b2312de84d85a5",
+      "retained_sha256": "d4f9f2e1ef4ba8314de356575b1763328fd5df0994602c589ed0e525c2bdd87a"
+    },
+    {
+      "receipt": "opencode-resume.json",
+      "raw_sha256": "525335a9821fe0d90b355172db7650ff35d11cf455c6e24083baa6af7785a43d",
+      "retained_sha256": "efa30e48182d8ea7ff8c211cfb7650f650b8b057b3d82930132f60c1e3788211"
+    },
+    {
+      "receipt": "opencode-resume.jsonl",
+      "raw_sha256": "037e49bd89de6bc75a2eb05b709b273fb839ff6079b3fbb954ad44d7180071b4",
+      "retained_sha256": "037e49bd89de6bc75a2eb05b709b273fb839ff6079b3fbb954ad44d7180071b4"
+    },
+    {
+      "receipt": "codex-persisted-both-disabled-plugins.json",
+      "raw_sha256": "993093fbd2014ba92f7e3508a344a9ab58217ebcaf29464760b1892942bbdf06",
+      "retained_sha256": "61ea2c2703b3695fceb80adb3bbf4b299cd9d321450a028cc8f826eb8378ca53"
+    },
+    {
+      "receipt": "codex-persisted-a-disabled-plugins.json",
+      "raw_sha256": "6cf072b76f95e31f39d7b8dc9c856d23099d5d4997d8d38976747d461e1f1457",
+      "retained_sha256": "2ec22bb4bffb87142c362deb2458edc31ad35951077017a4ee3320432993c8ad"
+    },
+    {
+      "receipt": "codex-remove-a.json",
+      "raw_sha256": "e8df19d0a8ed4b07d57e7d8a8a79898f2f825dcfdba4abc8cc74e5305fcdc511",
+      "retained_sha256": "e8df19d0a8ed4b07d57e7d8a8a79898f2f825dcfdba4abc8cc74e5305fcdc511"
+    },
+    {
+      "receipt": "codex-remove-b.json",
+      "raw_sha256": "807a740dc2b7244112fb7ab811faf43832e08a2cec8641adbf8ecc269dd5ce49",
+      "retained_sha256": "807a740dc2b7244112fb7ab811faf43832e08a2cec8641adbf8ecc269dd5ce49"
+    },
+    {
+      "receipt": "codex-reinstall-a.json",
+      "raw_sha256": "3f131f1e59b8b62ded568333bcd78c92d9037a24db9eaff785f222a7f712ef01",
+      "retained_sha256": "d49106f5a23dd3ea287362e2e8b628f4bf598e395e2f1b5c23dcfb08ece3c014"
+    },
+    {
+      "receipt": "codex-reinstall-b.json",
+      "raw_sha256": "ee7fc39d99903738a4f309bd59c1217d3cd0578c9d97b5f402e33a1beae3d5bd",
+      "retained_sha256": "bbcaa394b300c59592c053cb865ef54d0d77d75cf8a731081894b9f4627b7345"
+    },
+    {
+      "receipt": "codex-removal-lifecycle.json",
+      "raw_sha256": "90c4f0a860fdd777a78b013a723f019d277d15b5d5926aa30f281900878c4a3b",
+      "retained_sha256": "f3376a836384d7edc3009bd35616d25fb317d6c82d0d5c4bb4258352ca84eae9"
+    },
+    {
+      "receipt": "codex-fixture-input.json",
+      "retained_sha256": "03f3818be599a93173d1b6f63d9215185a47684d1a26eb925c171494fd3aa3e3",
+      "kind": "captured fixture inputs; no auth"
+    },
+    {
+      "receipt": "codex-team-instructions.txt",
+      "retained_sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+      "captured_mode": 416
+    },
+    {
+      "receipt": "opencode-fixture-input.json",
+      "retained_sha256": "51dfbbe33c09147de74fc8698899f4b000ef2000db0837da1b0c7f53fa15e915",
+      "kind": "captured fixture inputs; no auth"
+    },
+    {
+      "receipt": "opencode-team-instructions.txt",
+      "retained_sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+      "captured_mode": 416
+    }
+  ],
+  "executables": {
+    "codex": {
+      "version": "0.163.0",
+      "sha256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31"
+    },
+    "opencode": {
+      "version": "2.0.32",
+      "sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf"
+    }
+  },
+  "codex_fixture_trust_state": {
+    "upskill-probe-a@upskill-qualification:hooks/hooks.json:session_start:0:0": {
+      "trusted_hash": "sha256:2d9e063bd9e2ece6691687d2ab75b431a583af86b915185bbbbee25406910eb3"
+    },
+    "upskill-probe-b@upskill-qualification:hooks/hooks.json:session_start:0:0": {
+      "trusted_hash": "sha256:2d9e063bd9e2ece6691687d2ab75b431a583af86b915185bbbbee25406910eb3"
+    }
+  },
+  "codex_installed_source_comparison": {
+    "a": {
+      "all_selected_bytes_match_source": true,
+      "files": {
+        ".codex-plugin/plugin.json": "4cd0b23ac390dc3814ae0f0013fe9c04699bc78f2a833d482d165a2012c057d4",
+        "hooks/hooks.json": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "hook.py": "01d76da672d87198502729b3272f96c0c1f8b5ddac7158f4a3fa51b4aa1877a2",
+        "rule.txt": "9bc2945c3bcdb01fbdfdaa49f6d36c9c2b5dae06233fa3ffa2165b8881493e9d",
+        "fixture.json": "be764747b8ed651037668df9e3df222f8ffdff24d6942f735fbab50d365de9a7"
+      }
+    },
+    "b": {
+      "all_selected_bytes_match_source": true,
+      "files": {
+        ".codex-plugin/plugin.json": "ca14ed6d394496ce29d7827044dc26f2dc1cb3096871c5e6e676eabdb42066a4",
+        "hooks/hooks.json": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "hook.py": "01d76da672d87198502729b3272f96c0c1f8b5ddac7158f4a3fa51b4aa1877a2",
+        "rule.txt": "0adc84c4e3b595bd6e6d88620d70ea72ad8ee6853ae7ceae71ba77818b284c0c",
+        "fixture.json": "8b1445b783359a38c94e054300eb3a25b94807dded78d460ebe76ade4adf4a20"
+      }
+    }
+  }
+}

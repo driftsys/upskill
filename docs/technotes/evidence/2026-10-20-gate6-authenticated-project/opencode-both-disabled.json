@@ -1,0 +1,68 @@
+{
+  "state": "success",
+  "sha256": "1de9ab84c870aaab9230bfa18ab55c838b90c34bfa527a0a0998d0571949e0fe",
+  "exit_code": 0,
+  "diagnostic_category": null,
+  "command": [
+    "$OPENCODE",
+    "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--model",
+    "github-copilot/gpt-6.1-sol",
+    "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Sort the rules array lexicographically. Do not use tools."
+  ],
+  "team_before": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "team_after": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "native_events": [],
+  "qualified": false,
+  "session_export": {
+    "state": "success",
+    "sha256": "a99978ab4b384b4e5afa776f7cd641d61b8f71ecaa9deaf34c4519f50bf9bfe1",
+    "exit_code": 0,
+    "diagnostic_category": null
+  },
+  "config_before": {
+    "sha256": "89905410a7f91fab47944f4e1d75035acfff0a794e31c157184b98fe0704ccd6",
+    "mode": 420
+  },
+  "config_restored": {
+    "sha256": "89905410a7f91fab47944f4e1d75035acfff0a794e31c157184b98fe0704ccd6",
+    "mode": 420
+  },
+  "digest_scope": "sha256 is the capture helper combined stdout/stderr digest; the separate JSONL receipt hashes captured stdout only. Raw stderr was not retained by the helper.",
+  "native_session": "ses_ea898dc94ffe3DpOAX13ZLEhL5",
+  "completion": {
+    "outcome": "succeeded",
+    "finish": "stop",
+    "assistant_completed": 1792467741957,
+    "idle_outcome": "succeeded",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    }
+  },
+  "normalized_observation": {
+    "state": "success",
+    "completed": true,
+    "tools_observed": false,
+    "version": "2.0.32",
+    "response": {
+      "team": "TEAM_8d7ccf5e65182313b7d6b3bee5f5ae8e",
+      "rules": []
+    },
+    "activation_counts": {},
+    "team": {
+      "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+      "mode": 416
+    }
+  }
+}
