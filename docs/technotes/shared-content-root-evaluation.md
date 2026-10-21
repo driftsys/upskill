@@ -331,3 +331,14 @@ feasibility before selecting an adapter; review integrated evidence before
 adopting its route or enabling its production effects. Missing native evidence
 never becomes a pass because a later milestone owns implementation. Production
 schema-2 activation remains blocked by all applicable G6/CD requirements.
+
+## Bounded native follow-up retained on 2026-10-21
+
+The [shared-skill evidence note](gate6-shared-skill-controls.md) records Copilot
+1.0.98 project/macOS invocation and relative-resource observations. A narrow
+user exclusion, including native write/readback confirmation, did not prevent
+explicit native activation of the selected Claude-compatible skill. That
+candidate condition remains blocked. Surviving shared/manual positives do not
+turn the failed isolation control into a pass or establish automatic selection.
+All four-client/platform/scope requirements remain; no layout or route is
+adopted and all campaign cells remain unqualified.

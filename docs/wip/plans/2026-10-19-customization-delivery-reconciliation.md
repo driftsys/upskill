@@ -161,6 +161,21 @@ production dispatch or whole-profile qualification follows from this slice. The
 remainder of Task 2, including compaction, user scopes, Linux, unintended
 readers, duplicate paths and other clients, remains incomplete.
 
+### Shared-skill native evidence slice (#351)
+
+Retain the
+[bounded Copilot observations](../../technotes/gate6-shared-skill-controls.md)
+with sanitized event receipts and distinct raw/retained hashes. Nine completed
+sessions cover shared invocation/removal, relative resource reads, narrow
+Claude-source exclusions, surviving manual/shared skills and restored baseline.
+Native config write/readback confirms the selected setting, but explicit native
+activation still succeeds: keep both isolation negatives failed. Do not treat
+these observations as automatic-selection, actual-subagent or complete
+preservation/lifecycle proof. Independent before/after bytes, nonempty user
+settings, other readers/platforms/scopes and integrated ownership remain
+pending. Task 2 and CD-11 stay incomplete; all 160 campaign cells remain
+unqualified.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,
