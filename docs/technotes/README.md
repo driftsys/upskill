@@ -36,6 +36,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 Claude skill-route observations](gate6-claude-skill-controls.md):
+  bounded native, development and installed-plugin controls with configuration
+  residue.
+
 - [Gate 6 shared-skill and exclusion observations](gate6-shared-skill-controls.md):
   bounded Copilot invocation/resource controls and failed explicit isolation.
 

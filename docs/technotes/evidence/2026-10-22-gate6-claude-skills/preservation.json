@@ -1,0 +1,251 @@
+{
+  "development_pair": {
+    "before": {
+      "$PROJECT_A/CLAUDE.md": {
+        "sha256": "1266f3cbb4d5735efdeac7ac522b58cfbf2f5b9af65e3b8b1107c23fb8427d37",
+        "mode": 416,
+        "content": "Manual fixture guidance: run only the requested qualification control.\n"
+      },
+      "$PROJECT_A/.claude/skills/upskill-g6-claude-87d4db2b/SKILL.md": {
+        "sha256": "653906cfb398a0bebc8fa49c6fb5ed2a5b464a25f49b1a471cc1ac5439d501aa",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-claude-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly CLAUDE_4cdeb2d253a152c7613bfe50552393c7 and nothing else. Do not use any other skills or tools.\n"
+      },
+      "$PROJECT_A/.agents/skills/upskill-g6-shared-87d4db2b/SKILL.md": {
+        "sha256": "a2158296df8042b0773b4ffc59016b5d9a5dcd16bdf772e4910aa0556976ce1f",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-shared-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly SHARED_03c3acc8fa7a338576a265e826b20747 and nothing else. Do not use any other skills or tools.\n"
+      },
+      "$PACKET_A/plugin/.claude-plugin/plugin.json": {
+        "sha256": "825dd1b017371e76007bcceffce193555f674003c8a4efb8447392bd7a5e5696",
+        "mode": 420,
+        "content": "{\"name\": \"upskill-g6-adapter\", \"version\": \"0.0.0\", \"description\": \"Disposable skill adapter feasibility fixture\"}\n"
+      },
+      "$PACKET_A/plugin/skills/upskill-g6-shared-87d4db2b/SKILL.md": {
+        "sha256": "a2158296df8042b0773b4ffc59016b5d9a5dcd16bdf772e4910aa0556976ce1f",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-shared-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly SHARED_03c3acc8fa7a338576a265e826b20747 and nothing else. Do not use any other skills or tools.\n"
+      }
+    },
+    "after": {
+      "$PROJECT_A/CLAUDE.md": {
+        "sha256": "1266f3cbb4d5735efdeac7ac522b58cfbf2f5b9af65e3b8b1107c23fb8427d37",
+        "mode": 416,
+        "content": "Manual fixture guidance: run only the requested qualification control.\n"
+      },
+      "$PROJECT_A/.claude/skills/upskill-g6-claude-87d4db2b/SKILL.md": {
+        "sha256": "653906cfb398a0bebc8fa49c6fb5ed2a5b464a25f49b1a471cc1ac5439d501aa",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-claude-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly CLAUDE_4cdeb2d253a152c7613bfe50552393c7 and nothing else. Do not use any other skills or tools.\n"
+      },
+      "$PROJECT_A/.agents/skills/upskill-g6-shared-87d4db2b/SKILL.md": {
+        "sha256": "a2158296df8042b0773b4ffc59016b5d9a5dcd16bdf772e4910aa0556976ce1f",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-shared-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly SHARED_03c3acc8fa7a338576a265e826b20747 and nothing else. Do not use any other skills or tools.\n"
+      },
+      "$PACKET_A/plugin/.claude-plugin/plugin.json": {
+        "sha256": "825dd1b017371e76007bcceffce193555f674003c8a4efb8447392bd7a5e5696",
+        "mode": 420,
+        "content": "{\"name\": \"upskill-g6-adapter\", \"version\": \"0.0.0\", \"description\": \"Disposable skill adapter feasibility fixture\"}\n"
+      },
+      "$PACKET_A/plugin/skills/upskill-g6-shared-87d4db2b/SKILL.md": {
+        "sha256": "a2158296df8042b0773b4ffc59016b5d9a5dcd16bdf772e4910aa0556976ce1f",
+        "mode": 420,
+        "content": "---\nname: upskill-g6-shared-87d4db2b\ndescription: Native route qualification control; use only on explicit request by name.\n---\nReturn exactly SHARED_03c3acc8fa7a338576a265e826b20747 and nothing else. Do not use any other skills or tools.\n"
+      }
+    },
+    "preserved": true
+  },
+  "installed_before": {
+    "$PROJECT_B/CLAUDE.md": {
+      "sha256": "1266f3cbb4d5735efdeac7ac522b58cfbf2f5b9af65e3b8b1107c23fb8427d37",
+      "mode": 416,
+      "content": "Manual fixture guidance: run only the requested qualification control.\n"
+    },
+    "$PROJECT_B/.claude/settings.json": {
+      "sha256": "89ef18d5802dd3a09b5c5ce312337e761743d88e8e11cc5e3a6b8f3e71b730b6",
+      "mode": 416,
+      "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  }\n}\n"
+    },
+    "$PROJECT_B/.agents/skills/upskill-g6-portable-126b0ff4/SKILL.md": {
+      "sha256": "f56ad6abc489b463361dec17896950f1ee53c20baaf013adc9dec5b4ee286997",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-portable-126b0ff4\ndescription: Disposable native route control; invoke only when explicitly requested.\n---\nReturn exactly SHARED_40d4298ed6d1ea133b07de62a6f167dc and nothing else. Do not use other tools or skills.\n"
+    },
+    "$PACKET_C/marketplace/plugins/upskill-g6-shared-126b0ff4/.claude-plugin/plugin.json": {
+      "sha256": "6c3a0f43189354bdc1100f3f2b1871738473858fa720c4873e2cf0640f5fe02f",
+      "mode": 420,
+      "content": "{\"name\": \"upskill-g6-shared-126b0ff4\", \"version\": \"0.0.0\", \"description\": \"Disposable qualification fixture\"}\n"
+    },
+    "$PACKET_C/marketplace/plugins/upskill-g6-shared-126b0ff4/skills/upskill-g6-portable-126b0ff4/SKILL.md": {
+      "sha256": "f56ad6abc489b463361dec17896950f1ee53c20baaf013adc9dec5b4ee286997",
+      "mode": 420,
+      "content": "---\nname: upskill-g6-portable-126b0ff4\ndescription: Disposable native route control; invoke only when explicitly requested.\n---\nReturn exactly SHARED_40d4298ed6d1ea133b07de62a6f167dc and nothing else. Do not use other tools or skills.\n"
+    }
+  },
+  "installed_after": {
+    "$PROJECT_B/CLAUDE.md": {
+      "sha256": "1266f3cbb4d5735efdeac7ac522b58cfbf2f5b9af65e3b8b1107c23fb8427d37",
+      "mode": 416,
+      "content": "Manual fixture guidance: run only the requested qualification control.\n"
+    },
+    "$PROJECT_B/.claude/settings.json": {
+      "sha256": "dbe4b7573f50251f73a3584dcbfefcca9a45cf281aa57da28a4279a2b8582d82",
+      "mode": 416,
+      "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+    },
+    "$PROJECT_B/.agents/skills/upskill-g6-portable-126b0ff4/SKILL.md": {
+      "sha256": "f56ad6abc489b463361dec17896950f1ee53c20baaf013adc9dec5b4ee286997",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-portable-126b0ff4\ndescription: Disposable native route control; invoke only when explicitly requested.\n---\nReturn exactly SHARED_40d4298ed6d1ea133b07de62a6f167dc and nothing else. Do not use other tools or skills.\n"
+    },
+    "$PACKET_C/marketplace/plugins/upskill-g6-shared-126b0ff4/.claude-plugin/plugin.json": {
+      "sha256": "6c3a0f43189354bdc1100f3f2b1871738473858fa720c4873e2cf0640f5fe02f",
+      "mode": 420,
+      "content": "{\"name\": \"upskill-g6-shared-126b0ff4\", \"version\": \"0.0.0\", \"description\": \"Disposable qualification fixture\"}\n"
+    },
+    "$PACKET_C/marketplace/plugins/upskill-g6-shared-126b0ff4/skills/upskill-g6-portable-126b0ff4/SKILL.md": {
+      "sha256": "f56ad6abc489b463361dec17896950f1ee53c20baaf013adc9dec5b4ee286997",
+      "mode": 420,
+      "content": "---\nname: upskill-g6-portable-126b0ff4\ndescription: Disposable native route control; invoke only when explicitly requested.\n---\nReturn exactly SHARED_40d4298ed6d1ea133b07de62a6f167dc and nothing else. Do not use other tools or skills.\n"
+    }
+  },
+  "native_steps": [
+    {
+      "label": "validate",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "validate",
+        "$PACKET_C/marketplace"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e93358a2b541c6bc086c015afb461756979ff9e3df41dd1fb799a6df19c36148",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "89ef18d5802dd3a09b5c5ce312337e761743d88e8e11cc5e3a6b8f3e71b730b6",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-add",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "add",
+        "$PACKET_C/marketplace",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "745f359429073b68eed78d0d09784b73498ccc0238dc159a9bc1960310240382",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "0de7c2acefbe755ca3e81ed938d11804472bb338a45824c0f17b18a6fdb025a8",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "install",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "install",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a1a58b9d43a24b9370eea6dd2808cd140e9f760f8c95b434426b933999b6c9c3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "3e69549f885b20e6e7d79d75ca8b2b86e7107d359521b22b0e89fe3aabe93976",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": true\n  }\n}\n"
+      }
+    },
+    {
+      "label": "disable",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "disable",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "80b57c9c7f945608a2bfef1861e4b371d57af4eb18ee5836a322c05dfb9398c9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "17565ce968d951e00bcc2e21d6c2bcc97de6de7ffcac2035e029f6b76f6a9675",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": false\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "enable",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "enable",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "87e4c0738b05b863794123a6c67fb8cc0931340db0d9545a1794721f2e548d9e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "2fb9ee2c11e3c892bfae7694f73f651e451f2808d534159d2b9850fd4471d2f2",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": true\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "uninstall",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "uninstall",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f530dd458ad8f612c69c484d77748eae1a367f64abc56f6d60cf3e9e595b3d17",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "6dbed2a5ba030ebab4c6c753bd01a1e614ea9f5f8598cd03dea12ebe84715542",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-remove",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "553dd63148865b1f222126ae7b80eaa372447eeed420390f16bcea01028101f6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "dbe4b7573f50251f73a3584dcbfefcca9a45cf281aa57da28a4279a2b8582d82",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+      }
+    }
+  ],
+  "limits": "Initial route helper reports team equality only; no independent before/after capture for first three sessions. Later controls retain fixture snapshots. Native removal leaves empty enabledPlugins/extraKnownMarketplaces objects; manual env value and mode survive, settings bytes differ. No credentials or user auth/config snapshots."
+}
