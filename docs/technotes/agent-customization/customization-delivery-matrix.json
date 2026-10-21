@@ -4637,6 +4637,14 @@
     ],
     "rules_and_agents": "Capability-aware native representations; no universal format or inert source assumption. Existing .agents/rules glob, Claude plugin-agent ignored fields and legacy OpenCode permission mapping require controls.",
     "milestones": "Native feasibility before adapter selection; Gate 6 M1 rule lifecycle and existing-kind preservation; new owned-skill lifecycle after Gate 6; integrated qualification before adoption and combined MVP release.",
-    "qualification": "No cell qualified by documentation or this inventory change"
+    "qualification": "No cell qualified by documentation or this inventory change",
+    "native_follow_up": {
+      "reference": "../gate6-shared-skill-controls.md",
+      "status": "bounded observed and failed controls only; no qualified cells",
+      "client": "copilot 1.0.98 / macos-arm64 / project",
+      "observed": "shared explicit invocation/removal and relative-resource controls",
+      "failed": "selected ignoredSkillsLocations path still permits explicit native invocation, including native config write/readback confirmation",
+      "remaining": "all applicable client/platform/scope/IDE controls and integrated qualification; no layout adoption"
+    }
   }
 }

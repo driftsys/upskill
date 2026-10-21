@@ -1,0 +1,15 @@
+{
+  "claude-excluded.jsonl": "c9abef9ce55102915474b0c3d58fd7ff737d5641587fed56258e90c59bcca7e7",
+  "claude-positive.jsonl": "da7e85a41dcc834c711642844220d1eb88d19eecd89e1dfe6f849170873ecd03",
+  "claude-restored.jsonl": "90c85343ee729c61cadcdae0d2ac143c96a08dbf600c21f15a6b7ec96289c9f1",
+  "confirm-native-config-read.txt": "ee67c4b39c9e55518f273e76f6f5aa2e12b437d23618cf5e1ca879b21122e94b",
+  "confirm-native-config-write.txt": "0a4eae72f5acd0e30a848b4c7461b242fe5324db9e85631b088b5e6a112796df",
+  "fixtures.json": "de518daa66a74936d00e29aa40bfe945560d689b72e8fc396103adcf9e45fc6a",
+  "manual-survives.jsonl": "d1eb1bce4cd67726e787085e05978b767086b3161fe580329743ff37cc1fe33d",
+  "native-config-excluded.jsonl": "5c228a1ea755cfaebef2c95c02a880de90ef3f3eaca0fd4ef10ecaa7ab8164e4",
+  "resource-positive.jsonl": "6b0b3372ef5442cd3ce023d7e5b1826910a16515c8704a011479aa381370b8e6",
+  "shared-positive.jsonl": "2f0a73023c879015e80d8e9d1db1181b8f5ff84b14f3c3a163375d8391db7bc2",
+  "shared-removed.jsonl": "d465dafed0540284a83d95b3fffe20bea6961da42a8c752a1490b54d3e981171",
+  "shared-resource-survives.jsonl": "458ba039f355fd727d5ae18a571f0b27e26e54da50f0680adaa549116316e8ac",
+  "summary.json": "f59b7cc0a337e75636c0075b1c2e76d7555679b61b882c7b1114608c1c2900be"
+}

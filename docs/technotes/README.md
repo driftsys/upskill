@@ -36,6 +36,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 shared-skill and exclusion observations](gate6-shared-skill-controls.md):
+  bounded Copilot invocation/resource controls and failed explicit isolation.
+
 - [Gate 6 pinned profiles and reader inventory](gate6-plugin-profile-inventory.md)
 
 - [Customization architecture reconciliation](customization-architecture-reconciliation.md)
