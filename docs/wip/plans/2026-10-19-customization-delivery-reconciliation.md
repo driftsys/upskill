@@ -176,6 +176,21 @@ settings, other readers/platforms/scopes and integrated ownership remain
 pending. Task 2 and CD-11 stay incomplete; all 160 campaign cells remain
 unqualified.
 
+### Claude skill-route native evidence slice (#353)
+
+Retain the
+[bounded Claude controls](../../technotes/gate6-claude-skill-controls.md) after
+ordinary isolated reauthentication: native positive/failed shared-route
+candidate, development plugin positive/absent/restored, and normal project
+marketplace install/disable/enable/uninstall. Require successful completed
+native turns and matching Skill tool results, separate development loading from
+installed behavior, and retain before/after snapshots where captured. Record
+native removal's empty configuration objects; preserved manual semantics/mode
+are not byte restoration. No complete duplicate, resource, unintended-reader,
+rule/subagent, user/Linux or integrated lifecycle result follows. Task 2/CD-11
+remain incomplete; no adapter or shared layout is selected and all 160 cells
+remain unqualified.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

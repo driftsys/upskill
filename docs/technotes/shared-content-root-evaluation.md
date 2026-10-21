@@ -342,3 +342,21 @@ candidate condition remains blocked. Surviving shared/manual positives do not
 turn the failed isolation control into a pass or establish automatic selection.
 All four-client/platform/scope requirements remain; no layout or route is
 adopted and all campaign cells remain unqualified.
+
+## Bounded Claude route follow-up (#353)
+
+The [Claude evidence packet](gate6-claude-skill-controls.md) retains nine
+completed macOS project sessions at 2.1.303. The desired direct `.agents/skills`
+positive failed with a completed absent fallback beside a working native skill;
+it is not a passing negative. A self-contained Claude plugin exposed the
+namespaced skill. Development loading and normal project marketplace
+installation are separate controls. Persisted disable/enable and uninstall
+produced the expected absent/restored/absent results. Manual team/shared-source
+bytes and modes survived; the manual settings value/mode survived, but native
+removal left empty configuration objects. Do not claim byte restoration.
+
+This advances candidate A feasibility without selecting it. No complete catalog
+or duplicate/unintended-reader control, resource behavior, rule injection,
+subagent restriction, user/Linux or integrated ownership/recovery qualification
+follows. All alternatives, four-client obligations and production activation
+blockers remain. Every campaign cell stays unqualified.

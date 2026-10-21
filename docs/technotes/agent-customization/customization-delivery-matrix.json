@@ -4645,6 +4645,14 @@
       "observed": "shared explicit invocation/removal and relative-resource controls",
       "failed": "selected ignoredSkillsLocations path still permits explicit native invocation, including native config write/readback confirmation",
       "remaining": "all applicable client/platform/scope/IDE controls and integrated qualification; no layout adoption"
+    },
+    "claude_native_follow_up": {
+      "reference": "../gate6-claude-skill-controls.md",
+      "status": "bounded observed controls only; no qualified cells",
+      "client": "claude 2.1.303 / macos-arm64 / project",
+      "observed": "native skill positive; failed desired direct-shared positive with completed absent fallback; separate development and installed-plugin explicit invocation/disable/enable/removal",
+      "preservation": "manual team/shared source bytes/modes and manual settings value/mode survive; native removal leaves empty configuration objects, not byte restoration",
+      "remaining": "all applicable client/platform/scope/IDE and resource/duplicate/unintended-reader/rule/subagent/integrated qualification; no layout adoption"
     }
   }
 }
