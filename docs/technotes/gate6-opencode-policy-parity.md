@@ -22,7 +22,10 @@ permissions: deny all, allow reading `*.txt`, allow editing `sentinel.txt`. The
 project parent configuration declared default denial and one allowance to launch
 that named child. Both agent and parent configuration snapshots remained
 byte/mode identical before, during and after the two fresh turns. The only
-request difference was the target filename passed to the child.
+declared parent run prompt difference was the target filename. Actual delegated
+messages also vary: the denied turn repeats manual guidance about avoiding
+shell, permission and configuration changes. The delegated prompts are not
+identical apart from their target filenames.
 
 | Control                 | Actual native behavior                                                                                      | Fixture effect                                                               |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
