@@ -1,0 +1,11 @@
+{
+  "fixture-and-assessment.json": "571a4bc64da1c509db0b7159e8e6a7f64ec9f85d4105300798da7109a8c20226",
+  "missing-entry.jsonl": "333c1a86e1aea55cd017666adb536d664b7ce9bb4a706bd48c0ad40e8970fff6",
+  "missing-resource.jsonl": "eaae9c54f456f3467503dc4176939c35b524090bc68f40f3f2faa9790e42c72e",
+  "native-session-selections.json": "429d894e3eb603852a258121524c978ff7bab1fc2b6fc1b638eec5fe4af48f89",
+  "private-source-index.json": "642fa5c52ce7d29b6dfe25cc67d7077da97af84b6a71754dc1a2081035ba177f",
+  "relocated-shared.jsonl": "8b9e6add0c577418b8dad1fdb3b0de415edda2efe039e3ffd116b109b9d3daac",
+  "restored-shared.jsonl": "b253cbd5b329d54b8537939e7864b58e9dafca7943faecafbda3d82ec5c6c5f1",
+  "shared-positive.jsonl": "94ced7731e02eb51075b07639bf43a970c77f4c0dd3623b41471137dbc8bf857",
+  "summary.json": "8b14de98cbb9099fd00333e7dcecd3dc56085f7728f8c063d973f849e0b12329"
+}

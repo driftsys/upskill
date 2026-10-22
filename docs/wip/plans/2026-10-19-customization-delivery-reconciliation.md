@@ -296,6 +296,20 @@ Task 2/CD-11 and remaining four-client/platform/scope/IDE/integrated obligations
 remain incomplete; all 160 cells stay unqualified and schema-2 activation stays
 blocked.
 
+### Codex shared-skill and runtime-resource evidence slice (#369)
+
+Retain
+[bounded Codex project observations](../../technotes/gate6-codex-shared-resources.md)
+with actual native metadata, skill-body expansions, resource commands and
+final-answer phases. Keep two strict whole-output failures as failures, distinct
+from matching final phases. Preserve the no-entry/no-read control's limitation:
+it is not a failed-load or permission-denial event. Bind relocated resource
+paths, source/selected hashes and exact manual config/content preservation. One
+listed fixture item does not qualify complete discovery or duplicate activation.
+Other clients/scopes/platforms/IDE and integrated ownership/recovery remain
+open; Task 2 stays incomplete, all 160 cells remain unqualified and schema-2
+stays blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

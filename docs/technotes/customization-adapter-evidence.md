@@ -231,3 +231,13 @@ reader/root conditions and campaign pins after architecture PR #334. It
 supplements this dated research without rewriting earlier observations. Released
 Codex parser/hook source and the integrity-verified OpenCode v2 SDK declarations
 were inspected; no native plugin activation is qualified by those inspections.
+
+## Bounded Codex shared resource follow-up — 2026-10-22
+
+The [Codex shared-resource slice](gate6-codex-shared-resources.md) adds bounded
+0.163.0/macOS project observations: four native skill expansions, three
+successful resource reads, one missing-file command failure and a relocated
+package. All five final-answer phases match; two original whole-message-sequence
+expectations remain failed. No complete discovery inventory, duplicate
+activation, native permission-denial mapping, route adoption or lifecycle
+qualification follows.

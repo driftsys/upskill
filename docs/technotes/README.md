@@ -36,6 +36,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 Codex shared skills and runtime resources](gate6-codex-shared-resources.md):
+  native skill expansion, relative reads, relocation and strict-output failures.
+
 - [Gate 6 Codex project compaction observations](gate6-codex-compaction.md):
   retained native compaction, next-turn rule messages and preservation limits.
 

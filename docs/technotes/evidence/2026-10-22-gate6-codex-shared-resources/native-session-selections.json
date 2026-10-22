@@ -1,0 +1,505 @@
+[
+  {
+    "label": "shared-positive",
+    "session": "01a16572-9b10-7ca1-83e6-ffbf83817573",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:09:32.949Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16572-9b10-7ca1-83e6-ffbf83817573",
+          "timestamp": "2026-10-22T21:09:32.730Z",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:09:32.951Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16572-9e78-7f73-ab6e-acf1c7b7d5d1",
+          "started_at": 1792703372
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:09:34.544Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-resource-7c17ce0c: Use for the explicitly requested resource probe. (file: r1/upskill-resource-7c17ce0c/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:09:34.557Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16572-9e78-7f73-ab6e-acf1c7b7d5d1",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "model": "gpt-6.1-sol",
+          "sandbox_policy_type": "read-only",
+          "approval_policy": "never"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:09:34.610Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-resource-7c17ce0c</name>\n<path>/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md</path>\n---\nname: upskill-resource-7c17ce0c\ndescription: Use for the explicitly requested resource probe.\n---\n\nRead references/review-procedure.md relative to this skill directory, then follow its response instruction. If the resource is missing, return exactly MISSING_d52664b063d18438. Do not substitute another procedure or search other locations.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 13,
+        "timestamp": "2026-10-22T21:09:36.872Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "I\u2019m using the upskill-resource-7c17ce0c skill for the resource probe.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "commentary"
+        }
+      },
+      {
+        "source_line_index_zero_based": 20,
+        "timestamp": "2026-10-22T21:09:40.696Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_c348764eed699af2704c57ec4201d966",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 23,
+        "timestamp": "2026-10-22T21:09:40.787Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16572-9e78-7f73-ab6e-acf1c7b7d5d1",
+          "last_agent_message": "RESOURCE_c348764eed699af2704c57ec4201d966",
+          "started_at": 1792703372,
+          "completed_at": 1792703380,
+          "duration_ms": 7865
+        }
+      }
+    ]
+  },
+  {
+    "label": "missing-resource",
+    "session": "01a16572-c020-7772-8ae8-6b65d87eff10",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:09:42.123Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16572-c020-7772-8ae8-6b65d87eff10",
+          "timestamp": "2026-10-22T21:09:41.604Z",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:09:42.125Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16572-c22f-72e1-8234-b1e42dadf2d1",
+          "started_at": 1792703382
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:09:44.951Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-resource-7c17ce0c: Use for the explicitly requested resource probe. (file: r7/upskill-resource-7c17ce0c/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:09:44.953Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16572-c22f-72e1-8234-b1e42dadf2d1",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "model": "gpt-6.1-sol",
+          "sandbox_policy_type": "read-only",
+          "approval_policy": "never"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:09:45.106Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-resource-7c17ce0c</name>\n<path>/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md</path>\n---\nname: upskill-resource-7c17ce0c\ndescription: Use for the explicitly requested resource probe.\n---\n\nRead references/review-procedure.md relative to this skill directory, then follow its response instruction. If the resource is missing, return exactly MISSING_d52664b063d18438. Do not substitute another procedure or search other locations.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 18,
+        "timestamp": "2026-10-22T21:09:49.609Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "MISSING_d52664b063d18438",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 21,
+        "timestamp": "2026-10-22T21:09:49.677Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16572-c22f-72e1-8234-b1e42dadf2d1",
+          "last_agent_message": "MISSING_d52664b063d18438",
+          "started_at": 1792703382,
+          "completed_at": 1792703389,
+          "duration_ms": 7575
+        }
+      }
+    ]
+  },
+  {
+    "label": "missing-entry",
+    "session": "01a16572-e569-7f01-9461-fd050fe1dbe0",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:09:51.598Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16572-e569-7f01-9461-fd050fe1dbe0",
+          "timestamp": "2026-10-22T21:09:51.104Z",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:09:51.599Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16572-e736-7b62-b2b0-93400bd0b7d4",
+          "started_at": 1792703391
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:09:52.779Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16572-e736-7b62-b2b0-93400bd0b7d4",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "model": "gpt-6.1-sol",
+          "sandbox_policy_type": "read-only",
+          "approval_policy": "never"
+        }
+      },
+      {
+        "source_line_index_zero_based": 14,
+        "timestamp": "2026-10-22T21:09:54.797Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "ABSENT_2912e738de75456f",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 17,
+        "timestamp": "2026-10-22T21:09:54.800Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16572-e736-7b62-b2b0-93400bd0b7d4",
+          "last_agent_message": "ABSENT_2912e738de75456f",
+          "started_at": 1792703391,
+          "completed_at": 1792703394,
+          "duration_ms": 3227
+        }
+      }
+    ]
+  },
+  {
+    "label": "restored-shared",
+    "session": "01a16572-f68f-7732-92eb-f6d74abde127",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:09:56.003Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16572-f68f-7732-92eb-f6d74abde127",
+          "timestamp": "2026-10-22T21:09:55.492Z",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:09:56.003Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16572-f88c-7be1-8fe8-a235715776d6",
+          "started_at": 1792703395
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:09:57.419Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-resource-7c17ce0c: Use for the explicitly requested resource probe. (file: r7/upskill-resource-7c17ce0c/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:09:57.421Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16572-f88c-7be1-8fe8-a235715776d6",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+          "model": "gpt-6.1-sol",
+          "sandbox_policy_type": "read-only",
+          "approval_policy": "never"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:09:57.488Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-resource-7c17ce0c</name>\n<path>/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md</path>\n---\nname: upskill-resource-7c17ce0c\ndescription: Use for the explicitly requested resource probe.\n---\n\nRead references/review-procedure.md relative to this skill directory, then follow its response instruction. If the resource is missing, return exactly MISSING_d52664b063d18438. Do not substitute another procedure or search other locations.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 13,
+        "timestamp": "2026-10-22T21:09:59.708Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "I\u2019m using the upskill-resource-7c17ce0c skill and its supporting procedure.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "commentary"
+        }
+      },
+      {
+        "source_line_index_zero_based": 20,
+        "timestamp": "2026-10-22T21:10:02.467Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_c348764eed699af2704c57ec4201d966",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 23,
+        "timestamp": "2026-10-22T21:10:02.485Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16572-f88c-7be1-8fe8-a235715776d6",
+          "last_agent_message": "RESOURCE_c348764eed699af2704c57ec4201d966",
+          "started_at": 1792703395,
+          "completed_at": 1792703402,
+          "duration_ms": 6498
+        }
+      }
+    ]
+  },
+  {
+    "label": "relocated-shared",
+    "session": "01a16573-14e1-7a82-aa3c-f18cd0974073",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:10:03.828Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16573-14e1-7a82-aa3c-f18cd0974073",
+          "timestamp": "2026-10-22T21:10:03.259Z",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:10:03.829Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16573-1721-7391-a2ac-17f50127bfce",
+          "started_at": 1792703403
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:10:05.197Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-resource-7c17ce0c: Use for the explicitly requested resource probe. (file: r7/upskill-resource-7c17ce0c/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:10:05.201Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16573-1721-7391-a2ac-17f50127bfce",
+          "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b",
+          "model": "gpt-6.1-sol",
+          "sandbox_policy_type": "read-only",
+          "approval_policy": "never"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:10:05.276Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-resource-7c17ce0c</name>\n<path>/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/.agents/skills/upskill-resource-7c17ce0c/SKILL.md</path>\n---\nname: upskill-resource-7c17ce0c\ndescription: Use for the explicitly requested resource probe.\n---\n\nRead references/review-procedure.md relative to this skill directory, then follow its response instruction. If the resource is missing, return exactly MISSING_d52664b063d18438. Do not substitute another procedure or search other locations.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 20,
+        "timestamp": "2026-10-22T21:10:11.058Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_c348764eed699af2704c57ec4201d966",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 23,
+        "timestamp": "2026-10-22T21:10:11.067Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16573-1721-7391-a2ac-17f50127bfce",
+          "last_agent_message": "RESOURCE_c348764eed699af2704c57ec4201d966",
+          "started_at": 1792703403,
+          "completed_at": 1792703411,
+          "duration_ms": 7249
+        }
+      }
+    ]
+  }
+]
