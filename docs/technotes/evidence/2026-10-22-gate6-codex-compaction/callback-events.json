@@ -1,0 +1,26 @@
+{
+  "session": "01a15776-550d-76d0-99a8-069c17576026",
+  "events": [
+    {
+      "rule": "a",
+      "session": "01a15776-550d-76d0-99a8-069c17576026",
+      "source": "startup"
+    },
+    {
+      "rule": "b",
+      "session": "01a15776-550d-76d0-99a8-069c17576026",
+      "source": "startup"
+    },
+    {
+      "rule": "a",
+      "session": "01a15776-550d-76d0-99a8-069c17576026",
+      "source": "compact"
+    },
+    {
+      "rule": "b",
+      "session": "01a15776-550d-76d0-99a8-069c17576026",
+      "source": "compact"
+    }
+  ],
+  "limitation": "Callbacks contain no timestamp; next-turn placement is shown by native developer message order, not callback wall-clock timing."
+}

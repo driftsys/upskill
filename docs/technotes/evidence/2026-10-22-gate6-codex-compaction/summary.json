@@ -1,0 +1,45 @@
+{
+  "qualified": false,
+  "issue": 368,
+  "client": "codex",
+  "session_reported_version": "0.163.0",
+  "session_reported_provider": "openai",
+  "turn_context_model": "gpt-6.1-sol",
+  "session": "01a15776-550d-76d0-99a8-069c17576026",
+  "captured_session_timestamp": "2026-10-20T03:58:55.261Z",
+  "retained_at": "2026-10-22T21:01:28.900632+00:00",
+  "platform_context": "Earlier authenticated fixture campaign macOS arm64; the session metadata itself does not independently identify the OS/architecture.",
+  "surface_context": "Prior private assessment describes ordinary CLI TUI /compact. This retained source packet has no contemporaneous invocation command or process-exit receipt.",
+  "source_line_count": 39,
+  "selected_line_count": 19,
+  "completed_tasks": 3,
+  "response_tasks": 2,
+  "compaction_records": 1,
+  "compaction_task_last_agent_message": null,
+  "native_response_item_types": {
+    "message": 12
+  },
+  "native_response_item_tool_calls": 0,
+  "startup_callbacks_each_rule": 1,
+  "compact_callbacks_each_rule": 1,
+  "pre_post_response_equal": true,
+  "native_developer_rule_messages_equal": true,
+  "pre_post_user_prompts_equal": true,
+  "omitted": [
+    "account identifiers",
+    "base instructions",
+    "world state",
+    "provider/accounting state",
+    "compaction content/history",
+    "unrelated sessions"
+  ],
+  "limits": [
+    "No independent /compact invocation or process-exit receipt in this packet",
+    "No immediate preservation snapshots or config/cache inventory",
+    "No automatic compaction or repeated-compaction result",
+    "No disabled/removed compaction pairing",
+    "No fresh reproduction or qualified opt-in runner",
+    "Other clients, scopes/platforms, IDE, duplicate/unintended readers and integrated lifecycle remain incomplete",
+    "No whole profile, route adoption or schema-2 activation"
+  ]
+}
