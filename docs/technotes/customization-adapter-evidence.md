@@ -40,6 +40,12 @@ historical permission generator, shared catalogs, other scopes/platforms or the
 complete adapter. The informative matrix and its 160 unqualified cells remain
 unchanged; no production route is adopted.
 
+A subsequent [unchanged-policy path pair](gate6-opencode-policy-parity.md)
+records an actual matching edit and a native nonmatching rejection under one
+unchanged agent/configuration, with exact fixture restoration. This is a new
+bounded project/macOS observation; the earlier mismatched-policy receipts and
+all full-profile, generated-adapter and activation limits remain unchanged.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |

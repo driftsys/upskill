@@ -1,0 +1,200 @@
+{
+  "qualified": false,
+  "declared": {
+    "qualified": false,
+    "version": "opencode v2.0.32",
+    "platform": "macOS arm64",
+    "scope": "project",
+    "profile": "$OPENCODE_PROFILE",
+    "binary": "$OPENCODE_BINARY",
+    "binary_sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf",
+    "environment_helper_sha256": "d25e204efbaf243b6e66e4eddb356fdeb98f9014d897354d7dbd8a19701a8399",
+    "agent_name": "upskill-parity-195549ae",
+    "constant": {
+      "agent": {
+        "sha256": "e33526e8f20e62ee9082a8193dede93883e319debdabb10d3b1b0f4b523d1a01",
+        "mode": 416,
+        "content": "---\ndescription: Disposable unchanged-policy path control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nThe delegated message names exactly one target text file. Read that target, then attempt exactly one native patch to replace its whole contents with EDIT_6d02780397a2c7eda62c00578319fb4c followed by a newline. This is a disposable permission experiment: attempt the patch once even if rejection is expected, then honor native rejection without retry, shell, another path or permission changes. Return exactly DENIED_62e79a952b26c98e3d00f964dc300495 if the native patch is rejected or unavailable. Return exactly EDIT_6d02780397a2c7eda62c00578319fb4c only after the native patch succeeds. Do not infer success without the patch result.\n"
+      },
+      "parent_configuration": {
+        "sha256": "238a40ab461c1b31544180c26d73e340167dd0403eac2f7b9b860fa34657e6b7",
+        "mode": 416,
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-parity-195549ae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+      },
+      "permissions": [
+        {
+          "action": "*",
+          "resource": "*",
+          "effect": "deny"
+        },
+        {
+          "action": "read",
+          "resource": "*.txt",
+          "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "sentinel.txt",
+          "effect": "allow"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "allowed",
+        "target": "sentinel.txt",
+        "expected_response": "EDIT_6d02780397a2c7eda62c00578319fb4c",
+        "expected_tool": "patch completed"
+      },
+      {
+        "label": "denied",
+        "target": "other.txt",
+        "expected_response": "DENIED_62e79a952b26c98e3d00f964dc300495",
+        "expected_tool": "patch permission.rejected"
+      }
+    ],
+    "before": {
+      "$PROJECT/AGENTS.md": {
+        "sha256": "4c957f08feb711dcc3d38923b18aad2e89d65717d8374464a6062b4cc077713e",
+        "mode": 416,
+        "content": "Manual fixture guidance: delegate only to the requested child. Do not use shell, alter permissions or modify configuration. Preserve this guidance.\n"
+      },
+      "$PROJECT/sentinel.txt": {
+        "sha256": "4a636c2f650f813399e8b41175241a78eceec77b44ac5c98659ab9ba4968cb82",
+        "mode": 416,
+        "content": "ORIGINAL_10c3eb0ebf2809cb13ecd443b7214cdc\n"
+      },
+      "$PROJECT/other.txt": {
+        "sha256": "52f891a0f35cd76e28fab28a818a34615871833528f2d075daf47f5014f62643",
+        "mode": 416,
+        "content": "Unrelated protected fixture a3760dc3ea009d93ec685eb8ea57b77b\n"
+      },
+      "$PROJECT/opencode.json": {
+        "sha256": "238a40ab461c1b31544180c26d73e340167dd0403eac2f7b9b860fa34657e6b7",
+        "mode": 416,
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-parity-195549ae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+      },
+      "$PROJECT/.opencode/agents/upskill-parity-195549ae.md": {
+        "sha256": "e33526e8f20e62ee9082a8193dede93883e319debdabb10d3b1b0f4b523d1a01",
+        "mode": 416,
+        "content": "---\ndescription: Disposable unchanged-policy path control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nThe delegated message names exactly one target text file. Read that target, then attempt exactly one native patch to replace its whole contents with EDIT_6d02780397a2c7eda62c00578319fb4c followed by a newline. This is a disposable permission experiment: attempt the patch once even if rejection is expected, then honor native rejection without retry, shell, another path or permission changes. Return exactly DENIED_62e79a952b26c98e3d00f964dc300495 if the native patch is rejected or unavailable. Return exactly EDIT_6d02780397a2c7eda62c00578319fb4c only after the native patch succeeds. Do not infer success without the patch result.\n"
+      }
+    }
+  },
+  "before": {
+    "$PROJECT/AGENTS.md": {
+      "sha256": "4c957f08feb711dcc3d38923b18aad2e89d65717d8374464a6062b4cc077713e",
+      "mode": 416,
+      "content": "Manual fixture guidance: delegate only to the requested child. Do not use shell, alter permissions or modify configuration. Preserve this guidance.\n"
+    },
+    "$PROJECT/sentinel.txt": {
+      "sha256": "4a636c2f650f813399e8b41175241a78eceec77b44ac5c98659ab9ba4968cb82",
+      "mode": 416,
+      "content": "ORIGINAL_10c3eb0ebf2809cb13ecd443b7214cdc\n"
+    },
+    "$PROJECT/other.txt": {
+      "sha256": "52f891a0f35cd76e28fab28a818a34615871833528f2d075daf47f5014f62643",
+      "mode": 416,
+      "content": "Unrelated protected fixture a3760dc3ea009d93ec685eb8ea57b77b\n"
+    },
+    "$PROJECT/opencode.json": {
+      "sha256": "238a40ab461c1b31544180c26d73e340167dd0403eac2f7b9b860fa34657e6b7",
+      "mode": 416,
+      "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-parity-195549ae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+    },
+    "$PROJECT/.opencode/agents/upskill-parity-195549ae.md": {
+      "sha256": "e33526e8f20e62ee9082a8193dede93883e319debdabb10d3b1b0f4b523d1a01",
+      "mode": 416,
+      "content": "---\ndescription: Disposable unchanged-policy path control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nThe delegated message names exactly one target text file. Read that target, then attempt exactly one native patch to replace its whole contents with EDIT_6d02780397a2c7eda62c00578319fb4c followed by a newline. This is a disposable permission experiment: attempt the patch once even if rejection is expected, then honor native rejection without retry, shell, another path or permission changes. Return exactly DENIED_62e79a952b26c98e3d00f964dc300495 if the native patch is rejected or unavailable. Return exactly EDIT_6d02780397a2c7eda62c00578319fb4c only after the native patch succeeds. Do not infer success without the patch result.\n"
+    }
+  },
+  "after": {
+    "$PROJECT/AGENTS.md": {
+      "sha256": "4c957f08feb711dcc3d38923b18aad2e89d65717d8374464a6062b4cc077713e",
+      "mode": 416,
+      "content": "Manual fixture guidance: delegate only to the requested child. Do not use shell, alter permissions or modify configuration. Preserve this guidance.\n"
+    },
+    "$PROJECT/sentinel.txt": {
+      "sha256": "4a636c2f650f813399e8b41175241a78eceec77b44ac5c98659ab9ba4968cb82",
+      "mode": 416,
+      "content": "ORIGINAL_10c3eb0ebf2809cb13ecd443b7214cdc\n"
+    },
+    "$PROJECT/other.txt": {
+      "sha256": "52f891a0f35cd76e28fab28a818a34615871833528f2d075daf47f5014f62643",
+      "mode": 416,
+      "content": "Unrelated protected fixture a3760dc3ea009d93ec685eb8ea57b77b\n"
+    },
+    "$PROJECT/opencode.json": {
+      "sha256": "238a40ab461c1b31544180c26d73e340167dd0403eac2f7b9b860fa34657e6b7",
+      "mode": 416,
+      "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-parity-195549ae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+    },
+    "$PROJECT/.opencode/agents/upskill-parity-195549ae.md": {
+      "sha256": "e33526e8f20e62ee9082a8193dede93883e319debdabb10d3b1b0f4b523d1a01",
+      "mode": 416,
+      "content": "---\ndescription: Disposable unchanged-policy path control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nThe delegated message names exactly one target text file. Read that target, then attempt exactly one native patch to replace its whole contents with EDIT_6d02780397a2c7eda62c00578319fb4c followed by a newline. This is a disposable permission experiment: attempt the patch once even if rejection is expected, then honor native rejection without retry, shell, another path or permission changes. Return exactly DENIED_62e79a952b26c98e3d00f964dc300495 if the native patch is rejected or unavailable. Return exactly EDIT_6d02780397a2c7eda62c00578319fb4c only after the native patch succeeds. Do not infer success without the patch result.\n"
+    }
+  },
+  "assessment": {
+    "qualified": false,
+    "same_agent_and_parent_configuration": true,
+    "allowed_native_patch_completed": true,
+    "nonmatching_native_patch_rejected": true,
+    "manual_fixture_restored": true,
+    "patch_resource_identities": [
+      {
+        "label": "allowed",
+        "child_session": "ses_e9ab2d796ffeqlSJEVCIMoTp67",
+        "parent_session": "ses_e9ab2e5a3ffe2c2OGjaRfIMkCP",
+        "native_tool_id": "call_hMhkVDdDgfkY1pzIhoOa7tpu",
+        "native_status": "completed",
+        "native_error": null,
+        "patch_headers": [
+          "sentinel.txt"
+        ],
+        "owned_fixture_resources": [
+          "$PROJECT/sentinel.txt"
+        ],
+        "native_patch_sha256": "482ace42397fce1cf312523fc8aebeb2bd21d645d8afdfbc686d4ca9ec7b087c",
+        "full_export_sha256": "1c7a5524c1be7f013c7797bbc4978b540642e9c5b266454fad94fc70252950bf",
+        "full_export_retained": false,
+        "command": [
+          "$OPENCODE_BINARY",
+          "session",
+          "export",
+          "ses_e9ab2d796ffeqlSJEVCIMoTp67",
+          "--standalone"
+        ]
+      },
+      {
+        "label": "denied",
+        "child_session": "ses_e9ab2aa76ffeOmbPWnZnlJlyCi",
+        "parent_session": "ses_e9ab2b750ffeV1jkM0F36AZf96",
+        "native_tool_id": "call_AsZ9SbOycJJDfCp4kMpMB4cT",
+        "native_status": "error",
+        "native_error": {
+          "type": "permission.rejected",
+          "message": "Permission denied: edit"
+        },
+        "patch_headers": [
+          "$PROJECT/other.txt"
+        ],
+        "owned_fixture_resources": [
+          "$PROJECT/other.txt"
+        ],
+        "native_patch_sha256": "4f0d478eb62dd2881721a45bfd4da87ec2b2f9c48992c3aad5394af050ec734f",
+        "full_export_sha256": "af256b1d842662cc00b4a40ebbad8f4db71837db77739171043056477f95a1ea",
+        "full_export_retained": false,
+        "command": [
+          "$OPENCODE_BINARY",
+          "session",
+          "export",
+          "ses_e9ab2aa76ffeOmbPWnZnlJlyCi",
+          "--standalone"
+        ]
+      }
+    ],
+    "native_sessions": 4,
+    "limits": "Two fresh project turns in one OpenCode profile only; no route/lifecycle/four-client qualification"
+  }
+}
