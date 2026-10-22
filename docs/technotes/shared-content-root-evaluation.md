@@ -438,3 +438,14 @@ embedded include is involved. Exact manual configuration/content is preserved.
 These observations do not establish catalog counts, configured/default discovery
 exclusivity, duplicate absence, four-client coexistence or integrated lifecycle.
 No route is adopted and no delivery cell becomes qualified.
+
+## Bounded Codex shared skill/resource observations (2026-10-22)
+
+The [bounded Codex project resource controls](gate6-codex-shared-resources.md)
+retain native skill expansions, relative supporting-file reads and relocation
+between two disposable repositories. Two strict whole-output expectations failed
+because of commentary, although all native final-answer phases match. A missing
+entry has no fixture metadata/expansion or read attempt; it is not a native
+failed-load or permission-denial result. Broader inventories, duplicate
+activation, other clients/scopes/platforms and installed lifecycle remain
+unqualified.
