@@ -1,0 +1,49 @@
+{
+  "context": "Post-run independent version check; binary fingerprints equal both capture boundaries. Original capture asserted --version without retaining its stdout.",
+  "records": [
+    {
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "2.1.303 (Claude Code)\n",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "binary_sha256": "d2da3b003dc08b88b7230469014fe3e1dc6fe94bc8f648e89b34175d30269370"
+    },
+    {
+      "client": "copilot",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "GitHub Copilot CLI 1.0.98.\nRun 'copilot update' to check for updates.\n",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "binary_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130"
+    },
+    {
+      "client": "codex",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "codex-cli 0.163.0\n",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "binary_sha256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31"
+    },
+    {
+      "client": "opencode",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "opencode v2.0.32\n",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "binary_sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf"
+    }
+  ]
+}

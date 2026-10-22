@@ -1,0 +1,73 @@
+{
+  "sources": [
+    {
+      "packet": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb",
+      "original_manifest": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/receipt-hashes.json",
+        "sha256": "bec033ff586aae12dc6b7fd8114827fc16103b2016ec1df587c284a9fffcad70",
+        "verified_entries": 42
+      },
+      "owned_native_sessions": [
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-34-31-01a16589-7c39-73c1-8b72-f09927d8416f.jsonl",
+          "sha256": "e6c82b093d2e3c26449260beaa08d5724bf35f54d7fa13944bc747b5e2bdfb71"
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-35-06-01a1658a-060c-72d3-8e2e-e0d31f22ea92.jsonl",
+          "sha256": "15b831db92c3ba8c70a31e0225481048acee7ad734424a7a9cdb97fe47d1a0d9"
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-35-27-01a1658a-560c-78c3-894e-3e52aa382e3a.jsonl",
+          "sha256": "0877dd208d8e23972013534a7e877438f33ed79d6d54a81b0ad451fa7b2bbccc"
+        }
+      ],
+      "executed_capture_helper": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/capture.py",
+        "sha256": "388bd66aa494acdb2a24d6bc3105e15d4aea9d17ec21d5108f6420cd98969e99"
+      },
+      "environment_helper": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/environment-helper.py",
+        "sha256": "d25e204efbaf243b6e66e4eddb356fdeb98f9014d897354d7dbd8a19701a8399"
+      }
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg",
+      "original_manifest": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/receipt-hashes.json",
+        "sha256": "8f19f0e741496a0cf32aa3b761c13edc14dafa83cf02108469929ea1e3eb0bc3",
+        "verified_entries": 50
+      },
+      "owned_native_sessions": [
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-37-31-01a1658c-3b1b-7882-b5d7-8e42dba3c710.jsonl",
+          "sha256": "31af0c930ab035528d7990fa12319e3ad6c6046621d3cc2ee4c9ba31d8494bd5"
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-38-20-01a1658c-faf5-7b12-a868-3a29719ccbc9.jsonl",
+          "sha256": "e384df8531e081df8fdcca5e906a06da29030ed5fe17d511a47a4e3f74c9343e"
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-38-56-01a1658d-86e2-7b91-bae6-9f3fad8e0b27.jsonl",
+          "sha256": "4aa5510460a1418539bf2f6a0742a54fed1bcfe63d6ed932dcaf499a86c6d8f1"
+        }
+      ],
+      "executed_capture_helper": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/capture.py",
+        "sha256": "2d5d4039e23c0dcfeed4738e34841704e2d29dad1e2f2303d50d3a3437382e2c"
+      },
+      "environment_helper": {
+        "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/environment-helper.py",
+        "sha256": "d25e204efbaf243b6e66e4eddb356fdeb98f9014d897354d7dbd8a19701a8399"
+      }
+    }
+  ],
+  "version_verification": {
+    "path": "/private/tmp/upskill-four-client-version-verification-20261022.json",
+    "sha256": "236b163e2ed5830abd6329e1010ca5c5bcbb4fe8d84b065070e01c60b5a86897"
+  },
+  "retention_helper": {
+    "path": "/private/tmp/upskill-retain-four-client-coexistence.py",
+    "sha256": "732275d39082042dd462cb1ee65f0c752ca2691edf351cc1526d0789690873a5"
+  },
+  "privacy": "Only owned fixture tool results and filtered metadata are retained. Account identifiers, unrelated skill metadata, provider state, accounting and world state are omitted; full source CLI/export streams remain private."
+}

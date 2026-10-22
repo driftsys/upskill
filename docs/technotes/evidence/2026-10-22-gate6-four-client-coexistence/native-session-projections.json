@@ -1,0 +1,879 @@
+[
+  {
+    "case": "a-baseline-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:34:32.168Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a16589-7c39-73c1-8b72-f09927d8416f",
+          "timestamp": "2026-10-22T21:34:31.884Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:34:32.168Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a16589-7ed9-70c0-9792-d6229c9bb2ac",
+          "started_at": 1792704872
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:34:33.511Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-common-01bc1130: Use only for the explicitly requested resource probe. (file: r7/upskill-common-01bc1130/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:34:33.515Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a16589-7ed9-70c0-9792-d6229c9bb2ac",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:34:33.577Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-common-01bc1130</name>\n<path>/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project/.agents/skills/upskill-common-01bc1130/SKILL.md</path>\n---\nname: upskill-common-01bc1130\ndescription: Use only for the explicitly requested resource probe.\n---\nRead references/review-procedure.md exactly once relative to this skill directory, then follow its response instruction. If that resource is unavailable, return exactly MISSING_1ed2998a1e0af108df378ca492469643. Do not search for substitutes or modify files.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 13,
+        "timestamp": "2026-10-22T21:34:35.993Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "I\u2019m using the upskill-common-01bc1130 skill for the resource probe.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "commentary"
+        }
+      },
+      {
+        "source_line_index_zero_based": 20,
+        "timestamp": "2026-10-22T21:34:38.988Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_12ebb97e8f7f7baec6bbc3f11ea8e70a",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 23,
+        "timestamp": "2026-10-22T21:34:39.013Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a16589-7ed9-70c0-9792-d6229c9bb2ac",
+          "last_agent_message": "RESOURCE_12ebb97e8f7f7baec6bbc3f11ea8e70a",
+          "started_at": 1792704872,
+          "completed_at": 1792704879,
+          "duration_ms": 6856
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "a-baseline-opencode",
+    "info": {
+      "id": "ses_e9a7660a0ffeZJrG4cuEajLp7B",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "outcome": "succeeded",
+      "time": {
+        "created": 1792704880648,
+        "updated": 1792704887187,
+        "idle": 1792704887192
+      }
+    },
+    "assistants": [
+      {
+        "id": "msg_16589a03e001UNUFbmjpGg2LBa",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792704880707,
+          "streamed": 1792704883111,
+          "completed": 1792704883128
+        }
+      },
+      {
+        "id": "msg_16589a9c10016NG3SRPFbuxuol",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792704883145,
+          "streamed": 1792704885205,
+          "completed": 1792704885231
+        }
+      },
+      {
+        "id": "msg_16589b1f70014gSNRQ0CXg8NWK",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "time": {
+          "created": 1792704885244,
+          "streamed": 1792704887165,
+          "completed": 1792704887187
+        }
+      }
+    ],
+    "idle": [
+      {
+        "id": "msg_16589b998001hgnK5a2CRJrOcp",
+        "time": {
+          "created": 1792704887192
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "message_content_provider_state_and_accounting_omitted": true
+  },
+  {
+    "case": "a-shared-removed-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:35:07.051Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a1658a-060c-72d3-8e2e-e0d31f22ea92",
+          "timestamp": "2026-10-22T21:35:06.780Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:35:07.051Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a1658a-071b-7c83-b016-40499a979c6d",
+          "started_at": 1792704907
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:35:08.411Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a1658a-071b-7c83-b016-40499a979c6d",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 14,
+        "timestamp": "2026-10-22T21:35:10.653Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "ABSENT_bb4e084084fc91cb06623d757bdd626e",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 17,
+        "timestamp": "2026-10-22T21:35:10.670Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a1658a-071b-7c83-b016-40499a979c6d",
+          "last_agent_message": "ABSENT_bb4e084084fc91cb06623d757bdd626e",
+          "started_at": 1792704907,
+          "completed_at": 1792704910,
+          "duration_ms": 3634
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "a-plugin-disabled-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:35:27.636Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a1658a-560c-78c3-894e-3e52aa382e3a",
+          "timestamp": "2026-10-22T21:35:27.266Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:35:27.636Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a1658a-5781-7101-8761-40f8e55b7d62",
+          "started_at": 1792704927
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:35:28.808Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-common-01bc1130: Use only for the explicitly requested resource probe. (file: r7/upskill-common-01bc1130/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:35:28.811Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a1658a-5781-7101-8761-40f8e55b7d62",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:35:28.888Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-common-01bc1130</name>\n<path>/private/tmp/upskill-gate6-four-client-coexistence-ujx8lqjb/project/.agents/skills/upskill-common-01bc1130/SKILL.md</path>\n---\nname: upskill-common-01bc1130\ndescription: Use only for the explicitly requested resource probe.\n---\nRead references/review-procedure.md exactly once relative to this skill directory, then follow its response instruction. If that resource is unavailable, return exactly MISSING_1ed2998a1e0af108df378ca492469643. Do not search for substitutes or modify files.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 15,
+        "timestamp": "2026-10-22T21:35:33.272Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "I\u2019m using the upskill-common-01bc1130 skill for the resource probe.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "commentary"
+        }
+      },
+      {
+        "source_line_index_zero_based": 22,
+        "timestamp": "2026-10-22T21:35:36.085Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_12ebb97e8f7f7baec6bbc3f11ea8e70a.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 25,
+        "timestamp": "2026-10-22T21:35:36.113Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a1658a-5781-7101-8761-40f8e55b7d62",
+          "last_agent_message": "RESOURCE_12ebb97e8f7f7baec6bbc3f11ea8e70a.",
+          "started_at": 1792704927,
+          "completed_at": 1792704936,
+          "duration_ms": 8490
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-baseline-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:37:32.144Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a1658c-3b1b-7882-b5d7-8e42dba3c710",
+          "timestamp": "2026-10-22T21:37:31.431Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:37:32.145Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a1658c-3de2-7203-b345-3e12f36d03e6",
+          "started_at": 1792705052
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:37:33.175Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-common-2d34fa49: Use only for the explicitly requested resource probe. (file: r7/upskill-common-2d34fa49/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:37:33.178Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a1658c-3de2-7203-b345-3e12f36d03e6",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:37:33.260Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-common-2d34fa49</name>\n<path>/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/SKILL.md</path>\n---\nname: upskill-common-2d34fa49\ndescription: Use only for the explicitly requested resource probe.\n---\nRead references/review-procedure.md exactly once relative to this skill directory, then follow its response instruction. If that resource is unavailable, return exactly MISSING_2fb1231e863de2bc2d601220179aa5f7. Do not search for substitutes or modify files.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 18,
+        "timestamp": "2026-10-22T21:37:37.958Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_f93f45b0abe7ed048d87728c062ba780",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 21,
+        "timestamp": "2026-10-22T21:37:37.984Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a1658c-3de2-7203-b345-3e12f36d03e6",
+          "last_agent_message": "RESOURCE_f93f45b0abe7ed048d87728c062ba780",
+          "started_at": 1792705052,
+          "completed_at": 1792705057,
+          "duration_ms": 5848
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-baseline-opencode",
+    "info": {
+      "id": "ses_e9a73a553ffeXqQgAT5uvqWLhQ",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "outcome": "succeeded",
+      "time": {
+        "created": 1792705059651,
+        "updated": 1792705067438,
+        "idle": 1792705067441
+      }
+    },
+    "assistants": [
+      {
+        "id": "msg_1658c5b7e0016v64uBlyhjJiIx",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792705059714,
+          "streamed": 1792705061707,
+          "completed": 1792705061725
+        }
+      },
+      {
+        "id": "msg_1658c6362001U2q5IpGgzffbnL",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792705061735,
+          "streamed": 1792705063587,
+          "completed": 1792705063622
+        }
+      },
+      {
+        "id": "msg_1658c6acf001oudNCMMHUPUPux",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "time": {
+          "created": 1792705063641,
+          "streamed": 1792705067412,
+          "completed": 1792705067438
+        }
+      }
+    ],
+    "idle": [
+      {
+        "id": "msg_1658c79b1001CbTGeYKXDiqrFh",
+        "time": {
+          "created": 1792705067441
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "message_content_provider_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-shared-removed-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:38:21.005Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a1658c-faf5-7b12-a868-3a29719ccbc9",
+          "timestamp": "2026-10-22T21:38:20.547Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:38:21.005Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a1658c-fcbf-7c02-9a29-ea5133af7b0d",
+          "started_at": 1792705100
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:38:22.187Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a1658c-fcbf-7c02-9a29-ea5133af7b0d",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 14,
+        "timestamp": "2026-10-22T21:38:24.195Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "ABSENT_d86891a2563f421d9baa52886b2f2db4",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 17,
+        "timestamp": "2026-10-22T21:38:24.213Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a1658c-fcbf-7c02-9a29-ea5133af7b0d",
+          "last_agent_message": "ABSENT_d86891a2563f421d9baa52886b2f2db4",
+          "started_at": 1792705100,
+          "completed_at": 1792705104,
+          "duration_ms": 3216
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-shared-removed-opencode",
+    "info": {
+      "id": "ses_e9a72f1e0ffeoGN8plx9o7PkUA",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "outcome": "succeeded",
+      "time": {
+        "created": 1792705105591,
+        "updated": 1792705109322,
+        "idle": 1792705109329
+      }
+    },
+    "assistants": [
+      {
+        "id": "msg_1658d0ee3001KxmFeOiRBgr2TF",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792705105639,
+          "streamed": 1792705107608,
+          "completed": 1792705107636
+        }
+      },
+      {
+        "id": "msg_1658d16bc001no6BT5HRF4fm5V",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "time": {
+          "created": 1792705107649,
+          "streamed": 1792705109289,
+          "completed": 1792705109322
+        }
+      }
+    ],
+    "idle": [
+      {
+        "id": "msg_1658d1d510019hHo7CI6ClNl93",
+        "time": {
+          "created": 1792705109329
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "message_content_provider_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-plugin-disabled-codex",
+    "records": [
+      {
+        "source_line_index_zero_based": 0,
+        "timestamp": "2026-10-22T21:38:56.775Z",
+        "type": "session_meta",
+        "payload": {
+          "id": "01a1658d-86e2-7b91-bae6-9f3fad8e0b27",
+          "timestamp": "2026-10-22T21:38:56.372Z",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "cli_version": "0.163.0",
+          "model_provider": "openai"
+        }
+      },
+      {
+        "source_line_index_zero_based": 1,
+        "timestamp": "2026-10-22T21:38:56.775Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_started",
+          "turn_id": "01a1658d-8878-7ff0-8bbb-b382b0a1ca02",
+          "started_at": 1792705136
+        }
+      },
+      {
+        "source_line_index_zero_based": 2,
+        "timestamp": "2026-10-22T21:38:57.938Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "developer",
+          "only_matching_skill_metadata_lines": [
+            "- upskill-common-2d34fa49: Use only for the explicitly requested resource probe. (file: r7/upskill-common-2d34fa49/SKILL.md)"
+          ],
+          "other_content_omitted": true
+        }
+      },
+      {
+        "source_line_index_zero_based": 7,
+        "timestamp": "2026-10-22T21:38:57.940Z",
+        "type": "turn_context",
+        "payload": {
+          "turn_id": "01a1658d-8878-7ff0-8bbb-b382b0a1ca02",
+          "cwd": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+          "model": "gpt-6.1-sol",
+          "approval_policy": "never",
+          "sandbox_policy_type": "read-only"
+        }
+      },
+      {
+        "source_line_index_zero_based": 11,
+        "timestamp": "2026-10-22T21:38:58.023Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<skill>\n<name>upskill-common-2d34fa49</name>\n<path>/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/SKILL.md</path>\n---\nname: upskill-common-2d34fa49\ndescription: Use only for the explicitly requested resource probe.\n---\nRead references/review-procedure.md exactly once relative to this skill directory, then follow its response instruction. If that resource is unavailable, return exactly MISSING_2fb1231e863de2bc2d601220179aa5f7. Do not search for substitutes or modify files.\n\n</skill>"
+            }
+          ]
+        }
+      },
+      {
+        "source_line_index_zero_based": 15,
+        "timestamp": "2026-10-22T21:39:00.763Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "I\u2019m using the upskill-common-2d34fa49 skill for the resource probe.",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "commentary"
+        }
+      },
+      {
+        "source_line_index_zero_based": 22,
+        "timestamp": "2026-10-22T21:39:03.649Z",
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "RESOURCE_f93f45b0abe7ed048d87728c062ba780",
+              "annotations": [],
+              "logprobs": []
+            }
+          ],
+          "phase": "final_answer"
+        }
+      },
+      {
+        "source_line_index_zero_based": 25,
+        "timestamp": "2026-10-22T21:39:03.670Z",
+        "type": "event_msg",
+        "payload": {
+          "type": "task_complete",
+          "turn_id": "01a1658d-8878-7ff0-8bbb-b382b0a1ca02",
+          "last_agent_message": "RESOURCE_f93f45b0abe7ed048d87728c062ba780",
+          "started_at": 1792705136,
+          "completed_at": 1792705143,
+          "duration_ms": 6903
+        }
+      }
+    ],
+    "account_identifiers_base_instructions_world_state_and_accounting_omitted": true
+  },
+  {
+    "case": "b-plugin-disabled-opencode",
+    "info": {
+      "id": "ses_e9a7256aeffewsGPHgTHWhq1iq",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "outcome": "succeeded",
+      "time": {
+        "created": 1792705145325,
+        "updated": 1792705151016,
+        "idle": 1792705151019
+      }
+    },
+    "assistants": [
+      {
+        "id": "msg_1658daa32001Af0Dw1DD7iODlf",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792705145398,
+          "streamed": 1792705147227,
+          "completed": 1792705147239
+        }
+      },
+      {
+        "id": "msg_1658db16d001dA9MUuZLO5PWOC",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "tool-calls",
+        "time": {
+          "created": 1792705147251,
+          "streamed": 1792705149152,
+          "completed": 1792705149176
+        }
+      },
+      {
+        "id": "msg_1658db8fe001cQaB5KjjDrqR0X",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "time": {
+          "created": 1792705149190,
+          "streamed": 1792705150987,
+          "completed": 1792705151016
+        }
+      }
+    ],
+    "idle": [
+      {
+        "id": "msg_1658dc02b001Ud0hoG5DZVo0pt",
+        "time": {
+          "created": 1792705151019
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "message_content_provider_state_and_accounting_omitted": true
+  }
+]
