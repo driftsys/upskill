@@ -216,16 +216,70 @@ Override file rules:
   override vocabulary. `codex` is not a supported override suffix; the bounded
   Codex instruction producer rejects rule overrides.
 
-**Body-resolution order for a given client (canonical statement).** For
-historical generation client `C` (`claude`, `copilot` or `opencode`),
-implementations resolve the body as follows:
+**Current implementation status.** The resolution order below is the specified
+format contract, not current installer behavior. The historical installer
+renders the canonical body and does not apply override bodies. The captured
+compiler rejects an active matching override, including one hidden by `ignore`;
+it does not fall back to canonical content for that requested client. See
+[AD-0025](../adr/0025-reject-active-captured-overrides.md) and
+[debt #324](https://github.com/driftsys/upskill/issues/324). Override execution
+requires a separate implementation and compatibility tests.
+
+**Specified body-resolution order for a given client.** For historical
+generation client `C` (`claude`, `copilot` or `opencode`), a conforming override
+implementation would resolve the body as follows:
 
 1. If `<KIND>.<C>.md` exists, use its body verbatim. Directives in the canonical
    body are NOT processed for client `C`.
 2. Otherwise, use the canonical body with `<!-- @client: -->` directives (§6)
    processed for client `C`.
 
-§6.4 cross-references this rule; this section is the authoritative statement.
+An override replaces the whole canonical body; it does not append to or compose
+with it. §6.4 cross-references this specified rule and its implementation
+status; this section is the authoritative statement.
+
+#### Sharing a procedure across client-specific orchestration
+
+For small differences, keep the common procedure in `SKILL.md` and surround only
+the client-specific orchestration instructions with inline client directives
+(§6). These directives are processed during upskill generation; a native client
+reading the source directory directly does not perform that preprocessing.
+
+For large differences, a candidate authoring pattern puts the common procedure
+in a supporting resource and gives each client wrapper an explicit instruction
+to read it before using that client's agent mechanism:
+
+```text
+review/
+├── SKILL.md
+├── SKILL.claude.md
+├── SKILL.copilot.md
+└── references/
+    ├── review-procedure.md
+    ├── code-reviewer.md
+    └── test-reviewer.md
+```
+
+For example, each wrapper can say: “Read `references/review-procedure.md` and
+follow its review criteria. Launch two reviewers using this client's agent
+mechanism.” The example illustrates the specified override format; the current
+installer/compiler boundaries above still apply. The canonical body must also be
+complete for clients without an override. There is no `SKILL.codex.md` override
+suffix.
+
+This shares the procedure through runtime file loading. Supporting resources are
+copied alongside each generated entrypoint (§2.4); their contents are not
+embedded into the body or processed for client directives. Embedding a common
+core would require a separately specified composition/include feature. Neither
+an override nor a resource reference supplies that feature.
+
+Shared authoring is distinct from shared native discovery. Keep this variant
+family outside scanned shared catalogs; expose each logical skill once per
+client through a qualified route. A directly discovered `.agents/skills` entry
+must already be consumption-ready. Runtime resource loading must be qualified
+for relative paths, permissions, missing files and package relocation. A read
+instruction does not register subagents, grant tool permissions or configure MCP
+servers. See the [delivery contract](0009-customization-delivery.md).
 
 ### 2.4 Supporting resources
 
@@ -1202,9 +1256,11 @@ Implementations:
 Override-file precedence over directives is defined by §2.3 (per-client override
 file rules); this subsection exists only as a cross-reference. When generating
 output for a historical generation client (`claude`, `copilot` or `opencode`),
-implementations resolve the body per the rules in §2.3. The bounded Codex
-instruction producer rejects rule override entrypoints and processes directives
-only in the canonical body.
+the specified resolution order applies only once override execution is
+implemented. The current historical installer ignores override bodies; the
+captured compiler rejects active matching overrides under AD-0025. The bounded
+Codex instruction producer rejects rule override entrypoints and processes
+directives only in the canonical body.
 
 ---
 
@@ -1542,10 +1598,14 @@ agents/security-reviewer/
 └── AGENT.copilot.md           # GitHub Copilot body override
 ```
 
-`AGENT.md` frontmatter is used for all clients. `AGENT.claude.md` body is used
-when generating for Claude Code. `AGENT.copilot.md` body is used when generating
-for GitHub Copilot. For opencode, the canonical `AGENT.md` body is used (with
-directives processed).
+This is a format illustration, not current installer behavior. Under the
+specified §2.3 resolution order, `AGENT.md` supplies frontmatter for all
+clients; the Claude and Copilot overrides replace the canonical body for their
+respective clients. OpenCode uses the canonical body with directives processed.
+The current historical installer instead renders the canonical body for all
+three clients; the captured compiler rejects an active matching override under
+[AD-0025](../adr/0025-reject-active-captured-overrides.md). Neither path
+currently implements the illustrated override selection.
 
 ---
 
