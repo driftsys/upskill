@@ -1,0 +1,342 @@
+{
+  "qualified": false,
+  "task": 358,
+  "client": "OpenCode v2.0.32",
+  "platform": "macOS arm64",
+  "scope": "project",
+  "provider": "github-copilot",
+  "model": "gpt-6.1-sol",
+  "native_sessions": 12,
+  "actual_parent_sessions": 6,
+  "actual_child_sessions": 6,
+  "exact_parent_responses": 6,
+  "native_tool_calls": 13,
+  "completed_native_tool_calls": 12,
+  "native_rejected_tool_calls": 1,
+  "controls": [
+    {
+      "label": "configured",
+      "qualified": false,
+      "source_packet": "$PACKET_A",
+      "parent_session": "ses_e9b24bc86ffeK9gAozOlTtQN1t",
+      "child_session": "ses_e9b24aa59ffeswWHtqXXti2yW8",
+      "agent": "upskill-native-d3317eae",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68",
+      "actual_parent_response": "CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68",
+      "native_tool_calls": 1,
+      "native_tool_errors": 0,
+      "child_tools": [],
+      "retained_parent": "configured-parent.jsonl",
+      "retained_child": "configured-child.json",
+      "raw_parent_stdout_sha256": "f2fb1eac38ae623128c6a9d4535ee848814f9007a093a98d54e348dccf4410dc",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_C/configured-child.json",
+      "source_child_export_sha256": "a5e6909f8446440ee9e4f49b0361dc1f10071521b6d6cf0026c24829c8b9d8d5"
+    },
+    {
+      "label": "file",
+      "qualified": false,
+      "source_packet": "$PACKET_B",
+      "parent_session": "ses_e9b23be47ffeHeXuvoi0E3BUvz",
+      "child_session": "ses_e9b23ac3fffeJOwsruEHfnsUoh",
+      "agent": "upskill-file-b6aaa4fe",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "FILE_CHILD_89676e79f04f2d91d44a4009b7cf4051",
+      "actual_parent_response": "FILE_CHILD_89676e79f04f2d91d44a4009b7cf4051",
+      "native_tool_calls": 1,
+      "native_tool_errors": 0,
+      "child_tools": [],
+      "retained_parent": "file-parent.jsonl",
+      "retained_child": "file-child.json",
+      "raw_parent_stdout_sha256": "e2e0bf57ccf774a8125779f064a51ad6a261b8b5e76b329b93077ba36730ec19",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_C/file-child.json",
+      "source_child_export_sha256": "2aa2ee74753f04d90cc14dfb94a4133d71894617061f680ff2800a7a3cf3d23f"
+    },
+    {
+      "label": "allow",
+      "qualified": false,
+      "source_packet": "$PACKET_D",
+      "parent_session": "ses_e9b1ec5a4ffeT8v6vRxR6ElmAU",
+      "child_session": "ses_e9b1eb740ffeQC4WdD0ZyxqToE",
+      "agent": "upskill-edit-9a1b8fab",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "EDIT_c0ea551df16104fa9e3cfe0fb7084601",
+      "actual_parent_response": "EDIT_c0ea551df16104fa9e3cfe0fb7084601",
+      "native_tool_calls": 3,
+      "native_tool_errors": 0,
+      "child_tools": [
+        {
+          "type": "tool",
+          "id": "call_SCk0jNap8vWmqS2u6k9lLwJq",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e148f2001B4QgvL2Qd7qjZb"
+            }
+          },
+          "tool_content_omitted": true
+        },
+        {
+          "type": "tool",
+          "id": "call_wJbUF01gBDkhacclQPDxXQkY",
+          "name": "patch",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e1509a00148JFpK3FrPyDTx"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ],
+      "retained_parent": "allow-parent.jsonl",
+      "retained_child": "allow-child.json",
+      "raw_parent_stdout_sha256": "d4e7700df6a014cd5c27e7905edc84377b8fc1f9f72ff72cfc433f60c09915fc",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_D/allow-ses_e9b1eb740ffeQC4WdD0ZyxqToE.json",
+      "source_child_export_sha256": "34dd2c9747088a3073f6ee85472aaefd2c100a465484741a3aff17e8c22fe731"
+    },
+    {
+      "label": "deny",
+      "qualified": false,
+      "source_packet": "$PACKET_D",
+      "parent_session": "ses_e9b1e9027ffeDoKHj2kSC44I3H",
+      "child_session": "ses_e9b1e82b4ffePHrknQROcGmuW5",
+      "agent": "upskill-edit-9a1b8fab",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "DENIED_129fa84ddca582c121baeeb08dc08746",
+      "actual_parent_response": "DENIED_129fa84ddca582c121baeeb08dc08746",
+      "native_tool_calls": 2,
+      "native_tool_errors": 0,
+      "child_tools": [
+        {
+          "type": "tool",
+          "id": "call_XkR8O6yWiKeUy1eSPNCQ9KHE",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e17d7c001aaqaPH582T7u1j"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ],
+      "retained_parent": "deny-parent.jsonl",
+      "retained_child": "deny-child.json",
+      "raw_parent_stdout_sha256": "c9ac710c3078662c9cdcdd745ea85419b216738cc10b2e667595adcfeedd24a4",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_D/deny-ses_e9b1e82b4ffePHrknQROcGmuW5.json",
+      "source_child_export_sha256": "80b92b24b8b8ac143c69a61129cbdd7dc1deb8348703de60c44e5a0fb90a24af"
+    },
+    {
+      "label": "allowed-path",
+      "qualified": false,
+      "source_packet": "$PACKET_E",
+      "parent_session": "ses_e9b1bf804ffeQu4irIByp9wDtv",
+      "child_session": "ses_e9b1bed90ffeWLHhn4R0d7L8tg",
+      "agent": "upskill-edit-eec04b1a",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "EDIT_88c005cbf86faefda109773e29ef291c",
+      "actual_parent_response": "EDIT_88c005cbf86faefda109773e29ef291c",
+      "native_tool_calls": 3,
+      "native_tool_errors": 0,
+      "child_tools": [
+        {
+          "type": "tool",
+          "id": "call_rDxtnrcOJMrLaylH2PR3bZhi",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e412e3001U6fgE1RUrwsJaP"
+            }
+          },
+          "tool_content_omitted": true
+        },
+        {
+          "type": "tool",
+          "id": "call_D99LkPAotivCt3GASuPEub1h",
+          "name": "patch",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e41c8e001lvraaXG33ACbxT"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ],
+      "retained_parent": "allowed-path-parent.jsonl",
+      "retained_child": "allowed-path-child.json",
+      "raw_parent_stdout_sha256": "1b78ac18872a2756d5b45714df5d933af1e8666046ef509f93816a85793d64d6",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_E/allowed-path-ses_e9b1bed90ffeWLHhn4R0d7L8tg.json",
+      "source_child_export_sha256": "cceeece5f965b56e1dad9eccc0445cf15b9efd2efa3c57ac54b32afebef4784a"
+    },
+    {
+      "label": "denied-path",
+      "qualified": false,
+      "source_packet": "$PACKET_E",
+      "parent_session": "ses_e9b1bc6b8ffeYk3ZqxAUzoVRrD",
+      "child_session": "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+      "agent": "upskill-edit-eec04b1a",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ],
+      "parent_exit": 0,
+      "expected_response": "DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec",
+      "actual_parent_response": "DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec",
+      "native_tool_calls": 3,
+      "native_tool_errors": 1,
+      "child_tools": [
+        {
+          "type": "tool",
+          "id": "call_uuCQ41ApfoX4YUozioFWshOZ",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e447ec001p5spvppBIQFetD"
+            }
+          },
+          "tool_content_omitted": true
+        },
+        {
+          "type": "tool",
+          "id": "call_OfXhyrNEvqKVMJaoa5LgItVC",
+          "name": "patch",
+          "executed": false,
+          "state": {
+            "status": "error",
+            "input": {
+              "redacted": "tool-input:msg_164e450d3001y1382Gcwt7VJMd"
+            },
+            "error": {
+              "type": "permission.rejected",
+              "message": "Permission denied: edit"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ],
+      "retained_parent": "denied-path-parent.jsonl",
+      "retained_child": "denied-path-child.json",
+      "raw_parent_stdout_sha256": "f65f16575bfefad688cb29c0b194236274816bd642751c4d036bacc2f1acd907",
+      "raw_parent_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_child_export": "$PACKET_E/denied-path-ses_e9b1bb85effeonvc8muF1VPQ4Z.json",
+      "source_child_export_sha256": "9ae7aae21946f7a942a0f80bcc423f769d0fec2a124f446213e7a09efe059f80"
+    }
+  ],
+  "limits": [
+    "All 160 delivery cells remain false; production schema 1 unchanged",
+    "Manual disposable native fixtures, not generated upskill adapters or a shipped qualification runner",
+    "No all-four-client, user-scope, Linux, IDE, rule-scoping, MCP inheritance, delegation-limit, shared-catalog coexistence or integrated lifecycle qualification",
+    "Edit-deny case made no patch attempt; only denied-path case records native permission.rejected",
+    "Path positive has broader edit glob than its negative; not a same-policy control pair. Earlier allow case independently uses narrow sentinel edit permission",
+    "Debug-agent empty catalog remains inconclusive; later file-backed actual child execution is a distinct observation",
+    "Native sanitized exports redact tool inputs; separate owned-fixture header receipts bind three patch resources without retaining full unsanitized exports",
+    "Private helpers and selective retention are not production implementation or comprehensive preservation/recovery evidence"
+  ]
+}

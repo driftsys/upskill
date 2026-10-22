@@ -1,0 +1,96 @@
+{
+  "qualified": false,
+  "info": {
+    "id": "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+    "parentID": "ses_e9b1bc6b8ffeYk3ZqxAUzoVRrD",
+    "agent": "upskill-edit-eec04b1a",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_164e447d1001ORO7hYBfdXbXQD",
+      "type": "user"
+    },
+    {
+      "id": "msg_164e447ec001p5spvppBIQFetD",
+      "type": "assistant",
+      "agent": "upskill-edit-eec04b1a",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "tool",
+          "id": "call_uuCQ41ApfoX4YUozioFWshOZ",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_164e447ec001p5spvppBIQFetD"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ]
+    },
+    {
+      "id": "msg_164e450d3001y1382Gcwt7VJMd",
+      "type": "assistant",
+      "agent": "upskill-edit-eec04b1a",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "tool",
+          "id": "call_OfXhyrNEvqKVMJaoa5LgItVC",
+          "name": "patch",
+          "executed": false,
+          "state": {
+            "status": "error",
+            "input": {
+              "redacted": "tool-input:msg_164e450d3001y1382Gcwt7VJMd"
+            },
+            "error": {
+              "type": "permission.rejected",
+              "message": "Permission denied: edit"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ]
+    },
+    {
+      "id": "msg_164e45a41001ZZX0gfU7lnah7r",
+      "type": "assistant",
+      "agent": "upskill-edit-eec04b1a",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "[redacted:text:msg_164e45a41001ZZX0gfU7lnah7r]"
+        }
+      ]
+    },
+    {
+      "id": "msg_164e46047001UjdtS93FOg7nl9",
+      "type": "idle",
+      "outcome": "succeeded"
+    }
+  ],
+  "source_export_sha256": "9ae7aae21946f7a942a0f80bcc423f769d0fec2a124f446213e7a09efe059f80",
+  "omitted": "provider state, token/cost accounting, snapshots and tool output bodies; input remains native sanitized redaction"
+}

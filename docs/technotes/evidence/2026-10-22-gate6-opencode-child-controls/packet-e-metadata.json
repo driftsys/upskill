@@ -1,0 +1,226 @@
+{
+  "qualified": false,
+  "private_packet_alias": "$PACKET_E",
+  "summary": {
+    "qualified": false,
+    "packet": "$PACKET_E",
+    "project": "$PROJECT_E",
+    "agent": "upskill-edit-eec04b1a",
+    "before": {
+      "$PROJECT_E/AGENTS.md": {
+        "sha256": "5e11cf3d37bb7ca3d0637bc8c160dd62117892247ad234a77065034bdd4a64cc",
+        "mode": 416,
+        "content": "Manual fixture guidance: delegate only to the explicitly requested child. Never use shell or touch other.txt.\n"
+      },
+      "$PROJECT_E/sentinel.txt": {
+        "sha256": "0a8b7fe1ae44ec326228ffc856a450639a277d0642e6b5eaacc2f7e992a60944",
+        "mode": 416,
+        "content": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n"
+      },
+      "$PROJECT_E/other.txt": {
+        "sha256": "466bfb5009305cedb1e847dbd0eeb5fd269c51899a2a6712ec7455f08036ef13",
+        "mode": 416,
+        "content": "Unrelated manual fixture.\n"
+      },
+      "$PROJECT_E/opencode.json": {
+        "sha256": "b48f43d1a342c3c7f88b5bbc8a1091e1d0c63497ecb8c1245d15d764497b2e98",
+        "mode": 416,
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-edit-eec04b1a\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+      }
+    },
+    "after": {
+      "$PROJECT_E/AGENTS.md": {
+        "sha256": "5e11cf3d37bb7ca3d0637bc8c160dd62117892247ad234a77065034bdd4a64cc",
+        "mode": 416,
+        "content": "Manual fixture guidance: delegate only to the explicitly requested child. Never use shell or touch other.txt.\n"
+      },
+      "$PROJECT_E/sentinel.txt": {
+        "sha256": "0a8b7fe1ae44ec326228ffc856a450639a277d0642e6b5eaacc2f7e992a60944",
+        "mode": 416,
+        "content": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n"
+      },
+      "$PROJECT_E/other.txt": {
+        "sha256": "466bfb5009305cedb1e847dbd0eeb5fd269c51899a2a6712ec7455f08036ef13",
+        "mode": 416,
+        "content": "Unrelated manual fixture.\n"
+      },
+      "$PROJECT_E/opencode.json": {
+        "sha256": "b48f43d1a342c3c7f88b5bbc8a1091e1d0c63497ecb8c1245d15d764497b2e98",
+        "mode": 416,
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-edit-eec04b1a\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n"
+      }
+    },
+    "controls": [
+      {
+        "label": "allowed-path",
+        "exit": 0,
+        "timeout": false,
+        "final": "EDIT_88c005cbf86faefda109773e29ef291c",
+        "expected_response": "EDIT_88c005cbf86faefda109773e29ef291c",
+        "target_after": {
+          "sha256": "0847644164b4b8171f3bbb0006f70de708a6143fe049122cbc9dc68e0e643f20",
+          "mode": 416,
+          "content": "EDIT_88c005cbf86faefda109773e29ef291c\n"
+        },
+        "expected_target": "EDIT_88c005cbf86faefda109773e29ef291c\n",
+        "children": [
+          {
+            "session": "ses_e9b1bed90ffeWLHhn4R0d7L8tg",
+            "parentID": "ses_e9b1bf804ffeQu4irIByp9wDtv",
+            "agent": "upskill-edit-eec04b1a",
+            "model": {
+              "id": "gpt-6.1-sol",
+              "providerID": "github-copilot",
+              "variant": "default"
+            },
+            "idle_outcomes": [
+              "succeeded"
+            ],
+            "tools": [
+              {
+                "name": "read",
+                "id": "call_rDxtnrcOJMrLaylH2PR3bZhi",
+                "state": {
+                  "status": "completed",
+                  "input": {
+                    "redacted": "tool-input:msg_164e412e3001U6fgE1RUrwsJaP"
+                  },
+                  "output": null,
+                  "error": null
+                }
+              },
+              {
+                "name": "patch",
+                "id": "call_D99LkPAotivCt3GASuPEub1h",
+                "state": {
+                  "status": "completed",
+                  "input": {
+                    "redacted": "tool-input:msg_164e41c8e001lvraaXG33ACbxT"
+                  },
+                  "output": null,
+                  "error": null
+                }
+              }
+            ],
+            "export_sha256": "cceeece5f965b56e1dad9eccc0445cf15b9efd2efa3c57ac54b32afebef4784a"
+          }
+        ],
+        "stdout_sha256": "1b78ac18872a2756d5b45714df5d933af1e8666046ef509f93816a85793d64d6",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "denied-path",
+        "exit": 0,
+        "timeout": false,
+        "final": "DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec",
+        "expected_response": "DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec",
+        "target_after": {
+          "sha256": "0a8b7fe1ae44ec326228ffc856a450639a277d0642e6b5eaacc2f7e992a60944",
+          "mode": 416,
+          "content": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n"
+        },
+        "expected_target": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n",
+        "children": [
+          {
+            "session": "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+            "parentID": "ses_e9b1bc6b8ffeYk3ZqxAUzoVRrD",
+            "agent": "upskill-edit-eec04b1a",
+            "model": {
+              "id": "gpt-6.1-sol",
+              "providerID": "github-copilot",
+              "variant": "default"
+            },
+            "idle_outcomes": [
+              "succeeded"
+            ],
+            "tools": [
+              {
+                "name": "read",
+                "id": "call_uuCQ41ApfoX4YUozioFWshOZ",
+                "state": {
+                  "status": "completed",
+                  "input": {
+                    "redacted": "tool-input:msg_164e447ec001p5spvppBIQFetD"
+                  },
+                  "output": null,
+                  "error": null
+                }
+              },
+              {
+                "name": "patch",
+                "id": "call_OfXhyrNEvqKVMJaoa5LgItVC",
+                "state": {
+                  "status": "error",
+                  "input": {
+                    "redacted": "tool-input:msg_164e450d3001y1382Gcwt7VJMd"
+                  },
+                  "output": null,
+                  "error": {
+                    "type": "permission.rejected",
+                    "message": "Permission denied: edit"
+                  }
+                }
+              }
+            ],
+            "export_sha256": "9ae7aae21946f7a942a0f80bcc423f769d0fec2a124f446213e7a09efe059f80"
+          }
+        ],
+        "stdout_sha256": "f65f16575bfefad688cb29c0b194236274816bd642751c4d036bacc2f1acd907",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "remaining": "Native child/tool/error inspection required; no model-refusal-only enforcement claim, no other clients/scopes/platforms or whole-profile qualification"
+  },
+  "declarations": {
+    "allowed-path-declared.json": {
+      "label": "allowed-path",
+      "expected_target": "EDIT_88c005cbf86faefda109773e29ef291c\n",
+      "expected_response": "EDIT_88c005cbf86faefda109773e29ef291c",
+      "agent_snapshot": {
+        "sha256": "a6caa49cf2a7ff49a326df80d6a8ab5639bcb42e188b81a57c737912b4170be3",
+        "mode": 416,
+        "content": "---\ndescription: Disposable scoped child edit control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n  - action: edit\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nRead sentinel.txt, then attempt exactly one native patch of sentinel.txt to replace its entire contents with exactly EDIT_88c005cbf86faefda109773e29ef291c followed by a newline. This is a disposable native permission control. Do not use shell or another path. The permission engine may reject the patch; do not bypass it. If unavailable or rejected, return exactly DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec. Return exactly EDIT_88c005cbf86faefda109773e29ef291c only after the required write succeeds.\n"
+      },
+      "target_before": {
+        "sha256": "0a8b7fe1ae44ec326228ffc856a450639a277d0642e6b5eaacc2f7e992a60944",
+        "mode": 416,
+        "content": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n"
+      },
+      "command": [
+        "$OPENCODE_BINARY",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Delegate exactly once to the subagent named upskill-edit-eec04b1a. Ask it to follow its system instruction. Return only its exact response. Do not use other tools or infer the response without invoking it."
+      ]
+    },
+    "denied-path-declared.json": {
+      "label": "denied-path",
+      "expected_target": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n",
+      "expected_response": "DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec",
+      "agent_snapshot": {
+        "sha256": "101a9d3c2d2064de0b82f5796538ddc99958b8f01efbeb3adbf8ef5db16aff16",
+        "mode": 416,
+        "content": "---\ndescription: Disposable scoped child edit control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nRead other.txt, then attempt exactly one native patch of other.txt to replace its entire contents with exactly EDIT_88c005cbf86faefda109773e29ef291c followed by a newline. This is a disposable native permission control. Do not use shell or another path. The permission engine may reject the patch; do not bypass it. If unavailable or rejected, return exactly DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec. Return exactly EDIT_88c005cbf86faefda109773e29ef291c only after the required write succeeds.\n"
+      },
+      "target_before": {
+        "sha256": "0a8b7fe1ae44ec326228ffc856a450639a277d0642e6b5eaacc2f7e992a60944",
+        "mode": 416,
+        "content": "ORIGINAL_9b8a2a2fecf7408a30daa15475af21eb\n"
+      },
+      "command": [
+        "$OPENCODE_BINARY",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Delegate exactly once to the subagent named upskill-edit-eec04b1a. Ask it to follow its system instruction. Return only its exact response. Do not use other tools or infer the response without invoking it."
+      ]
+    }
+  }
+}

@@ -402,3 +402,16 @@ remain planning requirements. A private helper's post-capture fixture-mode error
 and guarded restoration are explicit; no uninterrupted preservation or recovery
 claim follows. All four-client/scope/platform/IDE and integrated gates remain,
 all 160 cells stay unqualified and no layout or adapter is selected.
+
+## Bounded OpenCode child observations (2026-10-22)
+
+The [retained child controls](gate6-opencode-child-controls.md) establish six
+actual macOS project child sessions at OpenCode v2.0.32, including named
+configured and file-backed agents, an independent narrow edit positive and an
+actual rejected nonmatching-path patch. A no-attempt denial is not enforcement
+proof; the later path positive contains a broader edit glob than its negative.
+Keep that mismatch and the corrected export-parser assumption explicit. These
+manual native fixtures do not qualify historical generated permissions, shared
+agent catalogs, coexistence, scoped rules, delegation/MCP inheritance or
+integrated ownership. No route is adopted and no delivery cell becomes
+qualified.

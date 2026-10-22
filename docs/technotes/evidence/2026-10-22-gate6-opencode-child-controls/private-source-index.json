@@ -1,0 +1,76 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-delegation-63znag2j",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "793d44091f2c3be73a8579e245b055070d0e86aad7cc87d98d83b42d30f82343"
+      }
+    ],
+    "capture_helper_sha256": "33dd4b42c87be27200e32c378feb436e2ee7dd0a7caa862df651b730c5cf0709"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-file-agent-b9xe8y1w",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "f56421b979e1a8b94aa4d078ac8d32353bace98249bcca3c679d81c360cd6c85"
+      }
+    ],
+    "capture_helper_sha256": "9437f3fa209e37f458a5a8c46dc74e999736a1f13f47021028041c717b615a12"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-child-exports-adxh_9kw",
+    "manifests": [
+      {
+        "file": "export-shape-audit-hashes.json",
+        "sha256": "2e5734aa861435492231d4b4b7dfbf6a3128b7adef746c908c924ae039253e5b"
+      },
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "84f4de873ce1a1e7cce63a63df4e8699bfb6841f60a3e9e698f19d8f1b75356c"
+      }
+    ],
+    "capture_helper_sha256": "8b98343ee5dd692807c07bbab856ba2052aa0c2549eca83528c92b86601fc3a0"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-child-edit-x_ho36gr",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "bcc68b322d8abf6d192508a2a308298e93457a8b60abf9fa7f5848dcb5267598"
+      }
+    ],
+    "capture_helper_sha256": "ae024e0ada74c5eef656684e5434834a42c5b3de4978295c711313e87ba4ad94"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-child-path-5v7tp906",
+    "manifests": [
+      {
+        "file": "path-audit-hashes.json",
+        "sha256": "2c58bc2569b0d9aec68ba68af81e6c649b1f11c151ada3de1538f9bb21cc8f6c"
+      },
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "11a03e8c85bed999c8b9145fc2df5a97957b9935d357dbb2c79ca77fb22cab43"
+      }
+    ],
+    "capture_helper_sha256": "be02f7f8e69b309a82f5e81180fd795e6e738591aaf9bf9b94f31c0ac7713711"
+  },
+  {
+    "alias": "$PACKET_F",
+    "private_source_path": "/private/tmp/upskill-gate6-opencode-patch-identity-5yg9lozj",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "59105ee0e9be12978730af44f8c5d59b34c2f748bb960db28b78073c79bc8e69"
+      }
+    ],
+    "capture_helper_sha256": "e72ab8e0c7d32f0a75940d8717960dcfa54226c1468ba5b94ff6c9d4e3759946"
+  }
+]

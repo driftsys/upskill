@@ -1,0 +1,134 @@
+{
+  "qualified": false,
+  "correction": "Original summary parser expected legacy info/parts messages and produced empty agent/tool arrays. Native v2 uses agent/model/content directly; those earlier empty arrays are not absence evidence.",
+  "native_layout": "info plus messages; assistant agent/model/content and idle outcome are direct message fields",
+  "actual_sessions": [
+    {
+      "session": "ses_e9b24aa59ffeswWHtqXXti2yW8",
+      "parentID": "ses_e9b24bc86ffeK9gAozOlTtQN1t",
+      "agent": "upskill-native-d3317eae",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    },
+    {
+      "session": "ses_e9b23ac3fffeJOwsruEHfnsUoh",
+      "parentID": "ses_e9b23be47ffeHeXuvoi0E3BUvz",
+      "agent": "upskill-file-b6aaa4fe",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    },
+    {
+      "session": "ses_e9b1eb740ffeQC4WdD0ZyxqToE",
+      "parentID": "ses_e9b1ec5a4ffeT8v6vRxR6ElmAU",
+      "agent": "upskill-edit-9a1b8fab",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    },
+    {
+      "session": "ses_e9b1e82b4ffePHrknQROcGmuW5",
+      "parentID": "ses_e9b1e9027ffeDoKHj2kSC44I3H",
+      "agent": "upskill-edit-9a1b8fab",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    },
+    {
+      "session": "ses_e9b1bed90ffeWLHhn4R0d7L8tg",
+      "parentID": "ses_e9b1bf804ffeQu4irIByp9wDtv",
+      "agent": "upskill-edit-eec04b1a",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    },
+    {
+      "session": "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+      "parentID": "ses_e9b1bc6b8ffeYk3ZqxAUzoVRrD",
+      "agent": "upskill-edit-eec04b1a",
+      "models": [
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      ],
+      "child_terminal_outcomes": [
+        "succeeded"
+      ]
+    }
+  ],
+  "original_private_summary_sha256": "733cbcbfb1076f22686fead56bac766abd0086fa9dd67a734c0443a9ef83ae67",
+  "corrected_private_audit_sha256": "17054f9ae81cc503b1685da9e04e88bfe4157c9e0561ff4b5d51ba43746965c5"
+}

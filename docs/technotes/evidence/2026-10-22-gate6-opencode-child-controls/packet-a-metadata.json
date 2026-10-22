@@ -1,0 +1,70 @@
+{
+  "qualified": false,
+  "private_packet_alias": "$PACKET_A",
+  "summary": {
+    "qualified": false,
+    "client": "opencode2.0.32",
+    "platform": "macos-arm64",
+    "scope": "project",
+    "packet": "$PACKET_A",
+    "project": "$PROJECT_A",
+    "command": [
+      "$OPENCODE_BINARY",
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "--model",
+      "github-copilot/gpt-6.1-sol",
+      "Delegate exactly once to the subagent named upskill-native-d3317eae. Ask it to follow its system instruction, then return only its exact response. Use no other tools. Do not infer its response without invoking it."
+    ],
+    "exit": 0,
+    "timeout": false,
+    "before": {
+      "$PROJECT_A/AGENTS.md": {
+        "content": "Manual fixture guidance: use only the requested native subagent. Do not read or modify files.\n",
+        "mode": 416,
+        "sha256": "b34674e961cb30d7ad7f38229dfc113d55d304d9977c165b041927d717e446be"
+      },
+      "$PROJECT_A/opencode.json": {
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"upskill-native-d3317eae\": {\n      \"description\": \"Disposable explicitly requested delegation calibration\",\n      \"mode\": \"subagent\",\n      \"system\": \"Return exactly CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68 and nothing else. Do not use tools.\",\n      \"permissions\": [\n        {\n          \"action\": \"*\",\n          \"resource\": \"*\",\n          \"effect\": \"deny\"\n        }\n      ]\n    },\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-native-d3317eae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n",
+        "mode": 416,
+        "sha256": "66973ed7d949912bb43c52d0eea50a9058779a6b52190d57a426fb986a273d8f"
+      }
+    },
+    "after": {
+      "$PROJECT_A/AGENTS.md": {
+        "content": "Manual fixture guidance: use only the requested native subagent. Do not read or modify files.\n",
+        "mode": 416,
+        "sha256": "b34674e961cb30d7ad7f38229dfc113d55d304d9977c165b041927d717e446be"
+      },
+      "$PROJECT_A/opencode.json": {
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"upskill-native-d3317eae\": {\n      \"description\": \"Disposable explicitly requested delegation calibration\",\n      \"mode\": \"subagent\",\n      \"system\": \"Return exactly CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68 and nothing else. Do not use tools.\",\n      \"permissions\": [\n        {\n          \"action\": \"*\",\n          \"resource\": \"*\",\n          \"effect\": \"deny\"\n        }\n      ]\n    },\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-native-d3317eae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n",
+        "mode": 416,
+        "sha256": "66973ed7d949912bb43c52d0eea50a9058779a6b52190d57a426fb986a273d8f"
+      }
+    },
+    "preserved": true,
+    "stdout_sha256": "f2fb1eac38ae623128c6a9d4535ee848814f9007a093a98d54e348dccf4410dc",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "remaining": "inspect actual native parent/child/tool identities and completion; no catalog/file discovery or enforced-restriction claim from final text alone"
+  },
+  "declarations": {
+    "declared-control.json": {
+      "expected_marker": "CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68",
+      "required_native_action": "subagent",
+      "required_agent": "upskill-native-d3317eae",
+      "qualified": false,
+      "command": [
+        "$OPENCODE_BINARY",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Delegate exactly once to the subagent named upskill-native-d3317eae. Ask it to follow its system instruction, then return only its exact response. Use no other tools. Do not infer its response without invoking it."
+      ]
+    }
+  }
+}

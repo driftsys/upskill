@@ -236,6 +236,22 @@ pre-existing planned/observed wording (#355) without qualifying any cell. Task
 2/CD-11, other clients/scopes/platforms/IDE, rules/subagents/resources and
 integrated ownership/recovery stay incomplete; no shared layout is adopted.
 
+### OpenCode child-execution evidence slice (#358)
+
+Retain the
+[bounded actual-child controls](../../technotes/gate6-opencode-child-controls.md)
+with six parent/six child identities, selected model, exact responses, child
+idle outcomes, native tool IDs and before/after fixture snapshots. Distinguish a
+configured child from a file-backed child, a no-attempt denial response from an
+actual `permission.rejected` patch, and the independent narrow positive from the
+path pair's broader positive policy. Retain the original export-parser error,
+its correction and separate actual patch-resource bindings; do not reinterpret
+earlier empty debug catalogs or repair old manifests. Manual native fixtures do
+not qualify legacy generated permissions or implement owned-agent management.
+Task 2/CD-11, four-client coexistence, rules/MCP/delegation, other scopes,
+platforms/IDE and integrated lifecycle remain incomplete; all 160 cells remain
+unqualified and schema-2 activation stays blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,
