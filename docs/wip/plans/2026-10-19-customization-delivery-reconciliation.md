@@ -75,6 +75,36 @@ integrated adoption controls remain with the later skill milestone (#287).
       observations do not satisfy these controls. Production activation remains
       blocked.
 
+## Shared-core authoring clarification (#324)
+
+The following are planned acceptance criteria for candidate delivery patterns,
+not native observations or additional Gate 6 implementation scope. Whole-body
+overrides replace canonical content; they do not compose with it. Current
+historical installation ignores override bodies and captured compilation rejects
+active matching overrides under AD-0025. Implementing override execution or an
+embedded composition/include feature requires separate work.
+
+- [ ] For small orchestration differences, generated inline-directive examples
+      preserve the common procedure for each intended client and select only its
+      orchestration. Direct native shared discovery receives no raw client
+      directives; generated-file checks alone do not qualify native behavior.
+- [ ] For large differences, each candidate wrapper explicitly reads its common
+      `references/review-procedure.md`. Native traces establish the actual read,
+      relative resource identity and subsequent use of the intended native agent
+      mechanism. Instructions alone do not establish child execution or grants.
+- [ ] Test allowed and denied resource reads, a missing common resource and a
+      relocated self-contained package with successful controls. Do not claim
+      successful loading from a final marker or weaken native permissions.
+- [ ] Keep variant families outside shared scanned catalogs and qualify one
+      effective entrypoint per logical skill/client across direct and plugin
+      discovery. Copied procedure resources are not extra entrypoints. Preserve
+      manual resources, existing configuration and unrelated ownership during
+      installation, update and removal, including surviving bundle references.
+- [ ] Apply the four-client platform/scope and coexistence obligations before
+      adopting any route. No new override suffix, route adoption, owned-skill
+      lifecycle advancement or schema-2 activation follows from this
+      clarification.
+
 ## Task 1: Pin profile and reader inventories before choosing plugin events
 
 **Files:** extend `docs/technotes/customization-adapter-evidence.md` with exact

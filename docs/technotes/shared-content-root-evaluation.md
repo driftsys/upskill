@@ -240,6 +240,31 @@ manifest format or runtime path guarantee. Do not put variants in client-named
 subdirectories under a shared catalog and rely on names or ignored-file
 folklore.
 
+## Shared authoring with client-specific orchestration
+
+Sharing a procedure in SSOT does not require placing its entrypoint in a shared
+native catalog. For small differences, canonical `SKILL.md` can retain the
+procedure and use inline client directives only for orchestration. Generation
+processes those directives; direct native discovery does not.
+
+For large differences, wrappers can explicitly read a copied
+`references/review-procedure.md` before launching native reviewers. This is a
+candidate runtime resource-loading pattern, not embedded composition. Whole-body
+overrides replace the canonical body. Their execution remains unimplemented: the
+historical installer ignores override bodies and the captured compiler rejects
+active matching overrides under AD-0025. The specified override suffixes remain
+`claude`, `copilot` and `opencode`; a fourth audience does not add a Codex
+override suffix. See
+[format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files).
+
+Keep variant sources outside scanned shared catalogs. Qualify one effective
+entrypoint per client, self-contained package resources, native relative reads
+and permission failures, missing resources and relocation. Copying the same
+procedure resource into several client packages does not duplicate a skill
+entrypoint. Runtime file loading neither installs subagents nor grants their
+permissions. Override execution and a future embedding/include feature require
+separate work; this evaluation adopts neither.
+
 ## One logical item per client
 
 Logical identity follows captured source/content lineage and the declared item,
