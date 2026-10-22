@@ -221,9 +221,9 @@ format contract, not current installer behavior. The historical installer
 renders the canonical body and does not apply override bodies. The captured
 compiler rejects an active matching override, including one hidden by `ignore`;
 it does not fall back to canonical content for that requested client. See
-[AD-0025](../adr/0025-reject-active-captured-overrides.md) and
-[debt #324](https://github.com/driftsys/upskill/issues/324). Override execution
-requires a separate implementation and compatibility tests.
+[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
+and [debt #324](https://github.com/driftsys/upskill/issues/324). Override
+execution requires a separate implementation and compatibility tests.
 
 **Specified body-resolution order for a given client.** For historical
 generation client `C` (`claude`, `copilot` or `opencode`), a conforming override
@@ -279,7 +279,8 @@ client through a qualified route. A directly discovered `.agents/skills` entry
 must already be consumption-ready. Runtime resource loading must be qualified
 for relative paths, permissions, missing files and package relocation. A read
 instruction does not register subagents, grant tool permissions or configure MCP
-servers. See the [delivery contract](0009-customization-delivery.md).
+servers. See the
+[delivery contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md).
 
 ### 2.4 Supporting resources
 
@@ -1162,9 +1163,11 @@ They are explicitly **permitted** inside:
   a client that would not understand it.
 - Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`,
   `AGENT.opencode.md`, etc. — when the filename suffix matches the construct's
-  historical generation client (`claude`, `copilot` or `opencode`). Override
-  files are loaded only by the matching client's generator; `codex` has no
-  override-file form.
+  historical generation client (`claude`, `copilot` or `opencode`). This is a
+  format permission for the specified matching-client override selection, not
+  implemented loading: the historical installer ignores override bodies and
+  captured compilation rejects active matching overrides as recorded in §2.3.
+  `codex` has no override-file form.
 
 | Construct                       | Why prohibited (in always-rendered content) | Client         |
 | ------------------------------- | ------------------------------------------- | -------------- |
@@ -1604,8 +1607,8 @@ clients; the Claude and Copilot overrides replace the canonical body for their
 respective clients. OpenCode uses the canonical body with directives processed.
 The current historical installer instead renders the canonical body for all
 three clients; the captured compiler rejects an active matching override under
-[AD-0025](../adr/0025-reject-active-captured-overrides.md). Neither path
-currently implements the illustrated override selection.
+[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md).
+Neither path currently implements the illustrated override selection.
 
 ---
 

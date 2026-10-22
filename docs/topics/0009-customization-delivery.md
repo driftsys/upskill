@@ -78,10 +78,10 @@ small orchestration differences, or in copied resources explicitly read by
 client-specific wrappers for larger differences. Whole-body overrides replace
 the canonical body and do not compose with it. Their specified semantics are not
 implemented by the historical installer or captured compiler; see
-[format §2.3](0001-content-format.md#23-per-client-override-files) and AD-0025.
-Resource copies do not create additional skill entrypoints. Qualify the native
-read, resource path and permission behavior separately; references do not
-register agents or grant tools/MCP access. An embedded composition/include
+[format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files)
+and AD-0025. Resource copies do not create additional skill entrypoints. Qualify
+the native read, resource path and permission behavior separately; references do
+not register agents or grant tools/MCP access. An embedded composition/include
 feature and override execution are separate work, outside this Gate 6 change.
 
 This intent does not adopt existing schema-1 outputs or manual content, add

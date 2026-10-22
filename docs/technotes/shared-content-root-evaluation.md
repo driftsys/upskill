@@ -255,7 +255,7 @@ historical installer ignores override bodies and the captured compiler rejects
 active matching overrides under AD-0025. The specified override suffixes remain
 `claude`, `copilot` and `opencode`; a fourth audience does not add a Codex
 override suffix. See
-[format §2.3](../topics/0001-content-format.md#23-per-client-override-files).
+[format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files).
 
 Keep variant sources outside scanned shared catalogs. Qualify one effective
 entrypoint per client, self-contained package resources, native relative reads
