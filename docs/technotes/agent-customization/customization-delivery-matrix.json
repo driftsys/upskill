@@ -4653,6 +4653,15 @@
       "observed": "native skill positive; failed desired direct-shared positive with completed absent fallback; separate development and installed-plugin explicit invocation/disable/enable/removal",
       "preservation": "manual team/shared source bytes/modes and manual settings value/mode survive; native removal leaves empty configuration objects, not byte restoration",
       "remaining": "all applicable client/platform/scope/IDE and resource/duplicate/unintended-reader/rule/subagent/integrated qualification; no layout adoption"
+    },
+    "coexistence_follow_up": {
+      "reference": "../gate6-skill-coexistence-controls.md",
+      "status": "bounded observations and failed expectations only; no qualified cells",
+      "clients": "Claude2.1.303/Copilot1.0.98, macOS arm64 project",
+      "observed": "common-project explicit positives, unavailable Claude namespace in Copilot, manual survivors, Copilot shared survival under Claude disable and restored Claude positive; same-name shadowing and two alias entries",
+      "failed": "revoked-login calibration; bare-name and exact-fallback expectations; same-name catalog count expectation",
+      "preservation": "native fixture snapshots and config residue; helper post-capture mode error and guarded repair disclosed, no uninterrupted preservation/recovery claim",
+      "remaining": "all four clients/scopes/platforms/IDE, resource/rule/subagent and integrated ownership/recovery controls; no layout adoption"
     }
   }
 }

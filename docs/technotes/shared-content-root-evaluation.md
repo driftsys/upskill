@@ -136,9 +136,11 @@ positive still works. Test ancestors, nested roots, user catalogs, configured
 sources, imports and duplicate direct/plugin exports separately. Classify
 unsupported flags, ignored settings and missing authentication as blocked or
 failed controls, never as successful absence. Test removal/restoration against
-manual configuration and unrelated content. All exclusion and alternative-root
-cases are currently planned and unqualified; no real client configuration has
-been changed.
+manual configuration and unrelated content. Full qualification of these
+exclusion and alternative-root cases remains planned. Bounded observed and
+failed controls are retained below; they do not qualify a route or adopt a
+layout. Experiments change only disposable client configuration, without
+changing production defaults or personal installations.
 
 ## Rules and delegated subagents
 
@@ -360,3 +362,18 @@ or duplicate/unintended-reader control, resource behavior, rule injection,
 subagent restriction, user/Linux or integrated ownership/recovery qualification
 follows. All alternatives, four-client obligations and production activation
 blockers remain. Every campaign cell stays unqualified.
+
+## Bounded coexistence and duplicate follow-up (#356)
+
+The [next evidence packet](gate6-skill-coexistence-controls.md) records a common
+Claude/Copilot project: one advertised Claude plugin export and one Copilot
+shared entry, successful explicit positives, an unavailable Claude namespace in
+Copilot, preserved manual compatibility consumption, Copilot survival under
+Claude disable and a restored Claude positive. Failed bare-name and exact
+fallback expectations remain failed; neither proves direct shared discovery.
+Copilot shadowed a same-name compatible copy but exposed and invoked a renamed
+alias alongside the shared item. Logical lineage and complete native readers
+remain planning requirements. A private helper's post-capture fixture-mode error
+and guarded restoration are explicit; no uninterrupted preservation or recovery
+claim follows. All four-client/scope/platform/IDE and integrated gates remain,
+all 160 cells stay unqualified and no layout or adapter is selected.
