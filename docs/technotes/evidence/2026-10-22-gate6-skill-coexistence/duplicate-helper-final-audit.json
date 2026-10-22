@@ -1,0 +1,50 @@
+{
+  "qualified": false,
+  "capture_helper_completion_preserved": false,
+  "limitation": "After native controls and snapshots, private helper applied receipt mode0600 recursively to its own fixture files. No personal file affected. Exact fixture modes restored after byte/hash guards; preserve this failure instead of claiming uninterrupted mode preservation.",
+  "mode_repair": [
+    {
+      "path": "$PROJECT_E/AGENTS.md",
+      "helper_completion_mode": 384,
+      "restored_mode": 416
+    },
+    {
+      "path": "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411/SKILL.md",
+      "helper_completion_mode": 384,
+      "restored_mode": 416
+    },
+    {
+      "path": "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411/SKILL.md",
+      "helper_completion_mode": 384,
+      "restored_mode": 416
+    }
+  ],
+  "final_fixture_and_settings_equal_original": true,
+  "declared_catalog_checks": [
+    {
+      "label": "baseline",
+      "expected": 1,
+      "observed": 1,
+      "matches": true
+    },
+    {
+      "label": "same-name-duplicate",
+      "expected": 2,
+      "observed": 1,
+      "matches": false
+    },
+    {
+      "label": "alias",
+      "expected": 2,
+      "observed": 2,
+      "matches": true
+    },
+    {
+      "label": "restored",
+      "expected": 1,
+      "observed": 1,
+      "matches": true
+    }
+  ],
+  "prior_receipt_manifest_sha256": "939f17e2ca97117ed32e4b1240ebfc89e042090b3050543c8c60c2345f47ccac"
+}

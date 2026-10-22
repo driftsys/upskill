@@ -191,6 +191,21 @@ rule/subagent, user/Linux or integrated lifecycle result follows. Task 2/CD-11
 remain incomplete; no adapter or shared layout is selected and all 160 cells
 remain unqualified.
 
+### Skill coexistence and duplicate evidence slice (#356)
+
+Retain
+[bounded common-project and duplicate controls](../../technotes/gate6-skill-coexistence-controls.md)
+with declared expectations, catalog/native invocation counts, exact model and
+raw/retained hashes. Preserve the revoked-login calibration, failed Claude
+bare-name/exact-fallback expectations and Copilot same-name count mismatch.
+Distinguish model selection of an existing namespace from direct path discovery.
+Record alias exposure, surviving unrelated manual/shared content and native
+configuration residue. The private helper's post-capture mode error and guarded
+restoration do not establish uninterrupted preservation or recovery. Correct
+pre-existing planned/observed wording (#355) without qualifying any cell. Task
+2/CD-11, other clients/scopes/platforms/IDE, rules/subagents/resources and
+integrated ownership/recovery stay incomplete; no shared layout is adopted.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,
