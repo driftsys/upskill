@@ -1,0 +1,23 @@
+{
+  "session": "01a15776-550d-76d0-99a8-069c17576026",
+  "project": "/private/tmp/upskill-gate6-codex-installed-20261019/project",
+  "expected_response": {
+    "team": "TEAM_10dd5455515b5758a761e050c0d4f698",
+    "rules": [
+      "RULE_3da4e26dd634f3df24b2bc29c9aaa28f",
+      "RULE_d314bcc6c6e8a151ac4a523b923fe2c4"
+    ]
+  },
+  "initial_fixture_team": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "current_team": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "current_checked_at": "2026-10-22T21:01:28.900349+00:00",
+  "team_matches_initial_fixture": true,
+  "immediate_before_after_compaction_snapshots": false,
+  "limitation": "Initial fixture and current bytes/modes agree. No uninterrupted preservation, immediate compaction snapshots, config preservation, or native side-effect recovery is established."
+}

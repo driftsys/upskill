@@ -36,6 +36,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 Codex project compaction observations](gate6-codex-compaction.md):
+  retained native compaction, next-turn rule messages and preservation limits.
+
 - [Gate 6 OpenCode shared skills and runtime resources](gate6-opencode-shared-resources.md):
   native relative-resource reads, missing-file controls and shared-route limits.
 

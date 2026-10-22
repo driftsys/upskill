@@ -84,9 +84,15 @@ but no independent live process-cleanup trace was retained. This evidence slice
 introduces no automated model runner or native receipt parser. Those capture and
 cleanup obligations remain before full qualification.
 
-Compaction, update/trust-definition changes, unintended/default/configured
-readers, nested/ancestor sources, direct-plus-packaged duplicates, user-scope
-registration authority, Linux, Claude Code, Copilot CLI and mixed-kind
-compatibility remain incomplete. Authentication and trust are resolved only for
-the two stated project fixtures. No production adapter is selected, no plugin is
-published, and schema-2 activation stays blocked under #337.
+The later [Codex compaction note](gate6-codex-compaction.md) retains one actual
+compaction record, subsequent rule messages and same-session callback counts. It
+lacks independent launch/exit and immediate preservation receipts; it does not
+qualify the whole compaction obligation.
+
+Remaining compaction, update/trust-definition changes,
+unintended/default/configured readers, nested/ancestor sources,
+direct-plus-packaged duplicates, user-scope registration authority, Linux,
+Claude Code, Copilot CLI and mixed-kind compatibility remain incomplete.
+Authentication and trust are resolved only for the two stated project fixtures.
+No production adapter is selected, no plugin is published, and schema-2
+activation stays blocked under #337.

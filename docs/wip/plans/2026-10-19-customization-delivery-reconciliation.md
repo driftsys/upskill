@@ -191,6 +191,20 @@ production dispatch or whole-profile qualification follows from this slice. The
 remainder of Task 2, including compaction, user scopes, Linux, unintended
 readers, duplicate paths and other clients, remains incomplete.
 
+### Codex compaction retention slice (#368)
+
+Retain the
+[existing Codex compaction packet](../../technotes/gate6-codex-compaction.md)
+with independently checked original/selected hashes and a privacy whitelist.
+Bind the actual compacted record, ordered rule messages, three completed tasks
+(two response turns) and same-session startup/compact callbacks. Distinguish
+initial/current team equality from immediate snapshots, and prior private TUI
+context from missing contemporaneous invocation/exit receipts. No native rerun,
+trust change or qualified capture runner follows. Remaining compaction pairs,
+clients/scopes/platforms/IDE, readers/duplicates and integrated lifecycle stay
+incomplete. Task 2 and schema-2 activation remain blocked; all 160 cells remain
+unqualified.
+
 ### Shared-skill native evidence slice (#351)
 
 Retain the
