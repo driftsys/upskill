@@ -48,12 +48,15 @@ retrospectively. The
 retains both actual agent snapshots and the limitation. No single-policy scope
 qualification follows from these observations.
 
-Parent project permissions deny all actions except the named child launch;
-children carry their own ordered native permission rules. These are manual
-native fixtures, not outputs from the historical generator. Its legacy
-permission map is not thereby qualified for this v2 runtime. No instruction-only
-restriction substitutes for a native deny, and these cases do not establish MCP
-inheritance, further-delegation limits or rule scoping inside child sessions.
+Parent project permissions deny actions by default and add named child-launch
+allowances. The file-backed calibration retains the earlier configured-child
+allowance while adding the file-backed child; both launches are permitted in
+that case. Each observed parent invokes only its requested child. Children carry
+their own ordered native permission rules. These are manual native fixtures, not
+outputs from the historical generator. Its legacy permission map is not thereby
+qualified for this v2 runtime. No instruction-only restriction substitutes for a
+native deny, and these cases do not establish MCP inheritance,
+further-delegation limits or rule scoping inside child sessions.
 
 ## Resource identity, preservation and restoration
 
