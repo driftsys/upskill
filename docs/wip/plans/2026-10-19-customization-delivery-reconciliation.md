@@ -266,6 +266,22 @@ catalogs, rules/MCP/delegation, other clients/scopes/platforms/IDE or integrated
 lifecycle. Task 2/CD-11 remain incomplete; all 160 cells stay unqualified and
 production schema-2 activation remains blocked.
 
+### OpenCode shared-skill/runtime-resource evidence (#366)
+
+Retain
+[native skill/resource controls](../../technotes/gate6-opencode-shared-resources.md):
+native-directory calibration, the same entry moved to shared discovery, a
+supporting-file error, a missing-entrypoint native error and a restored shared
+positive. Require actual skill/read tool IDs and resource paths, exact declared
+responses, selected model/idle outcomes and unchanged manual fixture snapshots.
+Keep one fixture entry exposed at a time; do not infer native catalog counts,
+configured/default source exclusivity or duplicate/coexistence qualification.
+Portable source and runtime reads do not implement overrides, embedded includes,
+generated adapters, review-child orchestration or new owned-skill lifecycle.
+Task 2/CD-11 and remaining four-client/platform/scope/IDE/integrated obligations
+remain incomplete; all 160 cells stay unqualified and schema-2 activation stays
+blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

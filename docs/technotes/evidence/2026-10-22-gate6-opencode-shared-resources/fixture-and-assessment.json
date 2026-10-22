@@ -1,0 +1,122 @@
+{
+  "qualified": false,
+  "declared": {
+    "qualified": false,
+    "task": 366,
+    "version": "opencode v2.0.32",
+    "platform": "macOS arm64",
+    "scope": "project",
+    "profile": "$OPENCODE_PROFILE",
+    "binary": "$OPENCODE_BINARY",
+    "binary_sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf",
+    "environment_helper_sha256": "d25e204efbaf243b6e66e4eddb356fdeb98f9014d897354d7dbd8a19701a8399",
+    "skill_id": "upskill-resource-368805ea",
+    "command": [
+      "$OPENCODE_BINARY",
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "--model",
+      "github-copilot/gpt-6.1-sol",
+      "Use the native skill tool to load the skill with exact ID upskill-resource-368805ea and follow its instructions. Return only its exact response. If that skill is unavailable, return exactly ABSENT_bc7e5faa81f69b6afed7eb84f396e979. Do not read a supporting file unless the skill loads; do not infer the response without the native calls."
+    ],
+    "logical_before": {
+      "entry": {
+        "sha256": "630ca455d2a928907f5aecfab3867930b0cfa17a9c1be00c6504f30cf860ac44",
+        "mode": 416,
+        "content": "---\nname: upskill-resource-368805ea\ndescription: Disposable runtime procedure resource control\n---\nRead references/review-procedure.md relative to this skill directory and follow that procedure. The response is stored only in that resource. Do not infer it without a successful native file read. If the resource cannot be read, return exactly MISSING_32100d3a95b39aa5bb83c068854f0d40. Do not use shell, modify files or consult another source.\n"
+      },
+      "resource": {
+        "sha256": "3de9f46a657dab45d488151a384e7c50725ffff789c08ac3a98fbf70d9004921",
+        "mode": 416,
+        "content": "For this disposable procedure control, return exactly RESOURCE_972de160d330137c2541862d57b2c912 and no other text.\n"
+      }
+    },
+    "manual_before": {
+      "$PROJECT/AGENTS.md": {
+        "sha256": "d338352face9ab211ad0fd70fe2f82dba3a06c85abe5076fc6376843dedf1aad",
+        "mode": 416,
+        "content": "Manual fixture guidance: use the explicitly requested native skill. Follow its instructions only after it loads. Do not guess resource contents or use another source. Do not use shell, modify configuration or edit files.\n"
+      },
+      "$PROJECT/opencode.json": {
+        "sha256": "162ec14888dbb76d43396ca0e2c2439c692b948fce5432eec165007cf914c2cc",
+        "mode": 416,
+        "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    },\n    {\n      \"action\": \"skill\",\n      \"resource\": \"upskill-resource-368805ea\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".opencode/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".agents/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    }\n  ]\n}\n"
+      }
+    },
+    "controls": [
+      {
+        "label": "native-positive",
+        "route": ".opencode/skills",
+        "expected": "RESOURCE_972de160d330137c2541862d57b2c912"
+      },
+      {
+        "label": "shared-positive",
+        "route": ".agents/skills",
+        "expected": "RESOURCE_972de160d330137c2541862d57b2c912"
+      },
+      {
+        "label": "missing-resource",
+        "route": ".agents/skills",
+        "expected": "MISSING_32100d3a95b39aa5bb83c068854f0d40"
+      },
+      {
+        "label": "missing-entry",
+        "route": ".agents/skills",
+        "expected": "ABSENT_bc7e5faa81f69b6afed7eb84f396e979"
+      },
+      {
+        "label": "restored-shared",
+        "route": ".agents/skills",
+        "expected": "RESOURCE_972de160d330137c2541862d57b2c912"
+      }
+    ],
+    "source_reference": "https://dev.opencode.ai/v2/docs/skills/; rolling documentation is not pinned runtime proof"
+  },
+  "manual_before": {
+    "$PROJECT/AGENTS.md": {
+      "sha256": "d338352face9ab211ad0fd70fe2f82dba3a06c85abe5076fc6376843dedf1aad",
+      "mode": 416,
+      "content": "Manual fixture guidance: use the explicitly requested native skill. Follow its instructions only after it loads. Do not guess resource contents or use another source. Do not use shell, modify configuration or edit files.\n"
+    },
+    "$PROJECT/opencode.json": {
+      "sha256": "162ec14888dbb76d43396ca0e2c2439c692b948fce5432eec165007cf914c2cc",
+      "mode": 416,
+      "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    },\n    {\n      \"action\": \"skill\",\n      \"resource\": \"upskill-resource-368805ea\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".opencode/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".agents/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    }\n  ]\n}\n"
+    }
+  },
+  "manual_after": {
+    "$PROJECT/AGENTS.md": {
+      "sha256": "d338352face9ab211ad0fd70fe2f82dba3a06c85abe5076fc6376843dedf1aad",
+      "mode": 416,
+      "content": "Manual fixture guidance: use the explicitly requested native skill. Follow its instructions only after it loads. Do not guess resource contents or use another source. Do not use shell, modify configuration or edit files.\n"
+    },
+    "$PROJECT/opencode.json": {
+      "sha256": "162ec14888dbb76d43396ca0e2c2439c692b948fce5432eec165007cf914c2cc",
+      "mode": 416,
+      "content": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    },\n    {\n      \"action\": \"skill\",\n      \"resource\": \"upskill-resource-368805ea\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".opencode/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    },\n    {\n      \"action\": \"read\",\n      \"resource\": \".agents/skills/upskill-resource-368805ea/references/review-procedure.md\",\n      \"effect\": \"allow\"\n    }\n  ]\n}\n"
+    }
+  },
+  "assessment": {
+    "qualified": false,
+    "all_declared_controls_matched": true,
+    "native_sessions": 5,
+    "manual_preserved": true,
+    "logical_entry_and_resource_restored": true,
+    "final_entry": "$PROJECT/.agents/skills/upskill-resource-368805ea/SKILL.md",
+    "logical_after": {
+      "entry": {
+        "sha256": "630ca455d2a928907f5aecfab3867930b0cfa17a9c1be00c6504f30cf860ac44",
+        "mode": 416,
+        "content": "---\nname: upskill-resource-368805ea\ndescription: Disposable runtime procedure resource control\n---\nRead references/review-procedure.md relative to this skill directory and follow that procedure. The response is stored only in that resource. Do not infer it without a successful native file read. If the resource cannot be read, return exactly MISSING_32100d3a95b39aa5bb83c068854f0d40. Do not use shell, modify files or consult another source.\n"
+      },
+      "resource": {
+        "sha256": "3de9f46a657dab45d488151a384e7c50725ffff789c08ac3a98fbf70d9004921",
+        "mode": 416,
+        "content": "For this disposable procedure control, return exactly RESOURCE_972de160d330137c2541862d57b2c912 and no other text.\n"
+      }
+    },
+    "limit": "One route at a time, no native catalog/duplicate/coexistence or complete profile/lifecycle qualification"
+  }
+}

@@ -46,6 +46,14 @@ unchanged agent/configuration, with exact fixture restoration. This is a new
 bounded project/macOS observation; the earlier mismatched-policy receipts and
 all full-profile, generated-adapter and activation limits remain unchanged.
 
+The [OpenCode skill/resource supplement](gate6-opencode-shared-resources.md)
+records actual shared `.agents/skills` consumption and a relative resource read
+at pinned 2.0.32 in macOS project scope, calibrated by a native-directory
+positive. Native missing-file and unavailable-skill errors, exact fallbacks and
+restored positive are retained. Default/configured discovery exclusivity,
+catalog counts, other readers and complete lifecycle/profile qualification
+remain unresolved.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |

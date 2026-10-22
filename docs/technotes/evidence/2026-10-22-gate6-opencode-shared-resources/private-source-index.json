@@ -1,0 +1,6 @@
+{
+  "private_packet": "/private/tmp/upskill-gate6-opencode-shared-resources-_hrnj37z",
+  "original_manifest_sha256": "fc1b8b4d0abfb39eb10c87dd1d6c0072306eb92970057c31e832d7f1a02cdd25",
+  "capture_helper_sha256": "c24e9a3b7a0b9827b9e19a82ba7bcd0fe505e7b7c53ac82f467d80649099bfa0",
+  "selection": "Own fixture native streams and sanitized session identity/idle metadata only; provider state and authentication contents omitted"
+}
