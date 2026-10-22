@@ -426,3 +426,15 @@ the old broad-positive declaration stays unchanged. Exact fixture bytes/modes
 are restored. These four project/macOS OpenCode sessions do not qualify
 generated permissions, shared catalogs, four-client coexistence or integrated
 lifecycle. No route is adopted and no delivery cell becomes qualified.
+
+## Bounded OpenCode shared skill/resource observations (2026-10-22)
+
+The [new skill controls](gate6-opencode-shared-resources.md) record five macOS
+project sessions at OpenCode v2.0.32: native calibration, actual shared skill
+and relative resource read, native missing-resource/missing-entrypoint errors
+with exact fallbacks, and a restored positive. The same portable entry is
+exposed at one fixture route at a time. No variant, directive preprocessing or
+embedded include is involved. Exact manual configuration/content is preserved.
+These observations do not establish catalog counts, configured/default discovery
+exclusivity, duplicate absence, four-client coexistence or integrated lifecycle.
+No route is adopted and no delivery cell becomes qualified.

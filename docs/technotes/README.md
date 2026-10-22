@@ -36,6 +36,15 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 OpenCode shared skills and runtime resources](gate6-opencode-shared-resources.md):
+  native relative-resource reads, missing-file controls and shared-route limits.
+
+- [Gate 6 OpenCode policy-parity observations](gate6-opencode-policy-parity.md):
+  child execution and path permission controls with unchanged declarations.
+
+- [Gate 6 OpenCode child controls](gate6-opencode-child-controls.md): actual
+  child execution, permission observations and calibration limits.
+
 - [Gate 6 skill coexistence and duplicate observations](gate6-skill-coexistence-controls.md):
   bounded Claude/Copilot controls, failed expectations and helper preservation
   limits.
