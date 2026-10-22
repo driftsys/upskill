@@ -1,0 +1,6 @@
+{
+  "private_packet": "/private/tmp/upskill-gate6-opencode-policy-parity-ab0km2tr",
+  "receipt_manifest_sha256": "a6c0f7b926c21e1c9fb6fe2a7d6c537484f572c9960f4d02e4d2832bfd510959",
+  "capture_helper_sha256": "cffed09a7fc6239deb9f741ed72e5e227a14b3191132f6a757016aa234fe2a60",
+  "source_selection": "Native own-session streams and sanitized child exports; own patch input headers selected in memory, full unsanitized exports not retained"
+}

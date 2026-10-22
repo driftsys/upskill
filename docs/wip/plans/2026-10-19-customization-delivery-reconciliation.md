@@ -252,6 +252,20 @@ Task 2/CD-11, four-client coexistence, rules/MCP/delegation, other scopes,
 platforms/IDE and integrated lifecycle remain incomplete; all 160 cells remain
 unqualified and schema-2 activation stays blocked.
 
+### Unchanged-policy OpenCode path pair (#363)
+
+Retain the [new path pair](../../technotes/gate6-opencode-policy-parity.md) as a
+separate experiment: one unchanged file-backed agent/body, ordered permission
+policy and parent configuration across two fresh parent/child sessions. Require
+actual sentinel patch success and a nonmatching protected-file patch receiving
+native `permission.rejected`, with selected patch resource bindings and exact
+before/after bytes/modes. Preserve the earlier positive's extra edit glob and
+its failed policy-equality comparison; new observations do not repair old data.
+The new bounded pair does not qualify historical generated permissions, shared
+catalogs, rules/MCP/delegation, other clients/scopes/platforms/IDE or integrated
+lifecycle. Task 2/CD-11 remain incomplete; all 160 cells stay unqualified and
+production schema-2 activation remains blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

@@ -415,3 +415,14 @@ manual native fixtures do not qualify historical generated permissions, shared
 agent catalogs, coexistence, scoped rules, delegation/MCP inheritance or
 integrated ownership. No route is adopted and no delivery cell becomes
 qualified.
+
+## Unchanged-policy OpenCode path pair (2026-10-22)
+
+The [new native path controls](gate6-opencode-policy-parity.md) use one
+unchanged agent/body and parent configuration for both fresh turns: a sentinel
+patch succeeds and a protected-file patch receives an actual native rejection.
+This addresses the earlier pair's policy-comparability limit in a new fixture;
+the old broad-positive declaration stays unchanged. Exact fixture bytes/modes
+are restored. These four project/macOS OpenCode sessions do not qualify
+generated permissions, shared catalogs, four-client coexistence or integrated
+lifecycle. No route is adopted and no delivery cell becomes qualified.

@@ -1,0 +1,92 @@
+{
+  "qualified": false,
+  "info": {
+    "id": "ses_e9ab2d796ffeqlSJEVCIMoTp67",
+    "parentID": "ses_e9ab2e5a3ffe2c2OGjaRfIMkCP",
+    "agent": "upskill-parity-195549ae",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_1654d2888002CcvtqXcbND0kwr",
+      "type": "user"
+    },
+    {
+      "id": "msg_1654d2893001Qmm9j3WzZ0EABw",
+      "type": "assistant",
+      "agent": "upskill-parity-195549ae",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "tool",
+          "id": "call_0fdW5WAX0xZmLrJCMxJoldiQ",
+          "name": "read",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_1654d2893001Qmm9j3WzZ0EABw"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ]
+    },
+    {
+      "id": "msg_1654d2ea4001nhfJy3kYdU5B0m",
+      "type": "assistant",
+      "agent": "upskill-parity-195549ae",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "tool",
+          "id": "call_hMhkVDdDgfkY1pzIhoOa7tpu",
+          "name": "patch",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "redacted": "tool-input:msg_1654d2ea4001nhfJy3kYdU5B0m"
+            }
+          },
+          "tool_content_omitted": true
+        }
+      ]
+    },
+    {
+      "id": "msg_1654d3800001wgnT2iSIYjQhUh",
+      "type": "assistant",
+      "agent": "upskill-parity-195549ae",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "[redacted:text:msg_1654d3800001wgnT2iSIYjQhUh]"
+        }
+      ]
+    },
+    {
+      "id": "msg_1654d3e5e001wZ9faggxYewzOh",
+      "type": "idle",
+      "outcome": "succeeded"
+    }
+  ],
+  "source_export_sha256": "2bc79f72f10b7e0ed6e5fa9c00cac3558d50ca4a0468a3492ca73742ec54df12",
+  "omitted": "provider state, accounting, snapshots and tool output bodies; native sanitized tool input redaction preserved"
+}
