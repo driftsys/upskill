@@ -241,3 +241,15 @@ package. All five final-answer phases match; two original whole-message-sequence
 expectations remain failed. No complete discovery inventory, duplicate
 activation, native permission-denial mapping, route adoption or lifecycle
 qualification follows.
+
+## Four-client shared resource coexistence — 2026-10-22
+
+The [bounded common-project packet](gate6-four-client-skill-coexistence.md)
+retains native shared/resource and installed Claude package paths across all
+four clients, successful paired route-absence/survival controls in a corrected
+fixture, and two frozen preliminary expectation failures. Native Claude reads
+its local installed marketplace source; cache-copy behavior is not established.
+Exact native final responses, one fixture activation per positive and bound
+resource reads remain distinct from full duplicate/discovery, permission, scope
+and integrated lifecycle qualification. No route is adopted; schema-2 remains
+blocked.

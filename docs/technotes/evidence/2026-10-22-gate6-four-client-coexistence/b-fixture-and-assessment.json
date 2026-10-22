@@ -1,0 +1,437 @@
+{
+  "declaration": {
+    "task": 372,
+    "qualified": false,
+    "project": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project",
+    "profiles": {
+      "claude": "/private/tmp/upskill-gate6-claude-auth-20261020",
+      "copilot": "/private/tmp/upskill-gate6-copilot-auth-20261020",
+      "codex": "/private/tmp/upskill-gate6-codex-installed-20261019",
+      "opencode": "/private/tmp/upskill-gate6-opencode-corrected-20261019"
+    },
+    "executables": {
+      "claude": "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+      "copilot": "/opt/homebrew/bin/copilot",
+      "codex": "/Users/sebastientasson/.local/bin/codex",
+      "opencode": "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode"
+    },
+    "versions": {
+      "claude": "2.1.303 (Claude Code)",
+      "copilot": "GitHub Copilot CLI 1.0.98.",
+      "codex": "codex-cli 0.163.0",
+      "opencode": "opencode v2.0.32"
+    },
+    "binary_before": {
+      "claude": "d2da3b003dc08b88b7230469014fe3e1dc6fe94bc8f648e89b34175d30269370",
+      "copilot": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "codex": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+      "opencode": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf"
+    },
+    "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+    "name": "upskill-common-2d34fa49",
+    "namespace": "upskill-common-claude-2d34fa49:upskill-common-2d34fa49",
+    "plugin": "upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49",
+    "marker": "RESOURCE_f93f45b0abe7ed048d87728c062ba780",
+    "absent": "ABSENT_d86891a2563f421d9baa52886b2f2db4",
+    "missing": "MISSING_2fb1231e863de2bc2d601220179aa5f7",
+    "body": "---\nname: upskill-common-2d34fa49\ndescription: Use only for the explicitly requested resource probe.\n---\nRead references/review-procedure.md exactly once relative to this skill directory, then follow its response instruction. If that resource is unavailable, return exactly MISSING_2fb1231e863de2bc2d601220179aa5f7. Do not search for substitutes or modify files.\n",
+    "resource": "Return exactly the next line, without punctuation or explanation:\nRESOURCE_f93f45b0abe7ed048d87728c062ba780\n",
+    "controls": [
+      [
+        "baseline",
+        "claude",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "baseline",
+        "copilot",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "baseline",
+        "codex",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "baseline",
+        "opencode",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "shared-removed",
+        "claude",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "shared-removed",
+        "copilot",
+        "ABSENT_d86891a2563f421d9baa52886b2f2db4"
+      ],
+      [
+        "shared-removed",
+        "codex",
+        "ABSENT_d86891a2563f421d9baa52886b2f2db4"
+      ],
+      [
+        "shared-removed",
+        "opencode",
+        "ABSENT_d86891a2563f421d9baa52886b2f2db4"
+      ],
+      [
+        "plugin-disabled",
+        "claude",
+        "ABSENT_d86891a2563f421d9baa52886b2f2db4"
+      ],
+      [
+        "plugin-disabled",
+        "copilot",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "plugin-disabled",
+        "codex",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "plugin-disabled",
+        "opencode",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ],
+      [
+        "restored-plugin",
+        "claude",
+        "RESOURCE_f93f45b0abe7ed048d87728c062ba780"
+      ]
+    ],
+    "response_contract": "Exact native final response; retain commentary/extra prose separately. No substring matching.",
+    "revision_context": "Fresh corrected fixture after packet ujx8lqjb: project-relative OpenCode resource identity, no explicit plugins list, unambiguous next-line output. Previous failures remain failed; this is not a policy-identical pair.",
+    "limits": [
+      "Sequential native turns in one shared project, not simultaneous sessions",
+      "Narrow declared Skill/Read, skill/view and native read-only surfaces; no general permission/MCP qualification",
+      "No global skill-discovery suppression",
+      "No installed upskill lifecycle or shared-root adoption"
+    ]
+  },
+  "manual_before": [
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/AGENTS.md",
+      "exists": true,
+      "sha256": "99a03255a84571811bd81cb0d04fb40158244e7010fb5627a9fed6b77b1d1fcf",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/CLAUDE.md",
+      "exists": true,
+      "sha256": "99a03255a84571811bd81cb0d04fb40158244e7010fb5627a9fed6b77b1d1fcf",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/opencode.json",
+      "exists": true,
+      "sha256": "92d4b08d0d4fdc55f24194139f93abd0b782b0451a9f3602d554fbaa2d9b7e7b",
+      "mode": 416
+    }
+  ],
+  "manual_after": [
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/AGENTS.md",
+      "exists": true,
+      "sha256": "99a03255a84571811bd81cb0d04fb40158244e7010fb5627a9fed6b77b1d1fcf",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/CLAUDE.md",
+      "exists": true,
+      "sha256": "99a03255a84571811bd81cb0d04fb40158244e7010fb5627a9fed6b77b1d1fcf",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/opencode.json",
+      "exists": true,
+      "sha256": "92d4b08d0d4fdc55f24194139f93abd0b782b0451a9f3602d554fbaa2d9b7e7b",
+      "mode": 416
+    }
+  ],
+  "selected_profile_config_candidates_before": {
+    "claude": {
+      "path": "/private/tmp/upskill-gate6-claude-auth-20261020/home/.claude/settings.json",
+      "exists": false
+    },
+    "copilot": {
+      "path": "/private/tmp/upskill-gate6-copilot-auth-20261020/home/.copilot/settings.json",
+      "exists": false
+    },
+    "codex": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "exists": true,
+      "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+      "mode": 384
+    },
+    "opencode": {
+      "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/config.json",
+      "exists": false
+    }
+  },
+  "selected_profile_config_candidates_after": {
+    "claude": {
+      "path": "/private/tmp/upskill-gate6-claude-auth-20261020/home/.claude/settings.json",
+      "exists": false
+    },
+    "copilot": {
+      "path": "/private/tmp/upskill-gate6-copilot-auth-20261020/home/.copilot/settings.json",
+      "exists": false
+    },
+    "codex": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "exists": true,
+      "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+      "mode": 384
+    },
+    "opencode": {
+      "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/config.json",
+      "exists": false
+    }
+  },
+  "source_before": [
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/SKILL.md",
+      "exists": true,
+      "sha256": "1e44e220d7c3ff6389dd7f7bd17b97db61cca12b6cc950f3dd12922f36d6d280",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/references/review-procedure.md",
+      "exists": true,
+      "sha256": "4dedaaa44ddd16f505552f5a5b77ef8880656fd684dcd0934d80cd39fdabfce4",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace/plugins/upskill-common-claude-2d34fa49/skills/upskill-common-2d34fa49/SKILL.md",
+      "exists": true,
+      "sha256": "1e44e220d7c3ff6389dd7f7bd17b97db61cca12b6cc950f3dd12922f36d6d280",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace/plugins/upskill-common-claude-2d34fa49/skills/upskill-common-2d34fa49/references/review-procedure.md",
+      "exists": true,
+      "sha256": "4dedaaa44ddd16f505552f5a5b77ef8880656fd684dcd0934d80cd39fdabfce4",
+      "mode": 416
+    }
+  ],
+  "source_after": [
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/SKILL.md",
+      "exists": true,
+      "sha256": "1e44e220d7c3ff6389dd7f7bd17b97db61cca12b6cc950f3dd12922f36d6d280",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.agents/skills/upskill-common-2d34fa49/references/review-procedure.md",
+      "exists": true,
+      "sha256": "4dedaaa44ddd16f505552f5a5b77ef8880656fd684dcd0934d80cd39fdabfce4",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace/plugins/upskill-common-claude-2d34fa49/skills/upskill-common-2d34fa49/SKILL.md",
+      "exists": true,
+      "sha256": "1e44e220d7c3ff6389dd7f7bd17b97db61cca12b6cc950f3dd12922f36d6d280",
+      "mode": 416
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace/plugins/upskill-common-claude-2d34fa49/skills/upskill-common-2d34fa49/references/review-procedure.md",
+      "exists": true,
+      "sha256": "4dedaaa44ddd16f505552f5a5b77ef8880656fd684dcd0934d80cd39fdabfce4",
+      "mode": 416
+    }
+  ],
+  "native_steps": [
+    {
+      "label": "validate",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "validate",
+        "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "6fce67ec979df868fdc7dbc573891ef4d7d1e7393b408a01e50d69ac2863260a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "ccdf8df1f5eda66af41cf590e522d8a9ed0f22283a8441c467c8c98b809bd928",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-add",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "add",
+        "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "af30de2e244f76c104e1dfbb8319e4867a868465d09d6c243b373ea5990a975b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "f661cb07845d99f2862fcc65cf2293353fc037435df1d4d5028aa49d6d396083",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-common-market-2d34fa49\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "install",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "install",
+        "upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "c9b06b15713178ef58e6fef717c0b3047fbfdeb52020b31894dde03cd5163707",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "8d97e5c1c427fb3849d474f05123615b78effa5d5e283c0a7980ca4c2d154419",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-common-market-2d34fa49\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace\"\n      }\n    }\n  },\n  \"enabledPlugins\": {\n    \"upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49\": true\n  }\n}\n"
+      }
+    },
+    {
+      "label": "disable",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "disable",
+        "upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49",
+        "--scope",
+        "project"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "fad8e49ef1d2e6b476253633e45380ae6d1a07d994e40b1a7abd227c6d8f4051",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "af36ffb52b0b53b950bbdffab8e3a075a0ed58f53a0df2b67fd833e17127a8bb",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49\": false\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-common-market-2d34fa49\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "enable",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "enable",
+        "upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49",
+        "--scope",
+        "project"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "fa06b42f9be6574a0634040ddf9bb15e4602bfcbe940ca411696b0ce02526a8c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "61795dce24638c30fad79463929593b6954677beb72a5df632b6d6fcd14711b1",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49\": true\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-common-market-2d34fa49\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "uninstall",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "uninstall",
+        "upskill-common-claude-2d34fa49@upskill-common-market-2d34fa49",
+        "--scope",
+        "project"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "e227fdf8d8ca526332cd2c57ea450f25f4e4e0f5f4a74c03ef7a4a24da4904aa",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "babf5804a2ca10bc96b1f564c9d299a0f3cec7e3fb78e60414c6509c01d3a6c6",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {\n    \"upskill-common-market-2d34fa49\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-remove",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-common-market-2d34fa49",
+        "--scope",
+        "project"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "305a7777f831ccb5fddf85452f328bec6c18c1895bb8bbfb4b0da707d5d2c770",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "snapshot": {
+          "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+          "exists": true,
+          "sha256": "70ac22e1fb82c9a685839fa6edc4a59de4cc8fecfa757f7dbf777821bb7f7251",
+          "mode": 416
+        },
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+      }
+    }
+  ],
+  "final_project_settings": {
+    "snapshot": {
+      "path": "/private/tmp/upskill-gate6-four-client-coexistence-rp92m0hg/project/.claude/settings.json",
+      "exists": true,
+      "sha256": "70ac22e1fb82c9a685839fa6edc4a59de4cc8fecfa757f7dbf777821bb7f7251",
+      "mode": 416
+    },
+    "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_288c3a0cf5e7b02bc20ec43391300416\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+  },
+  "skipped": [],
+  "limitation": "Selected config candidates are not a complete profile inventory. Native CLI retains empty settings objects; manual env/mode survive, not original settings bytes. Package resource reads use the local installed marketplace source, not proof of cache-copy behavior."
+}

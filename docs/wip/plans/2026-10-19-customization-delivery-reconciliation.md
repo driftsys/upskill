@@ -310,6 +310,21 @@ Other clients/scopes/platforms/IDE and integrated ownership/recovery remain
 open; Task 2 stays incomplete, all 160 cells remain unqualified and schema-2
 stays blocked.
 
+### Four-client common-project skill coexistence slice (#372)
+
+Retain
+[sequential four-client controls](../../technotes/gate6-four-client-skill-coexistence.md)
+for one portable shared skill/resource and a normal installed Claude package
+outside shared catalogs. Bind native source/activation/read identities and exact
+final responses. Preserve the initial absolute-grant denial and trailing-period
+failure, including skipped OpenCode negatives. The fresh corrected fixture is
+not a policy-identical pair. Distinguish no-call/catalog absence from failed
+native skill calls; keep empty native settings residue and selected config-path
+limits explicit. All user/Linux/IDE, exhaustive readers/namespace
+aliases/imports/ globs/duplicates, implicit activation, other kinds and
+integrated lifecycle obligations remain open. Task 2/CD-11, all 160 cells and
+schema-2 stay blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

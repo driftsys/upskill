@@ -449,3 +449,16 @@ entry has no fixture metadata/expansion or read attempt; it is not a native
 failed-load or permission-denial result. Broader inventories, duplicate
 activation, other clients/scopes/platforms and installed lifecycle remain
 unqualified.
+
+## Bounded four-client skill coexistence (2026-10-22)
+
+The [common-project controls](gate6-four-client-skill-coexistence.md) retain a
+fresh corrected context with 13 completed native turns: Codex/Copilot/OpenCode
+read the intentional shared resource, while Claude reads its normally installed
+local plugin package. Removing the shared entry leaves Claude working; disabling
+the Claude plugin leaves the other three working. One fixture activation and one
+bound resource read occur per positive turn. The preliminary failed OpenCode
+grant and Codex exact-output expectations stay failed. These sequential macOS
+project observations do not establish exhaustive catalogs, namespace aliases,
+imports/globs, implicit activation, user/Linux/IDE or integrated lifecycle
+qualification. No root is adopted and all 160 cells remain unqualified.

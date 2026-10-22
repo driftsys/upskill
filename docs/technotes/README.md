@@ -36,6 +36,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 four-client skill coexistence observations](gate6-four-client-skill-coexistence.md):
+  shared and installed-plugin resource routes, paired removals and frozen failed
+  calibration controls.
+
 - [Gate 6 Codex shared skills and runtime resources](gate6-codex-shared-resources.md):
   native skill expansion, relative reads, relocation and strict-output failures.
 
