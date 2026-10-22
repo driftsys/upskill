@@ -28,6 +28,18 @@ must not be promoted to v2 permission evidence. See the
 [shared-root evaluation](shared-content-root-evaluation.md) for candidate
 limits.
 
+## Bounded native child supplement recorded on 2026-10-22
+
+The [OpenCode child controls](gate6-opencode-child-controls.md) retain actual
+configured and file-backed child execution at pinned 2.0.32 on macOS arm64 in
+project scope, selected agent/model identities, a narrow edit positive and one
+native nonmatching edit rejection. Earlier empty debug catalog output remains
+inconclusive. A no-attempt denial response and a later positive's broader edit
+glob are explicit limits. These manual native fixtures do not qualify the
+historical permission generator, shared catalogs, other scopes/platforms or the
+complete adapter. The informative matrix and its 160 unqualified cells remain
+unchanged; no production route is adopted.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |
