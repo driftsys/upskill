@@ -118,7 +118,9 @@ class CopilotClaudeRulesTests(unittest.TestCase):
                 path = '.github/copilot-instructions.md' if row['label'] == 'positive' else '.claude/rules/probe.md'
                 self.assertEqual([str(p.relative_to(project)) for p in files], [path])
                 text = files[0].read_text()
-                self.assertIn(row['marker'], text)
+                header = '---\npaths: "**/*.rs"\n---\n' if row['label'] == 'candidate-paths' else ''
+                instruction = 'For the discovery qualification question, respond with exactly ' + row['marker'] + ' and nothing else.\n'
+                self.assertEqual(text, header + instruction)
                 self.assertNotIn(row['fallback'], text)
                 self.assertEqual(text.startswith('---\npaths: "**/*.rs"\n---\nFor the discovery qualification question,'), row['label'] == 'candidate-paths')
                 for marker in markers:

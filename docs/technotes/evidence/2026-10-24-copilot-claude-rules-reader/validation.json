@@ -30,5 +30,23 @@
     "result": "PASS: documentation checks",
     "private_log": "q1-followup-docs.log",
     "sha256": "554480e292407accdf8ea35e12beb6c89920382a4c09b5ada6b39579d3c6c984"
+  },
+  {
+    "stage": "F1 directive mutation",
+    "result": "PASS: inverted candidate instruction rejected; original fixture tests pass",
+    "private_log": "q1-directive-mutation.log",
+    "sha256": "80d2b10232f3fa313f9182c9dbc4eb12c05896893b6b89f9a3c5b763bc72ec7c"
+  },
+  {
+    "stage": "F1 lint",
+    "result": "PASS: 42 offline tests",
+    "private_log": "q1-f1-lint.log",
+    "sha256": "082aa0985ebf474a90feac30b6099023615904acd2f8879ca06704be5ccf0ae6"
+  },
+  {
+    "stage": "F1 documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q1-f1-docs.log",
+    "sha256": "ae7fc9c08ce34ae15acae203738cd6ec83a80dec3021143ef09ca119cb82a50e"
   }
 ]

@@ -2,8 +2,8 @@
   "summary.json": "55311ea2d2c18de97619f37c528159a29ad691e8ab7b78351a04df8204fcbf95",
   "preservation.json": "8ab6bc193851e345d978d2e863eeb2870743b4700e76d7eadbb187afc89d0015",
   "campaign-pins.json": "557e4ecc93c53dc2041414aa52f8075c7f18f6f1fa5db7bea137a8288f74400a",
-  "validation.json": "d3abde80c5b5340c48c47a0f77d34524c8a632c9b80d41462525102e228e4b44",
-  "private-source-index.json": "d3c7ca682d5073a61ffc57e4c12dcb6f5624797d6739eeba95922a2a0a720360",
+  "validation.json": "4df860f53e8daa7541deb836f3841108055b16a62f446c577245a957831c03c5",
+  "private-source-index.json": "400cd85db9019cbb3581f098b2c970cb247e0f49bb5df7440bfbb65d142dba5d",
   "fixtures.json": "b958b9544b4f6d542b8368e5cdd8fed13d0b9e274c6df9b1f4111a32f6f56ec8",
   "positive.jsonl": "6030b98f8b79bec35c247ed7d6b80387a83c741f85f43a414d4197ef4b60630c"
 }
