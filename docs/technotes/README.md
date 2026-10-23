@@ -36,6 +36,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 OpenCode user-configuration rule observations](gate6-opencode-user-rule-controls.md):
+  local global configuration, paired removals and manual-settings preservation.
+
 - [Gate 6 Codex user-registration rule observations](gate6-codex-user-rule-controls.md):
   ordinary hook trust, two-project native controls and selected preservation.
 

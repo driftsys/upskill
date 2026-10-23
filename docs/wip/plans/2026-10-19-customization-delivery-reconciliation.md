@@ -345,6 +345,26 @@ platform/client/reader/duplicate/IDE and integrated lifecycle obligations open.
 Task 2 stays incomplete, all 160 cells remain unqualified and schema-2
 activation remains blocked.
 
+### OpenCode user-configuration rule evidence slice (#375)
+
+Retain
+[bounded global local-path observations](../../technotes/gate6-opencode-user-rule-controls.md)
+from the normally provisioned isolated profile. Native package CLI rejects a
+local directory, while a distinct configured-local route completes fourteen
+native turns with exact callback source identities and paired entry removals.
+Keep the original managed-port failure and package rejection separate; restore
+only the experiment's temporary service/port state and leave unrelated processes
+untouched.
+
+Global-file absence is restored in both contexts. A representative manual global
+field/mode baseline is restored exactly before removing its experiment-created
+file. This does not qualify arbitrary existing JSONC or unrelated plugin arrays,
+native package uninstall, arbitrary user workspaces or integrated ownership.
+Native sanitized exports redact text/directory fields; preserve that distinction
+from CLI response and callback provenance. All remaining platform/client/scope/
+IDE/reader/duplicate/restriction/recovery requirements remain. Task 2 stays
+incomplete, all 160 cells unqualified and schema-2 activation blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

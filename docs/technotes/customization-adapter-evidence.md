@@ -266,3 +266,16 @@ responses with bound callback counts. Exact post-trust configuration restoration
 and selected prior registration preservation do not qualify full
 ownership/recovery, other readers or other clients/platforms/scopes. No adapter
 is adopted; schema-2 stays blocked.
+
+## Bounded OpenCode user configuration — 2026-10-23
+
+The [OpenCode user-configuration slice](gate6-opencode-user-rule-controls.md)
+retains a failed managed-port attempt, a native package-CLI rejection of a local
+directory, and fourteen successful configured-local turns across two fresh
+contexts. Global-file entries load the intended local package sources; paired
+removals preserve team guidance and a representative manual field/mode baseline.
+Native sanitized exports redact directory/text identity, so exact responses bind
+CLI receipts and actual module paths bind context callbacks. This is not native
+package uninstall, arbitrary existing JSONC/plugin-array preservation or
+complete profile recovery. No adapter or shared root is adopted. All 160 cells
+remain unqualified; schema-2 activation stays blocked.

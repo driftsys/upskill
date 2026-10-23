@@ -1,0 +1,612 @@
+{
+  "issue": 375,
+  "qualified": false,
+  "counts": {
+    "native_completed_turns": 14,
+    "declared_responses_matched": 14,
+    "context_callbacks": 18,
+    "tool_calls": 0,
+    "native_package_cli_local_rejections": 1,
+    "default_service_port_failures": 1
+  },
+  "sessions": [
+    {
+      "label": "configured-global-positive-a",
+      "session": "ses_e98efc5fdffe7dkqNHxnCrE8rM",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+      "expected": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "02e58152ce7614ed5597cfd20e420d00cbaa553549c57c06d857896e6d424099",
+      "qualified": false
+    },
+    {
+      "label": "configured-global-positive-b",
+      "session": "ses_e98efb657ffeE86bgvSmuu4zeX",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+      "expected": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "1d517d66d1c19eb9316bc8362551be8853b695f3f7bacd23165d0d9e57504813",
+      "qualified": false
+    },
+    {
+      "label": "configured-removed-a-project-a",
+      "session": "ses_e98efaac9ffeDt2RwOKTZEQUoU",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+      "expected": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 1,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "f0d3fd1fa84c7f1704ab4d14eb04b9eae9ac1beda7939302f85903fb4db31f78",
+      "qualified": false
+    },
+    {
+      "label": "configured-removed-both-project-b",
+      "session": "ses_e98ef8e30ffe3XHgNNxCWSPrsA",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+      "expected": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": []
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 0,
+      "actual_module_roots": [],
+      "tool_calls": 0,
+      "selected_cli_sha256": "dc72d544db6a7a7481182c7645de0101e6b0b75981c1f45516024dced2b5b3d5",
+      "qualified": false
+    },
+    {
+      "label": "configured-restored-project-a",
+      "session": "ses_e98ef811affeX1A17sTvK3MbLr",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+      "expected": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "66b6b27a24f84ca27884e1708ef47a7c3fa2cc141d283abc818a73644fdf7739",
+      "qualified": false
+    },
+    {
+      "label": "configured-restored-project-b",
+      "session": "ses_e98ef715affexjS2MJtu74l0qY",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+      "expected": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+        "rules": [
+          "RULE_0fb37b8715ffedf90165cbb275672c74",
+          "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "f36487baf0ef9cfb36b842c8e70bf6836ee784b2614e2fa4443091c57fecb947",
+      "qualified": false
+    },
+    {
+      "label": "configured-global-file-removed",
+      "session": "ses_e98ef64f7ffe0rU1tdlLUK3Jce",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+      "expected": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "rules": []
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 0,
+      "actual_module_roots": [],
+      "tool_calls": 0,
+      "selected_cli_sha256": "bd02565a5ba703134d60cf5bcfe68869c4e445229435702df1e6685349225172",
+      "qualified": false
+    },
+    {
+      "label": "manual-global-positive-a",
+      "session": "ses_e98ed227dffebf6pG7IEcizUPN",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+      "expected": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "4227d4c13c3a28fe502effa18f2236018233091a9faa1601b89998d4a229c1ce",
+      "qualified": false
+    },
+    {
+      "label": "manual-global-positive-b",
+      "session": "ses_e98ed1528ffeqY5L5pafvDinhn",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+      "expected": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "0cd027c467435fada30724518cd3061b6010b0d7469134ba34830c1de19baa99",
+      "qualified": false
+    },
+    {
+      "label": "manual-removed-a-project-a",
+      "session": "ses_e98ed0857ffes3Jbk5GRBdT16w",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+      "expected": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 1,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "281f7992a55e963a1411d74f8f02ad46bdfc1c5d5cc0b24478e2db62f490f907",
+      "qualified": false
+    },
+    {
+      "label": "manual-removed-both-project-b",
+      "session": "ses_e98ecfdf3ffeHahdoYUUbYjDa1",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+      "expected": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": []
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 0,
+      "actual_module_roots": [],
+      "tool_calls": 0,
+      "selected_cli_sha256": "03f5eaf2c0d1811c7b5de8ec37926abea5cef95e7b3376fb50503c3075fb7e4f",
+      "qualified": false
+    },
+    {
+      "label": "manual-restored-project-a",
+      "session": "ses_e98ecf1edffe25R8mNzkGgpqW2",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+      "expected": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "86e3202fecaead9517ab88b57a49955b47a7b3d0a7990bedb15eaad6c66328e2",
+      "qualified": false
+    },
+    {
+      "label": "manual-restored-project-b",
+      "session": "ses_e98ece2bdffetppH3SpSH6E40s",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+      "expected": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+        "rules": [
+          "RULE_ab32940a7bd5f562f9518baa68af7cae",
+          "RULE_26e60256c12a123baeac2d7affe34ef0"
+        ]
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 2,
+      "actual_module_roots": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "tool_calls": 0,
+      "selected_cli_sha256": "7dcd225954233ee9d2f72a2d402a369babdcf8c8051071d902ecb7ace397b2db",
+      "qualified": false
+    },
+    {
+      "label": "manual-manual-baseline-restored",
+      "session": "ses_e98ecd5a1ffe00KcoanieMbXWt",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+      ],
+      "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+      "expected": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+        "rules": []
+      },
+      "native_outcome": "succeeded",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "response_matched": true,
+      "native_export_text_redacted": true,
+      "fixture_context_callbacks": 0,
+      "actual_module_roots": [],
+      "tool_calls": 0,
+      "selected_cli_sha256": "f949553e4d9f5512f0920f59b4b2a5a7bf712f7a5dd4108c0c6ec705c0d0febf",
+      "qualified": false
+    }
+  ],
+  "limits": [
+    "Local global configuration is a distinct route from rejected package CLI; source callbacks bind actual local package directories",
+    "Both new packages and callbacks are specific to this client and two declared project paths; not arbitrary user-workspace or project-scope registration qualification",
+    "First configured packet starts with absent global config; second creates a representative manual username/settings baseline with mode640, restores it exactly, then removes its own file to original absence",
+    "Global config uses whole-file ownership of a disposable created fixture; no in-place production editor or preservation proof for arbitrary preexisting JSONC, other owners or existing plugin arrays",
+    "Sanitized native exports redact directory and user/assistant text; exact final responses bind CLI receipts, while exports bind session/model/completion. No system-message dump is claimed",
+    "Cache/dependency, parent directory and complete profile/native side-effect recovery remain unqualified",
+    "Full four-client/platform/scope/IDE, compatible readers/imports/globs/aliases/duplicates, native restrictions, timeout and integrated ownership remain required",
+    "No route adoption, plugin publication or schema-2 activation"
+  ]
+}
