@@ -1,0 +1,34 @@
+[
+  {
+    "worktree": "native-four-client-coexistence",
+    "commit": "f9eaee3301296db2960f4b3a4fcc717021c36439",
+    "packet": "2026-10-22-gate6-four-client-coexistence",
+    "manifest_sha256": "1208f64b9982f2a433c7c4321ddcf5adbf7c70fe3756e9c4623df8fdd5324aa6",
+    "verified_files": 30,
+    "failed_files": []
+  },
+  {
+    "worktree": "native-opencode-shared-resources",
+    "commit": "15f30b0e067ba0c635ec2e915fc4388041816a14",
+    "packet": "2026-10-22-gate6-opencode-shared-resources",
+    "manifest_sha256": "5fcda1482a43fa34b6bbb7a453150c5cfbc6d2cf8a6cffbbc7e9d4999ca8d9b7",
+    "verified_files": 9,
+    "failed_files": []
+  },
+  {
+    "worktree": "native-opencode-policy-parity",
+    "commit": "53f7bae0ccb63a681e4310302133d01120c77e0f",
+    "packet": "2026-10-22-gate6-opencode-policy-parity",
+    "manifest_sha256": "9045cb8b60374d905d4a6da7541bde1b108115aa9e1db8aa279efe60c6a93e6a",
+    "verified_files": 7,
+    "failed_files": []
+  },
+  {
+    "worktree": "native-codex-user-rules",
+    "commit": "262e19994c8043093f2feff4ea30c159a655c5c9",
+    "packet": "2026-10-23-gate6-codex-user-rules",
+    "manifest_sha256": "d3dab3092d5d004eed5ff74d9171932e55e14fa1b189cf9cec9f125653957587",
+    "verified_files": 17,
+    "failed_files": []
+  }
+]

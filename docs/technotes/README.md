@@ -8,6 +8,11 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Customization delivery choice evidence](evidence/2026-10-23-delivery-choice/assessment.md):
+  current skill experiments, verified retained native records and focused
+  ownership checks; supports a proposal without claiming production
+  qualification.
+
 - [Customization adapter capability refresh](customization-adapter-evidence.md):
   source-pinned client mapping and packaging evidence.
 - [Updater plugin startup probes](updater-plugin-probes.md): partial

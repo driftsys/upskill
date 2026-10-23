@@ -12,6 +12,11 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Customization delivery architecture proposal](specs/2026-10-23-customization-delivery-proposal.md)
+  — proposal for Fable review: shared authored core, managed client packages,
+  rules/skills/subagents MVP, user/project scope and capability-preserving
+  native exceptions; awaiting architecture approval.
+
 - [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
   — four-client MVP sequencing and proposed qualification gates; retained
   planning.

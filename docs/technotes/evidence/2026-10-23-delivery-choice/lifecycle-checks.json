@@ -1,0 +1,20 @@
+{
+  "base_commit": "eba3dae8452cac855cd474f8876faed450b78655",
+  "command": "CARGO_TARGET_DIR=<existing target> RUSTC_WRAPPER= cargo test --test lifecycle_sharing --test lifecycle_retirement --test lifecycle_commands",
+  "results": {
+    "lifecycle_commands": {
+      "passed": 16,
+      "failed": 0
+    },
+    "lifecycle_retirement": {
+      "passed": 18,
+      "failed": 0
+    },
+    "lifecycle_sharing": {
+      "passed": 31,
+      "failed": 0
+    }
+  },
+  "evidence": "observed command output in this session; no independently retained raw stdout",
+  "scope": "existing library and integration behavior; not native adapter or schema-2 activation proof"
+}
