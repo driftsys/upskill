@@ -1,0 +1,56 @@
+{
+  "original_packets": [
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-session-3hxvsw00",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-session-3hxvsw00/receipt-hashes.json",
+        "sha256": "e8512d90ab3ec779c7763b81c8aa62ffb1a7a851f4317f4bb0c48257c07f0fc7",
+        "mode": 384
+      },
+      "original_entries_verified": 9
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-session-y6do2vjw",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-session-y6do2vjw/receipt-hashes.json",
+        "sha256": "3e26731231e30206758d402ee51351d8fa92f55d59517713437cdafeb84074f3",
+        "mode": 384
+      },
+      "original_entries_verified": 11
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-compact-cx6pndf9",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-compact-cx6pndf9/receipt-hashes.json",
+        "sha256": "510b97f57428c635c4a1341537e002f86a0a487a74702c92e0e85eabf518958f",
+        "mode": 384
+      },
+      "original_entries_verified": 8
+    }
+  ],
+  "native_sessions": [
+    {
+      "session": "01a1671e-bc78-7ef3-a974-f97f0bec8ef4",
+      "native_path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-57-10-01a1671e-bc78-7ef3-a974-f97f0bec8ef4.jsonl",
+      "final_prefix_bytes": 87878,
+      "final_prefix_sha256": "5188e5ed38f2ff6f9c4584a2cd939acd8ac6ffd57a31803f4c1ba1bb1a2eb5fa"
+    },
+    {
+      "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+      "native_path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-59-15-01a16720-a744-73d2-afce-d21f64c954b8.jsonl",
+      "final_prefix_bytes": 151305,
+      "final_prefix_sha256": "0b6f0a250c463f4444c0af164919bf4fc214f51d6dd5706677a7a8d5fa46bc7b"
+    }
+  ],
+  "selector": {
+    "path": "/private/tmp/upskill-retain-codex-user-sessions.py",
+    "sha256": "fe3d34277a333731a3259a40bae268c63f86fe605e55f3fb4aa898e0f34833be",
+    "mode": 420
+  },
+  "failed_policy_supplement": {
+    "path": "/private/tmp/upskill-gate6-codex-user-session-3hxvsw00/supplemental-source-hashes.json",
+    "sha256": "55f33dbdd7e0157fa74483e85c8b8eaf80aa345f4d0464200cc85a96c11679ac",
+    "mode": 420
+  },
+  "privacy": "Whitelisted experimental bodies, CLI answers, policy and completion only. Full native/terminal state, account/provider/accounting/world state and encrypted context omitted. Authentication contents were not inspected or copied."
+}

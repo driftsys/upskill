@@ -365,6 +365,26 @@ from CLI response and callback provenance. All remaining platform/client/scope/
 IDE/reader/duplicate/restriction/recovery requirements remain. Task 2 stays
 incomplete, all 160 cells unqualified and schema-2 activation blocked.
 
+### Codex user session lifecycle evidence slice (#377)
+
+Retain
+[native fresh/resume/compaction observations](../../technotes/gate6-codex-user-session-controls.md)
+using the unchanged reviewed user packages and newly owned session identities.
+Keep the first resume's workspace-write policy as a failed control; explicit
+read-only configuration on each invocation passes the separate new pair. Bind
+append-only native phase prefixes without invalidating frozen history.
+
+Native UI reopen followed by native compaction records two exact developer
+bodies per rule on the next turn, despite one callback per rule per source
+event. The declared JSON response remains correct, but the single-body delivery
+control fails. Resolve the candidate session contract and native proof in
+[#379](https://github.com/driftsys/upskill/issues/379) before adapter selection.
+Historical counts, encrypted compaction and provider effective input remain
+distinct evidence boundaries. Do not implement speculative deduplication or
+expand general hook/permission management to hide this failure. Task 2 stays
+incomplete, all 160 cells remain unqualified and schema-2 activation stays
+blocked; all four-client/platform/scope/reader/IDE obligations remain.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

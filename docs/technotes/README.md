@@ -36,6 +36,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 Codex user rule session lifecycle observations](gate6-codex-user-session-controls.md):
+  explicit resume policy, native compaction and failed duplicate-delivery
+  control.
+
 - [Gate 6 OpenCode user-configuration rule observations](gate6-opencode-user-rule-controls.md):
   local global configuration, paired removals and manual-settings preservation.
 
