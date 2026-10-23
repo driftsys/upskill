@@ -12,6 +12,13 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Customization delivery architecture proposal](specs/2026-10-23-customization-delivery-proposal.md)
+  — proposal for Fable review: shared authored core, managed client packages,
+  rules/skills/subagents MVP, user/project scope and capability-preserving
+  native exceptions; awaiting architecture approval. Its divergences from
+  AD-0040 are recorded as proposed amendments in AD-0040, Topic 0009 and the
+  roadmap.
+
 - [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md) and
   [corrected customization delivery plan](plans/2026-10-19-customization-delivery-reconciliation.md)
   — architecture reconciliation requested on 2026-10-19. Independent

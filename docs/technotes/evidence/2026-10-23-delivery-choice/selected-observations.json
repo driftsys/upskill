@@ -1,0 +1,529 @@
+{
+  "status": "selected experimental observations; not full-profile qualification",
+  "records": [
+    {
+      "client": "claude",
+      "phase": "separate",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_9eed2582db3c976a51aa28204bec59db",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-separate.json",
+      "source_sha256": "b43c01ecc006941615d4658404fb91899fa29018b0f065e6638c80b3dc224532",
+      "native_catalog": [
+        "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "Skill",
+          "input": {
+            "skill": "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "claude",
+      "phase": "shared",
+      "exit_code": 0,
+      "response_match": false,
+      "final": "UNAVAILABLE",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-shared.json",
+      "source_sha256": "23c710e9c7f25b7f31b25f01bc4cace2d653a4950d9818753920264e29c8c438",
+      "observed_tool_calls": [
+        {
+          "tool": "Skill",
+          "input": {
+            "skill": "upskill-receipt-9e21888e04"
+          }
+        }
+      ]
+    },
+    {
+      "client": "claude",
+      "phase": "implicit",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_9eed2582db3c976a51aa28204bec59db",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-implicit.json",
+      "source_sha256": "1a4f6bd15404f9153cab833e8866a0a753dec204abe0f9616634e46f273afab8",
+      "native_catalog": [
+        "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "Skill",
+          "input": {
+            "skill": "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "claude",
+      "phase": "plugin-off-topic",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "42",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-plugin-off-topic.json",
+      "source_sha256": "11e2e72e8080afb2722ef960c0e664599be4a456d6f3f5d97adb0cbe809554bd",
+      "native_catalog": [
+        "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+      ],
+      "observed_tool_calls": []
+    },
+    {
+      "client": "claude",
+      "phase": "shared-core-present",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "CORE_f0c80dfa91b7b21d4e21e6b38dc320f2",
+      "expected_core_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/skills/upskill-receipt-9e21888e04/procedure.md",
+      "expected_resource_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-shared-core-present.json",
+      "source_sha256": "4c19adbc8088470b7a22a68b2f188858e2fc3475834fd89d0c827a5eb75ea684",
+      "native_catalog": [
+        "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "Skill",
+          "input": {
+            "skill": "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/skills/upskill-receipt-9e21888e04/procedure.md"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "claude",
+      "phase": "shared-core-missing",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "UNAVAILABLE",
+      "expected_core_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/skills/upskill-receipt-9e21888e04/procedure.md",
+      "expected_resource_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/claude-shared-core-missing.json",
+      "source_sha256": "3ef9221dc8ddb874f1e3373661a1b75ceca3025396a6c10e5e320759dd914f55",
+      "native_catalog": [
+        "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "Skill",
+          "input": {
+            "skill": "upskill-eval-9e21888e04:upskill-receipt-9e21888e04"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/skills/upskill-receipt-9e21888e04/procedure.md"
+          }
+        },
+        {
+          "tool": "Read",
+          "input": {
+            "file_path": "/private/tmp/upskill-skill-comparison-awvzhdya/claude/.agents/claude/package/skills/upskill-receipt-9e21888e04/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "copilot",
+      "phase": "separate",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_3812fb606a777567571d598433953e27",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/copilot-separate.json",
+      "source_sha256": "3281ba4cab2bd2d34695565a9e3acc5409daeb8a6b35bb63e99dae1bb0339537",
+      "native_catalog": [
+        {
+          "name": "upskill-receipt-68c8caeee1",
+          "commandName": "upskill-eval-68c8caeee1:upskill-receipt-68c8caeee1",
+          "source": "plugin",
+          "enabled": true,
+          "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/copilot/package/skills/upskill-receipt-68c8caeee1/SKILL.md"
+        }
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "skill",
+          "input": {
+            "skill": "upskill-receipt-68c8caeee1"
+          }
+        },
+        {
+          "tool": "view",
+          "input": {
+            "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/copilot/package/skills/upskill-receipt-68c8caeee1/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "copilot",
+      "phase": "shared-plus-variant",
+      "exit_code": 0,
+      "response_match": false,
+      "final": "DEFAULT_53e0aa3f766c3648907ae54192e546ed",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/copilot-shared-plus-variant.json",
+      "source_sha256": "d88feb911b5afd1a342b8dbebd248171af6866c6edb2cb3f8b30693a57372638",
+      "native_catalog": [
+        {
+          "name": "upskill-receipt-68c8caeee1",
+          "commandName": "upskill-receipt-68c8caeee1",
+          "source": "project",
+          "enabled": true,
+          "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/skills/upskill-receipt-68c8caeee1/SKILL.md"
+        }
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "skill",
+          "input": {
+            "skill": "upskill-receipt-68c8caeee1"
+          }
+        },
+        {
+          "tool": "view",
+          "input": {
+            "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/skills/upskill-receipt-68c8caeee1/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "copilot",
+      "phase": "native-variant-with-shared",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_3812fb606a777567571d598433953e27",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/copilot-native-variant-with-shared.json",
+      "source_sha256": "5eb96d7f4f25bb3f2ba2eb713d653ba445d44a61234c01ac7e3c68726361dede",
+      "native_catalog": [
+        {
+          "name": "upskill-receipt-68c8caeee1",
+          "commandName": "upskill-receipt-68c8caeee1",
+          "source": "project",
+          "enabled": true,
+          "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.github/skills/upskill-receipt-68c8caeee1/SKILL.md"
+        }
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "skill",
+          "input": {
+            "skill": "upskill-receipt-68c8caeee1"
+          }
+        },
+        {
+          "tool": "view",
+          "input": {
+            "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.github/skills/upskill-receipt-68c8caeee1/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "copilot",
+      "phase": "native-variant-removed",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "DEFAULT_53e0aa3f766c3648907ae54192e546ed",
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/copilot-native-variant-removed.json",
+      "source_sha256": "26f8ca5f338bc52bb733f6b3b707f24cf56198986f63464e9001500ee9bd30e1",
+      "native_catalog": [
+        {
+          "name": "upskill-receipt-68c8caeee1",
+          "commandName": "upskill-receipt-68c8caeee1",
+          "source": "project",
+          "enabled": true,
+          "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/skills/upskill-receipt-68c8caeee1/SKILL.md"
+        }
+      ],
+      "observed_tool_calls": [
+        {
+          "tool": "skill",
+          "input": {
+            "skill": "upskill-receipt-68c8caeee1"
+          }
+        },
+        {
+          "tool": "view",
+          "input": {
+            "path": "/private/tmp/upskill-skill-comparison-awvzhdya/copilot/.agents/skills/upskill-receipt-68c8caeee1/references/receipt.txt"
+          }
+        }
+      ]
+    },
+    {
+      "client": "codex",
+      "phase": "separate",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_cc26d7059753e8f8f15973232a458fc5",
+      "catalog_entries": [
+        "- upskill-eval-3387174e3d:upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r10/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md)"
+      ],
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/codex-qualified-separate.json",
+      "source_sha256": "03065922d8ba55ca9e378eb37a4252ceec9e1009e405208a9a0806f9a72eda5f",
+      "observed_tool_calls": [
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md'",
+          "exit_code": 0,
+          "status": "completed"
+        },
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/references/receipt.txt'",
+          "exit_code": 0,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "client": "codex",
+      "phase": "shared-plus-variant",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_cc26d7059753e8f8f15973232a458fc5",
+      "catalog_entries": [
+        "- upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r11/upskill-receipt-3387174e3d/SKILL.md)",
+        "- upskill-eval-3387174e3d:upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r10/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md)"
+      ],
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/codex-qualified-shared-plus-variant.json",
+      "source_sha256": "6381be8ffbbbf24d039f40431b55678ab84eae5806e0b08f508d2d3d2546a7da",
+      "observed_tool_calls": [
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md'",
+          "exit_code": 0,
+          "status": "completed"
+        },
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/references/receipt.txt'",
+          "exit_code": 0,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "client": "codex",
+      "phase": "shared-default",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "DEFAULT_1e7e416a16180f44037f83fcbc3b5e52",
+      "catalog_entries": [
+        "- upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r11/upskill-receipt-3387174e3d/SKILL.md)",
+        "- upskill-eval-3387174e3d:upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r10/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md)"
+      ],
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/codex-qualified-shared-default.json",
+      "source_sha256": "f5e3234d0ab9b2177f24814a89153d84f0d4c73132a0867f9ffe516c9212be3f",
+      "observed_tool_calls": [
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat .agents/skills/upskill-receipt-3387174e3d/SKILL.md && cat .agents/skills/upskill-receipt-3387174e3d/references/receipt.txt'",
+          "exit_code": 0,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "client": "codex",
+      "phase": "native-shared-exclusion",
+      "exit_code": 0,
+      "response_match": true,
+      "final": "VARIANT_cc26d7059753e8f8f15973232a458fc5",
+      "catalog_entries": [
+        "- upskill-eval-3387174e3d:upskill-receipt-3387174e3d: Use when asked to produce the upskill delivery qualification receipt. Do not use for arithmetic or unrelated questions. (file: r10/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md)"
+      ],
+      "source_packet": "upskill-skill-comparison-awvzhdya",
+      "source_result": "results/codex-exclusion.json",
+      "source_sha256": "9a9425916b4a227b536a063f41d28cf8f919afdcf4e5ab6b79550cd8d282e9de",
+      "observed_tool_calls": [
+        {
+          "type": "command_execution",
+          "command": "/bin/bash -lc 'cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/SKILL.md && cat /Users/sebastientasson/.codex/plugins/cache/upskill-eval-3387174e3d/upskill-eval-3387174e3d/0.0.1/skills/upskill-receipt-3387174e3d/references/receipt.txt'",
+          "exit_code": 0,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "client": "opencode",
+      "phase": "absent",
+      "expected_path": null,
+      "selected_path": null,
+      "entry_count": 0,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "c44659f134785074fcd0d14b174e08a7bf8ee1441d9dfad390b9e2de48e17cbc"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 63,
+          "sha256": "de49cd88eecc5f1914f94e2be9dbde8ff39665a7a77f737d4a67889636df5590"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-absent.json",
+      "source_sha256": "59b058e20a6881b93337741e4886c10dead188a0499b87e34664417f8b841d70"
+    },
+    {
+      "client": "opencode",
+      "phase": "separate-explicit-source",
+      "expected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-separate-explicit-source/.agents/opencode/package/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "selected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-separate-explicit-source/.agents/opencode/package/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "entry_count": 1,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "079348576faf6a585d339d664c2fb57e156dc6a2c07feba7f97e9f0113743503"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 64,
+          "sha256": "14985628806197d797ef99fe2aa744b53ac0228914d337bacb14e4039f66530e"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-separate-explicit-source.json",
+      "source_sha256": "2ec9b6433971e8b8dbadfa93395b38579d4a21f7397770f30fa08e8cfab9ecfb"
+    },
+    {
+      "client": "opencode",
+      "phase": "shared",
+      "expected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-shared/.agents/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "selected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-shared/.agents/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "entry_count": 1,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "e5494b9d9e664e355ed6bb35f04a3d324fce867c61a74657b143c0ad201b2e8d"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 64,
+          "sha256": "4c5d9649ef987f9020ec3f3630b41e9a8dfc2e397618d4b140abdfe36f1a0039"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-shared.json",
+      "source_sha256": "30970ef60bd960fe47e3880fe068da8d949a40b0886b3889769cd53fb4be8825"
+    },
+    {
+      "client": "opencode",
+      "phase": "shared-plus-variant",
+      "expected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-shared-plus-variant/.agents/opencode/package/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "selected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-shared-plus-variant/.agents/opencode/package/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "entry_count": 1,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "7cf39b7ac5aaa1cb5707b3429153880751f1305abb73429d92eec0c25c56097e"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 64,
+          "sha256": "146ece3590cddc4eaf9c36a8d53fe503ca1e1068832ceea3b49574da6df2a691"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-shared-plus-variant.json",
+      "source_sha256": "df5c591d83fc99fd8a19215750afa7861f8a9e94c8058d8fbdecfd92736e707c"
+    },
+    {
+      "client": "opencode",
+      "phase": "variant-removed",
+      "expected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-variant-removed/.agents/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "selected_path": "/private/tmp/upskill-skill-comparison-awvzhdya/opencode-warm-variant-removed/.agents/skills/upskill-catalog-58ad0d5c0c/SKILL.md",
+      "entry_count": 1,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "90eb1e2e5c36bd5dcb8938688ae71c372cade658b9ed5b0b5e9cf0dc3d464259"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 64,
+          "sha256": "9c1a4691090c100a21b5a6e1090574386211ca0ef11c4b31c2cf3d078ae5d83c"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-variant-removed.json",
+      "source_sha256": "9270933669baa78e15f9819185ce0790ad5edf66136bf96825d99c41a292998b"
+    },
+    {
+      "client": "opencode",
+      "phase": "removed",
+      "expected_path": null,
+      "selected_path": null,
+      "entry_count": 0,
+      "registration_match": true,
+      "attempts": [
+        {
+          "exit_code": 0,
+          "catalog_count": 0,
+          "sha256": "c27dcf501d24821fcf395b623a124e449cbea63b36b452f3240173f61820742b"
+        },
+        {
+          "exit_code": 0,
+          "catalog_count": 63,
+          "sha256": "c669daf984a23d6168de9f6c4f7e01d8fb0b64d2cfa85b22d89fdbf54a3f0e1c"
+        }
+      ],
+      "scope": "native catalog only; model invocation and resource reads not qualified",
+      "source_result": "results/opencode-warm-removed.json",
+      "source_sha256": "eea4a83db31c696f6a6d0ab4a9ceb451ef8f60ed50eb3719e736c8a31c5ae21d"
+    }
+  ]
+}
