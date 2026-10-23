@@ -100,10 +100,11 @@ adopted changes; the accepted direction above stands until each is approved.
 1. Default to one self-contained upskill-managed package per client for skills
    and subagents, with `.agents/skills` as an optional qualified profile rather
    than the first experiment. Reason: Claude direct `.agents/skills` discovery
-   failed on 2.1.303 while the package route passed on all four clients.
+   failed on 2.1.303, while the package route passed on Claude, Copilot and
+   Codex; OpenCode has catalog evidence only, with invocation blocked at 2.1.4.
 2. Include subagents in the MVP delivery scope. Reason: user direction on
-   2026-10-23; this record keeps "new owned-agent management is not added to M1"
-   until the roadmap is re-sequenced.
+   2026-10-23. Topic 0009's statement that new owned-agent management is not
+   added to M1 stands until the roadmap is re-sequenced.
 3. Deliver OpenCode skills as package directories registered as explicit skill
    sources, instead of the `.opencode/skills` native candidate.
 

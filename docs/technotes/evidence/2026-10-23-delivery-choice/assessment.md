@@ -82,7 +82,7 @@ successful independent Codex/OpenCode rules and resumed sessions on the pinned
 clients. Its provenance and limitations were read; its evidence manifest was not
 included in this four-packet hash verification and no fresh run is claimed.
 
-## Ownership foundation checked at the current main revision
+## Ownership foundation checked at base revision `eba3dae`
 
 At base `eba3dae8452cac855cd474f8876faed450b78655`, the focused test suites
 completed with 65 passes and no failures. [Check receipt](lifecycle-checks.json)

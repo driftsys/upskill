@@ -46,11 +46,11 @@ Divergences from AD-0040, Topic 0009 and the [roadmap](../../roadmap.md):
   `.agents/skills` with one self-contained Claude adapter as the first
   experiment; this proposal makes the self-contained package the default and
   `.agents/skills` an optional qualified profile, because Claude direct
-  `.agents/skills` discovery failed and the package route passed on all four
-  clients. AD-0040 only requires that delivery and discovery stay separate; it
-  does not select packages. The 2026-10-14 adapter roadmap's route mapping gives
-  skills native discovery ("N") on all four clients and leaves subagents
-  unsequenced; both change here.
+  `.agents/skills` discovery failed and the package route passed on Claude,
+  Copilot and Codex, with OpenCode catalog evidence only. AD-0040 only requires
+  that delivery and discovery stay separate; it does not select packages. The
+  2026-10-14 adapter roadmap's route mapping gives skills native discovery ("N")
+  on all four clients and leaves subagents unsequenced; both change here.
 
 ## Records superseded or amended if this proposal is adopted
 
