@@ -48,7 +48,7 @@ fn same_root(a: &InstallationRoot, b: &InstallationRoot) -> bool {
     a.scope == b.scope && a.path.as_os_str() == b.path.as_os_str()
 }
 
-fn validate_set(set: &DesiredInstallationSet) -> Result<Vec<OwnerConsumers>> {
+pub(crate) fn validate_set(set: &DesiredInstallationSet) -> Result<Vec<OwnerConsumers>> {
     let item = &set.installation;
     ensure!(
         item.owner.kind == ItemKind::Rule,
@@ -106,7 +106,7 @@ fn validate_set(set: &DesiredInstallationSet) -> Result<Vec<OwnerConsumers>> {
     Ok(rows)
 }
 
-fn authorize_reference(
+pub(crate) fn authorize_reference(
     prior: &CombinedState,
     selected: &SelectedNodes,
     edge: &Reference,

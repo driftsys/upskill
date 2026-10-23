@@ -1,0 +1,45 @@
+{
+  "observed_on": "2026-10-19",
+  "scope": "release metadata only; no installation or runtime qualification",
+  "releases": [
+    {
+      "assets": [
+        "codex-aarch64-apple-darwin.tar.gz",
+        "codex-x86_64-unknown-linux-musl.tar.gz"
+      ],
+      "isPrerelease": false,
+      "publishedAt": "2026-10-15T21:30:38Z",
+      "tagName": "rust-v0.163.0",
+      "url": "https://github.com/openai/codex/releases/tag/rust-v0.163.0",
+      "repo": "openai/codex"
+    },
+    {
+      "assets": [
+        "claude-darwin-arm64.tar.gz",
+        "claude-linux-x64.tar.gz"
+      ],
+      "isPrerelease": false,
+      "publishedAt": "2026-10-18T22:26:54Z",
+      "tagName": "v2.1.303",
+      "url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.303",
+      "repo": "anthropics/claude-code"
+    },
+    {
+      "assets": [
+        "copilot-darwin-arm64.tar.gz",
+        "copilot-linux-x64.tar.gz"
+      ],
+      "isPrerelease": false,
+      "publishedAt": "2026-10-14T19:52:33Z",
+      "tagName": "v1.0.98",
+      "url": "https://github.com/github/copilot-cli/releases/tag/v1.0.98",
+      "repo": "github/copilot-cli"
+    },
+    {
+      "client": "opencode",
+      "source": "https://opencode.ai/update/api/latest/cli/npm",
+      "status": "unresolved",
+      "error_type": "HTTPError"
+    }
+  ]
+}

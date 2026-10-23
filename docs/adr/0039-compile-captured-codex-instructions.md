@@ -1,5 +1,10 @@
 # AD-0039 — Compile captured Codex instructions with a separate reader report
 
+Production-route clarification (2026-10-19):
+[AD-0040](0040-separate-customization-delivery-from-discovery.md) limits this
+decision to the experimental library boundary. It does not approve managed
+`AGENTS.md` contributions as the production independent-rule architecture.
+
 ## Context
 
 Project `AGENTS.md` can expose one managed contribution to several client
@@ -68,8 +73,13 @@ Add/Update.
 Expose complete reports sorted by installation identity through the borrowed
 `SourcePrepared::instruction_readers()` slice, including exclusions. Reports do
 not enter persisted ownership, references or receipts. Historical and Remove
-callbacks expose no newly compiled reports. Keep retained source and actual Git
-revision checks immediately before application.
+callbacks expose no newly compiled reports. Blocked Add and Update outcomes
+retain successfully compiled reader reports in the structured
+[complete preflight report](../topics/0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting).
+Collect independently observable selected-set failures without inferring
+downstream failures for unresolved or uncompiled sources. A blocked request
+cannot invoke the prepared callback or apply a successful subset. Keep retained
+source and actual Git revision checks immediately before application.
 
 ## Consequences
 
@@ -81,7 +91,8 @@ access to a declared user root does not identify real native HOME/CODEX_HOME.
 
 Historical generation clients, default selection, CLI routing and schema-1
 persistence remain unchanged. Selected Codex rule source integration is
-library-only; all-kind lifecycle adapters, conflict aggregation, native
+library-only, including complete independently observable preflight reporting.
+All-kind lifecycle adapters, production activation, native
 user/IDE/Linux/OpenCode qualification and staging accounting remain later gates.
 See the
 [generation concern](../topics/0002-generation.md#captured-codex-instruction-boundary)

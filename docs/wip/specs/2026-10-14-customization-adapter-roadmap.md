@@ -1,8 +1,10 @@
 # Customization adapter model and delivery roadmap
 
 Date: **2026-10-14**. Status: **captured user direction and proposed delivery
-gates**. Code baseline: `00d4c2c` (rebased on main). This document specifies
-future work, not released functionality. Evidence is collected in the
+gates**, reconciled on 2026-10-19 by the
+[delivery contract](../../topics/0009-customization-delivery.md). Code baseline:
+`00d4c2c` (rebased on main). This document specifies future work, not released
+functionality. Evidence is collected in the
 [capability refresh](../../technotes/customization-adapter-evidence.md).
 
 The concise [product roadmap](../../roadmap.md) owns the release scope and
@@ -65,7 +67,7 @@ runtime validation. Packaging/update transport is independent of these labels.
 
 | Customization                           | Claude Code         | Copilot CLI         | Codex               | OpenCode v2      | Cursor, later               | Gemini CLI, later              |
 | --------------------------------------- | ------------------- | ------------------- | ------------------- | ---------------- | --------------------------- | ------------------------------ |
-| Rules, independent of team instructions | N                   | N                   | P?                  | P?               | N, including packaged rules | N, including extension context |
+| Rules, independent of team instructions | N                   | N                   | P, required         | P, required      | N, including packaged rules | N, including extension context |
 | Skills                                  | N                   | N                   | N                   | N                | N                           | N                              |
 | Subagents, unsequenced                  | N                   | N                   | N                   | N                | N                           | N, release verification needed |
 | MCP, following release                  | N config            | N config            | N config            | N config         | N config                    | N config                       |
@@ -74,11 +76,14 @@ runtime validation. Packaging/update transport is independent of these labels.
 | Plugin installation                     | N lifecycle         | N lifecycle         | N lifecycle         | N lifecycle      | N lifecycle                 | N extension lifecycle          |
 | Bundles                                 | U                   | U                   | U                   | U                | U                           | U                              |
 
-Codex/OpenCode plugin rule delivery is proposed because additive discovery of
+Codex/OpenCode plugin rule delivery is the required intended architecture; its
+exact installed lifecycle/API remains unqualified. Earlier additive discovery of
 independent rule files alongside existing team `AGENTS.md` was not established
-for these contracts. Do not claim either client lacks project instructions. The
-fallback when injection cannot meet the required semantics is an explicit
-unsupported/limited result, not silent rewriting of team guidance.
+for these contracts. Do not claim either client lacks project instructions. If
+injection cannot meet the required semantics, the affected route and broad
+activation remain blocked. Managed `AGENTS.md` contributions are experimental,
+not a production fallback. Every category in the table requires the canonical
+per-client reader/preservation/status matrix and CD acceptance controls.
 
 Native permissions remain authoritative for the relevant runtime. Later plugin
 checks may supplement them, but a prompt cannot implement sandbox enforcement.
@@ -94,8 +99,10 @@ packaging over four copies of update logic. The plugin source repository and
 exact package layout remain implementation choices; metapowers is the agreed
 marketplace destination.
 
-The first plugin feature is keeping the **upskill CLI and installed skills up to
-date**. Rules and other managed MVP content use the same ownership-aware update
+The release goal includes keeping the **upskill CLI and installed skills up to
+date**. Independent rule-delivery probes and corrected M1 activation precede
+owned-skill lifecycle, which precedes automatic maintenance implementation.
+Rules and other managed MVP content use the same ownership-aware update
 lifecycle where applicable. A plugin is a suitable maintenance entry point when
 its initialization/startup event can invoke the updater reliably. It is a
 trigger and adapter, not the owner of download, reconciliation or binary

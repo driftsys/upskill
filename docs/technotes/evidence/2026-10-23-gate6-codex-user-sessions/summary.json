@@ -1,0 +1,31 @@
+{
+  "issue": 377,
+  "qualified": false,
+  "model_response_turns": 5,
+  "matching_responses": 5,
+  "native_compactions": 1,
+  "failed_policy_resume_controls": 1,
+  "native_duplicate_body_controls_failed": 1,
+  "tool_calls": 0,
+  "source_plugins": [
+    "upskill-user-rule-a-eedbabd4",
+    "upskill-user-rule-b-e0cd6bf6"
+  ],
+  "source_rule_bodies": [
+    "For the plugin qualification question include exactly one occurrence of RULE_d2728c69d294cb289b5ad5a332ba5200 in the rules array. Preserve the team marker and other rules.\n",
+    "For the plugin qualification question include exactly one occurrence of RULE_893a00c8afdd9712e08a43df8c136513 in the rules array. Preserve the team marker and other rules.\n"
+  ],
+  "source_callback_guard_projects": [
+    "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+    "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b"
+  ],
+  "limits": [
+    "First failed-policy resume completed but child exit code was not captured before policy guard failed; no successful read-only claim for it",
+    "Explicit sandbox_mode read-only is required on each normal invocation in this experiment",
+    "Fresh/resume history has one then two bodies per rule; history is not provider effective context proof",
+    "Reopened UI resume then compact produced two bodies per rule in next turn despite one callback per rule per hook point",
+    "No provider effective input or encrypted compaction inspected; response uniqueness does not prove payload uniqueness",
+    "User registration callbacks intentionally guard two declared projects only; no arbitrary-workspace or project registration qualification",
+    "No shared-root/adapter adoption, integrated ownership/recovery, general hook permissions, four-client/scope/platform/IDE coexistence qualification or schema-2 activation"
+  ]
+}

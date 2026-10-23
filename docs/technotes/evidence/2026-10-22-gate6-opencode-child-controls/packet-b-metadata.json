@@ -1,0 +1,53 @@
+{
+  "qualified": false,
+  "private_packet_alias": "$PACKET_B",
+  "summary": {
+    "qualified": false,
+    "packet": "$PACKET_B",
+    "source_packet": "$PACKET_A",
+    "project": "$PROJECT_A",
+    "exit": 0,
+    "timeout": false,
+    "tools": [
+      {
+        "tool": "subagent",
+        "id": "call_zVleur7MSiS9kmLd5Es8wFp4",
+        "status": "completed",
+        "input": {
+          "agent": "upskill-file-b6aaa4fe",
+          "description": "Follow subagent system instruction",
+          "prompt": "Follow your system instruction."
+        },
+        "output": "<subagent sessionID=\"ses_e9b23ac3fffeJOwsruEHfnsUoh\" state=\"completed\">\nFILE_CHILD_89676e79f04f2d91d44a4009b7cf4051\n</subagent>"
+      }
+    ],
+    "final_text": "FILE_CHILD_89676e79f04f2d91d44a4009b7cf4051",
+    "matches": true,
+    "config_restored": true,
+    "team_preserved": true,
+    "stdout_sha256": "e2e0bf57ccf774a8125779f064a51ad6a261b8b5e76b329b93077ba36730ec19",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "remaining": "actual child export/completion and enforced restriction controls; no whole-profile or compatibility-agent qualification"
+  },
+  "declarations": {
+    "declared-control.json": {
+      "qualified": false,
+      "name": "upskill-file-b6aaa4fe",
+      "marker": "FILE_CHILD_89676e79f04f2d91d44a4009b7cf4051",
+      "agent_content": "---\ndescription: Disposable file-backed native subagent control\nmode: subagent\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n---\nReturn exactly FILE_CHILD_89676e79f04f2d91d44a4009b7cf4051 and nothing else. Do not use tools.\n",
+      "agent_mode": 416,
+      "config_before": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"upskill-native-d3317eae\": {\n      \"description\": \"Disposable explicitly requested delegation calibration\",\n      \"mode\": \"subagent\",\n      \"system\": \"Return exactly CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68 and nothing else. Do not use tools.\",\n      \"permissions\": [\n        {\n          \"action\": \"*\",\n          \"resource\": \"*\",\n          \"effect\": \"deny\"\n        }\n      ]\n    },\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-native-d3317eae\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n",
+      "config_during": "{\n  \"plugins\": [],\n  \"permissions\": [\n    {\n      \"action\": \"*\",\n      \"resource\": \"*\",\n      \"effect\": \"deny\"\n    }\n  ],\n  \"agents\": {\n    \"upskill-native-d3317eae\": {\n      \"description\": \"Disposable explicitly requested delegation calibration\",\n      \"mode\": \"subagent\",\n      \"system\": \"Return exactly CHILD_b63d9314cf2c8d0f60ddc857ac0cbd68 and nothing else. Do not use tools.\",\n      \"permissions\": [\n        {\n          \"action\": \"*\",\n          \"resource\": \"*\",\n          \"effect\": \"deny\"\n        }\n      ]\n    },\n    \"build\": {\n      \"permissions\": [\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-native-d3317eae\",\n          \"effect\": \"allow\"\n        },\n        {\n          \"action\": \"subagent\",\n          \"resource\": \"upskill-file-b6aaa4fe\",\n          \"effect\": \"allow\"\n        }\n      ]\n    }\n  }\n}\n",
+      "command": [
+        "$OPENCODE_BINARY",
+        "run",
+        "--standalone",
+        "--format",
+        "json",
+        "--model",
+        "github-copilot/gpt-6.1-sol",
+        "Delegate exactly once to the subagent named upskill-file-b6aaa4fe. Ask it to follow its system instruction, then return only its exact response. Use no other tools. Do not infer its response without invoking it."
+      ]
+    }
+  }
+}

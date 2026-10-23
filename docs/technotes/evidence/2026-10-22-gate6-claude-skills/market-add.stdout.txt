@@ -1,0 +1,1 @@
+{"command":"marketplace-add","outcome":"ok","marketplace":"upskill-g6-market-126b0ff4","message":"Successfully added marketplace: upskill-g6-market-126b0ff4 (declared in project settings)"}

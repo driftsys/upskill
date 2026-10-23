@@ -1,0 +1,25 @@
+{
+  "source_files": [
+    {
+      "path": "/private/tmp/upskill-gate6-compaction-20261020/codex-owned-session.raw.jsonl",
+      "sha256": "21955b607935aea6ad8b1a7539ecd7ae768d0cd77bcdf879dfefa1a9699aa3eb"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-compaction-20261020/codex-compact.json",
+      "sha256": "08f52f3f1e89317eaced9d437c437dd65fcfadc0cd517f33d2944904af73d3d0"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/fixture.json",
+      "sha256": "4dd38c2cc755416692318a2b8182d1ea54372ac4531220ce461194ee71f23c93"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/activation.jsonl",
+      "sha256": "4d3bcdb06afc1e1e7ccaa8635f83ed954a8c6eed5c3fbc62e17fb2a86746ceb9"
+    }
+  ],
+  "retention_helper": {
+    "path": "/private/tmp/upskill-retain-codex-compaction.py",
+    "sha256": "629de22a0d0125560127bb7527dc246eacf3342a9a61f9b24f746ce1ffe2fcc3"
+  },
+  "limitation": "Hashes bind original bytes, not their completeness or independent native qualification. The full activation trace includes other sessions and is retained privately; only the selected session callbacks are published."
+}

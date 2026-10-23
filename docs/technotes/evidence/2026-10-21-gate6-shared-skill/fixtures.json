@@ -1,0 +1,44 @@
+{
+  "$PROJECT_A/.agents/skills/upskill-g6-shared-02b03563/SKILL.md": {
+    "content": "---\nname: upskill-g6-shared-02b03563\ndescription: Native shared-skill qualification control. Invoke only when explicitly requested by name.\n---\nWhen invoked, return exactly SHARED_9d6a681b58129c9fe16c2332dc8cb118 and nothing else. Do not invoke other skills or tools.\n",
+    "sha256": "951c1b88af6ff32952fa0eb0a9c1f4a2ed5091df58e4be9ce9c32b9534345d4c",
+    "mode": "0o644",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_A/AGENTS.md": {
+    "content": "Manual fixture guidance: perform only the requested native qualification control.\n",
+    "sha256": "ea359f73598695b5637134f22eaabb0a20f51700bbc0ae0ed2d5610d9edc9a37",
+    "mode": "0o640",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_B/AGENTS.md": {
+    "content": "Manual fixture guidance: carry out only the requested qualification control.\n",
+    "sha256": "433653d100a9690618cfc1c8a9232076e81bed4e7f415e7293390ed7ec8d9bf3",
+    "mode": "0o640",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_B/.agents/skills/upskill-g6-resource-bf22cca4/references/marker.txt": {
+    "content": "RESOURCE_89b9bc047f1fbda0fa5c771a855aa34b\n",
+    "sha256": "e312dd9ba66c47a53ccda54ca8fb9c3af7db342dff8e4976e2e2ca5dadce3336",
+    "mode": "0o644",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_B/.agents/skills/upskill-g6-resource-bf22cca4/SKILL.md": {
+    "content": "---\nname: upskill-g6-resource-bf22cca4\ndescription: Isolated native qualification skill; use only on an explicit request by name.\n---\nRead the adjacent references/marker.txt using the view tool, relative to this skill directory. Return exactly its trimmed contents. Use no other tools or skills.\n",
+    "sha256": "0a182fa472ddbf718dc9810e018e4261c201f67a6859032a517140ae9b9124b3",
+    "mode": "0o644",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_B/.claude/skills/upskill-g6-manual-bf22cca4/SKILL.md": {
+    "content": "---\nname: upskill-g6-manual-bf22cca4\ndescription: Isolated native qualification skill; use only on an explicit request by name.\n---\nReturn exactly MANUAL_a8570c2673b1eec5045fa336b7936e43 and nothing else. Use no other tools or skills.\n",
+    "sha256": "fddb6deb5f27f0b4b6562b93201106d5ff5a700fdcd8e82729e92941f46bb80e",
+    "mode": "0o644",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  },
+  "$PROJECT_B/.claude/skills/upskill-g6-claude-bf22cca4/SKILL.md": {
+    "content": "---\nname: upskill-g6-claude-bf22cca4\ndescription: Isolated native qualification skill; use only on an explicit request by name.\n---\nReturn exactly CLAUDE_4134831c4d9724fdfe647178f8e12bb0 and nothing else. Use no other tools or skills.\n",
+    "sha256": "7ff81c57d69466ec2b2fd5c30e3b5679f38ead42b34064124e6445c89a13b97e",
+    "mode": "0o644",
+    "snapshot": "after controls; capture helpers separately reported before/after equality"
+  }
+}

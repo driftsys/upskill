@@ -1,0 +1,110 @@
+{
+  "kind": "installation-only",
+  "qualified": false,
+  "receipts": [
+    {
+      "state": "success",
+      "exit_code": 0,
+      "diagnostic_category": null,
+      "command": [
+        "codex",
+        "--version"
+      ],
+      "receipt": "codex-interface-0.txt",
+      "raw_sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e",
+      "sanitized_sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e"
+    },
+    {
+      "state": "success",
+      "exit_code": 0,
+      "diagnostic_category": null,
+      "command": [
+        "codex",
+        "plugin",
+        "marketplace",
+        "add",
+        "$FIXTURE/marketplace",
+        "--json"
+      ],
+      "receipt": "codex-interface-1.txt",
+      "raw_sha256": "26fa48faa098fd22d11db3fa2ab7b1203511be2d9d2e2cb5be68a383efba169d",
+      "sanitized_sha256": "4128bf4b42c42e088c918038026d442f0b89be8a42206377c4be3155584a72e4"
+    },
+    {
+      "state": "success",
+      "exit_code": 0,
+      "diagnostic_category": null,
+      "command": [
+        "codex",
+        "plugin",
+        "add",
+        "upskill-probe-a@upskill-qualification",
+        "--json"
+      ],
+      "receipt": "codex-interface-2.txt",
+      "raw_sha256": "3f131f1e59b8b62ded568333bcd78c92d9037a24db9eaff785f222a7f712ef01",
+      "sanitized_sha256": "866c672894d42bfea96abab9332c361608aba77e656c17a2c0102e2a5958215f"
+    },
+    {
+      "state": "success",
+      "exit_code": 0,
+      "diagnostic_category": null,
+      "command": [
+        "codex",
+        "plugin",
+        "add",
+        "upskill-probe-b@upskill-qualification",
+        "--json"
+      ],
+      "receipt": "codex-interface-3.txt",
+      "raw_sha256": "ee7fc39d99903738a4f309bd59c1217d3cd0578c9d97b5f402e33a1beae3d5bd",
+      "sanitized_sha256": "6b89d3bcc45dd30f29a7eb228d7bceed7aa9fc691577deb5f4425f6f2a8a26b2"
+    },
+    {
+      "state": "success",
+      "exit_code": 0,
+      "diagnostic_category": null,
+      "command": [
+        "codex",
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "receipt": "codex-interface-4.txt",
+      "raw_sha256": "4d07b663035b3318e1d77e1b9b85cba4671438819b5d0fd78c54bf9d752ad419",
+      "sanitized_sha256": "a8073f7b5293aceb7aeb06c41859f25ccd5c7acc54a7301bab4bff40ae05182d"
+    }
+  ],
+  "team_after": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "client": "codex",
+  "version": "0.163.0",
+  "scope": "project",
+  "evidence_class": "native installation observation only",
+  "team_before": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "native_controls": "not-run: isolated root logged out; ordinary hook trust not provisioned",
+  "authentication_status": {
+    "state": "authentication_failure",
+    "sha256": "a06d5ca8261150a5175e866fc3dc401070fb4ea30e849a1b9394b7e252fa1677",
+    "exit_code": 1,
+    "diagnostic_category": "authentication_failure",
+    "command": [
+      "codex",
+      "login",
+      "status"
+    ],
+    "fixture": "$FIXTURE/project",
+    "classification": "authentication prerequisite only; no model controls run",
+    "receipt": "codex-authentication-status.txt",
+    "sanitized_sha256": "a06d5ca8261150a5175e866fc3dc401070fb4ea30e849a1b9394b7e252fa1677"
+  },
+  "working_directory_scope": "project fixture",
+  "registration_scope": "fixture user CODEX_HOME configuration and cache",
+  "authority_limit": "Does not qualify project-only native registration or authorize production project commands to write user state."
+}

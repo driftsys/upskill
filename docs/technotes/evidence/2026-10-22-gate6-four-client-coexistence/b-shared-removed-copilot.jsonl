@@ -1,0 +1,5 @@
+{"type": "assistant.message", "data": {"content": "", "model": "claude-sonnet-5.5", "providerId": "copilot", "turnId": "0"}}
+{"type": "tool.execution_start", "data": {"toolCallId": "toolu_01MvGnhkMxAsHbm4ZEaxsS86", "toolName": "skill", "arguments": {"skill": "upskill-common-2d34fa49"}}}
+{"type": "tool.execution_complete", "data": {"toolCallId": "toolu_01MvGnhkMxAsHbm4ZEaxsS86", "success": false, "result": {"native_error_result_omitted": true, "native_result_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"}, "fixture_observation": {"found": "false"}}}
+{"type": "assistant.message", "data": {"content": "ABSENT_d86891a2563f421d9baa52886b2f2db4", "model": "claude-sonnet-5.5", "providerId": "copilot", "turnId": "1"}}
+{"type": "result", "sessionId": "9884d5a2-c13b-49a3-99f6-f9d4d756108b", "exitCode": 0}

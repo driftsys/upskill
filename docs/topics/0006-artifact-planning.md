@@ -1,5 +1,14 @@
 # Artifact planning
 
+Architecture reconciliation (2026-10-19): the
+[delivery, discovery and activation contract](0009-customization-delivery.md)
+controls intended production routes and reader intent. Existing Codex
+`AGENTS.md` contribution APIs described here are experimental library
+boundaries, not production independent-rule delivery. Independent Codex/OpenCode
+rules require qualified plugins alongside unchanged team guidance. Reusable
+ownership, preflight and recovery mechanisms do not select a runtime delivery
+route.
+
 This concern owns the requirements and implemented architecture below. Moving
 these records does not change their implementation or approval status.
 Library-only capabilities remain separate from production CLI activation; each
@@ -691,6 +700,8 @@ is implemented;
 [qualified file execution and recovery](0008-execution-and-recovery.md#architecture-qualified-file-execution)
 consume selected modes as an opt-in library capability. Production lifecycle
 activation and native qualification remain pending. The API may return the first
-contextual conflict; complete diagnostic aggregation remains an activation gate.
-No production CLI selector, native support, schema-2 persistence or installation
-effects are activated. M1-A2, M1-A3 and M1 remain incomplete.
+contextual conflict. The opt-in source/session layer provides
+[complete safely observable selected-set reporting](0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting)
+without changing this pure API's first-error behavior. No production CLI
+selector, native support, schema-2 persistence or installation effects are
+activated. M1-A2, M1-A3 and M1 remain incomplete.

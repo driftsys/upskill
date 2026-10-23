@@ -1,0 +1,5 @@
+{
+  "marketplaceName": "upskill-qualification",
+  "installedRoot": "$FIXTURE/marketplace",
+  "alreadyAdded": false
+}

@@ -1,0 +1,25 @@
+{
+  "qualified": false,
+  "scope": "PR 341 pass-1 fixes; offline mechanics only",
+  "tests": 21,
+  "mutations": 18,
+  "mode_red": {
+    "receipt": "review-mode-red.log.gz",
+    "raw_sha256": "01fc7166dc7e6f8ac5a4a9e8539e501778e2d462d8dc31b10e98d40bb0234059",
+    "retained_sha256": "e277e769e6d4f73bf4c0d6ab49667d7912b9b1e90440c5d8e33f88e403c6b743"
+  },
+  "changes": [
+    "Snapshot retains all POSIX permission bits using stat.S_IMODE; actual sticky-bit drift rejected on either paired observation",
+    "Exact Codex SessionStart response envelope asserted",
+    "Both clients package identities, SDK/client pins, entrypoints, registration paths and configurations asserted"
+  ],
+  "minor_deferred": "#342 fresh independent marker regression; #340 SDK callback execution regression",
+  "full_verify": {
+    "command": "RUSTC_WRAPPER= CARGO_TARGET_DIR=$CARGO_TARGET_DIR just verify",
+    "exit_code": 0,
+    "python_tests": 40,
+    "receipt": "review-verify.log.gz",
+    "raw_sha256": "e1545f748495b09202ce2f4882a7fb28aa870f4d40532f8e4129a8c6ef6ebacd",
+    "retained_sha256": "e76e9251e3b9aa8a361773e91662fea7c8ba2f731edc1db75b47acda0a525201"
+  }
+}

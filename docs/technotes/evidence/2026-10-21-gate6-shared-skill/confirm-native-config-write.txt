@@ -1,0 +1,1 @@
+Added "$PROJECT_B/.claude/skills/upskill-g6-claude-bf22cca4" to ignoredSkillsLocations in settings.json.

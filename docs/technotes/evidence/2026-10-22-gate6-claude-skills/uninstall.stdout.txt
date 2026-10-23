@@ -1,0 +1,1 @@
+✔ Successfully uninstalled plugin: upskill-g6-shared-126b0ff4 (scope: project)

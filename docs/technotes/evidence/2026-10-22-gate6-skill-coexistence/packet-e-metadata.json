@@ -1,0 +1,200 @@
+{
+  "private_packet": "$PACKET_E",
+  "before": {
+    "$PROJECT_E/AGENTS.md": {
+      "sha256": "433653d100a9690618cfc1c8a9232076e81bed4e7f415e7293390ed7ec8d9bf3",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the requested qualification control.\n"
+    },
+    "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411/SKILL.md": {
+      "sha256": "d36b6913754d580ac20f75e9411a9bef0c6d2c652877aeac8e040a970eb017b3",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-shared-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly SHARED_8cdbe9d7a997395a1719d0205acfefa3 and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411/SKILL.md": {
+      "sha256": "d7d194ee0a5172699ee500ffc30484eb656d35c3346f537ee0f755297cacaa07",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-manual-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly MANUAL_91abdb3bc296a979c3dec52ee66c440e and nothing else. Use no other tools or skills.\n"
+    },
+    "$COPILOT_PROFILE/home/.copilot/settings.json": {
+      "absent": true
+    }
+  },
+  "after": {
+    "$PROJECT_E/AGENTS.md": {
+      "sha256": "433653d100a9690618cfc1c8a9232076e81bed4e7f415e7293390ed7ec8d9bf3",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the requested qualification control.\n"
+    },
+    "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411/SKILL.md": {
+      "sha256": "d36b6913754d580ac20f75e9411a9bef0c6d2c652877aeac8e040a970eb017b3",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-shared-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly SHARED_8cdbe9d7a997395a1719d0205acfefa3 and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411/SKILL.md": {
+      "sha256": "d7d194ee0a5172699ee500ffc30484eb656d35c3346f537ee0f755297cacaa07",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-manual-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly MANUAL_91abdb3bc296a979c3dec52ee66c440e and nothing else. Use no other tools or skills.\n"
+    },
+    "$COPILOT_PROFILE/home/.copilot/settings.json": {
+      "absent": true
+    }
+  },
+  "temporary_snapshots": {
+    "same-name-duplicate": {
+      "sha256": "d36b6913754d580ac20f75e9411a9bef0c6d2c652877aeac8e040a970eb017b3",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-shared-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly SHARED_8cdbe9d7a997395a1719d0205acfefa3 and nothing else. Use no other tools or skills.\n"
+    },
+    "alias": {
+      "sha256": "0c1464a44f37b56031ad47092fd8cba547142c7faa83f0c426b485fecc608fef",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-alias-9faba411\ndescription: Disposable explicit qualification control.\n---\nReturn exactly SHARED_8cdbe9d7a997395a1719d0205acfefa3 and nothing else. Use no other tools or skills.\n"
+    }
+  },
+  "catalogs": [
+    {
+      "label": "baseline",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "skill",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "fixture_entries": [
+        {
+          "name": "upskill-g6-shared-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-manual-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411",
+          "enabled": true
+        }
+      ],
+      "logical_exposure_count": 1,
+      "stdout_sha256": "f4acdd1fc83cea8d3493f1da18911ea393c080d2df52a92c5ce5ecd11259fa95",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "same-name-duplicate",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "skill",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "fixture_entries": [
+        {
+          "name": "upskill-g6-shared-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-manual-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411",
+          "enabled": true
+        }
+      ],
+      "logical_exposure_count": 1,
+      "stdout_sha256": "f4acdd1fc83cea8d3493f1da18911ea393c080d2df52a92c5ce5ecd11259fa95",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "alias",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "skill",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "fixture_entries": [
+        {
+          "name": "upskill-g6-shared-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-alias-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.claude/skills/upskill-g6-alias-9faba411",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-manual-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411",
+          "enabled": true
+        }
+      ],
+      "logical_exposure_count": 2,
+      "stdout_sha256": "3464377ad4e9b713abd6bfb9028efa3311349d2de442f249b1403ed59d303799",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "restored",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "skill",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "fixture_entries": [
+        {
+          "name": "upskill-g6-shared-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.agents/skills/upskill-g6-shared-9faba411",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-manual-9faba411",
+          "description": "Disposable explicit qualification control.",
+          "source": "project",
+          "path": "$PROJECT_E/.claude/skills/upskill-g6-manual-9faba411",
+          "enabled": true
+        }
+      ],
+      "logical_exposure_count": 1,
+      "stdout_sha256": "f4acdd1fc83cea8d3493f1da18911ea393c080d2df52a92c5ce5ecd11259fa95",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "native_steps": [],
+  "declared_controls": {
+    "qualified": false,
+    "lineage": "shared, duplicate and alias are one logical fixture item; manual skill is unrelated",
+    "controls": [
+      "baseline catalog and shared positive",
+      "byte-identical compatibility duplicate catalog",
+      "explicit alias of same logical item catalog and native invocation",
+      "original shared and unrelated manual invocation with alias present",
+      "remove only owned alias, restored catalog/shared positive and alias absent negative"
+    ],
+    "expected_catalogs": {
+      "baseline": 1,
+      "same-name-duplicate": 2,
+      "alias": 2,
+      "restored": 1
+    },
+    "remaining": "automatic selection, plugins, other clients/scopes/platforms, integrated ownership/recovery"
+  },
+  "raw_receipt_manifest_sha256": "939f17e2ca97117ed32e4b1240ebfc89e042090b3050543c8c60c2345f47ccac"
+}

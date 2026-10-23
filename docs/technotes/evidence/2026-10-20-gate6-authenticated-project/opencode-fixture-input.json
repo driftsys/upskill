@@ -1,0 +1,35 @@
+{
+  "client": "opencode",
+  "version": "2.0.32",
+  "scope": "project",
+  "team_marker": "TEAM_8d7ccf5e65182313b7d6b3bee5f5ae8e",
+  "rule_markers": [
+    "RULE_ae0c745525e3f27768c457426ac31128",
+    "RULE_f71518e0fa2c5ae8c95a2575cb34d363"
+  ],
+  "team_before": {
+    "sha256": "ebd15a66a0493df93e04f0e735cb9c1d2fdbf46436ba6a0d519466dd4c74dfc6",
+    "mode": 416
+  },
+  "qualified": false,
+  "packages": [
+    {
+      "rule": "a",
+      "files": {
+        "fixture.json": "52bf13401b6e245b67f95ac43d7bca1948c0a4dced422ffb3fae40097a415492",
+        "rule.txt": "7493107053856bfca0d4a4b8af4f2582b09017578489d48246dee0ccbf0104ca",
+        "package.json": "a2ba7440507c1562f06572c9c61690721f699dfe4c69971e85a80d2dce95c0d6",
+        "index.ts": "7877658017da59679aeda3dd61114348f9e28e840291a2439f12ba5e4b1e4f97"
+      }
+    },
+    {
+      "rule": "b",
+      "files": {
+        "fixture.json": "64381cb8f71a0ec54c8171d3b82c5a0e9dfd36f0361fa268de2045024ceac0af",
+        "rule.txt": "6a372079ea5b7fe290d76bff91a4330cb877b0b76650411351a1c6c446e84885",
+        "package.json": "91fbe0af8a5cfec84376a084e7004389d885f8eabac3c9053d49d17503ebde33",
+        "index.ts": "7877658017da59679aeda3dd61114348f9e28e840291a2439f12ba5e4b1e4f97"
+      }
+    }
+  ]
+}

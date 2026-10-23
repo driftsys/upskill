@@ -1,0 +1,8 @@
+{
+  "pluginId": "upskill-probe-a@upskill-qualification",
+  "name": "upskill-probe-a",
+  "marketplaceName": "upskill-qualification",
+  "version": "0.0.0",
+  "installedPath": "$FIXTURE/home/.codex/plugins/cache/upskill-qualification/upskill-probe-a/0.0.0",
+  "authPolicy": "ON_INSTALL"
+}

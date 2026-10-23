@@ -1,0 +1,94 @@
+{
+  "qualified": false,
+  "records": [
+    {
+      "qualified": false,
+      "source_packet": "$PACKET_D",
+      "label": "allow",
+      "child_session": "ses_e9b1eb740ffeQC4WdD0ZyxqToE",
+      "child_agent": "upskill-edit-9a1b8fab",
+      "parent_session": "ses_e9b1ec5a4ffeT8v6vRxR6ElmAU",
+      "native_tool_id": "call_wJbUF01gBDkhacclQPDxXQkY",
+      "native_tool": "patch",
+      "native_status": "completed",
+      "native_error": null,
+      "declared_patch_headers": [
+        "$PROJECT_D/sentinel.txt"
+      ],
+      "native_patch_sha256": "aa4e715831988c1fdf8ab3aa23ae13b6b97f78fc50c54a06718f2408eababee5",
+      "command": [
+        "$OPENCODE_BINARY",
+        "session",
+        "export",
+        "ses_e9b1eb740ffeQC4WdD0ZyxqToE",
+        "--standalone"
+      ],
+      "full_export_sha256": "398567d2f9ab51a26fb5181109591e5d8347033677c11eb9ac20732a3230551e",
+      "full_export_retained": false,
+      "owned_fixture_resources": [
+        "$PROJECT_D/sentinel.txt"
+      ]
+    },
+    {
+      "qualified": false,
+      "source_packet": "$PACKET_E",
+      "label": "allowed-path",
+      "child_session": "ses_e9b1bed90ffeWLHhn4R0d7L8tg",
+      "child_agent": "upskill-edit-eec04b1a",
+      "parent_session": "ses_e9b1bf804ffeQu4irIByp9wDtv",
+      "native_tool_id": "call_D99LkPAotivCt3GASuPEub1h",
+      "native_tool": "patch",
+      "native_status": "completed",
+      "native_error": null,
+      "declared_patch_headers": [
+        "sentinel.txt"
+      ],
+      "native_patch_sha256": "632096c7f35e573fdb77f3369e7d94352881d010071b575486ce39b2b28de0bf",
+      "command": [
+        "$OPENCODE_BINARY",
+        "session",
+        "export",
+        "ses_e9b1bed90ffeWLHhn4R0d7L8tg",
+        "--standalone"
+      ],
+      "full_export_sha256": "72dda161ddc36e7c5a5bbb02448313e9c5d3d676e52b87ec0b16c66cbf7f97f5",
+      "full_export_retained": false,
+      "owned_fixture_resources": [
+        "$PROJECT_E/sentinel.txt"
+      ]
+    },
+    {
+      "qualified": false,
+      "source_packet": "$PACKET_E",
+      "label": "denied-path",
+      "child_session": "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+      "child_agent": "upskill-edit-eec04b1a",
+      "parent_session": "ses_e9b1bc6b8ffeYk3ZqxAUzoVRrD",
+      "native_tool_id": "call_OfXhyrNEvqKVMJaoa5LgItVC",
+      "native_tool": "patch",
+      "native_status": "error",
+      "native_error": {
+        "type": "permission.rejected",
+        "message": "Permission denied: edit"
+      },
+      "declared_patch_headers": [
+        "other.txt"
+      ],
+      "native_patch_sha256": "efbf1f480ef686739ec27a5b230ea5929a5275d764d9f5d14d5ad39bc3669fab",
+      "command": [
+        "$OPENCODE_BINARY",
+        "session",
+        "export",
+        "ses_e9b1bb85effeonvc8muF1VPQ4Z",
+        "--standalone"
+      ],
+      "full_export_sha256": "b8de6d0b0162f244caabcb2c762d45009df421703c8bdaa148626cb59caf86db",
+      "full_export_retained": false,
+      "owned_fixture_resources": [
+        "$PROJECT_E/other.txt"
+      ]
+    }
+  ],
+  "selection": "Only own fixture patch header/resource identities retained from native exports in memory; full exports and provider/authentication state not retained",
+  "limits": "Earlier positive uses narrow sentinel permission; path experiment positive has broader edit glob as separately audited. No same-policy pair or whole-profile claim."
+}

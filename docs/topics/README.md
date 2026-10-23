@@ -14,6 +14,7 @@ decision rationale and their independent identifiers.
 - [Artifact planning](0006-artifact-planning.md)
 - [Filesystem access](0007-filesystem-access.md)
 - [Execution and recovery](0008-execution-and-recovery.md)
+- [Customization delivery, discovery and activation](0009-customization-delivery.md)
 
 The [tool specification](../specification/specification.md) owns CLI contracts.
 The [technical notes](../technotes/README.md) own research and validation

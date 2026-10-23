@@ -13,6 +13,9 @@ snapshot; a stable name does not imply that external research remains current.
   ownership checks; supports a proposal without claiming production
   qualification.
 
+- [Shared customization roots and client adapters](shared-content-root-evaluation.md):
+  alternative catalogs, compatibility exclusions and adoption controls.
+
 - [Customization adapter capability refresh](customization-adapter-evidence.md):
   source-pinned client mapping and packaging evidence.
 - [Updater plugin startup probes](updater-plugin-probes.md): partial
@@ -38,6 +41,50 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## State and lifecycle validation
 
+- [Gate 6 Codex user rule session lifecycle observations](gate6-codex-user-session-controls.md):
+  explicit resume policy, native compaction and failed duplicate-delivery
+  control.
+
+- [Gate 6 OpenCode user-configuration rule observations](gate6-opencode-user-rule-controls.md):
+  local global configuration, paired removals and manual-settings preservation.
+
+- [Gate 6 Codex user-registration rule observations](gate6-codex-user-rule-controls.md):
+  ordinary hook trust, two-project native controls and selected preservation.
+
+- [Gate 6 four-client skill coexistence observations](gate6-four-client-skill-coexistence.md):
+  shared and installed-plugin resource routes, paired removals and frozen failed
+  calibration controls.
+
+- [Gate 6 Codex shared skills and runtime resources](gate6-codex-shared-resources.md):
+  native skill expansion, relative reads, relocation and strict-output failures.
+
+- [Gate 6 Codex project compaction observations](gate6-codex-compaction.md):
+  retained native compaction, next-turn rule messages and preservation limits.
+
+- [Gate 6 OpenCode shared skills and runtime resources](gate6-opencode-shared-resources.md):
+  native relative-resource reads, missing-file controls and shared-route limits.
+
+- [Gate 6 OpenCode policy-parity observations](gate6-opencode-policy-parity.md):
+  child execution and path permission controls with unchanged declarations.
+
+- [Gate 6 OpenCode child controls](gate6-opencode-child-controls.md): actual
+  child execution, permission observations and calibration limits.
+
+- [Gate 6 skill coexistence and duplicate observations](gate6-skill-coexistence-controls.md):
+  bounded Claude/Copilot controls, failed expectations and helper preservation
+  limits.
+
+- [Gate 6 Claude skill-route observations](gate6-claude-skill-controls.md):
+  bounded native, development and installed-plugin controls with configuration
+  residue.
+
+- [Gate 6 shared-skill and exclusion observations](gate6-shared-skill-controls.md):
+  bounded Copilot invocation/resource controls and failed explicit isolation.
+
+- [Gate 6 pinned profiles and reader inventory](gate6-plugin-profile-inventory.md)
+
+- [Customization architecture reconciliation](customization-architecture-reconciliation.md)
+
 - [Gate 6 native instruction discovery qualification](m1-gate6-native-qualification.md)
 
 - [Gate 5 captured rule desired-set validation](m1-gate5-desired-validation.md)
@@ -61,3 +108,9 @@ are not proof of production activation or complete lifecycle qualification. Keep
 schema bytes, licenses and provenance manifests together. Preserve captured
 evidence and its hashes; update research explicitly when upstream contracts
 change. Technical notes and evidence assets are outside the published book.
+
+- [Gate 6 independent plugin fixture preparation](gate6-plugin-rule-probes.md) —
+  Offline controls, bounded native installation observations and activation
+  blockers.
+- [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
+  — Bounded native controls; no profile qualification.

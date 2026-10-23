@@ -1,0 +1,9 @@
+{
+  "denied-child.json": "b20328f5744456d9306f51987396d0a5202097e7e81b44ea55fa832d0e6c68ab",
+  "summary.json": "4143198d48eaf0eb629bb5c14176b287ccfc1aca247efce78a0962a9831a7f66",
+  "allowed-parent.jsonl": "7dee915b8f43297366200038ef063af05853c6696587fe735907a9a728c48711",
+  "allowed-child.json": "330bbe7202ab2e65aa3b0e26240bca8a27911de3d6e6b39ddfd8c2521d012431",
+  "denied-parent.jsonl": "1bc81a5381d664b3e5f6055117b0dae7e8676272df32978b40fbb4a50e6f39cf",
+  "private-source-index.json": "851bd7cbcbda82321ca6fdb676aa59dc8f1c8e8ad86c5dd1971f6dd6dce976ba",
+  "fixture-and-assessment.json": "9d97ae853c5dc4c7ced38d89db8fa756ca1fff277a6cdca41c5a82a44dd4385f"
+}

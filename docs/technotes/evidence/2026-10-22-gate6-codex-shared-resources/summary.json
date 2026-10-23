@@ -1,0 +1,219 @@
+{
+  "issue": 369,
+  "qualified": false,
+  "sessions": [
+    {
+      "label": "shared-positive",
+      "session": "01a16572-9b10-7ca1-83e6-ffbf83817573",
+      "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "--no-daemon",
+        "exec",
+        "--json",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-m",
+        "gpt-6.1-sol",
+        "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+      ],
+      "exit_code": 0,
+      "completed_turns": 1,
+      "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+      "captured_agent_message_sequence": [
+        "I\u2019m using the upskill-resource-7c17ce0c skill for the resource probe.",
+        "RESOURCE_c348764eed699af2704c57ec4201d966"
+      ],
+      "original_whole_message_sequence_exact": false,
+      "native_final_phase_exact": true,
+      "fixture_metadata_entries": 1,
+      "native_loaded_skill_paths": [
+        "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md"
+      ],
+      "resource_commands": 1,
+      "resource_command_exit_codes": [
+        0
+      ],
+      "selected_cli_sha256": "94ced7731e02eb51075b07639bf43a970c77f4c0dd3623b41471137dbc8bf857",
+      "qualified": false
+    },
+    {
+      "label": "missing-resource",
+      "session": "01a16572-c020-7772-8ae8-6b65d87eff10",
+      "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "--no-daemon",
+        "exec",
+        "--json",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-m",
+        "gpt-6.1-sol",
+        "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+      ],
+      "exit_code": 0,
+      "completed_turns": 1,
+      "expected": "MISSING_d52664b063d18438",
+      "captured_agent_message_sequence": [
+        "MISSING_d52664b063d18438"
+      ],
+      "original_whole_message_sequence_exact": true,
+      "native_final_phase_exact": true,
+      "fixture_metadata_entries": 1,
+      "native_loaded_skill_paths": [
+        "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md"
+      ],
+      "resource_commands": 1,
+      "resource_command_exit_codes": [
+        1
+      ],
+      "selected_cli_sha256": "eaae9c54f456f3467503dc4176939c35b524090bc68f40f3f2faa9790e42c72e",
+      "qualified": false
+    },
+    {
+      "label": "missing-entry",
+      "session": "01a16572-e569-7f01-9461-fd050fe1dbe0",
+      "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "--no-daemon",
+        "exec",
+        "--json",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-m",
+        "gpt-6.1-sol",
+        "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+      ],
+      "exit_code": 0,
+      "completed_turns": 1,
+      "expected": "ABSENT_2912e738de75456f",
+      "captured_agent_message_sequence": [
+        "ABSENT_2912e738de75456f"
+      ],
+      "original_whole_message_sequence_exact": true,
+      "native_final_phase_exact": true,
+      "fixture_metadata_entries": 0,
+      "native_loaded_skill_paths": [],
+      "resource_commands": 0,
+      "resource_command_exit_codes": [],
+      "selected_cli_sha256": "333c1a86e1aea55cd017666adb536d664b7ce9bb4a706bd48c0ad40e8970fff6",
+      "qualified": false
+    },
+    {
+      "label": "restored-shared",
+      "session": "01a16572-f68f-7732-92eb-f6d74abde127",
+      "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "--no-daemon",
+        "exec",
+        "--json",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-m",
+        "gpt-6.1-sol",
+        "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+      ],
+      "exit_code": 0,
+      "completed_turns": 1,
+      "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+      "captured_agent_message_sequence": [
+        "I\u2019m using the upskill-resource-7c17ce0c skill and its supporting procedure.",
+        "RESOURCE_c348764eed699af2704c57ec4201d966"
+      ],
+      "original_whole_message_sequence_exact": false,
+      "native_final_phase_exact": true,
+      "fixture_metadata_entries": 1,
+      "native_loaded_skill_paths": [
+        "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md"
+      ],
+      "resource_commands": 1,
+      "resource_command_exit_codes": [
+        0
+      ],
+      "selected_cli_sha256": "b253cbd5b329d54b8537939e7864b58e9dafca7943faecafbda3d82ec5c6c5f1",
+      "qualified": false
+    },
+    {
+      "label": "relocated-shared",
+      "session": "01a16573-14e1-7a82-aa3c-f18cd0974073",
+      "cwd": "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "--no-daemon",
+        "exec",
+        "--json",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-m",
+        "gpt-6.1-sol",
+        "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+      ],
+      "exit_code": 0,
+      "completed_turns": 1,
+      "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+      "captured_agent_message_sequence": [
+        "RESOURCE_c348764eed699af2704c57ec4201d966"
+      ],
+      "original_whole_message_sequence_exact": true,
+      "native_final_phase_exact": true,
+      "fixture_metadata_entries": 1,
+      "native_loaded_skill_paths": [
+        "/private/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/.agents/skills/upskill-resource-7c17ce0c/SKILL.md"
+      ],
+      "resource_commands": 1,
+      "resource_command_exit_codes": [
+        0
+      ],
+      "selected_cli_sha256": "8b9e6add0c577418b8dad1fdb3b0de415edda2efe039e3ffd116b109b9d3daac",
+      "qualified": false
+    }
+  ],
+  "counts": {
+    "sessions": 5,
+    "completed_turns": 5,
+    "resource_commands": 4,
+    "resource_command_successes": 3,
+    "resource_command_failures": 1,
+    "native_skill_expansions": 4,
+    "native_final_phase_exact": 5,
+    "original_whole_message_sequence_exact": 3,
+    "original_whole_message_sequence_failed": 2
+  },
+  "limits": [
+    "Two original strict whole-message-sequence expectations failed because of commentary; they remain failed",
+    "Missing entry produced no fixture metadata or native skill expansion and no file-read attempt, not a native failed load or permissions denial",
+    "One matching metadata item is not an exhaustive catalog or duplicate activation count",
+    "Broader global/configured/ancestor/compatibility readers, plugin coexistence and other clients remain unresolved",
+    "No installed upskill lifecycle, permission-denial control, wrapper child execution or embedded include/override result",
+    "User/Linux/IDE, timeout cleanup and integrated ownership/recovery remain required",
+    "No complete profile, shared-root adoption or schema-2 activation"
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "kind": "version availability only; no model or plugin controls",
+  "qualified": false,
+  "host": "Linux aarch64 Docker host on macOS arm64; x86_64 userspace via emulation",
+  "image": "debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587",
+  "network": "none",
+  "credentials": "none mounted or supplied",
+  "container_removed": true,
+  "receipts": [
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "uname",
+        "-sm"
+      ],
+      "exit_code": 0,
+      "sha256": "e0109ce4bb09317acfe73f0503e7a62845d527bbceef3fd629b64be2778a1c7c",
+      "receipt": "linux-interface-0.txt"
+    },
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "cat",
+        "/etc/os-release"
+      ],
+      "exit_code": 0,
+      "sha256": "59a77b5f2666d9c85c489bd1911a6eebbd91ef22fe48b90a3b75f1b21f3844d4",
+      "receipt": "linux-interface-1.txt"
+    },
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "env",
+        "HOME=/homes/codex",
+        "CODEX_HOME=/homes/codex/.codex",
+        "XDG_CONFIG_HOME=/homes/codex/.config",
+        "XDG_DATA_HOME=/homes/codex/.local/share",
+        "DISABLE_AUTOUPDATER=1",
+        "/probe/codex",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e",
+      "receipt": "linux-interface-2.txt"
+    },
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "env",
+        "HOME=/homes/claude",
+        "CODEX_HOME=/homes/codex/.codex",
+        "XDG_CONFIG_HOME=/homes/claude/.config",
+        "XDG_DATA_HOME=/homes/claude/.local/share",
+        "DISABLE_AUTOUPDATER=1",
+        "/probe/claude",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "d4986f1082ce2754694f97ceb54fb0c0dd3a49ec43a2031ea9c39648fabd5e1b",
+      "receipt": "linux-interface-3.txt"
+    },
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "env",
+        "HOME=/homes/copilot",
+        "CODEX_HOME=/homes/codex/.codex",
+        "XDG_CONFIG_HOME=/homes/copilot/.config",
+        "XDG_DATA_HOME=/homes/copilot/.local/share",
+        "DISABLE_AUTOUPDATER=1",
+        "/probe/copilot",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "267147db5d4a46f21396ce6b0a7df7f29dd8ca86acb25ba5630e52d10cc8b75a",
+      "receipt": "linux-interface-4.txt"
+    },
+    {
+      "command": [
+        "docker",
+        "exec",
+        "$CONTAINER",
+        "env",
+        "HOME=/homes/opencode",
+        "CODEX_HOME=/homes/codex/.codex",
+        "XDG_CONFIG_HOME=/homes/opencode/.config",
+        "XDG_DATA_HOME=/homes/opencode/.local/share",
+        "DISABLE_AUTOUPDATER=1",
+        "/probe/opencode",
+        "--version"
+      ],
+      "exit_code": 0,
+      "sha256": "db7075c6765852e2fff7cc6d0eb7e0ed1dd6cc2414af3606998f423d93b1c639",
+      "receipt": "linux-interface-5.txt"
+    }
+  ],
+  "artifacts": [
+    {
+      "client": "codex",
+      "version": "0.163.0",
+      "artifact": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-x86_64-unknown-linux-musl.tar.gz",
+      "verified": "sha256",
+      "archive_sha256": "beb339e8ecd9ba057a6bb2dc81ad8ca474812edfbf0fc5056ca818797648dde4",
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
+    },
+    {
+      "client": "claude",
+      "version": "2.1.303",
+      "artifact": "https://github.com/anthropics/claude-code/releases/download/v2.1.303/claude-linux-x64.tar.gz",
+      "verified": "sha256",
+      "archive_sha256": "9ef730488e8b75d47f23c156282a73c89db3342aaf756ed7ec0b78a88fb31f3e",
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
+    },
+    {
+      "client": "copilot",
+      "version": "1.0.98",
+      "artifact": "https://github.com/github/copilot-cli/releases/download/v1.0.98/copilot-linux-x64.tar.gz",
+      "verified": "sha256",
+      "archive_sha256": "87ddb4b3f98462b7cb13c0a6857c68ee410ec9673e2e5f64ee5bedad45825b05",
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
+    },
+    {
+      "client": "opencode",
+      "version": "2.0.32",
+      "artifact": "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.0.32.tgz",
+      "verified": "sha512",
+      "archive_sha256": "64a1f4b381c2d2efc18c8d76b2ce399141778b421b54c98b94be8e80803606dc",
+      "execution": "version-only success under x86_64 userspace emulation; no model/plugin controls"
+    }
+  ]
+}

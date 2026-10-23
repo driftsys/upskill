@@ -1,5 +1,14 @@
 # Generation and compilation
 
+Architecture reconciliation (2026-10-19): the
+[delivery, discovery and activation contract](0009-customization-delivery.md)
+controls intended production routes and reader intent. Existing Codex
+`AGENTS.md` contribution APIs described here are experimental library
+boundaries, not production independent-rule delivery. Independent Codex/OpenCode
+rules require qualified plugins alongside unchanged team guidance. Reusable
+ownership, preflight and recovery mechanisms do not select a runtime delivery
+route.
+
 This concern owns the requirements and implemented architecture below. Moving
 these records does not change their implementation or approval status.
 Library-only capabilities remain separate from production CLI activation; each
@@ -546,6 +555,7 @@ update/removal.
 [AD-0039](https://github.com/driftsys/upskill/blob/main/docs/adr/0039-compile-captured-codex-instructions.md)
 records the decision. Production CLI selection, schema 1 and historical
 generation layouts stay unchanged. Selected Codex rule sources now integrate
-with the opt-in library lifecycle route. Complete all-kind adapters, conflict
-aggregation, production activation, native user/IDE/Linux/OpenCode qualification
-and staging accounting in #316 remain later gates.
+with the opt-in library lifecycle route, including complete preflight conflict
+reporting for selected rule/instruction sources. Complete all-kind adapters,
+production activation, native user/IDE/Linux/OpenCode qualification and staging
+accounting in #316 remain later gates.

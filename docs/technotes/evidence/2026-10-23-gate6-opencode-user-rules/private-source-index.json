@@ -1,0 +1,127 @@
+{
+  "original_packets": [
+    {
+      "packet": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/receipt-hashes.json",
+        "sha256": "b4b174c5b0583b273c007cc24f010cf87c125b6762d83a448b2d0cca5f874e6d"
+      },
+      "original_entries_verified": 42
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/receipt-hashes.json",
+        "sha256": "aa2ff77d93baeccea660971cff2bd11cad952956ee406375791a8b24abf17fd8"
+      },
+      "original_entries_verified": 56
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/receipt-hashes.json",
+        "sha256": "3926db76bf887377936d3fdf7381c48253b68054ef7680692e7df3a6feaccebc"
+      },
+      "original_entries_verified": 56
+    }
+  ],
+  "native_session_exports": [
+    {
+      "label": "configured-global-positive-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/global-positive-a-session.stdout",
+      "sha256": "a89176522f881cbad36d19394d4e4d82f360fa3e101d42793746bab929e48e34"
+    },
+    {
+      "label": "configured-global-positive-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/global-positive-b-session.stdout",
+      "sha256": "727264fe81c271738aa9602fb00eabc89d8f9a7e5f884f01bd6b9013500711a6"
+    },
+    {
+      "label": "configured-removed-a-project-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/removed-a-project-a-session.stdout",
+      "sha256": "0f1319ab4a5481691a2c7deacac0f071626278959a61e12bc58fbef35281cab2"
+    },
+    {
+      "label": "configured-removed-both-project-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/removed-both-project-b-session.stdout",
+      "sha256": "d49fe6adc147887b66424b8f851dc36bd9df93e6cac3484a063188c59a5b6914"
+    },
+    {
+      "label": "configured-restored-project-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/restored-project-a-session.stdout",
+      "sha256": "faed63dc1940f9add10346329c87b37bbe561310e77137cace4640e61893a891"
+    },
+    {
+      "label": "configured-restored-project-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/restored-project-b-session.stdout",
+      "sha256": "2af39cea4c3e9bd498842d1c6d447f185c2ffa6dccedecd8b1b9e6b4242fa7a5"
+    },
+    {
+      "label": "configured-global-file-removed",
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/global-file-removed-session.stdout",
+      "sha256": "c308311808d6047454ef87246ef03f2cb3b95db2bf49cad72c5ef4c63a59e948"
+    },
+    {
+      "label": "manual-global-positive-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/global-positive-a-session.stdout",
+      "sha256": "1669068d2a390faadcfe7dc0d3f892c66cd83d90b9ea6c3e94903b25e449b04b"
+    },
+    {
+      "label": "manual-global-positive-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/global-positive-b-session.stdout",
+      "sha256": "b6fc89e45f63b400f579501220d45a8cafba82137bd19584a9e5c39c530029ad"
+    },
+    {
+      "label": "manual-removed-a-project-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/removed-a-project-a-session.stdout",
+      "sha256": "73b69c027458e9a3e0681356350361f925025751c722dc4229744f623ee3932f"
+    },
+    {
+      "label": "manual-removed-both-project-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/removed-both-project-b-session.stdout",
+      "sha256": "5741a5fee8e03810965bf2f2f592f6fcef8b3814202c1216a2b20bab7dfa1e5c"
+    },
+    {
+      "label": "manual-restored-project-a",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/restored-project-a-session.stdout",
+      "sha256": "3df0c8b4e72a1c5b87ad9a795cb2565074527d6ec54015c319eb3036fac31216"
+    },
+    {
+      "label": "manual-restored-project-b",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/restored-project-b-session.stdout",
+      "sha256": "2e35ee59689af258a445f8c7ee62291be2169e495cccb0abe1e63fc04aa47a62"
+    },
+    {
+      "label": "manual-manual-baseline-restored",
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/manual-baseline-restored-session.stdout",
+      "sha256": "99c3c404303d40010fb9d0c5b05de143f89db5baa9c36862c824052cbb6eea7c"
+    }
+  ],
+  "helpers": [
+    {
+      "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/capture.py",
+      "sha256": "4d0b2aaddc2f464c01837afd48cb069434cfba6a117de97fa68ed361d2fcd4f9"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/interface-preflight-helper.py",
+      "sha256": "d0f6f1f9c74079aab3938a3bd24812064f89075867305c41f71fb0207d2feea8"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/private-port-helper.py",
+      "sha256": "e22c565ebcc4864fe5ebec03e0e96df1b2300beb2be8cd7908b12402b3d5dbe6"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/capture.py",
+      "sha256": "b0b6174f41c6d55348ab2f711a338af07165d3fc454bc9314ef73f80f3f56e82"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/capture.py",
+      "sha256": "8b7e53c71907d53260a887ae71548fbce47abe91aef0a025584d8a52cca63627"
+    },
+    {
+      "path": "/private/tmp/upskill-retain-opencode-user-rules.py",
+      "sha256": "0ef41179cbdaccc0a2f7e575b6670917086118b05fb1eddf1f81c5159c74916d"
+    }
+  ],
+  "limitation": "Original full exports remain private; provider state, account identifiers, unrelated metadata and accounting are not copied. Initial default-port interface orchestration was inline, without a pre-frozen helper; only its native command/outputs are retained."
+}

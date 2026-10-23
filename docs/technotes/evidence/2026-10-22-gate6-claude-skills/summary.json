@@ -1,0 +1,600 @@
+{
+  "qualified": false,
+  "task": 353,
+  "context": "Claude 2.1.303 / macos-arm64 / project / normally renewed isolated login",
+  "resolved_model": "claude-sonnet-5-5",
+  "provider": "native Claude account route; provider identity not independently emitted in retained events",
+  "retained_sessions": 9,
+  "native_tool_counts": {
+    "Skill": 5
+  },
+  "controls": [
+    {
+      "label": "claude-native-positive",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-claude-87d4db2b and follow its instruction. If unavailable, return exactly ABSENT_ae5d725436fcb2a3c418fd7284262b7f. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "CLAUDE_4cdeb2d253a152c7613bfe50552393c7",
+      "response": "CLAUDE_4cdeb2d253a152c7613bfe50552393c7",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "c24c6c47-8d4a-4f69-b5b7-de6853774e8c"
+      ],
+      "tools": [
+        {
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-g6-claude-87d4db2b"
+          },
+          "id": "toolu_017ome2WANoXbTuAuQN7x9Gp"
+        }
+      ],
+      "stdout_sha256": "3bcb3948fdfedb4c1dd6cfc744d178b293ffc750df70088291f19fac9d95f2f0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded positive; exactly one successful Skill invocation",
+      "retained_events": "claude-native-positive.jsonl",
+      "private_packet": "$PACKET_A"
+    },
+    {
+      "label": "direct-shared-candidate",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-shared-87d4db2b and follow its instruction. If unavailable, return exactly ABSENT_ae5d725436fcb2a3c418fd7284262b7f. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "SHARED_03c3acc8fa7a338576a265e826b20747",
+      "response": "ABSENT_ae5d725436fcb2a3c418fd7284262b7f",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "5076b706-2cef-4609-a282-3276974ede2b"
+      ],
+      "tools": [],
+      "stdout_sha256": "9e4715207c43ae5bec1acd1bd68bb3f4751e8033c8947de89b3c6b6d4c14e79a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": false,
+      "interpretation": "failed desired shared-route positive; completed absent fallback is not a passing negative",
+      "retained_events": "direct-shared-candidate.jsonl",
+      "private_packet": "$PACKET_A"
+    },
+    {
+      "label": "plugin-dir-shared-candidate",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "--plugin-dir",
+        "$PACKET_A/plugin",
+        "Invoke the skill named upskill-g6-adapter:upskill-g6-shared-87d4db2b and follow its instruction. If unavailable, return exactly ABSENT_ae5d725436fcb2a3c418fd7284262b7f. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "SHARED_03c3acc8fa7a338576a265e826b20747",
+      "response": "SHARED_03c3acc8fa7a338576a265e826b20747",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "d8f6da64-2f44-4fdf-849a-36fcc26c8197"
+      ],
+      "tools": [
+        {
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-g6-adapter:upskill-g6-shared-87d4db2b"
+          },
+          "id": "toolu_018UtYbHfE9x1JGjy2Jtzbxa"
+        }
+      ],
+      "stdout_sha256": "30225b43c6af0d03af9ef1b24140a203cd0a4e0119de36554143fb364c968e0a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded positive; exactly one successful Skill invocation",
+      "retained_events": "plugin-dir-shared-candidate.jsonl",
+      "private_packet": "$PACKET_A"
+    },
+    {
+      "label": "plugin-not-loaded",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-adapter:upskill-g6-shared-87d4db2b and follow its instruction. If unavailable, return exactly ABSENT_ae5d725436fcb2a3c418fd7284262b7f. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "ABSENT_ae5d725436fcb2a3c418fd7284262b7f",
+      "response": "ABSENT_ae5d725436fcb2a3c418fd7284262b7f",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "7809eeb9-cc04-4ba9-8a50-ad8c5bc65cbc"
+      ],
+      "tools": [],
+      "stdout_sha256": "f49e8d4beb718e89dce370ff4bd9787638f2a162df9d5d5d54ef114110ec89eb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded absent fallback; no Skill invocation",
+      "retained_events": "plugin-not-loaded.jsonl",
+      "private_packet": "$PACKET_B"
+    },
+    {
+      "label": "plugin-loaded-again",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "--plugin-dir",
+        "$PACKET_A/plugin",
+        "Invoke the skill named upskill-g6-adapter:upskill-g6-shared-87d4db2b and follow its instruction. If unavailable, return exactly ABSENT_ae5d725436fcb2a3c418fd7284262b7f. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "SHARED_03c3acc8fa7a338576a265e826b20747",
+      "response": "SHARED_03c3acc8fa7a338576a265e826b20747",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "b6a4f747-f325-443a-9b82-e2bb952a48e5"
+      ],
+      "tools": [
+        {
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-g6-adapter:upskill-g6-shared-87d4db2b"
+          },
+          "id": "toolu_01N8TsjRpZcesyRBFWVCs5Sa"
+        }
+      ],
+      "stdout_sha256": "b8e37c476c25db95ed6b02755d72532c9627bf1049470dbe26f8b71f7fbf8c2e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded positive; exactly one successful Skill invocation",
+      "retained_events": "plugin-loaded-again.jsonl",
+      "private_packet": "$PACKET_B"
+    },
+    {
+      "label": "installed-positive",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4 and follow its instruction. If unavailable, return exactly ABSENT_08d3f52902d67d6d68c6441acf3e950b. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "SHARED_40d4298ed6d1ea133b07de62a6f167dc",
+      "response": "SHARED_40d4298ed6d1ea133b07de62a6f167dc",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "15aebbb3-d539-41a4-85e6-bf97aa624b2b"
+      ],
+      "tools": [
+        {
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4"
+          },
+          "id": "toolu_019UWe9cULFxopy2skxS2zHX"
+        }
+      ],
+      "stdout_sha256": "0a9a831457ce670a265024124007d30189628861a48f04bf1fe23a780cc73639",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded positive; exactly one successful Skill invocation",
+      "retained_events": "installed-positive.jsonl",
+      "private_packet": "$PACKET_C"
+    },
+    {
+      "label": "disabled-negative",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4 and follow its instruction. If unavailable, return exactly ABSENT_08d3f52902d67d6d68c6441acf3e950b. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "ABSENT_08d3f52902d67d6d68c6441acf3e950b",
+      "response": "ABSENT_08d3f52902d67d6d68c6441acf3e950b",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "849bf159-c16d-4c37-b3c4-06f1fa08b494"
+      ],
+      "tools": [],
+      "stdout_sha256": "6b7d1584c8d34e6f90f4c77d54cad93ea6691436b02ecf9aa04d42cbba307fae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded absent fallback; no Skill invocation",
+      "retained_events": "disabled-negative.jsonl",
+      "private_packet": "$PACKET_C"
+    },
+    {
+      "label": "enabled-positive",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4 and follow its instruction. If unavailable, return exactly ABSENT_08d3f52902d67d6d68c6441acf3e950b. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "SHARED_40d4298ed6d1ea133b07de62a6f167dc",
+      "response": "SHARED_40d4298ed6d1ea133b07de62a6f167dc",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "1b3cf5a7-eb80-4cdb-9e65-b30fb89ffb44"
+      ],
+      "tools": [
+        {
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4"
+          },
+          "id": "toolu_01EfospMHCQNVLoNTPquhjJt"
+        }
+      ],
+      "stdout_sha256": "f4a256a8b2551bd4cb9c9690cea643c0a89f4d765dc19c33f0fccafdb29385b1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded positive; exactly one successful Skill invocation",
+      "retained_events": "enabled-positive.jsonl",
+      "private_packet": "$PACKET_C"
+    },
+    {
+      "label": "removed-negative",
+      "exit": 0,
+      "timeout": false,
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "-p",
+        "--tools",
+        "Skill",
+        "--allowedTools",
+        "Skill",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "sonnet",
+        "Invoke the skill named upskill-g6-shared-126b0ff4:upskill-g6-portable-126b0ff4 and follow its instruction. If unavailable, return exactly ABSENT_08d3f52902d67d6d68c6441acf3e950b. Use no other skills or tools. Return only the required response."
+      ],
+      "expected": "ABSENT_08d3f52902d67d6d68c6441acf3e950b",
+      "response": "ABSENT_08d3f52902d67d6d68c6441acf3e950b",
+      "result_subtype": "success",
+      "native_is_error": false,
+      "permission_denials": [],
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "session_ids": [
+        "b94d4f70-f72f-44da-a47c-47aa7229520e"
+      ],
+      "tools": [],
+      "stdout_sha256": "2d1a6be63582ccfcae945e0f07d77d62ceb30a47562828c939aa270ff2328d2d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_response_matched": true,
+      "interpretation": "bounded absent fallback; no Skill invocation",
+      "retained_events": "removed-negative.jsonl",
+      "private_packet": "$PACKET_C"
+    }
+  ],
+  "installed_native_steps": [
+    {
+      "label": "validate",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "validate",
+        "$PACKET_C/marketplace"
+      ],
+      "exit": 0,
+      "stdout_sha256": "e93358a2b541c6bc086c015afb461756979ff9e3df41dd1fb799a6df19c36148",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "89ef18d5802dd3a09b5c5ce312337e761743d88e8e11cc5e3a6b8f3e71b730b6",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-add",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "add",
+        "$PACKET_C/marketplace",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "745f359429073b68eed78d0d09784b73498ccc0238dc159a9bc1960310240382",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "0de7c2acefbe755ca3e81ed938d11804472bb338a45824c0f17b18a6fdb025a8",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "install",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "install",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "a1a58b9d43a24b9370eea6dd2808cd140e9f760f8c95b434426b933999b6c9c3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "3e69549f885b20e6e7d79d75ca8b2b86e7107d359521b22b0e89fe3aabe93976",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": true\n  }\n}\n"
+      }
+    },
+    {
+      "label": "disable",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "disable",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "80b57c9c7f945608a2bfef1861e4b371d57af4eb18ee5836a322c05dfb9398c9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "17565ce968d951e00bcc2e21d6c2bcc97de6de7ffcac2035e029f6b76f6a9675",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": false\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "enable",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "enable",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "87e4c0738b05b863794123a6c67fb8cc0931340db0d9545a1794721f2e548d9e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "2fb9ee2c11e3c892bfae7694f73f651e451f2808d534159d2b9850fd4471d2f2",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4\": true\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "uninstall",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "uninstall",
+        "upskill-g6-shared-126b0ff4@upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "f530dd458ad8f612c69c484d77748eae1a367f64abc56f6d60cf3e9e595b3d17",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "6dbed2a5ba030ebab4c6c753bd01a1e614ea9f5f8598cd03dea12ebe84715542",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-market-126b0ff4\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_C/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-remove",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-g6-market-126b0ff4",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "553dd63148865b1f222126ae7b80eaa372447eeed420390f16bcea01028101f6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "settings": {
+        "sha256": "dbe4b7573f50251f73a3584dcbfefcca9a45cf281aa57da28a4279a2b8582d82",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"MANUAL_97ae9599a0823e2d1288c4f917825ccf\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+      }
+    }
+  ],
+  "capture_helpers": {
+    "/private/tmp/upskill-claude-shared-route-feasibility.py": "67c080a54f0701e183a46697ced4eaaa1e84916f436755d6eedb63fef33bf08b",
+    "/private/tmp/upskill-claude-route-paired-controls.py": "87f0698c90e571bdc9441d2eea818913b67481bbbc42fda239303d3e982c2502",
+    "/private/tmp/upskill-claude-installed-skill-controls.py": "b72804d43f1cbc0d975bd171592e5a5fb87ea17747fc48280aeedce23e4cefdb"
+  },
+  "raw_packets": [
+    "$PACKET_A",
+    "$PACKET_B",
+    "$PACKET_C"
+  ],
+  "limits": [
+    "selected original events only; no full requests, thinking, usage or authentication state",
+    "paths normalized; raw-stream hashes and retained hashes are distinct",
+    "initial route absence is bounded explicit fallback with working native positive, not all-discovery proof",
+    "plugin-dir is development loading; normal marketplace commands are separate installed controls",
+    "one Skill call per positive is not complete catalog/duplicate proof",
+    "no resources, actual delegated restrictions, automatic rules, user scopes, Linux, other-client negatives or recovery qualification",
+    "all 160 campaign cells remain unqualified; production schema1 unchanged"
+  ]
+}

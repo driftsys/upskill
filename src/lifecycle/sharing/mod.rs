@@ -60,35 +60,58 @@ fn same_content(a: &ArtifactContent, b: &ArtifactContent) -> bool {
         _ => false,
     }
 }
+/// Separate reportable ownership agreement from observed physical-file failures.
+/// The public pure planners still return their original first-error Result.
+pub(crate) enum SharingFailure {
+    Ownership(anyhow::Error),
+    Destination(anyhow::Error),
+}
+
 pub(crate) fn plan(
     prior: &CombinedState,
     candidate: &mut CombinedState,
     changes: &[InstallationChange],
     observations: &[ObservedFile],
 ) -> Result<Vec<PlannedFile>> {
-    let rebuilt = artifacts::rebuild(prior, candidate, changes)?;
-    candidate.artifacts = rebuilt.artifacts;
-    validate_state(candidate)?;
-    for a in &candidate.artifacts {
-        let identity = owned_key(a);
-        // Without a desired value at this identity, rebuilding only releases
-        // changed owners; all surviving owners and their evidence are untouched.
-        let release_only = !rebuilt.desired.contains_key(&identity);
-        if rebuilt.affected.contains(&identity) && a.owners.len() > 1 && !release_only {
-            ensure!(
-                check_contract_agreement(candidate, &a.root, &a.path, identity.3.as_deref())?
-                    == ContractAgreement::Matching,
-                "affected shared artifact requires matching complete contracts"
-            );
+    plan_reported(prior, candidate, changes, observations).map_err(|error| match error {
+        SharingFailure::Ownership(error) | SharingFailure::Destination(error) => error,
+    })
+}
+
+pub(crate) fn plan_reported(
+    prior: &CombinedState,
+    candidate: &mut CombinedState,
+    changes: &[InstallationChange],
+    observations: &[ObservedFile],
+) -> std::result::Result<Vec<PlannedFile>, SharingFailure> {
+    let rebuilt = (|| -> Result<_> {
+        let mut rebuilt = artifacts::rebuild(prior, candidate, changes)?;
+        candidate.artifacts = std::mem::take(&mut rebuilt.artifacts);
+        validate_state(candidate)?;
+        for a in &candidate.artifacts {
+            let identity = owned_key(a);
+            // Without a desired value at this identity, rebuilding only releases
+            // changed owners; all surviving owners and their evidence are untouched.
+            let release_only = !rebuilt.desired.contains_key(&identity);
+            if rebuilt.affected.contains(&identity) && a.owners.len() > 1 && !release_only {
+                ensure!(
+                    check_contract_agreement(candidate, &a.root, &a.path, identity.3.as_deref())?
+                        == ContractAgreement::Matching,
+                    "affected shared artifact requires matching complete contracts"
+                );
+            }
         }
-    }
+        Ok(rebuilt)
+    })()
+    .map_err(SharingFailure::Ownership)?;
     let files = physical::plan(
         prior,
         candidate,
         &rebuilt.desired,
         &rebuilt.affected,
         observations,
-    )?;
-    validate_state(candidate)?;
+    )
+    .map_err(SharingFailure::Destination)?;
+    validate_state(candidate).map_err(SharingFailure::Destination)?;
     Ok(files)
 }

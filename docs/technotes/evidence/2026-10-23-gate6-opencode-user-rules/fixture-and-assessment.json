@@ -1,0 +1,515 @@
+[
+  {
+    "phase": "configured",
+    "fixture": {
+      "issue": 375,
+      "qualified": false,
+      "source_interface_packet": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7",
+      "source_interface_manifest": {
+        "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/receipt-hashes.json",
+        "exists": true,
+        "sha256": "b4b174c5b0583b273c007cc24f010cf87c125b6762d83a448b2d0cca5f874e6d",
+        "mode": 384
+      },
+      "profile": "/private/tmp/upskill-gate6-opencode-corrected-20261019",
+      "binary": {
+        "path": "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "exists": true,
+        "sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf",
+        "mode": 493
+      },
+      "global_config_path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+      "global_config_initially_absent": true,
+      "projects": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b"
+      ],
+      "team_markers": [
+        "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+        "TEAM_473d38a40cb95c3e1998082d5426bf6e"
+      ],
+      "rule_markers": [
+        "RULE_0fb37b8715ffedf90165cbb275672c74",
+        "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+      ],
+      "plugins": [
+        "upskill-user-rule-a-1a6e572f48",
+        "upskill-user-rule-b-b8c7545386"
+      ],
+      "packages": [
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      ],
+      "manual_before": [
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a/AGENTS.md",
+          "exists": true,
+          "sha256": "366673c87eb477b1d8fb6e4ed0e4a2bcd8e6f9aaf83969ca20b832fb4b2a7369",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b/AGENTS.md",
+          "exists": true,
+          "sha256": "f526be120fb36d87a87ff6b216a8b305ccd0807a0f8f620c0100f5a23e1eb34a",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        }
+      ],
+      "old_trace_before": {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/activation.jsonl",
+        "exists": true,
+        "sha256": "815e6bcaa998bf8d19ac400ac001b54a3bf0d69b06019f883465605287d03412",
+        "mode": 420
+      },
+      "source_references": [
+        "https://opencode.ai/v2/docs/config/",
+        "https://opencode.ai/v2/docs/plugins/"
+      ],
+      "candidate_limit": "Rolling documentation proposes local global configuration, not pinned runtime proof. Fresh identities/projects differ from interface-only packet; no unchanged-policy comparison.",
+      "controls": [
+        {
+          "label": "global-positive-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+            "rules": [
+              "RULE_0fb37b8715ffedf90165cbb275672c74",
+              "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+            ]
+          }
+        },
+        {
+          "label": "global-positive-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+            "rules": [
+              "RULE_0fb37b8715ffedf90165cbb275672c74",
+              "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+            ]
+          }
+        },
+        {
+          "label": "removed-a-project-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+          "active_rules": [
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+            "rules": [
+              "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+            ]
+          }
+        },
+        {
+          "label": "removed-both-project-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+          "active_rules": [],
+          "expected": {
+            "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+            "rules": []
+          }
+        },
+        {
+          "label": "restored-project-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+            "rules": [
+              "RULE_0fb37b8715ffedf90165cbb275672c74",
+              "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+            ]
+          }
+        },
+        {
+          "label": "restored-project-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_473d38a40cb95c3e1998082d5426bf6e",
+            "rules": [
+              "RULE_0fb37b8715ffedf90165cbb275672c74",
+              "RULE_b3c61c6170f2c2a96336f59c946e9c15"
+            ]
+          }
+        },
+        {
+          "label": "global-file-removed",
+          "project": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+          "active_rules": [],
+          "expected": {
+            "team": "TEAM_dc77c03a3e94a99c89ad1d02aacf0136",
+            "rules": []
+          }
+        }
+      ]
+    },
+    "assessment": {
+      "qualified": false,
+      "failure": null,
+      "turns": 7,
+      "all_declared_controls_matched": true,
+      "manual_after": [
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a/AGENTS.md",
+          "exists": true,
+          "sha256": "366673c87eb477b1d8fb6e4ed0e4a2bcd8e6f9aaf83969ca20b832fb4b2a7369",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b/AGENTS.md",
+          "exists": true,
+          "sha256": "f526be120fb36d87a87ff6b216a8b305ccd0807a0f8f620c0100f5a23e1eb34a",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        }
+      ],
+      "manual_exact": true,
+      "global_config_after": {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+        "exists": false
+      },
+      "global_config_absence_restored": true,
+      "cleanup": "global config absent",
+      "old_trace_unchanged": true,
+      "limit": "Global local-path configuration is separate from package CLI installation. Cache/dependency side effects, parent directories and whole-profile recovery are not qualified."
+    },
+    "version_stdout": "opencode v2.0.32\n",
+    "source_packages": [
+      {
+        "plugin": "upskill-user-rule-a-1a6e572f48",
+        "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48",
+        "index_sha256": "72c8ee2960f480c7738ffc8c6bf3d4b7ecb92dafcc30b8a01bda14928138cb0e",
+        "index_body": "import { Plugin } from \"@opencode/plugin\";\nimport { appendFileSync, readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport { dirname, resolve } from \"node:path\";\nconst root = dirname(fileURLToPath(import.meta.url));\nconst config = JSON.parse(readFileSync(resolve(root, \"fixture.json\"), \"utf8\"));\nconst text = readFileSync(resolve(root, \"rule.txt\"), \"utf8\");\nexport default Plugin.define({\n  id: config.id,\n  async setup(ctx) {\n    const registration = await ctx.session.hook(\"context\", async (event) => {\n      const session = await ctx.session.get({ sessionID: event.sessionID });\n      const directory = resolve(session.location.directory);\n      if (!config.projects.includes(directory) || event.agent !== \"build\") return;\n      event.system.push({ type: \"text\", text });\n      appendFileSync(config.trace, JSON.stringify({ rule: config.rule, session: event.sessionID, cwd: directory, source: \"context\", module_root: root }) + \"\\n\");\n    });\n    return () => registration.dispose();\n  },\n});\n",
+        "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_0fb37b8715ffedf90165cbb275672c74 in the rules array. Preserve the team marker and other rules.\n",
+        "package_manifest": {
+          "name": "upskill-user-rule-a-1a6e572f48",
+          "version": "0.0.0",
+          "type": "module",
+          "exports": "./index.ts",
+          "dependencies": {
+            "@opencode/plugin": "2.0.32"
+          }
+        }
+      },
+      {
+        "plugin": "upskill-user-rule-b-b8c7545386",
+        "path": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386",
+        "index_sha256": "72c8ee2960f480c7738ffc8c6bf3d4b7ecb92dafcc30b8a01bda14928138cb0e",
+        "index_body": "import { Plugin } from \"@opencode/plugin\";\nimport { appendFileSync, readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport { dirname, resolve } from \"node:path\";\nconst root = dirname(fileURLToPath(import.meta.url));\nconst config = JSON.parse(readFileSync(resolve(root, \"fixture.json\"), \"utf8\"));\nconst text = readFileSync(resolve(root, \"rule.txt\"), \"utf8\");\nexport default Plugin.define({\n  id: config.id,\n  async setup(ctx) {\n    const registration = await ctx.session.hook(\"context\", async (event) => {\n      const session = await ctx.session.get({ sessionID: event.sessionID });\n      const directory = resolve(session.location.directory);\n      if (!config.projects.includes(directory) || event.agent !== \"build\") return;\n      event.system.push({ type: \"text\", text });\n      appendFileSync(config.trace, JSON.stringify({ rule: config.rule, session: event.sessionID, cwd: directory, source: \"context\", module_root: root }) + \"\\n\");\n    });\n    return () => registration.dispose();\n  },\n});\n",
+        "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_b3c61c6170f2c2a96336f59c946e9c15 in the rules array. Preserve the team marker and other rules.\n",
+        "package_manifest": {
+          "name": "upskill-user-rule-b-b8c7545386",
+          "version": "0.0.0",
+          "type": "module",
+          "exports": "./index.ts",
+          "dependencies": {
+            "@opencode/plugin": "2.0.32"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "phase": "manual",
+    "fixture": {
+      "issue": 375,
+      "qualified": false,
+      "source_interface_packet": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7",
+      "source_interface_manifest": {
+        "path": "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/receipt-hashes.json",
+        "exists": true,
+        "sha256": "b4b174c5b0583b273c007cc24f010cf87c125b6762d83a448b2d0cca5f874e6d",
+        "mode": 384
+      },
+      "profile": "/private/tmp/upskill-gate6-opencode-corrected-20261019",
+      "binary": {
+        "path": "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "exists": true,
+        "sha256": "e43ec2df6f36842fd17d1a71a866acb9a84884b489988376c19bf9a7250dabbf",
+        "mode": 493
+      },
+      "global_config_path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+      "global_config_initially_absent": true,
+      "representative_manual_global_baseline": {
+        "content": {
+          "username": "manual-12b09c504374f14d",
+          "plugins": []
+        },
+        "sha256": "d92ce174f38b91d24f23d231b70b9d35c2e1bb6b0396187981315909c95d5aa0",
+        "mode": 416
+      },
+      "projects": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b"
+      ],
+      "team_markers": [
+        "TEAM_b4356628815312cd58a181ccc87173c5",
+        "TEAM_8d5fe144251cd9771bf277405b6fdcaf"
+      ],
+      "rule_markers": [
+        "RULE_ab32940a7bd5f562f9518baa68af7cae",
+        "RULE_26e60256c12a123baeac2d7affe34ef0"
+      ],
+      "plugins": [
+        "upskill-user-rule-a-74d23d68f2",
+        "upskill-user-rule-b-ae05d7e61c"
+      ],
+      "packages": [
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      ],
+      "manual_before": [
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a/AGENTS.md",
+          "exists": true,
+          "sha256": "15f5e6a8d5602dc62cab0e7e2d25f94585d94c397c53c7a850226fe4c5bc00cd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b/AGENTS.md",
+          "exists": true,
+          "sha256": "55e0573b10956c2ed265c20c96e3f502e9a00cfd737506e228e9e8423417a7bf",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        }
+      ],
+      "old_trace_before": {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/activation.jsonl",
+        "exists": true,
+        "sha256": "815e6bcaa998bf8d19ac400ac001b54a3bf0d69b06019f883465605287d03412",
+        "mode": 420
+      },
+      "source_references": [
+        "https://opencode.ai/v2/docs/config/",
+        "https://opencode.ai/v2/docs/plugins/"
+      ],
+      "candidate_limit": "Rolling documentation proposes local global configuration, not pinned runtime proof. Fresh identities/projects differ from interface-only packet; no unchanged-policy comparison.",
+      "controls": [
+        {
+          "label": "global-positive-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+            "rules": [
+              "RULE_ab32940a7bd5f562f9518baa68af7cae",
+              "RULE_26e60256c12a123baeac2d7affe34ef0"
+            ]
+          }
+        },
+        {
+          "label": "global-positive-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+            "rules": [
+              "RULE_ab32940a7bd5f562f9518baa68af7cae",
+              "RULE_26e60256c12a123baeac2d7affe34ef0"
+            ]
+          }
+        },
+        {
+          "label": "removed-a-project-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+          "active_rules": [
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+            "rules": [
+              "RULE_26e60256c12a123baeac2d7affe34ef0"
+            ]
+          }
+        },
+        {
+          "label": "removed-both-project-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+          "active_rules": [],
+          "expected": {
+            "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+            "rules": []
+          }
+        },
+        {
+          "label": "restored-project-a",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+            "rules": [
+              "RULE_ab32940a7bd5f562f9518baa68af7cae",
+              "RULE_26e60256c12a123baeac2d7affe34ef0"
+            ]
+          }
+        },
+        {
+          "label": "restored-project-b",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+          "active_rules": [
+            "a",
+            "b"
+          ],
+          "expected": {
+            "team": "TEAM_8d5fe144251cd9771bf277405b6fdcaf",
+            "rules": [
+              "RULE_ab32940a7bd5f562f9518baa68af7cae",
+              "RULE_26e60256c12a123baeac2d7affe34ef0"
+            ]
+          }
+        },
+        {
+          "label": "manual-baseline-restored",
+          "project": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+          "active_rules": [],
+          "expected": {
+            "team": "TEAM_b4356628815312cd58a181ccc87173c5",
+            "rules": []
+          }
+        }
+      ]
+    },
+    "assessment": {
+      "qualified": false,
+      "failure": null,
+      "turns": 7,
+      "all_declared_controls_matched": true,
+      "manual_after": [
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a/AGENTS.md",
+          "exists": true,
+          "sha256": "15f5e6a8d5602dc62cab0e7e2d25f94585d94c397c53c7a850226fe4c5bc00cd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b/AGENTS.md",
+          "exists": true,
+          "sha256": "55e0573b10956c2ed265c20c96e3f502e9a00cfd737506e228e9e8423417a7bf",
+          "mode": 416
+        },
+        {
+          "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b/opencode.json",
+          "exists": true,
+          "sha256": "e024c7fa7e445b460581f6538406f6954b4fe393e14618d05624ddd29c4b4edd",
+          "mode": 416
+        }
+      ],
+      "manual_exact": true,
+      "manual_global_baseline_exact_before_cleanup": true,
+      "manual_global_baseline_after": {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+        "exists": true,
+        "sha256": "d92ce174f38b91d24f23d231b70b9d35c2e1bb6b0396187981315909c95d5aa0",
+        "mode": 416
+      },
+      "global_config_after": {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+        "exists": false
+      },
+      "global_config_absence_restored": true,
+      "cleanup": "temporary manual baseline restored exactly, then fixture-created global file removed",
+      "old_trace_unchanged": true,
+      "limit": "Global local-path configuration is separate from package CLI installation. Cache/dependency side effects, parent directories and whole-profile recovery are not qualified."
+    },
+    "version_stdout": "opencode v2.0.32\n",
+    "source_packages": [
+      {
+        "plugin": "upskill-user-rule-a-74d23d68f2",
+        "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2",
+        "index_sha256": "72c8ee2960f480c7738ffc8c6bf3d4b7ecb92dafcc30b8a01bda14928138cb0e",
+        "index_body": "import { Plugin } from \"@opencode/plugin\";\nimport { appendFileSync, readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport { dirname, resolve } from \"node:path\";\nconst root = dirname(fileURLToPath(import.meta.url));\nconst config = JSON.parse(readFileSync(resolve(root, \"fixture.json\"), \"utf8\"));\nconst text = readFileSync(resolve(root, \"rule.txt\"), \"utf8\");\nexport default Plugin.define({\n  id: config.id,\n  async setup(ctx) {\n    const registration = await ctx.session.hook(\"context\", async (event) => {\n      const session = await ctx.session.get({ sessionID: event.sessionID });\n      const directory = resolve(session.location.directory);\n      if (!config.projects.includes(directory) || event.agent !== \"build\") return;\n      event.system.push({ type: \"text\", text });\n      appendFileSync(config.trace, JSON.stringify({ rule: config.rule, session: event.sessionID, cwd: directory, source: \"context\", module_root: root }) + \"\\n\");\n    });\n    return () => registration.dispose();\n  },\n});\n",
+        "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_ab32940a7bd5f562f9518baa68af7cae in the rules array. Preserve the team marker and other rules.\n",
+        "package_manifest": {
+          "name": "upskill-user-rule-a-74d23d68f2",
+          "version": "0.0.0",
+          "type": "module",
+          "exports": "./index.ts",
+          "dependencies": {
+            "@opencode/plugin": "2.0.32"
+          }
+        }
+      },
+      {
+        "plugin": "upskill-user-rule-b-ae05d7e61c",
+        "path": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c",
+        "index_sha256": "72c8ee2960f480c7738ffc8c6bf3d4b7ecb92dafcc30b8a01bda14928138cb0e",
+        "index_body": "import { Plugin } from \"@opencode/plugin\";\nimport { appendFileSync, readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport { dirname, resolve } from \"node:path\";\nconst root = dirname(fileURLToPath(import.meta.url));\nconst config = JSON.parse(readFileSync(resolve(root, \"fixture.json\"), \"utf8\"));\nconst text = readFileSync(resolve(root, \"rule.txt\"), \"utf8\");\nexport default Plugin.define({\n  id: config.id,\n  async setup(ctx) {\n    const registration = await ctx.session.hook(\"context\", async (event) => {\n      const session = await ctx.session.get({ sessionID: event.sessionID });\n      const directory = resolve(session.location.directory);\n      if (!config.projects.includes(directory) || event.agent !== \"build\") return;\n      event.system.push({ type: \"text\", text });\n      appendFileSync(config.trace, JSON.stringify({ rule: config.rule, session: event.sessionID, cwd: directory, source: \"context\", module_root: root }) + \"\\n\");\n    });\n    return () => registration.dispose();\n  },\n});\n",
+        "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_26e60256c12a123baeac2d7affe34ef0 in the rules array. Preserve the team marker and other rules.\n",
+        "package_manifest": {
+          "name": "upskill-user-rule-b-ae05d7e61c",
+          "version": "0.0.0",
+          "type": "module",
+          "exports": "./index.ts",
+          "dependencies": {
+            "@opencode/plugin": "2.0.32"
+          }
+        }
+      }
+    ]
+  }
+]

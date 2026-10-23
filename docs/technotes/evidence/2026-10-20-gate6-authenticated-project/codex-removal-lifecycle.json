@@ -1,0 +1,83 @@
+{
+  "qualified": false,
+  "actions": [
+    {
+      "action": "remove",
+      "rule": "a",
+      "result": {
+        "state": "success",
+        "sha256": "e8df19d0a8ed4b07d57e7d8a8a79898f2f825dcfdba4abc8cc74e5305fcdc511",
+        "exit_code": 0,
+        "diagnostic_category": null
+      },
+      "cache_present_after": false,
+      "command": [
+        "$CODEX",
+        "plugin",
+        "remove",
+        "upskill-probe-a@upskill-qualification",
+        "--json"
+      ]
+    },
+    {
+      "action": "remove",
+      "rule": "b",
+      "result": {
+        "state": "success",
+        "sha256": "807a740dc2b7244112fb7ab811faf43832e08a2cec8641adbf8ecc269dd5ce49",
+        "exit_code": 0,
+        "diagnostic_category": null
+      },
+      "cache_present_after": false,
+      "command": [
+        "$CODEX",
+        "plugin",
+        "remove",
+        "upskill-probe-b@upskill-qualification",
+        "--json"
+      ]
+    },
+    {
+      "action": "add",
+      "rule": "a",
+      "result": {
+        "state": "success",
+        "sha256": "3f131f1e59b8b62ded568333bcd78c92d9037a24db9eaff785f222a7f712ef01",
+        "exit_code": 0,
+        "diagnostic_category": null
+      },
+      "command": [
+        "$CODEX",
+        "plugin",
+        "add",
+        "upskill-probe-a@upskill-qualification",
+        "--json"
+      ]
+    },
+    {
+      "action": "add",
+      "rule": "b",
+      "result": {
+        "state": "success",
+        "sha256": "ee7fc39d99903738a4f309bd59c1217d3cd0578c9d97b5f402e33a1beae3d5bd",
+        "exit_code": 0,
+        "diagnostic_category": null
+      },
+      "command": [
+        "$CODEX",
+        "plugin",
+        "add",
+        "upskill-probe-b@upskill-qualification",
+        "--json"
+      ]
+    }
+  ],
+  "config_before": {
+    "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+    "mode": 384
+  },
+  "config_restored": {
+    "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+    "mode": 384
+  }
+}

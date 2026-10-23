@@ -676,7 +676,7 @@ fn later_incompatible_source_prevents_callback_and_all_writes() {
         let root = root(dest.path(), OwnershipScope::Project);
         let scope = QualifiedScope::open(&root).unwrap();
         let guard = writer(&scope);
-        let error = with_prepared_codex(
+        let outcome = with_prepared_codex(
             &scope,
             &guard,
             root,
@@ -684,19 +684,23 @@ fn later_incompatible_source_prevents_callback_and_all_writes() {
             options(),
             |_| -> anyhow::Result<()> { panic!("later source must reject before callback") },
         )
-        .err()
-        .expect("incompatible source must reject");
-        let typed = error
-            .downcast_ref::<upskill::target::CapabilityError>()
-            .expect("reader conflict capability error");
+        .unwrap();
+        let report = blocked_report(outcome);
+        assert_eq!(report.diagnostics.len(), 1);
         assert_eq!(
-            typed.key.name,
-            if audience.is_empty() {
-                "directives"
-            } else {
-                "audience"
-            }
+            report.diagnostics[0].category,
+            upskill::lifecycle::preflight::PreflightCategory::Capability
         );
+        assert!(
+            report.diagnostics[0]
+                .message
+                .contains(if audience.is_empty() {
+                    "directives"
+                } else {
+                    "audience"
+                })
+        );
+        assert_eq!(report.instruction_readers.len(), 1);
         assert_eq!(std::fs::read_dir(dest.path()).unwrap().count(), 0);
         assert!(!scope.has_pending_operation().unwrap());
     }
@@ -1553,4 +1557,359 @@ fn excluded_scope_mismatch_rejects_before_reinclusion_callback() {
         assert!(!dest.path().join(".codex").exists());
         assert!(!scope.has_pending_operation().unwrap());
     }
+}
+
+fn blocked_report<T>(
+    outcome: OrchestrationOutcome<T>,
+) -> upskill::lifecycle::preflight::PreflightReport {
+    let OrchestrationOutcome::Blocked(diagnostics) = outcome else {
+        panic!("expected blocked preflight")
+    };
+    let mut diagnostics = diagnostics.into_iter();
+    let upskill::lifecycle::commands::CommandDiagnostic::Preflight(report) =
+        diagnostics.next().unwrap()
+    else {
+        panic!("expected preflight report")
+    };
+    assert!(diagnostics.next().is_none());
+    report
+}
+
+// A blocker must retain reports for both empty/excluded and included compilations,
+// while potential readers remain observational and existing ownership stays exact.
+#[test]
+fn blocked_preflight_keeps_excluded_and_incidental_readers() {
+    let dest = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    for name in ["retained", "included", "excluded"] {
+        std::fs::create_dir(sources.path().join(name)).unwrap();
+    }
+    write_rule(&sources.path().join("retained"), "Retained", "");
+    write_rule(&sources.path().join("included"), "Included", "");
+    write_rule(
+        &sources.path().join("excluded"),
+        "Excluded",
+        "audience: [claude]\n",
+    );
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(
+            ["retained", "included", "excluded"]
+                .into_iter()
+                .map(|name| add(&sources.path().join(name), name))
+                .collect(),
+        ),
+    );
+    let installed = state(dest.path());
+    let included_id = installed
+        .installations
+        .iter()
+        .find(|i| i.owner.installed_name == "included")
+        .unwrap()
+        .owner
+        .installation_id
+        .clone();
+    let excluded_id = installed
+        .installations
+        .iter()
+        .find(|i| i.owner.installed_name == "excluded")
+        .unwrap()
+        .owner
+        .installation_id
+        .clone();
+    let state_before = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let instructions = std::fs::read(dest.path().join("AGENTS.md")).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let mut reports = vec![];
+    for names in [
+        ["missing", "included", "excluded"],
+        ["excluded", "included", "missing"],
+    ] {
+        let outcome = with_prepared_codex(
+            &scope,
+            &guard,
+            root.clone(),
+            SourceRequest::Add(
+                names
+                    .into_iter()
+                    .map(|name| add(&sources.path().join(name), name))
+                    .collect(),
+            ),
+            options(),
+            |_| -> anyhow::Result<()> { panic!("blocked report cannot prepare") },
+        )
+        .unwrap();
+        let report = blocked_report(outcome);
+        assert_eq!(report.diagnostics.len(), 1);
+        assert_eq!(report.instruction_readers.len(), 2);
+        assert!(
+            report.instruction_readers[0].installation_id
+                < report.instruction_readers[1].installation_id
+        );
+        let included = report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.report.compatibility == InstructionCompatibility::UnconditionalMarkdown)
+            .cloned()
+            .collect::<Vec<_>>();
+        let excluded = report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.report.compatibility == InstructionCompatibility::NotEvaluated)
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(included.len(), 1);
+        assert_eq!(excluded.len(), 1);
+        assert_eq!(included[0].installation_id, included_id);
+        assert_eq!(excluded[0].installation_id, excluded_id);
+        assert_readers(
+            &included,
+            PROJECT_READERS,
+            InstructionCompatibility::UnconditionalMarkdown,
+        );
+        assert_readers(
+            &excluded,
+            PROJECT_READERS,
+            InstructionCompatibility::NotEvaluated,
+        );
+        reports.push(report);
+    }
+    assert_eq!(reports[0], reports[1]);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_before
+    );
+    assert_eq!(
+        std::fs::read(dest.path().join("AGENTS.md")).unwrap(),
+        instructions
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// Special destination modes must be rejected in the report, alongside independent
+// source failures, rather than escaping through the later first-error planner.
+#[test]
+fn instruction_mode_failure_does_not_hide_an_independent_source_failure() {
+    use std::os::unix::fs::PermissionsExt;
+    let dest = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    write_rule(source.path(), "Selected", "");
+    let instructions = dest.path().join("AGENTS.md");
+    std::fs::write(&instructions, b"Manual\n").unwrap();
+    std::fs::set_permissions(&instructions, std::fs::Permissions::from_mode(0o4640)).unwrap();
+    assert_eq!(
+        std::fs::metadata(&instructions)
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o4640,
+        "fixture special mode must be set before inspection"
+    );
+    let root = root(dest.path(), OwnershipScope::Project);
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let outcome = with_prepared_codex(
+        &scope,
+        &guard,
+        root,
+        SourceRequest::Add(vec![
+            add(source.path(), "valid"),
+            add(&source.path().join("missing"), "missing"),
+        ]),
+        options(),
+        |_| -> anyhow::Result<()> { panic!("no preparation") },
+    )
+    .unwrap();
+    let report = blocked_report(outcome);
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .filter_map(|d| d.location.as_ref())
+            .map(|l| l.path.as_str())
+            .collect::<Vec<_>>(),
+        ["AGENTS.md"]
+    );
+    assert_eq!(std::fs::read(&instructions).unwrap(), b"Manual\n");
+    assert_eq!(
+        std::fs::metadata(instructions)
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o4640
+    );
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+// A failed selected source keeps its existing contribution and contracts in a
+// successful neighbor's location checks. Neither capture failure nor tampering
+// may be hidden, and the surviving report belongs to the correct installation.
+#[test]
+fn capture_failure_keeps_failed_owner_in_shared_destination_report() {
+    use std::os::unix::fs::symlink;
+    use upskill::lifecycle::preflight::PreflightCategory;
+    let dest = tempfile::tempdir().unwrap();
+    let alpha = tempfile::tempdir().unwrap();
+    let beta = tempfile::tempdir().unwrap();
+    write_rule(alpha.path(), "Alpha", "");
+    write_rule(beta.path(), "Beta", "");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(vec![add(alpha.path(), "alpha"), add(beta.path(), "beta")]),
+    );
+    let prior = state(dest.path());
+    let id = |alias: &str| {
+        prior
+            .installations
+            .iter()
+            .find(|i| i.owner.installed_name == alias)
+            .unwrap()
+            .owner
+            .installation_id
+            .clone()
+    };
+    let alpha_id = id("alpha");
+    let beta_id = id("beta");
+    std::fs::remove_file(alpha.path().join("RULE.md")).unwrap();
+    symlink(beta.path().join("RULE.md"), alpha.path().join("RULE.md")).unwrap();
+    write_rule(beta.path(), "New beta", "");
+    let path = dest.path().join("AGENTS.md");
+    let before = std::fs::read_to_string(&path).unwrap();
+    let edited = before.replace("# Alpha", "# Manual alpha");
+    assert_ne!(edited, before);
+    std::fs::write(&path, &edited).unwrap();
+    let state_bytes = std::fs::read(dest.path().join(".upskill-lock.json")).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let report = blocked_report(
+        with_prepared_codex(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Update(Selection::All),
+            options(),
+            |_| -> anyhow::Result<()> { panic!("capture failure must not prepare") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 2, "{report:?}");
+    let capture = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == PreflightCategory::Capture)
+        .unwrap();
+    assert_eq!(
+        capture.installation_ids.as_slice(),
+        std::slice::from_ref(&alpha_id)
+    );
+    assert!(capture.location.is_none());
+    let destination = report
+        .diagnostics
+        .iter()
+        .find(|d| d.category == PreflightCategory::Destination)
+        .unwrap();
+    let mut owners = vec![alpha_id, beta_id.clone()];
+    owners.sort();
+    assert_eq!(destination.installation_ids, owners);
+    assert_eq!(destination.location.as_ref().unwrap().path, "AGENTS.md");
+    assert_eq!(report.instruction_readers.len(), 1);
+    assert_eq!(report.instruction_readers[0].installation_id, beta_id);
+    assert_eq!(
+        std::fs::read(dest.path().join(".upskill-lock.json")).unwrap(),
+        state_bytes
+    );
+    assert_eq!(state(dest.path()), prior);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), edited);
+    assert!(!scope.has_pending_operation().unwrap());
+}
+
+#[test]
+fn destination_only_block_keeps_compiled_readers() {
+    let dest = tempfile::tempdir().unwrap();
+    let included = tempfile::tempdir().unwrap();
+    let excluded = tempfile::tempdir().unwrap();
+    write_rule(included.path(), "Included", "");
+    write_rule(excluded.path(), "Excluded", "audience: [claude]\n");
+    let root = root(dest.path(), OwnershipScope::Project);
+    apply(
+        &root,
+        SourceRequest::Add(vec![
+            add(included.path(), "included"),
+            add(excluded.path(), "excluded"),
+        ]),
+    );
+    let prior = state(dest.path());
+    let mut expected_ids = prior
+        .installations
+        .iter()
+        .map(|i| i.owner.installation_id.clone())
+        .collect::<Vec<_>>();
+    expected_ids.sort();
+    let path = dest.path().join("AGENTS.md");
+    let original = std::fs::read_to_string(&path).unwrap();
+    let edited = original.replace("# Included", "# Edited");
+    assert_ne!(original, edited);
+    std::fs::write(&path, &edited).unwrap();
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = writer(&scope);
+    let report = blocked_report(
+        with_prepared_codex(
+            &scope,
+            &guard,
+            root,
+            SourceRequest::Update(Selection::All),
+            options(),
+            |_| -> anyhow::Result<()> { panic!("blocked destination cannot prepare") },
+        )
+        .unwrap(),
+    );
+    assert_eq!(report.diagnostics.len(), 1, "{report:?}");
+    assert_eq!(
+        report.diagnostics[0].category,
+        upskill::lifecycle::preflight::PreflightCategory::Destination
+    );
+    assert_eq!(
+        report
+            .instruction_readers
+            .iter()
+            .map(|r| r.installation_id.clone())
+            .collect::<Vec<_>>(),
+        expected_ids,
+        "destination-only blocker must preserve every compiled reader report"
+    );
+    assert_eq!(
+        report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.report.compatibility == InstructionCompatibility::NotEvaluated)
+            .count(),
+        1
+    );
+    for (name, compatibility) in [
+        ("included", InstructionCompatibility::UnconditionalMarkdown),
+        ("excluded", InstructionCompatibility::NotEvaluated),
+    ] {
+        let installation = prior
+            .installations
+            .iter()
+            .find(|i| i.owner.installed_name == name)
+            .unwrap();
+        let readers = report
+            .instruction_readers
+            .iter()
+            .filter(|r| r.installation_id == installation.owner.installation_id)
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(readers.len(), 1);
+        assert_readers(&readers, PROJECT_READERS, compatibility);
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), edited.as_bytes());
+    assert_eq!(state(dest.path()), prior);
+    assert!(!scope.has_pending_operation().unwrap());
 }

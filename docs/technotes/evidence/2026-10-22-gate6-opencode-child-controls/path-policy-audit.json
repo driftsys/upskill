@@ -1,0 +1,34 @@
+{
+  "qualified": false,
+  "native_rejected_patch": [
+    {
+      "name": "patch",
+      "id": "call_OfXhyrNEvqKVMJaoa5LgItVC",
+      "state": {
+        "status": "error",
+        "input": {
+          "redacted": "tool-input:msg_164e450d3001y1382Gcwt7VJMd"
+        },
+        "output": null,
+        "error": {
+          "type": "permission.rejected",
+          "message": "Permission denied: edit"
+        }
+      }
+    }
+  ],
+  "protected_fixture_unchanged": true,
+  "limitation": "Private script transformation left an extra edit *.txt allow rule in allowed-path positive; denied-path has edit sentinel.txt only. The two policies are not identical, so do not claim a same-policy matching/nonmatching pair. Earlier child-edit packet independently observed a narrow sentinel allow positive.",
+  "tool_input_limit": "Native sanitized child exports redact tool inputs. Do not claim independently retained patch resource identity from those exports. Declared child request, native permission.rejected/edit and unchanged owned other fixture are separately observed.",
+  "allowed_agent_snapshot": {
+    "sha256": "a6caa49cf2a7ff49a326df80d6a8ab5639bcb42e188b81a57c737912b4170be3",
+    "mode": 416,
+    "content": "---\ndescription: Disposable scoped child edit control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n  - action: edit\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nRead sentinel.txt, then attempt exactly one native patch of sentinel.txt to replace its entire contents with exactly EDIT_88c005cbf86faefda109773e29ef291c followed by a newline. This is a disposable native permission control. Do not use shell or another path. The permission engine may reject the patch; do not bypass it. If unavailable or rejected, return exactly DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec. Return exactly EDIT_88c005cbf86faefda109773e29ef291c only after the required write succeeds.\n"
+  },
+  "denied_agent_snapshot": {
+    "sha256": "101a9d3c2d2064de0b82f5796538ddc99958b8f01efbeb3adbf8ef5db16aff16",
+    "mode": 416,
+    "content": "---\ndescription: Disposable scoped child edit control\nmode: subagent\nsteps: 5\npermissions:\n  - action: \"*\"\n    resource: \"*\"\n    effect: deny\n  - action: read\n    resource: \"*.txt\"\n    effect: allow\n  - action: edit\n    resource: sentinel.txt\n    effect: allow\n---\nRead other.txt, then attempt exactly one native patch of other.txt to replace its entire contents with exactly EDIT_88c005cbf86faefda109773e29ef291c followed by a newline. This is a disposable native permission control. Do not use shell or another path. The permission engine may reject the patch; do not bypass it. If unavailable or rejected, return exactly DENIED_e065cf5e37c6d6ee7f34acf2ab20e8ec. Return exactly EDIT_88c005cbf86faefda109773e29ef291c only after the required write succeeds.\n"
+  },
+  "prior_manifest_sha256": "11a03e8c85bed999c8b9145fc2df5a97957b9935d357dbb2c79ca77fb22cab43"
+}

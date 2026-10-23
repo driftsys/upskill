@@ -1,0 +1,185 @@
+{
+  "assessment": {
+    "issue": 375,
+    "qualified": false,
+    "phase": "native-interface-only",
+    "default_service_list_failed": "Managed service port 49374 occupied by another process; that process untouched",
+    "private_port": 54949,
+    "private_list_succeeded": true,
+    "local_plugin_add_rejected": "Plugin target must be an npm registry package or Git package specifier",
+    "provider_or_model_requests": 0,
+    "private_service_stopped": true,
+    "original_port_unset_restored": true,
+    "global_config_candidates_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json",
+        "exists": false
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.jsonc",
+        "exists": false
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/config.json",
+        "exists": false
+      }
+    ],
+    "manual_exact": true,
+    "source_references": [
+      "https://opencode.ai/v2/docs/config/",
+      "https://opencode.ai/v2/docs/plugins/"
+    ],
+    "source_limit": "Rolling official docs describe local global-config entries separately from package CLI. They propose a candidate, not pinned runtime proof. Initial interface-0 used an inline orchestration snippet without a pre-frozen helper; its exact native command/outputs are retained, not a qualified runner."
+  },
+  "commands": [
+    {
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "plugin",
+        "list"
+      ],
+      "exit_code": 1,
+      "timed_out": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "261a467c06a92d0973ad31e9ebf7cc654cd0eb33750ec37541fc2469d1b999b1",
+      "qualified": false
+    },
+    {
+      "label": "private-port-set",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "service",
+        "set",
+        "port",
+        "54949"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-list-before",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "plugin",
+        "list"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "fa1e211a4cd194e24826f887071c6cff95cc424cd051c15b01133fbc8155db54",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-add-a",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "plugin",
+        "add",
+        "/private/tmp/upskill-gate6-opencode-user-rules-cbk4tza7/packages/upskill-user-rule-a-893195f5d7"
+      ],
+      "exit_code": 1,
+      "timed_out": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "128ef20fe96a443c18e23c2720ec86bcbeb7fb68b9051fa4ad8eff73a562191a"
+    },
+    {
+      "label": "private-service-stop",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "service",
+        "stop"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-service-status",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "service",
+        "status"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "f247a76b2893208aae7751dbf51f4c495efacfb6d9e743802870300f31ac45c8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-port-unset",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "service",
+        "unset",
+        "port"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-port-restored",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+        "service",
+        "get",
+        "port"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "default_list_stderr": "Error: Server process exited with code 1\nError: Managed service port 49374 on 127.0.0.1 is already in use by another process. Configure another port with `opencode service set port <port>` and start the service again.\n    at <anonymous> (/$bunfs/root/chunk-680z5ykb.js:2:8925) {\n  [cause]: ServeError: \n      at q (/$bunfs/root/chunk-2388pc86.js:52:7706)\n      at applyHandlers (node:events:64:20)\n      at emitError (node:events:44:27)\n      at emitListenErrorNextTick (node:_http_server:134:12)\n      at processTicksAndRejections (unknown:7:39) {\n    [cause]: Error: Failed to start server. Is port 49374 in use?\n        at serve (unknown)\n        at <anonymous> (node:_http_server:359:39)\n        at <anonymous> (node:_http_server:332:33)\n        at <anonymous> (/$bunfs/root/chunk-2388pc86.js:52:7744)\n  }\n}\n    at map (unknown:1:11)\n    at reap (/$bunfs/root/chunk-3wwjbdge.js:2:1203)\n    at <anonymous> (/$bunfs/root/chunk-3wwjbdge.js:3:6711)\n    at service.ensure (/$bunfs/root/chunk-4yp3z0hm.js:3:732)\n    at service.ensure (definition) (/$bunfs/root/chunk-3wwjbdge.js:3:5523)\n    at cli.server-connection.resolve (/$bunfs/root/chunk-qx93gfn0.js:2:1611)\n    at cli.server-connection.resolve (definition) (/$bunfs/root/chunk-4yp3z0hm.js:2:402)\n    at cli.plugin.list (/$bunfs/root/chunk-rhq1p77r.js:7:21275)\n    at cli.plugin.list (definition) (/$bunfs/root/chunk-qx93gfn0.js:2:1554)\n",
+  "private_list_stdout": "No plugins found\n",
+  "local_add_stderr": "Error: Plugin target must be an npm registry package or Git package specifier\n    at <anonymous> (/$bunfs/root/chunk-nj938qmq.js:2:1345)\n    at cli.plugin.add (/$bunfs/root/chunk-rhq1p77r.js:7:21275)\n    at cli.plugin.add (definition) (/$bunfs/root/chunk-nj938qmq.js:2:1259)\n",
+  "preflight_and_restoration": [
+    {
+      "label": "service-port-before",
+      "stdout": "\n",
+      "stderr": "",
+      "receipt": {
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "service",
+          "get",
+          "port"
+        ],
+        "exit_code": 0,
+        "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "label": "service-status-before",
+      "stdout": "stopped\n",
+      "stderr": "",
+      "receipt": {
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "service",
+          "status"
+        ],
+        "exit_code": 0,
+        "stdout_sha256": "f247a76b2893208aae7751dbf51f4c495efacfb6d9e743802870300f31ac45c8",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "label": "private-service-status",
+      "stdout": "stopped\n",
+      "stderr": "",
+      "receipt": null
+    },
+    {
+      "label": "private-port-restored",
+      "stdout": "\n",
+      "stderr": "",
+      "receipt": null
+    }
+  ]
+}

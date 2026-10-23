@@ -16,6 +16,44 @@ the relevant official documentation and runtime evidence when implementing each
 adapter. Historical research remains informative and does not override the
 active lifecycle plan or its activation gates.
 
+## Rolling-documentation discrepancy recorded on 2026-10-20
+
+The 2026-10-14 OpenCode statements below describe that dated research, not a
+current support claim. The current v2 instructions page now documents configured
+files/globs/URLs and explicitly no `CLAUDE.md` fallback. This differs from the
+earlier page description; neither establishes pinned 2.0.32 behavior. Retain
+separate default/configured native controls. Current v2 agent documentation also
+uses ordered `permissions`; existing legacy singular `permission` generation
+must not be promoted to v2 permission evidence. See the
+[shared-root evaluation](shared-content-root-evaluation.md) for candidate
+limits.
+
+## Bounded native child supplement recorded on 2026-10-22
+
+The [OpenCode child controls](gate6-opencode-child-controls.md) retain actual
+configured and file-backed child execution at pinned 2.0.32 on macOS arm64 in
+project scope, selected agent/model identities, a narrow edit positive and one
+native nonmatching edit rejection. Earlier empty debug catalog output remains
+inconclusive. A no-attempt denial response and a later positive's broader edit
+glob are explicit limits. These manual native fixtures do not qualify the
+historical permission generator, shared catalogs, other scopes/platforms or the
+complete adapter. The informative matrix and its 160 unqualified cells remain
+unchanged; no production route is adopted.
+
+A subsequent [unchanged-policy path pair](gate6-opencode-policy-parity.md)
+records an actual matching edit and a native nonmatching rejection under one
+unchanged agent/configuration, with exact fixture restoration. This is a new
+bounded project/macOS observation; the earlier mismatched-policy receipts and
+all full-profile, generated-adapter and activation limits remain unchanged.
+
+The [OpenCode skill/resource supplement](gate6-opencode-shared-resources.md)
+records actual shared `.agents/skills` consumption and a relative resource read
+at pinned 2.0.32 in macOS project scope, calibrated by a native-directory
+positive. Native missing-file and unavailable-skill errors, exact fallbacks and
+restored positive are retained. Default/configured discovery exclusivity,
+catalog counts, other readers and complete lifecycle/profile qualification
+remain unresolved.
+
 ## Four initial clients
 
 | Client      | Rules independent of team instructions                                                  | Skills and subagents                                    | MCP and permissions                                                    | Plugin lifecycle candidate                         |
@@ -184,3 +222,73 @@ Every proposed route needs a pinned released-client test. Record documentation
 support, emitted-file validation, native discovery and observed behavior as
 different evidence levels. The proposed roadmap uses these gates without
 claiming that the refreshed capability inventory is already implemented.
+
+## Gate 6 pinned inventory follow-up — 2026-10-19
+
+The [pinned profile and reader inventory](gate6-plugin-profile-inventory.md)
+records the corrected independent-plugin rule candidates, all customization
+reader/root conditions and campaign pins after architecture PR #334. It
+supplements this dated research without rewriting earlier observations. Released
+Codex parser/hook source and the integrity-verified OpenCode v2 SDK declarations
+were inspected; no native plugin activation is qualified by those inspections.
+
+## Bounded Codex shared resource follow-up — 2026-10-22
+
+The [Codex shared-resource slice](gate6-codex-shared-resources.md) adds bounded
+0.163.0/macOS project observations: four native skill expansions, three
+successful resource reads, one missing-file command failure and a relocated
+package. All five final-answer phases match; two original whole-message-sequence
+expectations remain failed. No complete discovery inventory, duplicate
+activation, native permission-denial mapping, route adoption or lifecycle
+qualification follows.
+
+## Four-client shared resource coexistence — 2026-10-22
+
+The [bounded common-project packet](gate6-four-client-skill-coexistence.md)
+retains native shared/resource and installed Claude package paths across all
+four clients, successful paired route-absence/survival controls in a corrected
+fixture, and two frozen preliminary expectation failures. Native Claude reads
+its local installed marketplace source; cache-copy behavior is not established.
+Exact native final responses, one fixture activation per positive and bound
+resource reads remain distinct from full duplicate/discovery, permission, scope
+and integrated lifecycle qualification. No route is adopted; schema-2 remains
+blocked.
+
+## Bounded Codex user registration — 2026-10-23
+
+The [Codex user-registration slice](gate6-codex-user-rule-controls.md) retains
+native rule messages and paired disable/remove/reinstall controls across two
+disposable projects after ordinary user hook review. Registration is
+user-scoped; callbacks intentionally guard only those two project paths. The
+untrusted positive remains failed and the first post-trust runner remains
+incomplete after a guard failure. Nine corrected turns match their declared
+responses with bound callback counts. Exact post-trust configuration restoration
+and selected prior registration preservation do not qualify full
+ownership/recovery, other readers or other clients/platforms/scopes. No adapter
+is adopted; schema-2 stays blocked.
+
+## Bounded OpenCode user configuration — 2026-10-23
+
+The [OpenCode user-configuration slice](gate6-opencode-user-rule-controls.md)
+retains a failed managed-port attempt, a native package-CLI rejection of a local
+directory, and fourteen successful configured-local turns across two fresh
+contexts. Global-file entries load the intended local package sources; paired
+removals preserve team guidance and a representative manual field/mode baseline.
+Native sanitized exports redact directory/text identity, so exact responses bind
+CLI receipts and actual module paths bind context callbacks. This is not native
+package uninstall, arbitrary existing JSONC/plugin-array preservation or
+complete profile recovery. No adapter or shared root is adopted. All 160 cells
+remain unqualified; schema-2 activation stays blocked.
+
+## Codex user session lifecycle — 2026-10-23
+
+The [session lifecycle slice](gate6-codex-user-session-controls.md) retains five
+matching model responses and one actual native UI compaction, with two explicit
+failed controls. An initial resume did not preserve the fresh invocation's
+read-only policy; a separate pair supplies read-only configuration on each
+invocation. UI reopen followed by compaction precedes the next turn recording
+two exact developer bodies per rule on the next turn. Correct JSON and one
+callback per hook point do not prove unique instruction delivery.
+[#379](https://github.com/driftsys/upskill/issues/379) blocks adapter selection
+until the lifecycle contract and native proof resolve this behavior. No adapter
+is adopted, all 160 cells remain unqualified and schema-2 stays blocked.

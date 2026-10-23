@@ -1,0 +1,262 @@
+{
+  "fixture": {
+    "issue": 369,
+    "root": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj",
+    "profile": "/private/tmp/upskill-gate6-codex-installed-20261019",
+    "projects": [
+      "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+      "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b"
+    ],
+    "skill": "upskill-resource-7c17ce0c",
+    "marker": "RESOURCE_c348764eed699af2704c57ec4201d966",
+    "missing": "MISSING_d52664b063d18438",
+    "absent": "ABSENT_2912e738de75456f",
+    "manual_before": [
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/AGENTS.md",
+        "sha256": "7ad9fc524488e271022554668b24850cd09532868e95dfda9b4678973c981356",
+        "mode": 416
+      },
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/AGENTS.md",
+        "sha256": "7ad9fc524488e271022554668b24850cd09532868e95dfda9b4678973c981356",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+        "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+        "mode": 384
+      }
+    ],
+    "content_before": [
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/SKILL.md",
+        "sha256": "2f35cc77fcac4b36d4dfcb1c78aa8a82d6f2d4ae49d92cdec8f43ec83fefd7e4",
+        "mode": 416
+      },
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/.agents/skills/upskill-resource-7c17ce0c/references/review-procedure.md",
+        "sha256": "0d18965b41e54a6376e73a4129cb69fcfcb564de081db54604eba29f5a5f79a4",
+        "mode": 416
+      }
+    ],
+    "binary": {
+      "path": "/Users/sebastientasson/.local/bin/codex",
+      "sha256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31"
+    },
+    "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+    "qualified": false
+  },
+  "assessment": {
+    "results": [
+      {
+        "label": "shared-positive",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+        ],
+        "cwd": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "session": [
+          "01a16572-9b10-7ca1-83e6-ffbf83817573"
+        ],
+        "completed_turns": 1,
+        "final": [
+          "I\u2019m using the upskill-resource-7c17ce0c skill for the resource probe.",
+          "RESOURCE_c348764eed699af2704c57ec4201d966"
+        ],
+        "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+        "exact_response": false,
+        "stdout_sha256": "a32998330366fe0ef3eb1dfdaadd4191718cbc8ed8d4dead33d5d90d0f5a35aa",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+        "qualified": false
+      },
+      {
+        "label": "missing-resource",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+        ],
+        "cwd": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "session": [
+          "01a16572-c020-7772-8ae8-6b65d87eff10"
+        ],
+        "completed_turns": 1,
+        "final": [
+          "MISSING_d52664b063d18438"
+        ],
+        "expected": "MISSING_d52664b063d18438",
+        "exact_response": true,
+        "stdout_sha256": "202d14f7982a67da031d707d96562dfb3ca9d5b1dc9f833cf70b8c2928313c9b",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+        "qualified": false
+      },
+      {
+        "label": "missing-entry",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+        ],
+        "cwd": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "session": [
+          "01a16572-e569-7f01-9461-fd050fe1dbe0"
+        ],
+        "completed_turns": 1,
+        "final": [
+          "ABSENT_2912e738de75456f"
+        ],
+        "expected": "ABSENT_2912e738de75456f",
+        "exact_response": true,
+        "stdout_sha256": "ef7bd6336e12fb54401df6faf28f2ce421a79eeed1dbf271b07c9534fb9cd886",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+        "qualified": false
+      },
+      {
+        "label": "restored-shared",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+        ],
+        "cwd": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "session": [
+          "01a16572-f68f-7732-92eb-f6d74abde127"
+        ],
+        "completed_turns": 1,
+        "final": [
+          "I\u2019m using the upskill-resource-7c17ce0c skill and its supporting procedure.",
+          "RESOURCE_c348764eed699af2704c57ec4201d966"
+        ],
+        "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+        "exact_response": false,
+        "stdout_sha256": "0e441e4ecc65c0daf0e4a37723c2856d4501dcf9678f8c65682d3a28cf2a94b2",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+        "qualified": false
+      },
+      {
+        "label": "relocated-shared",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Use $upskill-resource-7c17ce0c for the resource probe. Follow the skill and return only its required final response."
+        ],
+        "cwd": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "session": [
+          "01a16573-14e1-7a82-aa3c-f18cd0974073"
+        ],
+        "completed_turns": 1,
+        "final": [
+          "RESOURCE_c348764eed699af2704c57ec4201d966"
+        ],
+        "expected": "RESOURCE_c348764eed699af2704c57ec4201d966",
+        "exact_response": true,
+        "stdout_sha256": "bc8ddbfeaa9b73a06fc6ee9f058812ec1294cc25fc79a01ed3046d0b644eebce",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+        "qualified": false
+      }
+    ],
+    "manual_after": [
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-a/AGENTS.md",
+        "sha256": "7ad9fc524488e271022554668b24850cd09532868e95dfda9b4678973c981356",
+        "mode": 416
+      },
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/AGENTS.md",
+        "sha256": "7ad9fc524488e271022554668b24850cd09532868e95dfda9b4678973c981356",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+        "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+        "mode": 384
+      }
+    ],
+    "manual_exact": true,
+    "content_after": [
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/.agents/skills/upskill-resource-7c17ce0c/SKILL.md",
+        "sha256": "2f35cc77fcac4b36d4dfcb1c78aa8a82d6f2d4ae49d92cdec8f43ec83fefd7e4",
+        "mode": 416
+      },
+      {
+        "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/.agents/skills/upskill-resource-7c17ce0c/references/review-procedure.md",
+        "sha256": "0d18965b41e54a6376e73a4129cb69fcfcb564de081db54604eba29f5a5f79a4",
+        "mode": 416
+      }
+    ],
+    "entry_resource_bytes_modes_equal": true,
+    "final_entry": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/project-b/.agents/skills/upskill-resource-7c17ce0c",
+    "qualified": false
+  },
+  "skill_body": "---\nname: upskill-resource-7c17ce0c\ndescription: Use for the explicitly requested resource probe.\n---\n\nRead references/review-procedure.md relative to this skill directory, then follow its response instruction. If the resource is missing, return exactly MISSING_d52664b063d18438. Do not substitute another procedure or search other locations.\n",
+  "resource_body": "Return exactly RESOURCE_c348764eed699af2704c57ec4201d966.\n",
+  "limitation": "Final package location is project-b; byte/mode equality does not mean restoration of the initial location or installed lifecycle preservation."
+}

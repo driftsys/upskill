@@ -1,0 +1,267 @@
+[
+  {
+    "qualified": false,
+    "label": "native-positive",
+    "info": {
+      "id": "ses_e9aa2f365ffejW25Tv69WhFn88",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1655d0f45001P8FpMZdZsRMBmj",
+        "type": "user"
+      },
+      {
+        "id": "msg_1655d0faa001wxspaxKupT1PjQ",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d17b9001DknCxzD0IrESQ7",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d2299001LU3SHoB0KXXIBO",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d2913002UnXa2cR0vxrA09",
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "source_session_export_sha256": "1779f3353decada722cce65b01e95ebf36b8f659b34296260e26c8abac0920ff",
+    "omitted": "message content, provider state, accounting and snapshots; native tool/text evidence is in selected CLI trace"
+  },
+  {
+    "qualified": false,
+    "label": "shared-positive",
+    "info": {
+      "id": "ses_e9aa2d41effeYxj3ZV6XElZypZ",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1655d2cfb0015NMxi736iAuWEN",
+        "type": "user"
+      },
+      {
+        "id": "msg_1655d2d5f0019ns5qMXmxVPkv2",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d3628001hFBeLbHqwHJRTG",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d3e37001Z1Ix3NCVDTWxPn",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d47eb001w19WyK4t5SlCnU",
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "source_session_export_sha256": "ed23c5308625ac4e89e1770bd14009b3acd659cdfe8d41a4cfad6ba605e2a27c",
+    "omitted": "message content, provider state, accounting and snapshots; native tool/text evidence is in selected CLI trace"
+  },
+  {
+    "qualified": false,
+    "label": "missing-resource",
+    "info": {
+      "id": "ses_e9aa2b5a4ffeo3BDs5IyNbyGFG",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1655d4b9c001b8NhvGDJav7XbV",
+        "type": "user"
+      },
+      {
+        "id": "msg_1655d4e5a001ZPYCwdQdEqnW7P",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d59cf001ngTY8s9JIZBzlX",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d63a1001EzfY3DVnRdl97D",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d6edf0017dBS5shKnZZy41",
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "source_session_export_sha256": "895d31eca08fd529e33681a27e17954280d3adda6cc1ec1ed6962ea4b625344f",
+    "omitted": "message content, provider state, accounting and snapshots; native tool/text evidence is in selected CLI trace"
+  },
+  {
+    "qualified": false,
+    "label": "missing-entry",
+    "info": {
+      "id": "ses_e9aa28f16ffeQ85aa9lnNTpHAA",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1655d7174001GeW84eKA1CkT40",
+        "type": "user"
+      },
+      {
+        "id": "msg_1655d71a4001cD4XwGAiAuc1xH",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d79b3001jFoyWqAiOhR614",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d7f64001p1p6Taht911N3Q",
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "source_session_export_sha256": "95f14771051edfefd7f1ccbd2bd49b76dbcea55edc518c8aa39df470c2ca030e",
+    "omitted": "message content, provider state, accounting and snapshots; native tool/text evidence is in selected CLI trace"
+  },
+  {
+    "qualified": false,
+    "label": "restored-shared",
+    "info": {
+      "id": "ses_e9aa27e86ffeLfR7WoE8QLTjdT",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1655d81fd001vcW2ju4GyxjR8Q",
+        "type": "user"
+      },
+      {
+        "id": "msg_1655d8241001SglfyJrHqn9q0j",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d8989001wpObQt2Wcuql7W",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d94e9001DQgN1to7WZN4J3",
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        }
+      },
+      {
+        "id": "msg_1655d9bd70014oGg961nJUbut8",
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "source_session_export_sha256": "85c3e1d14b56843503256c2ca30d6fc522018e54cf0958611b714bda167bc2b1",
+    "omitted": "message content, provider state, accounting and snapshots; native tool/text evidence is in selected CLI trace"
+  }
+]

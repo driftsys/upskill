@@ -1,0 +1,129 @@
+{
+  "original_packets": [
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/receipt-hashes.json",
+        "sha256": "901b610ee4eb565676cc4510da0b26e0df7e7bcd652d8cb373c14d34fc38ce98"
+      },
+      "original_entries_verified": 38
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-posttrust-xrqer771",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-posttrust-xrqer771/receipt-hashes.json",
+        "sha256": "f47794ce64b91c81e9a6b3c1a3c2ff8a3cead320e777ce491652918c238f03a4"
+      },
+      "original_entries_verified": 17
+    },
+    {
+      "packet": "/private/tmp/upskill-gate6-codex-user-posttrust-ftpnhu8p",
+      "manifest": {
+        "path": "/private/tmp/upskill-gate6-codex-user-posttrust-ftpnhu8p/receipt-hashes.json",
+        "sha256": "30f520948308b205886fd292e2095962fccdac009c895d5b1f2eb115ed0ec36b"
+      },
+      "original_entries_verified": 52
+    }
+  ],
+  "original_sessions": [
+    {
+      "session": "01a165ac-c448-7de2-a0ba-5ba532bffa84",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T00-13-04-01a165ac-c448-7de2-a0ba-5ba532bffa84.jsonl",
+      "sha256": "330feb8c2cc449148d565374147b8511331b314f229cdba39637af46b3866ff0"
+    },
+    {
+      "session": "01a166fc-168f-7412-a935-33010ee50b02",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-19-19-01a166fc-168f-7412-a935-33010ee50b02.jsonl",
+      "sha256": "9b4529a62c5258f0eaa66374b0d18271b392b3f68245944250e91d4350200e05"
+    },
+    {
+      "session": "01a166fc-2ea1-7973-aba3-206de54b989d",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-19-25-01a166fc-2ea1-7973-aba3-206de54b989d.jsonl",
+      "sha256": "80149e171d5ab08ef199bd5b02d759aa4da701f3f4a49c2930e6f1e2cc2ead52"
+    },
+    {
+      "session": "01a166fd-3652-7f03-863e-a4b432906918",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-33-01a166fd-3652-7f03-863e-a4b432906918.jsonl",
+      "sha256": "cb92f228bde4e75716b6114ca4540a78e6120f6a48d59eb3df44dc7e2f1f0253"
+    },
+    {
+      "session": "01a166fd-4678-7013-a917-1ada7f572b0c",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-37-01a166fd-4678-7013-a917-1ada7f572b0c.jsonl",
+      "sha256": "889767ba5f9d33548acd449675f0d2cee2ac61ea036c67b82acb8eea28b80412"
+    },
+    {
+      "session": "01a166fd-597f-7881-bed2-0dfdbd8864fc",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-42-01a166fd-597f-7881-bed2-0dfdbd8864fc.jsonl",
+      "sha256": "59463bbb69fd79c492eb09b67dd81340b36d19ca1978d998736b5026681b0c57"
+    },
+    {
+      "session": "01a166fd-6e94-7ea1-b093-29ac8e5dc473",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-47-01a166fd-6e94-7ea1-b093-29ac8e5dc473.jsonl",
+      "sha256": "4d7055f8835dfd61c1396e2e0f781c4109a4de101fd0e16dd86503ed22714481"
+    },
+    {
+      "session": "01a166fd-81a5-72b3-aeee-6c0ae3473fa2",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-52-01a166fd-81a5-72b3-aeee-6c0ae3473fa2.jsonl",
+      "sha256": "2e57d147d63f3bb625ef162862ed09feaa700bfbe25b2cc04eb7c4ad5b5f7b49"
+    },
+    {
+      "session": "01a166fd-972a-7972-95b6-215081ae0ba5",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-20-57-01a166fd-972a-7972-95b6-215081ae0ba5.jsonl",
+      "sha256": "ae3bef43bfceb3f948fb9a961af02c6bb17f2c18d5783ee376f5863f01c5d430"
+    },
+    {
+      "session": "01a166fd-b811-79e2-b2f9-21ffb7d862f3",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-21-06-01a166fd-b811-79e2-b2f9-21ffb7d862f3.jsonl",
+      "sha256": "252d8c0eb8c163e3503dd3e94f9349344cf66774f865764208e01ff55aebfdef"
+    },
+    {
+      "session": "01a166fd-cb4d-7002-9b3c-9cb5c272ec7d",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-21-11-01a166fd-cb4d-7002-9b3c-9cb5c272ec7d.jsonl",
+      "sha256": "02921e7bb85226460a2ea6634a2c4f2eba0f4e6c16d971ff6975491a5b058cca"
+    },
+    {
+      "session": "01a166fd-de20-7100-8a97-e81e215c3606",
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-21-15-01a166fd-de20-7100-8a97-e81e215c3606.jsonl",
+      "sha256": "cd79596a0263dc0333db13e3856ce902ee07850da532bcf9c119f71fc7d4db8e"
+    }
+  ],
+  "helpers_and_regression": [
+    {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/capture.py",
+      "sha256": "d4d09f8285d5e7e9dbe975596127333176ae61cfd2964970ef9b96c33f6ce334"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/installation-helper.py",
+      "sha256": "ea8a331b52628553e9005126910f76c6bcc895ba033bf8f2b225f7d7caf30b5c"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/calibration-helper.py",
+      "sha256": "3013649a55b007b8cdc10819ac2cae0c1ace5036f933089e1ba46a3fd1557689"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-user-posttrust-xrqer771/capture.py",
+      "sha256": "30fb9d1f67764efba8a01b2d2b1cd96f10d15074bb021287750ab42dfd4fc1cb"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-user-posttrust-ftpnhu8p/capture.py",
+      "sha256": "4e29770c63e982b1130389d06d423397304be80cef1b3c58b2a253e6d85fe740"
+    },
+    {
+      "path": "/private/tmp/upskill-codex-user-config-regression.json",
+      "sha256": "4654bbc1184ddddea9ef5b99204bd395738087696a0d32b2b5569b59e78f5478"
+    },
+    {
+      "path": "/private/tmp/upskill-codex-user-rules-review.py",
+      "sha256": "ea2aa5c1934fdba07bbbbf3ced143b3ff6542c4f106e51febd637e676dfb5338"
+    },
+    {
+      "path": "/private/tmp/upskill-retain-codex-user-rules.py",
+      "sha256": "04b58c07c99d011fc49012035331faf90f4727d34c2d9f40ae6fe172353b6575"
+    }
+  ],
+  "partial_trace_supplement": {
+    "path": "/private/tmp/upskill-gate6-codex-user-posttrust-xrqer771/supplemental-source-hashes.json",
+    "sha256": "a08a55fd434d80fdc6584d93d3cb4aa3baa56af312e15fc5c2b51c582cfc8408"
+  },
+  "limitation": "Full owned native sessions and UI transcript stay private; selected records omit account IDs, provider/accounting/world state and unrelated catalog/configuration content. No authentication contents copied or inspected."
+}

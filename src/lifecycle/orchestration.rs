@@ -11,6 +11,7 @@ use super::commands::{
 use super::contracts::{ConsumerContract, ContractContent};
 use super::desired::CompilerBinding;
 use super::desired::codex::{InstructionReaderReport, contribution_id};
+use super::preflight::{PreflightCategory, PreflightDiagnostic, PreflightReport, normalize_report};
 use super::selection::{Selection, SelectionDiagnostic, SelectionOutcome, select_owned_nodes};
 use super::sources::{
     CodexSourceBinding, ResolvedRuleSource, RuleSourceBinding, normalized_source_label,
@@ -246,6 +247,7 @@ fn with_prepared_route<T>(
         SourceRoute::Codex { execution, .. } => execution,
     };
     let is_add = matches!(&request, SourceRequest::Add(_));
+    let mut report = PreflightReport::default();
     let mut specs = Vec::new();
     let mut bindings = Vec::new();
     let selection = match &request {
@@ -280,7 +282,17 @@ fn with_prepared_route<T>(
                     root: item.root.clone(),
                     targets: route_targets(route, targets, &item.requested)?,
                 });
-                specs.push(parse_install_source_label(&item.owner.source)?);
+                match parse_install_source_label(&item.owner.source) {
+                    Ok(source) => specs.push(Some(source)),
+                    Err(error) => {
+                        report.diagnostics.push(item_diagnostic(
+                            &item.owner.installation_id,
+                            PreflightCategory::Resolution,
+                            error.into(),
+                        ));
+                        specs.push(None);
+                    }
+                }
             }
             Some(selection.clone())
         }
@@ -290,24 +302,9 @@ fn with_prepared_route<T>(
                 "add requires at least one selected rule root"
             );
             let requested = route_targets(route, targets, add_defaults)?;
-            let mut aliases = std::collections::BTreeSet::new();
+            // Retained representation/root authority is an operation-level boundary:
+            // inspect every selected recorded owner before resolving new sources.
             for item in items {
-                ensure!(
-                    !item.source_name.is_empty() && !item.installed_name.is_empty(),
-                    "source name and installed alias must be nonempty"
-                );
-                ensure!(
-                    aliases.insert(&item.installed_name),
-                    "duplicate installed alias in add request"
-                );
-                ensure!(
-                    !session
-                        .state()
-                        .bundles
-                        .iter()
-                        .any(|bundle| bundle.name == item.installed_name),
-                    "installed alias already belongs to an owned bundle"
-                );
                 for prior in session
                     .state()
                     .installations
@@ -323,35 +320,88 @@ fn with_prepared_route<T>(
                 }
             }
             for item in items {
-                bindings.push(Binding {
+                let mut binding = Binding {
                     id: String::new(),
                     source_name: item.source_name.clone(),
                     installed_name: item.installed_name.clone(),
                     root: root.clone(),
                     targets: requested.clone(),
-                });
-                if session
-                    .state()
-                    .installations
-                    .iter()
-                    .any(|prior| prior.owner.installed_name == item.installed_name)
-                {
-                    let label = normalized_source_label(&item.source)?;
-                    let binding = bindings.last().expect("just inserted binding");
+                };
+                // A fallback identity is diagnostic-only: normalization failure cannot
+                // establish source evidence or authorize an installation.
+                let label = normalized_source_label(&item.source);
+                binding.id = new_installation_id(&binding, &item.source.to_string())?;
+                let checked = (|| -> Result<()> {
+                    let label = label?;
+                    binding.id = installation_id(session.state(), &binding, &label)?;
                     ensure!(
-                        !session.state().installations.iter().any(|prior| prior
-                            .owner
-                            .installed_name
-                            == item.installed_name
-                            && !same_binding(prior, binding, &label)),
-                        "installed alias already belongs to a different binding"
+                        !item.source_name.is_empty() && !item.installed_name.is_empty(),
+                        "source name and installed alias must be nonempty"
                     );
+                    ensure!(
+                        !session
+                            .state()
+                            .bundles
+                            .iter()
+                            .any(|b| b.name == item.installed_name),
+                        "installed alias already belongs to an owned bundle"
+                    );
+                    for prior in session
+                        .state()
+                        .installations
+                        .iter()
+                        .filter(|p| p.owner.installed_name == item.installed_name)
+                    {
+                        ensure_source_rule_owner(
+                            session.state(),
+                            &prior.owner.installation_id,
+                            route,
+                            &root,
+                        )?;
+                        ensure!(
+                            same_binding(prior, &binding, &label),
+                            "installed alias already belongs to a different binding"
+                        );
+                    }
+                    Ok(())
+                })();
+                if let Err(error) = checked {
+                    report.diagnostics.push(item_diagnostic(
+                        &binding.id,
+                        PreflightCategory::Binding,
+                        error,
+                    ));
+                    specs.push(None);
+                } else {
+                    specs.push(Some(item.source.clone()));
                 }
-                specs.push(item.source.clone());
+                bindings.push(binding);
+            }
+            // Duplicate aliases are request conflicts, even when they describe the
+            // same binding. Do not silently replace either selected request.
+            for index in 0..bindings.len() {
+                for previous in 0..index {
+                    if bindings[previous].installed_name == bindings[index].installed_name {
+                        report.diagnostics.push(PreflightDiagnostic {
+                            installation_ids: vec![
+                                bindings[previous].id.clone(),
+                                bindings[index].id.clone(),
+                            ],
+                            category: PreflightCategory::Binding,
+                            location: None,
+                            message: "duplicate installed alias in add request".into(),
+                        });
+                        specs[previous] = None;
+                        specs[index] = None;
+                    }
+                }
             }
             let names = items
                 .iter()
                 .map(|item| item.installed_name.clone())
+                .filter(|name| !name.is_empty())
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
                 .collect::<Vec<_>>();
             if let SelectionOutcome::Blocked { diagnostics, .. } =
                 select_owned_nodes(session.state(), &Selection::Names(names.clone()))?
@@ -381,46 +431,64 @@ fn with_prepared_route<T>(
     };
     let resolved = specs
         .iter()
-        .map(ResolvedRuleSource::resolve)
-        .collect::<Result<Vec<_>>>()?;
-    for (binding, source) in bindings.iter_mut().zip(&resolved) {
-        if is_add {
-            binding.id = installation_id(session.state(), binding, source.source_label())?;
-            ensure!(
-                !session
+        .zip(&bindings)
+        .map(|(spec, binding)| {
+            let source = spec.as_ref()?;
+            match ResolvedRuleSource::resolve(source) {
+                Ok(source) => Some(source),
+                Err(error) => {
+                    report.diagnostics.push(item_diagnostic(
+                        &binding.id,
+                        PreflightCategory::Resolution,
+                        error,
+                    ));
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    let captures = resolved
+        .iter()
+        .zip(&bindings)
+        .map(|(source, binding)| {
+            let source = source.as_ref()?;
+            if !is_add {
+                let item = session
                     .state()
                     .installations
                     .iter()
-                    .any(|item| item.owner.installed_name == binding.installed_name
-                        && item.owner.installation_id != binding.id),
-                "installed alias already belongs to a different binding"
-            );
-        } else {
-            let item = session
-                .state()
-                .installations
-                .iter()
-                .find(|item| item.owner.installation_id == binding.id)
-                .context("update binding disappeared")?;
-            ensure!(
-                item.owner.source == source.source_label(),
-                "resolved source binding differs from recorded installation"
-            );
-        }
-    }
-    let captures = resolved
-        .iter()
-        .map(ResolvedRuleSource::capture)
-        .collect::<Result<Vec<_>>>()?;
-    let snapshots = captures
-        .iter()
-        .map(|capture| capture.snapshot())
+                    .find(|i| i.owner.installation_id == binding.id)
+                    .expect("selected recorded binding");
+                if item.owner.source != source.source_label() {
+                    report.diagnostics.push(item_diagnostic(
+                        &binding.id,
+                        PreflightCategory::Binding,
+                        anyhow::anyhow!(
+                            "resolved source binding differs from recorded installation"
+                        ),
+                    ));
+                    return None;
+                }
+            }
+            match source.capture() {
+                Ok(capture) => Some(capture),
+                Err(error) => {
+                    report.diagnostics.push(item_diagnostic(
+                        &binding.id,
+                        PreflightCategory::Capture,
+                        error,
+                    ));
+                    None
+                }
+            }
+        })
         .collect::<Vec<_>>();
+    let mut request = CapturedUpsert::default();
     let mut instruction_readers = Vec::new();
-    let prepared = session.prepare_upsert(selection.as_ref(), &snapshots, execution, |_| {
-        let mut request = CapturedUpsert::default();
-        for (binding, capture) in bindings.iter().zip(&captures) {
-            let compiled = match route {
+    for (binding, capture) in bindings.iter().zip(&captures) {
+        let Some(capture) = capture else { continue };
+        let compiled = (|| -> Result<_> {
+            match route {
                 SourceRoute::Historical(compiler) => {
                     let compiler_bindings = compiler
                         .bindings
@@ -446,7 +514,7 @@ fn with_prepared_route<T>(
                         requested: &binding.targets,
                         bindings: &compiler_bindings,
                         profiles: &compiler.profiles,
-                    })?
+                    })
                 }
                 SourceRoute::Codex { profile, .. } => {
                     let location = instruction_location(&root);
@@ -463,37 +531,86 @@ fn with_prepared_route<T>(
                         installation_id: binding.id.clone(),
                         report: compiled.readers,
                     });
-                    compiled.desired
-                }
-            };
-            request.sets.push(compiled.set);
-            request.contracts.extend(compiled.contracts);
-            if is_add {
-                let edge = Reference::DirectInstallation {
-                    installation_id: binding.id.clone(),
-                };
-                if !session.state().references.contains(&edge) {
-                    request.add_references.push(edge);
+                    Ok(compiled.desired)
                 }
             }
+        })();
+        match compiled {
+            Ok(compiled) => {
+                request.sets.push(compiled.set);
+                request.contracts.extend(compiled.contracts);
+                if is_add {
+                    let edge = Reference::DirectInstallation {
+                        installation_id: binding.id.clone(),
+                    };
+                    if !session.state().references.contains(&edge) {
+                        request.add_references.push(edge);
+                    }
+                }
+            }
+            Err(error) => {
+                let category = if error.downcast_ref::<CapabilityError>().is_some() {
+                    PreflightCategory::Capability
+                } else {
+                    PreflightCategory::Compilation
+                };
+                report
+                    .diagnostics
+                    .push(item_diagnostic(&binding.id, category, error));
+            }
         }
-        Ok(request)
-    })?;
+    }
+    report.instruction_readers = instruction_readers.clone();
+    if !report.diagnostics.is_empty() {
+        session.collect_preflight(&mut request, execution, &[], &mut report)?;
+        normalize_report(&mut report);
+        return Ok(OrchestrationOutcome::Blocked(vec![
+            CommandDiagnostic::Preflight(report),
+        ]));
+    }
+    let snapshots = captures
+        .iter()
+        .flatten()
+        .map(|c| c.snapshot())
+        .collect::<Vec<_>>();
+    let prepared =
+        session.prepare_upsert(selection.as_ref(), &snapshots, execution, |_| Ok(request))?;
     instruction_readers.sort_by(|a, b| a.installation_id.cmp(&b.installation_id));
     let captures = &captures;
     match prepared {
-        PrepareOutcome::Blocked(diagnostics) => Ok(OrchestrationOutcome::Blocked(diagnostics)),
+        PrepareOutcome::Blocked(mut diagnostics) => {
+            for diagnostic in &mut diagnostics {
+                if let CommandDiagnostic::Preflight(report) = diagnostic {
+                    report.instruction_readers = instruction_readers.clone();
+                    normalize_report(report);
+                }
+            }
+            Ok(OrchestrationOutcome::Blocked(diagnostics))
+        }
         PrepareOutcome::Ready(prepared) => {
             Ok(OrchestrationOutcome::Ready(use_prepared(SourcePrepared {
                 instruction_readers,
                 apply: Box::new(move || {
-                    for capture in captures {
+                    for capture in captures.iter().flatten() {
                         capture.verify_unchanged()?;
                     }
                     prepared.apply()
                 }),
             })?))
         }
+    }
+}
+
+fn item_diagnostic(
+    id: &str,
+    category: PreflightCategory,
+    error: anyhow::Error,
+) -> PreflightDiagnostic {
+    PreflightDiagnostic {
+        installation_ids: vec![id.into()],
+        category,
+        location: None,
+        message: format!("{error:#}"),
     }
 }
 
@@ -649,7 +766,7 @@ fn same_binding(item: &Installation, binding: &Binding, source: &str) -> bool {
         && item.owner.installed_name == binding.installed_name
 }
 
-fn installation_id(prior: &CombinedState, binding: &Binding, source: &str) -> Result<String> {
+fn new_installation_id(binding: &Binding, source: &str) -> Result<String> {
     // JSON tuple framing preserves raw root bytes and component boundaries.
     let bytes = serde_json::to_vec(&(
         "upskill-installation-v1",
@@ -664,6 +781,11 @@ fn installation_id(prior: &CombinedState, binding: &Binding, source: &str) -> Re
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
+    Ok(id)
+}
+
+fn installation_id(prior: &CombinedState, binding: &Binding, source: &str) -> Result<String> {
+    let id = new_installation_id(binding, source)?;
     ensure!(
         !prior
             .installations

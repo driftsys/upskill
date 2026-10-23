@@ -1,0 +1,936 @@
+[
+  {
+    "label": "configured-global-positive-a",
+    "info": {
+      "id": "ses_e98efc5fdffe7dkqNHxnCrE8rM",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98efc5fdffe7dkqNHxnCrE8rM]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167103ac500115iO03nji7YF0j",
+        "time": {
+          "created": 1792730479353
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167103ac500115iO03nji7YF0j]"
+      },
+      {
+        "id": "msg_167103b08001MyyAijy01Q4ZVx",
+        "time": {
+          "created": 1792730479375,
+          "streamed": 1792730482665,
+          "completed": 1792730482694
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167103b08001MyyAijy01Q4ZVx]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167104809001HIDJa3jWSS9ktw",
+        "time": {
+          "created": 1792730482697
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98efc5fdffe7dkqNHxnCrE8rM",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98efc5fdffe7dkqNHxnCrE8rM",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-global-positive-b",
+    "info": {
+      "id": "ses_e98efb657ffeE86bgvSmuu4zeX",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98efb657ffeE86bgvSmuu4zeX]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167104a31001D68SwdLMd27srl",
+        "time": {
+          "created": 1792730483311
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167104a31001D68SwdLMd27srl]"
+      },
+      {
+        "id": "msg_167104a770014sTaIcJDAeQ9Vb",
+        "time": {
+          "created": 1792730483324,
+          "streamed": 1792730485579,
+          "completed": 1792730485598
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167104a770014sTaIcJDAeQ9Vb]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167105385002lM8LF7FDq5RWia",
+        "time": {
+          "created": 1792730485637
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98efb657ffeE86bgvSmuu4zeX",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98efb657ffeE86bgvSmuu4zeX",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-removed-a-project-a",
+    "info": {
+      "id": "ses_e98efaac9ffeDt2RwOKTZEQUoU",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98efaac9ffeDt2RwOKTZEQUoU]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1671055ce001suqsHacLoLCkhN",
+        "time": {
+          "created": 1792730486281
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_1671055ce001suqsHacLoLCkhN]"
+      },
+      {
+        "id": "msg_167105613001iXtvL3OYzbAKTs",
+        "time": {
+          "created": 1792730486296,
+          "streamed": 1792730492125,
+          "completed": 1792730492173
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167105613001iXtvL3OYzbAKTs]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167106d26001eIAgvg7Bo7AtL2",
+        "time": {
+          "created": 1792730492198
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "b",
+        "session": "ses_e98efaac9ffeDt2RwOKTZEQUoU",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-removed-both-project-b",
+    "info": {
+      "id": "ses_e98ef8e30ffe3XHgNNxCWSPrsA",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ef8e30ffe3XHgNNxCWSPrsA]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_1671072df001mLPHVV5VesU5Ow",
+        "time": {
+          "created": 1792730493708
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_1671072df001mLPHVV5VesU5Ow]"
+      },
+      {
+        "id": "msg_167107320001rJzFnORWo6CMCq",
+        "time": {
+          "created": 1792730493734,
+          "streamed": 1792730495987,
+          "completed": 1792730496091
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167107320001rJzFnORWo6CMCq]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167107c67001fCFA2oi4Ea7SB7",
+        "time": {
+          "created": 1792730496103
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-restored-project-a",
+    "info": {
+      "id": "ses_e98ef811affeX1A17sTvK3MbLr",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ef811affeX1A17sTvK3MbLr]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167107ff8001ORZIyzhAnaAKD0",
+        "time": {
+          "created": 1792730497095
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167107ff8001ORZIyzhAnaAKD0]"
+      },
+      {
+        "id": "msg_16710805400167P0C8x2YAmPL8",
+        "time": {
+          "created": 1792730497115,
+          "streamed": 1792730500281,
+          "completed": 1792730500314
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_16710805400167P0C8x2YAmPL8]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167108cdd001CADowLSmDlxdoQ",
+        "time": {
+          "created": 1792730500317
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ef811affeX1A17sTvK3MbLr",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ef811affeX1A17sTvK3MbLr",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-restored-project-b",
+    "info": {
+      "id": "ses_e98ef715affexjS2MJtu74l0qY",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ef715affexjS2MJtu74l0qY]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167108f42001RYzb121eNmj1Hm",
+        "time": {
+          "created": 1792730500979
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167108f42001RYzb121eNmj1Hm]"
+      },
+      {
+        "id": "msg_167108f7d001HP5K1ZY3zHjQZx",
+        "time": {
+          "created": 1792730500994,
+          "streamed": 1792730503479,
+          "completed": 1792730503509
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167108f7d001HP5K1ZY3zHjQZx]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167109957001fE7PgWpsaOjqw9",
+        "time": {
+          "created": 1792730503511
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ef715affexjS2MJtu74l0qY",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-a-1a6e572f48"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ef715affexjS2MJtu74l0qY",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/packages/upskill-user-rule-b-b8c7545386"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "configured-global-file-removed",
+    "info": {
+      "id": "ses_e98ef64f7ffe0rU1tdlLUK3Jce",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ef64f7ffe0rU1tdlLUK3Jce]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167109ba4001ZBZdkjrE6lnlpC",
+        "time": {
+          "created": 1792730504135
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167109ba4001ZBZdkjrE6lnlpC]"
+      },
+      {
+        "id": "msg_167109bd0001Uz3FlIdaLbl0Bi",
+        "time": {
+          "created": 1792730504150,
+          "streamed": 1792730508996,
+          "completed": 1792730509039
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167109bd0001Uz3FlIdaLbl0Bi]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_16710aef3001WDmne52RVmAtVj",
+        "time": {
+          "created": 1792730509043
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-global-positive-a",
+    "info": {
+      "id": "ses_e98ed227dffebf6pG7IEcizUPN",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ed227dffebf6pG7IEcizUPN]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_16712ded6001dXD62JsLXLOCsU",
+        "time": {
+          "created": 1792730652450
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_16712ded6001dXD62JsLXLOCsU]"
+      },
+      {
+        "id": "msg_16712df2d001xgLdZEckHNBbqI",
+        "time": {
+          "created": 1792730652467,
+          "streamed": 1792730654805,
+          "completed": 1792730654822
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_16712df2d001xgLdZEckHNBbqI]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_16712e868001w1DGpXRjVAViXE",
+        "time": {
+          "created": 1792730654824
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ed227dffebf6pG7IEcizUPN",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ed227dffebf6pG7IEcizUPN",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-global-positive-b",
+    "info": {
+      "id": "ses_e98ed1528ffeqY5L5pafvDinhn",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ed1528ffeqY5L5pafvDinhn]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_16712ec0e001zA8Kg3gt7jMaYU",
+        "time": {
+          "created": 1792730655835
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_16712ec0e001zA8Kg3gt7jMaYU]"
+      },
+      {
+        "id": "msg_16712ec64001BypWbbEgAPA0BL",
+        "time": {
+          "created": 1792730655855,
+          "streamed": 1792730658139,
+          "completed": 1792730658164
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_16712ec64001BypWbbEgAPA0BL]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_16712f578001EaAF1J9VYVXuYO",
+        "time": {
+          "created": 1792730658168
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ed1528ffeqY5L5pafvDinhn",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ed1528ffeqY5L5pafvDinhn",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-removed-a-project-a",
+    "info": {
+      "id": "ses_e98ed0857ffes3Jbk5GRBdT16w",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ed0857ffes3Jbk5GRBdT16w]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_16712f859001MbHFZSRsDRgcoh",
+        "time": {
+          "created": 1792730658940
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_16712f859001MbHFZSRsDRgcoh]"
+      },
+      {
+        "id": "msg_16712f88b001ph1u9QwuDE6ikF",
+        "time": {
+          "created": 1792730658960,
+          "streamed": 1792730660885,
+          "completed": 1792730660903
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_16712f88b001ph1u9QwuDE6ikF]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_16713002b001n2CitciUwPmFGk",
+        "time": {
+          "created": 1792730660907
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "b",
+        "session": "ses_e98ed0857ffes3Jbk5GRBdT16w",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-removed-both-project-b",
+    "info": {
+      "id": "ses_e98ecfdf3ffeHahdoYUUbYjDa1",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ecfdf3ffeHahdoYUUbYjDa1]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167130319001OlWyqAnPdui2Ej",
+        "time": {
+          "created": 1792730661703
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167130319001OlWyqAnPdui2Ej]"
+      },
+      {
+        "id": "msg_1671303520013RoPTe6828iXAB",
+        "time": {
+          "created": 1792730661719,
+          "streamed": 1792730663733,
+          "completed": 1792730663773
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_1671303520013RoPTe6828iXAB]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167130b5f002nTKYMGvMqDdt5S",
+        "time": {
+          "created": 1792730663775
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-restored-project-a",
+    "info": {
+      "id": "ses_e98ecf1edffe25R8mNzkGgpqW2",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ecf1edffe25R8mNzkGgpqW2]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167130ec3001qembknD6Yx6YMs",
+        "time": {
+          "created": 1792730664682
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167130ec3001qembknD6Yx6YMs]"
+      },
+      {
+        "id": "msg_167130ef70012DWHhD96Mhb6U8",
+        "time": {
+          "created": 1792730664700,
+          "streamed": 1792730667811,
+          "completed": 1792730667826
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167130ef70012DWHhD96Mhb6U8]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167131b340022Uq2Xfc39PMtea",
+        "time": {
+          "created": 1792730667828
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ecf1edffe25R8mNzkGgpqW2",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ecf1edffe25R8mNzkGgpqW2",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-restored-project-b",
+    "info": {
+      "id": "ses_e98ece2bdffetppH3SpSH6E40s",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ece2bdffetppH3SpSH6E40s]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167131e3a001KyuO5mTkSDWt0a",
+        "time": {
+          "created": 1792730668656
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167131e3a001KyuO5mTkSDWt0a]"
+      },
+      {
+        "id": "msg_167131e7b001wnvOcOxWHbx1RT",
+        "time": {
+          "created": 1792730668674,
+          "streamed": 1792730671175,
+          "completed": 1792730671186
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167131e7b001wnvOcOxWHbx1RT]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_167132854002j3VCStS8aJau2c",
+        "time": {
+          "created": 1792730671188
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [
+      {
+        "rule": "a",
+        "session": "ses_e98ece2bdffetppH3SpSH6E40s",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-a-74d23d68f2"
+      },
+      {
+        "rule": "b",
+        "session": "ses_e98ece2bdffetppH3SpSH6E40s",
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "source": "context",
+        "module_root": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/packages/upskill-user-rule-b-ae05d7e61c"
+      }
+    ],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  },
+  {
+    "label": "manual-manual-baseline-restored",
+    "info": {
+      "id": "ses_e98ecd5a1ffe00KcoanieMbXWt",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      },
+      "location": {
+        "directory": "/[redacted:session-directory:ses_e98ecd5a1ffe00KcoanieMbXWt]"
+      }
+    },
+    "messages": [
+      {
+        "id": "msg_167132b4a00106iK4C5SxlZcvY",
+        "time": {
+          "created": 1792730671987
+        },
+        "type": "user",
+        "text": "[redacted:text:msg_167132b4a00106iK4C5SxlZcvY]"
+      },
+      {
+        "id": "msg_167132b80001Adwc55unkHQ4aH",
+        "time": {
+          "created": 1792730672005,
+          "streamed": 1792730674978,
+          "completed": 1792730675004
+        },
+        "type": "assistant",
+        "agent": "build",
+        "model": {
+          "id": "gpt-6.1-sol",
+          "providerID": "github-copilot",
+          "variant": "default"
+        },
+        "finish": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": "[redacted:text:msg_167132b80001Adwc55unkHQ4aH]"
+          }
+        ],
+        "provider_accounting_and_reasoning_omitted": true
+      },
+      {
+        "id": "msg_16713373e001b6K2hKddWxY3B2",
+        "time": {
+          "created": 1792730675006
+        },
+        "type": "idle",
+        "outcome": "succeeded"
+      }
+    ],
+    "fixture_context_callbacks": [],
+    "limitation": "Sanitized native export redacts directory identity and has no system-prompt message projection; cwd binds the captured command and positive callback, not an unredacted export field; rule injection is evidenced by callback source, exact module root and unpredictable response markers, not a retained native system-message dump."
+  }
+]

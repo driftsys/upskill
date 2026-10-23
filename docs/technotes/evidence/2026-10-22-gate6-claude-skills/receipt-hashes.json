@@ -1,0 +1,20 @@
+{
+  "claude-native-positive.jsonl": "e68bf07a3d32c79a7399261df57459eb667c533fb113f663002d6e0490e85030",
+  "direct-shared-candidate.jsonl": "4cc58d30f18300dc816195de5d65ceb7af20d92e549933e7cf2de7d42aef7a05",
+  "disable.stdout.txt": "80b57c9c7f945608a2bfef1861e4b371d57af4eb18ee5836a322c05dfb9398c9",
+  "disabled-negative.jsonl": "fac4b9f0c1180d5473de7fad001f3584460cd374e5c6aba0105ad910e536475d",
+  "enable.stdout.txt": "87e4c0738b05b863794123a6c67fb8cc0931340db0d9545a1794721f2e548d9e",
+  "enabled-positive.jsonl": "3f496cd2aae250d89f16cd719835670e7419111fc1fcf34cce0db240cd5a783b",
+  "install.stdout.txt": "a1a58b9d43a24b9370eea6dd2808cd140e9f760f8c95b434426b933999b6c9c3",
+  "installed-positive.jsonl": "84d5658f3261f0a08e6967abda02623726de74cd14c365ca17a1d8d9d1679b08",
+  "market-add.stdout.txt": "745f359429073b68eed78d0d09784b73498ccc0238dc159a9bc1960310240382",
+  "market-remove.stdout.txt": "553dd63148865b1f222126ae7b80eaa372447eeed420390f16bcea01028101f6",
+  "plugin-dir-shared-candidate.jsonl": "49611e89783c27b3f870762eae6105175ca32a91291c793aaf7dc633d9e26d6c",
+  "plugin-loaded-again.jsonl": "9078510f62c8e7e186d5bd070de91751dca504e0b1dbbb595ddfc1685ad2af30",
+  "plugin-not-loaded.jsonl": "66a9b59a683f8e5d61dfe6a4cc2bf56498169eb7f116f13c65aaa77ea2fe61eb",
+  "preservation.json": "aa3d22fe9f126e48f17861bca1c0f89d6b371f2bb2304b8aa443e095a11bf817",
+  "removed-negative.jsonl": "1b320a87c779eb844495dd3665ed2d9d07af146161be024ac48d3e10155359c0",
+  "summary.json": "d51aab9c974e897dd8d50ef2745f919ecf0cbb4a6e86d38a592f95b05f2aace5",
+  "uninstall.stdout.txt": "f530dd458ad8f612c69c484d77748eae1a367f64abc56f6d60cf3e9e595b3d17",
+  "validate.stdout.txt": "e06c83313e78dcda96aca125b4cf96f9bd7639647ecfd52d238d71e5433bea20"
+}

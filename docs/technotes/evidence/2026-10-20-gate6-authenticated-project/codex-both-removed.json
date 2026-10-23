@@ -1,0 +1,58 @@
+{
+  "state": "success",
+  "sha256": "74caae5769e06f0403f5d6e3d7521483f50ff0e85f59e4f92aa0522585d8e7ff",
+  "exit_code": 0,
+  "diagnostic_category": null,
+  "command": [
+    "$CODEX",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "--no-daemon",
+    "exec",
+    "--json",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--color",
+    "never",
+    "-m",
+    "gpt-6.1-sol",
+    "This is the plugin qualification question. Return the JSON requested by automatically loaded instructions. Sort the rules array lexicographically. Do not use tools."
+  ],
+  "team_before": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "team_after": {
+    "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+    "mode": 416
+  },
+  "native_events": [],
+  "qualified": false,
+  "digest_scope": "sha256 is the capture helper combined stdout/stderr digest; the separate JSONL receipt hashes captured stdout only. Raw stderr was not retained by the helper.",
+  "native_session": "01a15769-9afc-73c2-9cba-ff56ea930dd5",
+  "completion": {
+    "type": "turn.completed",
+    "event_types": [
+      "item.completed",
+      "thread.started",
+      "turn.completed",
+      "turn.started"
+    ]
+  },
+  "normalized_observation": {
+    "state": "success",
+    "completed": true,
+    "tools_observed": false,
+    "version": "0.163.0",
+    "response": {
+      "team": "TEAM_10dd5455515b5758a761e050c0d4f698",
+      "rules": []
+    },
+    "activation_counts": {},
+    "team": {
+      "sha256": "9a4459cb9e7cbc8464e6e2c63690ba86d102764333e52f0cb72cf1d32eaa4fa2",
+      "mode": 416
+    }
+  }
+}

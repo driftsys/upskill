@@ -1,0 +1,38 @@
+{
+  "packet": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj",
+  "original_manifest": {
+    "path": "/var/folders/85/lrhw4g894xq10wxwqtl7w85h0000gn/T/upskill-gate6-codex-shared-resources-uatcg3qj/receipt-hashes.json",
+    "sha256": "859380a841aa5e50ca7c364bc32cba41773297e064d15c288f82ca6b3203a0ff"
+  },
+  "original_sessions": [
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-09-32-01a16572-9b10-7ca1-83e6-ffbf83817573.jsonl",
+      "sha256": "53e456ab034ade909c144eadc3aff03ebb79b179c8b1a2f4b3e5693c31f7cbbd"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-09-41-01a16572-c020-7772-8ae8-6b65d87eff10.jsonl",
+      "sha256": "41939a80c213cbf3120328ce1e7f893aa5f929fe5da781b4476921f394f3c9d9"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-09-51-01a16572-e569-7f01-9461-fd050fe1dbe0.jsonl",
+      "sha256": "eab1cd2c2a6fe4e910d6b4cb7ea1b0953ce18a2c00a5aef96e5a47243b381777"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-09-55-01a16572-f68f-7732-92eb-f6d74abde127.jsonl",
+      "sha256": "eda32dad22368cf9122b1379decd9622ddb1f8f3a59053d56982ec8cdd5a2071"
+    },
+    {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/22/rollout-2026-10-22T23-10-03-01a16573-14e1-7a82-aa3c-f18cd0974073.jsonl",
+      "sha256": "b7f6b2db75bafdb60e9be9fa3eb59a5957f5b4a9731b64754b383b9ed74cb991"
+    }
+  ],
+  "capture_helper": {
+    "path": "/private/tmp/upskill-codex-shared-resources.py",
+    "sha256": "1c6b6786a5a5ca64f35727e367afc267a1bc30ccfe3752a69c99892c9a5c60bb"
+  },
+  "retention_helper": {
+    "path": "/private/tmp/upskill-retain-codex-shared-resources.py",
+    "sha256": "5df44aa2398592cbf52a2435235f71d0a57f1a2fdbb4ada7bb5a9ebd4cf3bfb5"
+  },
+  "limitation": "Original owned sessions remain at their native profile paths. Full session contents/account identifiers, unrelated skill metadata, accounting and provider state are not copied into these selected receipts."
+}

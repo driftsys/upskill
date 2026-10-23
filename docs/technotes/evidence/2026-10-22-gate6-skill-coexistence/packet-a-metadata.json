@@ -1,0 +1,293 @@
+{
+  "private_packet": "$PACKET_A",
+  "before": {
+    "$PROJECT_A/AGENTS.md": {
+      "sha256": "15e936c7a8ae50636ff7a7f325a21438e1ea4c99e2470cf7a1a632e727cb9c5d",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the explicitly requested native qualification control.\n"
+    },
+    "$PROJECT_A/CLAUDE.md": {
+      "sha256": "15e936c7a8ae50636ff7a7f325a21438e1ea4c99e2470cf7a1a632e727cb9c5d",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the explicitly requested native qualification control.\n"
+    },
+    "$PROJECT_A/.agents/skills/upskill-g6-shared-92f6e97d/SKILL.md": {
+      "sha256": "bf3ebddbba3149a4c21473ef1a26dd5b2a22e2571b9e782b75ad6d625d81e9dd",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-shared-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly SHARED_5088e468c382cf4028d24ca45992049a and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_A/.claude/skills/upskill-g6-manual-92f6e97d/SKILL.md": {
+      "sha256": "1ca5d58c3fbb586af4157232e2249f606ca7665e8efccbb49605de559fe47439",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-manual-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly MANUAL_16d32ec7785218a0ff3114402984a560 and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_A/.claude/settings.json": {
+      "sha256": "e1f8e3d45c42a1efb51bd8441336f71660e8abc2c727cfa3f6baccedf76455de",
+      "mode": 416,
+      "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  }\n}\n"
+    },
+    "$PACKET_A/marketplace/plugins/upskill-g6-claude-92f6e97d/skills/upskill-g6-shared-92f6e97d/SKILL.md": {
+      "sha256": "bf3ebddbba3149a4c21473ef1a26dd5b2a22e2571b9e782b75ad6d625d81e9dd",
+      "mode": 420,
+      "content": "---\nname: upskill-g6-shared-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly SHARED_5088e468c382cf4028d24ca45992049a and nothing else. Use no other tools or skills.\n"
+    },
+    "$PACKET_A/marketplace/plugins/upskill-g6-claude-92f6e97d/.claude-plugin/plugin.json": {
+      "sha256": "8797e8e32f3350294e1c3c2402e7e2de55aa2e4ec277042adeab5a5967d7e1af",
+      "mode": 420,
+      "content": "{\"name\": \"upskill-g6-claude-92f6e97d\", \"version\": \"0.0.0\", \"description\": \"Disposable Claude-only adapter fixture\"}\n"
+    }
+  },
+  "after": {
+    "$PROJECT_A/AGENTS.md": {
+      "sha256": "15e936c7a8ae50636ff7a7f325a21438e1ea4c99e2470cf7a1a632e727cb9c5d",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the explicitly requested native qualification control.\n"
+    },
+    "$PROJECT_A/CLAUDE.md": {
+      "sha256": "15e936c7a8ae50636ff7a7f325a21438e1ea4c99e2470cf7a1a632e727cb9c5d",
+      "mode": 416,
+      "content": "Manual fixture guidance: carry out only the explicitly requested native qualification control.\n"
+    },
+    "$PROJECT_A/.agents/skills/upskill-g6-shared-92f6e97d/SKILL.md": {
+      "sha256": "bf3ebddbba3149a4c21473ef1a26dd5b2a22e2571b9e782b75ad6d625d81e9dd",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-shared-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly SHARED_5088e468c382cf4028d24ca45992049a and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_A/.claude/skills/upskill-g6-manual-92f6e97d/SKILL.md": {
+      "sha256": "1ca5d58c3fbb586af4157232e2249f606ca7665e8efccbb49605de559fe47439",
+      "mode": 416,
+      "content": "---\nname: upskill-g6-manual-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly MANUAL_16d32ec7785218a0ff3114402984a560 and nothing else. Use no other tools or skills.\n"
+    },
+    "$PROJECT_A/.claude/settings.json": {
+      "sha256": "14c0f877e7788fc2733503d593381de9eb9a80edc1b240ee5cf52b4408144366",
+      "mode": 416,
+      "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+    },
+    "$PACKET_A/marketplace/plugins/upskill-g6-claude-92f6e97d/skills/upskill-g6-shared-92f6e97d/SKILL.md": {
+      "sha256": "bf3ebddbba3149a4c21473ef1a26dd5b2a22e2571b9e782b75ad6d625d81e9dd",
+      "mode": 420,
+      "content": "---\nname: upskill-g6-shared-92f6e97d\ndescription: Disposable native qualification fixture; invoke only on explicit request by name.\n---\nReturn exactly SHARED_5088e468c382cf4028d24ca45992049a and nothing else. Use no other tools or skills.\n"
+    },
+    "$PACKET_A/marketplace/plugins/upskill-g6-claude-92f6e97d/.claude-plugin/plugin.json": {
+      "sha256": "8797e8e32f3350294e1c3c2402e7e2de55aa2e4ec277042adeab5a5967d7e1af",
+      "mode": 420,
+      "content": "{\"name\": \"upskill-g6-claude-92f6e97d\", \"version\": \"0.0.0\", \"description\": \"Disposable Claude-only adapter fixture\"}\n"
+    }
+  },
+  "temporary_snapshots": null,
+  "catalogs": [
+    {
+      "label": "copilot-catalog",
+      "client": "copilot",
+      "native_data": [
+        {
+          "name": "upskill-g6-shared-92f6e97d",
+          "description": "Disposable native qualification fixture; invoke only on explicit request by name.",
+          "source": "project",
+          "path": "$PROJECT_A/.agents/skills/upskill-g6-shared-92f6e97d",
+          "enabled": true
+        },
+        {
+          "name": "upskill-g6-manual-92f6e97d",
+          "description": "Disposable native qualification fixture; invoke only on explicit request by name.",
+          "source": "project",
+          "path": "$PROJECT_A/.claude/skills/upskill-g6-manual-92f6e97d",
+          "enabled": true
+        },
+        {
+          "name": "customize-cloud-agent",
+          "description": "Skill for customizing the Copilot cloud agent (formerly known as Copilot coding agent) environment, including copilot-setup-steps.yml configuration, preinstalling tools and dependencies, runners, and settings. Use when the user mentions copilot-setup-steps, copilot setup steps, or wants to configure the cloud agent environment.",
+          "source": "builtin",
+          "path": "$COPILOT_PROFILE/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.98/builtin/customize-cloud-agent",
+          "enabled": true
+        },
+        {
+          "name": "github-pr-media",
+          "description": "Upload an image or video to GitHub's user attachments API and embed it in a pull request description or comment. Use when asked to add screenshots, diagrams, recordings, or other media to a PR or GitHub comment.",
+          "source": "builtin",
+          "path": "$COPILOT_PROFILE/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.98/builtin/github-pr-media",
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "native_steps": [
+    {
+      "label": "validate",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "validate",
+        "$PACKET_A/marketplace"
+      ],
+      "exit": 0,
+      "stdout_sha256": "4b2c2e4fdf4cd8d211dd271d0da3186e76db7983e33d5616e7db8a45c7818f52",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "e1f8e3d45c42a1efb51bd8441336f71660e8abc2c727cfa3f6baccedf76455de",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-add",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "add",
+        "$PACKET_A/marketplace",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "0f18906262a3981f7772b90a83bba7beafd811bf8da0817475b918e03b96add3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "3b8bb164951c6a4cc37ae08e1609711370613852c845928fbbaf58019b26bc53",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-coexist-92f6e97d\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_A/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "install",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "install",
+        "upskill-g6-claude-92f6e97d@upskill-g6-coexist-92f6e97d",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "6061b0d42cb9169c1e7d131cd3c6aadaa46b6aed8c440a77b62a53434fa1b864",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "d7d3041a62ff1ec09ba0ec7903b30934abc96bab11f26641809d07438ab4dd30",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-coexist-92f6e97d\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_A/marketplace\"\n      }\n    }\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-claude-92f6e97d@upskill-g6-coexist-92f6e97d\": true\n  }\n}\n"
+      }
+    },
+    {
+      "label": "copilot-catalog",
+      "client": "copilot",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "skill",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b207a805492cdb9d2941331788da407288cf73cf54e851fafca2bfe3b412e0ac",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "d7d3041a62ff1ec09ba0ec7903b30934abc96bab11f26641809d07438ab4dd30",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-coexist-92f6e97d\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_A/marketplace\"\n      }\n    }\n  },\n  \"enabledPlugins\": {\n    \"upskill-g6-claude-92f6e97d@upskill-g6-coexist-92f6e97d\": true\n  }\n}\n"
+      }
+    },
+    {
+      "label": "uninstall",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "uninstall",
+        "upskill-g6-claude-92f6e97d@upskill-g6-coexist-92f6e97d",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "b4cbb3405d8adbe62388c56e645a278616de9c99b59bbeb84e98878b29d557d1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "b74a9ddc827492393bea401319ae3d848a1414386b861853e20fd68336674abc",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {\n    \"upskill-g6-coexist-92f6e97d\": {\n      \"source\": {\n        \"source\": \"directory\",\n        \"path\": \"$PACKET_A/marketplace\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "label": "market-remove",
+      "client": "claude",
+      "command": [
+        "/private/tmp/upskill-gate6-pinned-binaries-20261019/claude/claude",
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-g6-coexist-92f6e97d",
+        "--scope",
+        "project"
+      ],
+      "exit": 0,
+      "stdout_sha256": "3841a97494eaa081cbd9bf3b0bae3642985d75e81ab20b95b1382eb10865511e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "project_settings": {
+        "sha256": "14c0f877e7788fc2733503d593381de9eb9a80edc1b240ee5cf52b4408144366",
+        "mode": 416,
+        "content": "{\n  \"env\": {\n    \"UPSKILL_FIXTURE_MANUAL\": \"CONFIG_e1f596a6509d1919e196f07ba724cdc0\"\n  },\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n"
+      }
+    }
+  ],
+  "declared_controls": [
+    [
+      "claude-installed-positive",
+      "claude",
+      "upskill-g6-claude-92f6e97d:upskill-g6-shared-92f6e97d",
+      "SHARED_5088e468c382cf4028d24ca45992049a"
+    ],
+    [
+      "copilot-shared-positive",
+      "copilot",
+      "upskill-g6-shared-92f6e97d",
+      "SHARED_5088e468c382cf4028d24ca45992049a"
+    ],
+    [
+      "copilot-plugin-namespace-negative",
+      "copilot",
+      "upskill-g6-claude-92f6e97d:upskill-g6-shared-92f6e97d",
+      "ABSENT_21d1e4485cc888f244c1f592c2579acb"
+    ],
+    [
+      "claude-shared-bare-negative",
+      "claude",
+      "upskill-g6-shared-92f6e97d",
+      "ABSENT_21d1e4485cc888f244c1f592c2579acb"
+    ],
+    [
+      "claude-manual-positive",
+      "claude",
+      "upskill-g6-manual-92f6e97d",
+      "MANUAL_16d32ec7785218a0ff3114402984a560"
+    ],
+    [
+      "copilot-manual-positive",
+      "copilot",
+      "upskill-g6-manual-92f6e97d",
+      "MANUAL_16d32ec7785218a0ff3114402984a560"
+    ],
+    [
+      "claude-disabled-negative",
+      "claude",
+      "upskill-g6-claude-92f6e97d:upskill-g6-shared-92f6e97d",
+      "ABSENT_21d1e4485cc888f244c1f592c2579acb"
+    ],
+    [
+      "copilot-shared-survives",
+      "copilot",
+      "upskill-g6-shared-92f6e97d",
+      "SHARED_5088e468c382cf4028d24ca45992049a"
+    ],
+    [
+      "claude-restored-positive",
+      "claude",
+      "upskill-g6-claude-92f6e97d:upskill-g6-shared-92f6e97d",
+      "SHARED_5088e468c382cf4028d24ca45992049a"
+    ]
+  ],
+  "raw_receipt_manifest_sha256": "7750402d42aded2deffd2458eb66dad09fef0bdb54315bfabccf0c9653f42fdc"
+}

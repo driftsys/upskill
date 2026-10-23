@@ -1,0 +1,49 @@
+{
+  "info": {
+    "id": "ses_ea898dc94ffe3DpOAX13ZLEhL5",
+    "model": {
+      "id": "gpt-6.1-sol",
+      "providerID": "github-copilot",
+      "variant": "default"
+    },
+    "outcome": "succeeded",
+    "time": {
+      "created": 1792467739660,
+      "updated": 1792467741957,
+      "idle": 1792467741959
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_1576724100012Wc36Fx8CdCEIS",
+      "type": "user",
+      "time": {
+        "created": 1792467739699
+      }
+    },
+    {
+      "id": "msg_15767243d001VmYyRTfVDomNLk",
+      "type": "assistant",
+      "time": {
+        "created": 1792467739714,
+        "streamed": 1792467741937,
+        "completed": 1792467741957
+      },
+      "finish": "stop",
+      "agent": "build",
+      "model": {
+        "id": "gpt-6.1-sol",
+        "providerID": "github-copilot",
+        "variant": "default"
+      }
+    },
+    {
+      "id": "msg_157672d0700167ZPXlaTSqZobp",
+      "type": "idle",
+      "time": {
+        "created": 1792467741959
+      },
+      "outcome": "succeeded"
+    }
+  ]
+}
