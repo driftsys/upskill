@@ -1,0 +1,512 @@
+[
+  {
+    "phase": "configured",
+    "receipts": [
+      {
+        "label": "version",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "--version"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "db7075c6765852e2fff7cc6d0eb7e0ed1dd6cc2414af3606998f423d93b1c639",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "bbea8dd5ccda2fc2c100ecd4bd775373f18c4f388154490d842060528a5d4f49",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98efc5fdffe7dkqNHxnCrE8rM",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "a89176522f881cbad36d19394d4e4d82f360fa3e101d42793746bab929e48e34",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "a23ae45e3ed42e22524fc57fc0723795f7588e5cebb43dc398e4ad0434e0f623",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98efb657ffeE86bgvSmuu4zeX",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "727264fe81c271738aa9602fb00eabc89d8f9a7e5f884f01bd6b9013500711a6",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-project-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "2a1bc050006ba64c645381887d6d2efca5649a30151c73d2f8fbb5a0abe2d4d1",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-project-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98efaac9ffeDt2RwOKTZEQUoU",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "0f1319ab4a5481691a2c7deacac0f071626278959a61e12bc58fbef35281cab2",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-project-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "dfe5206d8c6d15bfaf0d2c4e0082f4cd65fd394f5f0ed7cb7406258b0e77988d",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-project-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ef8e30ffe3XHgNNxCWSPrsA",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "d49fe6adc147887b66424b8f851dc36bd9df93e6cac3484a063188c59a5b6914",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "4bb24cc0716edbaeb2f717de72f67b34293d25993cbbd8459ba5ea259187a348",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ef811affeX1A17sTvK3MbLr",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "faed63dc1940f9add10346329c87b37bbe561310e77137cace4640e61893a891",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "dff7a30fc402567d20ececf2ad0010caf80c5edd8ad0db1e38bd4389dcc1e1fc",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ef715affexjS2MJtu74l0qY",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "2af39cea4c3e9bd498842d1c6d447f185c2ffa6dccedecd8b1b9e6b4242fa7a5",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-file-removed",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "424cfabaedb463dc23c36209bb3e9f4eacae97b1dba36e4be9bce34c9fdff4a2",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-file-removed-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ef64f7ffe0rU1tdlLUK3Jce",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-config-29lnjfk9/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "c308311808d6047454ef87246ef03f2cb3b95db2bf49cad72c5ef4c63a59e948",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "phase": "manual",
+    "receipts": [
+      {
+        "label": "version",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "--version"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "db7075c6765852e2fff7cc6d0eb7e0ed1dd6cc2414af3606998f423d93b1c639",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "8c44ddd1b9028c1eb6f9efba2ca99304ee6a135da90da9fa8dfe5c633c7fd6a2",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ed227dffebf6pG7IEcizUPN",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "1669068d2a390faadcfe7dc0d3f892c66cd83d90b9ea6c3e94903b25e449b04b",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7b43f3fdffa4044b79f7620909a662103a5ea7b75c9f4a80ffccd4b4900e8210",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "global-positive-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ed1528ffeqY5L5pafvDinhn",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "b6fc89e45f63b400f579501220d45a8cafba82137bd19584a9e5c39c530029ad",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-project-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "0f207812bbbba40a987c88d12fa5fc58a7a0a9832153b308298bdcbb69d8fbb0",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-project-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ed0857ffes3Jbk5GRBdT16w",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "73b69c027458e9a3e0681356350361f925025751c722dc4229744f623ee3932f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-project-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "d7dd054c7c9ea90755f084faab57405f01d4bda6140afa962b3058cd7a8f736b",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-project-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ecfdf3ffeHahdoYUUbYjDa1",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "5741a5fee8e03810965bf2f2f592f6fcef8b3814202c1216a2b20bab7dfa1e5c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-a",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "89e3a01c6360516bb5c1636d8275836f45913661cc45d22376e0d166afd29470",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-a-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ecf1edffe25R8mNzkGgpqW2",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "3df0c8b4e72a1c5b87ad9a795cb2565074527d6ec54015c319eb3036fac31216",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-b",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "5aaf0a17757e3e1b7722fa47e69300314032ba3a6bf97bdb2608be26cacd93c1",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-b-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ece2bdffetppH3SpSH6E40s",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "2e35ee59689af258a445f8c7ee62291be2169e495cccb0abe1e63fc04aa47a62",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "manual-baseline-restored",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "run",
+          "--standalone",
+          "--format",
+          "json",
+          "--model",
+          "github-copilot/gpt-6.1-sol",
+          "Answer the plugin qualification question using automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "5487ed49ae4a4fe955db3698349bd5b0302118037c7032bd810deb9236529643",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "manual-baseline-restored-session",
+        "command": [
+          "/private/tmp/upskill-gate6-pinned-binaries-20261019/opencode/package/bin/opencode",
+          "session",
+          "export",
+          "ses_e98ecd5a1ffe00KcoanieMbXWt",
+          "--standalone",
+          "--sanitize"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-opencode-user-manual-4knos3w4/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "99c3c404303d40010fb9d0c5b05de143f89db5baa9c36862c824052cbb6eea7c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+]

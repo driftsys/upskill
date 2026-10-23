@@ -1,0 +1,22 @@
+{
+  "commands.json": "5a980de8b2b772cd198f42c95d5715bf3ed9f608be2fbf4796c849705e73510e",
+  "configured-global-file-removed.jsonl": "bd02565a5ba703134d60cf5bcfe68869c4e445229435702df1e6685349225172",
+  "configured-global-positive-a.jsonl": "02e58152ce7614ed5597cfd20e420d00cbaa553549c57c06d857896e6d424099",
+  "configured-global-positive-b.jsonl": "1d517d66d1c19eb9316bc8362551be8853b695f3f7bacd23165d0d9e57504813",
+  "configured-removed-a-project-a.jsonl": "f0d3fd1fa84c7f1704ab4d14eb04b9eae9ac1beda7939302f85903fb4db31f78",
+  "configured-removed-both-project-b.jsonl": "dc72d544db6a7a7481182c7645de0101e6b0b75981c1f45516024dced2b5b3d5",
+  "configured-restored-project-a.jsonl": "66b6b27a24f84ca27884e1708ef47a7c3fa2cc141d283abc818a73644fdf7739",
+  "configured-restored-project-b.jsonl": "f36487baf0ef9cfb36b842c8e70bf6836ee784b2614e2fa4443091c57fecb947",
+  "fixture-and-assessment.json": "95f095eec0adb718af17f13c1d29aa9fdabc6d0ff4640e3c65c4b3af9e1564b7",
+  "interface-observations.json": "0cbe69436dfdd4c14d1c0d528ed12a0c10270a803ffa160e843ecbdcaf8ce057",
+  "manual-global-positive-a.jsonl": "4227d4c13c3a28fe502effa18f2236018233091a9faa1601b89998d4a229c1ce",
+  "manual-global-positive-b.jsonl": "0cd027c467435fada30724518cd3061b6010b0d7469134ba34830c1de19baa99",
+  "manual-manual-baseline-restored.jsonl": "f949553e4d9f5512f0920f59b4b2a5a7bf712f7a5dd4108c0c6ec705c0d0febf",
+  "manual-removed-a-project-a.jsonl": "281f7992a55e963a1411d74f8f02ad46bdfc1c5d5cc0b24478e2db62f490f907",
+  "manual-removed-both-project-b.jsonl": "03f5eaf2c0d1811c7b5de8ec37926abea5cef95e7b3376fb50503c3075fb7e4f",
+  "manual-restored-project-a.jsonl": "86e3202fecaead9517ab88b57a49955b47a7b3d0a7990bedb15eaad6c66328e2",
+  "manual-restored-project-b.jsonl": "7dcd225954233ee9d2f72a2d402a369babdcf8c8051071d902ecb7ace397b2db",
+  "native-session-selections.json": "b9ec48bcf2e58ae728bcd5acf0ea449b22eebb1f5ab0885a3f90f4f39e6a5776",
+  "private-source-index.json": "5b05e50e53ebb07e0adf3e1ece1b90c28e48cbcba1bd13046d4ff80d6fbe0c4a",
+  "summary.json": "1175febcc23cb83f8726dd6a20861fff2629acbc15a4a305d41cc64aaa889bbc"
+}
