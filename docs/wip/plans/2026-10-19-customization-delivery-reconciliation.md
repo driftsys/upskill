@@ -325,6 +325,26 @@ aliases/imports/ globs/duplicates, implicit activation, other kinds and
 integrated lifecycle obligations remain open. Task 2/CD-11, all 160 cells and
 schema-2 stay blocked.
 
+### Codex user-registration rule evidence slice (#374)
+
+Retain
+[bounded user-profile observations](../../technotes/gate6-codex-user-rule-controls.md)
+from the already provisioned isolated Codex root. New local plugin identifiers
+keep old trusted definitions and packets frozen. Require ordinary native user
+review for the new definitions; the failed pre-trust positive remains failed.
+User registration with callbacks guarded to two disposable project paths does
+not qualify arbitrary user workspaces or project-scoped registration.
+
+Nine corrected native turns bind team guidance, independent rule messages and
+callback counts through guarded persisted enable changes and native removal/
+reinstallation. The initial post-trust matcher guard failure remains an
+incomplete packet. Record installation/trust configuration changes separately
+from exact post-trust run restoration; preserve manual content and unrelated
+registrations within the selected evidence. Keep all
+platform/client/reader/duplicate/IDE and integrated lifecycle obligations open.
+Task 2 stays incomplete, all 160 cells remain unqualified and schema-2
+activation remains blocked.
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,

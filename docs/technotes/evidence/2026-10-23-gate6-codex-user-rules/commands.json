@@ -1,0 +1,574 @@
+[
+  {
+    "phase": "installation",
+    "receipts": [
+      {
+        "label": "list-before",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "5901465063e51dfc19a4e91fa2b5169054c9fcaed4e3985198c78101cf7d9cdd",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "marketplace-add",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "marketplace",
+          "add",
+          "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/marketplace",
+          "--json"
+        ],
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "3f2be06746b27a49dbeeac6fcca3989996919f5f9ca5f1199694dcccb32c4eb5",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "plugin-add-0",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "add",
+          "upskill-user-rule-a-eedbabd4@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "1a42e06979db56904451426c50fb62e5e8bc983bf77a20f43500d3e9962614cc",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "plugin-add-1",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "add",
+          "upskill-user-rule-b-e0cd6bf6@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "3970779eeaad9dbc403c9821b6de0cf416ebf654bac3591693743c5802567914",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "list-after",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "26a172ed264c63914e4cd6330f6068a1856c4d8bf2e99d1dd59afed69cb0a894",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "phase": "partial",
+    "receipts": [
+      {
+        "label": "initial-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "version",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "--version"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "trusted-project-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "0802940669c18076a33d9e0a933dc9df217064e09172f6d989a717fb4b6be8d2",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "trusted-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "384f69fc15d811cc70ad5d4e4541c3ea983abb9fee0f7bb9d35419983eec938e",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "final-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "phase": "corrected",
+    "receipts": [
+      {
+        "label": "initial-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "version",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "--version"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "15c9db57c80035537f94bea647d07608a1fab5148f5482c0a0d1d7422b7fb69e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "trusted-project-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7c8e580635dc2fee19ab47538481dd2c070608d05424b718d5cbda2466e16520",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "trusted-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "c1647b9e6640a8810c89df14db135446c5d91e2f6842abc5b2fbe28203ab7893",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "disabled-a-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "4222a49d0066a95999157763d0f28f915fdbd5cdb9f83e8a4be98191f45289c3",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "disabled-a-project-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "2434b34f371083492bd738d6a9ac9b0c74d6165f0d9f2802361b7641cc99bd0f",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "disabled-both-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "345739bab7a9f67f2350f8b22b0c2291ebc784b05e12074f15fbc82b9348e4a3",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "disabled-both-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "e4d650dfaaafaaa19d8da73605bd3bef84447446210419e10cb8e165cc5d16ae",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "restored-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7f83ef8f1e6fb91ca8b963e48049acba1d164ed261ecca4d5fc7963c3ee3bb7e",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "remove-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "remove",
+          "upskill-user-rule-a-eedbabd4@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "9b9d8eb5ccb64343ba16edd8c8eaeed2e0f60627a92ec35ca26bd27a272d00eb",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "838591acaa85aed62f9815d424ac16f9110d0c7c51a3211887f271deda16b17d",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-a-project-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "74c33e4a0f37bd2325fd0aeee56e853c405dd78ee713b468931940afca603a7b",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "remove-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "remove",
+          "upskill-user-rule-b-e0cd6bf6@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "757a5ff73a3461b060829e6d3176e15d09873d1100eaceecb9e22ee5c044ca8c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "bb2e5328e60226fd3b728f3251a18c4e78966443627bb444e7a9eb16242ae3b6",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "removed-both-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "d30873f2b3a7f3f018172e8e4b99e2c967e90296dadc2a993d96fc245a0cf830",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "reinstall-0",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "add",
+          "upskill-user-rule-a-eedbabd4@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "1a42e06979db56904451426c50fb62e5e8bc983bf77a20f43500d3e9962614cc",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "reinstall-1",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "add",
+          "upskill-user-rule-b-e0cd6bf6@upskill-user-09de53d3d366",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "3970779eeaad9dbc403c9821b6de0cf416ebf654bac3591693743c5802567914",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "reinstalled-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "reinstalled-project-a",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "2422b0af8e792db99d103b08a86ef510864ada096462677c356389176d7a0077",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "reinstalled-project-b",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "-c",
+          "cli_auth_credentials_store=\"file\"",
+          "--no-daemon",
+          "exec",
+          "--json",
+          "--sandbox",
+          "read-only",
+          "--skip-git-repo-check",
+          "--color",
+          "never",
+          "-m",
+          "gpt-6.1-sol",
+          "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "77ec93785cf145bf8d4fecb84e8fca62e35cca64162d0cc8bf256dd69a2c9f62",
+        "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
+      },
+      {
+        "label": "final-inventory",
+        "command": [
+          "/Users/sebastientasson/.local/bin/codex",
+          "plugin",
+          "list",
+          "--json"
+        ],
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+        "exit_code": 0,
+        "timed_out": false,
+        "stdout_sha256": "7fc1cbd497dbc6742932ea34d618e6f32cafd665d7b3d5fe05faab71e7a38b4f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+]

@@ -1,0 +1,452 @@
+{
+  "fixture": {
+    "issue": 374,
+    "status": "prepared-only",
+    "qualified": false,
+    "profile": "/private/tmp/upskill-gate6-codex-installed-20261019",
+    "root": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw",
+    "marketplace": "upskill-user-09de53d3d366",
+    "plugins": [
+      "upskill-user-rule-a-eedbabd4",
+      "upskill-user-rule-b-e0cd6bf6"
+    ],
+    "projects": [
+      "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b"
+    ],
+    "team_markers": [
+      "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+      "TEAM_b58e120f609cc2aae10edef62a749cae"
+    ],
+    "rule_markers": [
+      "RULE_d2728c69d294cb289b5ad5a332ba5200",
+      "RULE_893a00c8afdd9712e08a43df8c136513"
+    ],
+    "team_before": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b/AGENTS.md",
+        "sha256": "e46da6144bbd7e0f2bf5eaa71e13d77531bd2c4542132ed3b3ea46de553f60a1",
+        "mode": 416
+      }
+    ],
+    "config_before": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "sha256": "f7fb6781cf161ef65da6f644ce29035bc8b30177f56f05fa66a731d1827b39b8",
+      "mode": 384
+    },
+    "binary": {
+      "path": "/Users/sebastientasson/.local/bin/codex",
+      "sha256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+      "mode": 493
+    },
+    "registration_scope": "isolated user profile",
+    "injection_scope": "two declared disposable project paths; not arbitrary workspace qualification",
+    "trust": "new definitions not reviewed or assumed trusted",
+    "expected_positive": [
+      {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      }
+    ]
+  },
+  "installation_assessment": {
+    "kind": "installation-only",
+    "qualified": false,
+    "existing_registration_items_equal": true,
+    "owned_installed_items": [
+      {
+        "pluginId": "upskill-user-rule-a-eedbabd4@upskill-user-09de53d3d366",
+        "name": "upskill-user-rule-a-eedbabd4",
+        "marketplaceName": "upskill-user-09de53d3d366",
+        "version": "0.0.0",
+        "installed": true,
+        "enabled": true
+      },
+      {
+        "pluginId": "upskill-user-rule-b-e0cd6bf6@upskill-user-09de53d3d366",
+        "name": "upskill-user-rule-b-e0cd6bf6",
+        "marketplaceName": "upskill-user-09de53d3d366",
+        "version": "0.0.0",
+        "installed": true,
+        "enabled": true
+      }
+    ],
+    "config_after": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "sha256": "9ffc2edcb3f16beed157c93f458856cc56d95ba6f9ca679d42e8ef0593d2175b",
+      "mode": 384
+    },
+    "config_bytes_equal": false,
+    "team_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b/AGENTS.md",
+        "sha256": "e46da6144bbd7e0f2bf5eaa71e13d77531bd2c4542132ed3b3ea46de553f60a1",
+        "mode": 416
+      }
+    ],
+    "team_exact": true,
+    "old_activation_trace_unchanged": true,
+    "ordinary_hook_trust": "not yet observed; installed/enabled is not trust evidence"
+  },
+  "existing_registration_count_before_install": 13,
+  "pending_trust_observation": {
+    "qualified": false,
+    "status": "awaiting-user-native-hook-review",
+    "registration_scope": "isolated user profile",
+    "observed_sessionstart": {
+      "installed": 4,
+      "active": 2,
+      "review": 2
+    },
+    "new_hook_trust": "New hook - review required",
+    "new_hook_names": [
+      "upskill-user-rule-a-eedbabd4",
+      "upskill-user-rule-b-e0cd6bf6"
+    ],
+    "pretrust_positive_failed": true,
+    "model_native_turn_completed": true,
+    "new_activation_records": 0,
+    "existing_trace_sha256": "4d3bcdb06afc1e1e7ccaa8635f83ed954a8c6eed5c3fbc62e17fb2a86746ceb9",
+    "team_exact": true,
+    "config_after_ui": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "sha256": "8693d5dd0b0fcdc5b32da728f38522596383bdb77a2b919fbcc8acd0b38668f5",
+      "mode": 384
+    },
+    "native_ui_configuration_change": "First TUI inspection saved ordinary project-a folder trust when buffered input reached the folder prompt. Neither new hook was trusted. No claim of unchanged config bytes. A second recorded inspection confirmed pending hook trust.",
+    "cache_source_checks": [
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4",
+        "relative": "hook.py",
+        "source_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "cache_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4",
+        "relative": "rule.txt",
+        "source_sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+        "cache_sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4",
+        "relative": "fixture.json",
+        "source_sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+        "cache_sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4",
+        "relative": ".codex-plugin/plugin.json",
+        "source_sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+        "cache_sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4",
+        "relative": "hooks/hooks.json",
+        "source_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "cache_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-b-e0cd6bf6",
+        "relative": "hook.py",
+        "source_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "cache_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-b-e0cd6bf6",
+        "relative": "rule.txt",
+        "source_sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+        "cache_sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-b-e0cd6bf6",
+        "relative": "fixture.json",
+        "source_sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+        "cache_sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-b-e0cd6bf6",
+        "relative": ".codex-plugin/plugin.json",
+        "source_sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+        "cache_sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+        "bytes_equal": true
+      },
+      {
+        "plugin": "upskill-user-rule-b-e0cd6bf6",
+        "relative": "hooks/hooks.json",
+        "source_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "cache_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "bytes_equal": true
+      }
+    ],
+    "ui_transcript": {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/native-hook-review.typescript",
+      "sha256": "6d3f315ba6193360179e68cf810cbce023794f6a7aaf7285eb1be86717efd70a",
+      "mode": 420
+    },
+    "native_ui_sessions": [
+      "01a165ad-52e5-7651-8624-f1a6be3eec95",
+      "01a165ae-7e85-7fb1-99b9-ca0d7e0915e1"
+    ]
+  },
+  "pretrust_failed_positive": {
+    "kind": "pre-trust-positive-calibration",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "--no-daemon",
+      "exec",
+      "--json",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--color",
+      "never",
+      "-m",
+      "gpt-6.1-sol",
+      "Answer the plugin qualification question using the automatically loaded team guidance and independent plugin rules. Return only the required JSON object. Do not use tools."
+    ],
+    "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+    "expected": {
+      "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+      "rules": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ]
+    },
+    "exit_code": 0,
+    "timed_out": false,
+    "thread_ids": [
+      "01a165ac-c448-7de2-a0ba-5ba532bffa84"
+    ],
+    "completed_turns": 1,
+    "observed_messages": [
+      "{\"team\":\"TEAM_0d843e0aceaeb07dd64f48efdb9b458c\",\"rules\":[]}"
+    ],
+    "expected_response_met": false,
+    "owned_hook_records": [],
+    "stdout_sha256": "218e275fc549503b0115c15fb94c9a543d4e31410bf4caf0e62d36ffdc79d4a8",
+    "stderr_sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+    "qualified": false
+  },
+  "partial_assessment": {
+    "failure": "AssertionError: ",
+    "completed_declared_controls": 2,
+    "all_turn_expectations_met": false,
+    "manual_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b/AGENTS.md",
+        "sha256": "e46da6144bbd7e0f2bf5eaa71e13d77531bd2c4542132ed3b3ea46de553f60a1",
+        "mode": 416
+      }
+    ],
+    "team_exact": true,
+    "config_after": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+      "mode": 384
+    },
+    "config_bytes_equal": true,
+    "config_other_tables_equal": true,
+    "old_activation_trace_unchanged": true,
+    "all_initial_registration_items_equal": true,
+    "cleanup": [
+      {
+        "plugin": "upskill-user-rule-a-eedbabd4@upskill-user-09de53d3d366",
+        "enable_restore_error": ""
+      }
+    ],
+    "source_trace": {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/activation.jsonl",
+      "sha256": "9f8ac289db9d31cddeeb8dc25c80ea216c777e6295176f7b27e2e36707ac10af",
+      "mode": 420
+    },
+    "qualified": false
+  },
+  "corrected_assessment": {
+    "failure": null,
+    "completed_declared_controls": 9,
+    "all_turn_expectations_met": true,
+    "manual_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b/AGENTS.md",
+        "sha256": "e46da6144bbd7e0f2bf5eaa71e13d77531bd2c4542132ed3b3ea46de553f60a1",
+        "mode": 416
+      }
+    ],
+    "team_exact": true,
+    "config_after": {
+      "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+      "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+      "mode": 384
+    },
+    "config_bytes_equal": true,
+    "config_other_tables_equal": true,
+    "old_activation_trace_unchanged": true,
+    "all_initial_registration_items_equal": true,
+    "cleanup": [],
+    "source_trace": {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/activation.jsonl",
+      "sha256": "85e4311702dc0cc38978431cd31dbc999fc94fe191c1d85aa103dea10a299b2c",
+      "mode": 420
+    },
+    "qualified": false
+  },
+  "version_stdout": "codex-cli 0.163.0\n",
+  "cache_after_controls": [
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "relative": "hook.py",
+      "source_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "cache_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf"
+    },
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "relative": "rule.txt",
+      "source_sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+      "cache_sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b"
+    },
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "relative": "fixture.json",
+      "source_sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+      "cache_sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525"
+    },
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "relative": ".codex-plugin/plugin.json",
+      "source_sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+      "cache_sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77"
+    },
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "relative": "hooks/hooks.json",
+      "source_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "cache_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6"
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "relative": "hook.py",
+      "source_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "cache_sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf"
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "relative": "rule.txt",
+      "source_sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+      "cache_sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344"
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "relative": "fixture.json",
+      "source_sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+      "cache_sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60"
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "relative": ".codex-plugin/plugin.json",
+      "source_sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+      "cache_sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6"
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "relative": "hooks/hooks.json",
+      "source_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "cache_sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6"
+    }
+  ],
+  "regression": [
+    {
+      "helper": "upskill-codex-user-rules-posttrust.py",
+      "expected_pass": false,
+      "passed": false,
+      "error": "AssertionError",
+      "synthetic_only": true
+    },
+    {
+      "helper": "upskill-codex-user-rules-posttrust-v2.py",
+      "expected_pass": true,
+      "passed": true,
+      "error": null,
+      "synthetic_only": true
+    }
+  ],
+  "package_sources": [
+    {
+      "plugin": "upskill-user-rule-a-eedbabd4",
+      "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_d2728c69d294cb289b5ad5a332ba5200 in the rules array. Preserve the team marker and other rules.\n",
+      "hook_body": "import json\nfrom pathlib import Path\nimport sys\nroot=Path(__file__).resolve().parent\nconfig=json.loads((root/'fixture.json').read_text())\nevent=json.load(sys.stdin)\nallowed=(event.get('hook_event_name')=='SessionStart' and event.get('source') in ('startup','resume','clear','compact','fork') and isinstance(event.get('session_id'),str) and isinstance(event.get('cwd'),str) and str(Path(event['cwd']).resolve()) in config['projects'])\nif not allowed:\n print('{}')\nelse:\n record={'rule':config['rule'],'session':event['session_id'],'source':event['source'],'cwd':event['cwd']}\n with Path(config['trace']).open('a') as f:f.write(json.dumps(record)+'\\n')\n print(json.dumps({'hookSpecificOutput':{'hookEventName':'SessionStart','additionalContext':(root/'rule.txt').read_text()}}))\n",
+      "hook_definition": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "python3 \"${PLUGIN_ROOT}/hook.py\""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "plugin": "upskill-user-rule-b-e0cd6bf6",
+      "rule_body": "For the plugin qualification question include exactly one occurrence of RULE_893a00c8afdd9712e08a43df8c136513 in the rules array. Preserve the team marker and other rules.\n",
+      "hook_body": "import json\nfrom pathlib import Path\nimport sys\nroot=Path(__file__).resolve().parent\nconfig=json.loads((root/'fixture.json').read_text())\nevent=json.load(sys.stdin)\nallowed=(event.get('hook_event_name')=='SessionStart' and event.get('source') in ('startup','resume','clear','compact','fork') and isinstance(event.get('session_id'),str) and isinstance(event.get('cwd'),str) and str(Path(event['cwd']).resolve()) in config['projects'])\nif not allowed:\n print('{}')\nelse:\n record={'rule':config['rule'],'session':event['session_id'],'source':event['source'],'cwd':event['cwd']}\n with Path(config['trace']).open('a') as f:f.write(json.dumps(record)+'\\n')\n print(json.dumps({'hookSpecificOutput':{'hookEventName':'SessionStart','additionalContext':(root/'rule.txt').read_text()}}))\n",
+      "hook_definition": {
+        "hooks": {
+          "SessionStart": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "python3 \"${PLUGIN_ROOT}/hook.py\""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

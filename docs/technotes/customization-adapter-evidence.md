@@ -253,3 +253,16 @@ Exact native final responses, one fixture activation per positive and bound
 resource reads remain distinct from full duplicate/discovery, permission, scope
 and integrated lifecycle qualification. No route is adopted; schema-2 remains
 blocked.
+
+## Bounded Codex user registration — 2026-10-23
+
+The [Codex user-registration slice](gate6-codex-user-rule-controls.md) retains
+native rule messages and paired disable/remove/reinstall controls across two
+disposable projects after ordinary user hook review. Registration is
+user-scoped; callbacks intentionally guard only those two project paths. The
+untrusted positive remains failed and the first post-trust runner remains
+incomplete after a guard failure. Nine corrected turns match their declared
+responses with bound callback counts. Exact post-trust configuration restoration
+and selected prior registration preservation do not qualify full
+ownership/recovery, other readers or other clients/platforms/scopes. No adapter
+is adopted; schema-2 stays blocked.

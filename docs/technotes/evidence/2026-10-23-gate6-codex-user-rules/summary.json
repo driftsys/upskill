@@ -1,0 +1,358 @@
+{
+  "issue": 374,
+  "qualified": false,
+  "sessions": [
+    {
+      "label": "pre-pretrust-failed-positive",
+      "session": "01a165ac-c448-7de2-a0ba-5ba532bffa84",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": []
+      },
+      "declared_response_matched": false,
+      "native_rule_payloads": [],
+      "callback_count": 0,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "9bbabb18ac2a43002dd8366622c8dcd101fcd2277d9bfe65cc567d995b834908",
+      "qualified": false
+    },
+    {
+      "label": "partial-trusted-project-a",
+      "session": "01a166fc-168f-7412-a935-33010ee50b02",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "23060377a4fce2f457a9435a7f0c5ba49929a68e3bd7c754d12b5f12c56fb2b1",
+      "qualified": false
+    },
+    {
+      "label": "partial-trusted-project-b",
+      "session": "01a166fc-2ea1-7973-aba3-206de54b989d",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "5429564b4ad2c716c171717127893c4066caf2368f470fd234a0f00daf059231",
+      "qualified": false
+    },
+    {
+      "label": "corrected-trusted-project-a",
+      "session": "01a166fd-3652-7f03-863e-a4b432906918",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "0089438414ec4a3ac544641e18c01a8b6902dd60a9ddf3ba5b61feb7fe3a3c23",
+      "qualified": false
+    },
+    {
+      "label": "corrected-trusted-project-b",
+      "session": "01a166fd-4678-7013-a917-1ada7f572b0c",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "bf6f624f74da1418152a6c131ebc128b718940f41aedcc235ca3ba828051fa76",
+      "qualified": false
+    },
+    {
+      "label": "corrected-disabled-a-project-a",
+      "session": "01a166fd-597f-7881-bed2-0dfdbd8864fc",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 1,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "f858d241c82a10a8efbba37f8475dfb8e42de99a4d6319d48adfbf84d1de34de",
+      "qualified": false
+    },
+    {
+      "label": "corrected-disabled-both-project-b",
+      "session": "01a166fd-6e94-7ea1-b093-29ac8e5dc473",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": []
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [],
+      "callback_count": 0,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "c07c8f3c613a22bc776810a57cb8da9519e7c8f3eff3a9e538a20f0b99ae4b46",
+      "qualified": false
+    },
+    {
+      "label": "corrected-restored-project-b",
+      "session": "01a166fd-81a5-72b3-aeee-6c0ae3473fa2",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "6a31072c52b99315693a18c66f53096fc0a5563d3aa7a28e092ca985fcc47649",
+      "qualified": false
+    },
+    {
+      "label": "corrected-removed-a-project-a",
+      "session": "01a166fd-972a-7972-95b6-215081ae0ba5",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 1,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "b228a116779900472ad9b9e34da4ccc7a671d3528e72f4b1607633f10a3fcca2",
+      "qualified": false
+    },
+    {
+      "label": "corrected-removed-both-project-b",
+      "session": "01a166fd-b811-79e2-b2f9-21ffb7d862f3",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": []
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": []
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [],
+      "callback_count": 0,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "150144466081eb3a6b913558771bfa2d579a0c95d4dcd99bf78f70ae5b607615",
+      "qualified": false
+    },
+    {
+      "label": "corrected-reinstalled-project-a",
+      "session": "01a166fd-cb4d-7002-9b3c-9cb5c272ec7d",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+      "declared_expected": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "00c09c65237d206cbc09366ed157220a790a36e17a42f9e7267a55170ae2606c",
+      "qualified": false
+    },
+    {
+      "label": "corrected-reinstalled-project-b",
+      "session": "01a166fd-de20-7100-8a97-e81e215c3606",
+      "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-b",
+      "declared_expected": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "observed": {
+        "team": "TEAM_b58e120f609cc2aae10edef62a749cae",
+        "rules": [
+          "RULE_d2728c69d294cb289b5ad5a332ba5200",
+          "RULE_893a00c8afdd9712e08a43df8c136513"
+        ]
+      },
+      "declared_response_matched": true,
+      "native_rule_payloads": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ],
+      "callback_count": 2,
+      "completed_turns": 1,
+      "native_final_phase_exact_to_cli": true,
+      "tool_calls": 0,
+      "selected_cli_sha256": "2f7ae691c7cb92bcf3caf5106c2ac6de69225dda450ab8fe1eaaae6992f28727",
+      "qualified": false
+    }
+  ],
+  "counts": {
+    "completed_turns": 12,
+    "declared_responses_matched": 11,
+    "pretrust_failed_positives": 1,
+    "partial_posttrust_turns": 2,
+    "partial_runner_guard_failures": 1,
+    "corrected_turns": 9,
+    "corrected_declared_responses_matched": 9,
+    "native_rule_payloads": 16,
+    "bound_fixture_callbacks": 16,
+    "tool_calls": 0
+  },
+  "limits": [
+    "User-scoped registration; payload callbacks intentionally guard only two declared project paths, not arbitrary workspaces or project-scope registration",
+    "Initial untrusted positive failed; partial posttrust runner stopped before first disable edit and preserved unchanged config",
+    "Disable used guarded edits of only fixture plugin enabled values, not a native disable CLI or installed upskill lifecycle",
+    "Native remove/reinstall success does not qualify complete cache/cloud side-effect recovery or integrated ownership",
+    "UI folder trust changed and user reviewed new hook definitions before posttrust controls; registration/initial trust phase does not preserve original config bytes",
+    "Posttrust corrected config bytes and mode match its own post-user-review baseline",
+    "No complete profile/source/compatibility inventory, full duplicate/unintended-reader proof, other clients/scopes/platforms/IDE, MCP or general permission/tool/hook management qualification",
+    "No shared-root adoption, production adapter or schema-2 activation"
+  ]
+}
