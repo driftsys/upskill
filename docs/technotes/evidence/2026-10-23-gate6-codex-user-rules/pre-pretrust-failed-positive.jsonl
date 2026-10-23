@@ -1,0 +1,4 @@
+{"type": "thread.started", "thread_id": "01a165ac-c448-7de2-a0ba-5ba532bffa84"}
+{"type": "turn.started"}
+{"type": "item.completed", "item": {"id": "item_0", "type": "agent_message", "text": "{\"team\":\"TEAM_0d843e0aceaeb07dd64f48efdb9b458c\",\"rules\":[]}"}}
+{"type": "turn.completed", "usage_omitted": true}

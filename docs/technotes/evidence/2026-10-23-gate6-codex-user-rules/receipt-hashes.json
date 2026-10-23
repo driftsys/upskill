@@ -1,0 +1,19 @@
+{
+  "commands.json": "0759075f33119123ccc29658b7c05b4df76899b8b274869643a63e312f787ca5",
+  "corrected-disabled-a-project-a.jsonl": "f858d241c82a10a8efbba37f8475dfb8e42de99a4d6319d48adfbf84d1de34de",
+  "corrected-disabled-both-project-b.jsonl": "c07c8f3c613a22bc776810a57cb8da9519e7c8f3eff3a9e538a20f0b99ae4b46",
+  "corrected-reinstalled-project-a.jsonl": "00c09c65237d206cbc09366ed157220a790a36e17a42f9e7267a55170ae2606c",
+  "corrected-reinstalled-project-b.jsonl": "2f7ae691c7cb92bcf3caf5106c2ac6de69225dda450ab8fe1eaaae6992f28727",
+  "corrected-removed-a-project-a.jsonl": "b228a116779900472ad9b9e34da4ccc7a671d3528e72f4b1607633f10a3fcca2",
+  "corrected-removed-both-project-b.jsonl": "150144466081eb3a6b913558771bfa2d579a0c95d4dcd99bf78f70ae5b607615",
+  "corrected-restored-project-b.jsonl": "6a31072c52b99315693a18c66f53096fc0a5563d3aa7a28e092ca985fcc47649",
+  "corrected-trusted-project-a.jsonl": "0089438414ec4a3ac544641e18c01a8b6902dd60a9ddf3ba5b61feb7fe3a3c23",
+  "corrected-trusted-project-b.jsonl": "bf6f624f74da1418152a6c131ebc128b718940f41aedcc235ca3ba828051fa76",
+  "fixture-and-assessment.json": "dfd9875eaed747528c54534c2e146cb53866deb8b835dabcf04bab770d9dbd00",
+  "native-session-selections.json": "46e94f402288fd7a1af9a3de4648617d14102d17510cfdbf7693f29aa3004469",
+  "partial-trusted-project-a.jsonl": "23060377a4fce2f457a9435a7f0c5ba49929a68e3bd7c754d12b5f12c56fb2b1",
+  "partial-trusted-project-b.jsonl": "5429564b4ad2c716c171717127893c4066caf2368f470fd234a0f00daf059231",
+  "pre-pretrust-failed-positive.jsonl": "9bbabb18ac2a43002dd8366622c8dcd101fcd2277d9bfe65cc567d995b834908",
+  "private-source-index.json": "43ec33256ffe16e730e3dcbfaefc5f43e876b328c581db2989a8a49b0c65256a",
+  "summary.json": "539681fd185907c2eacb37281341959ceb48a8417254f95d0eabc9ec7b52878d"
+}
