@@ -279,3 +279,16 @@ CLI receipts and actual module paths bind context callbacks. This is not native
 package uninstall, arbitrary existing JSONC/plugin-array preservation or
 complete profile recovery. No adapter or shared root is adopted. All 160 cells
 remain unqualified; schema-2 activation stays blocked.
+
+## Codex user session lifecycle — 2026-10-23
+
+The [session lifecycle slice](gate6-codex-user-session-controls.md) retains five
+matching model responses and one actual native UI compaction, with two explicit
+failed controls. An initial resume did not preserve the fresh invocation's
+read-only policy; a separate pair supplies read-only configuration on each
+invocation. UI reopen followed by compaction precedes the next turn recording
+two exact developer bodies per rule on the next turn. Correct JSON and one
+callback per hook point do not prove unique instruction delivery.
+[#379](https://github.com/driftsys/upskill/issues/379) blocks adapter selection
+until the lifecycle contract and native proof resolve this behavior. No adapter
+is adopted, all 160 cells remain unqualified and schema-2 stays blocked.

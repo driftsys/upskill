@@ -1,0 +1,239 @@
+{
+  "fixture": {
+    "issue": 377,
+    "qualified": false,
+    "pair_packet": "/private/tmp/upskill-gate6-codex-user-session-y6do2vjw",
+    "pair_manifest": {
+      "path": "/private/tmp/upskill-gate6-codex-user-session-y6do2vjw/receipt-hashes.json",
+      "sha256": "3e26731231e30206758d402ee51351d8fa92f55d59517713437cdafeb84074f3",
+      "mode": 384
+    },
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "--no-daemon",
+      "resume",
+      "01a16720-a744-73d2-afce-d21f64c954b8",
+      "-m",
+      "gpt-6.1-sol"
+    ],
+    "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+    "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+    "native_session_path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/sessions/2026/10/23/rollout-2026-10-23T06-59-15-01a16720-a744-73d2-afce-d21f64c954b8.jsonl",
+    "native_before_prefix_bytes": 84900,
+    "native_before_prefix_sha256": "1583011db52e12bd18c4319ef89ef325a42366dd118314a045ab503733163fb8",
+    "expected_response": {
+      "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+      "rules": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ]
+    },
+    "manual_before": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+        "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+        "mode": 384
+      }
+    ],
+    "trace_before": {
+      "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/activation.jsonl",
+      "sha256": "ac2bc6b60c66041b37c026703dcff1c02243aec2287a4670538dffaa8c2d6e64",
+      "mode": 420
+    },
+    "planned_native_command": "/compact",
+    "expected_model_tools": 0,
+    "limitation": "Wait for actual native UI readiness before input. No approval of workspace/hook trust; unchanged definitions and existing trusted project only."
+  },
+  "exit_receipt": {
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "--no-daemon",
+      "resume",
+      "01a16720-a744-73d2-afce-d21f64c954b8",
+      "-m",
+      "gpt-6.1-sol"
+    ],
+    "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a",
+    "child_wait_status": 0,
+    "native_child_exit_code": 0,
+    "output": {
+      "path": "/private/tmp/upskill-gate6-codex-user-compact-cx6pndf9/terminal-output.raw",
+      "sha256": "e47162fca561a88259efb4cbe99d3382d43549353171c1c4ee285402544a760d",
+      "mode": 384
+    },
+    "input": {
+      "path": "/private/tmp/upskill-gate6-codex-user-compact-cx6pndf9/terminal-input.raw",
+      "sha256": "7e5691dd2705ff11078cc7932762d8e760cfcd062fbdc650a09e29b1e1c05c5b",
+      "mode": 384
+    },
+    "qualified": false
+  },
+  "terminal_resize_receipt": {
+    "recorder_pid": 66777,
+    "owned_native_child_pid": 66800,
+    "child_comm": "/Users/sebastientasson/.local/bin/codex",
+    "child_terminal": "/dev/ttys032",
+    "before_size": "0 0",
+    "after_size": "40 120",
+    "purpose": "Resize only this recorder-owned nested PTY; no trust or policy changes"
+  },
+  "assessment": {
+    "qualified": false,
+    "native_compaction_completed": true,
+    "next_response_matched": true,
+    "next_response": {
+      "team": "TEAM_0d843e0aceaeb07dd64f48efdb9b458c",
+      "rules": [
+        "RULE_d2728c69d294cb289b5ad5a332ba5200",
+        "RULE_893a00c8afdd9712e08a43df8c136513"
+      ]
+    },
+    "native_child_exit_code": 0,
+    "new_callback_records": [
+      {
+        "rule": "b",
+        "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+        "source": "resume",
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a"
+      },
+      {
+        "rule": "a",
+        "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+        "source": "resume",
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a"
+      },
+      {
+        "rule": "a",
+        "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+        "source": "compact",
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a"
+      },
+      {
+        "rule": "b",
+        "session": "01a16720-a744-73d2-afce-d21f64c954b8",
+        "source": "compact",
+        "cwd": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a"
+      }
+    ],
+    "new_rule_body_message_counts": [
+      2,
+      2
+    ],
+    "replacement_history_exact_rule_body_counts": [
+      0,
+      0
+    ],
+    "replacement_history_plaintext_rule_marker_counts": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "postcompact_next_turn_exact_rule_body_counts": [
+      2,
+      2
+    ],
+    "single_body_delivery_control_passed": false,
+    "interpretation": "Reopened UI resume and compact callbacks each ran once per rule, then both outputs were recorded as separate developer bodies on the next turn. Successful JSON is not a single-copy or deduplication proof. Encrypted compaction and provider effective input are not inspected.",
+    "tool_calls": 0,
+    "manual_exact": true,
+    "manual_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-user-rules-eqi2ktsw/project-a/AGENTS.md",
+        "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/config.toml",
+        "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+        "mode": 384
+      }
+    ],
+    "cache_exact": true,
+    "cache_after": [
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hook.py",
+        "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/rule.txt",
+        "sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/fixture.json",
+        "sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/.codex-plugin/plugin.json",
+        "sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hooks/hooks.json",
+        "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hook.py",
+        "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/rule.txt",
+        "sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/fixture.json",
+        "sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/.codex-plugin/plugin.json",
+        "sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+        "mode": 416
+      },
+      {
+        "path": "/private/tmp/upskill-gate6-codex-installed-20261019/home/.codex/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hooks/hooks.json",
+        "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+        "mode": 416
+      }
+    ],
+    "native_final_prefix_bytes": 151305,
+    "native_final_prefix_sha256": "0b6f0a250c463f4444c0af164919bf4fc214f51d6dd5706677a7a8d5fa46bc7b",
+    "trace_delta_prefix_bytes": 4130,
+    "trace_delta_prefix_sha256": "ac2bc6b60c66041b37c026703dcff1c02243aec2287a4670538dffaa8c2d6e64"
+  },
+  "terminal_proof": {
+    "actual_typed_native_command": "/compact",
+    "actual_ui_completed_text": "Context compacted",
+    "raw_input_sha256": "7e5691dd2705ff11078cc7932762d8e760cfcd062fbdc650a09e29b1e1c05c5b",
+    "raw_output_sha256": "e47162fca561a88259efb4cbe99d3382d43549353171c1c4ee285402544a760d",
+    "raw_terminal_transcripts_retained_privately": true
+  },
+  "limitation": "Selected command/UI proof is a derived receipt bound to private native transcript; full terminal/account and encrypted content are omitted."
+}
