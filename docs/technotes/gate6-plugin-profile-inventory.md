@@ -23,8 +23,12 @@ any new native control. Every new control row must name its pin. Historical
 | Copilot CLI     | 1.0.103           | macOS arm64 CLI |
 | OpenCode v2 CLI | 2.1.4             | macOS arm64 CLI |
 
-These are installed release observations, not native qualification. Linux, IDE
-and hosted surfaces remain unqualified. Production routing remains schema 1.
+The
+[retained version receipts](evidence/2026-10-24-copilot-claude-rules-reader/campaign-pins.json)
+confirm all four installed versions after the Q1 attempt; the initial checks
+preceded that attempt. These are installed release observations, not native
+qualification. Linux, IDE and hosted surfaces remain unqualified. Production
+routing remains schema 1.
 
 ## Frozen campaign
 

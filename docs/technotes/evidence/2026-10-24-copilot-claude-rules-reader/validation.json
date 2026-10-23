@@ -12,5 +12,23 @@
     "result": "PASS: 42 offline tests",
     "private_log": "q1-lint-green.log",
     "sha256": "d397ed9fa900bcf53751f50f05dd18c4d79d06418ef1beb27a5d01f87ec2d6f0"
+  },
+  {
+    "stage": "mutation checks",
+    "result": "PASS: positive-guard bypass and incomplete frontmatter mutations both rejected",
+    "private_log": "q1-mutation-tests.log",
+    "sha256": "9a386042781a249474e537b2bc6d65c078ed529a7fae713118c68ad88585cb85"
+  },
+  {
+    "stage": "follow-up lint",
+    "result": "PASS: 42 offline tests",
+    "private_log": "q1-followup-lint.log",
+    "sha256": "d3cffcc264610d1ff4b2fdddd06cfe3e51092d6c4c932cbb45b39f8e19952c8f"
+  },
+  {
+    "stage": "follow-up docs",
+    "result": "PASS: documentation checks",
+    "private_log": "q1-followup-docs.log",
+    "sha256": "554480e292407accdf8ea35e12beb6c89920382a4c09b5ada6b39579d3c6c984"
   }
 ]

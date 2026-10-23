@@ -76,17 +76,18 @@ class QualificationTests(unittest.TestCase):
             inherited = {'GIT_DIR': str(external / '.git'), 'GIT_WORK_TREE': str(external), 'GIT_INDEX_FILE': str(external / '.git/index')}
             with mock.patch.dict(os.environ, inherited):
                 positive, negative, _, _ = q.fixtures(root / 'fixtures', 'opencode')
+                reader_rows = q.copilot_claude_rules_fixtures(root / 'reader-fixtures')
                 self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
             self.assertEqual(fixture_git(external, 'rev-parse', 'HEAD'), before_head)
             self.assertEqual((external / '.git/index').read_bytes(), before_index)
             self.assertEqual(sentinel.read_text(), 'worktree sentinel\n')
             heads = []
-            for project in (positive, negative):
+            for project in (positive, negative, *(row['project'] for row in reader_rows)):
                 self.assertTrue((project / '.git').is_dir())
                 self.assertEqual(Path(fixture_git(project, 'rev-parse', '--show-toplevel').strip()).resolve(), project.resolve())
                 heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
                 self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
-            self.assertNotEqual(*heads)
+            self.assertEqual(len(set(heads)), 5)
 
     def test_distinct_negative_marker(self):
         self.assertEqual(q.classify('positive', 'staging', 'positive', 'absent', 'staging'), 'staging_discovered')
@@ -119,17 +120,24 @@ class CopilotClaudeRulesTests(unittest.TestCase):
                 text = files[0].read_text()
                 self.assertIn(row['marker'], text)
                 self.assertNotIn(row['fallback'], text)
-                self.assertEqual(text.startswith('---\npaths:'), row['label'] == 'candidate-paths')
+                self.assertEqual(text.startswith('---\npaths: "**/*.rs"\n---\nFor the discovery qualification question,'), row['label'] == 'candidate-paths')
                 for marker in markers:
                     self.assertEqual(marker in text, marker == row['marker'])
                 heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
+                self.assertEqual(fixture_git(project, 'rev-list', '--parents', '-n', '1', 'HEAD').split(), [heads[-1].strip()])
+                self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
             self.assertEqual(len(set(heads)), 3)
+            self.assertEqual(len({row['fallback'] for row in rows}), 3)
+            again = q.copilot_claude_rules_fixtures(Path(tmp) / 'again')
+            self.assertFalse({row['marker'] for row in rows} & {row['marker'] for row in again})
+            self.assertFalse({row['fallback'] for row in rows} & {row['fallback'] for row in again})
 
     def test_reader_classification_requires_successful_positive_and_exact_candidate(self):
         self.assertEqual(q.classify_reader('ok', 'seen', 'ok', 'seen', 'absent'), 'reads')
         self.assertEqual(q.classify_reader('ok', 'absent', 'ok', 'seen', 'absent'), 'does not read')
         for failure in q.FAILURES | {'wrong', 'prefix ok'}:
-            self.assertEqual(q.classify_reader(failure, 'absent', 'ok', 'seen', 'absent'), 'positive_control_failed')
+            for candidate in ('absent', 'seen'):
+                self.assertEqual(q.classify_reader(failure, candidate, 'ok', 'seen', 'absent'), 'positive_control_failed')
         for failure in q.FAILURES:
             self.assertEqual(q.classify_reader('ok', failure, 'ok', 'seen', 'absent'), failure)
         for response in ('prefix seen', 'prefix absent', '', 'ok'):
