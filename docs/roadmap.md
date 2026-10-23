@@ -27,10 +27,11 @@ Tracking: [MVP epic #283](https://github.com/driftsys/upskill/issues/283).
 
 Pending proposal: the
 [customization delivery proposal](wip/specs/2026-10-23-customization-delivery-proposal.md)
-(2026-10-23) proposes adding subagents to this MVP and moving bundles and plugin
-authoring to the following release. It does not address the updater deliverable,
-which keeps its place along with the three implementation dependencies below. It
-is not adopted; this table is re-sequenced only when that proposal is approved.
+(2026-10-23) proposes adding subagents to this MVP and moving bundles as an
+authorable content type to the following release; native plugins stay in the MVP
+as the delivery mechanism. It does not address the updater deliverable, which
+keeps its place along with the three implementation dependencies below. It is
+not adopted; this table is re-sequenced only when that proposal is approved.
 
 Deliver **automatic updates, rules, skills, bundles and plugins** across the
 four initial clients.

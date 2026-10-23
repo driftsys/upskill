@@ -7,10 +7,11 @@ adapters or qualify a client. The
 [roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md) owns
 release order;
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md)
-resolves conflicts with earlier experimental instruction plans. A
-[proposal dated 2026-10-23](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-proposal.md)
-suggests managed per-client packages for skills and subagents and subagents in
-the MVP; its amendments are listed in AD-0040 and are not adopted here.
+resolves conflicts with earlier experimental instruction plans. A proposal dated
+2026-10-23 suggests managed per-client packages for skills and subagents, and
+places subagents in the MVP; its amendments are listed in
+[AD-0040's proposed amendments](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#proposed-amendments-2026-10-23)
+and are not adopted here.
 
 ## Architecture and authority
 

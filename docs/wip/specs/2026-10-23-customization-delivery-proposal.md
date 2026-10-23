@@ -38,8 +38,10 @@ Divergences from AD-0040, Topic 0009 and the [roadmap](../../roadmap.md):
 
 - Subagents join the MVP. The roadmap leaves subagent management unassigned and
   the 2026-10-11 roadmap placed them in M3 after skills.
-- Bundles, plugin installation and the updater plugin leave the MVP table. See
-  "Requirements and scope" for what this does and does not change.
+- Bundles as an authorable content type leave the MVP table; native plugins stay
+  as the delivery mechanism. The updater plugin is not addressed by this
+  proposal and keeps its roadmap place. See "Requirements and scope" for what
+  this does and does not change.
 - Skills and subagents are delivered as upskill-managed packages per client
   wherever a native plugin root exists; rules use a package hook only where no
   qualified native route exists. AD-0040's extended section selects portable
