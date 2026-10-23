@@ -103,6 +103,39 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(q.classify('prefix marker', 'fallback', 'marker', 'fallback'), 'positive_control_failed')
         self.assertEqual(q.classify('marker', 'other', 'marker', 'fallback'), 'inconclusive')
 
+class CopilotClaudeRulesTests(unittest.TestCase):
+    def test_reader_fixture_has_only_the_selected_instruction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rows = q.copilot_claude_rules_fixtures(Path(tmp))
+            self.assertEqual([row['label'] for row in rows], ['positive', 'candidate', 'candidate-paths'])
+            heads = []
+            markers = [row['marker'] for row in rows]
+            self.assertEqual(len(set(markers)), 3)
+            for row in rows:
+                project = row['project']
+                files = [p for p in project.rglob('*') if p.is_file() and '.git' not in p.relative_to(project).parts]
+                path = '.github/copilot-instructions.md' if row['label'] == 'positive' else '.claude/rules/probe.md'
+                self.assertEqual([str(p.relative_to(project)) for p in files], [path])
+                text = files[0].read_text()
+                self.assertIn(row['marker'], text)
+                self.assertNotIn(row['fallback'], text)
+                self.assertEqual(text.startswith('---\npaths:'), row['label'] == 'candidate-paths')
+                for marker in markers:
+                    self.assertEqual(marker in text, marker == row['marker'])
+                heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
+            self.assertEqual(len(set(heads)), 3)
+
+    def test_reader_classification_requires_successful_positive_and_exact_candidate(self):
+        self.assertEqual(q.classify_reader('ok', 'seen', 'ok', 'seen', 'absent'), 'reads')
+        self.assertEqual(q.classify_reader('ok', 'absent', 'ok', 'seen', 'absent'), 'does not read')
+        for failure in q.FAILURES | {'wrong', 'prefix ok'}:
+            self.assertEqual(q.classify_reader(failure, 'absent', 'ok', 'seen', 'absent'), 'positive_control_failed')
+        for failure in q.FAILURES:
+            self.assertEqual(q.classify_reader('ok', failure, 'ok', 'seen', 'absent'), failure)
+        for response in ('prefix seen', 'prefix absent', '', 'ok'):
+            self.assertEqual(q.classify_reader('ok', response, 'ok', 'seen', 'absent'), 'inconclusive')
+
+
 class OpenCodeEvents(unittest.TestCase):
     def test_text_events_and_tool_rejection(self):
         self.assertEqual(q.opencode_response('{"type":"text","part":{"type":"text","text":"marker"}}'), ('marker', False))

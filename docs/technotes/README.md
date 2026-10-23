@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Copilot reader of Claude rules: failed positive](gate6-copilot-claude-rules-reader.md)
+  — Q1, Copilot 1.0.103; quota failure, candidates not run.
+
 - [Customization delivery choice evidence](evidence/2026-10-23-delivery-choice/assessment.md):
   current skill experiments, verified retained native records and focused
   ownership checks; supports a proposal without claiming production

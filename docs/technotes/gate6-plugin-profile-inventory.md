@@ -7,6 +7,25 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice 1 campaign revision: 2026-10-24
+
+Task [#382](https://github.com/driftsys/upskill/issues/382) opens a new campaign
+revision for the
+[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+Installed CLI version checks on macOS arm64 pin the following releases before
+any new native control. Every new control row must name its pin. Historical
+2026-10-19 evidence keeps its original pins and is not implicitly rerun.
+
+| Client          | Installed release | Surface         |
+| --------------- | ----------------- | --------------- |
+| Claude Code     | 2.1.308           | macOS arm64 CLI |
+| Codex CLI       | 0.164.0           | macOS arm64 CLI |
+| Copilot CLI     | 1.0.103           | macOS arm64 CLI |
+| OpenCode v2 CLI | 2.1.4             | macOS arm64 CLI |
+
+These are installed release observations, not native qualification. Linux, IDE
+and hosted surfaces remain unqualified. Production routing remains schema 1.
+
 ## Frozen campaign
 
 [Campaign metadata](agent-customization/gate6-campaign-2026-10-19.json) pins:

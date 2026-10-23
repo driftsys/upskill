@@ -1,0 +1,16 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: missing Q1 fixture and classification helpers",
+    "private_log": "q1-lint-red.log",
+    "sha256": "83ed67f526a3570d9823636e52c3fa5b0eda95b4db427c728ac246c52af92c21"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 42 offline tests",
+    "private_log": "q1-lint-green.log",
+    "sha256": "d397ed9fa900bcf53751f50f05dd18c4d79d06418ef1beb27a5d01f87ec2d6f0"
+  }
+]

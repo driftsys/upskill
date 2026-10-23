@@ -1,0 +1,14 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q1-copilot-bz0xsam8",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "7dd65c983579b784636f5e4e3d7741537bfc5ccf6172394cc227c6bb037fda45"
+      }
+    ],
+    "capture_helper_sha256": "6aa7fd1228c9c2aa9e73914cf554807442c2d1a7d0c5cf6e1d05b514f8f63619",
+    "capture_helper_path": "/private/tmp/q1-capture.py"
+  }
+]
