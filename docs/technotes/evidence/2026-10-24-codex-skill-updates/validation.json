@@ -1,0 +1,59 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: seven missing-helper tests",
+    "private_log": "$PACKET_A/q8-lint-red.log",
+    "sha256": "d85684a170a82e386b77e23c16fe422e62efb5afdbf6b23c598a1276c93e52db"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_A/q8-lint-green.log",
+    "sha256": "1b4ff115d6c4525d474203c5cf057fbcdb4db00140d144011a84ced6d5e8b711"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: missing response evidence raises instead of classifying",
+    "private_log": "$PACKET_A/q8-missing-evidence-red.log",
+    "sha256": "e2d6bcdee3addfbe1e926df01414768137db971131a8e1b7a00f0bf5f86b866f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-missing-evidence-green.log",
+    "sha256": "fea2701648c3bb0b7f652b780490ae035b6fe7d793cf5916c7cec7c75e485115"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: native-user-root exclusion missing",
+    "private_log": "$PACKET_A/q8-user-root-red.log",
+    "sha256": "2e16fa132ecbd759fd7977789a7179f4a8353123bc404b0341a20c3945469330"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-user-root-green.log",
+    "sha256": "751c15912ec8685797fa6360e3a489d3b7d1961430ee00bdb28c650d7ebf581b"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_A/q8-verify.log",
+    "sha256": "3f76328bda185eca81954ef0f82d3c1d0c9a567dc9d2562e4f661a5fb9fbe31f"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_A/q8-symlink-home-red.log",
+    "sha256": "9d7fa6dbad22409e57527abc0e9d1ae68a8485a9af1d5d21b169bc757eae1852"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 68 offline tests",
+    "private_log": "$PACKET_A/q8-symlink-fix-verify.log",
+    "sha256": "00bb319310e2a89d260de3fe56f6462be42234f0ae09327d0f6f89cefffb83bd"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "installed": [
+    {
+      "pluginId": "upskill-q8-e0cb7edc26c257ce@upskill-q8-e0cb7edc26c257ce-market",
+      "name": "upskill-q8-e0cb7edc26c257ce",
+      "marketplaceName": "upskill-q8-e0cb7edc26c257ce-market",
+      "version": "0.0.0",
+      "installed": true,
+      "enabled": true,
+      "source": {
+        "source": "local",
+        "path": "$PACKET_A/fixture/delivery/plugins/upskill-q8-e0cb7edc26c257ce"
+      },
+      "marketplaceSource": {
+        "sourceType": "local",
+        "source": "$PACKET_A/fixture/delivery"
+      },
+      "installPolicy": "AVAILABLE",
+      "authPolicy": "ON_INSTALL"
+    }
+  ],
+  "available": []
+}

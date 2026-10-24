@@ -1,0 +1,16 @@
+[
+  {
+    "decision": "Use one new project activation entry and disable only the new user binding",
+    "reason": "Keep the skill active once for the intended project while retaining native user cache/marketplace mechanics."
+  },
+  {
+    "decision": "Use native remove/re-add for the refresh control",
+    "reason": "The pinned plugin CLI exposes add/remove; this is an allowed refresh alternative in Q8.",
+    "result": "Source resource/version edit stays invisible before refresh; edited resource loads from a new native cache version afterward."
+  },
+  {
+    "decision": "Hold original profile bytes only in memory through admission and all controls",
+    "reason": "This avoids the earlier Q7 hash-only restoration gap.",
+    "result": "Measured bytes/mode restored exactly after verified owned-entry cleanup. The later Q7 notice-counter correction is a separate campaign cleanup."
+  }
+]

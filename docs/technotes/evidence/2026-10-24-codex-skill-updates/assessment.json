@@ -1,0 +1,8 @@
+{
+  "pin": "0.164.0",
+  "qualified": false,
+  "classification": "edits_require_refresh",
+  "native_expansions": 3,
+  "native_resource_reads": 3,
+  "counts_are_not_provider_effective_uniqueness": true
+}

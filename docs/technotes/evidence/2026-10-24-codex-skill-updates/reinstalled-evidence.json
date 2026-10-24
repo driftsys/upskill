@@ -1,0 +1,40 @@
+{
+  "native_expansion": "<skill>\n<name>upskill-q8-e0cb7edc26c257ce:procedure-a091013ffadfa7a8</name>\n<path>$PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.1/skills/procedure-a091013ffadfa7a8/SKILL.md</path>\n---\nname: procedure-a091013ffadfa7a8\ndescription: Disposable native plugin resource procedure.\n---\nRead references/procedure.md relative to this skill and follow it. Do not infer its contents or use another source. If unavailable return exactly ABSENT_94a496928530d56d6a207256544f0b03. Do not edit files, delegate or change configuration.\n\n</skill>",
+  "resource_reads": [
+    {
+      "call": {
+        "type": "custom_tool_call",
+        "id": "ctc_0a2f3bf494f07a12016adc9f1b66888191bf47bbc8e8b7b757",
+        "status": "completed",
+        "call_id": "call_1393fb2ba3d04e37b0e810150fdcce9b",
+        "name": "exec",
+        "input": "text(await tools.exec_command({cmd:\"cat $PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.1/skills/procedure-a091013ffadfa7a8/SKILL.md $PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.1/skills/procedure-a091013ffadfa7a8/references/procedure.md\",max_output_tokens:2000}));\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16dcd-731e-7ac0-a5d7-8bd97ab0f739",
+          "create_time": 1792843547.479891
+        }
+      },
+      "result": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_01a16dcd-8bb4-7332-81fa-0b675ad6bef3",
+        "call_id": "call_1393fb2ba3d04e37b0e810150fdcce9b",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"chunk_id\":\"9bcfa2\",\"wall_time_seconds\":0.000002541,\"exit_code\":0,\"original_token_count\":103,\"output\":\"---\\nname: procedure-a091013ffadfa7a8\\ndescription: Disposable native plugin resource procedure.\\n---\\nRead references/procedure.md relative to this skill and follow it. Do not infer its contents or use another source. If unavailable return exactly ABSENT_94a496928530d56d6a207256544f0b03. Do not edit files, delegate or change configuration.\\nReturn exactly EDITED_a58f21ef7acc139c814c0049662484f5 and nothing else.\\n\"}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16dcd-731e-7ac0-a5d7-8bd97ab0f739",
+          "create_time": 1792843549.620051
+        }
+      }
+    }
+  ],
+  "cache_skill_sha256": "e6cd0b9d2238748862a89ec1bc3317850f1cd5131f18c2b73ee743e9dd3dbcf6",
+  "cache_resource_sha256": "dd03801460792088230e4a0760a4cbcbc7a49f4bab01067d6628ae63f46e925a"
+}

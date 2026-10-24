@@ -1,0 +1,11 @@
+{
+  "pin": "0.164.0",
+  "state": "success",
+  "completed": true,
+  "response": "INITIAL_dbbd69b06085f72a3d74d3018b8625d7",
+  "native_expansion": true,
+  "resource_read": true,
+  "native_identity": "upskill-q8-e0cb7edc26c257ce:procedure-a091013ffadfa7a8",
+  "load_path": "$PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.0/skills/procedure-a091013ffadfa7a8/SKILL.md",
+  "session": "01a16dca-d2a3-7881-a05c-4969603fd6dc"
+}
