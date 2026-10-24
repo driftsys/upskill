@@ -55,16 +55,45 @@ preserves the earlier checkpoint. Native responses, distinct session IDs,
 fixture hashes and root commits are retained. Failed positives are never
 reclassified as absence observations.
 
-The exact affected row is the
-[proposal Rules section's `.claude/rules`
-gate](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules).
-Unscoped files are a demonstrated Copilot reader and duplicate-delivery risk.
-The two native defaults therefore cannot be assumed independent. Option (a) can
-be considered only for an unscoped rule shared verbatim; option (b) still needs
-Q4's Claude hook qualification, and option (c) still needs Q3's Copilot plugin
-qualification. This packet does not establish a selective exclusion or that
-Copilot ignores `paths:`. Scoped delivery for both clients remains gated.
-Durable records await step 7; the Codex rules row remains blocked by #379.
+The result informs the adopted native-first rules decision in the
+[delivery proposal](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24).
+Unscoped `.claude/rules` is a demonstrated Copilot reader. In the selected
+shared Claude/Copilot route it is an explicitly declared per-item consumer of
+one native file, not a second `.github/instructions` copy. The scoped matching-
+file question remains deferred as Q1b. This packet does not establish ignored
+`paths:` frontmatter, a selective exclusion or production activation.
+
+## Replay and pre-run pin evidence
+
+The existing harness now exposes the structured Copilot event gate used to
+verify the retained outcome selections. It requires native invocation success,
+one assistant response, a terminal successful result, and no tool, error,
+malformed or unknown event. Response whitespace is preserved. The ordinary
+Copilot native command requests JSON; the offline Q1 replay reads only retained
+selections and compares both candidates and failed positives with the summary.
+The
+[full-stream audit](evidence/2026-10-24-copilot-claude-rules-reader/raw-event-gate-audit.json)
+also applies the gate to the complete private stdout, including nonselected
+events, and matches all five retained outcomes. Replay performs no model
+request:
+
+```bash
+python3 scripts/qualify-native-instructions.py --replay-copilot-reader \
+  docs/technotes/evidence/2026-10-24-copilot-claude-rules-reader
+```
+
+The
+[pre-run provenance](evidence/2026-10-24-copilot-claude-rules-reader/pre-run-pin-provenance.json)
+and
+[version output](evidence/2026-10-24-copilot-claude-rules-reader/copilot-pre-run-version.txt)
+bind Copilot's version before all three attempts. Native request timestamps and
+retained file times corroborate the helper's enforced ordering; file times are
+not independently attested. The other three clients have only post-attempt
+version confirmation in this packet. This disclosed gap does not relax the
+all-four pre-run requirement for new campaigns. The all-four pre-run step is
+therefore unproven, and the inventory no longer asserts it. Q1's
+executing-client pin is retained; other clients' controls require their own
+pre-run evidence.
 
 ## Preservation, provenance and residue
 
@@ -73,10 +102,11 @@ The
 and
 [retry receipt](evidence/2026-10-24-copilot-claude-rules-reader/retry-preservation.json)
 record unchanged isolated-profile `config.json` bytes and mode `0600`. The
-initial check also observed absent `settings.json` and `mcp-config.json`. No
-measured configuration required restoration. Authentication stores were not
-read, copied or exported. Native session, log and search state may remain; exact
-whole-profile restoration is unqualified. No real user profile was selected.
+absence of `settings.json` and `mcp-config.json` was not retained as a measured
+value and is not claimed. No measured configuration required restoration.
+Authentication stores were not read, copied or exported. Native session, log and
+search state may remain; exact whole-profile restoration is unqualified. No real
+user profile was selected.
 
 Raw transcripts, fixtures and capture helpers remain outside the repository. The
 [private source index](evidence/2026-10-24-copilot-claude-rules-reader/private-source-index.json)

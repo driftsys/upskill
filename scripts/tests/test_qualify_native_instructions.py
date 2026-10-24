@@ -185,6 +185,18 @@ class OrchestrationTests(unittest.TestCase):
                         stdout = json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': marker}})
                     elif current_events == 'mismatch':
                         stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'different response'}}), json.dumps({'type': 'turn.completed'})])
+                elif client == 'copilot':
+                    stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': marker}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
+                    if tool:
+                        stdout = json.dumps({'type': 'tool.execution_start'}) + '\n' + stdout
+                    if current_events == 'malformed':
+                        stdout = 'not json'
+                    elif current_events == 'empty':
+                        stdout = ''
+                    elif current_events == 'incomplete':
+                        stdout = json.dumps({'type': 'assistant.message', 'data': {'content': marker}})
+                    elif current_events == 'unknown':
+                        stdout = json.dumps({'type': 'future.event'}) + '\n' + stdout
                 elif client == 'opencode':
                     stdout = 'not json' if current_events == 'malformed' else json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
                 else:
@@ -213,11 +225,19 @@ class OrchestrationTests(unittest.TestCase):
                                 self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else state)
 
     def test_exact_responses_with_observed_tools_never_qualify(self):
-        for client in ('codex', 'opencode'):
+        for client in ('codex', 'copilot', 'opencode'):
             with self.subTest(client=client):
                 report, _ = self.controlled_run(client, tool=True)
                 self.assertTrue(all(probe['result'] != 'qualified' for probe in report['probes']))
                 self.assertTrue(all(outcome['tools_observed'] for probe in report['probes'] for outcome in probe['outcomes']))
+
+    def test_copilot_requires_completed_response_events(self):
+        for fixture in ('positive', 'negative'):
+            for events in ('empty', 'malformed', 'incomplete', 'unknown'):
+                with self.subTest(fixture=fixture, events=events):
+                    report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
+                    self.assertEqual(report['probes'][0]['outcomes'][0 if fixture == 'positive' else 1]['state'], 'failure')
+                    self.assertNotEqual(report['probes'][0]['result'], 'qualified')
 
     def test_codex_requires_completed_response_events(self):
         for events in ('empty', 'malformed', 'incomplete', 'unknown'):
