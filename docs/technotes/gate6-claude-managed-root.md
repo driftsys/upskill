@@ -138,8 +138,9 @@ The type regression failed before type-sensitive comparison and passed after it.
 All three reviewed mutations are rejected; the subsequent full verification
 passes all 48 offline tests. A further positive regression preserves existing
 native registrations and unchanged boolean/numeric values when object keys are
-reordered and an allowed empty sibling registration is added. The latest full
-verification passes all 49 offline tests.
+reordered and an allowed empty sibling registration is added. That full
+verification passed all 49 offline tests. The successful native retry was
+followed by a full verification passing all 50 offline tests.
 
 Offline checks never call a client. Linux, IDE/hosted surfaces, running-session
 edit visibility, native cache recovery, interrupted operations and integrated
