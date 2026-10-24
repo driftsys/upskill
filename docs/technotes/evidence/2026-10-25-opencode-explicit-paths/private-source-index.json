@@ -17,5 +17,18 @@
       "classification-source/": "Offline path-order correction and final classifier/tests"
     },
     "method": "One fresh failed native positive; no downstream model requests; offline tests and preservation checks"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-review-jm40cmn7",
+    "manifest_sha256": "95851be25801ce9a1565019370155eaf94794780933f473377586a53babe20ed",
+    "capture_helpers": {
+      "q5-explicit-retain-pass1.py": "0d52fa560fb7ef510fa310c7f61c97915667095900f147d22df413281c5e921b",
+      "q5-explicit-pass1-mutations.py": "507be93ff4b1f024b6430a78e7fae0e8ba273d827e710925c110d537e2dd2fd1"
+    },
+    "source_snapshots": {
+      "source/": "Offline full-review classifier/tests/doc fixes; native capture source remains unchanged in $PACKET_A"
+    },
+    "method": "Offline review fixes, no native or model request"
   }
 ]

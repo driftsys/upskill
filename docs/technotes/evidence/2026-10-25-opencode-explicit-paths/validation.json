@@ -46,5 +46,35 @@
     "result": "PASS: all three surviving mutants now rejected by assertion failure",
     "private_log": "$PACKET_A/q5-explicit-quick-mutations.log",
     "sha256": "6fed10000010078a8ef46f3df655c7a703e01c21629fcfcebc063a321b277f19"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "FAIL: native absence contradiction accepted before correction",
+    "private_log": "$PACKET_B/q5-explicit-pass1-red.log",
+    "sha256": "0ade470be38a641f7feaa508b74c0a850c898121a54a9d1bfc7a4baa9958a626"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: seven focused tests",
+    "private_log": "$PACKET_B/q5-explicit-pass1-green.log",
+    "sha256": "1929830b775d36f9f7407915d2addd4748c200cffd458955c4e4554c900f3fc3"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: three mutants survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_B/q5-explicit-pass1-mutations.log",
+    "sha256": "6d43036eb7a5c30ae1ba55619d07b365b59dd5b53df127077c978d9d2173ca50"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q5-explicit-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_B/q5-explicit-pass1-verify.log",
+    "sha256": "dd8326a5f0bfc2bdd56be86fd68b91db3dd6bb714ca3d4619bfd26f3650b8211"
   }
 ]

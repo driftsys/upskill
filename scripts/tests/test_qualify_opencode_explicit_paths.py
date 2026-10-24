@@ -29,7 +29,8 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
                 else:self.assertNotIn('instructions',config)
             for index,path in enumerate(f['rule_files']):
                 self.assertTrue(path.is_relative_to(f['root']/'delivery'))
-                self.assertIn(f['initial_markers'][index],path.read_text())
+                self.assertEqual(path.read_text().count(f['initial_markers'][index]),1)
+                for other in [marker for marker in markers if marker!=f['initial_markers'][index]]:self.assertNotIn(other,path.read_text())
                 self.assertNotIn(f['updated_markers'][index],path.read_text())
                 self.assertNotIn(f['fallback'],path.read_text())
             for path in f['root'].rglob('*'):
@@ -77,7 +78,7 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
     def test_each_lifecycle_response_has_exact_marker_identity_and_multiplicity(self):
         c,f=self.controls();self.assertEqual(self.classify(c,f),'observed')
         for stage in ['installed','resume','updated','reinstalled']:
-            for response in [{'rules':['X','Y']},{'rules':['A','A','B']},{'rules':['U']},'A B']:
+            for response in [{'rules':['X','Y']},{'rules':['A','B'] if stage in ['installed','resume'] else ['U','V'],'extra':True},{'rules':['A','A','B']},{'rules':['U']},'A B']:
                 c,f=self.controls();c[stage]['response']=response
                 self.assertEqual(self.classify(c,f),'rule_control_failed')
             c,f=self.controls();c[stage]['response']['rules'].reverse()
@@ -118,3 +119,12 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
                 c,f=self.controls();c[second]['session']=c[first]['session']
                 if second=='installed':c['resume']['session']=c['installed']['session']
                 self.assertEqual(self.classify(c,f),'session_identity_failed')
+
+    def test_absence_response_cannot_override_native_delivery_or_missing_identity(self):
+        for stage in ['unregistered','removed','outside']:
+            for key,value in [('native_instruction_paths',['/managed/a.md','/managed/b.md']),('native_body_counts',{'a':1,'b':1}),('native_instruction_paths',{}),('native_body_counts',[])]:
+                c,f=self.controls();c[stage][key]=value
+                self.assertEqual(self.classify(c,f),'native_identity_failed')
+            for key in ['native_instruction_paths','native_body_counts']:
+                c,f=self.controls();del c[stage][key]
+                self.assertEqual(self.classify(c,f),'native_identity_unobserved')

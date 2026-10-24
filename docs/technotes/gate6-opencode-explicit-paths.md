@@ -84,3 +84,9 @@ continue; no production route, schema-1 state or durable record changes in this
 packet
 ([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [summary](evidence/2026-10-25-opencode-explicit-paths/summary.json)).
+
+Packet review adds a failed regression before rejecting contradictory native
+paths or bodies in an absence control. Fixture tests now keep each rule marker
+in its own file exactly once and reject response objects with extra keys. These
+offline fixes do not rerun the failed native positive
+([validation](evidence/2026-10-25-opencode-explicit-paths/validation.json)).

@@ -19,7 +19,7 @@
   "positive-version.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "positive-version.stdout": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
   "preservation.json": "f0c47aec8638ddbd0372c8a7e9b889ea54fb50a2d8d7ce3c819b3a115778806d",
-  "private-source-index.json": "265fca7c005d16bcc12da80b94d3922b3d7f796ecb6e86c6d4d2ba77f861e0fd",
+  "private-source-index.json": "af1bb3d75ac67a3758caf6bf9b99c8667d5c465c1bd6e93951e4e1a84062501b",
   "summary.json": "270eb2c82bc2267e3b2706ff47779032f45095ec4b22a09d5317a8b3fe9d250b",
-  "validation.json": "4cf45ca431a2dad83ae0134d709d2070e3839dc6c0104acee9d574c82561e2a4"
+  "validation.json": "c8105a9571f3e51053239e9aa9e74be20a9fd9f87a26aaac45dd7dda35455dd3"
 }

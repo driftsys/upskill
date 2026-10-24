@@ -110,6 +110,12 @@ def classify_opencode_explicit_paths(controls, fixture):
     for stage in ('unregistered', 'removed', 'outside'):
         if controls[stage]['response'] != fixture['fallback']:
             return 'absence_control_failed'
+    for stage in ('unregistered', 'removed', 'outside'):
+        row = controls[stage]
+        if row.get('native_instruction_paths') is None or row.get('native_body_counts') is None:
+            return 'native_identity_unobserved'
+        if row['native_instruction_paths'] != [] or row['native_body_counts'] != {}:
+            return 'native_identity_failed'
     for stage in ('installed', 'resume', 'updated', 'reinstalled'):
         row = controls[stage]
         expected = fixture['initial_markers'] if stage in ('installed', 'resume') else fixture['updated_markers']
