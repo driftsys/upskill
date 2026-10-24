@@ -144,3 +144,13 @@ class ClaudeRuleHookTests(unittest.TestCase):
         for changed in (None,False,1,'yes'):
             c,f=self.controls();c['compact']['native_compaction_completed']=changed
             self.assertNotEqual(self.q.classify_claude_rule_hook(c,f),'observed')
+
+    def test_zero_missing_and_swapped_active_callbacks_are_rejected(self):
+        for phase in ('installed','resume','compact'):
+            c,f=self.controls();c[phase]['events']=[]
+            self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+            c,f=self.controls();del c[phase]['events']
+            self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+        for phase,source in (('resume','compact'),('compact','resume')):
+            c,f=self.controls();c[phase]['events'][0]['source']=source
+            self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')

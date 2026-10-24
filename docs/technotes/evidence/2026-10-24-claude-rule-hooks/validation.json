@@ -62,5 +62,26 @@
     "result": "PASS: full repository verification and 58 offline tests",
     "private_log": "$PACKET_A/q4-pre-pr-verify.log",
     "sha256": "33fb2d49264f164974a4c6b92e8b2535e02b5344219db19ba9c90defe2d48647"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just lint",
+    "result": "PASS: 59 offline tests",
+    "private_log": "$PACKET_A/q4-pass1-fix-lint.log",
+    "sha256": "867afb32236c086b3ea31ae476a7d21cb68ebcf4d3b0e014f08e76f11e982764"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q4-pass1-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 private-pass1-mutations.py",
+    "result": "PASS: empty/missing events and conflated resume/compact mutants rejected",
+    "private_log": "$PACKET_A/q4-pass1-mutations.log",
+    "sha256": "f8ac74a97d5650b7f6589b9dd672193e1faada6ce3abfca22911460fba364d41"
   }
 ]
