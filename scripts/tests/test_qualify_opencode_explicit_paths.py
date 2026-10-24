@@ -91,14 +91,14 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
             for key in ['native_instruction_paths','native_body_counts']:
                 c,f=self.controls();del c[stage][key]
                 self.assertEqual(self.classify(c,f),'native_identity_unobserved')
-            for value in [{'a':2,'b':1},{'a':True,'b':1},{'a':1},{'a':1,'b':1,'extra':1}]:
+            for value in [{'a':2,'b':1},{'a':True,'b':1},{'a':1},{'a':1,'b':1,'extra':1}, *[{'a':1,'b':value} for value in [2,0,True,1.0,'1']]]:
                 c,f=self.controls();c[stage]['native_body_counts']=value
                 self.assertEqual(self.classify(c,f),'native_identity_failed')
             c,f=self.controls();c[stage]['native_instruction_paths']=['/other/a.md','/managed/b.md']
             self.assertEqual(self.classify(c,f),'native_identity_failed')
             c,f=self.controls();c[stage]['native_instruction_paths'].reverse()
             self.assertEqual(self.classify(c,f),'observed')
-            for paths in [['/managed/a.md','/managed/a.md'],[1,'/managed/b.md']]:
+            for paths in [['/managed/a.md','/managed/a.md'],['/managed/a.md','/managed/b.md','/managed/a.md'],[1,'/managed/b.md']]:
                 c,f=self.controls();c[stage]['native_instruction_paths']=paths
                 self.assertEqual(self.classify(c,f),'native_identity_failed')
 
@@ -111,3 +111,10 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
         self.assertEqual(self.classify(c,f),'session_identity_failed')
         c,f=self.controls();c['updated']['session']='installed'
         self.assertEqual(self.classify(c,f),'session_identity_failed')
+
+        fresh=['positive','unregistered','installed','updated','removed','reinstalled','outside']
+        for index,first in enumerate(fresh):
+            for second in fresh[index+1:]:
+                c,f=self.controls();c[second]['session']=c[first]['session']
+                if second=='installed':c['resume']['session']=c['installed']['session']
+                self.assertEqual(self.classify(c,f),'session_identity_failed')

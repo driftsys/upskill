@@ -2,14 +2,15 @@
   {
     "alias": "$PACKET_A",
     "private_source_path": "/private/tmp/upskill-q5-explicit-sk3i25mj",
-    "manifest_sha256": "e4e8640b2e75f4378534c7a3cce2b9be89bdf6915b8291108519ac255a4f3d54",
+    "manifest_sha256": "ea495b12b4e289032f19371543c4a8247126f89a71702823bc72310b6b763aa7",
     "capture_helpers": {
       "campaign-pin-helper.py": "f0cab9710a347eaf8f85d8fd783d34251d5d002bb7a125d29be244958bdf4c2f",
       "prepare-helper.py": "7b4aa358b9711f381cbf4568dd7196f3118249abf957b133534c7ee6073a84df",
       "native-positive-helper.py": "287e72c4e05ead6e79a93a429498ab5410af80bbf7df9712fd4607c8ebb4e8ae",
       "retain-native-helper.py": "229955ad2987a3ac705fbc20486f65d667c9eace004812374eb674c95bb960fa",
       "q5-explicit-mutations.py": "b060a38d65a14af8dd526fc4f73e92566b586df8ef1bf53e767a163ec59ae529",
-      "q5-explicit-retain-validation.py": "1d59ecb9cd98b235a345cc651149e3a2f691f7ec8205ab63c9a865f29494ea8c"
+      "q5-explicit-retain-validation.py": "e22ab2d9267bb7ee4c6b66b9e5cd6f10d223334518bdf043dac11d21f5f922c4",
+      "q5-explicit-quick-mutations.py": "c287715eacf36c75b45e7f0df1cece91081acd0e0cb6f5f644df589412ee5888"
     },
     "source_snapshots": {
       "qualify-native-instructions.py": "Fixture/capture source before native request",

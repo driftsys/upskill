@@ -21,7 +21,7 @@
     "stage": "Focused fixture/classification tests",
     "result": "PASS: six tests",
     "private_log": "$PACKET_A/q5-explicit-focused-green.log",
-    "sha256": "70478897cb3015c59b4843fb6300b16f9ed6d51122ac58e7d340df0f25d29f2d"
+    "sha256": "52d5196e35ec66246d361251372470b2e52c76b36726c97cf727da8bfea0f0b3"
   },
   {
     "stage": "Independent regression mutations",
@@ -33,12 +33,18 @@
     "stage": "Final repository verification",
     "result": "PASS: just verify",
     "private_log": "$PACKET_A/q5-explicit-full-verify.log",
-    "sha256": "4ba0fa7905ce8b3b70c5728e283aa06d7646505731334217e092d7d02ebaa948"
+    "sha256": "85c7dbc89fcd5669346f00dd706de0ed23bed6f25673077e4b87df3600a228a5"
   },
   {
     "stage": "Final repository verification",
     "result": "PASS: just fmt",
     "private_log": "$PACKET_A/q5-explicit-fmt.log",
     "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "QUICK review regression gaps",
+    "result": "PASS: all three surviving mutants now rejected by assertion failure",
+    "private_log": "$PACKET_A/q5-explicit-quick-mutations.log",
+    "sha256": "6fed10000010078a8ef46f3df655c7a703e01c21629fcfcebc063a321b277f19"
   }
 ]
