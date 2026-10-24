@@ -86,6 +86,9 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
 
     def test_exact_rule_responses_and_individual_counts(self):
         for phase in ('context','resume'):
+            for wrong in (['WRONG','B'],['A','WRONG'],['WRONG_A','WRONG_B']):
+                c,f=self.controls();c[phase]['response']={'rules':wrong}
+                self.assertEqual(self.q.classify_opencode_current_routes(c,f),'context_control_failed')
             for response in ({'rules':['A','A','B']},{'rules':['A']},{'rules':['A','B'],'extra':True},'A B'):
                 c,f=self.controls();c[phase]['response']=response
                 self.assertNotEqual(self.q.classify_opencode_current_routes(c,f),'observed')

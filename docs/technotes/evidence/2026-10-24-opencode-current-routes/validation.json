@@ -118,5 +118,29 @@
     "result": "PASS: full Rust tests, 154 offline tests, lint, docs and build",
     "private_log": "$PACKET_D/q5-review-verify.log",
     "sha256": "4e5cee788beac15a45b04af3709f08ae8a8436ac4eedd3481eb476f6b2b8f9ea"
+  },
+  {
+    "stage": "Final packet review regressions",
+    "result": "PASS: formatting",
+    "private_log": "$PACKET_D/q5-pass2-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final packet review regressions",
+    "result": "PASS: 154 offline tests after test/documentation-only fixes; harness unchanged from full verification",
+    "private_log": "$PACKET_D/q5-pass2-lint.log",
+    "sha256": "4e091625b6308c1856fff6af23f8541b6c1c416603200507c11bb028593ca948"
+  },
+  {
+    "stage": "Final packet review regressions",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_D/q5-pass2-docs.log",
+    "sha256": "8aaa3394c16eaf035dabe590a30480a50445865630689ca1b813655e98adc193"
+  },
+  {
+    "stage": "Final packet review regressions",
+    "result": "PASS: prior 11 tests accept a cardinality-only comparator; fixed 11 tests reject it by assertion failure",
+    "private_log": "$PACKET_D/q5-pass2-mutations.log",
+    "sha256": "a23b6c53d57fa78f71583e5b4d9322c353b2447cba824061bc7aa410f2c5f92d"
   }
 ]

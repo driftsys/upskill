@@ -72,8 +72,10 @@ Custom-model context/output limit fallbacks and performance are not qualified.
 ## Preservation and offline validation
 
 Later root assertions cover resolved native user homes and unchanged filesystems
-after rejection. Final full verification passes 67 offline tests; the retained
-native failures remain unchanged.
+after rejection. The earlier full verification passed 67 offline tests. Current
+full verification passes 154 offline tests, as the
+[validation record](evidence/2026-10-24-opencode-current-routes/validation.json)
+and its bound log show. The retained native failures remain unchanged.
 
 Project configuration and the isolated profile's two user configuration
 candidates retain their exact bytes, presence and modes. Native local-directory
