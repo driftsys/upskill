@@ -47,5 +47,53 @@
     "result": "PASS: full Rust tests, 55 offline tests, lint, docs and build",
     "private_log": "$PACKET_A/q3-verify.log",
     "sha256": "d29675a4741d782b3538c641364a345cdde7f06c9a7ad9d8f1b37d0c7f50afd7"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: missing task model accepted",
+    "private_log": "$PACKET_F/q3-explicit-child-model-red.log",
+    "sha256": "4f40a267b13d329d2bc5ee277a87128a1e2bf5f5115d7e18f879878be67bd95f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-explicit-child-model-green.log",
+    "sha256": "c96f7fc7e668f7798d844e30324f8144b46934539633fbea4dfe0ce37c1066d9"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: filename variant unavailable",
+    "private_log": "$PACKET_F/q3-filename-red.log",
+    "sha256": "5b735fce79682e640335bf084952fbf64dee03557719e0212d97c7ccf7cdda9f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-filename-green.log",
+    "sha256": "3e2e652a4b052158da100f0d21ffebf60f4515c2c3987ec3466642d2dd5a0a95"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: complete native rule metadata missing",
+    "private_log": "$PACKET_F/q3-native-metadata-red.log",
+    "sha256": "32d196f05f9edb2e0dfc0e405d30b57368c0980c5668b76d245aef602745f871"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-native-metadata-green.log",
+    "sha256": "aea2cfed12db923f0f4c15c2842649a47fa354a5262b536a935c8fe0a9c4817a"
+  },
+  {
+    "command": "python3 private-review-mutations.py",
+    "result": "PASS: nine adverse variants rejected",
+    "private_log": "$PACKET_F/q3-review-mutations.log",
+    "sha256": "25318dbaa1f5b3933cb17a44a5324a11061c1681a1c77b1de08b0f773e92f993"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: complete repository verification, 62 offline tests",
+    "private_log": "$PACKET_F/q3-final-verify.log",
+    "sha256": "94593f82f25ffe8ff0880927b2d5c1e44295336791fd7a50eda55169da7e8e47"
   }
 ]

@@ -120,8 +120,10 @@ def classify_agent(catalog_present, state, delegated, child_tools, response, mar
     return 'delegation_observed'
 
 
-def copilot_plugin_component_fixture(root):
+def copilot_plugin_component_fixture(root, rule_suffix='.md'):
     """Prepare Q3 packages and separate scope projects without team guides."""
+    if rule_suffix not in ('.md', '.instructions.md'):
+        raise ValueError('Only declared native rule filename variants are allowed')
     if os.path.lexists(root):
         raise ValueError('Fixture root must not exist')
     root = root.resolve()
@@ -146,9 +148,12 @@ def copilot_plugin_component_fixture(root):
         'name': name, 'version': '0.0.0', 'description': 'Disposable component qualification.'}, indent=2) + '\n')
     rules = package / 'com.github.copilot/rules'
     rules.mkdir(parents=True)
-    (rules / 'plain.md').write_text('For the component qualification question include '
+    (rules / ('plain' + rule_suffix)).write_text('---\nname: ' + name + '-plain\n'
+                                  'description: Global component qualification rule.\napplyTo: "**"\n---\n'
+                                  'For the component qualification question include '
                                   + plain + ' in the rules array.\n')
-    (rules / 'scoped.md').write_text('---\napplyTo: "matching/**"\n---\n'
+    (rules / ('scoped' + rule_suffix)).write_text('---\nname: ' + name + '-scoped\n'
+                                   'description: Scoped component qualification rule.\napplyTo: "matching/**"\n---\n'
                                    'For the component qualification question include '
                                    + scoped + ' in the rules array.\n')
     agents = package / 'com.github.copilot/agents'
@@ -194,7 +199,45 @@ def copilot_plugin_component_fixture(root):
             'plugin_name': name, 'market_name': name + '-market', 'projects': projects,
             'native_markers': native_markers, 'plain_marker': plain, 'scoped_marker': scoped,
             'agent_name': agent_name, 'agent_marker': agent_marker,
-            'catalog_positive_name': catalog_positive_name, 'pin': '1.0.103'}
+            'catalog_positive_name': catalog_positive_name, 'pin': '1.0.103', 'rule_suffix': rule_suffix}
+
+
+def copilot_plugin_agent_selection(config_options, plugin_name, agent_name):
+    """Keep native namespaced selection values distinct from display names."""
+    matches = []
+    for option in config_options:
+        if option.get('id') != 'agent':
+            continue
+        for choice in option.get('options', []):
+            value = choice.get('value')
+            if (choice.get('name') == agent_name and isinstance(value, str)
+                    and value.startswith(plugin_name + ':') and value != plugin_name + ':'):
+                matches.append(value)
+    return matches[0] if len(matches) == 1 else None
+
+
+def copilot_delegation_policy(tool_name, arguments, expected_agent, expected_model, resource):
+    """Bound a private Q3 retry; this is not a production permission adapter."""
+    if (not isinstance(tool_name, str) or not isinstance(arguments, dict)
+            or not isinstance(expected_agent, str) or not expected_agent
+            or not isinstance(expected_model, str) or not expected_model):
+        return 'deny'
+    if tool_name.lower() == 'task':
+        if (arguments.get('agent_type') != expected_agent
+                or arguments.get('model') != expected_model
+                or any(arguments.get(k) is not None for k in ('resume', 'agent_id', 'session_id'))
+                or arguments.get('mode') not in (None, 'sync', 'foreground')):
+            return 'deny'
+        return 'allow'
+    if tool_name.lower() in ('view', 'read', 'read_file'):
+        paths = [arguments[k] for k in ('path', 'file_path') if k in arguments]
+        if len(paths) != 1 or not isinstance(paths[0], str) or not paths[0]:
+            return 'deny'
+        path = Path(paths[0])
+        if not path.is_absolute():
+            path = resource.parent / path
+        return 'allow' if path.resolve() == resource.resolve() else 'deny'
+    return 'deny'
 
 
 def classify_copilot_plugin_components(observations, fixture, scope):

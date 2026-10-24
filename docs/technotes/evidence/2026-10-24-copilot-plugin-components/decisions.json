@@ -10,13 +10,24 @@
     "cost_if_wrong": "The full user-scope lifecycle is incomplete; no successful custom-child claim is made."
   },
   {
-    "decision": "Use a fresh native-agent catalog positive without inference",
-    "reason": "It distinguishes a functioning native custom-agent catalog from a missing plugin-contained candidate without further model-selection risk.",
-    "cost_if_wrong": "Catalog evidence alone cannot qualify actual delegation."
+    "decision": "Correct native agent selection using namespace identity and display name separately",
+    "reason": "The native catalog contains the expected display name with a distinct namespaced selection value; the prior value-only presence check was wrong.",
+    "cost_if_wrong": "No actual custom delegation is qualified until a guarded native retry succeeds."
   },
   {
-    "decision": "Retain current candidate as unsupported pending a successful pinned rerun; continue Q4",
-    "reason": "Native instruction positives pass, but component positives fail and the plugin agent is absent from a calibrated catalog.",
-    "cost_if_wrong": "A different client pin or validated fixture correction may work; no universal reader claim is made."
+    "decision": "Retain failed rule/delegation attempts and calibrate a native guard before retry",
+    "reason": "Catalog discovery succeeds, but failed rule positives and unbounded generic fallback do not establish support.",
+    "cost_if_wrong": "The remaining native lifecycle/delegation controls stay unqualified until observed."
+  },
+  {
+    "decision": "Supersede the initial catalog absence assessment without editing original raw capture",
+    "reason": "Independent review identified the selection/display identity parser error.",
+    "cost_if_wrong": "The original false derived result remains visible in raw evidence but is explicitly corrected in the retained packet."
+  },
+  {
+    "decision": "Supersede the paused-delegation limit only for a native-calibrated guarded retry",
+    "reason": "The corrected native namespaced identity and mandatory explicit task model prevent the previously observed generic fallback path.",
+    "result": "One real user-scope custom child; zero alternate native child selections. Rule controls still fail; no full qualification.",
+    "remaining": "Project overlay absent from ACP catalog; prompt trust flag incompatible with ACP; exact child response includes leading whitespace."
   }
 ]

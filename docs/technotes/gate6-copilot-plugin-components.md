@@ -1,154 +1,154 @@
-# Gate 6 Copilot plugin components: failed positives
+# Gate 6 Copilot plugin components: failed rules and bounded delegation
 
 Task [#388](https://github.com/driftsys/upskill/issues/388), Q3 of the
 [implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
-retains failed component controls on Copilot CLI 1.0.103, macOS arm64,
-2026-10-24. Native instruction positives pass. The installed plugin does not
-produce the required rule responses, and its agent is absent from a calibrated
-native catalog. No rule lifecycle or real custom-child route is qualified. The
-task remains open; production remains schema 1.
+retains Copilot CLI 1.0.103 controls on macOS arm64, 2026-10-24. Native
+instruction positives pass. Plugin rule positives fail. A guarded retry observes
+one real namespaced user-scope custom child and its resource read, while its
+leading response whitespace fails the exact marker contract. The full Q3 route
+is unqualified. Production remains schema 1.
 
-## Fixture and campaign
+## Fixture and pins
 
-The pin is Copilot 1.0.103 in the
-[2026-10-24 revision](gate6-plugin-profile-inventory.md). Claude 2.1.308, Codex
-0.164.0 and OpenCode 2.1.4 do not run controls in this packet. Every one of 14
-parent native session-start records identifies 1.0.103 and the requested private
-model selection. Automatic client updates are disabled. Initial requests lack a
-separate pre-request version receipt; their native session-start records
-establish the pin. Later invocations also check the version first.
+Copilot 1.0.103 is the
+[2026-10-24 campaign pin](gate6-plugin-profile-inventory.md). Claude 2.1.308,
+Codex 0.164.0 and OpenCode 2.1.4 do not run controls in this packet. Native
+session-start records establish the pin and parent selection for all 14 initial
+and 16 completed-retry parent sessions. Later requests additionally check the
+version before invocation. Automatic client updates are disabled.
 
-The existing `scripts/qualify-native-instructions.py` prepares a neutral managed
-source with Agent Plugins 1.0 `plugin.json`, unscoped and `applyTo`-scoped files
-under `com.github.copilot/rules/`, and a restricted agent under
-`com.github.copilot/agents/`. Separate project and user test projects have
-distinct empty Git roots, unpredictable native markers and ordinary resources.
-Their native `.github/copilot-instructions.md` positive asks for a JSON native
-marker and the sorted loaded-rule marker array. No team-guide file or symlink is
-created. The later catalog fixture additionally has a separate native agent at
-`.github/agents/catalog-positive.agent.md`; it is a different logical agent.
+The existing `scripts/qualify-native-instructions.py` creates neutral managed
+packages with Agent Plugins 1.0 `plugin.json`, rule files under
+`com.github.copilot/rules/`, and `probe.agent.md` under
+`com.github.copilot/agents/`. Two independent disposable Git projects have
+native `.github/copilot-instructions.md` positives, distinct markers and
+ordinary resources. No team-guide file, symlink or client cache is authored.
 
-The namespace layout is the documented
-[Copilot component layout](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
-Documentation does not establish support at this pin; this packet retains the
-observed failures rather than promoting the route.
+The initial rule filenames are `.md`; a separate `.instructions.md` inventory
+variant is retained. The completed retry uses `.instructions.md` and complete
+native `name`, `description` and `applyTo` headers: `"**"` for the unscoped rule
+and `"matching/**"` for the scoped rule. Each variant has fresh markers. Old
+source and failed responses remain unchanged. The
+[documented component layout](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)
+is a fixture basis, not proof of installed-version support.
 
-The normally authenticated isolated profile and allowlisted child environment
-are reused. Existing profile configuration has no instruction/skill glob keys;
-the managed source is outside documented discovery directories. The generated
-project registration is a new owned entry, not a modification of an existing
-user or team discovery setting.
+A separate native `.github/agents/catalog-positive.agent.md` calibrates later
+catalog checks. The child response marker exists only in `agent-resource.txt`.
+The normally authenticated isolated profile and stripped child environment are
+reused without copying credentials. No existing user/team discovery setting is
+changed to manufacture a negative.
 
-## Installation and scope mechanics
+## Installation and scope
 
-A direct local directory install succeeds. Native inventory reports its bare
-plugin identity, and native uninstall succeeds. A separate local marketplace
-registration provides a namespaced identity for the lifecycle attempts. Native
-installation reports that the package loads live from its managed directory; it
-does not report a copied source. This is client-native behavior, distinct from
-upskill's copy-only generated managed source. The helper never writes a client
-cache directly.
+Native direct local-directory install and uninstall succeed. Local marketplace
+installation reports live loading from the managed source, with nothing copied.
+That native behavior does not authorize direct writes into a client cache.
 
-For project activation, the helper disables its new user binding through the
-native CLI and writes a new project-owned `enabledPlugins` entry. Disable
-toggles only that owned project entry; uninstall removes it and invokes the
-native uninstall verb. For user activation, native install/disable/uninstall
-manage the new user registration. No pre-existing plugin or discovery entry is
-toggled. Project-overlay activation is not established by these failed component
-probes.
+The project attempt disables only the newly created user binding through the
+native CLI and creates its own project `enabledPlugins` entry. The user attempt
+uses ordinary native install, disable and uninstall. Project-overlay activation
+is not established: the completed retry's ACP catalog contains the native agent
+positive but no plugin candidate. The user-enabled catalog contains the exact
+namespaced candidate. Prompt-mode workspace admission and ACP catalog behavior
+are separate observations.
 
-## Observations
+## Initial failures and catalog correction
 
-| Control                           | Pin             | Project attempt                                | User attempt                                        |
-| --------------------------------- | --------------- | ---------------------------------------------- | --------------------------------------------------- |
-| Native instruction positive       | Copilot 1.0.103 | PASS: exact native marker, empty rule array    | PASS: same                                          |
-| Local/marketplace install         | Copilot 1.0.103 | Native install succeeds                        | Native install succeeds                             |
-| Installed component rule positive | Copilot 1.0.103 | FAIL: refuses the required fixture response    | FAIL: additional prose, no expected rule marker     |
-| Matching/nonmatching access       | Copilot 1.0.103 | Expected component markers not established     | Expected component markers not established          |
-| Expected custom child             | Copilot 1.0.103 | FAIL: generic fallback, timeout                | NOT RUN: delegation blocked                         |
-| Disabled/uninstalled response     | Copilot 1.0.103 | Empty arrays observed; not qualified negatives | Disabled empty array; uninstall request interrupted |
-| Reinstalled response              | Copilot 1.0.103 | FAIL: empty rules array                        | NOT RUN: model requests paused                      |
-| Fresh calibrated catalog          | Copilot 1.0.103 | Native agent present, plugin candidate absent  | Native agent present, plugin candidate absent       |
+Both original instruction positives pass. Installed component rule responses
+fail the required marker/JSON contract; some include refusals, prose or fences.
+Matching and nonmatching responses do not establish scoped activation. Empty
+arrays after disable/uninstall do not qualify negatives after failed installed
+positives. The initial user uninstall request was interrupted and its reinstall
+request was not run; native management cleanup completed.
 
-The [summary](evidence/2026-10-24-copilot-plugin-components/summary.json)
-retains per-scope failure classifications. Empty arrays after disable/uninstall
-cannot qualify absence because the installed component positive failed. The
-model's statement that rules are absent is not a verified reader result.
-Markdown fences or extra prose also fail the fixture's exact JSON response
-contract.
+The original project delegation used the display name instead of the native
+selection ID. It selected generic delegates, reached its timeout and produced
+four nonrequested delegate-model selection events. Starts do not prove inference
+completed on each selected model. This is a retained model-policy failure, not a
+successful custom-child control. Further calls were paused.
 
-The second fresh fixture's two ACP catalog checks make no model requests. Native
-initialization and session creation succeed, and the distinct native agent is
-present in each catalog. The plugin-contained candidate is absent in each. This
-supports the bounded missing-catalog observation; it does not establish actual
-custom-agent delegation, all plugin formats or every CLI surface.
+Two subsequent ACP catalog checks made no model requests. The candidate was
+present at both projects under the direct user-enabled registration. The first
+parser incorrectly searched selection values for the friendly name. The
+[parser correction](evidence/2026-10-24-copilot-plugin-components/catalog-parser-correction.json)
+retains the original raw result and identifies the native `plugin:probe` value.
+The candidate's friendly name and selection value are distinct.
 
-## Model-policy failure and ruling
+The original empty `--available-tools` argument also failed to provide a
+reliable tool-free boundary. It is not reused as enforcement. Observed shell
+commands inspected files and Git history; no model file-write tool was observed.
 
-The project agent attempt selects a generic agent instead of the fixture custom
-agent, then selects further built-in delegates. Four delegate-start events
-select models other than the user's requested parent route. Those starts do not
-prove successful inference on each selected model, but they violate the intended
-test selection boundary. The attempt reaches its timeout and is terminated. It
-is retained as a failure, never as successful custom delegation.
+## Guarded retry
 
-Further delegation is blocked; the later model sequence is paused and its active
-isolated-profile process terminated. The user-scope reinstall request is not
-run. The empty `--available-tools` value also did not establish a reliable
-tool-free boundary: the user installed request inspected files. It must not be
-reused as a hard enforcement claim. Recorded shell commands list files and Git
-history; no model file-write tool is observed. No claim of full sandbox
-containment is made for these controls.
+The retry requires the exact native namespaced agent ID and an explicit task
+model matching the user's private selection. Missing model arguments, generic
+agents, resumed/background tasks, unrelated reads and other tools are denied. A
+private project `preToolUse` guard allows one exact task and its declared
+resource read. It is test instrumentation, not a shipped permission adapter.
+
+Before delegation, a real native `view` request is denied by this hook, with a
+native tool error and matching private trace. Prompt sessions use normal
+`--trust-folder` one-session admission. ACP rejects that flag; the rejected
+request and cleanup are retained. An earlier unadmitted catalog attempt is also
+retained. No saved trust setting or existing discovery preference is changed.
+
+| Completed retry control     | Pin             | Project attempt                                                        | User attempt                                                                   |
+| --------------------------- | --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Native instruction positive | Copilot 1.0.103 | PASS: exact JSON object, empty rules                                   | PASS: same                                                                     |
+| Installed rules             | Copilot 1.0.103 | FAIL: empty rules array                                                | FAIL: empty rules array                                                        |
+| Matching/nonmatching access | Copilot 1.0.103 | Resource reads observed; required rule markers absent                  | Same; one fenced response also fails JSON contract                             |
+| Candidate catalog           | Copilot 1.0.103 | Native positive present; plugin candidate absent under project overlay | Native positive and namespaced candidate present                               |
+| Custom child                | Copilot 1.0.103 | NOT RUN: no catalog candidate; no fallback                             | Real namespaced child and resource read; final response has leading whitespace |
+| Disabled/uninstalled        | Copilot 1.0.103 | Empty arrays; unqualified negatives                                    | Same                                                                           |
+| Reinstalled rules           | Copilot 1.0.103 | FAIL: empty rules array                                                | FAIL: empty rules array                                                        |
 
 The
-[decision record](evidence/2026-10-24-copilot-plugin-components/decisions.json)
-requires a calibrated custom-agent identity and a bounded child-model policy
-before another delegation attempt. Catalog absence is checked without inference.
-No further Copilot model requests are made for this packet. These failures do
-not justify switching to an unrequested test model or hiding the first attempts.
+[retry audit](evidence/2026-10-24-copilot-plugin-components/guarded-retry-audit.json)
+records 16 parent sessions, one custom child, explicit model override and zero
+alternate delegate selections. The native task and child `view` are correlated
+in the private session transcript. The retained final response includes its
+leading whitespace; it is not silently trimmed into an exact-marker PASS. This
+establishes bounded delegation, not all child restriction semantics or a working
+project-overlay route.
 
 ## Preservation and provenance
 
+Native uninstall leaves an owned empty `installedPlugins` key. Original
+auth-bearing configuration bytes stay only in memory and are restored in place
+after checking unrelated values. The completed retry's measured configuration
+hash and mode exactly match the original. Interrupted attempts also record the
+removal of their new project-only settings entry after native uninstall.
+
 The
 [preservation record](evidence/2026-10-24-copilot-plugin-components/preservation.json)
-retains configuration hashes and modes. Initial local-install calibration,
-lifecycle cleanup and the later catalog control each restore the measured
-configuration exactly. Native uninstall leaves an added empty `installedPlugins`
-key. The calibration removes that owned empty key only when the resulting bytes
-match the pre-control hash. The later controllers retain original configuration
-bytes in memory and restore them in place only after checking that unrelated
-values are unchanged. The auth-bearing configuration is never copied to the
-packet or exported; only hashes, modes and key names are retained.
+and
+[retry restoration](evidence/2026-10-24-copilot-plugin-components/guarded-retry-preservation.json)
+retain measured results. Session, log, native cache and trust bookkeeping are
+not whole-profile equality. No team guide or client cache is directly rewritten.
 
-New project registration files are removed. Native profile session, log and
-registry/cache effects remain separate; whole-profile byte restoration is not
-qualified. No credentials, team guides or client cache files are directly
-copied, rewritten or reclaimed by the harness. The failed delegation did not
-create a team-guide file in either fixture.
-
-Raw events, sources and helpers remain outside the repository. The
+The
 [source index](evidence/2026-10-24-copilot-plugin-components/private-source-index.json)
-and receipt manifests bind them. Retained event selections omit thinking, model
-identifiers, auth-bearing values and unrelated profile data. They preserve
-parent results, tool identities and the failed generic-agent selection. Four
-nonrequested model-selection events remain visible as Boolean audit results.
+binds six private roots, including inventory variants and failed attempts.
+Transcripts, model identifiers and private guard source stay outside the
+repository. Public event selections omit thinking and auth-bearing values and
+represent model agreement as Booleans. The initial four selection failures
+remain visible beside the clean guarded retry.
 
 ## Offline checks and consequence
 
-Tests run first: `just lint` fails five missing-helper tests, then passes all 54
-offline tests. A further catalog-positive fixture assertion fails before its
-implementation and passes afterward. Strict per-control pin checks similarly
-fail before implementation; the subsequent suite passes 55 tests. Offline tests
-never call a client.
+Tests precede harness changes. Initial missing helpers fail before the 54-test
+suite passes; catalog and pin assertions then reach 55 tests. Selector/guard,
+filename and metadata assertions extend this to 62 passing offline tests.
+Requiring an explicit child model fails first, then passes. Nine adverse
+mutations are rejected by the strengthened tests. No offline test calls a
+client. Validation logs and their hashes are retained in the packet.
 
 The affected proposal rows are
 [Rules, Copilot](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
 and
 [Subagents, Copilot](../wip/specs/2026-10-23-customization-delivery-proposal.md#subagents).
-The tested component route remains unsupported pending a successful pinned
-control. This is not a universal statement that Copilot cannot read a file or
-that another package format cannot work. A bounded delegation guard, successful
-component positives and the remaining lifecycle controls are still needed.
-Linux, IDE/hosted surfaces, complete preservation and integrated ownership
-remain unqualified. Q4 continues independently; durable adoption waits for
-step 7.
+The rule route remains a failed candidate. A bounded user custom-child route is
+observed, with exact response and project activation limits. Failed positives
+cannot establish a universal absence reader result. The task stays open; Linux,
+IDE/hosted surfaces, complete preservation and integrated ownership remain
+unqualified. Durable adoption waits for step 7.
