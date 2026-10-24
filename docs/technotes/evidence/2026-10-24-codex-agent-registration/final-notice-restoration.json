@@ -1,0 +1,14 @@
+{
+  "initial_restoration_failure_retained_in": "trust-restoration.json",
+  "reason": "Native UI advanced the pre-existing model availability notice counter during admission; counter restoration plus owned trust cleanup exactly reconstructs the original hash.",
+  "observed_counter_after_ui": 4,
+  "original_counter_confirmed_by_hash": 3,
+  "before_correction_sha256": "b3bf571726bc47976b24404c682f6ecd8651867a3fab77dfbe8f1b05d1b62a83",
+  "original_sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+  "final_sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+  "mode": 384,
+  "restored_exact": true,
+  "applied_after_q8_exact_cleanup": true,
+  "credentials_copied_or_exported": false,
+  "source_provenance": "Equivalent guarded source retained after the original inline execution; not claimed as a pre-execution snapshot."
+}

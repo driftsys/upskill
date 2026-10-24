@@ -1,0 +1,250 @@
+[
+  {
+    "label": "registered-catalog",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "debug",
+      "prompt-input",
+      "Do not use tools."
+    ],
+    "exit_code": 0,
+    "attempt": "initial"
+  },
+  {
+    "label": "marketplace-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_A/fixture/delivery",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "initial"
+  },
+  {
+    "label": "plugin-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "add",
+      "upskill-q7-f5d210978804ac0c@upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "initial"
+  },
+  {
+    "label": "plugin-list",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "exit_code": 1,
+    "attempt": "initial"
+  },
+  {
+    "label": "plugin-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "remove",
+      "upskill-q7-f5d210978804ac0c@upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "initial"
+  },
+  {
+    "label": "marketplace-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "initial"
+  },
+  {
+    "label": "registered-catalog",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "debug",
+      "prompt-input",
+      "Do not use tools."
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "marketplace-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_A/fixture/delivery",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "plugin-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "add",
+      "upskill-q7-f5d210978804ac0c@upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "plugin-list",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "list",
+      "--marketplace",
+      "upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "plugin-only-catalog",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "debug",
+      "prompt-input",
+      "Do not use tools."
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "plugin-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "remove",
+      "upskill-q7-f5d210978804ac0c@upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  },
+  {
+    "label": "marketplace-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q7-f5d210978804ac0c-market",
+      "--json"
+    ],
+    "exit_code": 0,
+    "attempt": "retry"
+  }
+]

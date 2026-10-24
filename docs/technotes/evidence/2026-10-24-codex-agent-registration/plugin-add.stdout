@@ -1,0 +1,8 @@
+{
+  "pluginId": "upskill-q7-f5d210978804ac0c@upskill-q7-f5d210978804ac0c-market",
+  "name": "upskill-q7-f5d210978804ac0c",
+  "marketplaceName": "upskill-q7-f5d210978804ac0c-market",
+  "version": "0.0.0",
+  "installedPath": "$PROFILE/plugins/cache/upskill-q7-f5d210978804ac0c-market/upskill-q7-f5d210978804ac0c/0.0.0",
+  "authPolicy": "ON_INSTALL"
+}

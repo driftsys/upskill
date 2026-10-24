@@ -1,0 +1,38 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: seven missing-helper tests",
+    "private_log": "$PACKET_A/q7-lint-red.log",
+    "sha256": "2d8312c93f079fa7f7796e2f8958980605f5b591df1e865b184854760fbba13b"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_A/q7-lint-green.log",
+    "sha256": "deb65251e78d7e6d3daba036596d227a9f4d57d2fd527124a5684764defa022b"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: newly declared native-user-root rejection missing",
+    "private_log": "$PACKET_A/q7-user-root-red.log",
+    "sha256": "940111c4faf59e2ccb09129c4fb30ba41709fc08e47e950be3eed15802d32b5b"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_A/q7-user-root-green.log",
+    "sha256": "e5c5053cc297fdeae4623c1adc8467032a418ada423c49ef5d648d2d946da85c"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification; 65 offline tests",
+    "private_log": "$PACKET_A/q7-final-verify.log",
+    "sha256": "f522e93dd0908932ebf5d166284f29088326461ad7e505ff7277e4a2f0e42e33"
+  },
+  {
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS: final restoration narrative and links",
+    "private_log": "$PACKET_A/q7-restoration-docs-check.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  }
+]
