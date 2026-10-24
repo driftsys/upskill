@@ -22,6 +22,17 @@
   },
   {
     "stage": "mutation checks",
-    "result": "PASS: ignore developer role, collapse duplicate counts and ignore effective input mutants rejected"
+    "result": "PASS: seven mutants rejected; original three checks repeated with retained source and output",
+    "command": "python3 $PACKET_B/q9-mutation-checks.py",
+    "private_log": "$PACKET_B/q9-mutations.log",
+    "sha256": "465fc9d6c128bc8818f010fe3cdfc70b5f90b60ba69e3590546c5fa229fcde10",
+    "private_helper_sha256": "1f1c4a55bd335934b4b84a577a5d895f8999e0efcff71edcfe2f48b381fb10cb"
+  },
+  {
+    "stage": "review regression verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: 57 offline tests, full Rust tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-final-verify.log",
+    "sha256": "607230c2c9f8dea7c09c2e1a2c326cb7f0012ce91092e85d79d281ec8dfe88e3"
   }
 ]

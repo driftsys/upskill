@@ -3,6 +3,10 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import json
+import subprocess
+import sys
+from unittest import mock
 
 
 SCRIPT = Path(__file__).parents[1] / 'qualify-plugin-rules.py'
@@ -20,12 +24,31 @@ class CodexLifecycleTests(unittest.TestCase):
             self.assertEqual(len(f['packages']), 2)
             self.assertEqual(len(set(f['rule_bodies'].values())), 2)
             self.assertEqual(f['pin'], '0.164.0')
+            market = json.loads((f['marketplace'] / '.agents/plugins/marketplace.json').read_text())
+            self.assertEqual(market, {'name': f['market_name'], 'plugins': [
+                {'name': p.name, 'source': {'source': 'local', 'path': './packages/' + p.name}}
+                for p in f['packages']]})
+            parents = subprocess.check_output(['git', '-C', str(f['project']), 'show', '-s', '--format=%P', 'HEAD'], text=True)
+            self.assertEqual(parents.strip(), '')
+            self.assertEqual(subprocess.check_output(['git', '-C', str(f['project']), 'ls-tree', '-r', '--name-only', 'HEAD']), b'')
             for path in f['root'].rglob('*'):
                 self.assertFalse(path.is_symlink())
                 self.assertNotIn(path.name, ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.md'))
-            for package, body in zip(f['packages'], f['rule_bodies'].values()):
+            for (rule, body), package in zip(f['rule_bodies'].items(), f['packages']):
                 self.assertEqual((package / 'rule.txt').read_text(), body)
-                self.assertTrue((package / 'hooks/hooks.json').is_file())
+                self.assertEqual(json.loads((package / '.codex-plugin/plugin.json').read_text()),
+                                 {'name': package.name, 'version': '0.0.0', 'hooks': './hooks/hooks.json'})
+                self.assertEqual(json.loads((package / 'hooks/hooks.json').read_text()),
+                                 {'hooks': {'SessionStart': [{'hooks': [{'type': 'command', 'command': 'python3 "${PLUGIN_ROOT}/hook.py"'}]}]}})
+                event = {'hook_event_name': 'SessionStart', 'source': 'startup',
+                         'session_id': 'offline-session', 'cwd': str(f['project'])}
+                result = subprocess.run([sys.executable, str(package / 'hook.py')],
+                                        input=json.dumps(event), capture_output=True, text=True,
+                                        env=self.q.fixture_environment(f['root']), check=True)
+                self.assertEqual(json.loads(result.stdout), {'hookSpecificOutput': {
+                    'hookEventName': 'SessionStart', 'additionalContext': body}})
+                trace = list(map(json.loads, (f['root'] / 'activation.jsonl').read_text().splitlines()))
+                self.assertEqual(trace[-1], {'rule': rule, 'session': 'offline-session', 'source': 'startup'})
             self.assertFalse(f['qualified'])
 
     def test_existing_root_and_discovery_roots_are_rejected(self):
@@ -38,6 +61,9 @@ class CodexLifecycleTests(unittest.TestCase):
             dangling.symlink_to(root / 'absent')
             with self.assertRaises(ValueError):
                 self.q.prepare_codex_rule_lifecycle(dangling)
+            with mock.patch.object(self.q, 'REPO', root.resolve() / 'repository'):
+                with self.assertRaises(ValueError):
+                    self.q.prepare_codex_rule_lifecycle(root / 'repository/fixture')
 
     def test_only_exact_developer_rule_payloads_count(self):
         bodies = {'a': 'RULE A\n', 'b': 'RULE B\n'}
@@ -49,6 +75,11 @@ class CodexLifecycleTests(unittest.TestCase):
         messages.append(message('developer', bodies['a']))
         self.assertEqual(self.q.count_developer_rule_bodies(messages, bodies), {'a': 2, 'b': 1})
         self.assertEqual(self.q.count_developer_rule_bodies([message('developer', bodies['a'] * 2)], bodies), {'a': 2, 'b': 0})
+        other_block = message('developer', bodies['a'])
+        other_block['content'][0]['type'] = 'input_image'
+        other_record = message('developer', bodies['b'])
+        other_record['type'] = 'function_call'
+        self.assertEqual(self.q.count_developer_rule_bodies([other_block, other_record], bodies), {'a': 0, 'b': 0})
 
     def test_rule_identity_requires_two_distinct_nonempty_bodies(self):
         for bodies in ({"a": "", "b": "B"}, {"a": "A", "b": "A"}, {"a": "A"}):
@@ -76,7 +107,10 @@ class CodexLifecycleTests(unittest.TestCase):
         value = self.observation(); value['positive_passed'] = False
         self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'positive_control_failed')
         for i in range(3):
-            value = self.observation(); value['boundaries'][i]['effective_input_observed'] = False
+            for replacement in (False, None, 0, 1, 'yes'):
+                value = self.observation(); value['boundaries'][i]['effective_input_observed'] = replacement
+                self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'effective_input_unobserved')
+            value = self.observation(); del value['boundaries'][i]['effective_input_observed']
             self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'effective_input_unobserved')
 
     def test_lifecycle_identity_completion_readonly_and_automatic_compactions(self):
