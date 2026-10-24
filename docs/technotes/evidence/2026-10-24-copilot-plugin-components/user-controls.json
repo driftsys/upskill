@@ -1,0 +1,241 @@
+[
+  {
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\": \"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\", \"rules\": []}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "native_positive",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\nI reviewed the entire fixture (4 files total, excluding `.git`):\n- `.github/copilot-instructions.md` \u2014 the auto-loaded project instructions (defines the `native` sentinel and answer format)\n- `agent-resource.txt` \u2014 holds `AGENT_0df7cd90f9632196b5750d2aae087197` (an agent scope resource)\n- `matching/probe.txt`, `nonmatching/probe.txt` \u2014 both \"Disposable scope resource.\"\n\nThe only automatically-loaded component-qualification instruction is the project file, which supplies the fixed `native` value; no separately-loaded qualification-rule markers exist. The `AGENT_...` and probe files are non-auto-loaded distractors, so per \"without those rules the array is empty,\" `rules` is empty.\n\n```json\n{\"native\": \"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\", \"rules\": []}\n```",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "installed",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n```json\n{\n  \"native\": \"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\",\n  \"rules\": []\n}\n```",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools",
+      "view",
+      "--allow-tool",
+      "view",
+      "-p",
+      "Read matching/probe.txt using the native view tool exactly once. Then answer the component qualification question, returning only the required JSON object."
+    ],
+    "stage": "matching",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n```json\n{\n  \"native\": \"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\",\n  \"rules\": []\n}\n```",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools",
+      "view",
+      "--allow-tool",
+      "view",
+      "-p",
+      "Read nonmatching/probe.txt using the native view tool exactly once. Then answer the component qualification question, returning only the required JSON object."
+    ],
+    "stage": "nonmatching",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "state": "not_run",
+    "completed": false,
+    "response": null,
+    "reason": "Custom-agent catalog and child model policy must be confirmed before any delegation.",
+    "stage": "agent",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\":\"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\",\"rules\":[]}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "disabled",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": -15,
+    "timed_out": false,
+    "state": "failure",
+    "completed": true,
+    "response": null,
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "uninstalled",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "state": "not_run",
+    "completed": false,
+    "response": null,
+    "reason": "Native model requests paused after unexpected delegated model selection.",
+    "stage": "reinstalled",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  }
+]

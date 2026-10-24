@@ -1,0 +1,49 @@
+{
+  "qualified": false,
+  "q3_completed": false,
+  "control": "Q3",
+  "task": 388,
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "pin": "Copilot 1.0.103",
+  "status": "FAIL: component positives and expected custom-agent discovery not established",
+  "scopes": [
+    {
+      "scope": "project",
+      "pin": "Copilot 1.0.103",
+      "native_positive": "PASS: exact native marker and empty rules array",
+      "component_result": "component_response_mismatch",
+      "installed_component_positive": "FAIL: no exact required component-marker response",
+      "disabled_uninstalled_observations": "Not qualified as negatives after failed installed component positive",
+      "agent": "FAIL: expected custom child not established; generic fallback timed out",
+      "reinstalled": "FAIL: empty rules array"
+    },
+    {
+      "scope": "user",
+      "pin": "Copilot 1.0.103",
+      "native_positive": "PASS: exact native marker and empty rules array",
+      "component_result": "component_response_mismatch",
+      "installed_component_positive": "FAIL: no exact required component-marker response",
+      "disabled_uninstalled_observations": "Not qualified as negatives after failed installed component positive",
+      "agent": "NOT RUN: delegation paused pending bounded agent/model policy",
+      "reinstalled": "NOT RUN: model requests paused"
+    }
+  ],
+  "counts": {
+    "parent_sessions": 14,
+    "parent_models_matching_requested": 14,
+    "unexpected_delegate_model_selection_events": 4,
+    "catalog_model_requests": 0
+  },
+  "local_directory_install": "PASS: direct local path accepted, native bare plugin identity observed, native uninstall succeeded",
+  "catalog": "Native project agent positive present at both projects; plugin-contained candidate absent at both",
+  "limits": [
+    "Failed component positives never count as successful absence or scope controls.",
+    "Four native delegate-selection events selected models other than the requested parent route; that failed attempt is retained, and later delegation/model requests were blocked.",
+    "Empty --available-tools value did not provide a reliable tool-free boundary; do not reuse it as an enforcement claim.",
+    "A timed-out custom-agent attempt actually selected generic delegates; no real fixture custom child is established.",
+    "User-scope uninstall request interrupted; reinstalled model request not run. Native management cleanup completed.",
+    "Measured configuration bytes and modes restored; native session/log effects are not whole-profile restoration.",
+    "No production or durable support promotion."
+  ]
+}

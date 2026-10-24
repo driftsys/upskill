@@ -1,0 +1,51 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: five missing-helper tests",
+    "private_log": "$PACKET_A/q3-lint-red.log",
+    "sha256": "c139c5ff90d9547ce098c6a628410e500736c7c291fc6a2b0bfb1da8dc685c05"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 54 offline tests",
+    "private_log": "$PACKET_A/q3-lint-green.log",
+    "sha256": "d31d8f6c1725204096f427eb7e78e746ece3ec97742b2cdcca5b5e8c6835924a"
+  },
+  {
+    "stage": "catalog-red",
+    "command": "just lint",
+    "result": "FAIL: native catalog-positive fixture missing",
+    "private_log": "$PACKET_A/q3-catalog-red.log",
+    "sha256": "3d891266bab7c91ea12b36a6c556bce1fcc29ecdb8f04d2481e464d9917431d9"
+  },
+  {
+    "stage": "catalog-green",
+    "command": "just lint",
+    "result": "PASS: 54 offline tests",
+    "private_log": "$PACKET_A/q3-catalog-green.log",
+    "sha256": "89f2f1e00a4e5b71bfe75fcd45f525f225f8d6cf639199d5c0903e0a22fa8797"
+  },
+  {
+    "stage": "pin-red",
+    "command": "just lint",
+    "result": "FAIL: mixed native pin accepted",
+    "private_log": "$PACKET_A/q3-pin-red.log",
+    "sha256": "9deaeec236130c5b6cd8f22ab413faf5326cd1929ed370f6bb19b09a8ac4d489"
+  },
+  {
+    "stage": "pin-green",
+    "command": "just lint",
+    "result": "PASS: 55 offline tests",
+    "private_log": "$PACKET_A/q3-pin-green.log",
+    "sha256": "1ff7c0141f01346b0b0055124cbe91044500f4574a00ea56b127f0fd56c6bbe9"
+  },
+  {
+    "stage": "full verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full Rust tests, 55 offline tests, lint, docs and build",
+    "private_log": "$PACKET_A/q3-verify.log",
+    "sha256": "d29675a4741d782b3538c641364a345cdde7f06c9a7ad9d8f1b37d0c7f50afd7"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "decision": "Use a local marketplace id for project-owned activation; retain direct local-path install calibration separately",
+    "reason": "The native CLI accepts local directories, while the project enabledPlugins entry needs a stable named registration.",
+    "cost_if_wrong": "The project overlay may not activate this candidate in the tested noninteractive surface; failed controls remain unqualified."
+  },
+  {
+    "decision": "Stop delegation and all further model requests after unexpected generic fallback models",
+    "reason": "The user selected one route for Copilot tests; generic delegate defaults escaped that selection.",
+    "cost_if_wrong": "The full user-scope lifecycle is incomplete; no successful custom-child claim is made."
+  },
+  {
+    "decision": "Use a fresh native-agent catalog positive without inference",
+    "reason": "It distinguishes a functioning native custom-agent catalog from a missing plugin-contained candidate without further model-selection risk.",
+    "cost_if_wrong": "Catalog evidence alone cannot qualify actual delegation."
+  },
+  {
+    "decision": "Retain current candidate as unsupported pending a successful pinned rerun; continue Q4",
+    "reason": "Native instruction positives pass, but component positives fail and the plugin agent is absent from a calibrated catalog.",
+    "cost_if_wrong": "A different client pin or validated fixture correction may work; no universal reader claim is made."
+  }
+]

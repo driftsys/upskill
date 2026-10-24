@@ -1,0 +1,12 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q3-copilot-kx9n16se",
+    "manifest_sha256": "d1c56ca0236bac3acffa66d9f9f756524f5b67c7b46f555737b209887aae6c09"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q3-catalog-94yp63x8",
+    "manifest_sha256": "35e94490213f4ac1fbf247db520ea2754725c99d67687b95b100927d1495fb77"
+  }
+]

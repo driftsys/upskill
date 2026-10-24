@@ -1,0 +1,38 @@
+{
+  "pin": "1.0.103",
+  "scope_project": "$PACKET_B/fixture/user",
+  "initialize_success": true,
+  "session_success": true,
+  "native_positive_name": "upskill-q3-79f5345f54bd750a-catalog-positive",
+  "native_positive_present": true,
+  "candidate_name": "upskill-q3-79f5345f54bd750a-child",
+  "candidate_present": false,
+  "agent_options": [
+    {
+      "type": "select",
+      "id": "agent",
+      "name": "Agent",
+      "category": "_agent",
+      "description": "Select a custom agent persona, or use the default Copilot agent.",
+      "currentValue": "",
+      "options": [
+        {
+          "value": "",
+          "name": "Copilot",
+          "description": "Default Copilot agent"
+        },
+        {
+          "value": "upskill-q3-79f5345f54bd750a-catalog-positive",
+          "name": "upskill-q3-79f5345f54bd750a-catalog-positive",
+          "description": "Native catalog positive for a disposable fixture."
+        },
+        {
+          "value": "upskill-q3-79f5345f54bd750a:probe",
+          "name": "upskill-q3-79f5345f54bd750a-child",
+          "description": "Explicit component qualification child."
+        }
+      ]
+    }
+  ],
+  "model_requests": 0
+}

@@ -120,6 +120,111 @@ def classify_agent(catalog_present, state, delegated, child_tools, response, mar
     return 'delegation_observed'
 
 
+def copilot_plugin_component_fixture(root):
+    """Prepare Q3 packages and separate scope projects without team guides."""
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    root = root.resolve()
+    parts = root.parts
+    if (root.is_relative_to(Path(__file__).resolve().parents[1])
+            or root == Path.home().resolve()
+            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+                   for i in range(len(parts) - 1))):
+        raise ValueError('A new neutral fixture root is required')
+    root.mkdir(parents=True, mode=0o700)
+    name = 'upskill-q3-' + secrets.token_hex(8)
+    package = root / 'delivery/packages' / name
+    package.mkdir(parents=True)
+    plain = 'PLAIN_' + secrets.token_hex(16)
+    scoped = 'SCOPED_' + secrets.token_hex(16)
+    agent_marker = 'AGENT_' + secrets.token_hex(16)
+    agent_name = name + '-child'
+    catalog_positive_name = name + '-catalog-positive'
+    (package / 'plugin.json').write_text(json.dumps({
+        '$schema': 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+        'name': name, 'version': '0.0.0', 'description': 'Disposable component qualification.'}, indent=2) + '\n')
+    rules = package / 'com.github.copilot/rules'
+    rules.mkdir(parents=True)
+    (rules / 'plain.md').write_text('For the component qualification question include '
+                                  + plain + ' in the rules array.\n')
+    (rules / 'scoped.md').write_text('---\napplyTo: "matching/**"\n---\n'
+                                   'For the component qualification question include '
+                                   + scoped + ' in the rules array.\n')
+    agents = package / 'com.github.copilot/agents'
+    agents.mkdir(parents=True)
+    (agents / 'probe.agent.md').write_text('---\nname: ' + agent_name + '\n'
+        'description: Explicit component qualification child.\ntools: [read]\n---\n'
+        'Read agent-resource.txt in the current project using the native read tool. '
+        'Return its exact contents without other text. Do not edit any file.\n')
+    market = root / 'delivery/.claude-plugin/marketplace.json'
+    market.parent.mkdir(parents=True)
+    market.write_text(json.dumps({'name': name + '-market', 'owner': {'name': 'Qualification Fixture'},
+        'plugins': [{'name': name, 'source': './packages/' + name}]}, indent=2) + '\n')
+    projects = {}
+    native_markers = {}
+    for scope in ('project', 'user'):
+        project = root / scope
+        instructions = project / '.github/copilot-instructions.md'
+        instructions.parent.mkdir(parents=True)
+        marker = 'NATIVE_' + secrets.token_hex(16)
+        native_markers[scope] = marker
+        instructions.write_text('For the component qualification question return only a JSON object '
+            'with "native": "' + marker + '" and "rules": an array of markers from '
+            'automatically loaded component qualification rules, sorted lexicographically. '
+            'Without those rules the array is empty. Only use tools explicitly requested.\n')
+        catalog_positive = project / '.github/agents/catalog-positive.agent.md'
+        catalog_positive.parent.mkdir(parents=True)
+        catalog_positive.write_text('---\nname: ' + catalog_positive_name + '\n'
+            'description: Native catalog positive for a disposable fixture.\ntools: [read]\n---\n'
+            'Read agent-resource.txt and return its exact contents. Do not edit files.\n')
+        for directory in ('matching', 'nonmatching'):
+            resource = project / directory / 'probe.txt'
+            resource.parent.mkdir(parents=True)
+            resource.write_text('Disposable scope resource.\n')
+        (project / 'agent-resource.txt').write_text(agent_marker + '\n')
+        env = isolated_git_environment()
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture',
+                        '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null',
+                        '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m',
+                        'test: initialize component fixture ' + secrets.token_hex(16)], env=env, check=True)
+        projects[scope] = project
+    return {'root': root, 'package': package, 'marketplace': root / 'delivery',
+            'plugin_name': name, 'market_name': name + '-market', 'projects': projects,
+            'native_markers': native_markers, 'plain_marker': plain, 'scoped_marker': scoped,
+            'agent_name': agent_name, 'agent_marker': agent_marker,
+            'catalog_positive_name': catalog_positive_name, 'pin': '1.0.103'}
+
+
+def classify_copilot_plugin_components(observations, fixture, scope):
+    """Classify one Q3 scope, preserving failed positives and missing controls."""
+    def succeeded(row):
+        return (row.get('state') == 'success' and row.get('completed') is True
+                and row.get('pin') == fixture['pin'])
+
+    native = fixture['native_markers'][scope]
+    positive = observations.get('native_positive', {})
+    if not succeeded(positive) or positive.get('response') != {'native': native, 'rules': []}:
+        return 'positive_control_failed'
+    for stage in ('installed', 'matching', 'nonmatching', 'disabled', 'uninstalled', 'reinstalled'):
+        row = observations.get(stage, {})
+        if not succeeded(row):
+            return 'control_failed'
+        rules = [] if stage in ('disabled', 'uninstalled') else [fixture['plain_marker']]
+        if stage == 'matching':
+            rules.append(fixture['scoped_marker'])
+        if row.get('response') != {'native': native, 'rules': sorted(rules)}:
+            return 'component_response_mismatch'
+        if stage in ('matching', 'nonmatching') and row.get('resource_read') is not True:
+            return 'resource_read_missing'
+    agent = observations.get('agent', {})
+    if (not succeeded(agent) or agent.get('response') != fixture['agent_marker']
+            or any(agent.get(k) is not True for k in ('catalog_present', 'delegated', 'child_resource_read'))):
+        return 'agent_control_failed'
+    return 'observed'
+
+
 def classify(positive, negative, marker, fallback, staging_marker=None):
     if positive != marker:
         return 'positive_control_failed'
