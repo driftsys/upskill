@@ -1,0 +1,165 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: six missing-helper tests, 56 total",
+    "private_log": "$PACKET_A/q4-lint-red.log",
+    "sha256": "cb3babfdec853dd9c3a6d2acacbe26a04b8ca97c2ca99854e6eac600755bdef3"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 56 offline tests",
+    "private_log": "$PACKET_A/q4-lint-green.log",
+    "sha256": "7b3b4986bfde8750d4422038b2c25036c8c32ed14fdf281545306ce19136e4c4"
+  },
+  {
+    "stage": "full-verification",
+    "command": "just verify",
+    "result": "PASS: complete repository verification, 58 offline tests",
+    "private_log": "$PACKET_A/q4-verify.log",
+    "sha256": "1803e68afc03a3fd3ff990a534dfb427f5b253cb00af8cb022f36e1eb8a78683"
+  },
+  {
+    "stage": "final-lint",
+    "command": "just lint",
+    "result": "PASS: 58 offline tests and repository lint",
+    "private_log": "$PACKET_A/q4-final-lint.log",
+    "sha256": "5e2be1e67f27db980d294a65a62688d83b0a94834c60205ca48f83166043bd6e"
+  },
+  {
+    "stage": "final-docs",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_A/q4-final-check-docs.log",
+    "sha256": "ba550ffb8065e7614bc00d24890aba7b3d066f7daaea12e91aed27ca08838876"
+  },
+  {
+    "stage": "shellcheck",
+    "command": "shellcheck tests/fixtures/native-plugins/claude/hook.sh",
+    "exit_code": 0,
+    "result": "PASS",
+    "private_log": "$PACKET_A/final-shellcheck.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "just lint",
+    "result": "PASS: 58 offline tests",
+    "private_log": "$PACKET_A/q4-review-fixes-lint.log",
+    "sha256": "dcc510c4890ce343ca8d3413b44576473fdfdbab4706b55dfa58a3f7e3c57d37"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 private-review-mutations.py",
+    "result": "PASS: five invalid variants rejected by strengthened tests",
+    "private_log": "$PACKET_A/q4-review-mutations.log",
+    "sha256": "55a3c93c5ed8dba5691cba80177fb7c4498a1317d68407d43b0633292211605c"
+  },
+  {
+    "stage": "pre-pr-full-verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification and 58 offline tests",
+    "private_log": "$PACKET_A/q4-pre-pr-verify.log",
+    "sha256": "33fb2d49264f164974a4c6b92e8b2535e02b5344219db19ba9c90defe2d48647"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just lint",
+    "result": "PASS: 59 offline tests",
+    "private_log": "$PACKET_A/q4-pass1-fix-lint.log",
+    "sha256": "867afb32236c086b3ea31ae476a7d21cb68ebcf4d3b0e014f08e76f11e982764"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q4-pass1-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 private-pass1-mutations.py",
+    "result": "PASS: empty/missing events and conflated resume/compact mutants rejected",
+    "private_log": "$PACKET_A/q4-pass1-mutations.log",
+    "sha256": "f8ac74a97d5650b7f6589b9dd672193e1faada6ce3abfca22911460fba364d41"
+  },
+  {
+    "stage": "Tests before classifier changes",
+    "result": "FAIL: eight failures and two errors, 63 offline tests",
+    "private_log": "$PACKET_B/q4-review-red-lint.log",
+    "sha256": "bd26608ab0dcc92d6be1963d06a1a03894aa920ad0a0b6a44f484e2aa868ac58"
+  },
+  {
+    "stage": "Tests before shared root guard",
+    "result": "FAIL: configured client root accepted",
+    "private_log": "$PACKET_B/q4-root-red.log",
+    "sha256": "9dfb3b899d34b28bc6195bdc4ee36dc909627107b3ae915326acb854d1b28c94"
+  },
+  {
+    "stage": "Tests before strict session identity",
+    "result": "FAIL: whitespace-only session identity accepted",
+    "private_log": "$PACKET_B/q4-session-red.log",
+    "sha256": "31a5717f3477edf4320d18bd3155a079effefdcee9f3bae83f5af4f16f69f6d1"
+  },
+  {
+    "stage": "Offline lint before current-main integration",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_B/q4-review-green-lint.log",
+    "sha256": "31856da8b7c3a27c0a8e044224bc740febbf76dfea6c52eb5b2ec3fc93d42bc7"
+  },
+  {
+    "stage": "Formatting",
+    "result": "PASS: formatting before full verification",
+    "private_log": "$PACKET_B/q4-review-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Focused classifier, hook and packet tests",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q4-review-focused-green.log",
+    "sha256": "c53cc9059d52a235d4614ccb05841fa331c2724ca0b70070713a39907a9ed453"
+  },
+  {
+    "stage": "Independent review mutation checks",
+    "result": "PASS: nine mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q4-review-mutations.log",
+    "sha256": "a440dbd81bb2309321dece6c816d25125923aaf7052d4d3efba450379e434b4f"
+  },
+  {
+    "stage": "ShellCheck",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q4-review-shellcheck.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "Full verification",
+    "result": "PASS: just fmt then just verify; 141 offline tests, full Rust tests, lint, docs and build",
+    "private_log": "$PACKET_B/q4-review-verify.log",
+    "sha256": "5f4d56c70b811d558ac041bd69cc019029d0e5196ce36d8f7a008a30ec7325e0"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: formatting",
+    "private_log": "$PACKET_B/q4-quick-fix-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: 143 offline tests; test-only updates after unchanged harness full verification with 141 tests",
+    "private_log": "$PACKET_B/q4-quick-fix-lint.log",
+    "sha256": "b970a31bee3341db88038d0ca2210693d653bf5410ebf7b357bb8fbd14cd33ec"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_B/q4-quick-fix-docs.log",
+    "sha256": "8dd174569aa0870cb855d019fee87fc15bf5b56388d190c8f3a1daea5c2dd0d6"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: six independent callback/provenance mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q4-quick-fix-mutations.log",
+    "sha256": "516ff63e9b228fca3f038724717089c8764c1942b087aace1dc445bece88a89f"
+  }
+]

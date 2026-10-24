@@ -1,0 +1,50 @@
+[
+  {
+    "id": "upskill-q4-8ec13b32f738ce46@upskill-q4-8ec13b32f738ce46-market",
+    "version": "0.0.0",
+    "scope": "project",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/cache/upskill-q4-8ec13b32f738ce46-market/upskill-q4-8ec13b32f738ce46/0.0.0",
+    "readFromFolder": "$FIXTURE/delivery/packages/upskill-q4-8ec13b32f738ce46",
+    "folderVersion": "0.0.0",
+    "installedAt": "2026-10-24T10:33:15.427Z",
+    "lastUpdated": "2026-10-24T10:33:15.427Z",
+    "projectPath": "$FIXTURE/project",
+    "projectEnabled": true
+  },
+  {
+    "id": "pdf-viewer@synced",
+    "version": "0.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/pdf-viewer"
+  },
+  {
+    "id": "design@synced",
+    "version": "1.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/design"
+  },
+  {
+    "id": "cowork-plugin-management@synced",
+    "version": "0.2.2",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/cowork-plugin-management"
+  },
+  {
+    "id": "engineering@synced",
+    "version": "1.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/engineering"
+  },
+  {
+    "id": "figma@synced",
+    "version": "2.2.157",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/figma"
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "controls": {
+    "resume": {
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+      "events": [
+        {
+          "hook_event_name": "SessionStart",
+          "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+          "source": "resume",
+          "cwd": "$FIXTURE/project"
+        }
+      ],
+      "native_user_line": 24,
+      "native_assistant_line": 29,
+      "native_assistant_uuid": "9a666fe0-ac16-49bc-a319-6a147ec7d4d0",
+      "native_turn_completion_records": 1,
+      "native_ui_exit_code": 0,
+      "model_tool_uses": 0
+    },
+    "compact": {
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+      "events": [
+        {
+          "hook_event_name": "SessionStart",
+          "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+          "source": "compact",
+          "cwd": "$FIXTURE/project"
+        }
+      ],
+      "native_user_line": 47,
+      "native_assistant_line": 64,
+      "native_assistant_uuid": "51bebec9-75ee-4112-8182-8bc8d405e9f0",
+      "native_turn_completion_records": 1,
+      "native_ui_exit_code": 0,
+      "model_tool_uses": 0,
+      "native_compaction_completed": true
+    }
+  },
+  "native_compaction_line": 37,
+  "session": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4"
+}

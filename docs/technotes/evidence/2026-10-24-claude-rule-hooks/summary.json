@@ -1,0 +1,207 @@
+{
+  "qualified": false,
+  "q4_completed": true,
+  "task": 390,
+  "control": "Q4",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "pin": "Claude Code 2.1.308",
+  "status": "PASS: unscoped startup and post-compaction context, absence controls; resume callback and response only",
+  "controls": [
+    {
+      "exit_code": 0,
+      "timed_out": false,
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "NATIVE_60745886bed426507a3225a6eeceb814",
+      "session": "685c3785-36c4-4101-a466-bce12aebe965",
+      "native_tools": [],
+      "label": "native_positive",
+      "events": [],
+      "command": [
+        "/opt/homebrew/bin/claude",
+        "-p",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "user,project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "[private selection omitted]",
+        "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
+      ],
+      "cwd": "$FIXTURE/positive",
+      "model_tool_uses": 0
+    },
+    {
+      "exit_code": 0,
+      "timed_out": false,
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+      "session": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+      "native_tools": [],
+      "label": "installed",
+      "events": [
+        {
+          "hook_event_name": "SessionStart",
+          "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+          "source": "startup",
+          "cwd": "$FIXTURE/project"
+        }
+      ],
+      "command": [
+        "/opt/homebrew/bin/claude",
+        "-p",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "user,project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "[private selection omitted]",
+        "--session-id",
+        "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+        "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
+    },
+    {
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+      "native_user_line": 24,
+      "native_assistant_line": 29,
+      "native_assistant_uuid": "9a666fe0-ac16-49bc-a319-6a147ec7d4d0",
+      "native_turn_completion_records": 1,
+      "native_ui_exit_code": 0,
+      "model_tool_uses": 0,
+      "label": "resume",
+      "events": [
+        {
+          "hook_event_name": "SessionStart",
+          "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+          "source": "resume",
+          "cwd": "$FIXTURE/project"
+        }
+      ],
+      "cwd": "$FIXTURE/project"
+    },
+    {
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+      "native_user_line": 47,
+      "native_assistant_line": 64,
+      "native_assistant_uuid": "51bebec9-75ee-4112-8182-8bc8d405e9f0",
+      "native_turn_completion_records": 1,
+      "native_ui_exit_code": 0,
+      "model_tool_uses": 0,
+      "native_compaction_completed": true,
+      "label": "compact",
+      "events": [
+        {
+          "hook_event_name": "SessionStart",
+          "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+          "source": "compact",
+          "cwd": "$FIXTURE/project"
+        }
+      ],
+      "cwd": "$FIXTURE/project"
+    },
+    {
+      "exit_code": 0,
+      "timed_out": false,
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "ABSENT_29092eaf26cb186c7fd6388429f0e81e",
+      "session": "ce9bebed-e3c9-42cf-97c0-8d565a6c8b7f",
+      "native_tools": [],
+      "label": "disabled",
+      "events": [],
+      "command": [
+        "/opt/homebrew/bin/claude",
+        "-p",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "user,project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "[private selection omitted]",
+        "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
+    },
+    {
+      "exit_code": 0,
+      "timed_out": false,
+      "pin": "2.1.308",
+      "state": "success",
+      "completed": true,
+      "response": "ABSENT_29092eaf26cb186c7fd6388429f0e81e",
+      "session": "b26823e4-764d-4657-a321-8fb255ce65be",
+      "native_tools": [],
+      "label": "uninstalled",
+      "events": [],
+      "command": [
+        "/opt/homebrew/bin/claude",
+        "-p",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+        "--setting-sources",
+        "user,project",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--model",
+        "[private selection omitted]",
+        "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
+    }
+  ],
+  "counts": {
+    "native_positive_responses": 1,
+    "hook_marker_responses": 3,
+    "fallback_responses": 2,
+    "own_hook_events": 3,
+    "native_compactions": 1
+  },
+  "measured_configuration_restored": true,
+  "limits": [
+    "Callback events and exact responses do not qualify provider-effective input uniqueness.",
+    "Normal isolated UI onboarding created a theme setting and official marketplace; initial automatic guard failure and native cleanup are retained.",
+    "Only measured settings and two native registration files are restored exactly; native UI trust/onboarding/session/log/cache effects are not whole-profile restoration.",
+    "Linux, user scope, IDE/hosted surfaces, unintended readers and integrated ownership/recovery remain unqualified.",
+    "Production schema 1 unchanged; no durable adoption in this packet.",
+    "Resume already contains the hook marker; a fresh resume attachment was not retained. Post-disable settings bytes were not captured."
+  ],
+  "classification": "observed"
+}

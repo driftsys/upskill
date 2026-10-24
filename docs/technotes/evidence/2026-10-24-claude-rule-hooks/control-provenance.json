@@ -1,0 +1,74 @@
+{
+  "method": "Offline selection from original native print/UI streams and capture helper; no repeated native run",
+  "controls": {
+    "native_positive": {
+      "cwd": "$FIXTURE/positive",
+      "session": "685c3785-36c4-4101-a466-bce12aebe965",
+      "native_tools": [],
+      "model_tool_uses": 0,
+      "own_plugins": [],
+      "source_file": "$PACKET_A/native_positive.stdout",
+      "source_sha256": "b9fad414503adc1b127152b432dfff555b0b89d3c23220510bf7e4f407ce391f"
+    },
+    "installed": {
+      "cwd": "$FIXTURE/project",
+      "session": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+      "native_tools": [],
+      "model_tool_uses": 0,
+      "own_plugins": [
+        {
+          "name": "upskill-q4-8ec13b32f738ce46",
+          "source": "upskill-q4-8ec13b32f738ce46@upskill-q4-8ec13b32f738ce46-market",
+          "version": "0.0.0",
+          "path": "$FIXTURE/delivery/packages/upskill-q4-8ec13b32f738ce46"
+        }
+      ],
+      "source_file": "$PACKET_A/installed.stdout",
+      "source_sha256": "a7cdd810456efa10f6e22d5d19406038fa47b733985a8d36f4cd8be268100ab1"
+    },
+    "resume": {
+      "cwd": "$FIXTURE/project",
+      "native_user_line": 24,
+      "native_assistant_line": 29,
+      "model_tool_uses": 0,
+      "source_file": "$PACKET_A/ui-transcript.jsonl",
+      "source_sha256": "658b32ab1bca709716c463158e97549fed99fd4183ae92f5a5043c7fe5249463",
+      "fresh_resume_attachment_observed": false
+    },
+    "compact": {
+      "cwd": "$FIXTURE/project",
+      "native_user_line": 47,
+      "native_assistant_line": 64,
+      "model_tool_uses": 0,
+      "source_file": "$PACKET_A/ui-transcript.jsonl",
+      "source_sha256": "658b32ab1bca709716c463158e97549fed99fd4183ae92f5a5043c7fe5249463",
+      "fresh_resume_attachment_observed": null
+    },
+    "disabled": {
+      "cwd": "$FIXTURE/project",
+      "session": "ce9bebed-e3c9-42cf-97c0-8d565a6c8b7f",
+      "native_tools": [],
+      "model_tool_uses": 0,
+      "own_plugins": [],
+      "source_file": "$PACKET_A/disabled.stdout",
+      "source_sha256": "5de4aa60657f44d23c55f968b95f6d44e3653a1a785a379861043a83551b714a"
+    },
+    "uninstalled": {
+      "cwd": "$FIXTURE/project",
+      "session": "b26823e4-764d-4657-a321-8fb255ce65be",
+      "native_tools": [],
+      "model_tool_uses": 0,
+      "own_plugins": [],
+      "source_file": "$PACKET_A/uninstalled.stdout",
+      "source_sha256": "d8cd7457ef86490d283ea3b762f7a573cb9772cd71af53d39871456c7cc789b9"
+    }
+  },
+  "management": {
+    "cwd": "$FIXTURE/project",
+    "project_identities": "project-identities.json",
+    "capture_helper": "$PACKET_A/capture-helper.py",
+    "capture_helper_sha256": "07240f79cdecc83a3d9e5538e9d35018d5ae8eed580bdfef9d968bbd8f3db4a9",
+    "post_disable_settings_snapshot_retained": false,
+    "limit": "Management cwd follows retained call arguments, not an independently recorded process receipt. Native negative init records independently confirm the candidate cwd and omit this package."
+  }
+}

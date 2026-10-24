@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Claude unscoped rule hook controls](gate6-claude-rule-hooks.md): Q4, Claude
+  2.1.308; startup, compaction and absence observations, with resume attribution
+  limits.
+
 - [Codex rule lifecycle controls](gate6-codex-rule-lifecycle.md): Q9, Codex
   0.164.0; repeated native bodies in a combined reopened-session/compaction
   window.
