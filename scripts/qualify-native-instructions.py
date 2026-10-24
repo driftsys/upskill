@@ -49,6 +49,37 @@ def fixtures(root, client, configured=False):
     return root / 'positive', root / 'negative', marker, staging_marker
 
 
+def copilot_claude_rules_fixtures(root):
+    """Q1 fixtures contain one instruction each and independent project identities."""
+    rows = []
+    env = isolated_git_environment()
+    for label in ('positive', 'candidate', 'candidate-paths'):
+        project = root / label
+        project.mkdir(parents=True)
+        marker = 'READER_' + secrets.token_hex(16)
+        fallback = 'ABSENT_' + secrets.token_hex(16)
+        relative = '.github/copilot-instructions.md' if label == 'positive' else '.claude/rules/probe.md'
+        target = project / relative
+        target.parent.mkdir(parents=True)
+        header = '---\npaths: "**/*.rs"\n---\n' if label == 'candidate-paths' else ''
+        target.write_text(header + 'For the discovery qualification question, respond with exactly ' + marker + ' and nothing else.\n')
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize reader fixture ' + secrets.token_hex(16)], env=env, check=True)
+        rows.append({'label': label, 'project': project, 'marker': marker, 'fallback': fallback})
+    return rows
+
+
+def classify_reader(positive, candidate, positive_marker, candidate_marker, fallback):
+    """An absence conclusion requires a calibrated positive and exact fallback."""
+    if positive != positive_marker:
+        return 'positive_control_failed'
+    if candidate in FAILURES:
+        return candidate
+    if candidate == candidate_marker:
+        return 'reads'
+    return 'does not read' if candidate == fallback else 'inconclusive'
+
+
 def classify(positive, negative, marker, fallback, staging_marker=None):
     if positive != marker:
         return 'positive_control_failed'

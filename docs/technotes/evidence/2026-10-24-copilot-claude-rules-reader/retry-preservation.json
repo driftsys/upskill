@@ -1,0 +1,33 @@
+{
+  "attempts": [
+    {
+      "attempt": 2,
+      "configuration_before": {
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": "0o600"
+      },
+      "configuration_after": {
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": "0o600"
+      },
+      "configuration_equal": true
+    },
+    {
+      "attempt": 3,
+      "configuration_before": {
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": "0o600"
+      },
+      "configuration_after": {
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": "0o600"
+      },
+      "configuration_equal": true
+    }
+  ],
+  "limits": [
+    "Only isolated profile config.json bytes/mode measured on retries; native session/log/search residue is not whole-profile restoration.",
+    "No configuration restoration required because measured bytes and modes are unchanged.",
+    "Authentication stores were not read, copied or exported."
+  ]
+}
