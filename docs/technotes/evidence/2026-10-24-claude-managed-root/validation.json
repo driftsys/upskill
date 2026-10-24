@@ -1,0 +1,52 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: three missing Q6 helper tests",
+    "private_log": "q6-lint-red.log",
+    "sha256": "15e638d19c37d34e42cbb21763d16c6ac7f4372e0c623ca2134b9bc09cc928ba"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 45 offline tests",
+    "private_log": "q6-lint-green.log",
+    "sha256": "36c062fdb39f50e3962c61c806621c14dacefc7ddebe927e95e5db38c0ad9968"
+  },
+  {
+    "stage": "symlink guard red",
+    "result": "FAIL: dangling root symlink redirected fixture writes",
+    "private_log": "q6-symlink-red.log",
+    "sha256": "8333b95f7030f55ab83ee7594600cf537544660b259c08cf9d45e8f562d0abc7"
+  },
+  {
+    "stage": "symlink guard green",
+    "result": "PASS: four Q6 tests",
+    "private_log": "q6-symlink-green.log",
+    "sha256": "41855a6380634e4d5ef6e6b8a4b4afa9f891b191414433c9328dff783b38b91c"
+  },
+  {
+    "stage": "full verification",
+    "result": "PASS: just verify",
+    "private_log": "q6-verify.log",
+    "sha256": "6aad9a5f8ae56cc6f9833aa560b4891d916239b58f872abfa2f0795299e79dcb"
+  },
+  {
+    "stage": "rebased lint",
+    "result": "PASS: 46 offline tests",
+    "private_log": "q6-rebased-lint.log",
+    "sha256": "a90c7b5eafc03caaf477fb488cde675e32b1175bbebb9007dfbf160d4503f5ea"
+  },
+  {
+    "stage": "rebased documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q6-rebased-docs.log",
+    "sha256": "c64d59167bcc435dff3a2db6e443caa3e9657b61a442442c01279556e61401cb"
+  },
+  {
+    "stage": "final focused tests",
+    "result": "PASS: four Q6 tests, including fresh identities and markers",
+    "private_log": "q6-final-focused.log",
+    "sha256": "931ee622acb24d582aa0e2442389b49137ce32c07e9412d1969bff1cbd11a562"
+  }
+]

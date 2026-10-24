@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Claude managed-root mechanics](gate6-claude-managed-root.md) — Q6, Claude
+  2.1.308; both scopes cleaned up, invocation blocked by expired OAuth.
+
 - [Copilot reader of Claude rules](gate6-copilot-claude-rules-reader.md) — Q1,
   Copilot 1.0.103; plain rule read, paths variant fallback in a tool-free
   request.

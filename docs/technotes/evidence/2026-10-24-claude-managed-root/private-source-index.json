@@ -1,0 +1,14 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q6-claude-lb2iofuw",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "4830e62ff55e6c2d82355b36de854d5ff8b4f3daef1828688e3ba4522ec53aae"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q6-claude-lb2iofuw/capture-helper.py",
+    "capture_helper_sha256": "eb1eb936b83aa133b6922801261f44051252380dc1a8d0c803bf5894722813cb"
+  }
+]
