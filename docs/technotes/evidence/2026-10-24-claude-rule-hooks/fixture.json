@@ -1,0 +1,14 @@
+{
+  "root": "$FIXTURE",
+  "package": "$FIXTURE/delivery/packages/upskill-q4-8ec13b32f738ce46",
+  "marketplace": "$FIXTURE/delivery",
+  "project": "$FIXTURE/project",
+  "positive_project": "$FIXTURE/positive",
+  "trace": "$FIXTURE/hook-inputs.jsonseq",
+  "plugin_name": "upskill-q4-8ec13b32f738ce46",
+  "market_name": "upskill-q4-8ec13b32f738ce46-market",
+  "hook_marker": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914",
+  "native_marker": "NATIVE_60745886bed426507a3225a6eeceb814",
+  "fallback": "ABSENT_29092eaf26cb186c7fd6388429f0e81e",
+  "pin": "2.1.308"
+}

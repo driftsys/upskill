@@ -1,0 +1,2 @@
+{"type": "system", "subtype": "init", "session_id": "685c3785-36c4-4101-a466-bce12aebe965", "claude_code_version": "2.1.308", "tools": []}
+{"type": "result", "subtype": "success", "is_error": false, "result": "NATIVE_60745886bed426507a3225a6eeceb814", "session_id": "685c3785-36c4-4101-a466-bce12aebe965", "permission_denials": []}

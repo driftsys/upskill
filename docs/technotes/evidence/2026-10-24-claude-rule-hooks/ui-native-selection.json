@@ -1,0 +1,119 @@
+[
+  {
+    "line": 2,
+    "type": "attachment",
+    "uuid": "a71d8e31-b798-42a9-bb0a-8bc66de769df",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "attachment": {
+      "type": "hook_success",
+      "hookName": "SessionStart:startup",
+      "hookEvent": "SessionStart",
+      "toolUseID": "7ac956bd-1985-44f7-add2-ed23910669f5",
+      "content": "",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"SessionStart\",\n    \"additionalContext\": \"For the unscoped hook question return exactly HOOK_b2c2883db9d2b13b05af5a8fe72d4914 and nothing else. Do not use tools.\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  {
+    "line": 3,
+    "type": "attachment",
+    "uuid": "38b91e83-d044-496a-aafe-0198343f9ca6",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "attachment": {
+      "type": "hook_additional_context",
+      "hookName": "SessionStart",
+      "hookEvent": "SessionStart",
+      "toolUseID": "SessionStart",
+      "content": [
+        "For the unscoped hook question return exactly HOOK_b2c2883db9d2b13b05af5a8fe72d4914 and nothing else. Do not use tools.\n"
+      ]
+    }
+  },
+  {
+    "line": 29,
+    "type": "assistant",
+    "uuid": "9a666fe0-ac16-49bc-a319-6a147ec7d4d0",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "message": {
+      "content": [
+        {
+          "type": "text",
+          "text": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914"
+        }
+      ]
+    }
+  },
+  {
+    "type": "system",
+    "subtype": "turn_duration",
+    "uuid": "2e8d1979-a606-45c7-883c-dde9dc50dee7",
+    "parentUuid": "9a666fe0-ac16-49bc-a319-6a147ec7d4d0",
+    "timestamp": "2026-10-24T10:36:33.097Z",
+    "sessionId": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "line": 30
+  },
+  {
+    "type": "system",
+    "subtype": "compact_boundary",
+    "uuid": "758eae15-b397-4259-a98a-0f43a35ab3ac",
+    "parentUuid": null,
+    "timestamp": "2026-10-24T10:38:24.203Z",
+    "sessionId": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "line": 37
+  },
+  {
+    "line": 44,
+    "type": "attachment",
+    "uuid": "add13aee-fdde-46bd-b538-45549e958428",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "attachment": {
+      "type": "hook_success",
+      "hookName": "SessionStart:compact",
+      "hookEvent": "SessionStart",
+      "toolUseID": "75baded8-492d-4f96-a6ce-183ff6dce3f1",
+      "content": "",
+      "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"SessionStart\",\n    \"additionalContext\": \"For the unscoped hook question return exactly HOOK_b2c2883db9d2b13b05af5a8fe72d4914 and nothing else. Do not use tools.\\n\"\n  }\n}\n",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  {
+    "line": 45,
+    "type": "attachment",
+    "uuid": "82178131-d194-400a-aedf-1552c84e8cda",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "attachment": {
+      "type": "hook_additional_context",
+      "hookName": "SessionStart",
+      "hookEvent": "SessionStart",
+      "toolUseID": "SessionStart",
+      "content": [
+        "For the unscoped hook question return exactly HOOK_b2c2883db9d2b13b05af5a8fe72d4914 and nothing else. Do not use tools.\n"
+      ]
+    }
+  },
+  {
+    "line": 64,
+    "type": "assistant",
+    "uuid": "51bebec9-75ee-4112-8182-8bc8d405e9f0",
+    "session_id": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "message": {
+      "content": [
+        {
+          "type": "text",
+          "text": "HOOK_b2c2883db9d2b13b05af5a8fe72d4914"
+        }
+      ]
+    }
+  },
+  {
+    "type": "system",
+    "subtype": "turn_duration",
+    "uuid": "3d71094e-566a-4177-a6d0-d9f039c80365",
+    "parentUuid": "c381452f-efd9-4e78-8033-dde2b0c228a7",
+    "timestamp": "2026-10-24T10:40:50.546Z",
+    "sessionId": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "line": 66
+  }
+]

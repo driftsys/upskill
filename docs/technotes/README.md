@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Claude rule hooks](gate6-claude-rule-hooks.md) — Q4, Claude 2.1.308; project
+  positive, resume, compaction and disabled/uninstalled controls pass.
+
 - [Claude managed-root mechanics](gate6-claude-managed-root.md) — Q6, Claude
   2.1.308; both scopes invoke successfully and see source edits before native
   update; earlier authentication failures retained.

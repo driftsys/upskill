@@ -1,0 +1,12 @@
+[
+  {
+    "decision": "Accept normal onboarding defaults in the isolated profile",
+    "reason": "Theme and security-notice acknowledgement complete native UI setup; no discovery override or bypass flag used.",
+    "cost_if_wrong": "Native preference residue is recorded outside the measured settings contract."
+  },
+  {
+    "decision": "Trust only the newly generated Q4 fixture through the ordinary Claude UI",
+    "reason": "The fixture and shell hook were created and reviewed for this authorized control; hook writes only its declared private trace.",
+    "cost_if_wrong": "A native trust record remains for the disposable fixture and must be recorded; no team/user discovery setting is changed."
+  }
+]

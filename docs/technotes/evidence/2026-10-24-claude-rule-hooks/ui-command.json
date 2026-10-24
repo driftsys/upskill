@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/homebrew/bin/claude",
+    "--resume",
+    "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+    "--tools",
+    "",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--setting-sources",
+    "user,project",
+    "--model",
+    "[private selection omitted]"
+  ],
+  "cwd": "$FIXTURE/project",
+  "session": "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
+  "window": {
+    "rows": 40,
+    "columns": 140
+  }
+}

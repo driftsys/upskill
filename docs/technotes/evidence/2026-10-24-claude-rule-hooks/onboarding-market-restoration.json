@@ -1,0 +1,23 @@
+{
+  "reason": "UI onboarding added the sole official marketplace to an originally empty registry. Remove only that new name through the native CLI, after all model controls.",
+  "scoped_remove_exit": 1,
+  "scoped_remove_limitation": "Not declared in user settings; native CLI requires unscoped removal for this implicit registration.",
+  "command": [
+    "/opt/homebrew/bin/claude",
+    "plugin",
+    "marketplace",
+    "remove",
+    "claude-plugins-official"
+  ],
+  "exit_code": 0,
+  "initial_registry_difference_retained": true,
+  "after": {
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "mode": 420,
+    "present": true
+  },
+  "registry_restored_exact": true,
+  "new_empty_settings_residue": null,
+  "user_settings_restored_absent": true,
+  "whole_profile_restoration_qualified": false
+}

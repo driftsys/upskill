@@ -128,6 +128,88 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     return 'empty_object_residue' if added else 'settings_bytes_changed'
 
 
+def prepare_claude_rule_hook(root):
+    """Build the Q4 shell-hook package without team guidance or cache writes."""
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    root = root.resolve()
+    parts = root.parts
+    if (root.is_relative_to(REPO) or root == Path.home().resolve()
+            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+                   for i in range(len(parts) - 1))):
+        raise ValueError('A new neutral fixture root is required')
+    root.mkdir(parents=True, mode=0o700)
+    name = 'upskill-q4-' + secrets.token_hex(8)
+    package = root / 'delivery/packages' / name
+    marker = 'HOOK_' + secrets.token_hex(16)
+    native = 'NATIVE_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    manual = 'MANUAL_' + secrets.token_hex(16)
+    trace = root / 'hook-inputs.jsonseq'
+    body = 'For the unscoped hook question return exactly ' + marker + ' and nothing else. Do not use tools.\n'
+    write_json(package / '.claude-plugin/plugin.json', {'name': name, 'version': '0.0.0', 'description': 'Disposable unscoped rule hook.'})
+    write_json(package / 'rules/rule-a.json', {'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': body}})
+    (package / 'rules/index').write_text('rule-a.json\n')
+    (package / 'trace-path').write_text(str(trace) + '\n')
+    shutil.copyfile(TEMPLATES / 'claude/hook.sh', package / 'hook.sh')
+    write_json(package / 'hooks/hooks.json', {'hooks': {'SessionStart': [{'hooks': [
+        {'type': 'command', 'command': 'sh "${CLAUDE_PLUGIN_ROOT}/hook.sh"'}]}]}})
+    write_json(root / 'delivery/.claude-plugin/marketplace.json', {'name': name + '-market',
+        'owner': {'name': 'Qualification Fixture'}, 'plugins': [{'name': name, 'source': './packages/' + name}]})
+    project = root / 'project'
+    positive = root / 'positive'
+    instructions = positive / '.claude/rules/native-positive.md'
+    instructions.parent.mkdir(parents=True)
+    instructions.write_text('For the unscoped hook question return exactly ' + native + ' and nothing else. Do not use tools.\n')
+    settings = project / '.claude/settings.json'
+    write_json(settings, {'env': {'UPSKILL_Q4_MANUAL': manual}})
+    settings.chmod(0o640)
+    env = fixture_environment(root)
+    for path in (project, positive):
+        subprocess.run(['git', 'init', '-q', str(path)], env=env, check=True)
+        subprocess.run(['git', '-C', str(path), '-c', 'user.name=Qualification Fixture',
+                        '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null',
+                        '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m',
+                        'test: initialize hook fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'package': package, 'marketplace': root / 'delivery', 'project': project,
+            'positive_project': positive, 'trace': trace, 'plugin_name': name, 'market_name': name + '-market',
+            'hook_marker': marker, 'native_marker': native, 'fallback': fallback, 'pin': '2.1.308'}
+
+
+def classify_claude_rule_hook(controls, fixture):
+    """Classify Q4 callback/response controls without claiming effective copies."""
+    def succeeded(row):
+        return (row.get('pin') == fixture['pin'] and row.get('state') == 'success'
+                and row.get('completed') is True)
+
+    positive = controls.get('native_positive', {})
+    if not succeeded(positive) or positive.get('response') != fixture['native_marker']:
+        return 'positive_control_failed'
+    installed = controls.get('installed', {})
+    if not succeeded(installed) or installed.get('response') != fixture['hook_marker']:
+        return 'installed_positive_failed'
+    session = None
+    for phase, source in (('installed', 'startup'), ('resume', 'resume'), ('compact', 'compact')):
+        row = controls.get(phase, {})
+        events = row.get('events', [])
+        if (not succeeded(row) or row.get('response') != fixture['hook_marker']
+                or len(events) != 1 or events[0].get('source') != source):
+            return 'lifecycle_control_failed'
+        current = events[0].get('session_id')
+        if not isinstance(current, str) or not current or (session is not None and current != session):
+            return 'lifecycle_control_failed'
+        session = current
+    if controls['compact'].get('native_compaction_completed') is not True:
+        return 'lifecycle_control_failed'
+    for phase in ('disabled', 'uninstalled'):
+        row = controls.get(phase, {})
+        if (not succeeded(row) or row.get('response') != fixture['fallback']
+                or row.get('events') != []):
+            return 'absence_control_failed'
+    return 'observed'
+
+
 def prepare(root, client):
     """Create new fixture content without modifying any existing directory."""
     if client not in VERSIONS:
