@@ -100,6 +100,10 @@ unrelated catalog content and test model identifiers.
 
 ## Offline validation and consequence
 
+Resolved native user-home rejection, including a symlinked profile, is checked
+before writes. Final full repository verification passes 68 offline tests;
+native outcomes remain unchanged.
+
 Tests are written first: `just lint` fails seven missing-helper tests, then
 passes 66 offline tests. A missing-response assertion fails before its
 classifier fix and then passes 67 tests. Native-user-root exclusions also fail
