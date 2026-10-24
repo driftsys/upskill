@@ -55,5 +55,26 @@
     "result": "PASS: full repository verification; 66 offline tests",
     "private_log": "$PACKET_B/q5-final-verify.log",
     "sha256": "a0ea2a072eacaad0330f6c3fe07887d33fb6ba69c887877a970d3d5f45384d52"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_B/q5-symlink-home-red.log",
+    "sha256": "b197da1df5c716ee5f8a567d5f4032c16b9c0ff9a8a2ce20d12d64659d6bd9db"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_B/q5-symlink-fix-verify.log",
+    "sha256": "aadf31f10b00fccb3efe3500f8e94cb2587cd521838a169fe98c893c0966b9ca"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS: later normal-profile preflight links",
+    "private_log": "$PACKET_B/q5-later-catalog-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
   }
 ]

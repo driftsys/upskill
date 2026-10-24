@@ -40,8 +40,13 @@ key and configured `modelID`, removing alias translation as a variable. Its
 positive also fails with the same provider error. Both requests explicitly
 select the configured route. Native session exports record the selected catalog
 entry; retained Boolean audits compare it with the declared private selection.
-No alternate model is substituted. A catalog entry and selected session metadata
-do not prove backend inference succeeded.
+No alternate model is substituted. A later normal-profile catalog lookup also
+omits the exact requested reference and matching model-name suffix. That
+[later preflight](evidence/2026-10-24-opencode-current-routes/later-normal-catalog.json)
+makes no model request; its version is observed afterward. It does not establish
+availability across every provider configuration, and normal-profile byte
+equality is not measured. A catalog entry and selected session metadata do not
+prove backend inference succeeded.
 
 | Control                             | Pin            | Result                                                                          |
 | ----------------------------------- | -------------- | ------------------------------------------------------------------------------- |

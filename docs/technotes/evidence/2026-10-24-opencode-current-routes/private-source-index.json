@@ -7,6 +7,11 @@
   {
     "alias": "$PACKET_B",
     "private_source_path": "/private/tmp/upskill-q5-opencode-o211bbds",
-    "manifest_sha256": "24a29b9e7fc93e186fd7051890b433d9a8c9f256b00b20d75b6d3ed7385dfc17"
+    "manifest_sha256": "6d2007d007aefc1f3b64f558b9919baa4060e71cd23556814a3adf2d9385edcd"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q5-normal-catalog-bm9f2gf5",
+    "manifest_sha256": "3f6ee567b5e74cb5090e6abe5db88a69762377c5ebe766b9c59afda6e06ea8cf"
   }
 ]

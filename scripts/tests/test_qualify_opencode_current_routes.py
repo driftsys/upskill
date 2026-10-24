@@ -51,7 +51,9 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             for p in (root, *(root/s/'fixture' for s in ('.claude','.github','.codex','.opencode','.copilot','.config/opencode','.agents/skills','.agents/plugins'))):
+                before=set(root.rglob('*'))
                 with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(p)
+                self.assertEqual(set(root.rglob('*')),before)
             a=self.q.prepare_opencode_current_routes(root/'a');b=self.q.prepare_opencode_current_routes(root/'b')
             for key in ('native_marker','resource_marker','fallback','rule_markers','skill_id'):self.assertNotEqual(a[key],b[key])
             with mock.patch.object(self.q,'REPO',root.resolve()/'repo'):
@@ -118,3 +120,15 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
         for key,value in (('pin','other'),('recorded',1),('recorded',False),('exit_code',None),('exit_code',False)):
             c,f=self.controls();c['plugin_add'][key]=value
             self.assertNotEqual(self.q.classify_opencode_current_routes(c,f),'observed')
+
+    def test_resolved_native_home_is_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);home=root/'home';home.mkdir()
+            target=root/'actual-client-profile';target.mkdir()
+            link=home/'.config/opencode'
+            link.parent.mkdir(parents=True,exist_ok=True)
+            link.symlink_to(target,target_is_directory=True)
+            candidate=target/'plugins/fixture'
+            with mock.patch.object(Path,'home',return_value=home):
+                with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(candidate)
+            self.assertFalse(candidate.exists())
