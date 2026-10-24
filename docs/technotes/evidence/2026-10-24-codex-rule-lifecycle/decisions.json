@@ -1,0 +1,26 @@
+[
+  {
+    "decision": "Retest unchanged all-sources adapter before proposing a workaround",
+    "reason": "A new client pin could change lifecycle behavior; avoid editing trusted definitions first.",
+    "cost_if_wrong": "Continuity evidence cannot substitute for a fresh project qualification."
+  },
+  {
+    "decision": "Retain the historical FAIL; apply the adopted declared-limitation direction at step 7 after resume-only attribution",
+    "reason": "The combined reopened-session and first automatic-compaction window contains duplicate bodies. Resume-only was not separately run, so compaction alone is not established as the cause.",
+    "cost_if_wrong": "A different supported route may work but is not adopted without evidence.",
+    "historical_decision": "Keep Q9 open and the Codex rules route unsupported pending resolution",
+    "record": "docs/wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24"
+  },
+  {
+    "decision": "Do not use private transcript parsing or a session-level sent flag to deduplicate",
+    "reason": "Transcript format is not a supported hook interface; compaction can require reinjection.",
+    "cost_if_wrong": "No automated workaround is delivered in this packet."
+  },
+  {
+    "decision": "Continue independent controls without adopting a runtime deduplication workaround",
+    "reason": "The user accepts a declared limitation; the resume-only follow-up and step 7 recording remain required.",
+    "cost_if_wrong": "Any later definition change still needs ordinary user hook review.",
+    "historical_decision": "Continue Q3-Q8 after retaining this blocking result",
+    "record": "docs/wip/specs/2026-10-23-customization-delivery-implementation-spec.md"
+  }
+]

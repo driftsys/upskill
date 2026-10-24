@@ -83,5 +83,59 @@
     "result": "PASS: empty/missing events and conflated resume/compact mutants rejected",
     "private_log": "$PACKET_A/q4-pass1-mutations.log",
     "sha256": "f8ac74a97d5650b7f6589b9dd672193e1faada6ce3abfca22911460fba364d41"
+  },
+  {
+    "stage": "Tests before classifier changes",
+    "result": "FAIL: eight failures and two errors, 63 offline tests",
+    "private_log": "$PACKET_B/q4-review-red-lint.log",
+    "sha256": "bd26608ab0dcc92d6be1963d06a1a03894aa920ad0a0b6a44f484e2aa868ac58"
+  },
+  {
+    "stage": "Tests before shared root guard",
+    "result": "FAIL: configured client root accepted",
+    "private_log": "$PACKET_B/q4-root-red.log",
+    "sha256": "9dfb3b899d34b28bc6195bdc4ee36dc909627107b3ae915326acb854d1b28c94"
+  },
+  {
+    "stage": "Tests before strict session identity",
+    "result": "FAIL: whitespace-only session identity accepted",
+    "private_log": "$PACKET_B/q4-session-red.log",
+    "sha256": "31a5717f3477edf4320d18bd3155a079effefdcee9f3bae83f5af4f16f69f6d1"
+  },
+  {
+    "stage": "Offline lint before current-main integration",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_B/q4-review-green-lint.log",
+    "sha256": "31856da8b7c3a27c0a8e044224bc740febbf76dfea6c52eb5b2ec3fc93d42bc7"
+  },
+  {
+    "stage": "Formatting",
+    "result": "PASS: formatting before full verification",
+    "private_log": "$PACKET_B/q4-review-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Focused classifier, hook and packet tests",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q4-review-focused-green.log",
+    "sha256": "c53cc9059d52a235d4614ccb05841fa331c2724ca0b70070713a39907a9ed453"
+  },
+  {
+    "stage": "Independent review mutation checks",
+    "result": "PASS: nine mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q4-review-mutations.log",
+    "sha256": "a440dbd81bb2309321dece6c816d25125923aaf7052d4d3efba450379e434b4f"
+  },
+  {
+    "stage": "ShellCheck",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q4-review-shellcheck.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "Full verification",
+    "result": "PASS: just fmt then just verify; 141 offline tests, full Rust tests, lint, docs and build",
+    "private_log": "$PACKET_B/q4-review-verify.log",
+    "sha256": "5f4d56c70b811d558ac041bd69cc019029d0e5196ce36d8f7a008a30ec7325e0"
   }
 ]

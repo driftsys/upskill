@@ -49,7 +49,7 @@ class ClaudeRuleHookTests(unittest.TestCase):
             self.assertEqual(settings.stat().st_mode & 0o777, 0o640)
             for path in f['root'].rglob('*'):
                 self.assertFalse(path.is_symlink())
-                self.assertNotIn(path.name, ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.md'))
+                self.assertNotIn(path.name, ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.md', 'CLAUDE.local.md', 'copilot-instructions.md'))
             commits = [subprocess.check_output(['git', '-C', str(p), 'rev-parse', 'HEAD'], env=env) for p in (f['project'], f['positive_project'])]
             self.assertNotEqual(*commits)
 
@@ -84,6 +84,11 @@ class ClaudeRuleHookTests(unittest.TestCase):
         c['compact']['native_compaction_completed'] = True
         c['native_positive'] = {'pin': '2.1.308', 'state': 'success', 'completed': True, 'response': 'N'}
         c.update({k: {'pin':'2.1.308','state':'success','completed':True,'response':'F','events':[]} for k in ('disabled','uninstalled')})
+        for phase,row in c.items():
+            row.update(cwd='/fixture/positive' if phase=='native_positive' else '/fixture/project', native_tools=[], model_tool_uses=0)
+        f.update(project='/fixture/project',positive_project='/fixture/positive')
+        for phase in ('installed','resume','compact'):
+            c[phase]['events'][0].update(hook_event_name='SessionStart',cwd='/fixture/project')
         return c, f
 
     def test_lifecycle_requires_exact_markers_and_one_event(self):
@@ -137,7 +142,7 @@ class ClaudeRuleHookTests(unittest.TestCase):
             for key in ('pin','state','completed','response'):
                 c,f=self.controls();del c[phase][key]
                 self.assertNotEqual(self.q.classify_claude_rule_hook(c,f),'observed')
-        for changed in (None,'',1,[]):
+        for changed in (None,'',' ',1,[]):
             c,f=self.controls()
             for phase in ('installed','resume','compact'):c[phase]['events'][0]['session_id']=changed
             self.assertNotEqual(self.q.classify_claude_rule_hook(c,f),'observed')
@@ -154,3 +159,63 @@ class ClaudeRuleHookTests(unittest.TestCase):
         for phase,source in (('resume','compact'),('compact','resume')):
             c,f=self.controls();c[phase]['events'][0]['source']=source
             self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+
+    def test_absence_requires_explicit_empty_callback_evidence(self):
+        for phase in ('disabled','uninstalled'):
+            for value in (None,{},'missing'):
+                c,f=self.controls()
+                if value=='missing':del c[phase]['events']
+                else:c[phase]['events']=value
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),'absence_control_failed')
+
+    def test_every_phase_requires_observed_tool_and_workspace_boundaries(self):
+        for phase in ('native_positive','installed','resume','compact','disabled','uninstalled'):
+            expected = 'positive_control_failed' if phase=='native_positive' else 'installed_positive_failed' if phase=='installed' else 'absence_control_failed' if phase in ('disabled','uninstalled') else 'lifecycle_control_failed'
+            for key,value in [('native_tools',['Read']),('native_tools',None),('model_tool_uses',1),('model_tool_uses',False),('model_tool_uses',None),('cwd','/other-project'),('cwd',None)]:
+                with self.subTest(phase=phase,key=key,value=value):
+                    c,f=self.controls();c[phase][key]=value
+                    self.assertEqual(self.q.classify_claude_rule_hook(c,f),expected)
+            for key in ('model_tool_uses','cwd'):
+                c,f=self.controls();del c[phase][key]
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),expected)
+
+    def test_active_callback_shapes_names_and_projects_are_required(self):
+        for phase in ('installed','resume','compact'):
+            for value in (None,{0:{'source':'startup','session_id':'same'}},[None],['bad']):
+                c,f=self.controls();c[phase]['events']=value
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+            for key,value in [('hook_event_name','SessionEnd'),('cwd','/other-project')]:
+                c,f=self.controls();c[phase]['events'][0][key]=value
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+
+    def test_retained_packet_replays_observed_callback_boundaries(self):
+        packet=Path(__file__).resolve().parents[2]/'docs/technotes/evidence/2026-10-24-claude-rule-hooks'
+        summary=json.loads((packet/'summary.json').read_text());fixture=json.loads((packet/'fixture.json').read_text())
+        self.assertEqual(self.q.classify_claude_rule_hook({row['label']:row for row in summary['controls']},fixture),'observed')
+        self.assertEqual(summary['classification'],'observed')
+
+    def test_trace_failure_cannot_emit_unrecorded_hook_context(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            f=self.q.prepare_claude_rule_hook(Path(temporary)/'fixture')
+            f['trace'].mkdir()
+            env=self.q.fixture_environment(f['root']);env['CLAUDE_PLUGIN_ROOT']=str(f['package'])
+            result=subprocess.run(['/bin/sh',str(f['package']/'hook.sh')],input='{}',capture_output=True,text=True,env=env)
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(result.stdout,'')
+
+    def test_configured_roots_and_ancestor_guidance_are_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve()
+            configured=root/'ordinary-client-profile';configured.mkdir()
+            for variable in ('CLAUDE_CONFIG_DIR','CODEX_HOME','COPILOT_HOME','OPENCODE_CONFIG_DIR'):
+                candidate=configured/'fixture'
+                with mock.patch.dict(os.environ,{variable:str(configured)}):
+                    with self.assertRaises(ValueError):self.q.prepare_claude_rule_hook(candidate)
+                self.assertFalse(candidate.exists())
+            actual_exists=Path.exists
+            for name in ('CLAUDE.md','AGENTS.md','AGENTS.override.md'):
+                guide=root/name
+                def exists(path):return path==guide or actual_exists(path)
+                with mock.patch.object(Path,'exists',exists), mock.patch.object(Path,'mkdir',side_effect=AssertionError('Reject before writes')):
+                    with self.assertRaises(ValueError):self.q.prepare_claude_rule_hook(root/'fixture')
+                self.assertFalse((root/'fixture').exists())

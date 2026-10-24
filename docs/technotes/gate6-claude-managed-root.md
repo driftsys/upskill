@@ -37,25 +37,30 @@ including on failed positives. The helper does not write native plugin caches.
 
 ## Observations
 
-| Control                            | Pin            | Project scope                                     | User scope                      |
-| ---------------------------------- | -------------- | ------------------------------------------------- | ------------------------------- |
-| Marketplace validation/addition    | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
-| Plugin install and inventory       | Claude 2.1.308 | PASS: enabled project registration                | PASS: enabled user registration |
-| Runtime init load path             | Claude 2.1.308 | Managed source under `delivery/packages/`         | Same managed source             |
-| Inventory `installPath`            | Claude 2.1.308 | Distinct native cache path                        | Distinct native cache path      |
-| Initial invocation                 | Claude 2.1.308 | PASS: namespaced Skill call, exact initial marker | PASS: same                      |
-| Source edit without update         | Claude 2.1.308 | PASS: fresh session returns exact edited marker   | PASS: same                      |
-| Native update and fresh invocation | Claude 2.1.308 | PASS: update exit 0; exact edited marker          | PASS: same                      |
-| Uninstall and marketplace removal  | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
+| Control                                 | Pin            | Project scope                                     | User scope                      |
+| --------------------------------------- | -------------- | ------------------------------------------------- | ------------------------------- |
+| Marketplace validation/addition         | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
+| Plugin install and inventory            | Claude 2.1.308 | PASS: enabled project registration                | PASS: enabled user registration |
+| Runtime init load path                  | Claude 2.1.308 | Managed source under `delivery/packages/`         | Same managed source             |
+| Inventory `installPath`                 | Claude 2.1.308 | Distinct native cache path                        | Distinct native cache path      |
+| Initial invocation                      | Claude 2.1.308 | PASS: namespaced Skill call, exact initial marker | PASS: same                      |
+| Content and version edit without update | Claude 2.1.308 | PASS: fresh session returns exact edited marker   | PASS: same                      |
+| Native update and fresh invocation      | Claude 2.1.308 | PASS: update exit 0; exact edited marker          | PASS: same                      |
+| Uninstall and marketplace removal       | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
 
 The [summary](evidence/2026-10-24-claude-managed-root/summary.json) retains all
 three controls at each scope. Each request has one native `Skill` call with the
 exact `<plugin>:<skill>` identity, a correlated successful tool result, an exact
 expected marker, exit 0, `is_error: false` and no permission denial. The marker
 was absent from the request. Separate sessions observed the initial source and
-then the edited source; native update also succeeded. No reinstall was required
-for this observed fresh-session edit loop. This does not establish visibility
-inside an already running session.
+then the edited source; native update also succeeded. The edit changed both the
+skill body and the package version from `0.0.0` to `0.0.1`. No reinstall was
+required for that combined edit in fresh sessions. A content-only edit and
+visibility inside an already running session were not tested. The retained
+[project update output](evidence/2026-10-24-claude-managed-root/retry-project-update.stdout)
+and
+[user update output](evidence/2026-10-24-claude-managed-root/retry-user-update.stdout)
+also tell the user to restart to apply changes.
 
 Runtime init reports the managed source path while native inventory reports a
 cache `installPath`. These are distinct observations. The runtime source version
@@ -101,6 +106,27 @@ whole-profile restoration evidence. Native-managed effects remain separate from
 the measured settings contract. No direct cache writes or cleanup were
 performed.
 
+The original cache observations checked only the inventory path ending in
+`0.0.0`; they did not inventory the whole package cache after update. A later
+read-only review inventory records the
+[initial package](evidence/2026-10-24-claude-managed-root/cache-review-inventory.json)
+and
+[retry package](evidence/2026-10-24-claude-managed-root/retry-cache-review-inventory.json).
+The retry package retains both `0.0.0` and `0.0.1` directories, with file hashes
+and no observed symlink descendants. These are later observations, not
+contemporaneous removal receipts. The review did not run a client or change the
+cache.
+
+The original helper retained settings hashes rather than byte snapshots. The
+[settings reconstruction](evidence/2026-10-24-claude-managed-root/settings-byte-reconstruction.json)
+now retains byte values for all present settings receipts, including the initial
+attempt's disposable manual marker. Each reconstruction matches its historical
+SHA-256 and mode receipt; absent files remain absent. The serialization is
+explicit in the base64 bytes. This makes the content checkable without guessing
+the serialization, but does not independently prove when the original helper
+captured the hashes. No authentication settings were read for this
+reconstruction.
+
 ## Consequence for the proposal
 
 The affected rows are the proposal's
@@ -141,6 +167,18 @@ native registrations and unchanged boolean/numeric values when object keys are
 reordered and an allowed empty sibling registration is added. That full
 verification passed all 49 offline tests. The successful native retry was
 followed by a full verification passing all 50 offline tests.
+
+Review regressions pin absent settings, strict empty-object JSON types, case
+aliases, configured client roots and ancestor guidance. Changed malformed
+settings and formatting-only changes now return `preservation_failed` directly.
+Ancestor-guide tests mock presence and do not create team instruction files.
+Additional regressions pin all guarded override and ancestor paths, dangling
+guidance, lexical discovery aliases and expanded existing roots. The
+[validation record](evidence/2026-10-24-claude-managed-root/validation.json)
+retains the tests-first failure and subsequent passing checks.
+
+Remaining nonblocking packet and fixture follow-ups are tracked in
+[debt #401](https://github.com/driftsys/upskill/issues/401).
 
 Offline checks never call a client. Linux, IDE/hosted surfaces, running-session
 edit visibility, native cache recovery, interrupted operations and integrated

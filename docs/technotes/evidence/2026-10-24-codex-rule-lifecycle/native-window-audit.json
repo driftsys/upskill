@@ -1,0 +1,36 @@
+{
+  "method": "Offline exact-body counts in original raw and selected native windows; not provider-effective input",
+  "source": "$PACKET_B/native-session.jsonl",
+  "source_sha256": "950a535feb35a97811f97f7016e8d2a4ffe7da6d296ed5985c53b263f952a978",
+  "selected_source_sha256": "b697a7b5546b17bb8d4b8b5f6dd8a3bc27dee731350d941b32b18da54d858dcd",
+  "selected_window_counts": [
+    {
+      "a": 1,
+      "b": 1
+    },
+    {
+      "a": 2,
+      "b": 2
+    },
+    {
+      "a": 1,
+      "b": 1
+    }
+  ],
+  "raw_window_counts": [
+    {
+      "a": 1,
+      "b": 1
+    },
+    {
+      "a": 2,
+      "b": 2
+    },
+    {
+      "a": 1,
+      "b": 1
+    }
+  ],
+  "native_client_rerun": false,
+  "selected_semantic_sha256": "b02358fa4624006e9b7f72c537fa88b4edb46ca032ecc4b1e632a413efce9737"
+}

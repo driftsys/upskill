@@ -8,7 +8,9 @@
       "$FIXTURE/delivery"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "market-add",
@@ -23,7 +25,9 @@
       "--json"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "install",
@@ -37,7 +41,9 @@
       "--json"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "inventory",
@@ -48,7 +54,9 @@
       "--json"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "disable",
@@ -61,7 +69,9 @@
       "project"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "uninstall",
@@ -74,7 +84,9 @@
       "project"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   },
   {
     "label": "market-remove",
@@ -88,6 +100,8 @@
       "project"
     ],
     "exit_code": 0,
-    "timed_out": false
+    "timed_out": false,
+    "cwd": "$FIXTURE/project",
+    "cwd_basis": "Retained capture-helper.py native(args, fixture project, label) call; not a process cwd receipt"
   }
 ]

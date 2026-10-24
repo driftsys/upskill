@@ -1,0 +1,9 @@
+{
+  "exit_code": 0,
+  "timed_out": false,
+  "stdout_sha256": "a798be23fc4cb91b8e033ad27413ad9eb711bf0c37faa1634e0e8736d686d4c3",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "denied_file_exists": false,
+  "pin": "1.0.103",
+  "source": "$PACKET_A/delegation-meta.json"
+}

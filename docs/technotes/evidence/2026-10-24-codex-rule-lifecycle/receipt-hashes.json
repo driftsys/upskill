@@ -1,0 +1,18 @@
+{
+  "assessment.json": "4ec9ca2a6b045f17a2531081dd3f86fb5abd5e89ad9b90b9c5c903ceff650eb0",
+  "decisions.json": "9fdc0af5f028e26d84ad4156b5013954076a055ac59fcf4bd6302046a8ce72cf",
+  "exit-receipt.json": "7d8fe3b66b1659c5db3b4f73885f00adaa6fcf79db5f68d3850e84d9380b731d",
+  "fresh-fixture.json": "d2e7e2d7443fda8c27bc49c3f46b78c44c6d50a624312d5289cbaa73d37c7813",
+  "input-audit.json": "1291e5524995c8da7a7ff3d4a8c98cc945571553fc04fc477f9711a5ad00985b",
+  "native-selection.json": "b697a7b5546b17bb8d4b8b5f6dd8a3bc27dee731350d941b32b18da54d858dcd",
+  "native-window-audit.json": "151fddb7f5d769061b524cc00734f807fbc6e9fb7413a202b897c8b2364b062f",
+  "negative-events.json": "0542d93f90faab2629d23acf9a13bf44d1a30738445a5d6c7c1bdc9fab2bbcb9",
+  "negative-receipt.json": "1d0707c7f7bbbcf1cf3b22f3123ea6f74a03ba58616a589ed20e0c976397813c",
+  "positive-events.json": "2184e0d4511f74da9cc97a0f8b773d7df32becb99255ce728891efcf3486fad1",
+  "positive-receipt.json": "e245410d59a3d40c28c40b6b74cad49a6b6be9c2ac5dd617b24ba479c4c38461",
+  "private-source-index.json": "83f651f5916a2ad4824ead21ec627e36b71c261b30c5dd9688b000886d752377",
+  "resume-command.json": "21d220d55e4cd8471617447c53be0b60717c858520cff659ac97b3d287fbb7ac",
+  "rule-bodies.json": "e010e2011e31959b42a5955535a7742027f45bc0feb57398792224d11e81d519",
+  "summary.json": "a498637f25aec544f29989931c531aec204ac98539b8328870bb9cdfcb864d28",
+  "validation.json": "4ae6e1aacbb4b1200ab388ba57c99d4d59d1657d13626c6baaadf8681d345f06"
+}

@@ -1,0 +1,199 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: missing Q9 helpers; 57 tests, 10 errors",
+    "private_log": "$PACKET_B/q9-lint-red.log",
+    "sha256": "52d67e9b69e816d9283c95d67b6c0994858dcc6c40648ffdb244442b972fca1e"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 57 offline tests",
+    "private_log": "$PACKET_B/q9-lint-green.log",
+    "sha256": "6dbff44c5f3f4f6a2f341223dd8a0bdefa2fd7dc45e7d27226de77c53f4a9eee"
+  },
+  {
+    "stage": "full verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full Rust tests, 57 offline tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-verify.log",
+    "sha256": "55043b4048cc74b9c0de1ff0b70fea416d107f1f15b5ab91032f604a5ea82093"
+  },
+  {
+    "stage": "mutation checks",
+    "result": "PASS: seven mutants rejected; original three checks repeated with retained source and output",
+    "command": "python3 $PACKET_B/q9-mutation-checks.py",
+    "private_log": "$PACKET_B/q9-mutations.log",
+    "sha256": "465fc9d6c128bc8818f010fe3cdfc70b5f90b60ba69e3590546c5fa229fcde10",
+    "private_helper_sha256": "1f1c4a55bd335934b4b84a577a5d895f8999e0efcff71edcfe2f48b381fb10cb"
+  },
+  {
+    "stage": "review regression verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: 57 offline tests, full Rust tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-final-verify.log",
+    "sha256": "607230c2c9f8dea7c09c2e1a2c326cb7f0012ce91092e85d79d281ec8dfe88e3"
+  },
+  {
+    "stage": "numbered review regressions",
+    "command": "just lint and just docs-check",
+    "result": "PASS: 59 offline tests and documentation checks",
+    "private_log": "$PACKET_B/q9-numbered-lint.log",
+    "sha256": "43acfdfa75604d02bb7bc31ef46001c78dd2ffbaee2b61983cded37ef44823ce"
+  },
+  {
+    "stage": "numbered review mutation checks",
+    "command": "python3 $PACKET_B/q9-numbered-mutation-checks.py",
+    "result": "PASS: ten mutants rejected; the three numbered findings survived prior tests and now fail",
+    "private_log": "$PACKET_B/q9-numbered-mutations.log",
+    "sha256": "4c9317093d1252f1641ed88bf9f1c6447820dc990385af6e65c022ccd30bcb51",
+    "private_helper_sha256": "c52b36d996826c1dbfc5be608cc600b8013f91f907a6addc2d3f0ab39528b39a"
+  },
+  {
+    "stage": "final numbered finding regression",
+    "command": "just lint; just docs-check; python3 $PACKET_B/q9-final-session-mutation-checks.py",
+    "result": "PASS: 59 offline tests, docs and eleven rejected mutants; matching invalid session identities now pin the identity guard",
+    "private_log": "$PACKET_B/q9-final-session-mutations.log",
+    "sha256": "def8469359cae183295b7a1855d07c9753640f2cf1adbfa129b796469fe81249",
+    "private_helper_sha256": "791942e4f9cbff7e55fefb83bbb116e8a2a13b7e0319e0af8f7eb026a9a4c8b2"
+  },
+  {
+    "stage": "Tests before core changes",
+    "result": "FAIL: 13 failures and two errors, 66 tests",
+    "private_log": "$PACKET_E/q9-packet-red-lint.log",
+    "sha256": "47346ba6e23930e0478d5a14004e0bc8837c139ea44d856fd259b0365e2d5c6c"
+  },
+  {
+    "stage": "Tests before shared root guard",
+    "result": "FAIL: configured Codex root accepted",
+    "private_log": "$PACKET_E/q9-root-red.log",
+    "sha256": "750addf0c850c975ba001cff0dc331b7cc781ddccc73e22b033600fb01f9903e"
+  },
+  {
+    "stage": "Tests before semantic source identity",
+    "result": "FAIL: JSON layout changed replay",
+    "private_log": "$PACKET_E/q9-json-layout-red.log",
+    "sha256": "0d6484087daec68dc5df8626566a1adfcb87a41bbb89708b47b46715fcea0377"
+  },
+  {
+    "stage": "Tests before strict recorded types",
+    "result": "FAIL: recorded JSON types accepted",
+    "private_log": "$PACKET_E/q9-json-types-red.log",
+    "sha256": "f35f34d4e8835395ae7c5515866cd3ea56f712b98decb21b8e06c41728677079"
+  },
+  {
+    "stage": "Tests before override-guide guard",
+    "result": "FAIL: ancestor override guide accepted",
+    "private_log": "$PACKET_E/q9-override-root-red.log",
+    "sha256": "f2c12b86a3d27185969890e5d389a884228f625f629046be2254a81d24cba1b0"
+  },
+  {
+    "stage": "Focused replay tests",
+    "result": "PASS: 26 tests",
+    "private_log": "$PACKET_E/q9-replay-green.log",
+    "sha256": "b02934667b3b75a9a983316e8c30f976e82d85e478b9e89307e66102bbe6a25e"
+  },
+  {
+    "stage": "Shared root regression tests",
+    "result": "PASS: 14 tests",
+    "private_log": "$PACKET_E/q9-shared-root-green.log",
+    "sha256": "a3327ac90ad344b29c7b580144777e524cf6fc93bfcde171180ba9114fab54f3"
+  },
+  {
+    "stage": "Review mutation checks",
+    "result": "PASS: 17 independent mutants rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-packet-mutations.log",
+    "sha256": "99d8d1bf2f2e468be8d802ed709e0fb6e266aa593acb813198764a29fd159592"
+  },
+  {
+    "stage": "Review lint",
+    "result": "PASS: 103 offline tests",
+    "private_log": "$PACKET_E/q9-replay-lint-green.log",
+    "sha256": "53c550ec1ebb478eedef4544eb320af302e37bf3f4ce659369d78b79b0334701"
+  },
+  {
+    "stage": "Review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_E/q9-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "FAIL: two independently contradictory legacy summary counts",
+    "private_log": "$PACKET_E/q9-legacy-count-red.log",
+    "sha256": "cd34ae1b42e5a78f987a80a3ff865dbd8e89b7b0dd69331aef51db3aa5e1b0bd"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "FAIL: nonexistent personal home was accepted",
+    "private_log": "$PACKET_E/q9-missing-home-red.log",
+    "sha256": "250686ae0f463759f032416bec64a296400a993d234d196d079cff38274d2548"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: 31 Q9 tests",
+    "private_log": "$PACKET_E/q9-quick-fix-tests.log",
+    "sha256": "cc27d892f0598452e11b7a6ab4dedb23cb3e07c9bcb9f70de0cb5303016a9121"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: ten independent mutation guards rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-quick-fix-mutations.log",
+    "sha256": "df67ae6b0f03411f2428024da44add2b71bd7cb78540a04403fc0d5904e98a28"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: just fmt then just verify; 124 offline tests, full Rust tests, lint, documentation and build",
+    "private_log": "$PACKET_E/q9-quick-fix-verify.log",
+    "sha256": "ab7e3d8108b40c3ab526570781be27245ff63f575655df7d0f3ee78cae238b8d"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "FAIL: three root-admission cases, 126 offline tests; before guard changes",
+    "private_log": "$PACKET_E/q9-pass2-red-lint.log",
+    "sha256": "c84b507660abfa44d2b41643a4763091d0ebda2b1248d12b3d84283e1d03bc4a"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: 15 offline Q9 replay tests",
+    "private_log": "$PACKET_E/q9-pass2-replay-green.log",
+    "sha256": "d599eb224cebec1d7dd54fe9e7c30fc6fa50054d990e659fa7efbebca6c46a95"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: 17 offline Copilot component tests",
+    "private_log": "$PACKET_E/q9-pass2-root-green.log",
+    "sha256": "d644e283e6fae2da7c45b82d21c2394287d143b5d8d27c8b2eec938732a33196"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: four independent mutants rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-pass2-mutations.log",
+    "sha256": "63a595c7e024285906b85d526325d5e4ce85d5f5a0be7d0c2ec437f1736ae1ca"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: formatting before full verification",
+    "private_log": "$PACKET_E/q9-pass2-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: full Rust tests, 126 offline tests, lint, documentation and build",
+    "private_log": "$PACKET_E/q9-pass2-verify.log",
+    "sha256": "9385dedf6a06d6fbc351698462b646a9ebe81172671f3d5a660c5336ab9586f4"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: final prose formatting",
+    "private_log": "$PACKET_E/q9-pass2-docs-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: final documentation checks",
+    "private_log": "$PACKET_E/q9-pass2-docs-check.log",
+    "sha256": "d233cc78b6d6c14eb9e5006c1f5cd05237fe982192d8da9eb1655f337e3bdb1e"
+  }
+]

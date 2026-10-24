@@ -1,0 +1,11 @@
+{
+  "method": "Selected ordinary prompt text; terminal control bytes retained privately",
+  "source": "$PACKET_B/terminal-input.raw",
+  "source_sha256": "9d1ff42ccce9ec665240567e651bd92ee4b3c6e4961528a28f932222b7db7b7d",
+  "inputs": [
+    "For the plugin qualification question, return only the required JSON object. Do not use any tools.",
+    "For the plugin qualification question, return only the required JSON object. Do not use any tools."
+  ],
+  "no_manual_compaction": true,
+  "native_client_rerun": false
+}

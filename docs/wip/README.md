@@ -13,11 +13,14 @@ references must be reconciled as part of that feature's review.
 ## Active proposals
 
 - [Customization delivery architecture proposal](specs/2026-10-23-customization-delivery-proposal.md)
-  — proposal for Fable review: shared authored core, managed client packages,
-  rules/skills/subagents MVP, user/project scope and capability-preserving
-  native exceptions; awaiting architecture approval. Its divergences from
-  AD-0040 are recorded as proposed amendments in AD-0040, Topic 0009 and the
-  roadmap.
+  : native-first always-on rules decided by the user on 2026-10-24; other
+  architecture amendments remain pending
+  ([rules decision](specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)).
+  [AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md) lists
+  proposed amendments; Topic 0009 links to them without adopting them. The
+  [slice-1 spec](specs/2026-10-23-customization-delivery-implementation-spec.md)
+  marks the user's step 7 decisions separately from route evidence
+  ([design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)).
 
 - [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md) and
   [corrected customization delivery plan](plans/2026-10-19-customization-delivery-reconciliation.md)
@@ -67,6 +70,32 @@ references must be reconciled as part of that feature's review.
   — Claude Code, Copilot, and Codex first; instructions, skills, subagents, MCP,
   marketplaces/plugins, hooks, and permissions. Proposed sequencing and
   acceptance gates; no implementation claim.
+
+## Retained context, not active proposals
+
+The local, uncommitted draft
+`specs/2026-10-23-customization-storage-delivery-candidates.md` is registered as
+retained comparison context only. It is not an active proposal, an adopted
+route, or a file included in this reconciliation PR. Its source bytes remain
+untouched in the original worktree. The
+[design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)
+identifies the draft and requires its disposition; the
+[delivery proposal](specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)
+records this retained-context choice.
+
+### OpenCode explicit-path observation
+
+The draft reports that explicit OpenCode instruction paths avoid the glob's
+cache/token behavior in the user's experience. This remains user-reported and
+unqualified; Q5's failed positives do not compare cache behavior. The
+[2026-10-24 user decision](specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)
+now selects explicit paths, subject to Q5 retry PASS, and lists the amendment
+from AD-0040's plugin-only wording to delivery independent of team `AGENTS.md`.
+Criterion 7 remains: compare native and hook using identical rule bytes and
+tasks, cached and uncached tokens, one client at a time. No performance
+advantage or production route is qualified by this retained context
+([Q5 packet](https://github.com/driftsys/upskill/blob/6ec187f5422d72e9329c4c7f9cb706468e2ebb6b/docs/technotes/gate6-opencode-current-routes.md),
+[AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md)).
 
 ## Reconciliation inventory
 

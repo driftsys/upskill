@@ -8,13 +8,25 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
-- [Claude rule hooks](gate6-claude-rule-hooks.md) — Q4, Claude 2.1.308; project
-  positive, resume, compaction and disabled/uninstalled controls pass.
+- [Claude unscoped rule hook controls](gate6-claude-rule-hooks.md): Q4, Claude
+  2.1.308; startup, compaction and absence observations, with resume attribution
+  limits.
 
-- [Claude managed-root mechanics](gate6-claude-managed-root.md) — Q6, Claude
-  2.1.308; both scopes invoke successfully and see source edits before native
-  update; earlier authentication failures retained.
+- [Codex rule lifecycle controls](gate6-codex-rule-lifecycle.md): Q9, Codex
+  0.164.0; repeated native bodies in a combined reopened-session/compaction
+  window.
 
+- [Copilot plugin component controls](gate6-copilot-plugin-components.md): Q3,
+  Copilot 1.0.103; rules component failures at both scopes and bounded agent
+  observations.
+
+- [Claude managed-root controls](gate6-claude-managed-root.md): Q6, Claude
+  2.1.308; local marketplace, fresh-session edit visibility and measured
+  residue.
+
+- [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md):
+  Q2 catalog and real-child observations; restriction enforcement remains
+  unqualified.
 - [Copilot reader of Claude rules](gate6-copilot-claude-rules-reader.md) — Q1,
   Copilot 1.0.103; plain rule read, paths variant fallback in a tool-free
   request.

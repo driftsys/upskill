@@ -1,0 +1,71 @@
+[
+  {
+    "input": {
+      "sessionId": "4967c6ec-0eff-4cb8-8c5a-50c8271b5f47",
+      "timestamp": 1792841274371,
+      "cwd": "$PACKET_F/fixture/user",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/user/matching/probe.txt"
+      }
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    }
+  },
+  {
+    "input": {
+      "sessionId": "a98693a5-c742-4ff7-b47c-c092252c90cb",
+      "timestamp": 1792841285694,
+      "cwd": "$PACKET_F/fixture/user",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/user/nonmatching/probe.txt"
+      }
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    }
+  },
+  {
+    "input": {
+      "sessionId": "7129b796-9d61-468e-b955-55aa0257e6dc",
+      "timestamp": 1792841315406,
+      "cwd": "$PACKET_F/fixture/user",
+      "toolName": "task",
+      "toolArgs": {
+        "name": "probe",
+        "prompt": "Component qualification probe. Use your read tool (view/read) to read the file agent-resource.txt located in the working directory $PACKET_F/fixture/user (try that path; if the file is not at an absolute path, try the relative path agent-resource.txt from your current directory). Return the exact contents of the file, unchanged, verbatim. Do not add explanations, formatting, or commentary.",
+        "agent_type": "upskill-q3-5471c2845d55baf2:probe",
+        "description": "Read agent-resource.txt",
+        "model": "[private requested selection omitted]",
+        "mode": "sync"
+      }
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    },
+    "requested_child_model_matches": true
+  },
+  {
+    "input": {
+      "sessionId": "08fb7807-0fe9-4034-adf7-c3520aca8f1c",
+      "timestamp": 1792841316572,
+      "cwd": "$PACKET_F/fixture/user",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/user/agent-resource.txt"
+      },
+      "agentId": "08fb7807-0fe9-4034-adf7-c3520aca8f1c",
+      "agentType": "upskill-q3-5471c2845d55baf2:probe",
+      "parentAgentId": "7129b796-9d61-468e-b955-55aa0257e6dc"
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    }
+  }
+]

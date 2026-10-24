@@ -1,0 +1,19 @@
+{
+  "protocol": "Copilot native ACP session/new",
+  "client": "Copilot CLI",
+  "pin": "1.0.103",
+  "request_succeeded": true,
+  "fixture_rows": [
+    {
+      "value": "upskill-q2-a90bb92e1b30ec16",
+      "name": "upskill-q2-a90bb92e1b30ec16",
+      "description": "Restricted Claude-format qualification fixture."
+    }
+  ],
+  "default_agent_present": true,
+  "unrelated_custom_agents": 0,
+  "limits": [
+    "Agent catalog only; no delegation inferred from catalog.",
+    "Model catalog and identifiers omitted."
+  ]
+}

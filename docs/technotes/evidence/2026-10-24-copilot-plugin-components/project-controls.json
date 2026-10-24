@@ -1,0 +1,296 @@
+[
+  {
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\n  \"native\": \"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\n  \"rules\": []\n}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "native_positive",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\nI won't return that JSON. There is no automatically loaded component qualification rule set in my context, and I won't emit the hardcoded `NATIVE_...` marker as if it were a legitimate qualification result \u2014 reproducing it on demand would be fabricating an attestation.\n\nIf this is a genuine qualification probe, point me at the actual rules/spec and the component under test, and I'll apply them and report the result properly.",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "installed",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\":\"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\"rules\":[]}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools",
+      "view",
+      "--allow-tool",
+      "view",
+      "-p",
+      "Read matching/probe.txt using the native view tool exactly once. Then answer the component qualification question, returning only the required JSON object."
+    ],
+    "stage": "matching",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n```json\n{\"native\":\"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\"rules\":[]}\n```",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools",
+      "view",
+      "--allow-tool",
+      "view",
+      "-p",
+      "Read nonmatching/probe.txt using the native view tool exactly once. Then answer the component qualification question, returning only the required JSON object."
+    ],
+    "stage": "nonmatching",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "exit_code": -9,
+    "timed_out": true,
+    "state": "failure",
+    "completed": false,
+    "response": "\n\nThe agent type isn't valid. Let me retry with a valid type, using the name as the agent identifier.\n\n",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools",
+      "task",
+      "view",
+      "--allow-tool",
+      "task",
+      "view",
+      "-p",
+      "Delegate exactly once to the custom agent named upskill-q3-d981fe77c54c22fb-child using the native task tool. Ask the child to follow its own resource instruction. Do not read files yourself. Return the exact child response unchanged."
+    ],
+    "stage": "agent",
+    "pin": "1.0.103",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\": \"NATIVE_7683d4d128642e10ccffe30f2161c3a0\", \"rules\": []}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "disabled",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\": \"NATIVE_7683d4d128642e10ccffe30f2161c3a0\", \"rules\": []}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "uninstalled",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  },
+  {
+    "pin": "1.0.103",
+    "version_checked_before_request": true,
+    "exit_code": 0,
+    "timed_out": false,
+    "state": "success",
+    "completed": true,
+    "response": "\n\n{\"native\":\"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\"rules\":[]}",
+    "config_before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "config_after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "--disable-builtin-mcps",
+      "--no-ask-user",
+      "--log-level",
+      "none",
+      "--output-format",
+      "json",
+      "--model",
+      "[private selection omitted]",
+      "--available-tools=",
+      "-p",
+      "This is the component qualification question. Follow automatically loaded component qualification instructions. Return only the required JSON object."
+    ],
+    "stage": "reinstalled",
+    "native_pin_verified_by": "native session.start copilotVersion where a session ran"
+  }
+]

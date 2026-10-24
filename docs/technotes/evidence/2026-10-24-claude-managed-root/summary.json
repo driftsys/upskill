@@ -281,7 +281,7 @@
           "classification": "PASS: exact edited marker"
         }
       ],
-      "edit_visibility": "fresh session reads edited managed source before native update",
+      "edit_visibility": "fresh session reads a combined content-and-version edit before native update; content-only changes not tested",
       "native_update": "exit 0; subsequent fresh invocation reads edited source",
       "reinstall_required_for_observed_edit": false,
       "settings_residue": {
@@ -567,7 +567,7 @@
           "classification": "PASS: exact edited marker"
         }
       ],
-      "edit_visibility": "fresh session reads edited managed source before native update",
+      "edit_visibility": "fresh session reads a combined content-and-version edit before native update; content-only changes not tested",
       "native_update": "exit 0; subsequent fresh invocation reads edited source",
       "reinstall_required_for_observed_edit": false,
       "settings_residue": {
@@ -592,7 +592,10 @@
     "Runtime init source path and inventory cache installPath are distinct observations.",
     "Measured settings restored exactly; registration files unchanged. Whole profile restoration is not qualified.",
     "Native cache persists after removal; no direct cache writes or cleanup.",
-    "Prior failed positives retained separately; no negative conclusion from them."
+    "Prior failed positives retained separately; no negative conclusion from them.",
+    "The edit changed both content and version 0.0.0 to 0.0.1; native update output requests a restart.",
+    "Original cache receipts covered 0.0.0 only; later read-only review inventory also records retry cache 0.0.1.",
+    "Historical settings bytes are reconstructed from fixture values with exact historical hash matches; original helpers retained hashes, not byte snapshots."
   ],
   "initial_attempt": {
     "summary": "initial-attempt-summary.json",
