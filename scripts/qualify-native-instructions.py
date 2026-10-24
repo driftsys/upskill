@@ -49,6 +49,37 @@ def fixtures(root, client, configured=False):
     return root / 'positive', root / 'negative', marker, staging_marker
 
 
+def copilot_claude_rules_fixtures(root):
+    """Q1 fixtures contain one instruction each and independent project identities."""
+    rows = []
+    env = isolated_git_environment()
+    for label in ('positive', 'candidate', 'candidate-paths'):
+        project = root / label
+        project.mkdir(parents=True)
+        marker = 'READER_' + secrets.token_hex(16)
+        fallback = 'ABSENT_' + secrets.token_hex(16)
+        relative = '.github/copilot-instructions.md' if label == 'positive' else '.claude/rules/probe.md'
+        target = project / relative
+        target.parent.mkdir(parents=True)
+        header = '---\npaths: "**/*.rs"\n---\n' if label == 'candidate-paths' else ''
+        target.write_text(header + 'For the discovery qualification question, respond with exactly ' + marker + ' and nothing else.\n')
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize reader fixture ' + secrets.token_hex(16)], env=env, check=True)
+        rows.append({'label': label, 'project': project, 'marker': marker, 'fallback': fallback})
+    return rows
+
+
+def classify_reader(positive, candidate, positive_marker, candidate_marker, fallback):
+    """An absence conclusion requires a calibrated positive and exact fallback."""
+    if positive != positive_marker:
+        return 'positive_control_failed'
+    if candidate in FAILURES:
+        return candidate
+    if candidate == candidate_marker:
+        return 'reads'
+    return 'does not read' if candidate == fallback else 'inconclusive'
+
+
 def classify(positive, negative, marker, fallback, staging_marker=None):
     if positive != marker:
         return 'positive_control_failed'
@@ -96,7 +127,7 @@ def command(client, prompt, output):
     if client == 'claude':
         return ['claude', '-p', '--tools', '', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', 'project', prompt]
     if client == 'copilot':
-        return ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=', '--no-ask-user', '--silent', '--log-level', 'none', '-p', prompt]
+        return ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=', '--no-ask-user', '--output-format', 'json', '--log-level', 'none', '-p', prompt]
     return ['opencode', 'run', '--standalone', '--format', 'json', prompt]
 
 
@@ -130,6 +161,84 @@ def codex_response(stdout):
             elif kind == 'item.completed' and item.get('type') == 'agent_message':
                 response = item.get('text') if isinstance(item.get('text'), str) else None
     return response, tool_seen, {'completed_response': completed and response is not None, 'event_types': sorted(event_types)}
+
+
+def copilot_response(stdout):
+    """Accept one complete, tool-free native response without trimming its bytes."""
+    messages, results, kinds = [], [], []
+    tool_seen = False
+    invalid = False
+    harmless = {'user.message', 'assistant.idle', 'assistant.turn_start',
+                'assistant.turn_end', 'assistant.message_start', 'assistant.message_delta',
+                'assistant.reasoning', 'assistant.reasoning_delta', 'model.call_start',
+                'model.call_finished', 'model.call_final_result', 'session.indexed_search',
+                'session.mcp_servers_loaded', 'session.tools_updated'}
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            invalid = True
+            continue
+        if not isinstance(event, dict):
+            invalid = True
+            continue
+        kind = event.get('type')
+        kinds.append(kind if isinstance(kind, str) else 'invalid')
+        if isinstance(kind, str) and kind.startswith('tool.'):
+            tool_seen = True
+        if kind == 'assistant.message':
+            data = event.get('data')
+            messages.append(data.get('content') if isinstance(data, dict) else None)
+        elif kind == 'result':
+            results.append(event)
+        elif not isinstance(kind, str) or kind not in harmless:
+            invalid = True
+    response = messages[0] if len(messages) == 1 and isinstance(messages[0], str) else None
+    terminal = results[0] if len(results) == 1 else {}
+    completed = (not invalid and not tool_seen and response is not None
+                 and bool(kinds) and kinds[-1] == 'result'
+                 and type(terminal.get('exitCode')) is int and terminal['exitCode'] == 0
+                 and isinstance(terminal.get('sessionId'), str) and bool(terminal['sessionId'].strip())
+                 and kinds.index('assistant.message') < kinds.index('result'))
+    return response, tool_seen, {'completed_response': completed, 'event_types': sorted(set(kinds))}
+
+
+def replay_copilot_reader(packet):
+    """Replay sanitized Q1 receipts offline and reject drift in their summary."""
+    summary = json.loads((packet / 'summary.json').read_text())
+
+    def observe(row):
+        receipt = row['receipt']
+        if not isinstance(receipt, str) or Path(receipt).name != receipt:
+            raise ValueError('Receipt must name a packet file')
+        response, tools, evidence = copilot_response((packet / receipt).read_text())
+        succeeded = (type(row.get('exit_code')) is int and row['exit_code'] == 0
+                     and not tools and evidence['completed_response'])
+        if response != row.get('response'):
+            raise ValueError('Recorded response differs from native events')
+        if 'completed' in row and row['completed'] != evidence['completed_response']:
+            raise ValueError('Recorded completion differs from native events')
+        return response if succeeded else 'failure'
+
+    def positive(row):
+        result = 'positive_passed' if observe(row) == row['marker'] else 'positive_control_failed'
+        if row.get('classification', result) != result:
+            raise ValueError('Recorded positive classification differs from replay')
+        return result
+
+    initial = json.loads((packet / summary['initial_failure']).read_text())
+    result = {'initial_positive': positive(initial['controls'][0]),
+              'retry_positives': [positive(row) for row in summary['failed_retry']]}
+    rows = {row['label']: row for row in summary['controls']}
+    calibrated = observe(rows['positive'])
+    result['positive'] = positive(rows['positive'])
+    for label in ('candidate', 'candidate-paths'):
+        row = rows[label]
+        classification = classify_reader(calibrated, observe(row), rows['positive']['marker'], row['marker'], row['fallback'])
+        if classification != row['classification']:
+            raise ValueError('Recorded candidate classification differs from replay')
+        result[label] = classification
+    return result
 
 
 def opencode_response(stdout):
@@ -208,6 +317,12 @@ def run(args):
                         result['response_events'] = event_evidence
                         if result['state'] == 'success' and (tools_observed or not event_evidence['completed_response'] or event_response != response):
                             result['state'] = 'failure'
+                    if client == 'copilot':
+                        response, tools_observed, event_evidence = copilot_response(result.get('stdout', ''))
+                        result['tools_observed'] = tools_observed
+                        result['response_events'] = event_evidence
+                        if result['state'] == 'success' and not event_evidence['completed_response']:
+                            result['state'] = 'failure'
                     if client == 'opencode':
                         response, tools_observed = opencode_response(result.get('stdout', ''))
                         result['tools_observed'] = tools_observed
@@ -232,8 +347,14 @@ if __name__ == '__main__':
     parser.add_argument('--clients', nargs='+', choices=CLIENTS, default=list(CLIENTS))
     parser.add_argument('--opencode-discovery', choices=('default', 'configured', 'both'), default='both')
     parser.add_argument('--timeout', type=int, default=90)
-    parser.add_argument('--evidence', type=Path, required=True)
+    parser.add_argument('--evidence', type=Path)
+    parser.add_argument('--replay-copilot-reader', type=Path, help='Replay retained Q1 receipts offline without a native client')
     args = parser.parse_args()
-    if not args.run:
-        parser.error('--run is required; native probes may use paid model requests')
-    run(args)
+    if args.replay_copilot_reader:
+        if args.run or args.evidence:
+            parser.error('Offline replay cannot be combined with native run options')
+        print(json.dumps(replay_copilot_reader(args.replay_copilot_reader), indent=2))
+    else:
+        if not args.run or not args.evidence:
+            parser.error('--run and --evidence are required; native probes may use paid model requests')
+        run(args)

@@ -76,17 +76,18 @@ class QualificationTests(unittest.TestCase):
             inherited = {'GIT_DIR': str(external / '.git'), 'GIT_WORK_TREE': str(external), 'GIT_INDEX_FILE': str(external / '.git/index')}
             with mock.patch.dict(os.environ, inherited):
                 positive, negative, _, _ = q.fixtures(root / 'fixtures', 'opencode')
+                reader_rows = q.copilot_claude_rules_fixtures(root / 'reader-fixtures')
                 self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
             self.assertEqual(fixture_git(external, 'rev-parse', 'HEAD'), before_head)
             self.assertEqual((external / '.git/index').read_bytes(), before_index)
             self.assertEqual(sentinel.read_text(), 'worktree sentinel\n')
             heads = []
-            for project in (positive, negative):
+            for project in (positive, negative, *(row['project'] for row in reader_rows)):
                 self.assertTrue((project / '.git').is_dir())
                 self.assertEqual(Path(fixture_git(project, 'rev-parse', '--show-toplevel').strip()).resolve(), project.resolve())
                 heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
                 self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
-            self.assertNotEqual(*heads)
+            self.assertEqual(len(set(heads)), 5)
 
     def test_distinct_negative_marker(self):
         self.assertEqual(q.classify('positive', 'staging', 'positive', 'absent', 'staging'), 'staging_discovered')
@@ -102,6 +103,48 @@ class QualificationTests(unittest.TestCase):
         self.assertEqual(q.classify('marker', 'marker', 'marker', 'fallback'), 'staging_discovered')
         self.assertEqual(q.classify('prefix marker', 'fallback', 'marker', 'fallback'), 'positive_control_failed')
         self.assertEqual(q.classify('marker', 'other', 'marker', 'fallback'), 'inconclusive')
+
+class CopilotClaudeRulesTests(unittest.TestCase):
+    def test_reader_fixture_has_only_the_selected_instruction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rows = q.copilot_claude_rules_fixtures(Path(tmp))
+            self.assertEqual([row['label'] for row in rows], ['positive', 'candidate', 'candidate-paths'])
+            heads = []
+            markers = [row['marker'] for row in rows]
+            self.assertEqual(len(set(markers)), 3)
+            for row in rows:
+                project = row['project']
+                files = [p for p in project.rglob('*') if p.is_file() and '.git' not in p.relative_to(project).parts]
+                path = '.github/copilot-instructions.md' if row['label'] == 'positive' else '.claude/rules/probe.md'
+                self.assertEqual([str(p.relative_to(project)) for p in files], [path])
+                text = files[0].read_text()
+                header = '---\npaths: "**/*.rs"\n---\n' if row['label'] == 'candidate-paths' else ''
+                instruction = 'For the discovery qualification question, respond with exactly ' + row['marker'] + ' and nothing else.\n'
+                self.assertEqual(text, header + instruction)
+                self.assertNotIn(row['fallback'], text)
+                self.assertEqual(text.startswith('---\npaths: "**/*.rs"\n---\nFor the discovery qualification question,'), row['label'] == 'candidate-paths')
+                for marker in markers:
+                    self.assertEqual(marker in text, marker == row['marker'])
+                heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
+                self.assertEqual(fixture_git(project, 'rev-list', '--parents', '-n', '1', 'HEAD').split(), [heads[-1].strip()])
+                self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
+            self.assertEqual(len(set(heads)), 3)
+            self.assertEqual(len({row['fallback'] for row in rows}), 3)
+            again = q.copilot_claude_rules_fixtures(Path(tmp) / 'again')
+            self.assertFalse({row['marker'] for row in rows} & {row['marker'] for row in again})
+            self.assertFalse({row['fallback'] for row in rows} & {row['fallback'] for row in again})
+
+    def test_reader_classification_requires_successful_positive_and_exact_candidate(self):
+        self.assertEqual(q.classify_reader('ok', 'seen', 'ok', 'seen', 'absent'), 'reads')
+        self.assertEqual(q.classify_reader('ok', 'absent', 'ok', 'seen', 'absent'), 'does not read')
+        for failure in q.FAILURES | {'wrong', 'prefix ok'}:
+            for candidate in ('absent', 'seen'):
+                self.assertEqual(q.classify_reader(failure, candidate, 'ok', 'seen', 'absent'), 'positive_control_failed')
+        for failure in q.FAILURES:
+            self.assertEqual(q.classify_reader('ok', failure, 'ok', 'seen', 'absent'), failure)
+        for response in ('prefix seen', 'prefix absent', '', 'ok'):
+            self.assertEqual(q.classify_reader('ok', response, 'ok', 'seen', 'absent'), 'inconclusive')
+
 
 class OpenCodeEvents(unittest.TestCase):
     def test_text_events_and_tool_rejection(self):
@@ -142,6 +185,23 @@ class OrchestrationTests(unittest.TestCase):
                         stdout = json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': marker}})
                     elif current_events == 'mismatch':
                         stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'different response'}}), json.dumps({'type': 'turn.completed'})])
+                elif client == 'copilot':
+                    stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': marker}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
+                    if tool:
+                        stdout = json.dumps({'type': 'tool.execution_start'}) + '\n' + stdout
+                    if current_events == 'malformed':
+                        stdout = 'not json'
+                    elif current_events == 'empty':
+                        stdout = ''
+                    elif current_events == 'incomplete':
+                        stdout = json.dumps({'type': 'assistant.message', 'data': {'content': marker}})
+                    elif current_events == 'unknown':
+                        stdout = json.dumps({'type': 'future.event'}) + '\n' + stdout
+                    elif current_events == 'post-result-delta':
+                        stdout += '\n' + json.dumps({'type': 'assistant.message_delta'})
+                    elif current_events in ('leading-whitespace', 'trailing-whitespace'):
+                        padded = ' ' + marker if current_events == 'leading-whitespace' else marker + '\n'
+                        stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': padded}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
                 elif client == 'opencode':
                     stdout = 'not json' if current_events == 'malformed' else json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
                 else:
@@ -170,11 +230,28 @@ class OrchestrationTests(unittest.TestCase):
                                 self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else state)
 
     def test_exact_responses_with_observed_tools_never_qualify(self):
-        for client in ('codex', 'opencode'):
+        for client in ('codex', 'copilot', 'opencode'):
             with self.subTest(client=client):
                 report, _ = self.controlled_run(client, tool=True)
                 self.assertTrue(all(probe['result'] != 'qualified' for probe in report['probes']))
                 self.assertTrue(all(outcome['tools_observed'] for probe in report['probes'] for outcome in probe['outcomes']))
+
+    def test_copilot_orchestration_does_not_trim_positive_or_fallback(self):
+        for fixture in ('positive', 'negative'):
+            for events in ('leading-whitespace', 'trailing-whitespace'):
+                with self.subTest(fixture=fixture, events=events):
+                    report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
+                    probe = report['probes'][0]
+                    self.assertEqual(probe['outcomes'][0 if fixture == 'positive' else 1]['state'], 'success')
+                    self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'inconclusive')
+
+    def test_copilot_requires_completed_response_events(self):
+        for fixture in ('positive', 'negative'):
+            for events in ('empty', 'malformed', 'incomplete', 'unknown', 'post-result-delta'):
+                with self.subTest(fixture=fixture, events=events):
+                    report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
+                    self.assertEqual(report['probes'][0]['outcomes'][0 if fixture == 'positive' else 1]['state'], 'failure')
+                    self.assertNotEqual(report['probes'][0]['result'], 'qualified')
 
     def test_codex_requires_completed_response_events(self):
         for events in ('empty', 'malformed', 'incomplete', 'unknown'):

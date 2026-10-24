@@ -1,0 +1,2 @@
+{"type": "session.error", "data": {"errorType": "quota", "statusCode": 402, "errorCode": "quota_exceeded"}}
+{"type": "result", "sessionId": "6ad13eaa-f434-4bda-b40f-fefce423a376", "exitCode": 1}

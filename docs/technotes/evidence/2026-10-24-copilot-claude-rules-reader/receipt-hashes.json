@@ -1,0 +1,19 @@
+{
+  "summary.json": "8ef5d96f257710bd9ac8e3f435edb9aa15a0dd4ab44009f5ed602b3b907347d4",
+  "initial-failure-summary.json": "55311ea2d2c18de97619f37c528159a29ad691e8ab7b78351a04df8204fcbf95",
+  "copilot-pre-run-version.txt": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+  "preservation.json": "8ab6bc193851e345d978d2e863eeb2870743b4700e76d7eadbb187afc89d0015",
+  "attempt-3-candidate.jsonl": "333ac07230c9a80eee8ef2e02fbdabf6ed7670590ad9cbbf63903fd36a392609",
+  "campaign-pins.json": "e36667e9516925fad8eafc4e0130a030ffdea373e3419e4d488a56c21eaaf02d",
+  "retry-fixtures.json": "93d35f95814edce9fcc8919d4a729b5d7597cc28facce8ab7245bd4b866586f5",
+  "pre-run-pin-provenance.json": "c89c5346e134a985f7a7a5e85062279ba1fdc157995bf2941a5a3d00167dafe5",
+  "raw-event-gate-audit.json": "2a34aa5bb30572f2da0a641daaadc92acf5a1ef60cb72a22212fb86e3a652575",
+  "retry-preservation.json": "dfc27c0e80d1b56f274629c3628d9244de1d1ee1e3416a92a43a1ae9b7e4deeb",
+  "attempt-3-positive.jsonl": "86ad53fdcda347d2fcc12fd3dfccfe791d554c919e5e2e78211c13ab45facde7",
+  "attempt-3-candidate-paths.jsonl": "bf28106a5e52606eb165be013d063bae0de5291dcddc19547502b5cf687caec1",
+  "attempt-2-positive.jsonl": "e92e009cba4a155fc5b2298031d9c7c45e47d20de3fb85e8b71c08afcfff5e7f",
+  "validation.json": "553c54bf47f2263514961aba65b1420358528c8a88028132336b24bbc0d7138e",
+  "private-source-index.json": "279b940247ff4cece247097c440bc5d2c78f85c70f3ddee08fd7360f1fa56027",
+  "fixtures.json": "b958b9544b4f6d542b8368e5cdd8fed13d0b9e274c6df9b1f4111a32f6f56ec8",
+  "positive.jsonl": "6030b98f8b79bec35c247ed7d6b80387a83c741f85f43a414d4197ef4b60630c"
+}

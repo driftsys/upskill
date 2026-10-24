@@ -7,6 +7,36 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice 1 campaign revision: 2026-10-24
+
+Task [#382](https://github.com/driftsys/upskill/issues/382) opens a new campaign
+revision for the
+[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+The installed-version receipts on macOS arm64 record the following campaign
+releases. Every new control row must name its pin and retain a pre-run version
+receipt for its executing client. Historical 2026-10-19 evidence keeps its
+original pins and is not implicitly rerun.
+
+| Client          | Installed release | Surface         |
+| --------------- | ----------------- | --------------- |
+| Claude Code     | 2.1.308           | macOS arm64 CLI |
+| Codex CLI       | 0.164.0           | macOS arm64 CLI |
+| Copilot CLI     | 1.0.103           | macOS arm64 CLI |
+| OpenCode v2 CLI | 2.1.4             | macOS arm64 CLI |
+
+The
+[retained version receipts](evidence/2026-10-24-copilot-claude-rules-reader/campaign-pins.json)
+confirm all four installed versions after the first Q1 attempt. The
+[Copilot pre-run provenance](evidence/2026-10-24-copilot-claude-rules-reader/pre-run-pin-provenance.json)
+binds a version receipt before each Q1 attempt. Pre-run receipts for Claude,
+Codex and OpenCode were not retained, so the all-four pre-run step is not
+proven. New campaigns still require all four pre-run pin receipts under the
+implementation handoff; this is a disclosed historical evidence gap, not a
+relaxed campaign requirement. No later confirmation is presented as retroactive
+proof of that step. These are installed release observations, not native
+qualification. Linux, IDE and hosted surfaces remain unqualified. Production
+routing remains schema 1.
+
 ## Frozen campaign
 
 [Campaign metadata](agent-customization/gate6-campaign-2026-10-19.json) pins:

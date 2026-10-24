@@ -1,0 +1,23 @@
+[
+  {
+    "label": "candidate",
+    "root_commit": "817c0597a35752d3d0d68ae9a16d9260535b320a",
+    "files": {
+      ".claude/rules/probe.md": "7ca9630d28c47673589073684798de569b7d5b82dc6439d6690513b3385f1bd2"
+    }
+  },
+  {
+    "label": "candidate-paths",
+    "root_commit": "0c69c7e4dfac5407109a744f251b4e5c32bfac6e",
+    "files": {
+      ".claude/rules/probe.md": "680c1184a16ceb54797b2ea8cb7b0165ab9ebc0c900f916c6263a69d4c2831bf"
+    }
+  },
+  {
+    "label": "positive",
+    "root_commit": "11fccc2ecf1ccdd294ea2786e890a1f19a5d2654",
+    "files": {
+      ".github/copilot-instructions.md": "2ac66aa75f6ba9c9f8388293bbbe528237cea8695be5af147e5a2159aece3635"
+    }
+  }
+]

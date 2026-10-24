@@ -1,0 +1,49 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q1-copilot-bz0xsam8",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "e94bbdff7b51f6e6cc77dfae2a1962c93658eccf79d9aea5735e16956a3b1ecd"
+      }
+    ],
+    "capture_helper_sha256": "6aa7fd1228c9c2aa9e73914cf554807442c2d1a7d0c5cf6e1d05b514f8f63619",
+    "capture_helper_path": "/private/tmp/q1-capture.py"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q1-retry-ljod9qjz",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "3a9659fc8e4788c017096dcddee10f93529203eeb1a28fdd08e11b755b8f7b71"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q1-retry-ljod9qjz/capture-helper.py",
+    "capture_helper_sha256": "80164cbfc8a9f8c1c04c79087d7b24cd3be436856c1534d0092a0d57c7bc369e"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q1-retry-5p64heeg",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "17fa15975f11c5486a3e423b6d887660f8268ef144fabfb6088368bb8d0580c8"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q1-retry-5p64heeg/capture-helper.py",
+    "capture_helper_sha256": "7daca5afd0b055b53afe8dd4ac59461de10ede7227dea73c7190e2ea83b4ffcb"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q1-review-fiinhodx",
+    "purpose": "Offline replay and pin-provenance review fixes; no native invocation.",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "a683030a5f4fda313c6136aaf52fc60c23224edd7796b073ba18b4976019962b"
+      }
+    ]
+  }
+]

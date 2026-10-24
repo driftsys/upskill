@@ -1,0 +1,54 @@
+[
+  {
+    "client": "claude",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "pin": "2.1.308",
+    "exit_code": 0,
+    "stdout": "2.1.308 (Claude Code)\n",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "note": "Installed-version confirmation retained after the first Q1 attempt; pre-run ordering is not established by this receipt."
+  },
+  {
+    "client": "codex",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "--version"
+    ],
+    "pin": "0.164.0",
+    "exit_code": 0,
+    "stdout": "codex-cli 0.164.0\n",
+    "stdout_sha256": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "note": "Installed-version confirmation retained after the first Q1 attempt; pre-run ordering is not established by this receipt."
+  },
+  {
+    "client": "copilot",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--version"
+    ],
+    "pin": "1.0.103",
+    "exit_code": 0,
+    "stdout": "GitHub Copilot CLI 1.0.103.\nRun 'copilot update' to check for updates.\n",
+    "stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "note": "Installed-version confirmation retained after the first Q1 attempt; pre-run ordering is not established by this receipt. Separate Copilot pre-run version receipts and ordering are bound in pre-run-pin-provenance.json."
+  },
+  {
+    "client": "opencode",
+    "command": [
+      "/Users/sebastientasson/.opencode/bin/opencode",
+      "--version"
+    ],
+    "pin": "2.1.4",
+    "exit_code": 0,
+    "stdout": "opencode v2.1.4\n",
+    "stdout_sha256": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "note": "Installed-version confirmation retained after the first Q1 attempt; pre-run ordering is not established by this receipt."
+  }
+]

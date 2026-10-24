@@ -1,0 +1,22 @@
+{
+  "configuration_before": {
+    "config.json": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": "0o600"
+    }
+  },
+  "configuration_after": {
+    "config.json": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": "0o600"
+    }
+  },
+  "configuration_equal": true,
+  "restoration": "No configuration write by helper; no restoration required for measured files.",
+  "limits": [
+    "Measured config.json, settings.json and mcp-config.json presence, bytes and modes under isolated COPILOT_HOME only.",
+    "Native session/log/search state may remain; not restored or inventoried before the run.",
+    "Authentication stores were not read, copied or exported."
+  ],
+  "prohibited_fixture_files_created": false
+}
