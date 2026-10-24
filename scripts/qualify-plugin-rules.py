@@ -122,7 +122,8 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     permitted = {'enabledPlugins', 'extraKnownMarketplaces'}
     if added - permitted or any(new[key] != {} for key in added):
         return 'preservation_failed'
-    if {key: value for key, value in new.items() if key not in added} != old:
+    remaining = {key: value for key, value in new.items() if key not in added}
+    if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
         return 'preservation_failed'
     return 'empty_object_residue' if added else 'settings_bytes_changed'
 

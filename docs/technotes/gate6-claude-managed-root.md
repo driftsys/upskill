@@ -110,14 +110,20 @@ and receipt manifests retain their hashes. Selected init/result events omit
 model identifiers, thinking, usage and unrelated profile information. Private
 paths are normalized; complete raw-output hashes differ from retained hashes.
 
-Tests preceded implementation: `just lint` failed on three missing Q6 helpers,
-then passed all 45 offline tests. A further dangling-symlink regression failed
-before its guard and passed afterward. The subsequent lint run passed all 46
-offline tests. Tests cover the package layout, copy-only fixtures, excluded
-discovery roots, preserved existing roots, distinct project identities and exact
-settings-residue classification. Only added empty native registration objects
-are allowed; unrelated JSON changes, mode changes and formatting-only byte
-changes fail preservation classification.
+Tests preceded implementation: `just lint` failed in three tests referencing two
+missing Q6 helpers, then passed all 45 offline tests. A further dangling-symlink
+regression failed before its guard and passed afterward. The subsequent lint run
+passed all 46 offline tests. Tests cover the package layout, copy-only fixtures,
+excluded discovery roots, preserved existing roots, distinct project identities
+and exact settings-residue classification. Only added empty native registration
+objects are allowed; unrelated JSON changes, mode changes and formatting-only
+byte changes fail preservation classification.
+
+Review regressions also cover nonempty marketplace residue, existing native
+registrations, repository-relative roots and JSON boolean/number type changes.
+The type regression failed before type-sensitive comparison and passed after it.
+All three reviewed mutations are rejected; the subsequent full verification
+passes all 48 offline tests.
 
 Offline checks never call a client. Linux, IDE/hosted surfaces, successful
 invocation, update behavior, native cache recovery, interrupted operations and

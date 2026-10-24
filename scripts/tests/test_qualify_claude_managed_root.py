@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('qualification', Path(__file__).parents[1] / 'qualify-plugin-rules.py')
 q = importlib.util.module_from_spec(spec)
@@ -55,6 +56,15 @@ class ClaudeManagedRootControls(unittest.TestCase):
                 q.prepare_claude_managed_root(sentinel)
             self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
 
+    def test_repository_relative_root_is_rejected_before_writing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = (Path(temporary) / 'repository').resolve()
+            repository.mkdir()
+            root = repository / 'fixture'
+            with mock.patch.object(q, 'REPO', repository), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(root)
+            self.assertFalse(root.exists())
+
     @unittest.skipIf(os.name == 'nt', 'POSIX symlink control')
     def test_dangling_root_symlink_does_not_redirect_fixture_writes(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -73,10 +83,24 @@ class ClaudeManagedRootControls(unittest.TestCase):
         after = b'{"env":{"MANUAL":"preserve"},"enabledPlugins":{},"extraKnownMarketplaces":{}}\n'
         self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'empty_object_residue')
         self.assertEqual(q.classify_claude_settings(None, b'{"enabledPlugins":{}}', None, 0o600), 'empty_object_residue')
-        for value in ({'env': {'MANUAL': 'changed'}, 'enabledPlugins': {}}, {'env': {'MANUAL': 'preserve'}, 'unknown': {}}, {'env': {'MANUAL': 'preserve'}, 'enabledPlugins': {'unexpected': True}}, {'enabledPlugins': {}}):
+        for value in ({'env': {'MANUAL': 'changed'}, 'enabledPlugins': {}}, {'env': {'MANUAL': 'preserve'}, 'unknown': {}}, {'env': {'MANUAL': 'preserve'}, 'enabledPlugins': {'unexpected': True}}, {'env': {'MANUAL': 'preserve'}, 'extraKnownMarketplaces': {'unexpected': {'source': 'changed'}}}, {'enabledPlugins': {}}):
             self.assertEqual(q.classify_claude_settings(before, json.dumps(value).encode(), 0o640, 0o640), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o600), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, b'{ "env": { "MANUAL": "preserve" } }', 0o640, 0o640), 'settings_bytes_changed')
         self.assertEqual(q.classify_claude_settings(before, None, 0o640, None), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(None, None, None, None), 'unchanged')
         self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'invalid_settings')
+
+    def test_existing_registration_values_and_json_types_are_preserved(self):
+        cases = [
+            (b'{"enabledPlugins":{"manual":true}}', b'{"enabledPlugins":{}}'),
+            (b'{"extraKnownMarketplaces":{"manual":{"source":"preserve"}}}', b'{"extraKnownMarketplaces":{}}'),
+            (b'{"manual":true}', b'{"manual":1,"enabledPlugins":{}}'),
+            (b'{"manual":1}', b'{"manual":true,"extraKnownMarketplaces":{}}'),
+            (b'{"manual":false}', b'{"manual":0,"enabledPlugins":{}}'),
+            (b'{"manual":[{"nested":true}]}', b'{"manual":[{"nested":1}],"enabledPlugins":{}}'),
+            (b'{"manual":1}', b'{"manual":1.0,"enabledPlugins":{}}'),
+        ]
+        for before, after in cases:
+            with self.subTest(before=before, after=after):
+                self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'preservation_failed')

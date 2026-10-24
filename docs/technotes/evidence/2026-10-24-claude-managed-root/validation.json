@@ -48,5 +48,29 @@
     "result": "PASS: four Q6 tests, including fresh identities and markers",
     "private_log": "q6-final-focused.log",
     "sha256": "931ee622acb24d582aa0e2442389b49137ce32c07e9412d1969bff1cbd11a562"
+  },
+  {
+    "stage": "JSON type regression red",
+    "result": "FAIL: five boolean/number representation changes accepted",
+    "private_log": "q6-types-red.log",
+    "sha256": "ca4a46c9d9ae83cb8e81096a493cd2b04729856ccae05db381de1eeb55b3ee34"
+  },
+  {
+    "stage": "JSON type regression green",
+    "result": "PASS: six Q6 tests",
+    "private_log": "q6-types-green.log",
+    "sha256": "66fb186812f578f1267d329e4ba0b2f82b72da00837e37dbc11e1d52375dcf72"
+  },
+  {
+    "stage": "review mutation checks",
+    "result": "PASS: nonempty marketplace, missing repository guard and JSON type-loss mutants rejected",
+    "private_log": "q6-review-mutations.log",
+    "sha256": "0e73ac3fa8755d9c42d75db981ad52e2433514fa0debf4f3bf4769950fbb4198"
+  },
+  {
+    "stage": "review full verification",
+    "result": "PASS: just verify, 48 offline tests",
+    "private_log": "q6-review-verify.log",
+    "sha256": "b5cb5230deeb0d8a4ae47ddf263a1b48594e9c7c6740040d9cfa50885b945087"
   }
 ]
