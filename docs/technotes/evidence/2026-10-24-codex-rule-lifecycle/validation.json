@@ -49,5 +49,13 @@
     "private_log": "$PACKET_B/q9-numbered-mutations.log",
     "sha256": "4c9317093d1252f1641ed88bf9f1c6447820dc990385af6e65c022ccd30bcb51",
     "private_helper_sha256": "c52b36d996826c1dbfc5be608cc600b8013f91f907a6addc2d3f0ab39528b39a"
+  },
+  {
+    "stage": "final numbered finding regression",
+    "command": "just lint; just docs-check; python3 $PACKET_B/q9-final-session-mutation-checks.py",
+    "result": "PASS: 59 offline tests, docs and eleven rejected mutants; matching invalid session identities now pin the identity guard",
+    "private_log": "$PACKET_B/q9-final-session-mutations.log",
+    "sha256": "def8469359cae183295b7a1855d07c9753640f2cf1adbfa129b796469fe81249",
+    "private_helper_sha256": "791942e4f9cbff7e55fefb83bbb116e8a2a13b7e0319e0af8f7eb026a9a4c8b2"
   }
 ]

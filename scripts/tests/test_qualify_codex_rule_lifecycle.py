@@ -136,6 +136,9 @@ class CodexLifecycleTests(unittest.TestCase):
         for changed in (None, '', 1, []):
             value = self.observation(); value['session'] = changed
             self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+            for boundary in value['boundaries']:
+                boundary['session'] = changed
+            self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
         for changed in (False, None, 0, 1, 'yes'):
             value = self.observation(); value['positive_passed'] = changed
             self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'positive_control_failed')

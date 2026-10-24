@@ -145,3 +145,8 @@ fresh markers and Git identities across fixtures. The three review mutants pass
 the prior suite and fail the strengthened suite. Ten retained mutations are
 rejected; latest lint passes all 59 offline tests and documentation checks pass.
 These test-only changes do not alter native observations or qualification.
+
+The final numbered finding adds matching invalid identities at both observation
+and boundary levels, avoiding a mismatch that could mask the identity guard. All
+59 offline tests and documentation checks pass; eleven retained mutants are
+rejected. The identity-guard mutant passes the prior suite and fails this case.
