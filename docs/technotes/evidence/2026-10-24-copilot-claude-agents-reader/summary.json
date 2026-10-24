@@ -1,0 +1,71 @@
+{
+  "qualified": false,
+  "q2_control_completed": true,
+  "task": 383,
+  "control": "Q2",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "scope": "project",
+  "client": "Copilot CLI",
+  "pin": "1.0.103",
+  "controls": [
+    {
+      "label": "catalog",
+      "status": "PASS",
+      "fixture_catalogued": true
+    },
+    {
+      "label": "real-delegation",
+      "status": "PASS",
+      "classification": "delegation_observed",
+      "state": "success",
+      "completed_child": true,
+      "child_tool_invocations": [
+        "view"
+      ],
+      "successful_child_tools": [
+        "view"
+      ],
+      "parent_response": "CHILD_6c873b50fb7b0965bc379f99c6018b31",
+      "expected_marker": "CHILD_6c873b50fb7b0965bc379f99c6018b31",
+      "child_declared_tools": [
+        "Read"
+      ],
+      "permissionMode": "plan",
+      "outside_child_tool_invocations": [],
+      "denied_file_exists": false,
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "--no-auto-update",
+        "--disable-builtin-mcps",
+        "--no-ask-user",
+        "--log-level",
+        "none",
+        "--output-format",
+        "json",
+        "--model",
+        "[private selection omitted]",
+        "--available-tools",
+        "task",
+        "view",
+        "create",
+        "--allow-tool",
+        "task",
+        "view",
+        "create",
+        "-p",
+        "Delegate exactly once to the custom agent named upskill-q2-a90bb92e1b30ec16 using the native task tool. Ask the child to follow its own qualification instructions. Do not read or edit files yourself. Return the child final marker unchanged. If the agent is unavailable, return exactly ABSENT_c9ac45c900ca3a4a35879821bc2031bc."
+      ],
+      "stdout_sha256": "a798be23fc4cb91b8e033ad27413ad9eb711bf0c37faa1634e0e8736d686d4c3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limits": [
+    "Read-only child tool filtering observed for this fixture; not a general safe exception-route claim.",
+    "Child reported editing unavailable; no edit call or permission denial occurred.",
+    "permissionMode interpretation and permission-boundary enforcement remain unqualified.",
+    "No child shell execution, broader tools list, inherited permissions, MCPs, hooks or other Claude-only fields tested.",
+    "Model choice/identifiers private; normally provisioned account route.",
+    "Production schema 1 unchanged; durable records await step 7."
+  ]
+}

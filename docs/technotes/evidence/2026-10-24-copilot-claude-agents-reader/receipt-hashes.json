@@ -1,0 +1,9 @@
+{
+  "fixture.json": "2685c04e6c1bf73b8438ee9d8ba64c2bf4b05328cc4f0c88048b0eb7467a9ed5",
+  "summary.json": "4b84a231fb859f89b2a6ff4c5c4a1a4cec59d4ea3011faa24cda87ebdfa3ab39",
+  "preservation.json": "58edc695a795635891becc975ad0f74cb3de8ed8d4079b10e89f57a4a093ec29",
+  "delegation.jsonl": "bf19e36e4a4e8667269365c9b713e9ff39661876609c27e1bd34d6ad0dcbe282",
+  "validation.json": "760d2721d5f90586990d7f1cb196c27dda7fd3c137261ca43f995558f3dd72d7",
+  "private-source-index.json": "c10d382d9705ff34c042fc75756f18573ff060d4af7d95ca4aba7b15c3752c9b",
+  "catalog.json": "eb24ef273220a20e5b45537939b18da9fa6261711f524d2dcbd1ec84d702fee5"
+}
