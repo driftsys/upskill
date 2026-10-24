@@ -1,0 +1,53 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q3-copilot-kx9n16se",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "d1c56ca0236bac3acffa66d9f9f756524f5b67c7b46f555737b209887aae6c09"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q3-catalog-94yp63x8",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "983c3f689bf0a6360d291c30c204f6c6c377f690e71aefe8f0bfcdd5ae7c6a18"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q3-guarded-e1j58vma",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "39ed5f83491343cd15b8a80cdf32e68585761f01009b601cac0fd9bbc2f37a4c"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q3-native-suffix-j3gvk0_c",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "069e05ab64b01574f032dfc84e2a41cb56ae977980c4a888c2d15dac435ac033"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-q3-guarded-retry-kmir3aef",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "2dd733a7202da51b06e3f8da9e04abbe3525c01df4989f73e5c1c35bf9cefc1c"
+  },
+  {
+    "alias": "$PACKET_F",
+    "private_source_path": "/private/tmp/upskill-q3-guarded-retry-_ktp39jb",
+    "manifest_file": "receipt-hashes-retry.json",
+    "manifest_sha256": "910ce35296c26cc287477fa71bd09175f95cd5df5a344be1c706c2a1bb1c6f6c"
+  },
+  {
+    "alias": "$PACKET_G",
+    "private_source_path": "/private/tmp/upskill-q3-main-integration-3ci3h1lp",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "93fa08583c16d8bf640734ff8414ae2f90c449e85aa0c673ee4dff455f58e261"
+      }
+    ],
+    "capture_helpers": {
+      "retain-q3-main-integration.py": "761b70eb793a91f9c393bc3a1f7a4406d2ddb8edfd4d3bb1784b46ddc4f65b81",
+      "correct-q3-integration-count.py": "ef1b8971bc47446f2dd041072bcc85d734663b1c05d697a038ee9802dbaabf5f",
+      "retain-q3-q6-integration.py": "438e15f058e461270a7a710a0a92d773bb13e117895660ec8d316f27e6fafa57"
+    }
+  }
+]

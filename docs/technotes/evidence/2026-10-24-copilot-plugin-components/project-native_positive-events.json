@@ -1,0 +1,12 @@
+[
+  {
+    "type": "assistant.message",
+    "content": "\n\n{\n  \"native\": \"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\n  \"rules\": []\n}",
+    "event_id": "33b610ad-31ac-4ebb-ae27-c784dace6201"
+  },
+  {
+    "type": "result",
+    "sessionId": "f2677c85-0c43-4fc5-9368-ddb481524a6f",
+    "exitCode": 0
+  }
+]

@@ -22,16 +22,19 @@
   {
     "alias": "$PACKET_E",
     "private_source_path": "/private/tmp/upskill-q9-review-5o0rhn7w",
-    "manifest_sha256": "c9185e30f126622252103e78de5bcce5d782685e08a0aa35d11ef109266032e2",
+    "manifest_sha256": "c3c15c854dceedd729f9c5ce4cd9283d3e2b661bb31d984b691862450422b230",
     "capture_helpers": {
       "q9-review-observations.py": "9088a3547d7a9e0df6de90046eac4300d1e65e3fbc049bbe79f592f74847353a",
       "q9-packet-mutations.py": "903d2c7a0f76ded3e9f38d174397eedff84f4d5c369089fafe0e1b4cd53a7356",
-      "retain-q9-review.py": "0ad7fb35223800088899fd06b4c31471560508a67938968e3794fc93494deca4"
+      "retain-q9-review.py": "0ad7fb35223800088899fd06b4c31471560508a67938968e3794fc93494deca4",
+      "q9-quick-fix-mutations.py": "208c434dd784dca05d128e20e7d09e5fe32fce47128144f2c493b399c9105a6a",
+      "retain-q9-quick-fix.py": "d8cc1edae4acaa60f5b09436c4af7b05d4144c00e775c4b57710899d71a9e5c6"
     },
     "method": "Offline raw/selected window audit and public replay, no repeated native run",
     "source_snapshots": {
       "red-source/": "Core changes tests-first snapshot; original native packet source before replay changes",
-      "source/": "Current harness and regression tests"
+      "source/": "Initial offline replay source, commit 829b321",
+      "quick-fix-source/": "Review fix and current-main integration source"
     }
   }
 ]

@@ -120,8 +120,10 @@ The replay binds package-body hashes, startup response/session, native turn
 identities, read-only policy, compaction windows and observed counts to the
 assessment and summary. It explicitly represents the unrun resume-only control.
 A semantic fingerprint allows JSON layout changes while preserving recorded
-values and types; original byte hashes remain separate evidence. Altering a
-recorded count, status, session or qualification flag fails replay
+values and types; original byte hashes remain separate evidence. The replay
+checks startup and window body counts, both summary representations of those
+counts, and its bound status, native session and qualification fields. The
+receipt manifest covers retained fields outside the replay
 ([rule bodies](evidence/2026-10-24-codex-rule-lifecycle/rule-bodies.json),
 [window audit](evidence/2026-10-24-codex-rule-lifecycle/native-window-audit.json),
 [validation](evidence/2026-10-24-codex-rule-lifecycle/validation.json)).

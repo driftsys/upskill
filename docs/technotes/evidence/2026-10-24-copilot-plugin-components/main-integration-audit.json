@@ -1,0 +1,14 @@
+{
+  "method": "AST equality without source-location attributes",
+  "main_commit": "78f24f814a4cdf03df981756a4ef5abb05996290",
+  "q3_source_commit": "cd8c605674f34fea13c20233d648dcf16dd29cac",
+  "q3_functions_unchanged": {
+    "classify_copilot_plugin_components": "65274285faca7f8fc37379e99403ccc5c0dd16a288eaf65d4bce21e42f95a92c",
+    "copilot_plugin_agent_selection": "3ddda44cead7c771322fabe8c54e982ed25b7979f736262c242e6d06cc4c5916",
+    "copilot_plugin_component_fixture": "0ca3033e47cb69f5cbb39a43bde1d4c14b67cbed393024cd0a9ca073d876725b",
+    "copilot_delegation_policy": "831ed3da830f85e142eb2b374903c1510fd3575d696f0226d084716d47d10084"
+  },
+  "remaining_module_matches_main": true,
+  "native_control_rerun": false,
+  "harness_sha256": "6a5fc0e8c326167fbee996b4616f09ca5d97ab56a8d7d1242dd794fac59ff064"
+}

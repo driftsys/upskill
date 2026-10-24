@@ -117,5 +117,35 @@
     "result": "PASS: documentation checks",
     "private_log": "$PACKET_E/q9-docs.log",
     "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "FAIL: two independently contradictory legacy summary counts",
+    "private_log": "$PACKET_E/q9-legacy-count-red.log",
+    "sha256": "cd34ae1b42e5a78f987a80a3ff865dbd8e89b7b0dd69331aef51db3aa5e1b0bd"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "FAIL: nonexistent personal home was accepted",
+    "private_log": "$PACKET_E/q9-missing-home-red.log",
+    "sha256": "250686ae0f463759f032416bec64a296400a993d234d196d079cff38274d2548"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: 31 Q9 tests",
+    "private_log": "$PACKET_E/q9-quick-fix-tests.log",
+    "sha256": "cc27d892f0598452e11b7a6ab4dedb23cb3e07c9bcb9f70de0cb5303016a9121"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: ten independent mutation guards rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-quick-fix-mutations.log",
+    "sha256": "df67ae6b0f03411f2428024da44add2b71bd7cb78540a04403fc0d5904e98a28"
+  },
+  {
+    "stage": "Review fixes and current-main integration",
+    "result": "PASS: just fmt then just verify; 124 offline tests, full Rust tests, lint, documentation and build",
+    "private_log": "$PACKET_E/q9-quick-fix-verify.log",
+    "sha256": "ab7e3d8108b40c3ab526570781be27245ff63f575655df7d0f3ee78cae238b8d"
   }
 ]

@@ -1,0 +1,154 @@
+{
+  "sessions": [
+    {
+      "session": "de0a29a2-60ea-43ea-9377-853dd4211f59",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-de0a29a2-60ea-43ea-9377-853dd4211f59.jsonl"
+    },
+    {
+      "session": "a98693a5-c742-4ff7-b47c-c092252c90cb",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-a98693a5-c742-4ff7-b47c-c092252c90cb.jsonl"
+    },
+    {
+      "session": "afdca7ca-d12e-4cfc-8b93-a20949759274",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-afdca7ca-d12e-4cfc-8b93-a20949759274.jsonl"
+    },
+    {
+      "session": "8b9d6cb7-a78d-4809-a477-1e4ae920deeb",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-8b9d6cb7-a78d-4809-a477-1e4ae920deeb.jsonl"
+    },
+    {
+      "session": "7129b796-9d61-468e-b955-55aa0257e6dc",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "task",
+        "view"
+      ],
+      "delegates": [
+        {
+          "agent": "upskill-q3-5471c2845d55baf2:probe",
+          "requested_model_matches": true,
+          "selection_source": "explicit_override"
+        }
+      ],
+      "source": "native-session-7129b796-9d61-468e-b955-55aa0257e6dc.jsonl"
+    },
+    {
+      "session": "4967c6ec-0eff-4cb8-8c5a-50c8271b5f47",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-4967c6ec-0eff-4cb8-8c5a-50c8271b5f47.jsonl"
+    },
+    {
+      "session": "5d253f5d-0b8f-4ef9-987a-118beb922ae2",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-5d253f5d-0b8f-4ef9-987a-118beb922ae2.jsonl"
+    },
+    {
+      "session": "f9974b3a-d6c0-4803-8c7b-910fc8799237",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-f9974b3a-d6c0-4803-8c7b-910fc8799237.jsonl"
+    },
+    {
+      "session": "294d266d-03cf-4934-82fc-871c9c00e4d9",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-294d266d-03cf-4934-82fc-871c9c00e4d9.jsonl"
+    },
+    {
+      "session": "23496727-a6e8-453e-bb39-983a4b37a163",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-23496727-a6e8-453e-bb39-983a4b37a163.jsonl"
+    },
+    {
+      "session": "242190ec-e43a-447d-9c8b-dbd73a4df42b",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-242190ec-e43a-447d-9c8b-dbd73a4df42b.jsonl"
+    },
+    {
+      "session": "8ac5b337-71db-4962-a519-c623577954f3",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-8ac5b337-71db-4962-a519-c623577954f3.jsonl"
+    },
+    {
+      "session": "a73104e8-49da-48a0-9d82-70fc52aa739b",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-a73104e8-49da-48a0-9d82-70fc52aa739b.jsonl"
+    },
+    {
+      "session": "c32fb792-79fb-4410-9072-9863352175ed",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-c32fb792-79fb-4410-9072-9863352175ed.jsonl"
+    },
+    {
+      "session": "b8e00770-34b6-4049-bb2b-97d86de69c9f",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-b8e00770-34b6-4049-bb2b-97d86de69c9f.jsonl"
+    },
+    {
+      "session": "9d79ae9b-05e0-4a7b-9170-0b8803a8ae55",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-9d79ae9b-05e0-4a7b-9170-0b8803a8ae55.jsonl"
+    }
+  ],
+  "unexpected_delegate_model_selections": 0,
+  "new_team_guidance_files": [],
+  "limit": "Native tool names and starts do not prove whole-profile byte restoration."
+}

@@ -44,6 +44,11 @@ class CodexLifecycleTests(unittest.TestCase):
             self.assertEqual(f['trust'], 'Ordinary user hook review required; never preapproved by fixture')
             self.assertFalse((f['root'] / 'home').exists())
             self.assertFalse((f['project'] / '.codex').exists())
+            expected_files = {'delivery/.agents/plugins/marketplace.json'}
+            for package in f['packages']:
+                expected_files.update((package / leaf).relative_to(f['root']).as_posix() for leaf in ('rule.txt','hook.py','fixture.json','.codex-plugin/plugin.json','hooks/hooks.json'))
+            actual_files = {path.relative_to(f['root']).as_posix() for path in f['root'].rglob('*') if path.is_file() and '.git' not in path.relative_to(f['root']).parts}
+            self.assertEqual(actual_files, expected_files)
             self.assertEqual(len(set(f['rule_bodies'].values())), 2)
             self.assertEqual(f['pin'], '0.164.0')
             market = json.loads((f['marketplace'] / '.agents/plugins/marketplace.json').read_text())
@@ -84,6 +89,10 @@ class CodexLifecycleTests(unittest.TestCase):
             dangling.symlink_to(root / 'absent')
             with self.assertRaises(ValueError):
                 self.q.prepare_codex_rule_lifecycle(dangling)
+            missing_home = root / 'missing-home'
+            with mock.patch.object(Path, 'home', return_value=missing_home), self.assertRaises(ValueError):
+                self.q.prepare_codex_rule_lifecycle(missing_home)
+            self.assertFalse(missing_home.exists())
             with mock.patch.object(self.q, 'REPO', root.resolve() / 'repository'):
                 with self.assertRaises(ValueError):
                     self.q.prepare_codex_rule_lifecycle(root / 'repository/fixture')

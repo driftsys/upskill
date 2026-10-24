@@ -68,6 +68,8 @@ class CodexPacketReplayTests(unittest.TestCase):
                 write(root, 'assessment.json', assessment)
                 summary = load(root, 'summary.json')
                 summary['recorded_body_counts'] = counts
+                summary['counts']['first_postcompact_rule_bodies'] = counts[1]
+                summary['counts']['second_postcompact_rule_bodies'] = counts[2]
                 summary['status'] = status
                 write(root, 'summary.json', summary)
                 audit = load(root, 'native-window-audit.json')
@@ -171,5 +173,104 @@ class CodexPacketReplayTests(unittest.TestCase):
                 data = load(root,name)
                 data['pin'] = 'other-pin'
                 write(root,name,data)
+            with self.assertRaises(ValueError):
+                q.replay_codex_rule_lifecycle(root)
+
+    def test_legacy_summary_body_counts_cannot_contradict_the_replay(self):
+        for key in ('first_postcompact_rule_bodies','second_postcompact_rule_bodies'):
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                duplicate_packet(root)
+                summary = load(root,'summary.json')
+                summary['counts'][key]['a'] = 99
+                write(root,'summary.json',summary)
+                with self.assertRaises(ValueError):
+                    q.replay_codex_rule_lifecycle(root)
+
+    def test_startup_and_final_counts_have_independent_native_windows(self):
+        bodies = load(PACKET,'rule-bodies.json')
+        for window, new_line, classification in ((0,10,'positive_control_failed'),(2,49,'lifecycle_control_failed')):
+            with self.subTest(window=window), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                duplicate_packet(root)
+                rows = load(root,'native-selection.json')
+                duplicate = copy.deepcopy(next(row for row in rows if row['type']=='response_item' and row['payload'].get('role')=='developer' and any(block.get('text')==bodies['a'] for block in row['payload']['content'])))
+                duplicate['line'] = new_line
+                duplicate['payload']['id'] += '-synthetic-copy'
+                rows.append(duplicate)
+                rows.sort(key=lambda row:row['line'])
+                write(root,'native-selection.json',rows)
+                counts = copy.deepcopy(EXPECTED['recorded_body_counts'])
+                counts[window]['a'] = 2
+                assessment = load(root,'assessment.json')
+                assessment['positive']['body_counts'] = counts[0]
+                assessment['boundaries'][2]['body_counts'] = counts[2]
+                assessment['classification'] = classification
+                write(root,'assessment.json',assessment)
+                summary = load(root,'summary.json')
+                summary['recorded_body_counts'] = counts
+                summary['counts']['second_postcompact_rule_bodies'] = counts[2]
+                summary['gate_classification'] = classification
+                write(root,'summary.json',summary)
+                audit = load(root,'native-window-audit.json')
+                audit['selected_window_counts'] = counts
+                audit['raw_window_counts'] = counts
+                audit['source_sha256'] = '0'*64
+                write(root,'native-window-audit.json',audit)
+                bind_selected_source(root)
+                try:
+                    result = q.replay_codex_rule_lifecycle(root)
+                except ValueError as error:
+                    self.fail('Different startup/final windows must replay their own observations: '+str(error))
+                self.assertEqual(result, {'classification':classification,'recorded_body_counts':counts})
+
+    def test_each_native_readonly_marker_and_completion_is_required(self):
+        for mutation in ('readonly_0','readonly_1','readonly_2','compact_0','compact_1','completion_0','completion_1','completion_2','completion_order'):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                duplicate_packet(root)
+                rows = load(root,'native-selection.json')
+                if mutation.startswith('readonly_'):
+                    contexts = [row for row in rows if row['type']=='turn_context']
+                    contexts[int(mutation[-1])]['payload']['sandbox_policy'] = {'type':'workspace-write'}
+                elif mutation.startswith('compact_'):
+                    compacts = [row for row in rows if row['type']=='compacted']
+                    compacts[int(mutation[-1])]['payload']['native_compaction_record_present'] = False
+                else:
+                    completions = [row for row in rows if row['type']=='event_msg' and row['payload'].get('type')=='task_complete']
+                    if mutation=='completion_order':
+                        completions[0]['line'] = 8
+                        rows.sort(key=lambda row:row['line'])
+                    else:
+                        rows.remove(completions[int(mutation[-1])])
+                write(root,'native-selection.json',rows)
+                bind_selected_source(root)
+                with self.assertRaises(ValueError):
+                    q.replay_codex_rule_lifecycle(root)
+
+    def test_distinct_native_turns_cannot_reuse_an_earlier_task(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            duplicate_packet(root)
+            rows = load(root,'native-selection.json')
+            contexts = [row for row in rows if row['type']=='turn_context']
+            first, second = contexts[0]['payload']['turn_id'],contexts[1]['payload']['turn_id']
+            rows = [row for row in rows if not(row['type']=='event_msg' and row['payload'].get('type')=='task_started' and row['payload'].get('turn_id')==second)]
+            for row in rows:
+                if row['payload'].get('turn_id')==second:
+                    row['payload']['turn_id'] = first
+            write(root,'native-selection.json',rows)
+            bind_selected_source(root)
+            with self.assertRaises(ValueError):
+                q.replay_codex_rule_lifecycle(root)
+
+    def test_package_body_must_match_its_original_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            duplicate_packet(root)
+            receipt = load(root,'positive-receipt.json')
+            row = next(row for row in receipt['before'] if row['path'].endswith('/rule.txt') and 'rule-a-' in row['path'])
+            row['sha256'] = '0'*64
+            write(root,'positive-receipt.json',receipt)
             with self.assertRaises(ValueError):
                 q.replay_codex_rule_lifecycle(root)

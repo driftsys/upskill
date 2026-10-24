@@ -74,8 +74,8 @@ def neutral_fixture_root(root):
         raise ValueError('Fixture root must not exist')
     requested = root.expanduser().absolute()
     root = requested.resolve()
-    if root.exists():
-        raise ValueError('Fixture root must not exist')
+    if root.exists() or root == Path.home().resolve():
+        raise ValueError('Fixture root must not exist or be the personal home')
     forbidden = False
     for candidate in (requested, root):
         parts = tuple(part.casefold() for part in candidate.parts)
@@ -352,6 +352,11 @@ def replay_codex_rule_lifecycle(packet):
     for expected, recorded in zip(boundaries, assessment['boundaries']):
         if any(key not in recorded or not same_json(recorded[key], value) for key, value in expected.items()):
             raise ValueError('Q9 recorded boundary differs from native evidence')
+    legacy_counts = summary.get('counts')
+    if (not isinstance(legacy_counts, dict)
+            or not same_json(legacy_counts.get('first_postcompact_rule_bodies'), counts[1])
+            or not same_json(legacy_counts.get('second_postcompact_rule_bodies'), counts[2])):
+        raise ValueError('Q9 legacy summary body counts differ from native evidence')
     if (assessment.get('qualified') is not False or summary.get('qualified') is not False
             or assessment.get('classification') != classification or assessment.get('status') != status
             or summary.get('status') != status or summary.get('gate_classification') != classification

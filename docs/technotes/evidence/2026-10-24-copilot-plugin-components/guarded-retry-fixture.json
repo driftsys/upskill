@@ -1,0 +1,22 @@
+{
+  "root": "$PACKET_F/fixture",
+  "package": "$PACKET_F/fixture/delivery/packages/upskill-q3-5471c2845d55baf2",
+  "marketplace": "$PACKET_F/fixture/delivery",
+  "plugin_name": "upskill-q3-5471c2845d55baf2",
+  "market_name": "upskill-q3-5471c2845d55baf2-market",
+  "projects": {
+    "project": "$PACKET_F/fixture/project",
+    "user": "$PACKET_F/fixture/user"
+  },
+  "native_markers": {
+    "project": "NATIVE_bad1be8ee2485ee3a0af6665990f9958",
+    "user": "NATIVE_9b56843ecca4b4d8453579fa7095db46"
+  },
+  "plain_marker": "PLAIN_5ce7ae75b3213b0d3ce892a357eacede",
+  "scoped_marker": "SCOPED_05745c024a0a75a700c8e5af2ae0e488",
+  "agent_name": "upskill-q3-5471c2845d55baf2-child",
+  "agent_marker": "AGENT_5b9cf1c27a34e7eec827208ca327482a",
+  "catalog_positive_name": "upskill-q3-5471c2845d55baf2-catalog-positive",
+  "pin": "1.0.103",
+  "rule_suffix": ".instructions.md"
+}

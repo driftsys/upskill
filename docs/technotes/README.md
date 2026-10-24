@@ -12,6 +12,10 @@ snapshot; a stable name does not imply that external research remains current.
   0.164.0; repeated native bodies in a combined reopened-session/compaction
   window.
 
+- [Copilot plugin component controls](gate6-copilot-plugin-components.md): Q3,
+  Copilot 1.0.103; rules component failures at both scopes and bounded agent
+  observations.
+
 - [Claude managed-root controls](gate6-claude-managed-root.md): Q6, Claude
   2.1.308; local marketplace, fresh-session edit visibility and measured
   residue.
