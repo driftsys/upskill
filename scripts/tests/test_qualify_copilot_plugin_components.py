@@ -157,6 +157,8 @@ class CopilotPluginComponentsTests(unittest.TestCase):
         self.assertEqual(self.q.copilot_plugin_agent_selection(options,'plugin','display-child'),'plugin:probe')
         self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'other','display-child'))
         self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','other-child'))
+        options[0]['options'].append({'value':'plugin:other','name':'display-child'})
+        self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','display-child'))
         options[0]['id']='model'
         self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','display-child'))
 
@@ -166,6 +168,13 @@ class CopilotPluginComponentsTests(unittest.TestCase):
         self.assertEqual(policy('task',{'agent_type':'plugin:probe','model':'preferred'}),'allow')
         for args in ({'agent_type':'general-purpose','model':'preferred'},{'agent_type':'plugin:probe','model':'other'},{'agent_type':'plugin:probe','model':None},{'agent_type':'plugin:probe','model':'preferred','resume':'old'},{'agent_type':'plugin:probe','model':'preferred','mode':'background'},{},{'agent_type':None}):
             self.assertEqual(policy('task',args),'deny')
+        for continuation in ('resume','agent_id','session_id'):
+            self.assertEqual(policy('task',{'agent_type':'plugin:probe','model':'preferred',continuation:'old'}),'deny')
+        for mode in ('sync','foreground'):
+            self.assertEqual(policy('task',{'agent_type':'plugin:probe','model':'preferred','mode':mode}),'allow')
+        for tool in ('view','read','read_file'):
+            self.assertEqual(policy(tool,{'file_path':'/fixture/agent-resource.txt'}),'allow')
+        self.assertEqual(policy('view',{'path':'/outside/agent-resource.txt'}),'deny')
         self.assertEqual(policy('view',{'path':'agent-resource.txt'}),'allow')
         self.assertEqual(policy('view',{'path':'/fixture/agent-resource.txt'}),'allow')
         for tool,args in [('view',{'path':'../outside.txt'}),('view',{}),('view',{'path':'agent-resource.txt','file_path':'/outside'}),('bash',{'command':'anything'}),('create',{'path':'agent-resource.txt'}),('unknown',{}),('task',None)]:
@@ -179,6 +188,10 @@ class CopilotPluginComponentsTests(unittest.TestCase):
             self.assertEqual({p.name for p in rules.iterdir()}, {'plain.instructions.md','scoped.instructions.md'})
             self.assertIn(f['plain_marker'], (rules/'plain.instructions.md').read_text())
             self.assertIn(f['scoped_marker'], (rules/'scoped.instructions.md').read_text())
+            for stem,scope in (('plain','**'),('scoped','matching/**')):
+                text=(rules/(stem+'.instructions.md')).read_text()
+                self.assertTrue(text.startswith('---\nname: '+f['plugin_name']+'-'+stem+'\ndescription: '))
+                self.assertIn('\napplyTo: \"'+scope+'\"\n---\n',text)
             self.assertEqual(f['rule_suffix'], '.instructions.md')
             with self.assertRaises(ValueError):
                 self.q.copilot_plugin_component_fixture(root/'bad', rule_suffix='/../../outside')

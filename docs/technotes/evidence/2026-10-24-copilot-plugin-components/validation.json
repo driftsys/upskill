@@ -95,5 +95,19 @@
     "result": "PASS: complete repository verification, 62 offline tests",
     "private_log": "$PACKET_F/q3-final-verify.log",
     "sha256": "94593f82f25ffe8ff0880927b2d5c1e44295336791fd7a50eda55169da7e8e47"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-retry-quick-fix-lint.log",
+    "sha256": "25e1c4eba4290a0e888c55b00856f339fd6f2ce3083dd2ac2c84650ad61e13bb"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 $PACKET_F/q3-retry-quick-mutations.py",
+    "result": "PASS: four new retry guard/fixture mutations rejected",
+    "private_log": "$PACKET_F/q3-retry-quick-mutations.log",
+    "sha256": "a2e46d64799727b031cb305f0bcf5ab33062a3bb1fd2bbea77c60adda05cfcbb"
   }
 ]
