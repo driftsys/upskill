@@ -253,9 +253,14 @@ Copilot may read project `.claude/rules/**/*.md`. The
 records that the CLI command reference lists that path while the instruction
 how-to does not; the
 [Copilot research technote](../../technotes/agent-customization/copilot.md)
-lists neither, and no pinned run has tested it. If the pinned Copilot CLI does
-read it, a rule shipped natively to both clients reaches Copilot twice. Before
-the two native defaults are used together in one project, run the Gate 6
+listed neither at the proposal baseline. The later
+[Q1 packet](../../technotes/gate6-copilot-claude-rules-reader.md) records
+Copilot 1.0.103 reading an unscoped file, and a separate `paths:` candidate
+returning its fallback in a tool-free request. Matching-file scoping remains
+unqualified. The unscoped reader creates a duplicate-delivery risk; adopting
+routes and amending durable records still wait for slice 1 step 7. If Copilot
+reads a rule shipped natively to both clients, that rule reaches Copilot twice.
+Before the two native defaults are used together in one project, run the Gate 6
 paired-control harness with a `.claude/rules` positive under Copilot and record
 the result. Then:
 
@@ -307,14 +312,16 @@ A `metapowers` marketplace entry therefore does not by itself give a trusted
 Codex rule hook.
 
 Cross-client compatibility readers: Copilot documents project `.claude/skills`,
-`.claude/agents` and `.claude/commands` as sources. Whether the pinned Copilot
-CLI reads `.claude/rules/**/*.md` is recorded as a documentation conflict with
-no runtime test. A retained control also showed Copilot `ignoredSkillsLocations`
-failing to block explicit activation of a `.claude/skills` compatibility skill.
-Treat every `.claude/` path as potentially visible to Copilot until a pinned
-test says otherwise. Never put Claude-only adaptations there without proven
-reader controls. Existing team rules must not be rewritten to manufacture
-isolation.
+`.claude/agents` and `.claude/commands` as sources. At the proposal baseline,
+whether Copilot CLI read `.claude/rules/**/*.md` was a documentation conflict.
+The later [Q1 packet](../../technotes/gate6-copilot-claude-rules-reader.md)
+establishes an unscoped reader on 1.0.103; matching-file behavior for `paths:`
+remains unqualified. A retained control also showed Copilot
+`ignoredSkillsLocations` failing to block explicit activation of a
+`.claude/skills` compatibility skill. Treat every `.claude/` path as potentially
+visible to Copilot until a pinned test says otherwise. Never put Claude-only
+adaptations there without proven reader controls. Existing team rules must not
+be rewritten to manufacture isolation.
 
 ## Skills and resources
 
