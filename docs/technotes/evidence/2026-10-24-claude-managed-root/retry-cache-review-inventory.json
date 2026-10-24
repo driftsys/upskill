@@ -1,0 +1,56 @@
+{
+  "observed_at": "2026-10-24T18:17:50.721474+00:00",
+  "method": "Read-only inventory during review after the original control; not a contemporaneous post-removal snapshot",
+  "native_client_rerun": false,
+  "direct_cache_write_or_cleanup": false,
+  "versions": [
+    {
+      "version": "0.0.0",
+      "path": "$PROFILE/plugins/cache/upskill-q6-market-472c9cd5748f0b14/upskill-q6-472c9cd5748f0b14/0.0.0",
+      "is_directory": true,
+      "is_symlink": false,
+      "symlink_descendants": [],
+      "files": [
+        {
+          "path": ".orphaned_at",
+          "sha256": "dd993c2e7dba43b67db37b126de36dcbf81c4a62613c4220b7648582709cca63",
+          "mode": 420
+        },
+        {
+          "path": ".claude-plugin/plugin.json",
+          "sha256": "8139d705b0c0cb9fb88e136c7775e935c92b1a89690699db5946067a8e85e9bf",
+          "mode": 420
+        },
+        {
+          "path": "skills/probe-472c9cd5748f0b14/SKILL.md",
+          "sha256": "58aec6d4644124e3fd2d71d99aa22c7a3b536c02fcba8df750e049a443fa7ec1",
+          "mode": 420
+        }
+      ]
+    },
+    {
+      "version": "0.0.1",
+      "path": "$PROFILE/plugins/cache/upskill-q6-market-472c9cd5748f0b14/upskill-q6-472c9cd5748f0b14/0.0.1",
+      "is_directory": true,
+      "is_symlink": false,
+      "symlink_descendants": [],
+      "files": [
+        {
+          "path": ".orphaned_at",
+          "sha256": "e745ae47955f62226b5a7bbdaaa05bb961881035b215422dcfaa50df3f071751",
+          "mode": 420
+        },
+        {
+          "path": ".claude-plugin/plugin.json",
+          "sha256": "937a7d6775e406d3fd11caee8034c3f30d99e481f6f499bc9087f2fe311fcd84",
+          "mode": 420
+        },
+        {
+          "path": "skills/probe-472c9cd5748f0b14/SKILL.md",
+          "sha256": "0440a7efe0cc056f91359c5778f105ed0801769e50add898a6a588bae125c533",
+          "mode": 420
+        }
+      ]
+    }
+  ]
+}

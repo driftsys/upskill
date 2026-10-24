@@ -135,13 +135,13 @@ class ClaudeManagedRootControls(unittest.TestCase):
         for value in ({'env': {'MANUAL': 'changed'}, 'enabledPlugins': {}}, {'env': {'MANUAL': 'preserve'}, 'unknown': {}}, {'env': {'MANUAL': 'preserve'}, 'enabledPlugins': {'unexpected': True}}, {'env': {'MANUAL': 'preserve'}, 'extraKnownMarketplaces': {'unexpected': {'source': 'changed'}}}, {'enabledPlugins': {}}):
             self.assertEqual(q.classify_claude_settings(before, json.dumps(value).encode(), 0o640, 0o640), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o600), 'preservation_failed')
-        self.assertEqual(q.classify_claude_settings(before, b'{ "env": { "MANUAL": "preserve" } }', 0o640, 0o640), 'settings_bytes_changed')
+        self.assertEqual(q.classify_claude_settings(before, b'{ "env": { "MANUAL": "preserve" } }', 0o640, 0o640), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, None, 0o640, None), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(None, None, None, None), 'unchanged')
-        self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'invalid_settings')
+        self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'preservation_failed')
         for value in (b'[]', b'true', b'1', b'\"scalar\"', b'null'):
-            self.assertEqual(q.classify_claude_settings(before, value, 0o640, 0o640), 'invalid_settings')
-            self.assertEqual(q.classify_claude_settings(value, after, 0o640, 0o640), 'invalid_settings')
+            self.assertEqual(q.classify_claude_settings(before, value, 0o640, 0o640), 'preservation_failed')
+            self.assertEqual(q.classify_claude_settings(value, after, 0o640, 0o640), 'preservation_failed')
 
     def test_existing_registration_values_and_json_types_are_preserved(self):
         cases = [
@@ -167,3 +167,44 @@ class ClaudeManagedRootControls(unittest.TestCase):
         for before, after in cases:
             with self.subTest(before=before, after=after):
                 self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'empty_object_residue')
+
+    def test_absent_settings_cannot_accept_arbitrary_or_falsely_empty_content(self):
+        for after in (b'{}', b'{"manual":true}', b'invalid', b'[]', b'null', b'{"enabledPlugins":{"unexpected":true}}', b'{"extraKnownMarketplaces":{"unexpected":{}}}'):
+            with self.subTest(after=after):
+                self.assertEqual(q.classify_claude_settings(None, after, None, 0o600), 'preservation_failed')
+        before = b'{"manual":"preserve"}'
+        for value in ([], None, False, 0, ''):
+            for key in ('enabledPlugins', 'extraKnownMarketplaces'):
+                for original in (None, before):
+                    old = {} if original is None else {"manual":"preserve"}
+                    after = json.dumps({**old, key:value}).encode()
+                    self.assertEqual(q.classify_claude_settings(original, after, None if original is None else 0o640, 0o600 if original is None else 0o640), 'preservation_failed')
+
+    def test_case_aliases_and_additional_client_roots_are_rejected_before_effects(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            for location in ('.Claude/fixture', '.GitHub/fixture', '.CoPiLoT/fixture', '.config/OpenCode/fixture'):
+                root = base / location
+                with self.subTest(location=location), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+            override = base / 'configured-client'
+            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR'):
+                root = override / key / 'fixture'
+                with mock.patch.dict(os.environ, {key:str(override / key)}), self.subTest(key=key), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+
+    def test_ancestor_guidance_or_claude_discovery_rejects_without_writing_guides(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            real_exists = Path.exists
+            for name in ('CLAUDE.md','AGENTS.md','.claude'):
+                root = base / 'ancestor' / 'fixture'
+                sentinel = base / name
+                def exists(path):
+                    return path == sentinel or real_exists(path)
+                with mock.patch.object(Path, 'exists', exists), self.subTest(name=name), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+                self.assertFalse(real_exists(sentinel))

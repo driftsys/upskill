@@ -22,5 +22,21 @@
     ],
     "capture_helper_path": "/private/tmp/upskill-q6-claude-r7wprs9o/capture-helper.py",
     "capture_helper_sha256": "01c68406acc469b15123e280bd05310c3c33fa73c8ceb6bbf849577eb436ea25"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q6-review-ndbgdhm5",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "0777db007a86a74b9e4f8e3ffd53053f1a830f7987aeb4ef146a490797398d70"
+      }
+    ],
+    "capture_helpers": {
+      "q6-review-observations.py": "a8913e7e102332d93eb26a7c5baf7b4d75d28d3c97e31193650adb0794d56f70",
+      "q6-review-mutations.py": "1d6bab245fe1271a05ca2e1051d3aa1f2225a1d9d0bf9b06beda9d12b3682651",
+      "retain-q6-review.py": "f91d140d9a2ec188588232bdf38a63e6b1e49811875043d1eb096e0bcb7d0a39"
+    },
+    "method": "Offline replay and exact-hash settings reconstruction; later read-only cache inventory, not a repeated native run"
   }
 ]

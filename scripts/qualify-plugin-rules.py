@@ -72,11 +72,25 @@ def prepare_claude_managed_root(root):
     """Build a neutral, copy-only Q6 marketplace without team guidance files."""
     if os.path.lexists(root):
         raise ValueError('Fixture root must not exist')
-    root = root.resolve()
-    parts = root.parts
-    forbidden = any(part in ('.claude', '.github', '.codex', '.opencode') for part in parts)
-    forbidden = forbidden or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins')) for i in range(len(parts) - 1))
-    if forbidden or root.is_relative_to(REPO) or root == Path.home().resolve() or root.exists():
+    requested = root.expanduser().absolute()
+    root = requested.resolve()
+    if root.exists():
+        raise ValueError('Fixture root must not exist')
+    forbidden = False
+    for candidate in (requested, root):
+        parts = tuple(part.casefold() for part in candidate.parts)
+        forbidden |= any(part in ('.claude', '.github', '.codex', '.copilot', '.opencode') for part in parts)
+        forbidden |= any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode')) for i in range(len(parts) - 1))
+    configured = [Path(value).expanduser().resolve() for key in
+                  ('CLAUDE_CONFIG_DIR', 'COPILOT_HOME', 'CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'OPENCODE_CONFIG')
+                  if (value := os.environ.get(key))]
+    if os.environ.get('XDG_CONFIG_HOME'):
+        configured.append(Path(os.environ['XDG_CONFIG_HOME']).expanduser().resolve() / 'opencode')
+    forbidden |= any(root == location or root.is_relative_to(location) for location in configured)
+    guidance = ('CLAUDE.md', 'AGENTS.md', '.claude', '.copilot', '.codex', '.opencode', '.github', '.agents/skills', '.agents/plugins', '.config/opencode')
+    forbidden |= any((parent / name).exists() or (parent / name).is_symlink()
+                     for parent in root.parents for name in guidance)
+    if forbidden or root.is_relative_to(REPO):
         raise ValueError('A new neutral fixture root outside client discovery and the repository is required')
     root.mkdir(parents=True, mode=0o700)
     nonce = secrets.token_hex(8)
@@ -115,9 +129,9 @@ def classify_claude_settings(before, after, before_mode, after_mode):
         old = json.loads(before) if before is not None else {}
         new = json.loads(after)
     except (ValueError, TypeError):
-        return 'invalid_settings'
+        return 'preservation_failed'
     if not isinstance(old, dict) or not isinstance(new, dict):
-        return 'invalid_settings'
+        return 'preservation_failed'
     added = set(new) - set(old)
     permitted = {'enabledPlugins', 'extraKnownMarketplaces'}
     if added - permitted or any(new[key] != {} for key in added):
@@ -125,7 +139,7 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     remaining = {key: value for key, value in new.items() if key not in added}
     if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
         return 'preservation_failed'
-    return 'empty_object_residue' if added else 'settings_bytes_changed'
+    return 'empty_object_residue' if added else 'preservation_failed'
 
 
 def prepare(root, client):

@@ -115,5 +115,35 @@
     "result": "PASS: full build, Rust tests, lint, 50 offline Python tests and documentation checks",
     "private_log": "$PACKET_B/q6-retry-verify.log",
     "sha256": "4f93d0da4bf6caa85ed12face19cca4ffd8ba45a2375af9e3388cf975b215920"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "FAIL: nine regression failures before harness changes, 62 offline tests",
+    "private_log": "$PACKET_C/q6-review-red-lint.log",
+    "sha256": "0f0519c3c901a7d0eadf01abbe4b9c95adfa21fbde77f58aad30266fbaa8f584"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: 11 focused managed-root tests",
+    "private_log": "$PACKET_C/q6-review-focused-green.log",
+    "sha256": "9a0142f87087803c2904ef32e4970b5fd961406778499c50c3bebb036052187a"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_C/q6-review-green-lint.log",
+    "sha256": "b97b43b1863bb351cc15ef2d7b949646e6d745164b590a6201ee7826091b7092"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: six mutants rejected by assertion failure",
+    "private_log": "$PACKET_C/q6-review-mutations.log",
+    "sha256": "e6a1985e4b38937be2899e2b89549a51a451f066f2aaf4652b3327be1575333a"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_C/q6-review-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
   }
 ]

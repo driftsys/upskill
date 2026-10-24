@@ -1,0 +1,52 @@
+{
+  "client": "Copilot CLI",
+  "pin": "1.0.103",
+  "all_four_pre_run_pins_proven": false,
+  "ordering_basis": "Retained capture helper checks the version before invoking the client. File modification time and the first native user.message timestamp corroborate the sequence; filesystem times are not independent attestations.",
+  "version_receipt": "copilot-pre-run-version.txt",
+  "attempts": [
+    {
+      "packet": "$PACKET_A",
+      "private_version_file": "version.txt",
+      "version_stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "version_file_mtime_utc": "2026-10-23T22:05:49.030692+00:00",
+      "first_native_request": {
+        "file": "positive.stdout.jsonl",
+        "sha256": "a556ddb2ed7b8e7120becc8bc856f554697586d05822569b98007746f577077e",
+        "source_line": 5,
+        "type": "user.message",
+        "timestamp": "2026-10-23T22:05:54.340Z"
+      },
+      "version_time_precedes_native_request": true
+    },
+    {
+      "packet": "$PACKET_B",
+      "private_version_file": "version.stdout",
+      "version_stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "version_file_mtime_utc": "2026-10-24T05:28:13.282592+00:00",
+      "first_native_request": {
+        "file": "positive.stdout.jsonl",
+        "sha256": "5917b4b4208d39503b3b5830ec98afab31ff516555a2efa825d81981f0d5c6cf",
+        "source_line": 3,
+        "type": "user.message",
+        "timestamp": "2026-10-24T05:28:15.117Z"
+      },
+      "version_time_precedes_native_request": true
+    },
+    {
+      "packet": "$PACKET_C",
+      "private_version_file": "version.stdout",
+      "version_stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "version_file_mtime_utc": "2026-10-24T05:28:41.063398+00:00",
+      "first_native_request": {
+        "file": "positive.stdout.jsonl",
+        "sha256": "46405f843255599483fa7d200f06d6c04c023545303cfb0d42af182c690cedb3",
+        "source_line": 3,
+        "type": "user.message",
+        "timestamp": "2026-10-24T05:28:43.093Z"
+      },
+      "version_time_precedes_native_request": true
+    }
+  ],
+  "other_clients": "Claude, Codex and OpenCode receipts confirm installed versions after the first Q1 attempt. Their pre-run checks are not retained; no campaign-wide pre-run ordering claim is made."
+}
