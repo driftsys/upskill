@@ -48,5 +48,23 @@
     "result": "PASS: just verify, 48 offline tests",
     "private_log": "q2-review-verify.log",
     "sha256": "50e43e0db6296b699cd884ee220c7ecea622e0ed65e646c1bc901458d4efeaf9"
+  },
+  {
+    "stage": "numbered-review mutation checks",
+    "result": "PASS: narrow denylist, trailing-response and catalog-precedence mutants rejected",
+    "private_log": "q2-full-review-mutations.log",
+    "sha256": "1da36a21abe0fdaaacbbf4aa1e79badad80ff07b72b2599ce140e9b35a6cad0b"
+  },
+  {
+    "stage": "numbered-review lint",
+    "result": "PASS: 49 offline tests",
+    "private_log": "q2-full-fix-lint.log",
+    "sha256": "5f4402837cba9a65fe46a60f54108a6719ffcb9e17f306276f13cffa0bd87531"
+  },
+  {
+    "stage": "numbered-review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q2-full-fix-docs.log",
+    "sha256": "6b8c43dedbdb9f8bcd000a66d6edae6ab561b9faf81c85ef5f2d1e285eae1a71"
   }
 ]

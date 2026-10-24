@@ -76,7 +76,8 @@ class ClaudeAgentControls(unittest.TestCase):
         self.assertEqual(q.classify_agent(True, 'success', True, [], 'marker', 'marker'), 'resource_read_unobserved')
         self.assertEqual(q.classify_agent(False, 'success', True, ['view'], 'marker', 'marker'), 'agent_not_catalogued')
         self.assertEqual(q.classify_agent(True, 'success', True, None, 'marker', 'marker'), 'tool_evidence_missing')
-        self.assertEqual(q.classify_agent(True, 'success', True, ['view'], 'prefix marker', 'marker'), 'response_mismatch')
+        for response in ('prefix marker', 'marker trailing text', 'marker\n', '', 'different marker'):
+            self.assertEqual(q.classify_agent(True, 'success', True, ['view'], response, 'marker'), 'response_mismatch')
         self.assertEqual(q.classify_agent(True, 'success', True, ['view'], 'marker', 'marker'), 'delegation_observed')
 
     def test_outside_tool_use_overrides_response_and_invocation_failure(self):
@@ -85,6 +86,12 @@ class ClaudeAgentControls(unittest.TestCase):
                 for delegated in (True, False):
                     self.assertEqual(q.classify_agent(True, state, delegated, ['view', 'create'], response, 'marker'), 'restriction_violated')
                     self.assertEqual(q.classify_agent(True, state, delegated, ['shell'], response, 'marker'), 'restriction_violated')
+
+    def test_unknown_outside_tools_and_missing_catalog_never_hide_a_violation(self):
+        for tool in ('edit', 'unfamiliar_tool'):
+            self.assertEqual(q.classify_agent(True, 'success', True, ['view', tool], 'marker', 'marker'), 'restriction_violated')
+        for catalog in (False, None):
+            self.assertEqual(q.classify_agent(catalog, 'success', True, ['view', 'create'], 'marker', 'marker'), 'restriction_violated')
 
     def test_failed_invocations_never_establish_delegation(self):
         for state in ('failure', 'authentication_failure', 'timeout', 'unavailable'):

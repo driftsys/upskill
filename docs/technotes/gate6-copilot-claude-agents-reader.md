@@ -105,7 +105,10 @@ names/markers, independent empty root commits and inherited Git selector
 isolation. The classifier rejects catalog-only evidence, missing child/tool
 evidence, nonmatching responses and failed invocations. Any observed child call
 outside the declared tool restriction wins over both response text and
-invocation failure, including an outside call that fails.
+invocation failure, including an outside call that fails. Final review
+regressions cover unfamiliar outside tools, violation precedence over missing
+catalog evidence and trailing-response rejection; the latest lint run passes all
+49 offline tests.
 
 The tests do not call clients or qualify native behavior. Broader tool lists,
 permission inheritance, attempted native denials, other Claude fields, user
