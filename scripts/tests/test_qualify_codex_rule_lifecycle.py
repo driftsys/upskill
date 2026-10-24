@@ -54,7 +54,8 @@ class CodexLifecycleTests(unittest.TestCase):
     def test_existing_root_and_discovery_roots_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for path in (root, root / '.codex/fixture', root / '.agents/plugins/fixture'):
+            for path in (root, *(root / p / 'fixture' for p in (
+                    '.claude', '.github', '.codex', '.opencode', '.agents/skills', '.agents/plugins'))):
                 with self.subTest(path=path), self.assertRaises(ValueError):
                     self.q.prepare_codex_rule_lifecycle(path)
             dangling = root / 'dangling'
@@ -80,6 +81,9 @@ class CodexLifecycleTests(unittest.TestCase):
         other_record = message('developer', bodies['b'])
         other_record['type'] = 'function_call'
         self.assertEqual(self.q.count_developer_rule_bodies([other_block, other_record], bodies), {'a': 0, 'b': 0})
+        for changed in ('RULE A', 'rule A\n', 'RULE C\n', 'RULE  A\n'):
+            self.assertEqual(self.q.count_developer_rule_bodies(
+                [message('developer', changed)], bodies), {'a': 0, 'b': 0})
 
     def test_rule_identity_requires_two_distinct_nonempty_bodies(self):
         for bodies in ({"a": "", "b": "B"}, {"a": "A", "b": "A"}, {"a": "A"}):
@@ -97,7 +101,9 @@ class CodexLifecycleTests(unittest.TestCase):
         value = self.observation()
         self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'observed_single_copy')
         for i in range(3):
-            for counts in ({'a': 2, 'b': 1}, {'a': 1, 'b': 2}, {'a': 0, 'b': 1}, {'a': True, 'b': 1}, {'a': 1}, {'x': 1, 'b': 1}):
+            for counts in ({'a': 2, 'b': 1}, {'a': 1, 'b': 2}, {'a': 0, 'b': 1},
+                           {'a': 2, 'b': 0}, {'a': 0, 'b': 2},
+                           {'a': True, 'b': 1}, {'a': 1}, {'x': 1, 'b': 1}):
                 value = self.observation(); value['boundaries'][i]['body_counts'] = counts
                 value['boundaries'][i]['callback_counts'] = {'a': 1, 'b': 1}
                 with self.subTest(i=i, counts=counts):
@@ -121,6 +127,36 @@ class CodexLifecycleTests(unittest.TestCase):
         for i in (1, 2):
             value = self.observation(); value['boundaries'][i]['automatic'] = False
             self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+
         for change in (lambda v: v['boundaries'].pop(), lambda v: v['boundaries'].reverse(), lambda v: v.update(pin='other')):
             value = self.observation(); change(value)
             self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+
+    def test_missing_identity_and_nonboolean_lifecycle_evidence_fail(self):
+        for changed in (None, '', 1, []):
+            value = self.observation(); value['session'] = changed
+            self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+        for changed in (False, None, 0, 1, 'yes'):
+            value = self.observation(); value['positive_passed'] = changed
+            self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'positive_control_failed')
+            for i in range(3):
+                for key in ('completed', 'read_only', 'automatic'):
+                    if key == 'automatic' and i == 0:
+                        continue
+                    value = self.observation(); value['boundaries'][i][key] = changed
+                    self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+        for i in range(3):
+            for key in ('session', 'completed', 'read_only', 'automatic'):
+                if key == 'automatic' and i == 0:
+                    continue
+                value = self.observation(); del value['boundaries'][i][key]
+                self.assertEqual(self.q.classify_codex_rule_lifecycle(value), 'lifecycle_control_failed')
+
+    def test_markers_and_project_identities_are_fresh_between_fixtures(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixtures = [self.q.prepare_codex_rule_lifecycle(Path(tmp) / name) for name in ('one', 'two')]
+            self.assertNotEqual(fixtures[0]['fallback'], fixtures[1]['fallback'])
+            self.assertTrue(set(fixtures[0]['rule_bodies'].values()).isdisjoint(fixtures[1]['rule_bodies'].values()))
+            self.assertNotEqual(fixtures[0]['market_name'], fixtures[1]['market_name'])
+            commits = [subprocess.check_output(['git', '-C', str(f['project']), 'rev-parse', 'HEAD']) for f in fixtures]
+            self.assertNotEqual(*commits)

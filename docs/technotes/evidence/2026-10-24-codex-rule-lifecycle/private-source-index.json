@@ -7,7 +7,7 @@
   {
     "alias": "$PACKET_B",
     "private_source_path": "/private/tmp/upskill-q9-ui-4zbfeu48",
-    "manifest_sha256": "99edd4e5540f8c9649d6df4824b808587767f4b48ad76ece19f6fdeb105c923b"
+    "manifest_sha256": "d23f3cd922a9093ac617a2e58de903fc8db43f3e08b991914ca0d0afd8eb88f0"
   },
   {
     "alias": "$PACKET_C",

@@ -137,3 +137,11 @@ project registration, ordinary review of any changed definitions, separate
 resume/clear/fork controls and the remaining platform/scope/reader matrix remain
 open. Linux and IDE/hosted surfaces are unqualified. Production stays schema 1;
 step 7 cannot promote the Codex rule route from this packet.
+
+Numbered review adds near-match payload negatives, compensating duplicate/absent
+rule counts at every boundary and all sibling discovery roots. Additional checks
+reject missing session identity and nonboolean lifecycle evidence, and require
+fresh markers and Git identities across fixtures. The three review mutants pass
+the prior suite and fail the strengthened suite. Ten retained mutations are
+rejected; latest lint passes all 59 offline tests and documentation checks pass.
+These test-only changes do not alter native observations or qualification.

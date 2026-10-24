@@ -34,5 +34,20 @@
     "result": "PASS: 57 offline tests, full Rust tests, lint, documentation and build",
     "private_log": "$PACKET_B/q9-final-verify.log",
     "sha256": "607230c2c9f8dea7c09c2e1a2c326cb7f0012ce91092e85d79d281ec8dfe88e3"
+  },
+  {
+    "stage": "numbered review regressions",
+    "command": "just lint and just docs-check",
+    "result": "PASS: 59 offline tests and documentation checks",
+    "private_log": "$PACKET_B/q9-numbered-lint.log",
+    "sha256": "43acfdfa75604d02bb7bc31ef46001c78dd2ffbaee2b61983cded37ef44823ce"
+  },
+  {
+    "stage": "numbered review mutation checks",
+    "command": "python3 $PACKET_B/q9-numbered-mutation-checks.py",
+    "result": "PASS: ten mutants rejected; the three numbered findings survived prior tests and now fail",
+    "private_log": "$PACKET_B/q9-numbered-mutations.log",
+    "sha256": "4c9317093d1252f1641ed88bf9f1c6447820dc990385af6e65c022ccd30bcb51",
+    "private_helper_sha256": "c52b36d996826c1dbfc5be608cc600b8013f91f907a6addc2d3f0ab39528b39a"
   }
 ]
