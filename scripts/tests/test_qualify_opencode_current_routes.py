@@ -1,6 +1,7 @@
 """Offline Q5 fixture and current-release classification; no client calls."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -40,11 +41,11 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
                 self.assertEqual(json.loads((package/'package.json').read_text())['exports'],'./index.ts')
                 self.assertEqual((package/'rule.txt').read_text(),'For the plugin qualification question include exactly one occurrence of '+f['rule_markers'][i]+' in the rules array. Return only the JSON object with a rules array.\n')
                 self.assertEqual(json.loads((package/'package.json').read_text())['dependencies'], {'@opencode/plugin':'2.1.4'})
-                self.assertIn('ctx.session.hook("context"',(package/'index.ts').read_text())
+                self.assertEqual((package/'index.ts').read_bytes(),(self.q.TEMPLATES/'opencode/index.ts').read_bytes())
             for path in f['root'].rglob('*'):
                 self.assertFalse(path.is_symlink())
                 self.assertNotIn(path.name,('CLAUDE.md','AGENTS.md','AGENTS.override.md'))
-            heads=[subprocess.check_output(['git','-C',str(p),'rev-parse','HEAD']) for p in (f['project'],f['positive_project'])]
+            heads=[subprocess.check_output(['git','-C',str(p),'rev-parse','HEAD'],env=self.q.fixture_environment(f['root'])) for p in (f['project'],f['positive_project'])]
             self.assertNotEqual(*heads)
 
     def test_root_protection_and_fresh_markers(self):
@@ -56,6 +57,9 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
                 self.assertEqual(set(root.rglob('*')),before)
             a=self.q.prepare_opencode_current_routes(root/'a');b=self.q.prepare_opencode_current_routes(root/'b')
             for key in ('native_marker','resource_marker','fallback','rule_markers','skill_id'):self.assertNotEqual(a[key],b[key])
+            first=set(a['rule_markers']+[a['native_marker'],a['resource_marker'],a['fallback']])
+            second=set(b['rule_markers']+[b['native_marker'],b['resource_marker'],b['fallback']])
+            self.assertTrue(first.isdisjoint(second))
             with mock.patch.object(self.q,'REPO',root.resolve()/'repo'):
                 with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(root/'repo/new')
             with mock.patch.object(Path,'home',return_value=root.resolve()/'home'):
@@ -100,7 +104,7 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
         c,f=self.controls();c['resume']['session']='foreign'
         for event in c['resume']['events']:event['session']='foreign'
         self.assertEqual(self.q.classify_opencode_current_routes(c,f),'context_control_failed')
-        for invalid in ('',None,1,[]):
+        for invalid in ('',' ',None,1,[]):
             c,f=self.controls()
             for phase in ('context','resume'):
                 c[phase]['session']=invalid
@@ -132,3 +136,29 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
             with mock.patch.object(Path,'home',return_value=home):
                 with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(candidate)
             self.assertFalse(candidate.exists())
+
+    def test_rule_array_order_is_not_part_of_the_native_contract(self):
+        for context in (['A','B'],['B','A']):
+            for resume in (['A','B'],['B','A']):
+                c,f=self.controls();c['context']['response']={'rules':context};c['resume']['response']={'rules':resume}
+                self.assertEqual(self.q.classify_opencode_current_routes(c,f),'observed')
+        for phase in ('context','resume'):
+            for response in ({'rules':[1,'B']},{'rules':None},{'rules':['A','A']},{'rules':['A','B','B']}):
+                c,f=self.controls();c[phase]['response']=response
+                self.assertEqual(self.q.classify_opencode_current_routes(c,f),'context_control_failed')
+
+    def test_configured_roots_and_ancestor_guidance_are_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();profile=root/'ordinary-client-profile';profile.mkdir()
+            for variable in ('CLAUDE_CONFIG_DIR','CODEX_HOME','COPILOT_HOME','OPENCODE_CONFIG_DIR'):
+                candidate=profile/'fixture'
+                with mock.patch.dict(os.environ,{variable:str(profile)}):
+                    with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(candidate)
+                self.assertFalse(candidate.exists())
+            actual_exists=Path.exists
+            for name in ('CLAUDE.md','AGENTS.md','AGENTS.override.md'):
+                guide=root/name
+                def exists(path):return path==guide or actual_exists(path)
+                with mock.patch.object(Path,'exists',exists), mock.patch.object(Path,'mkdir',side_effect=AssertionError('Reject before writes')):
+                    with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(root/'fixture')
+                self.assertFalse((root/'fixture').exists())

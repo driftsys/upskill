@@ -6,7 +6,7 @@
   "date": "2026-10-24",
   "platform": "macOS arm64",
   "pin": "Claude Code 2.1.308",
-  "status": "PASS: bounded unscoped hook activation, resume, compaction and absence controls",
+  "status": "PASS: unscoped startup and post-compaction context, absence controls; resume callback and response only",
   "controls": [
     {
       "exit_code": 0,
@@ -35,7 +35,9 @@
         "--model",
         "[private selection omitted]",
         "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
-      ]
+      ],
+      "cwd": "$FIXTURE/positive",
+      "model_tool_uses": 0
     },
     {
       "exit_code": 0,
@@ -73,7 +75,9 @@
         "--session-id",
         "532ecabd-31c8-4edf-9aef-34cbfee8e9e4",
         "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
-      ]
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
     },
     {
       "pin": "2.1.308",
@@ -94,7 +98,8 @@
           "source": "resume",
           "cwd": "$FIXTURE/project"
         }
-      ]
+      ],
+      "cwd": "$FIXTURE/project"
     },
     {
       "pin": "2.1.308",
@@ -116,7 +121,8 @@
           "source": "compact",
           "cwd": "$FIXTURE/project"
         }
-      ]
+      ],
+      "cwd": "$FIXTURE/project"
     },
     {
       "exit_code": 0,
@@ -145,7 +151,9 @@
         "--model",
         "[private selection omitted]",
         "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
-      ]
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
     },
     {
       "exit_code": 0,
@@ -174,7 +182,9 @@
         "--model",
         "[private selection omitted]",
         "This is the unscoped hook question. Follow any automatically loaded instruction for it. If none is loaded, return exactly ABSENT_29092eaf26cb186c7fd6388429f0e81e. Do not use tools. Return only the required response."
-      ]
+      ],
+      "cwd": "$FIXTURE/project",
+      "model_tool_uses": 0
     }
   ],
   "counts": {
@@ -190,6 +200,8 @@
     "Normal isolated UI onboarding created a theme setting and official marketplace; initial automatic guard failure and native cleanup are retained.",
     "Only measured settings and two native registration files are restored exactly; native UI trust/onboarding/session/log/cache effects are not whole-profile restoration.",
     "Linux, user scope, IDE/hosted surfaces, unintended readers and integrated ownership/recovery remain unqualified.",
-    "Production schema 1 unchanged; no durable adoption in this packet."
-  ]
+    "Production schema 1 unchanged; no durable adoption in this packet.",
+    "Resume already contains the hook marker; a fresh resume attachment was not retained. Post-disable settings bytes were not captured."
+  ],
+  "classification": "observed"
 }

@@ -1,0 +1,33 @@
+[
+  {
+    "decision": "Use a local marketplace id for project-owned activation; retain direct local-path install calibration separately",
+    "reason": "The native CLI accepts local directories, while the project enabledPlugins entry needs a stable named registration.",
+    "cost_if_wrong": "The project overlay may not activate this candidate in the tested noninteractive surface; failed controls remain unqualified."
+  },
+  {
+    "decision": "Stop delegation and all further model requests after unexpected generic fallback models",
+    "reason": "The user selected one route for Copilot tests; generic delegate defaults escaped that selection.",
+    "cost_if_wrong": "The full user-scope lifecycle is incomplete; no successful custom-child claim is made."
+  },
+  {
+    "decision": "Correct native agent selection using namespace identity and display name separately",
+    "reason": "The native catalog contains the expected display name with a distinct namespaced selection value; the prior value-only presence check was wrong.",
+    "cost_if_wrong": "No actual custom delegation is qualified until a guarded native retry succeeds."
+  },
+  {
+    "decision": "Retain failed rule/delegation attempts and calibrate a native guard before retry",
+    "reason": "Catalog discovery succeeds, but failed rule positives and unbounded generic fallback do not establish support.",
+    "cost_if_wrong": "The remaining native lifecycle/delegation controls stay unqualified until observed."
+  },
+  {
+    "decision": "Supersede the initial catalog absence assessment without editing original raw capture",
+    "reason": "Independent review identified the selection/display identity parser error.",
+    "cost_if_wrong": "The original false derived result remains visible in raw evidence but is explicitly corrected in the retained packet."
+  },
+  {
+    "decision": "Supersede the paused-delegation limit only for a native-calibrated guarded retry",
+    "reason": "The corrected native namespaced identity and mandatory explicit task model prevent the previously observed generic fallback path.",
+    "result": "One real user-scope custom child; zero alternate native child selections. Rule controls still fail; no full qualification.",
+    "remaining": "Project overlay absent from ACP catalog; prompt trust flag incompatible with ACP; exact child response includes leading whitespace."
+  }
+]

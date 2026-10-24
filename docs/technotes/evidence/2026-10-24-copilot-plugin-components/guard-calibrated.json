@@ -1,0 +1,7 @@
+{
+  "pin": "1.0.103",
+  "native_guard_denial_observed": true,
+  "task_excluded": true,
+  "trace_sha256": "c99fb52b50d12d27b53680dfc0731375c0bb7e4c915e26925f831b90fa7133f7",
+  "stdout_sha256": "a616552b7086f1fba3607d0983de255994add783c255d0aed6ff65967ec74601"
+}

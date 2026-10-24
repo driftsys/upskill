@@ -2,6 +2,31 @@
   {
     "alias": "$PACKET_A",
     "private_source_path": "/private/tmp/upskill-q4-claude-71lwyz2p",
-    "manifest_sha256": "5ee52cbb86624a0b4de1a38b91c303da1f3aa5fff952c3926209fdba4886b8a7"
+    "manifest_sha256": "e4e0005f00eae6037e83c0fe88cfbd22da6b70593a1868b8c26f1a9abc55aa4d",
+    "capture_helpers": {
+      "capture-helper.py": "07240f79cdecc83a3d9e5538e9d35018d5ae8eed580bdfef9d968bbd8f3db4a9",
+      "fixture-builder.py": "2eadd131f602464ca01bedd8fb12663fca31be2b21244ae5abd5ff7b484403ba",
+      "ui-capture-helper.py": "6afd808c96c29a210988f6b85ade3d9cffb38806d4d08aecdd2cd0510053406c",
+      "ui-assessment-helper.py": "45a5d1f92bf7649856886b8a3cb1c82a9850acb3c96576804455242853c80fbc",
+      "retention-helper.py": "48f4e36354f8ce0d96f6778850696543d9da036b1525cf0c4d99601ea04c2e4a"
+    }
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q4-review-nfvgp7bb",
+    "manifest_sha256": "552309f275507f1b0ff5c62ab3533082199e0fc0c129657b72e9fd684204402a",
+    "capture_helpers": {
+      "q4-review-observations.py": "3acb09ea99ce10115e2aeae5495f2027f80ed39c32ddd31f50f03c97e747c0fa",
+      "q4-review-mutations.py": "3a2e94bb0c3ee1cfb396650f6bf17c85cdb0c10fd8680edd8d64fbb6f59ecf30",
+      "q4-main-integration-audit.py": "608b732345848d315b3044492297a746ac0afde89bfe9ecbc0fee697286a1d4e",
+      "retain-q4-review.py": "bc466865a3e5cebd26a5c00a41aee5510e897bcfc681cb24a4f7659e0329d67c",
+      "q4-quick-fix-mutations.py": "d135a21e0b37b61dfe819567f33f1edfbdb87d4eb79c2be0adfe2151a476c554",
+      "retain-q4-quick-fix.py": "cbd7665f878f2cc6953ad65a897c06e61c50b82e9fdc0f9984d94e6d5df9fb7e"
+    },
+    "method": "Offline provenance selection, review regressions and verification; no repeated native run",
+    "source_snapshots": {
+      "source/": "Initial full-verified integration at b6fbcc3",
+      "quick-fix-source/": "Test-only callback shape, metadata and historical-limit regressions; harness unchanged"
+    }
   }
 ]

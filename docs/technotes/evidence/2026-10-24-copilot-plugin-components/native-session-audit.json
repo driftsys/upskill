@@ -1,0 +1,214 @@
+{
+  "sessions": [
+    {
+      "session": "7d5b0cea-8b5f-4799-bb42-9238b8f024b6",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-7d5b0cea-8b5f-4799-bb42-9238b8f024b6.jsonl"
+    },
+    {
+      "session": "29855bbd-65e9-4ada-8e92-5d3762b52f34",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-29855bbd-65e9-4ada-8e92-5d3762b52f34.jsonl"
+    },
+    {
+      "session": "e0c14fe1-9fd1-4291-aa42-ccd0a2e6f67d",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "task",
+        "task",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "task",
+        "task",
+        "task",
+        "task",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "task",
+        "view"
+      ],
+      "delegates": [
+        {
+          "agent": "general-purpose",
+          "requested_model_matches": true,
+          "selection_source": "session_inheritance"
+        },
+        {
+          "agent": "task",
+          "requested_model_matches": false,
+          "selection_source": "agent_definition_default"
+        },
+        {
+          "agent": "task",
+          "requested_model_matches": false,
+          "selection_source": "explicit_override"
+        },
+        {
+          "agent": "task",
+          "requested_model_matches": true,
+          "selection_source": "explicit_override"
+        },
+        {
+          "agent": "task",
+          "requested_model_matches": false,
+          "selection_source": "agent_definition_default"
+        },
+        {
+          "agent": "task",
+          "requested_model_matches": false,
+          "selection_source": "agent_definition_default"
+        }
+      ],
+      "source": "native-session-e0c14fe1-9fd1-4291-aa42-ccd0a2e6f67d.jsonl"
+    },
+    {
+      "session": "8c640273-635e-4f8c-a3ba-bb8a75630734",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-8c640273-635e-4f8c-a3ba-bb8a75630734.jsonl"
+    },
+    {
+      "session": "f2677c85-0c43-4fc5-9368-ddb481524a6f",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-f2677c85-0c43-4fc5-9368-ddb481524a6f.jsonl"
+    },
+    {
+      "session": "b1165dc9-9126-49f3-a553-5db3f3caaaa1",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-b1165dc9-9126-49f3-a553-5db3f3caaaa1.jsonl"
+    },
+    {
+      "session": "f6c73eee-1b11-4873-87c4-357bf5f194ce",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-f6c73eee-1b11-4873-87c4-357bf5f194ce.jsonl"
+    },
+    {
+      "session": "79a5b2d7-a538-4bd0-959f-7f3344accc28",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-79a5b2d7-a538-4bd0-959f-7f3344accc28.jsonl"
+    },
+    {
+      "session": "d3d283b5-fe3e-49cd-b06e-f43beb57973f",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-d3d283b5-fe3e-49cd-b06e-f43beb57973f.jsonl"
+    },
+    {
+      "session": "5dfe7ac3-5d56-45cf-8e2e-853becc8adbb",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "view"
+      ],
+      "delegates": [],
+      "source": "native-session-5dfe7ac3-5d56-45cf-8e2e-853becc8adbb.jsonl"
+    },
+    {
+      "session": "c9b94f27-d070-4b4c-a368-428f4d2645b2",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [
+        "bash",
+        "Read",
+        "Read",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "view",
+        "bash"
+      ],
+      "delegates": [],
+      "source": "native-session-c9b94f27-d070-4b4c-a368-428f4d2645b2.jsonl"
+    },
+    {
+      "session": "633ada1a-f3af-41d6-93a2-e9b45fc85fdc",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-633ada1a-f3af-41d6-93a2-e9b45fc85fdc.jsonl"
+    },
+    {
+      "session": "8514d1e9-c73f-4398-8878-c874ee70ee84",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-8514d1e9-c73f-4398-8878-c874ee70ee84.jsonl"
+    },
+    {
+      "session": "8577891f-085b-4244-8cf0-602f471235c9",
+      "native_version": "1.0.103",
+      "parent_model_matches_requested": true,
+      "tool_names": [],
+      "delegates": [],
+      "source": "native-session-8577891f-085b-4244-8cf0-602f471235c9.jsonl"
+    }
+  ],
+  "unexpected_delegate_model_selections": 4,
+  "new_team_guidance_files": [],
+  "limit": "Native tool names and starts do not prove whole-profile byte restoration."
+}

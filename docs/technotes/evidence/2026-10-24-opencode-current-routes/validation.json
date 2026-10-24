@@ -76,5 +76,47 @@
     "result": "PASS: later normal-profile preflight links",
     "private_log": "$PACKET_B/q5-later-catalog-docs.log",
     "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "FAIL: valid rule permutation rejected, 68 offline tests; before classifier change",
+    "private_log": "$PACKET_D/q5-review-red-lint.log",
+    "sha256": "5bf9f1243483f404bb205735b034f67b36da33bfe104ba8fa14fe5ecbccc8fd4"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "FAIL: configured fixture root accepted; before shared guard",
+    "private_log": "$PACKET_D/q5-root-red.log",
+    "sha256": "2a9b9c9a31f47e8773de364f88c4c131889275e3e16dcff71cff7df4e5842126"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "FAIL: whitespace-only session admitted; before session guard",
+    "private_log": "$PACKET_D/q5-session-red.log",
+    "sha256": "75bcd2a25221ddc4fae1a45c1750dc526ee0d66219df6502d342a5d3fb4a145f"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "PASS: 11 focused tests",
+    "private_log": "$PACKET_D/q5-review-focused-green.log",
+    "sha256": "b5d1b9d2012a504fbb73b80397a3218c6202d9996f2c97b20bdd6a89dd46ef18"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "PASS: three independent mutants rejected by assertion failure",
+    "private_log": "$PACKET_D/q5-review-mutations.log",
+    "sha256": "cfde415a6b9267e929fcddf898c3327b43d27d5b1679a3a1b46a35a3e9b5c443"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "PASS: formatting before verification",
+    "private_log": "$PACKET_D/q5-review-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Packet review regressions and current-main integration",
+    "result": "PASS: full Rust tests, 154 offline tests, lint, docs and build",
+    "private_log": "$PACKET_D/q5-review-verify.log",
+    "sha256": "4e5cee788beac15a45b04af3709f08ae8a8436ac4eedd3481eb476f6b2b8f9ea"
   }
 ]

@@ -3,10 +3,14 @@
 Task [#390](https://github.com/driftsys/upskill/issues/390), Q4 of the
 [implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains passing project-scope activation controls on Claude Code 2.1.308, macOS
-arm64, 2026-10-24. One package-owned unscoped rule is observed on fresh startup,
-resume and after native compaction; disabled and uninstalled controls return the
-exact fallback without a hook event. This is bounded Q4 evidence, not complete
-Gate 6 qualification. Production remains schema 1.
+arm64, 2026-10-24. One package-owned unscoped rule is observed on fresh startup
+and after native compaction. Resume retains a callback and exact response, but
+no fresh context attachment. Disabled and uninstalled controls return the exact
+fallback without a hook event
+([summary](evidence/2026-10-24-claude-rule-hooks/summary.json),
+[provenance](evidence/2026-10-24-claude-rule-hooks/control-provenance.json)).
+This is bounded Q4 evidence, not complete Gate 6 qualification. Production
+remains schema 1.
 
 ## Method and pin
 
@@ -51,7 +55,7 @@ retained; no trust bypass flag or discovery override is used. UI exit is 0.
 | ----------------------- | -------------- | -------------------------------------------------------------------------- |
 | Native rule positive    | Claude 2.1.308 | PASS: exact independent native marker                                      |
 | Installed hook positive | Claude 2.1.308 | PASS: exact hook marker; one startup event                                 |
-| Resume                  | Claude 2.1.308 | PASS: exact hook marker; one resume event, same session                    |
+| Resume                  | Claude 2.1.308 | LIMITED: callback and exact response; fresh context unobserved             |
 | Native compaction       | Claude 2.1.308 | PASS: compact boundary, one compact event and exact subsequent hook marker |
 | Disabled                | Claude 2.1.308 | PASS: exact fallback; zero own hook events                                 |
 | Uninstalled             | Claude 2.1.308 | PASS: exact fallback; zero own hook events                                 |
@@ -64,9 +68,12 @@ exact user prompts, assistant UUIDs and native turn-completion records. The
 retains the manual compact boundary and completion positions. Native hook
 responses complete with exit 0. The retained startup and compact UI attachments
 contain successful hook output and its exact single additional-context body;
-resume is evidenced by its callback trace and exact response. Startup, resume
-and compact events have the same session identity. No model tool call is
-observed.
+resume is evidenced by its callback trace and exact response. The marker already
+exists in that resumed history, so this response does not establish fresh
+context injection on resume
+([UI assessment](evidence/2026-10-24-claude-rule-hooks/ui-assessment.json)).
+Startup, resume and compact events have the same session identity. No model tool
+call is observed.
 
 Callback counts and exact answers are separate observations. This packet does
 not claim that a callback count proves a single provider-effective developer
@@ -114,23 +121,50 @@ outside the repository. The
 binds the private manifest; retained hashes bind sanitized selections. Model
 identifiers, thinking and unrelated native transcript content are omitted.
 
-Tests preceded implementation: `just lint` failed six missing-helper tests, then
-passed all 56 offline tests. They execute the prepared shell hook offline, check
-its exact independent payload and callback sequence, reject escaping or multiple
-index entries, verify separate Git identities and require exact positive/absence
-responses, one event per active boundary, stable session identity, correct pin
-and native compaction completion. Offline tests do not invoke Claude or any
-model.
+The retained private validation logs record tests before implementation:
+`just lint` failed six missing-helper tests, then passed all 56 offline tests.
+They execute the prepared shell hook offline, check its exact independent
+payload and callback sequence, reject escaping or multiple index entries, verify
+separate Git identities and require exact positive/absence responses, one event
+per active boundary, stable session identity, correct pin and native compaction
+completion. Offline tests do not invoke Claude or any model.
 
-The affected proposal row is the
-[Claude unscoped hook exception](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules).
-The packet supplies the bounded positive, absence, resume and compaction results
-for that exception. Durable amendments wait for step 7. User scope, Linux,
-IDE/hosted surfaces, unintended readers, effective-input uniqueness and
-integrated upskill ownership/recovery remain unqualified. No production adapter
-is activated here.
+Under the
+[adopted rules direction](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules),
+the packet supplies bounded startup, absence and compaction results for the
+retained hook fallback. Resume provides callback and response evidence only
+([summary](evidence/2026-10-24-claude-rule-hooks/summary.json)). Durable
+amendments wait for step 7. User scope, Linux, IDE/hosted surfaces, unintended
+readers, effective-input uniqueness and integrated upskill ownership/recovery
+remain unqualified. No production adapter is activated here.
 
 Further regressions pin the native-positive file bytes, absent native rules in
 the hook project, fresh role markers, protected repository/home roots, missing
-evidence and matching invalid session identities. The full verification passes
-all 58 offline tests; the shell fixture also passes ShellCheck.
+evidence and matching invalid session identities. Further packet review tests
+require explicit absence traces, no observed tool calls, the correct project,
+valid callback objects and replay of the retained summary. Current verification
+counts and logs are in the
+[validation record](evidence/2026-10-24-claude-rule-hooks/validation.json); the
+shell fixture also passes ShellCheck.
+
+## Project identity and historical capture limits
+
+The
+[provenance selection](evidence/2026-10-24-claude-rule-hooks/control-provenance.json)
+recovers cwd, session, tool calls and the tested package's catalog entry from
+the original print streams. Both absence runs name the candidate project and
+omit this package. UI user and assistant records name that same project. The
+[project identities](evidence/2026-10-24-claude-rule-hooks/project-identities.json)
+retain its distinct Git root. These are offline selections, with no native
+request repeated.
+
+Management cwd follows the original capture helper's call arguments. It was not
+independently recorded in a process receipt. No settings bytes were captured
+immediately after disable, so that state cannot be reconstructed from this
+packet. The native catalog and fallback observation support the bounded absence
+result; they do not establish exact post-disable settings preservation
+([provenance](evidence/2026-10-24-claude-rule-hooks/control-provenance.json),
+[preservation](evidence/2026-10-24-claude-rule-hooks/preservation.json)).
+
+Remaining fixture and capture maintenance is tracked in
+[debt #403](https://github.com/driftsys/upskill/issues/403).

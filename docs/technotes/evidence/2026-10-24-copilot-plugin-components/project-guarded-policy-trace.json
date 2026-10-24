@@ -1,0 +1,47 @@
+[
+  {
+    "input": {
+      "sessionId": "afdca7ca-d12e-4cfc-8b93-a20949759274",
+      "timestamp": 1792841108612,
+      "cwd": "$PACKET_F/fixture/project",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/project/policy-denied.txt"
+      }
+    },
+    "output": {
+      "permissionDecision": "deny",
+      "permissionDecisionReason": "Private retry policy denies this operation."
+    }
+  },
+  {
+    "input": {
+      "sessionId": "9d79ae9b-05e0-4a7b-9170-0b8803a8ae55",
+      "timestamp": 1792841229108,
+      "cwd": "$PACKET_F/fixture/project",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/project/matching/probe.txt"
+      }
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    }
+  },
+  {
+    "input": {
+      "sessionId": "c32fb792-79fb-4410-9072-9863352175ed",
+      "timestamp": 1792841237478,
+      "cwd": "$PACKET_F/fixture/project",
+      "toolName": "view",
+      "toolArgs": {
+        "path": "$PACKET_F/fixture/project/nonmatching/probe.txt"
+      }
+    },
+    "output": {
+      "permissionDecision": "allow",
+      "permissionDecisionReason": "Exact private fixture operation allowed."
+    }
+  }
+]

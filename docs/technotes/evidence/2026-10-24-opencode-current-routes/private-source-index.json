@@ -13,5 +13,16 @@
     "alias": "$PACKET_C",
     "private_source_path": "/private/tmp/upskill-q5-normal-catalog-bm9f2gf5",
     "manifest_sha256": "3f6ee567b5e74cb5090e6abe5db88a69762377c5ebe766b9c59afda6e06ea8cf"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q5-review-8_xwplqj",
+    "manifest_sha256": "42dda0a1b38f1cb58cdaa1056996f9176d838d586db3432f673ade23fafb320f",
+    "capture_helpers": {
+      "q5-review-mutations.py": "84d4ee9adddbd5686dca16b636be318d5d2a6fc2c9c3c26270d9b6139e511027",
+      "q5-main-integration-audit.py": "10c1b5dd7b824a371355834448dc486fab8a06c01609d642435a01c28389d803",
+      "retain-q5-review.py": "28d26d64068f5a0ec6392338f0bc0f154872db4b0fc325838eebba3a672fbd05"
+    },
+    "method": "Offline fixture/classifier regressions and integration verification; original native attempts unchanged"
   }
 ]

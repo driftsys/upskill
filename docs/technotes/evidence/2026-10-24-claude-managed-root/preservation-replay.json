@@ -1,0 +1,62 @@
+{
+  "method": "Offline classification of exact-hash reconstructed selected settings bytes",
+  "harness_sha256": "4ce9d8004a16c17665ef6435e1f27c9f0084243f26541ac9b37e5d834909bccc",
+  "checks": [
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "recorded": "empty_object_residue",
+      "replayed": "empty_object_residue"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "path": "$PROFILE/settings.json",
+      "recorded": "unchanged",
+      "replayed": "unchanged"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "recorded": "unchanged",
+      "replayed": "unchanged"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "path": "$PROFILE/settings.json",
+      "recorded": "empty_object_residue",
+      "replayed": "empty_object_residue"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "recorded": "empty_object_residue",
+      "replayed": "empty_object_residue"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "path": "$PROFILE/settings.json",
+      "recorded": "unchanged",
+      "replayed": "unchanged"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "recorded": "unchanged",
+      "replayed": "unchanged"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "path": "$PROFILE/settings.json",
+      "recorded": "empty_object_residue",
+      "replayed": "empty_object_residue"
+    }
+  ]
+}

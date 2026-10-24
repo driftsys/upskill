@@ -61,6 +61,9 @@ class ClaudeManagedRootControls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 q.prepare_claude_managed_root(sentinel)
             self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
+            with mock.patch.dict(os.environ, {'HOME': str(base), 'USERPROFILE': str(base)}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(Path('~/existing'))
+            self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
 
     def test_fixture_git_ignores_ambient_repository_and_home_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -135,13 +138,13 @@ class ClaudeManagedRootControls(unittest.TestCase):
         for value in ({'env': {'MANUAL': 'changed'}, 'enabledPlugins': {}}, {'env': {'MANUAL': 'preserve'}, 'unknown': {}}, {'env': {'MANUAL': 'preserve'}, 'enabledPlugins': {'unexpected': True}}, {'env': {'MANUAL': 'preserve'}, 'extraKnownMarketplaces': {'unexpected': {'source': 'changed'}}}, {'enabledPlugins': {}}):
             self.assertEqual(q.classify_claude_settings(before, json.dumps(value).encode(), 0o640, 0o640), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o600), 'preservation_failed')
-        self.assertEqual(q.classify_claude_settings(before, b'{ "env": { "MANUAL": "preserve" } }', 0o640, 0o640), 'settings_bytes_changed')
+        self.assertEqual(q.classify_claude_settings(before, b'{ "env": { "MANUAL": "preserve" } }', 0o640, 0o640), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(before, None, 0o640, None), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(None, None, None, None), 'unchanged')
-        self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'invalid_settings')
+        self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'preservation_failed')
         for value in (b'[]', b'true', b'1', b'\"scalar\"', b'null'):
-            self.assertEqual(q.classify_claude_settings(before, value, 0o640, 0o640), 'invalid_settings')
-            self.assertEqual(q.classify_claude_settings(value, after, 0o640, 0o640), 'invalid_settings')
+            self.assertEqual(q.classify_claude_settings(before, value, 0o640, 0o640), 'preservation_failed')
+            self.assertEqual(q.classify_claude_settings(value, after, 0o640, 0o640), 'preservation_failed')
 
     def test_existing_registration_values_and_json_types_are_preserved(self):
         cases = [
@@ -167,3 +170,94 @@ class ClaudeManagedRootControls(unittest.TestCase):
         for before, after in cases:
             with self.subTest(before=before, after=after):
                 self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'empty_object_residue')
+
+    def test_absent_settings_cannot_accept_arbitrary_or_falsely_empty_content(self):
+        for after in (b'{}', b'{"manual":true}', b'invalid', b'[]', b'null', b'{"enabledPlugins":{"unexpected":true}}', b'{"extraKnownMarketplaces":{"unexpected":{}}}'):
+            with self.subTest(after=after):
+                self.assertEqual(q.classify_claude_settings(None, after, None, 0o600), 'preservation_failed')
+        before = b'{"manual":"preserve"}'
+        for value in ([], None, False, 0, ''):
+            for key in ('enabledPlugins', 'extraKnownMarketplaces'):
+                for original in (None, before):
+                    old = {} if original is None else {"manual":"preserve"}
+                    after = json.dumps({**old, key:value}).encode()
+                    self.assertEqual(q.classify_claude_settings(original, after, None if original is None else 0o640, 0o600 if original is None else 0o640), 'preservation_failed')
+
+    def test_case_aliases_and_additional_client_roots_are_rejected_before_effects(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            for location in ('.Claude/fixture', '.GitHub/fixture', '.CoPiLoT/fixture', '.CoDeX/fixture', '.OpenCode/fixture', '.AGENTS/Skills/fixture', '.AGENTS/Plugins/fixture', '.config/OpenCode/fixture'):
+                root = base / location
+                with self.subTest(location=location), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+            override = base / 'configured-client'
+            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR','OPENCODE_CONFIG'):
+                root = override / key / 'fixture'
+                with mock.patch.dict(os.environ, {key:str(override / key)}), self.subTest(key=key), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+                exact = override / key
+                with mock.patch.dict(os.environ, {key:str(exact)}), self.subTest(key=key, exact=True), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(exact)
+                self.assertFalse(exact.exists())
+            root = override / 'xdg' / 'opencode' / 'fixture'
+            with mock.patch.dict(os.environ, {'XDG_CONFIG_HOME': str(override / 'xdg')}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(root)
+            self.assertFalse(root.exists())
+
+    def test_ancestor_guidance_or_claude_discovery_rejects_without_writing_guides(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            real_exists, real_symlink = Path.exists, Path.is_symlink
+            for name in ('CLAUDE.md','AGENTS.md','AGENTS.override.md','.claude','.copilot','.codex','.opencode','.github','.agents/skills','.agents/plugins','.config/opencode'):
+                for dangling in (False, True):
+                    root = base / 'ancestor' / 'fixture'
+                    sentinel = base / name
+                    def exists(path):
+                        return not dangling if path == sentinel else real_exists(path)
+                    def is_symlink(path):
+                        return dangling if path == sentinel else real_symlink(path)
+                    with mock.patch.object(Path, 'exists', exists), mock.patch.object(Path, 'is_symlink', is_symlink), self.subTest(name=name, dangling=dangling), self.assertRaises(ValueError):
+                        q.prepare_claude_managed_root(root)
+                    self.assertFalse(root.exists())
+                    self.assertFalse(real_exists(sentinel))
+                    self.assertFalse(real_symlink(sentinel))
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX symlink control')
+    def test_lexical_discovery_ancestor_cannot_redirect_into_a_neutral_location(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            neutral, hidden = base / 'neutral', base / 'hidden-parent'
+            neutral.mkdir()
+            hidden.mkdir()
+            link = hidden / '.claude'
+            link.symlink_to(neutral, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(link / 'fixture')
+            self.assertFalse((neutral / 'fixture').exists())
+            self.assertTrue(link.is_symlink())
+
+    def test_configured_case_aliases_are_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            configured = base / 'CustomClientProfile'
+            configured.mkdir()
+            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR','OPENCODE_CONFIG'):
+                root = base / 'customclientprofile' / 'fixture'
+                with mock.patch.dict(os.environ, {key:str(configured)}), self.subTest(key=key), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX symlink control')
+    def test_resolved_default_client_homes_remain_protected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            home, profile = base / 'home', base / 'neutral-profile'
+            home.mkdir()
+            profile.mkdir()
+            (home / '.claude').symlink_to(profile, target_is_directory=True)
+            root = profile / 'fixture'
+            with mock.patch.dict(os.environ, {'HOME':str(home), 'USERPROFILE':str(home)}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(root)
+            self.assertFalse(root.exists())

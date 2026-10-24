@@ -34,5 +34,16 @@
     ],
     "capture_helper_path": "/private/tmp/upskill-q1-retry-5p64heeg/capture-helper.py",
     "capture_helper_sha256": "7daca5afd0b055b53afe8dd4ac59461de10ede7227dea73c7190e2ea83b4ffcb"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q1-review-fiinhodx",
+    "purpose": "Offline replay and pin-provenance review fixes; no native invocation.",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "a683030a5f4fda313c6136aaf52fc60c23224edd7796b073ba18b4976019962b"
+      }
+    ]
   }
 ]

@@ -101,3 +101,21 @@ The affected proposal rows are
 and the current-pin evidence assessment. Q5 stays open until a successful pinned
 positive permits the component controls. No older 2.0.32 execution result is
 promoted to 2.1.4 support. Durable adoption waits for step 7.
+
+## Review regressions
+
+Rule arrays have no ordering requirement in the fixture instructions. The
+classifier accepts either ordering and still requires exactly one occurrence of
+each rule, an exact object shape and correlated callback/session evidence. The
+fixture tests bind each generated hook to the existing injection template and
+require every marker to differ across independent fixtures. Shared root checks
+reject configured client locations and ancestor guidance before writes; tests
+simulate guide presence without creating guide files
+([validation](evidence/2026-10-24-opencode-current-routes/validation.json)).
+
+These are offline regressions. They do not change either retained failed
+positive, run a candidate control or qualify OpenCode 2.1.4. The current
+explicit-path retry remains pending under the
+[adopted delivery direction](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
+and
+[slice-1 order](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).

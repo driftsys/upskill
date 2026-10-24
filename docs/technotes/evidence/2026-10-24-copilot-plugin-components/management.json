@@ -1,0 +1,220 @@
+[
+  {
+    "label": "project-local-install",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "$PACKET_A/fixture/delivery/packages/upskill-q3-d981fe77c54c22fb"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-v2-market-add",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_A/fixture/delivery"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-v2-install",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-inventory",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "list"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-disable-user-binding",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "disable",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-uninstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "uninstall",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-reinstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-reinstall-disable-user-binding",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "disable",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-final-uninstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "uninstall",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "project-final-market-remove",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-v2-market-add",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_A/fixture/delivery"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-v2-install",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-inventory",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "list"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-disable",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "disable",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-uninstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "uninstall",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-reinstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-final-uninstall",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "uninstall",
+      "upskill-q3-d981fe77c54c22fb@upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "user-final-market-remove",
+    "command": [
+      "/opt/homebrew/bin/copilot",
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q3-d981fe77c54c22fb-market"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  }
+]

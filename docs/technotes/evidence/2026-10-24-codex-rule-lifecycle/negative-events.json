@@ -1,0 +1,17 @@
+[
+  {
+    "type": "thread.started",
+    "thread_id": "01a16d50-fdc0-7c23-9d1d-943d2892673e"
+  },
+  {
+    "type": "item.completed",
+    "item": {
+      "id": "item_0",
+      "type": "agent_message",
+      "text": "{\"rules\": []}"
+    }
+  },
+  {
+    "type": "turn.completed"
+  }
+]
