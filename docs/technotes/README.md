@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [OpenCode current-route controls](gate6-opencode-current-routes.md): Q5,
+  OpenCode 2.1.4; failed native positives, unrun component controls and rejected
+  local-directory installation.
+
 - [Claude unscoped rule hook controls](gate6-claude-rule-hooks.md): Q4, Claude
   2.1.308; startup, compaction and absence observations, with resume attribution
   limits.

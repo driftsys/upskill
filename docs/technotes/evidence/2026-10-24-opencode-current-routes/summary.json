@@ -1,0 +1,42 @@
+{
+  "qualified": false,
+  "q5_completed": false,
+  "control": "Q5",
+  "task": 391,
+  "date": "2026-10-24",
+  "pin": "OpenCode 2.1.4",
+  "platform": "macOS arm64",
+  "status": "BLOCKED: both native positives rejected the requested backend",
+  "attempts": [
+    {
+      "attempt": "alias",
+      "pin": "OpenCode 2.1.4",
+      "native_positive": "FAIL: provider model-not-supported, HTTP 400; no response",
+      "component_model_controls": "NOT RUN after failed native positive",
+      "native_plugin_add_exit_code": 1,
+      "measured_configuration_restored": true
+    },
+    {
+      "attempt": "direct",
+      "pin": "OpenCode 2.1.4",
+      "native_positive": "FAIL: provider model-not-supported, HTTP 400; no response",
+      "component_model_controls": "NOT RUN after failed native positive",
+      "native_plugin_add_exit_code": 1,
+      "measured_configuration_restored": true
+    }
+  ],
+  "counts": {
+    "native_positive_attempts": 2,
+    "successful_positive_responses": 0,
+    "component_model_requests": 0,
+    "local_plugin_add_attempts": 2
+  },
+  "limits": [
+    "A configured catalog entry is not proof of backend execution availability.",
+    "No alternate model was selected; private selection and direct configured backend were retained.",
+    "The native error does not establish context-hook or skill-source support or absence.",
+    "Local plugin add rejects a directory; explicit plugins configuration remains a separate candidate route.",
+    "Measured project/user configuration unchanged; caches, session logs and authentication refresh are not whole-profile equality.",
+    "No production route or durable support promotion."
+  ]
+}

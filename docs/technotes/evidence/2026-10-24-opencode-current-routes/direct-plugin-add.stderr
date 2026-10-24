@@ -1,0 +1,4 @@
+Error: Plugin target must be an npm registry package or Git package specifier
+    at <anonymous> (/$bunfs/root/chunk-a3xgz5sg.js:2:1267)
+    at cli.plugin.add (/$bunfs/root/chunk-z55429sy.js:7:21212)
+    at cli.plugin.add (definition) (/$bunfs/root/chunk-a3xgz5sg.js:2:1181)

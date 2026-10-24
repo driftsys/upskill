@@ -1,0 +1,21 @@
+{
+  "root": "$PACKET_A/fixture",
+  "project": "$PACKET_A/fixture/project",
+  "positive_project": "$PACKET_A/fixture/positive",
+  "packages": [
+    "$PACKET_A/fixture/delivery/packages/upskill-q5-a-04478c654c336d8f",
+    "$PACKET_A/fixture/delivery/packages/upskill-q5-b-bb82d413e7cd3298"
+  ],
+  "skill_source": "$PACKET_A/fixture/delivery/skill-sources",
+  "skill_id": "upskill-q5-1e33003667b852fc",
+  "resource_path": "$PACKET_A/fixture/delivery/skill-sources/upskill-q5-1e33003667b852fc/references/procedure.md",
+  "native_marker": "NATIVE_38356dc0766356c954d0ccf7cdecd8b5",
+  "resource_marker": "RESOURCE_1c5847ba23caa6442773bb402a8f5354",
+  "rule_markers": [
+    "RULE_90b5fd5571cb27820af36c3e79b2d97a",
+    "RULE_1a120f0850379d76377c389d4d82f62c"
+  ],
+  "fallback": "ABSENT_4baca610ec6c64aa4be4216f2bd8be7e",
+  "trace": "$PACKET_A/fixture/context.jsonl",
+  "pin": "2.1.4"
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q5-opencode-4bb883qw",
+    "manifest_sha256": "8755fa0499a67886950b265fe9dad659d3e8b2eb98a40d24c2e55bfe2dc418f0"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q5-opencode-o211bbds",
+    "manifest_sha256": "6d2007d007aefc1f3b64f558b9919baa4060e71cd23556814a3adf2d9385edcd"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q5-normal-catalog-bm9f2gf5",
+    "manifest_sha256": "3f6ee567b5e74cb5090e6abe5db88a69762377c5ebe766b9c59afda6e06ea8cf"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q5-review-8_xwplqj",
+    "manifest_sha256": "e7d97e6748fd0f2a49f3fe470368cecdbbb34c494d6d7399544c405c1072239b",
+    "capture_helpers": {
+      "q5-review-mutations.py": "84d4ee9adddbd5686dca16b636be318d5d2a6fc2c9c3c26270d9b6139e511027",
+      "q5-main-integration-audit.py": "10c1b5dd7b824a371355834448dc486fab8a06c01609d642435a01c28389d803",
+      "retain-q5-review.py": "28d26d64068f5a0ec6392338f0bc0f154872db4b0fc325838eebba3a672fbd05",
+      "q5-pass2-mutations.py": "2e02b14031328a453c4ae3caff5ec1284f4fd16fe48c8ba7dd19aa9c7cf0c9f2",
+      "retain-q5-pass2.py": "1b6282d93602543fd732f8839713e2265c11aa6cbf07da3836e31b4f1af73d8e"
+    },
+    "method": "Offline fixture/classifier regressions and integration verification; original native attempts unchanged",
+    "source_snapshots": {
+      "source/": "Initial full verification source at 2e67118",
+      "pass2-fix-source/": "Test/documentation-only final fixes; executable harness unchanged"
+    }
+  }
+]

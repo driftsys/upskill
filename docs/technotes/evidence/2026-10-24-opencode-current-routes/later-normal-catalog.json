@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/Users/sebastientasson/.opencode/bin/opencode",
+    "models",
+    "--standalone"
+  ],
+  "cwd": "$PACKET_C",
+  "exit_code": 0,
+  "exact_requested_reference_present": false,
+  "matching_route_lines": [],
+  "native_model_requests": 0,
+  "normal_profile_catalog_only": true,
+  "pin_observation": "OpenCode 2.1.4, observed by post-catalog version receipt",
+  "configuration_equality_measured": false,
+  "limit": "Normal-profile catalog preflight only; no model inference, no component qualification or whole-profile preservation claim."
+}

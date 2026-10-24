@@ -1,0 +1,6 @@
+{
+  "pin": "2.1.4",
+  "configured_alias_in_catalog": true,
+  "native_model_requests": 0,
+  "unknown_context_output_limits": "Documented custom-model fallbacks; performance and context limits not qualified."
+}
