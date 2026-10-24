@@ -151,5 +151,17 @@
     "result": "PASS: three final-review boundary mutations rejected",
     "private_log": "$PACKET_F/q3-pass2-mutations.log",
     "sha256": "f6a45bffbdfa68ad775830c0cc16408befcfe35420e2f225f7dc136379eae621"
+  },
+  {
+    "stage": "merged main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_G/q3-main-integration-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "merged main integration",
+    "result": "PASS: just verify, 77 offline tests",
+    "private_log": "$PACKET_G/q3-main-integration-verify.log",
+    "sha256": "6e51d636342cb7672ea4233d39c2e2b67dabc5c99c108aa942553d0ba3c6073c"
   }
 ]

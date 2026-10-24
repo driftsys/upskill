@@ -12,5 +12,29 @@
       "catalog-helper.py": "91698d164a5ac24f7995bafc89b15ca34122651e762addfb3897f1ae9a4a7c3b",
       "delegate-helper.py": "365063872cb8fb4de95f1be279ba9fd4e0b679681002ebc8098d855264f94041"
     }
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q2-review-replay-8h1nbxyo",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "49b13c028f728b86e1b3de1cdb18f3f0750a6162ada8186a0414540e94b8f72e"
+      }
+    ],
+    "capture_helpers": {
+      "retain-q2-replay.py": "82cf7704b8117fd94e39a95653b22bd8b224e33464d55ccd1da10db5d9340cc2",
+      "q2-replay-mutations.py": "ae3a14c0cb4f3f2e68ff0d12e1fcc8978effcb4e8bc811e9b6db22eca1d29da2",
+      "finalize-q2-replay.py": "67cc6f60facd26bc03689c8bb600e4f9e6b73edf57b24c7a4785dbdd030eab75",
+      "q2-quick-fix-mutations.py": "0d14d1f8eae492e2d4bf3106e130fe3ecfa5919f4838e8ddb07f6dd364d9f101",
+      "retain-q2-quick-fix.py": "0c2acdf5399c84da88a841a9b0b21ea23b89adfaff4f7b661dda7669afc3f1a4",
+      "q2-pass2-fix-mutations.py": "02d943f2d6e36aaf712e046312cbf82f7e1e6c6ff0106052b4a771d73bd11c30",
+      "retain-q2-pass2-fix.py": "e4411f26c7be830e4a27da885e4a21c4400414cbc3ef88d4b94888867f66ce13"
+    },
+    "source_snapshots": {
+      "source/": "Public observer and initial replay tests used by full just verify",
+      "quick-fix-source/": "Final test-only regressions used by subsequent just lint and mutation checks",
+      "pass2-fix-source/": "Final test-only regressions used by lint and final-review mutation checks"
+    }
   }
 ]

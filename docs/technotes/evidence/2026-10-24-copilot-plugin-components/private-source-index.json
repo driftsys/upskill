@@ -34,5 +34,18 @@
     "private_source_path": "/private/tmp/upskill-q3-guarded-retry-_ktp39jb",
     "manifest_file": "receipt-hashes-retry.json",
     "manifest_sha256": "910ce35296c26cc287477fa71bd09175f95cd5df5a344be1c706c2a1bb1c6f6c"
+  },
+  {
+    "alias": "$PACKET_G",
+    "private_source_path": "/private/tmp/upskill-q3-main-integration-3ci3h1lp",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "2a7d8ed992f462e87788b6226420e9eae823847b50bf4cb9432d4ae0f0a3fab0"
+      }
+    ],
+    "capture_helpers": {
+      "retain-q3-main-integration.py": "761b70eb793a91f9c393bc3a1f7a4406d2ddb8edfd4d3bb1784b46ddc4f65b81"
+    }
   }
 ]

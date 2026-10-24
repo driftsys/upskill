@@ -48,5 +48,41 @@
     "result": "PASS: documentation checks",
     "private_log": "q1-f1-docs.log",
     "sha256": "ae7fc9c08ce34ae15acae203738cd6ec83a80dec3021143ef09ca119cb82a50e"
+  },
+  {
+    "phase": "review fixes",
+    "offline_tests": 49,
+    "lint_red": "q1-replay-lint-red.log: missing Copilot parser and replay helpers",
+    "lint_green": "q1-replay-lint-green.log",
+    "full_verification": "q1-replay-verify.log",
+    "private_packet": "$PACKET_D",
+    "native_requests": 0,
+    "full_private_stream_audit": "raw-event-gate-audit.json",
+    "limits": "The other three clients have no retained pre-run pin receipt in this historical packet."
+  },
+  {
+    "phase": "quick review assertions",
+    "offline_tests": 51,
+    "tests": "q1-quick-fix-tests.log",
+    "full_verification": "q1-quick-fix-verify.log",
+    "mutation_helper": "q1-quick-fix-mutations.py",
+    "mutation_results": "q1-quick-fix-mutations.log",
+    "rejected_mutants": 5,
+    "private_packet": "$PACKET_D",
+    "source_snapshot": "quick-fix-source",
+    "native_requests": 0
+  },
+  {
+    "phase": "numbered review assertions",
+    "offline_tests": 51,
+    "lint": "q1-pass2-fix-lint.log",
+    "documentation": "q1-pass2-fix-docs.log",
+    "mutation_helper": "q1-pass2-fix-mutations.py",
+    "mutation_results": "q1-pass2-fix-mutations.log",
+    "rejected_mutants": 3,
+    "private_packet": "$PACKET_D",
+    "source_snapshot": "pass2-fix-source",
+    "native_requests": 0,
+    "limits": "Production parser unchanged from reviewed head; only regression assertions and retained metadata changed."
   }
 ]

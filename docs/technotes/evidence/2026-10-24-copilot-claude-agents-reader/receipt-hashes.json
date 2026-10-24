@@ -1,9 +1,11 @@
 {
-  "fixture.json": "2685c04e6c1bf73b8438ee9d8ba64c2bf4b05328cc4f0c88048b0eb7467a9ed5",
-  "summary.json": "c98fe58127b332107d2f1c1ff20efd000f79900772a5ec2d2df0b8d2fa4e3d3f",
-  "preservation.json": "58edc695a795635891becc975ad0f74cb3de8ed8d4079b10e89f57a4a093ec29",
+  "catalog.json": "eb24ef273220a20e5b45537939b18da9fa6261711f524d2dcbd1ec84d702fee5",
   "delegation.jsonl": "bf19e36e4a4e8667269365c9b713e9ff39661876609c27e1bd34d6ad0dcbe282",
-  "validation.json": "e153c29b20dcadd7e1ba501d91cad1411279795380cfadb09f7701ed081d3704",
-  "private-source-index.json": "e550f5592307192056c2994d763978e46279ab3342650d0f6bf6007aa925303a",
-  "catalog.json": "eb24ef273220a20e5b45537939b18da9fa6261711f524d2dcbd1ec84d702fee5"
+  "fixture.json": "2685c04e6c1bf73b8438ee9d8ba64c2bf4b05328cc4f0c88048b0eb7467a9ed5",
+  "invocation.json": "ed0945093957c2892adcb368219f42f3e2a9470c0536eadcab2205903e2718a8",
+  "native-observation.json": "2036cda8b6c0c27310eb9e5b4b26fb0046b386e967ef8127603242ae325c375e",
+  "preservation.json": "58edc695a795635891becc975ad0f74cb3de8ed8d4079b10e89f57a4a093ec29",
+  "private-source-index.json": "cb0cb72d233134380f2d223f5ff77d039228ff3df0575b31b5a81fb7dc5a6a1d",
+  "summary.json": "c98fe58127b332107d2f1c1ff20efd000f79900772a5ec2d2df0b8d2fa4e3d3f",
+  "validation.json": "07da1dbb81e61ed6b8dbd94010752cd591569d113bf388fb20361f6491d57c41"
 }
