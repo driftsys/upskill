@@ -30,5 +30,18 @@
       "source/": "Offline full-review classifier/tests/doc fixes; native capture source remains unchanged in $PACKET_A"
     },
     "method": "Offline review fixes, no native or model request"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-pass2-cn7g4p6x",
+    "manifest_sha256": "0ea63eaeea6ee12f69d0f74eadd11d7088a66b3b82f44f849b0f2d558f508c75",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "q5-explicit-pass2-mutations.py": "c1998e70467acea8811e33cff2b7c882620c8e17944d852a4a744f595f3085e8"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
   }
 ]

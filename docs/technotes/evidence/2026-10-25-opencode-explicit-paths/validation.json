@@ -76,5 +76,35 @@
     "result": "PASS: just verify",
     "private_log": "$PACKET_B/q5-explicit-pass1-verify.log",
     "sha256": "dd8326a5f0bfc2bdd56be86fd68b91db3dd6bb714ca3d4619bfd26f3650b8211"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q5-explicit-pass2-focused.log",
+    "sha256": "795d872cd929a9c778595fe5bb0368176418a847ce99e47b854ceef902d89d85"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q5-explicit-pass2-mutations.log",
+    "sha256": "3e82af86abf76b4aa04ccc98d335ff7394a629d2020897e15b3b0960cd30b12a"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q5-explicit-pass2-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q5-explicit-pass2-lint.log",
+    "sha256": "aa08d9e004eef21f53a4607d33d499a580fbd28484826ac55b96feb4ba418efd"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q5-explicit-pass2-docs.log",
+    "sha256": "cd76d635eff532d41cfb0bb37cf00a6b9ad612a0aba281e8c6a9ef8ddf945a12"
   }
 ]

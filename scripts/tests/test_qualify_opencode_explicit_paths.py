@@ -92,6 +92,8 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
             for key in ['native_instruction_paths','native_body_counts']:
                 c,f=self.controls();del c[stage][key]
                 self.assertEqual(self.classify(c,f),'native_identity_unobserved')
+                c,f=self.controls();c[stage][key]=None
+                self.assertEqual(self.classify(c,f),'native_identity_unobserved')
             for value in [{'a':2,'b':1},{'a':True,'b':1},{'a':1},{'a':1,'b':1,'extra':1}, *[{'a':1,'b':value} for value in [2,0,True,1.0,'1']]]:
                 c,f=self.controls();c[stage]['native_body_counts']=value
                 self.assertEqual(self.classify(c,f),'native_identity_failed')
@@ -127,4 +129,6 @@ class OpenCodeExplicitPathTests(unittest.TestCase):
                 self.assertEqual(self.classify(c,f),'native_identity_failed')
             for key in ['native_instruction_paths','native_body_counts']:
                 c,f=self.controls();del c[stage][key]
+                self.assertEqual(self.classify(c,f),'native_identity_unobserved')
+                c,f=self.controls();c[stage][key]=None
                 self.assertEqual(self.classify(c,f),'native_identity_unobserved')
