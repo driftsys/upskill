@@ -9,7 +9,7 @@ snapshot; a stable name does not imply that external research remains current.
 ## Research
 
 - [Copilot plugin components](gate6-copilot-plugin-components.md) — Q3, Copilot
-  1.0.103; component positives fail and the expected plugin agent is absent.
+  1.0.103; component positives fail; namespaced plugin agent discovery observed.
 
 - [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md)
   — Q2, Copilot 1.0.103; catalog and delegated Read-only observation, permission
