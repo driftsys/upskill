@@ -30,9 +30,16 @@ class CodexSkillUpdatesTests(unittest.TestCase):
             self.assertEqual(expected_resource.read_text(),'Return exactly '+f['initial_marker']+' and nothing else.\n')
             self.assertNotEqual(f['initial_marker'],f['edited_marker'])
             market=json.loads((f['marketplace']/'.agents/plugins/marketplace.json').read_text())
+            self.assertEqual(market['name'],f['market_name'])
             self.assertEqual(market['plugins'],[{'name':f['plugin_name'],'source':{'source':'local','path':'./plugins/'+f['plugin_name']}}])
             heads=[subprocess.check_output(['git','-C',str(f[k]),'rev-parse','HEAD'],env=self.q.fixture_environment(f['root'])) for k in ('project','unrelated_project')];self.assertNotEqual(*heads)
+            for project in [f['project'],f['unrelated_project']]:
+                env=self.q.fixture_environment(f['root'])
+                self.assertEqual(subprocess.check_output(['git','-C',str(project),'rev-list','--count','HEAD'],env=env).strip(),b'1')
+                self.assertEqual(subprocess.check_output(['git','-C',str(project),'ls-tree','--name-only','HEAD'],env=env),b'')
             for p in f['root'].rglob('*'):
+                if p.is_file() and '.git' not in p.relative_to(f['root']).parts and p!=f['resource']:
+                    for marker in [f['initial_marker'],f['edited_marker']]:self.assertNotIn(marker,p.read_text())
                 self.assertFalse(p.is_symlink())
                 self.assertNotIn(p.name,('CLAUDE.md','AGENTS.md','AGENTS.override.md'))
             self.assertEqual(list(f['package'].rglob('hooks.json')),[])
@@ -46,6 +53,8 @@ class CodexSkillUpdatesTests(unittest.TestCase):
                 self.assertEqual(set(root.rglob('*')),before)
             a=self.q.prepare_codex_skill_updates(root/'a');b=self.q.prepare_codex_skill_updates(root/'b')
             for k in ('initial_marker','edited_marker','fallback','plugin_name','skill_name'):self.assertNotEqual(a[k],b[k])
+            heads=[subprocess.check_output(['git','-C',str(f[k]),'rev-parse','HEAD'],env=self.q.fixture_environment(f['root'])) for f in [a,b] for k in ['project','unrelated_project']]
+            self.assertEqual(len(set(heads)),4)
             with mock.patch.object(self.q,'REPO',root.resolve()/'repo'):
                 with self.assertRaises(ValueError):self.q.prepare_codex_skill_updates(root/'repo/new')
             with mock.patch.object(Path,'home',return_value=root.resolve()/'home'):
@@ -121,3 +130,8 @@ class CodexSkillUpdatesTests(unittest.TestCase):
             original=Path.exists
             with mock.patch.object(Path,'exists',lambda p:p==root/'AGENTS.md' or original(p)),mock.patch.object(Path,'mkdir',side_effect=AssertionError('Reject before writes')):
                 with self.assertRaises(ValueError):self.q.prepare_codex_skill_updates(root/'new')
+
+    def test_failed_positive_precedes_simultaneous_lifecycle_failures(self):
+        for key,value in [('state','authentication_failure'),('response','B')]:
+            c,f=self.controls();c['installed'][key]=value;del c['reinstalled'];c['edited_without_reinstall']['completed']=False
+            self.assertEqual(self.q.classify_codex_skill_updates(c,f),'positive_control_failed')

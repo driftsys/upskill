@@ -18,7 +18,7 @@
   "native-catalog-selection.json": "b5faa3810be0787eb15d6965409ae5e5423e27b9a3ede95879959f9bfaf4143f",
   "platform-receipt.json": "bca52e51e156707e5f04d040bceddc93a85bc15f9d8e90ca171dba2bd8c34ab9",
   "post-removal-cache.json": "4875a5946c296f15a4188acb9c41101b5e3f9236335585a16aeb1e831dd500fb",
-  "private-source-index.json": "7930372e4d0d22d5b91bbc96eb804b4d684c2fbddcfa7f4b98255a4734a6ed17",
+  "private-source-index.json": "0f560df2f79a0fd8a7f965b41ed37baf07c8004d5b0ec31e2bf9eeed5aa0b66d",
   "profile-before.json": "d022575d4d4b6cbd357f78c8ec63ca0f89fe3ea2262af7cd7ba8fe6dc57d97a1",
   "profile-restoration.json": "5b65fde403bf12b48d67240b6e22bea9109dbc62ae61395218c8dfd779020307",
   "project-identities.json": "eb5aaf8232048b5767819db92c9869aeb8112eca7167be092071c2d0a8a8374b",
@@ -33,5 +33,5 @@
   "source-edit.json": "68f8aa2c71aa4962ea4f24ed1e1dbd2c64600f1c83fac25c1a912eab611d6878",
   "summary.json": "cbb95774441c3008b82c8f0500dc685735203e49a02859fce21c1e2780636e8d",
   "ui-admission.json": "440042f377b6fcf8f22393ca360cbf2118d366d1e6806b0b377269b18c92bcb1",
-  "validation.json": "2898194865c90ce187d51b086c479373fcea260ff30294afbfa554d3a5a3f598"
+  "validation.json": "758f417ad40b5b68c7dc07a25345337d78450d6fa7a0269e3d28b375a912c6cb"
 }

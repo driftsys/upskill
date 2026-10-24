@@ -85,5 +85,35 @@
     "result": "PASS: four QUICK regression mutants rejected by assertion failure",
     "private_log": "$PACKET_B/q8-main-mutations.log",
     "sha256": "0bc1f61f99245b85f06eb785745ecc171e4d7b5ab20fe9f8541d443b1cbd714b"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q8-current-quick-focused.log",
+    "sha256": "f4fc470871c06284c4ec147d317da8ccfbc19e52868096cb30bb76dd0838ebcf"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q8-current-quick-mutations.log",
+    "sha256": "09cc3f3d4291e8c8243481007fe478c7a1cafb09cf714e4b54c562021c0f996e"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q8-current-quick-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q8-current-quick-lint.log",
+    "sha256": "18610d129ad21345694b12aaf997ba303b035f8f9fe5e839541878eca11adb07"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q8-current-quick-docs.log",
+    "sha256": "623ec1cbf9527dba4acd871d7afad90b8cc3ff58546ba3cc300a29258cae0af3"
   }
 ]
