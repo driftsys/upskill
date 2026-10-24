@@ -219,6 +219,33 @@ def count_developer_rule_bodies(messages, bodies):
     return counts
 
 
+
+def classify_codex_resume_only(observation):
+    """Attribute recorded bodies to resume without claiming effective input."""
+    session = observation.get('session')
+    def valid_turn(turn):
+        return (isinstance(turn, dict) and turn.get('completed') is True
+                and turn.get('read_only') is True and turn.get('tools_observed') is False
+                and turn.get('response_matches') is True and turn.get('session') == session)
+    positive = observation.get('positive')
+    if (not isinstance(session, str) or not session.strip() or not valid_turn(positive)
+            or positive.get('body_counts') != {'a': 1, 'b': 1}
+            or any(type(n) is not int for n in positive['body_counts'].values())):
+        return 'positive_control_failed'
+    if observation.get('pin') != '0.164.0' or observation.get('preserved') is not True:
+        return 'control_metadata_failed'
+    resume = observation.get('resume')
+    if not valid_turn(resume):
+        return 'resume_control_failed'
+    counts = resume.get('body_counts')
+    if (type(resume.get('compaction_records')) is not int or resume['compaction_records'] != 0
+            or resume.get('callback_sources') != ['resume', 'resume']
+            or not isinstance(counts, dict) or set(counts) != {'a', 'b'}
+            or any(type(n) is not int or n < 0 for n in counts.values())):
+        return 'resume_control_failed'
+    return 'recorded_counts_observed'
+
+
 def classify_codex_rule_lifecycle(observation):
     """Gate startup, resume and two compactions; clear and fork are not covered."""
     def one_each(counts):

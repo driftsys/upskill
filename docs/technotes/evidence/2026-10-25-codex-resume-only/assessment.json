@@ -1,0 +1,17 @@
+{
+  "pin": "0.164.0",
+  "session": "01a17037-ddff-71b1-bda5-f70fb14679bf",
+  "preserved": true,
+  "positive": {
+    "session": "01a17037-ddff-71b1-bda5-f70fb14679bf",
+    "completed": false,
+    "read_only": true,
+    "tools_observed": false,
+    "response_matches": false,
+    "body_counts": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "classification": "positive_control_failed"
+}

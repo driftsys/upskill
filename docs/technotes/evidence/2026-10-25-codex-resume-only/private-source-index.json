@@ -1,0 +1,19 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q9-resume-got7xwwb",
+    "manifest_sha256": "8b537742d9ee7a07ac52749846c28fb31f6ccf7724697a38912703754c679352",
+    "capture_helpers": {
+      "capture-helper.py": "9c0ee389f8850b801816ff52a8bec57957e173246c172ed0020cd4a502229442",
+      "assess-failure-helper.py": "2a627c3b67c62c62d07e8481dcddabd3819b4cece701236b95af155990d7a332",
+      "retain-helper.py": "b9c9275302553fbdf62b34db27d8fb2e080a7d568e815da4f117d2bcdcbd2448"
+    },
+    "method": "One failed native positive, offline native log assessment, no resume invocation"
+  },
+  {
+    "alias": "$CAMPAIGN_PINS",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-sk3i25mj",
+    "manifest_sha256": "ea495b12b4e289032f19371543c4a8247126f89a71702823bc72310b6b763aa7",
+    "method": "Shared four-client version receipts before controls"
+  }
+]

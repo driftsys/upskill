@@ -8,6 +8,8 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Codex resume-only retry: failed positive](gate6-codex-resume-only.md): Q9
+  retry on Codex 0.164.0; HTTP 401 blocks the positive and resume remains unrun.
 - [OpenCode current-route controls](gate6-opencode-current-routes.md): Q5,
   OpenCode 2.1.4; failed native positives, unrun component controls and rejected
   local-directory installation.

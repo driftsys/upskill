@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/Users/sebastientasson/.local/bin/codex",
+    "--version"
+  ],
+  "cwd": "$EXISTING_FIXTURE/project-a",
+  "profile": "$PROFILE",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at": "2026-10-24T23:21:11.395722+00:00",
+  "finished_at": "2026-10-24T23:21:11.419798+00:00"
+}

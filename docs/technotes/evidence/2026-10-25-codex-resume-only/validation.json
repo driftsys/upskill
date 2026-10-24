@@ -1,0 +1,30 @@
+[
+  {
+    "command": "just lint",
+    "stage": "before implementation",
+    "result": "FAIL: four missing-classifier assertions, 158 tests",
+    "private_log": "$PACKET_A/q9-resume-red-lint.log",
+    "sha256": "ef85e3ccacf5f1129f28679009298de360e4dc1b094a5a3f2783db48d86f7db5"
+  },
+  {
+    "command": "just lint",
+    "stage": "after implementation",
+    "result": "PASS: 158 offline tests",
+    "private_log": "$PACKET_A/q9-resume-green-lint.log",
+    "sha256": "5ead14bddca64dbacf16646195ebfe0299643930a194fcd58afbd0a3853f17fa"
+  },
+  {
+    "stage": "Final repository verification",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q9-resume-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final repository verification",
+    "command": "just verify",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q9-resume-full-verify.log",
+    "sha256": "4b0a384fb54a6e8377f0dcff36c35eb60b2225db9b4835facf85fda72bef3cf8"
+  }
+]
