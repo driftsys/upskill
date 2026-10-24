@@ -39,7 +39,8 @@ class CopilotReaderReplayTests(unittest.TestCase):
         self.assertTrue(evidence['completed_response'])
         self.assertEqual(evidence['event_types'], ['assistant.message', 'result'])
         for rows in [[], events()[:1], events()[1:], list(reversed(events())),
-                     events()[:1] + events(), events() + events()[1:]]:
+                     events()[:1] + events(), events() + events()[1:],
+                     events() + [{'type': 'assistant.message_delta'}]]:
             with self.subTest(rows=rows):
                 self.assertFalse(q.copilot_response(encode(rows))[2]['completed_response'])
 
@@ -91,7 +92,7 @@ class CopilotReaderReplayTests(unittest.TestCase):
 
     def test_replay_refuses_summary_drift_and_false_negative_from_failed_positive(self):
         original = json.loads((PACKET / 'summary.json').read_text())
-        for mutation in ['classification', 'failed_positive', 'response_identity', 'positive_error', 'candidate_error', 'paths_error']:
+        for mutation in ['classification', 'failed_positive', 'response_identity', 'positive_error', 'candidate_error', 'paths_error', 'completed_identity', 'positive_classification']:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 packet = Path(temporary)
                 for source in PACKET.iterdir():
@@ -102,6 +103,10 @@ class CopilotReaderReplayTests(unittest.TestCase):
                     summary['controls'][2]['classification'] = 'reads'
                 elif mutation == 'failed_positive':
                     summary['controls'][0]['exit_code'] = 1
+                elif mutation == 'completed_identity':
+                    summary['controls'][0]['completed'] = False
+                elif mutation == 'positive_classification':
+                    summary['controls'][0]['classification'] = 'positive_control_failed'
                 elif mutation == 'response_identity':
                     summary['controls'][2]['response'] = 'different recorded response'
                 else:

@@ -71,5 +71,18 @@
     "private_packet": "$PACKET_D",
     "source_snapshot": "quick-fix-source",
     "native_requests": 0
+  },
+  {
+    "phase": "numbered review assertions",
+    "offline_tests": 51,
+    "lint": "q1-pass2-fix-lint.log",
+    "documentation": "q1-pass2-fix-docs.log",
+    "mutation_helper": "q1-pass2-fix-mutations.py",
+    "mutation_results": "q1-pass2-fix-mutations.log",
+    "rejected_mutants": 3,
+    "private_packet": "$PACKET_D",
+    "source_snapshot": "pass2-fix-source",
+    "native_requests": 0,
+    "limits": "Production parser unchanged from reviewed head; only regression assertions and retained metadata changed."
   }
 ]

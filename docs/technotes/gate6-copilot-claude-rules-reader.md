@@ -126,6 +126,11 @@ binds these logs and source snapshots through the private index. No new native
 request was made. Remaining nonblocking packet-review comments are tracked in
 [debt #399](https://github.com/driftsys/upskill/issues/399).
 
+Numbered-review assertions independently pin a terminal native result and
+recorded completion/positive-classification identity. All 51 tests, lint and
+documentation checks pass; three further mutations are rejected. The production
+parser is unchanged by these test-only fixes.
+
 Tests were written first. `just lint` failed on the two missing Q1 helper
 attributes before implementation, then passed all 42 offline tests. Follow-up
 regressions cover complete fixture directives, frontmatter, fresh separated

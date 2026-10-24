@@ -197,6 +197,8 @@ class OrchestrationTests(unittest.TestCase):
                         stdout = json.dumps({'type': 'assistant.message', 'data': {'content': marker}})
                     elif current_events == 'unknown':
                         stdout = json.dumps({'type': 'future.event'}) + '\n' + stdout
+                    elif current_events == 'post-result-delta':
+                        stdout += '\n' + json.dumps({'type': 'assistant.message_delta'})
                     elif current_events in ('leading-whitespace', 'trailing-whitespace'):
                         padded = ' ' + marker if current_events == 'leading-whitespace' else marker + '\n'
                         stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': padded}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
@@ -245,7 +247,7 @@ class OrchestrationTests(unittest.TestCase):
 
     def test_copilot_requires_completed_response_events(self):
         for fixture in ('positive', 'negative'):
-            for events in ('empty', 'malformed', 'incomplete', 'unknown'):
+            for events in ('empty', 'malformed', 'incomplete', 'unknown', 'post-result-delta'):
                 with self.subTest(fixture=fixture, events=events):
                     report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
                     self.assertEqual(report['probes'][0]['outcomes'][0 if fixture == 'positive' else 1]['state'], 'failure')
