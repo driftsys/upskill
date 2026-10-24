@@ -1,0 +1,16 @@
+{
+  "observation_time": "after native cleanup",
+  "isolated_home_other_client_configs": {
+    ".copilot/config.json": false,
+    ".copilot/settings.json": false,
+    ".config/opencode/opencode.json": false,
+    ".config/opencode/opencode.jsonc": false,
+    ".opencode/opencode.json": false,
+    ".opencode/opencode.jsonc": false,
+    ".codex/config.toml": false
+  },
+  "limits": [
+    "No other client was executed for Q6.",
+    "Real user profiles and arbitrary configured globs are not qualified."
+  ]
+}

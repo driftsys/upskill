@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare disposable independent-rule fixtures; offline results never qualify clients."""
+"""Prepare disposable native delivery fixtures; offline results never qualify clients."""
 import argparse
 import hashlib
 import json
@@ -8,6 +8,7 @@ from pathlib import Path
 import secrets
 import shutil
 import stat
+import subprocess
 
 
 REPO = next((p for p in Path(__file__).resolve().parents if (p / '.git').is_dir()),
@@ -65,6 +66,84 @@ def fixture_environment(root):
                XDG_STATE_HOME=str(home / '.local/state'), XDG_CACHE_HOME=str(home / '.cache'),
                DISABLE_AUTOUPDATER='1')
     return env
+
+
+def prepare_claude_managed_root(root):
+    """Build a neutral, copy-only Q6 marketplace without team guidance files."""
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    requested = root.expanduser().absolute()
+    root = requested.resolve()
+    if root.exists():
+        raise ValueError('Fixture root must not exist')
+    forbidden = False
+    for candidate in (requested, root):
+        parts = tuple(part.casefold() for part in candidate.parts)
+        forbidden |= any(part in ('.claude', '.github', '.codex', '.copilot', '.opencode') for part in parts)
+        forbidden |= any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode')) for i in range(len(parts) - 1))
+    configured = [Path(value).expanduser().resolve() for key in
+                  ('CLAUDE_CONFIG_DIR', 'COPILOT_HOME', 'CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'OPENCODE_CONFIG')
+                  if (value := os.environ.get(key))]
+    if os.environ.get('XDG_CONFIG_HOME'):
+        configured.append(Path(os.environ['XDG_CONFIG_HOME']).expanduser().resolve() / 'opencode')
+    native_roots = ('.claude', '.copilot', '.codex', '.opencode', '.github', '.agents/skills', '.agents/plugins', '.config/opencode')
+    configured.extend((Path.home() / name).resolve() for name in native_roots)
+    resolved_parts = tuple(part.casefold() for part in root.parts)
+    forbidden |= any(resolved_parts[:len(location.parts)] == tuple(part.casefold() for part in location.parts)
+                     for location in [REPO, *configured])
+    guidance = ('CLAUDE.md', 'AGENTS.md', *native_roots)
+    forbidden |= any((parent / name).exists() or (parent / name).is_symlink()
+                     for parent in root.parents for name in guidance)
+    if forbidden:
+        raise ValueError('A new neutral fixture root outside client discovery and the repository is required')
+    root.mkdir(parents=True, mode=0o700)
+    nonce = secrets.token_hex(8)
+    plugin = 'upskill-q6-' + nonce
+    market = 'upskill-q6-market-' + nonce
+    skill = 'probe-' + nonce
+    initial = 'INITIAL_' + secrets.token_hex(16)
+    edited = 'EDITED_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    manual = 'MANUAL_' + secrets.token_hex(16)
+    managed = root / 'delivery'
+    package = managed / 'packages' / plugin
+    write_json(managed / '.claude-plugin/marketplace.json', {'name': market, 'owner': {'name': 'Qualification Fixture'}, 'plugins': [{'name': plugin, 'source': './packages/' + plugin}]})
+    write_json(package / '.claude-plugin/plugin.json', {'name': plugin, 'version': '0.0.0', 'description': 'Disposable managed-root qualification fixture.'})
+    skill_path = package / 'skills' / skill / 'SKILL.md'
+    skill_path.parent.mkdir(parents=True)
+    skill_path.write_text('---\nname: ' + skill + '\ndescription: Explicit managed-root qualification skill.\n---\nReturn exactly ' + initial + ' and nothing else. Do not use any other tools.\n')
+    projects = [root / 'project', root / 'user-project']
+    env = fixture_environment(root)
+    for project in projects:
+        settings = project / '.claude/settings.json'
+        write_json(settings, {'env': {'UPSKILL_Q6_MANUAL': manual}})
+        settings.chmod(0o640)
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize managed-root fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'managed_root': managed, 'package': package, 'project': projects[0], 'user_project': projects[1], 'plugin_name': plugin, 'market_name': market, 'skill_name': skill, 'skill': skill_path, 'initial_marker': initial, 'edited_marker': edited, 'fallback': fallback, 'manual': manual}
+
+
+def classify_claude_settings(before, after, before_mode, after_mode):
+    """Allow only added empty native registration objects as declared residue."""
+    if before == after and before_mode == after_mode:
+        return 'unchanged'
+    if after is None or (before is not None and before_mode != after_mode):
+        return 'preservation_failed'
+    try:
+        old = json.loads(before) if before is not None else {}
+        new = json.loads(after)
+    except (ValueError, TypeError):
+        return 'preservation_failed'
+    if not isinstance(old, dict) or not isinstance(new, dict):
+        return 'preservation_failed'
+    added = set(new) - set(old)
+    permitted = {'enabledPlugins', 'extraKnownMarketplaces'}
+    if added - permitted or any(new[key] != {} for key in added):
+        return 'preservation_failed'
+    remaining = {key: value for key, value in new.items() if key not in added}
+    if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
+        return 'preservation_failed'
+    return 'empty_object_residue' if added else 'preservation_failed'
 
 
 def prepare(root, client):

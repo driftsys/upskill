@@ -1,0 +1,51 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q6-claude-lb2iofuw",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "5ade8df6de7a6aad7a94e9e3d65b56657ea9e7696969b036043eff4727016c20"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q6-claude-lb2iofuw/capture-helper.py",
+    "capture_helper_sha256": "eb1eb936b83aa133b6922801261f44051252380dc1a8d0c803bf5894722813cb"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q6-claude-r7wprs9o",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "a7401a03df3c812d5690bbdc052ff340cff27735cc6a918a61592817015f2c72"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q6-claude-r7wprs9o/capture-helper.py",
+    "capture_helper_sha256": "01c68406acc469b15123e280bd05310c3c33fa73c8ceb6bbf849577eb436ea25"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q6-review-ndbgdhm5",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "f0dea1ac93b154a44ac8150d1fba8baf4663a138ee0e92f3197ee024fa482de1"
+      }
+    ],
+    "capture_helpers": {
+      "q6-review-observations.py": "a8913e7e102332d93eb26a7c5baf7b4d75d28d3c97e31193650adb0794d56f70",
+      "q6-review-mutations.py": "1d6bab245fe1271a05ca2e1051d3aa1f2225a1d9d0bf9b06beda9d12b3682651",
+      "retain-q6-review.py": "f91d140d9a2ec188588232bdf38a63e6b1e49811875043d1eb096e0bcb7d0a39",
+      "q6-quick-fix-mutations.py": "f31772ce0d9c39f406a212c19e7aa8ad1230b2c8fea2d3abbfe164582cf180ff",
+      "retain-q6-quick-fix.py": "b79687bbbf24f947efd205f927d7675fd6ea7c62868001cfedb2cb5e9e66a7e3",
+      "q6-pass2-fix-mutations.py": "66af269a667c450748038e2fadda060dc385a17198703d7646bbe4096dd1439a",
+      "retain-q6-pass2-fix.py": "89faeb7de1a92393d9a8ec8432376e964f6e7fdd12b798420547c48f24873a41"
+    },
+    "method": "Offline replay and exact-hash settings reconstruction; later read-only cache inventory, not a repeated native run",
+    "source_snapshots": {
+      "source/": "Harness and initial regression tests used by full verification",
+      "quick-fix-source/": "Final test-only guard regressions used by focused tests, lint and mutation checks",
+      "pass2-fix-source/": "Final guard and tests, verified together after merging main Q2"
+    }
+  }
+]

@@ -1,0 +1,151 @@
+{
+  "scopes": [
+    {
+      "scope": "project",
+      "settings_before": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "settings_after_removal": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "28b5d203c64f8b9cd99cf1feba20b7c377932f0a6441cf6683aaaecb26590097",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "residue": {
+        "$FIXTURE/project/.claude/settings.json": "empty_object_residue",
+        "$PROFILE/settings.json": "unchanged"
+      },
+      "restoration": {
+        "$FIXTURE/project/.claude/settings.json": true,
+        "$PROFILE/settings.json": true
+      },
+      "settings_after_restoration": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "registry_before": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "registry_after_removal": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      }
+    },
+    {
+      "scope": "user",
+      "settings_before": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "settings_after_removal": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": "2fc36cd88ea5b1049defa6877fe98653f6b81a53f95878c26f79a0a06317e94a",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "residue": {
+        "$FIXTURE/user-project/.claude/settings.json": "unchanged",
+        "$PROFILE/settings.json": "empty_object_residue"
+      },
+      "restoration": {
+        "$FIXTURE/user-project/.claude/settings.json": true,
+        "$PROFILE/settings.json": true
+      },
+      "settings_after_restoration": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "registry_before": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "registry_after_removal": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Only settings files and the two native registration metadata files measured.",
+    "Native plugin cache, session/log state and authentication stores are not whole-profile restoration evidence.",
+    "Native removal residue recorded before exact settings restoration; restoration did not manufacture a negative-control result."
+  ]
+}

@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Claude managed-root controls](gate6-claude-managed-root.md): Q6, Claude
+  2.1.308; local marketplace, fresh-session edit visibility and measured
+  residue.
+
 - [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md):
   Q2 catalog and real-child observations; restriction enforcement remains
   unqualified.
