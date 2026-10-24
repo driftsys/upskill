@@ -104,3 +104,14 @@ class ClaudeManagedRootControls(unittest.TestCase):
         for before, after in cases:
             with self.subTest(before=before, after=after):
                 self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'preservation_failed')
+
+    def test_allowed_residue_preserves_values_independently_of_object_key_order(self):
+        cases = [
+            (b'{"enabledPlugins":{"manual":true},"manual":{"flag":true,"count":1,"ratio":1.0}}',
+             b'{"manual":{"ratio":1.0,"count":1,"flag":true},"extraKnownMarketplaces":{},"enabledPlugins":{"manual":true}}'),
+            (b'{"extraKnownMarketplaces":{"manual":{"source":"preserve"}},"env":{"A":"first","B":"second"}}',
+             b'{"env":{"B":"second","A":"first"},"enabledPlugins":{},"extraKnownMarketplaces":{"manual":{"source":"preserve"}}}'),
+        ]
+        for before, after in cases:
+            with self.subTest(before=before, after=after):
+                self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'empty_object_residue')

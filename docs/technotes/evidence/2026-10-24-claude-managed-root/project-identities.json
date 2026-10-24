@@ -1,0 +1,18 @@
+[
+  {
+    "scope": "project",
+    "root_commit": "e04dbc0b3298a7fbd98021702f3af9d48640d0ba",
+    "parentless": true,
+    "empty_root_tree": true,
+    "native_init_cwd_matches_fixture": true,
+    "native_session_id": "27ce79bb-bedb-4877-b5f6-8af4df7dce5c"
+  },
+  {
+    "scope": "user",
+    "root_commit": "5f097d605e758f52c7d113ac0a7456d02f52688b",
+    "parentless": true,
+    "empty_root_tree": true,
+    "native_init_cwd_matches_fixture": true,
+    "native_session_id": "168ee07f-6b17-4bab-9684-d8a08e34db80"
+  }
+]

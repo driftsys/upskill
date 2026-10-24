@@ -123,7 +123,10 @@ Review regressions also cover nonempty marketplace residue, existing native
 registrations, repository-relative roots and JSON boolean/number type changes.
 The type regression failed before type-sensitive comparison and passed after it.
 All three reviewed mutations are rejected; the subsequent full verification
-passes all 48 offline tests.
+passes all 48 offline tests. A further positive regression preserves existing
+native registrations and unchanged boolean/numeric values when object keys are
+reordered and an allowed empty sibling registration is added. The latest full
+verification passes all 49 offline tests.
 
 Offline checks never call a client. Linux, IDE/hosted surfaces, successful
 invocation, update behavior, native cache recovery, interrupted operations and

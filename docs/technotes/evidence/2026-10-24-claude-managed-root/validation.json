@@ -72,5 +72,17 @@
     "result": "PASS: just verify, 48 offline tests",
     "private_log": "q6-review-verify.log",
     "sha256": "b5cb5230deeb0d8a4ae47ddf263a1b48594e9c7c6740040d9cfa50885b945087"
+  },
+  {
+    "stage": "key order mutation",
+    "result": "PASS: key order regression rejected; seven Q6 tests pass",
+    "private_log": "q6-order-mutation.log",
+    "sha256": "9fec4b15a090ee457bc4787550a23a32993593671789add8d9de74a6d6cd696c"
+  },
+  {
+    "stage": "final full verification",
+    "result": "PASS: just verify, 49 offline tests",
+    "private_log": "q6-order-verify.log",
+    "sha256": "b7715c54f399bb483d25d82bd4f7d63db8e1665b06a80136a934cce93bb554b6"
   }
 ]

@@ -5,7 +5,7 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "51f5b141a3d1254a063c7698a3d61f7a4dfb568dff785b5ef39f65799c7a1a81"
+        "sha256": "4cbf4e44b59b06d5f58357ad9340dafaffcda8a6331ebe4837de04ac0b1d4cbf"
       }
     ],
     "capture_helper_path": "/private/tmp/upskill-q6-claude-lb2iofuw/capture-helper.py",
