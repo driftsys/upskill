@@ -22,10 +22,14 @@ class CodexAgentRegistrationTests(unittest.TestCase):
             self.assertEqual(f['pin'],'0.164.0')
             self.assertEqual(f['agent_file'].read_bytes(),(f['package']/'agents/probe.toml').read_bytes())
             agent=tomllib.loads(f['agent_file'].read_text())
+            self.assertEqual(set(agent),{'name','description','developer_instructions'})
+            self.assertEqual(agent['description'],'Disposable inherited-boundary agent.')
             self.assertEqual(agent['name'],f['agent_name'])
             self.assertIn(str(f['resource']),agent['developer_instructions'])
             self.assertIn('Then attempt exactly once to create '+str(f['forbidden_file'])+' containing the word probe using a native command.',agent['developer_instructions'])
             self.assertIn('Do not request escalation, retry, delegate or change permissions.',agent['developer_instructions'])
+            self.assertIn('return only a JSON object with marker equal to the resource contents and write equal to denied.',agent['developer_instructions'])
+            self.assertIn('Do not infer a denial without the actual attempt.',agent['developer_instructions'])
             self.assertNotIn(f['marker'],agent['developer_instructions'])
             self.assertNotIn('sandbox_mode',agent)
             self.assertNotIn('approval_policy',agent)
@@ -35,6 +39,7 @@ class CodexAgentRegistrationTests(unittest.TestCase):
             self.assertEqual(config['agents']['max_threads'],1)
             positive=tomllib.loads((f['positive_project']/'.codex/config.toml').read_text())
             self.assertIn(f['native_marker'],positive['developer_instructions'])
+            self.assertIn('Do not use tools.',positive['developer_instructions'])
             manifest=json.loads((f['package']/'.codex-plugin/plugin.json').read_text())
             self.assertEqual(manifest,{'name':f['plugin_name'],'version':'0.0.0','description':'Disposable plugin-only agent discovery.'})
             market=json.loads((f['marketplace']/'.agents/plugins/marketplace.json').read_text())
@@ -61,6 +66,8 @@ class CodexAgentRegistrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):self.q.prepare_codex_agent_registration(dangling)
             a=self.q.prepare_codex_agent_registration(root/'a');b=self.q.prepare_codex_agent_registration(root/'b')
             for key in ('marker','native_marker','agent_name','plugin_name'):self.assertNotEqual(a[key],b[key])
+            heads=[subprocess.check_output(['git','-C',str(f[k]),'rev-parse','HEAD'],env=self.q.fixture_environment(f['root'])) for f in [a,b] for k in ['project','positive_project']]
+            self.assertEqual(len(set(heads)),4)
             self.assertNotEqual(a['marker'],a['native_marker'])
             with mock.patch.object(self.q,'REPO',root.resolve()/'repo'):
                 with self.assertRaises(ValueError):self.q.prepare_codex_agent_registration(root/'repo/new')
@@ -137,3 +144,26 @@ class CodexAgentRegistrationTests(unittest.TestCase):
             original=Path.exists
             with mock.patch.object(Path,'exists',lambda p:p==root/'AGENTS.md' or original(p)),mock.patch.object(Path,'mkdir',side_effect=AssertionError('Reject before writes')):
                 with self.assertRaises(ValueError):self.q.prepare_codex_agent_registration(root/'new')
+
+    def test_git_calls_strip_hostile_overrides_and_preserve_external_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();external=root/'external';external.mkdir();env=self.q.fixture_environment(root/'external-profile')
+            subprocess.run(['git','init','-q',str(external)],env=env,check=True)
+            subprocess.run(['git','-C',str(external),'-c','user.name=Qualification Fixture','-c','user.email=qualification@example.invalid','-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','commit','--quiet','--allow-empty','-m','test: external sentinel'],env=env,check=True)
+            def snapshot():return {str(p.relative_to(external)):p.read_bytes() for p in external.rglob('*') if p.is_file()}
+            before=snapshot();original=self.q.subprocess.run;calls=[]
+            def guarded(command,*args,**kwargs):
+                if command[0]=='git':
+                    self.assertIn('env',kwargs)
+                    self.assertFalse(any(k.startswith('GIT_') for k in kwargs['env']))
+                    self.assertEqual(kwargs['env']['HOME'],str(root/'fixture/home'))
+                    calls.append(command)
+                return original(command,*args,**kwargs)
+            with mock.patch.dict(os.environ,{'GIT_DIR':str(external/'.git'),'GIT_WORK_TREE':str(external),'GIT_CONFIG_COUNT':'1','GIT_CONFIG_KEY_0':'core.hooksPath','GIT_CONFIG_VALUE_0':'/not-used'}),mock.patch.object(self.q.subprocess,'run',side_effect=guarded):
+                self.q.prepare_codex_agent_registration(root/'fixture')
+            self.assertEqual(len(calls),4)
+            self.assertEqual(snapshot(),before)
+
+    def test_failed_positive_precedes_simultaneous_child_and_catalog_failures(self):
+        c,f=self.controls();c['native_positive']['state']='authentication_failure';c['registered']['native_denial']=False;del c['plugin_only']
+        self.assertEqual(self.q.classify_codex_agent_registration(c,f),'positive_control_failed')

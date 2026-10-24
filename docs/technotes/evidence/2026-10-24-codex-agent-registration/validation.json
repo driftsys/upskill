@@ -93,5 +93,35 @@
     "result": "PASS: just verify",
     "private_log": "$PACKET_B/q7-main-verify.log",
     "sha256": "05f80422a1acbc01341bf1af2f2a0f55f478d28766856a6117f372d954213404"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q7-current-quick-focused.log",
+    "sha256": "9fb185f358917737995785a434d0e2d49abcdcd8c71310e7f29b063ef818d2de"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q7-current-quick-mutations.log",
+    "sha256": "db6bd7bacb1162334da133a9cef3052ded95ab75d1fa772c5dc4a6b006da771f"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q7-current-quick-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q7-current-quick-lint.log",
+    "sha256": "c8d6c0c00af53bf473ef57db8d77cbc391c3d09e24cf9d1b71eb7663af69d73e"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q7-current-quick-docs.log",
+    "sha256": "82b802ba0534a86717d660323e57b8bb97bbf546d94edb086c60ad6b6db3f8d0"
   }
 ]
