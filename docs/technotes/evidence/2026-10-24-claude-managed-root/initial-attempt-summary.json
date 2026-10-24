@@ -1,0 +1,309 @@
+{
+  "qualified": false,
+  "q6_completed": false,
+  "task": 384,
+  "control": "Q6",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "client": "Claude Code",
+  "pin": "2.1.308",
+  "scopes": [
+    {
+      "scope": "project",
+      "client": "Claude Code",
+      "pin": "2.1.308",
+      "status": "FAIL: invocation positive failed",
+      "failure": "OAuth session expired and could not be refreshed",
+      "steps": [
+        {
+          "label": "project-validate",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "validate",
+            "$FIXTURE/delivery"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "0403f6a66d0371d35d20def70e60e9a49c5e7190cd0c3155faf08dcba7182e72",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-market-add",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "add",
+            "$FIXTURE/delivery",
+            "--scope",
+            "project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "ef84d5a66a829198304bd28901eed47253ecca8ded926322e931816339fecf8a",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-install",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "install",
+            "upskill-q6-66d31ae858b12d98@upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "882aee2113fa42b6adeb0778fb76e53dea259c949243d4ea42441a8beeb2bc53",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-list",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "list",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "8b837ef0afc2845af556d179786d4b176a3dc824d0fb1d2022a0f5c0265030fa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-uninstall",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "uninstall",
+            "upskill-q6-66d31ae858b12d98@upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "project"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "0dfceb409b28744692cb8d8980afdae1c8b0c6c9b4e05566009c04a7de79a3e5",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-market-remove",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "remove",
+            "upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "project"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "ad927acf7148442a24ba18399211b98b2167a9278596390fc7ee510579a7cf8b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "inventory_receipt": "project-inventory.json",
+      "init_receipt": "project-installed.jsonl",
+      "invocation": {
+        "exit_code": 1,
+        "timed_out": false,
+        "stdout_sha256": "17d3a323d5922b12feab9dccf8f8c7e499a5637b47f1255ac7323b0542d3f475",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "result_subtype": "success",
+        "is_error": true,
+        "response": "Failed to authenticate: OAuth session expired and could not be refreshed",
+        "permission_denials": [],
+        "command": [
+          "/opt/homebrew/bin/claude",
+          "-p",
+          "--tools",
+          "Skill",
+          "--allowedTools",
+          "Skill",
+          "--no-session-persistence",
+          "--strict-mcp-config",
+          "--mcp-config",
+          "{\"mcpServers\":{}}",
+          "--setting-sources",
+          "user,project",
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--model",
+          "[private selection omitted]",
+          "Invoke the skill named upskill-q6-66d31ae858b12d98:probe-66d31ae858b12d98 and follow its instruction. If unavailable, return exactly ABSENT_18ce7e3f4feff22a50c80cf2c2dcd515. Do not use any other tools. Return only the required response."
+        ]
+      },
+      "edit_without_update": "NOT RUN: failed positive",
+      "update": "NOT RUN: failed positive",
+      "settings_residue": {
+        "$FIXTURE/project/.claude/settings.json": "empty_object_residue",
+        "$PROFILE/settings.json": "unchanged"
+      },
+      "settings_restored": [
+        true,
+        true
+      ],
+      "registry_bytes_and_modes_equal": true
+    },
+    {
+      "scope": "user",
+      "client": "Claude Code",
+      "pin": "2.1.308",
+      "status": "FAIL: invocation positive failed",
+      "failure": "OAuth session expired and could not be refreshed",
+      "steps": [
+        {
+          "label": "user-validate",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "validate",
+            "$FIXTURE/delivery"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "0403f6a66d0371d35d20def70e60e9a49c5e7190cd0c3155faf08dcba7182e72",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-market-add",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "add",
+            "$FIXTURE/delivery",
+            "--scope",
+            "user",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "702ee1a996534d129d26f00e9101e1d0f1b179a2312487b5561d52a169c8ae56",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-install",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "install",
+            "upskill-q6-66d31ae858b12d98@upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "user",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "b7184323d7b19c22c363e024d6e8d60bc1019ba93e2e76d0152fbe00f5c4aeda",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-list",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "list",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "9f2bc2185a33ca039c0ed323126df1fd28707658b66aa523cb3ff226f647f829",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-uninstall",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "uninstall",
+            "upskill-q6-66d31ae858b12d98@upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "user"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "ab86ef0381c657ae46fc4065f1d3cc7c1f2a49e70c294486bf56e64bde0dee3b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-market-remove",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "remove",
+            "upskill-q6-market-66d31ae858b12d98",
+            "--scope",
+            "user"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "60493cd60c42fba01a5ac5048c483153201ea4bc54e16e9a94b0ead068be0d30",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "inventory_receipt": "user-inventory.json",
+      "init_receipt": "user-installed.jsonl",
+      "invocation": {
+        "exit_code": 1,
+        "timed_out": false,
+        "stdout_sha256": "f6fbaf128f997d545c552044c332bd58ed0d169139dc9c2b0721102562ab6b04",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "result_subtype": "success",
+        "is_error": true,
+        "response": "Failed to authenticate: OAuth session expired and could not be refreshed",
+        "permission_denials": [],
+        "command": [
+          "/opt/homebrew/bin/claude",
+          "-p",
+          "--tools",
+          "Skill",
+          "--allowedTools",
+          "Skill",
+          "--no-session-persistence",
+          "--strict-mcp-config",
+          "--mcp-config",
+          "{\"mcpServers\":{}}",
+          "--setting-sources",
+          "user,project",
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--model",
+          "[private selection omitted]",
+          "Invoke the skill named upskill-q6-66d31ae858b12d98:probe-66d31ae858b12d98 and follow its instruction. If unavailable, return exactly ABSENT_18ce7e3f4feff22a50c80cf2c2dcd515. Do not use any other tools. Return only the required response."
+        ]
+      },
+      "edit_without_update": "NOT RUN: failed positive",
+      "update": "NOT RUN: failed positive",
+      "settings_residue": {
+        "$FIXTURE/user-project/.claude/settings.json": "unchanged",
+        "$PROFILE/settings.json": "empty_object_residue"
+      },
+      "settings_restored": [
+        true,
+        true
+      ],
+      "registry_bytes_and_modes_equal": true
+    }
+  ],
+  "counts": {
+    "model_requests": 2,
+    "successful_invocations": 0
+  },
+  "limits": [
+    "Native inventory and runtime init expose namespaced skill identity and package source path; no successful Skill invocation.",
+    "Inventory reports a native cache installPath while runtime init reports the managed source path; do not equate them.",
+    "Edit visibility and update/reinstall requirement remain unqualified.",
+    "Settings removal residue only empty enabledPlugins/extraKnownMarketplaces objects; exact settings bytes/modes restored afterward.",
+    "Authentication stores were not copied or exported.",
+    "Native-managed cache/log/session effects are separate; no direct cache writes by helper.",
+    "Production schema 1 unchanged; no support promotion."
+  ]
+}

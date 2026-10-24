@@ -1,0 +1,22 @@
+[
+  {
+    "scope": "project",
+    "observation_time": "after both scope removals",
+    "inventory_install_path": "$PROFILE/plugins/cache/upskill-q6-market-472c9cd5748f0b14/upskill-q6-472c9cd5748f0b14/0.0.0",
+    "exists": true,
+    "is_directory": true,
+    "is_symlink": false,
+    "symlink_descendants": [],
+    "direct_cache_write_or_cleanup": false
+  },
+  {
+    "scope": "user",
+    "observation_time": "after both scope removals",
+    "inventory_install_path": "$PROFILE/plugins/cache/upskill-q6-market-472c9cd5748f0b14/upskill-q6-472c9cd5748f0b14/0.0.0",
+    "exists": true,
+    "is_directory": true,
+    "is_symlink": false,
+    "symlink_descendants": [],
+    "direct_cache_write_or_cleanup": false
+  }
+]

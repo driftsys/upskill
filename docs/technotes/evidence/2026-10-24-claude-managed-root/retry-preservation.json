@@ -1,0 +1,146 @@
+{
+  "scopes": [
+    {
+      "scope": "project",
+      "settings_before": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "settings_after_removal": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "7346a044bf6d07d4d944af8aed0d5e4b20af4e87ef6e4b7ecc216c3b266774e1",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "residue": {
+        "$FIXTURE/project/.claude/settings.json": "empty_object_residue",
+        "$PROFILE/settings.json": "unchanged"
+      },
+      "restoration": {
+        "$FIXTURE/project/.claude/settings.json": true,
+        "$PROFILE/settings.json": true
+      },
+      "settings_after_restoration": {
+        "$FIXTURE/project/.claude/settings.json": {
+          "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "registry_before": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "registry_after_removal": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      }
+    },
+    {
+      "scope": "user",
+      "settings_before": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "settings_after_removal": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": "2fc36cd88ea5b1049defa6877fe98653f6b81a53f95878c26f79a0a06317e94a",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "residue": {
+        "$FIXTURE/user-project/.claude/settings.json": "unchanged",
+        "$PROFILE/settings.json": "empty_object_residue"
+      },
+      "restoration": {
+        "$FIXTURE/user-project/.claude/settings.json": true,
+        "$PROFILE/settings.json": true
+      },
+      "settings_after_restoration": {
+        "$FIXTURE/user-project/.claude/settings.json": {
+          "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+          "mode": 416,
+          "present": true
+        },
+        "$PROFILE/settings.json": {
+          "sha256": null,
+          "mode": null,
+          "present": false
+        }
+      },
+      "registry_before": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      },
+      "registry_after_removal": {
+        "$PROFILE/plugins/known_marketplaces.json": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "mode": 420,
+          "present": true
+        },
+        "$PROFILE/plugins/installed_plugins.json": {
+          "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+          "mode": 420,
+          "present": true
+        }
+      }
+    }
+  ]
+}

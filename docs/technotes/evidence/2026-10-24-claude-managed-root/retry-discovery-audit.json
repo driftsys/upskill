@@ -1,0 +1,14 @@
+{
+  "$FIXTURE/project/.claude/settings.json": {
+    "keys": [
+      "env"
+    ],
+    "discovery_keys_present": []
+  },
+  "$FIXTURE/user-project/.claude/settings.json": {
+    "keys": [
+      "env"
+    ],
+    "discovery_keys_present": []
+  }
+}

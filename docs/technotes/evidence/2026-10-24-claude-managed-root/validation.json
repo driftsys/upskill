@@ -108,5 +108,12 @@
     "result": "PASS: documentation checks",
     "private_log": "q6-numbered-docs.log",
     "sha256": "834a7130d456670401636af0329b8f05bcc59d66716507a901e061ed599cb7c4"
+  },
+  {
+    "stage": "successful native retry verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full build, Rust tests, lint, 50 offline Python tests and documentation checks",
+    "private_log": "$PACKET_B/q6-retry-verify.log",
+    "sha256": "4f93d0da4bf6caa85ed12face19cca4ffd8ba45a2375af9e3388cf975b215920"
   }
 ]

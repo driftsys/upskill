@@ -1,10 +1,11 @@
-# Gate 6 Claude managed-root mechanics: failed invocations
+# Gate 6 Claude managed-root controls
 
 Task [#384](https://github.com/driftsys/upskill/issues/384), Q6 of the
 [implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
-retains project- and user-scope marketplace mechanics on 2026-10-24. Both model
-positives failed authentication. Q6 remains incomplete; update behavior and a
-successful namespaced invocation are not qualified. Production remains schema 1.
+retains project- and user-scope marketplace controls on 2026-10-24. After normal
+isolated login renewal, all six fresh invocations passed. Q6 records source edit
+visibility before and after native update at both scopes. The two earlier
+authentication failures remain retained. Production remains schema 1.
 
 ## Method and pin
 
@@ -36,36 +37,45 @@ including on failed positives. The helper does not write native plugin caches.
 
 ## Observations
 
-| Control                             | Pin            | Project scope                                         | User scope                          |
-| ----------------------------------- | -------------- | ----------------------------------------------------- | ----------------------------------- |
-| Marketplace validation/addition     | Claude 2.1.308 | PASS: native exit 0                                   | PASS: native exit 0                 |
-| Plugin install and inventory        | Claude 2.1.308 | PASS: enabled project registration                    | PASS: enabled user registration     |
-| Runtime init load path              | Claude 2.1.308 | Managed package source under `delivery/packages/`     | Same managed package source         |
-| Inventory `installPath`             | Claude 2.1.308 | Native profile cache path reported                    | Native profile cache path reported  |
-| Native skill identity               | Claude 2.1.308 | Namespaced identity in init skills and slash commands | Same namespaced identity            |
-| Skill invocation positive           | Claude 2.1.308 | FAIL: expired OAuth session, exit 1                   | FAIL: expired OAuth session, exit 1 |
-| Edit without update                 | Claude 2.1.308 | NOT RUN: failed positive                              | NOT RUN: failed positive            |
-| Native update/reinstall requirement | Claude 2.1.308 | NOT RUN: failed positive                              | NOT RUN: failed positive            |
-| Uninstall and marketplace removal   | Claude 2.1.308 | PASS: native exit 0                                   | PASS: native exit 0                 |
+| Control                            | Pin            | Project scope                                     | User scope                      |
+| ---------------------------------- | -------------- | ------------------------------------------------- | ------------------------------- |
+| Marketplace validation/addition    | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
+| Plugin install and inventory       | Claude 2.1.308 | PASS: enabled project registration                | PASS: enabled user registration |
+| Runtime init load path             | Claude 2.1.308 | Managed source under `delivery/packages/`         | Same managed source             |
+| Inventory `installPath`            | Claude 2.1.308 | Distinct native cache path                        | Distinct native cache path      |
+| Initial invocation                 | Claude 2.1.308 | PASS: namespaced Skill call, exact initial marker | PASS: same                      |
+| Source edit without update         | Claude 2.1.308 | PASS: fresh session returns exact edited marker   | PASS: same                      |
+| Native update and fresh invocation | Claude 2.1.308 | PASS: update exit 0; exact edited marker          | PASS: same                      |
+| Uninstall and marketplace removal  | Claude 2.1.308 | PASS: native exit 0                               | PASS: native exit 0             |
 
-The [summary](evidence/2026-10-24-claude-managed-root/summary.json) and selected
-init events retain the exact generated identity and paths. The runtime init
-reports the managed source path while the inventory reports a cache
-`installPath`; these are distinct observations and must not be conflated. Native
-init lists `<plugin>:<skill>`, but there is no successful native `Skill` call.
-Both failed requests report `is_error: true`, even though their result subtype
-is `success`. A subtype or catalog entry alone is not a successful positive.
+The [summary](evidence/2026-10-24-claude-managed-root/summary.json) retains all
+three controls at each scope. Each request has one native `Skill` call with the
+exact `<plugin>:<skill>` identity, a correlated successful tool result, an exact
+expected marker, exit 0, `is_error: false` and no permission denial. The marker
+was absent from the request. Separate sessions observed the initial source and
+then the edited source; native update also succeeded. No reinstall was required
+for this observed fresh-session edit loop. This does not establish visibility
+inside an already running session.
 
-The fixture package was not edited after either failure. Source visibility,
-cache-copy behavior, update/reinstall requirements and edited-byte restoration
-remain unknown. Authentication must be renewed through the normal isolated login
-flow before fresh controls; no credential store was copied or exported.
+Runtime init reports the managed source path while native inventory reports a
+cache `installPath`. These are distinct observations. The runtime source version
+changes from `0.0.0` to `0.0.1` after editing the package, before native update.
+The packet does not infer cache synchronization or recovery from this result.
+
+The
+[initial attempt](evidence/2026-10-24-claude-managed-root/initial-attempt-summary.json)
+retains both failed positives: expired OAuth, exit 1 and `is_error: true`, even
+though the result subtype says `success`. Edit/update candidates were not run in
+that attempt. The successful retry uses a new fixture and normal renewed login;
+no credential store was copied or exported.
 
 ## Preservation and residue
 
-The
+The initial
 [preservation record](evidence/2026-10-24-claude-managed-root/preservation.json)
-retains settings-file hashes and modes before installation, after native removal
+and the
+[retry preservation record](evidence/2026-10-24-claude-managed-root/retry-preservation.json)
+retain settings-file hashes and modes before installation, after native removal
 and after exact restoration. At project scope the project settings retain added
 empty `enabledPlugins` and `extraKnownMarketplaces` objects; the user settings
 remain unchanged. At user scope the project settings remain unchanged and the
@@ -82,12 +92,14 @@ been retained as preservation failures.
 
 A
 [post-removal cache observation](evidence/2026-10-24-claude-managed-root/post-removal-cache.json)
-records that the reported cache entry remains a regular directory without
-symlink descendants after removal. Its persistence is a native-managed effect,
-not exact whole-profile restoration. Native session/log and authentication state
-are not whole-profile restoration evidence. Native-managed effects remain
-separate from the measured settings contract. No direct cache writes or cleanup
-were performed.
+and the
+[retry cache observation](evidence/2026-10-24-claude-managed-root/retry-post-removal-cache.json)
+record that the reported cache entry remains a regular directory without symlink
+descendants after removal. Its persistence is a native-managed effect, not exact
+whole-profile restoration. Native session/log and authentication state are not
+whole-profile restoration evidence. Native-managed effects remain separate from
+the measured settings contract. No direct cache writes or cleanup were
+performed.
 
 ## Consequence for the proposal
 
@@ -96,10 +108,11 @@ The affected rows are the proposal's
 and
 [Packaging changes identity](../wip/specs/2026-10-23-customization-delivery-proposal.md#packaging-changes-identity)
 sections. Local marketplace registration and namespaced catalog identity are
-observed at both scopes. This packet cannot adopt the update loop or qualify a
-successful skill route. Empty settings residue matches the stated allowance;
-other preservation and update requirements remain gated. Durable-record
-amendments wait for step 7.
+observed at both scopes, with successful namespaced calls and edited-source
+visibility in fresh sessions before and after native update. Empty settings
+residue matches the stated allowance. This is bounded Q6 evidence; complete
+profile qualification, production adoption and durable-record amendments remain
+gated. Durable-record amendments wait for step 7.
 
 ## Provenance and offline checks
 
@@ -128,7 +141,7 @@ native registrations and unchanged boolean/numeric values when object keys are
 reordered and an allowed empty sibling registration is added. The latest full
 verification passes all 49 offline tests.
 
-Offline checks never call a client. Linux, IDE/hosted surfaces, successful
-invocation, update behavior, native cache recovery, interrupted operations and
-integrated upskill ownership remain unqualified. This packet promotes no
-production adapter or complete Gate 6 profile.
+Offline checks never call a client. Linux, IDE/hosted surfaces, running-session
+edit visibility, native cache recovery, interrupted operations and integrated
+upskill ownership remain unqualified. This packet promotes no production adapter
+or complete Gate 6 profile.
