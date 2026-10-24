@@ -1,0 +1,58 @@
+{
+  "qualified": false,
+  "q9_completed": false,
+  "task": 379,
+  "control": "Q9",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "pin": "Codex 0.164.0",
+  "status": "FAIL: unchanged all-sources adapter records duplicate native bodies after reopen and first automatic compaction",
+  "controls": [
+    {
+      "name": "fresh-session continuity positive",
+      "pin": "Codex 0.164.0",
+      "result": "PASS: exact expected JSON, one native body per rule before compaction"
+    },
+    {
+      "name": "UI reopen plus automatic compaction 1",
+      "pin": "Codex 0.164.0",
+      "result": "FAIL: two native developer bodies per rule"
+    },
+    {
+      "name": "automatic compaction 2, same session",
+      "pin": "Codex 0.164.0",
+      "result": "one native developer body per rule; effective input unobserved"
+    },
+    {
+      "name": "outside guarded project negative",
+      "pin": "Codex 0.164.0",
+      "result": "PASS: exact empty rules array; no discovery setting edited"
+    },
+    {
+      "name": "fresh project-scoped registration and reviewed definitions",
+      "pin": "Codex 0.164.0",
+      "result": "NOT RUN: no safe replacement strategy selected; prepared fixture not registered"
+    }
+  ],
+  "counts": {
+    "sessions": 2,
+    "completed_model_turns": 4,
+    "automatic_compactions": 2,
+    "first_postcompact_rule_bodies": {
+      "a": 2,
+      "b": 2
+    },
+    "second_postcompact_rule_bodies": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "limits": [
+    "Continuity experiment reuses unchanged previously trusted user-registered packages guarded to an existing project, not fresh project registration.",
+    "Native log body counts are diagnostic evidence, not provider-effective-input proof or a supported adapter deduplication API.",
+    "Resume before a separate noncompacting next turn, clear and fork remain unobserved.",
+    "No speculative transcript parser, once-per-session state or native history deletion shipped.",
+    "Q9 and #379 remain unresolved; Codex rules cannot become supported.",
+    "Production schema 1 and durable adoption unchanged."
+  ]
+}

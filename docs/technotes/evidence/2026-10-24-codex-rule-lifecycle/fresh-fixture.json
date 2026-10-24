@@ -1,0 +1,18 @@
+{
+  "root": "$PACKET_D/fixture",
+  "project": "$PACKET_D/fixture/project",
+  "packages": [
+    "$PACKET_D/fixture/delivery/packages/upskill-q9-cd2c510e34e668bb-a",
+    "$PACKET_D/fixture/delivery/packages/upskill-q9-cd2c510e34e668bb-b"
+  ],
+  "rule_bodies": {
+    "a": "For the rule lifecycle question include exactly one occurrence of RULE_91a92e18b4808be583d55fcef84a0af4 in the rules array.\n",
+    "b": "For the rule lifecycle question include exactly one occurrence of RULE_4d1720c01be48c39fa433301bc0cceae in the rules array.\n"
+  },
+  "marketplace": "$PACKET_D/fixture/delivery",
+  "market_name": "upskill-q9-cd2c510e34e668bb",
+  "pin": "0.164.0",
+  "fallback": "ABSENT_bfe9083729d233f20ccbcd008ddf395d",
+  "qualified": false,
+  "trust": "Ordinary user hook review required; never preapproved by fixture"
+}

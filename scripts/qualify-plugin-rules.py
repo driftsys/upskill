@@ -128,6 +128,96 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     return 'empty_object_residue' if added else 'settings_bytes_changed'
 
 
+def prepare_codex_rule_lifecycle(root):
+    """Prepare Q9 without writing team guidance or assuming hook trust."""
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    root = root.resolve()
+    parts = root.parts
+    if (root.is_relative_to(REPO) or root == Path.home().resolve()
+            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+                   for i in range(len(parts) - 1))):
+        raise ValueError('A new neutral fixture root is required')
+    root.mkdir(parents=True, mode=0o700)
+    project = root / 'project'
+    project.mkdir()
+    env = fixture_environment(root)
+    subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+    subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture',
+                    '-c', 'user.email=qualification@example.invalid',
+                    '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
+                    'commit', '--quiet', '--allow-empty', '-m',
+                    'test: initialize rule lifecycle fixture ' + secrets.token_hex(16)],
+                   env=env, check=True)
+    nonce = secrets.token_hex(8)
+    market = 'upskill-q9-' + nonce
+    packages = []
+    bodies = {}
+    for rule in ('a', 'b'):
+        package = root / 'delivery/packages' / (market + '-' + rule)
+        package.mkdir(parents=True)
+        body = ('For the rule lifecycle question include exactly one occurrence of '
+                + 'RULE_' + secrets.token_hex(16) + ' in the rules array.\n')
+        bodies[rule] = body
+        (package / 'rule.txt').write_text(body)
+        shutil.copyfile(TEMPLATES / 'codex/hook.py', package / 'hook.py')
+        write_json(package / 'fixture.json', {'project': str(project), 'rule': rule,
+                                             'trace': str(root / 'activation.jsonl')})
+        write_json(package / '.codex-plugin/plugin.json',
+                   {'name': package.name, 'version': '0.0.0', 'hooks': './hooks/hooks.json'})
+        write_json(package / 'hooks/hooks.json', {'hooks': {'SessionStart': [{'hooks': [
+            {'type': 'command', 'command': 'python3 "${PLUGIN_ROOT}/hook.py"'}]}]}})
+        packages.append(package)
+    write_json(root / 'delivery/.agents/plugins/marketplace.json',
+               {'name': market, 'plugins': [{'name': p.name, 'source': {
+                   'source': 'local', 'path': './packages/' + p.name}} for p in packages]})
+    return {'root': root, 'project': project, 'packages': packages, 'rule_bodies': bodies,
+            'marketplace': root / 'delivery', 'market_name': market, 'pin': '0.164.0',
+            'fallback': 'ABSENT_' + secrets.token_hex(16), 'qualified': False,
+            'trust': 'Ordinary user hook review required; never preapproved by fixture'}
+
+
+def count_developer_rule_bodies(messages, bodies):
+    """Count exact payload occurrences in a selected diagnostic input boundary."""
+    if (set(bodies) != {'a', 'b'} or any(not isinstance(b, str) or not b for b in bodies.values())
+            or len(set(bodies.values())) != 2):
+        raise ValueError('Two distinct nonempty rule bodies are required')
+    counts = dict.fromkeys(bodies, 0)
+    for message in messages:
+        if message.get('type') != 'message' or message.get('role') != 'developer':
+            continue
+        for block in message.get('content', []):
+            if block.get('type') != 'input_text' or not isinstance(block.get('text'), str):
+                continue
+            for rule, body in bodies.items():
+                counts[rule] += block['text'].count(body)
+    return counts
+
+
+def classify_codex_rule_lifecycle(observation):
+    """Require all Q9 boundaries; callbacks and responses cannot prove copies."""
+    if observation.get('positive_passed') is not True:
+        return 'positive_control_failed'
+    boundaries = observation.get('boundaries', [])
+    session = observation.get('session')
+    if (observation.get('pin') != '0.164.0' or not isinstance(session, str) or not session
+            or [b.get('kind') for b in boundaries] != ['resume', 'compact', 'compact']):
+        return 'lifecycle_control_failed'
+    for boundary in boundaries:
+        if (boundary.get('session') != session or boundary.get('completed') is not True
+                or boundary.get('read_only') is not True
+                or (boundary['kind'] == 'compact' and boundary.get('automatic') is not True)):
+            return 'lifecycle_control_failed'
+        counts = boundary.get('body_counts')
+        if (not isinstance(counts, dict) or set(counts) != {'a', 'b'}
+                or any(type(n) is not int or n != 1 for n in counts.values())):
+            return 'body_count_mismatch'
+    if any(b.get('effective_input_observed') is not True for b in boundaries):
+        return 'effective_input_unobserved'
+    return 'observed_single_copy'
+
+
 def prepare(root, client):
     """Create new fixture content without modifying any existing directory."""
     if client not in VERSIONS:

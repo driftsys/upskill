@@ -1,0 +1,27 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: missing Q9 helpers; 57 tests, 10 errors",
+    "private_log": "$PACKET_B/q9-lint-red.log",
+    "sha256": "52d67e9b69e816d9283c95d67b6c0994858dcc6c40648ffdb244442b972fca1e"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 57 offline tests",
+    "private_log": "$PACKET_B/q9-lint-green.log",
+    "sha256": "6dbff44c5f3f4f6a2f341223dd8a0bdefa2fd7dc45e7d27226de77c53f4a9eee"
+  },
+  {
+    "stage": "full verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full Rust tests, 57 offline tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-verify.log",
+    "sha256": "55043b4048cc74b9c0de1ff0b70fea416d107f1f15b5ab91032f604a5ea82093"
+  },
+  {
+    "stage": "mutation checks",
+    "result": "PASS: ignore developer role, collapse duplicate counts and ignore effective input mutants rejected"
+  }
+]

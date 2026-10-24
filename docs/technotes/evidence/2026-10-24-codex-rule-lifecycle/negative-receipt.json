@@ -1,0 +1,155 @@
+{
+  "pin": "0.164.0",
+  "command": [
+    "/Users/sebastientasson/.local/bin/codex",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "-c",
+    "sandbox_mode=\"read-only\"",
+    "--no-daemon",
+    "exec",
+    "--json",
+    "-m",
+    "[private selection omitted]",
+    "For the plugin qualification question return a JSON object with a rules array containing only markers from automatically loaded plugin rules. Without rules the array is empty. Do not use any tools. Return only the JSON object."
+  ],
+  "exit_code": 0,
+  "cwd": "$PACKET_D/fixture/project",
+  "profile": "/private/tmp/upskill-gate6-codex-installed-20261019",
+  "before": [
+    {
+      "path": "$EXISTING_FIXTURE/project-a/AGENTS.md",
+      "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/config.toml",
+      "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+      "mode": 384
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/rule.txt",
+      "sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/fixture.json",
+      "sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/rule.txt",
+      "sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/fixture.json",
+      "sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    }
+  ],
+  "after": [
+    {
+      "path": "$EXISTING_FIXTURE/project-a/AGENTS.md",
+      "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/config.toml",
+      "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+      "mode": 384
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/rule.txt",
+      "sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/fixture.json",
+      "sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/rule.txt",
+      "sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/fixture.json",
+      "sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    }
+  ],
+  "binary": {
+    "path": "/Users/sebastientasson/.local/bin/codex",
+    "sha256": "d8990e3ee7acfbc26f91265b12a1a83f0fee40d0e0f8f1f40a37d4ec21f499cf",
+    "mode": 493
+  },
+  "expected_response": {
+    "rules": []
+  },
+  "limits": [
+    "Continuity diagnostic using unchanged previously trusted user-registered fixture; not a fresh project-scoped Q9 qualification.",
+    "No hook definitions, team files or cache bytes edited."
+  ]
+}

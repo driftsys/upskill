@@ -1,0 +1,160 @@
+{
+  "pin": "0.164.0",
+  "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+  "qualified": false,
+  "status": "FAIL: duplicate native developer bodies after reopen and first automatic compaction",
+  "boundaries": [
+    {
+      "kind": "compact",
+      "index": 1,
+      "native_line": 24,
+      "body_counts": {
+        "a": 2,
+        "b": 2
+      },
+      "replacement_history_body_counts": {
+        "a": 0,
+        "b": 0
+      },
+      "effective_input_observed": false
+    },
+    {
+      "kind": "compact",
+      "index": 2,
+      "native_line": 44,
+      "body_counts": {
+        "a": 1,
+        "b": 1
+      },
+      "replacement_history_body_counts": {
+        "a": 0,
+        "b": 0
+      },
+      "effective_input_observed": false
+    }
+  ],
+  "callbacks": [
+    {
+      "rule": "b",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "startup",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "a",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "startup",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "b",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "resume",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "a",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "resume",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "b",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "compact",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "a",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "compact",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "b",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "compact",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    },
+    {
+      "rule": "a",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "source": "compact",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    }
+  ],
+  "manual_and_cache_unchanged": true,
+  "after": [
+    {
+      "path": "$EXISTING_FIXTURE/project-a/AGENTS.md",
+      "sha256": "d660874af9303ac51783ad16d0ba7bf33d46d8828cf25ef71960ba882ed19f62",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/config.toml",
+      "sha256": "52ae5d591bdad7dedcedc691722f0e92b82bdc326cf06a0fec9e08a2f0519762",
+      "mode": 384
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/rule.txt",
+      "sha256": "b410070180c2376b95ea1f0579ca5b97364e124738afae2a979cd64aed4a8b7b",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/fixture.json",
+      "sha256": "97c95cb5f500b5278ad03b3ed3c0b6add54e859347f75920734d7bb32f452525",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "140a6cce19a950cb44392dbd2c8305f600f2cd80b9e81410e73fb63350ec6b77",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-a-eedbabd4/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hook.py",
+      "sha256": "d4653aa3331da492c8f3099b538ea0d680b3aaa00110cc09590cfa6feb1b7bcf",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/rule.txt",
+      "sha256": "2c66e9e536dc078283792893ee0ac620d53b1d38dbfa6ba1e4aaa75d8c40a344",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/fixture.json",
+      "sha256": "1c570bc8a556842c499034b35a63f18b31669ef9ba17988f53532c8738981a60",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/.codex-plugin/plugin.json",
+      "sha256": "9625926f066b332b47f80c4dd54e863808251446d7ffde8fe77a81fc216d4cb6",
+      "mode": 416
+    },
+    {
+      "path": "$PROFILE/plugins/cache/upskill-user-09de53d3d366/upskill-user-rule-b-e0cd6bf6/0.0.0/hooks/hooks.json",
+      "sha256": "5e8135a21d19757939ed95686431ec6675310596f251fa2cd32f062d836eada6",
+      "mode": 416
+    }
+  ],
+  "compactions": 2,
+  "completed_tasks": 3,
+  "tool_calls": 0,
+  "limits": [
+    "Provider effective input and encrypted compaction content are not inspected.",
+    "Continuity diagnostic uses unchanged previously reviewed user registrations and an existing project; fresh project registration remains unqualified.",
+    "Resume without automatic compaction was not separately submitted in this resumed UI."
+  ],
+  "non_message_catalog_records": [
+    "additional_tools"
+  ]
+}
