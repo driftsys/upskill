@@ -171,7 +171,9 @@ followed by a full verification passing all 50 offline tests.
 Review regressions pin absent settings, strict empty-object JSON types, case
 aliases, configured client roots and ancestor guidance. Malformed settings and
 formatting-only changes now return `preservation_failed` directly.
-Ancestor-guide tests mock presence and do not create team instruction files. The
+Ancestor-guide tests mock presence and do not create team instruction files.
+Additional regressions pin all guarded override and ancestor paths, dangling
+guidance, lexical discovery aliases and expanded existing roots. The
 [validation record](evidence/2026-10-24-claude-managed-root/validation.json)
 retains the tests-first failure and subsequent passing checks.
 

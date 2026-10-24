@@ -29,14 +29,20 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "0777db007a86a74b9e4f8e3ffd53053f1a830f7987aeb4ef146a490797398d70"
+        "sha256": "c00d22bf3e4cb8a7a9d1ed072ab1b14b770d143b0b507aad9bb8cf88a014bfe0"
       }
     ],
     "capture_helpers": {
       "q6-review-observations.py": "a8913e7e102332d93eb26a7c5baf7b4d75d28d3c97e31193650adb0794d56f70",
       "q6-review-mutations.py": "1d6bab245fe1271a05ca2e1051d3aa1f2225a1d9d0bf9b06beda9d12b3682651",
-      "retain-q6-review.py": "f91d140d9a2ec188588232bdf38a63e6b1e49811875043d1eb096e0bcb7d0a39"
+      "retain-q6-review.py": "f91d140d9a2ec188588232bdf38a63e6b1e49811875043d1eb096e0bcb7d0a39",
+      "q6-quick-fix-mutations.py": "f31772ce0d9c39f406a212c19e7aa8ad1230b2c8fea2d3abbfe164582cf180ff",
+      "retain-q6-quick-fix.py": "b79687bbbf24f947efd205f927d7675fd6ea7c62868001cfedb2cb5e9e66a7e3"
     },
-    "method": "Offline replay and exact-hash settings reconstruction; later read-only cache inventory, not a repeated native run"
+    "method": "Offline replay and exact-hash settings reconstruction; later read-only cache inventory, not a repeated native run",
+    "source_snapshots": {
+      "source/": "Harness and initial regression tests used by full verification",
+      "quick-fix-source/": "Final test-only guard regressions used by focused tests, lint and mutation checks"
+    }
   }
 ]

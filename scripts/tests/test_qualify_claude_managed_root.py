@@ -61,6 +61,9 @@ class ClaudeManagedRootControls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 q.prepare_claude_managed_root(sentinel)
             self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
+            with mock.patch.dict(os.environ, {'HOME': str(base), 'USERPROFILE': str(base)}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(Path('~/existing'))
+            self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
 
     def test_fixture_git_ignores_ambient_repository_and_home_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -189,22 +192,44 @@ class ClaudeManagedRootControls(unittest.TestCase):
                     q.prepare_claude_managed_root(root)
                 self.assertFalse(root.exists())
             override = base / 'configured-client'
-            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR'):
+            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR','OPENCODE_CONFIG'):
                 root = override / key / 'fixture'
                 with mock.patch.dict(os.environ, {key:str(override / key)}), self.subTest(key=key), self.assertRaises(ValueError):
                     q.prepare_claude_managed_root(root)
                 self.assertFalse(root.exists())
+            root = override / 'xdg' / 'opencode' / 'fixture'
+            with mock.patch.dict(os.environ, {'XDG_CONFIG_HOME': str(override / 'xdg')}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(root)
+            self.assertFalse(root.exists())
 
     def test_ancestor_guidance_or_claude_discovery_rejects_without_writing_guides(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
-            real_exists = Path.exists
-            for name in ('CLAUDE.md','AGENTS.md','.claude'):
-                root = base / 'ancestor' / 'fixture'
-                sentinel = base / name
-                def exists(path):
-                    return path == sentinel or real_exists(path)
-                with mock.patch.object(Path, 'exists', exists), self.subTest(name=name), self.assertRaises(ValueError):
-                    q.prepare_claude_managed_root(root)
-                self.assertFalse(root.exists())
-                self.assertFalse(real_exists(sentinel))
+            real_exists, real_symlink = Path.exists, Path.is_symlink
+            for name in ('CLAUDE.md','AGENTS.md','.claude','.copilot','.codex','.opencode','.github','.agents/skills','.agents/plugins','.config/opencode'):
+                for dangling in (False, True):
+                    root = base / 'ancestor' / 'fixture'
+                    sentinel = base / name
+                    def exists(path):
+                        return not dangling if path == sentinel else real_exists(path)
+                    def is_symlink(path):
+                        return dangling if path == sentinel else real_symlink(path)
+                    with mock.patch.object(Path, 'exists', exists), mock.patch.object(Path, 'is_symlink', is_symlink), self.subTest(name=name, dangling=dangling), self.assertRaises(ValueError):
+                        q.prepare_claude_managed_root(root)
+                    self.assertFalse(root.exists())
+                    self.assertFalse(real_exists(sentinel))
+                    self.assertFalse(real_symlink(sentinel))
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX symlink control')
+    def test_lexical_discovery_ancestor_cannot_redirect_into_a_neutral_location(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            neutral, hidden = base / 'neutral', base / 'hidden-parent'
+            neutral.mkdir()
+            hidden.mkdir()
+            link = hidden / '.claude'
+            link.symlink_to(neutral, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(link / 'fixture')
+            self.assertFalse((neutral / 'fixture').exists())
+            self.assertTrue(link.is_symlink())
