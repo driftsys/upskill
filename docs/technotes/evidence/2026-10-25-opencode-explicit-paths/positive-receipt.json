@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/Users/sebastientasson/.opencode/bin/opencode",
+    "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--model",
+    "[private selection omitted]",
+    "--title",
+    "Disposable explicit-path qualification",
+    "Answer the native qualification question. Return only its required response. Do not use tools."
+  ],
+  "cwd": "$PACKET_A/fixture/positive",
+  "exit_code": 1,
+  "timed_out": false,
+  "started_at_utc": "2026-10-24T23:03:33.220035+00:00",
+  "finished_at_utc": "2026-10-24T23:04:03.103846+00:00",
+  "stdout_sha256": "cfb165898878058df2cff27e809078d6fd8c14c077cbd293958814d9bd9dc9c4",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

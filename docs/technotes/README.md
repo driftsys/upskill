@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [OpenCode explicit-path retry](gate6-opencode-explicit-paths.md): Q5, OpenCode
+  2.1.4; failed native positive, with downstream controls not run.
+
 - [OpenCode current-route controls](gate6-opencode-current-routes.md): Q5,
   OpenCode 2.1.4; failed native positives, unrun component controls and rejected
   local-directory installation.

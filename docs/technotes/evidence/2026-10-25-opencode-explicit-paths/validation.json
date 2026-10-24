@@ -1,0 +1,44 @@
+[
+  {
+    "stage": "Tests before harness implementation",
+    "result": "FAIL: six expected missing-helper assertions, 160 tests",
+    "private_log": "$PACKET_A/q5-explicit-red-lint.log",
+    "sha256": "7babcb1c026597ce52699e77e051b4252bebc80fa76973cef58865d5f4523676"
+  },
+  {
+    "stage": "Offline suite after implementation",
+    "result": "PASS: 160 offline tests",
+    "private_log": "$PACKET_A/q5-explicit-green-lint.log",
+    "sha256": "0a8a42f989dbefd1a80ebe3c30e7b4f339572d792a2780ae92221940452ecc05"
+  },
+  {
+    "stage": "Native path ordering regression before correction",
+    "result": "FAIL: valid reversed native path inventory rejected",
+    "private_log": "$PACKET_A/q5-explicit-path-order-red.log",
+    "sha256": "491e9dc87170982c7810560dc11b837ac68f43432cc74498bad3c19b0a09baeb"
+  },
+  {
+    "stage": "Focused fixture/classification tests",
+    "result": "PASS: six tests",
+    "private_log": "$PACKET_A/q5-explicit-focused-green.log",
+    "sha256": "70478897cb3015c59b4843fb6300b16f9ed6d51122ac58e7d340df0f25d29f2d"
+  },
+  {
+    "stage": "Independent regression mutations",
+    "result": "PASS: nine mutants rejected by assertion failure",
+    "private_log": "$PACKET_A/q5-explicit-mutations.log",
+    "sha256": "127f71395c919ea5a4ddfebde8ff74e7fc093ca81d01fa53b5e8280ca2400b58"
+  },
+  {
+    "stage": "Final repository verification",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_A/q5-explicit-full-verify.log",
+    "sha256": "4ba0fa7905ce8b3b70c5728e283aa06d7646505731334217e092d7d02ebaa948"
+  },
+  {
+    "stage": "Final repository verification",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_A/q5-explicit-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  }
+]
