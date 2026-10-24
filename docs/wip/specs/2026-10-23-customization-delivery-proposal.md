@@ -1,32 +1,33 @@
 # Proposed customization delivery architecture
 
-Date: 2026-10-23. Status: proposal for review with Fable, revised after the
-first Fable review on the same day. Not an adopted ADR, implemented feature, or
-production support claim.
-
-This revision captures the requirements discussion and replaces the earlier
-separate-output recommendation in this draft. The managed-package direction was
-accepted in conversation; exact paths, schemas, adapters and support profiles
-remain subject to review and qualification.
+Date: 2026-10-23; rules direction adopted by the user on 2026-10-24 after
+reviewing Q1-Q9. Status: decided rules direction, pending durable-record
+amendments and implementation. The skills/subagent/package and release-scope
+amendments remain proposals; this decision changes no code or production route
+([user decision](#user-decision-2026-10-24), [AD-0040][direction],
+[roadmap][roadmap]).
 
 ## Controlling records
 
-This proposal refines, and must stay consistent with, the direction accepted on
-2026-10-19 in
+This proposal records the new [rules decision](#user-decision-2026-10-24) and
+identifies its required amendments to the direction accepted on 2026-10-19 in
 [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md)
 ("Separate customization delivery from discovery") and
 [Topic 0009](../../topics/0009-customization-delivery.md), both on `main` since
 PR #334 and extended on 2026-10-20 (PR #350). Where this proposal agrees with
 them it says so. Where it diverges it says so and gives the reason, and the
-divergence is recorded as a proposed amendment inside those records.
+three direction amendments are recorded in [AD-0040][direction]; Topic 0009
+links to that list rather than recording or adopting the amendments itself
+([Topic 0009][contract]).
 
 Agreements with AD-0040 and Topic 0009:
 
 - One captured source with generated client-native outputs; a physically shared
   directory is optional, not the baseline.
-- Independent Codex and OpenCode rules need a qualified plugin route. Team
-  `AGENTS.md` is preserved. Rewriting it is not a fallback, and missing
-  capabilities block the route instead of authorizing a rewrite.
+- Rule delivery remains independent of team `AGENTS.md`; rewriting it is not a
+  fallback. The new decision retains Codex hooks but allows explicit OpenCode
+  instruction paths, requiring amendment of AD-0040's plugin-only wording
+  ([user decision](#user-decision-2026-10-24), [AD-0040][direction]).
 - The merged managed-`AGENTS.md` contribution compiler is an experimental
   library mechanism, not production delivery.
 - Whole-body overrides replace the canonical body and do not compose with it.
@@ -43,35 +44,57 @@ Divergences from AD-0040, Topic 0009 and the [roadmap](../../roadmap.md):
   proposal and keeps its roadmap place. See "Requirements and scope" for what
   this does and does not change.
 - Skills and subagents are delivered as upskill-managed packages per client
-  wherever a native plugin root exists; rules use a package hook only where no
-  qualified native route exists. AD-0040's extended section selects portable
-  `.agents/skills` with one self-contained Claude adapter as the first
-  experiment; this proposal makes the self-contained package the default and
-  `.agents/skills` an optional qualified profile, because Claude direct
-  `.agents/skills` discovery failed and the package route passed on Claude,
-  Copilot and Codex, with OpenCode catalog evidence only. AD-0040 only requires
-  that delivery and discovery stay separate; it does not select packages. The
-  2026-10-14 adapter roadmap's route mapping gives skills native discovery ("N")
-  on all four clients and leaves subagents unsequenced; both change here.
+  wherever a native plugin root exists. Rules use native always-on routes first,
+  with a package hook only where no native route exists or a fallback has been
+  qualified ([user decision](#user-decision-2026-10-24)). AD-0040's extended
+  section selects portable `.agents/skills` with one self-contained Claude
+  adapter as the first experiment; this proposal makes the self-contained
+  package the default and `.agents/skills` an optional qualified profile,
+  because Claude direct `.agents/skills` discovery failed and the package route
+  passed on Claude, Copilot and Codex, with OpenCode catalog evidence only.
+  AD-0040 only requires that delivery and discovery stay separate; it does not
+  select packages. Those successes are historical evidence at their recorded
+  pins, not current route qualification ([Q6][Q6], [Q3][Q3], [Q5][Q5],
+  [CD-10][contract]). The 2026-10-14 adapter roadmap's route mapping gives
+  skills native discovery ("N") on all four clients and leaves subagents
+  unsequenced; both change here.
 
 ## Records superseded or amended if this proposal is adopted
 
 Adoption requires explicit amendments. This proposal does not silently amend any
 of them.
 
-| Record                                                                                                                                                                                   | Conflict with this proposal                                                                                                                                           | Required change                                                                                                        |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [ADR-0003](../../adr/0003-generation-pipeline.md) output table and ancillary files                                                                                                       | Shipped layout writes `.claude/rules`, `.github/instructions`, `.agents/rules` plus an `instructions[]` glob in `opencode.json`, and `.opencode/agents`               | Record the managed-package layout and the disposition of each shipped path (see "Existing generated output")           |
-| [Specification §3.4 ancillary file handling](../../specification/specification.md), with §2.3 `remove` leaving them untouched                                                            | `upskill` creates `CLAUDE.md` with `@AGENTS.md` when absent ([ancillary.rs](../../../src/ancillary.rs))                                                               | Remove `CLAUDE.md` creation; record what happens to an existing generated bridge file                                  |
-| [AD-0016](../../adr/0016-pure-instruction-planning.md), [AD-0017](../../adr/0017-shared-instruction-owner-evidence.md), [AD-0018](../../adr/0018-retain-empty-instruction-aggregates.md) | Owned contributions are written as marked regions inside shared instruction aggregates such as `AGENTS.md`                                                            | Mark as experimental library mechanisms with no production destination, as AD-0040 already does                        |
-| [AD-0039](../../adr/0039-compile-captured-codex-instructions.md)                                                                                                                         | Compiles captured Codex rules into project `AGENTS.md` or global `.codex/AGENTS.md`                                                                                   | Same as above; the reader-report contract may be reused for exposure reporting                                         |
-| [Roadmap](../../roadmap.md) MVP table and implementation dependencies                                                                                                                    | MVP lists automatic updates, rules, skills, bundles and plugins; subagents are unassigned                                                                             | Re-sequence explicitly; keep the three ordered dependencies or replace them                                            |
-| [Topic 0001 §7](../../topics/0001-content-format.md) and [format-spec §7](../../specification/format-spec.md)                                                                            | Define the per-client output paths this proposal replaces                                                                                                             | Amend together with ADR-0003                                                                                           |
-| [ADR-0012](../../adr/0012-consumer-client-filtering.md) and the `.vscode/settings.json` ancillary write                                                                                  | `chat.instructionsFilesLocations` is written for the VS Code Copilot surface                                                                                          | Record a disposition like `opencode.json` and `CLAUDE.md`; VS Code is deferred, so the write may have no replacement   |
-| [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md) and [Topic 0009](../../topics/0009-customization-delivery.md)                                                | Subagents in MVP; packages as default for skills and subagents instead of `.agents/skills` first; OpenCode package skills instead of the `.opencode/skills` candidate | Proposed amendments are recorded in both records dated 2026-10-23; adopt or reject them with this proposal             |
-| [2026-10-14 adapter roadmap](2026-10-14-customization-adapter-roadmap.md) and [adapter evidence](../../technotes/customization-adapter-evidence.md)                                      | Route mapping gives skills "N" everywhere and Claude rules "Plugin command hooks"                                                                                     | Update the route mapping to this table                                                                                 |
-| [ADR-0014](../../adr/0014-versioned-agent-model-mappings.md)                                                                                                                             | None. Accepted offline S/A/B/C model mappings exist for Claude, Codex and Copilot                                                                                     | Reference it from the subagent section; this proposal adds no new resolver                                             |
-| Storage candidates draft `docs/wip/specs/2026-10-23-customization-storage-delivery-candidates.md`                                                                                        | The sibling draft on `main` (uncommitted) asked for evidence before declaring a winner; this proposal selects managed packages, close to its Candidate A              | Archive the draft with the reason the decision no longer waits for the full comparison, or link it as retained context |
+| Record                                                                                                                                                                                   | Conflict with this proposal                                                                                                                                           | Required change                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [ADR-0003](../../adr/0003-generation-pipeline.md) output table and ancillary files                                                                                                       | Shipped layout writes `.claude/rules`, `.github/instructions`, `.agents/rules` plus an `instructions[]` glob in `opencode.json`, and `.opencode/agents`               | Record the managed-package layout and the disposition of each shipped path (see "Existing generated output")         |
+| [Specification §3.4 ancillary file handling](../../specification/specification.md), with §2.3 `remove` leaving them untouched                                                            | `upskill` creates `CLAUDE.md` with `@AGENTS.md` when absent ([ancillary.rs](../../../src/ancillary.rs))                                                               | Remove `CLAUDE.md` creation; record what happens to an existing generated bridge file                                |
+| [AD-0016](../../adr/0016-pure-instruction-planning.md), [AD-0017](../../adr/0017-shared-instruction-owner-evidence.md), [AD-0018](../../adr/0018-retain-empty-instruction-aggregates.md) | Owned contributions are written as marked regions inside shared instruction aggregates such as `AGENTS.md`                                                            | Mark as experimental library mechanisms with no production destination, as AD-0040 already does                      |
+| [AD-0039](../../adr/0039-compile-captured-codex-instructions.md)                                                                                                                         | Compiles captured Codex rules into project `AGENTS.md` or global `.codex/AGENTS.md`                                                                                   | Same as above; the reader-report contract may be reused for exposure reporting                                       |
+| [Roadmap](../../roadmap.md) MVP table and implementation dependencies                                                                                                                    | MVP lists automatic updates, rules, skills, bundles and plugins; subagents are unassigned                                                                             | Re-sequence explicitly; keep the three ordered dependencies or replace them                                          |
+| [Topic 0001 §7](../../topics/0001-content-format.md) and [format-spec §7](../../specification/format-spec.md)                                                                            | Define the per-client output paths this proposal replaces                                                                                                             | Amend together with ADR-0003                                                                                         |
+| [ADR-0012](../../adr/0012-consumer-client-filtering.md) and the `.vscode/settings.json` ancillary write                                                                                  | `chat.instructionsFilesLocations` is written for the VS Code Copilot surface                                                                                          | Record a disposition like `opencode.json` and `CLAUDE.md`; VS Code is deferred, so the write may have no replacement |
+| [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md) and [Topic 0009](../../topics/0009-customization-delivery.md)                                                | Subagents in MVP; packages as default for skills and subagents instead of `.agents/skills` first; OpenCode package skills instead of the `.opencode/skills` candidate | AD-0040 lists proposed amendments; Topic 0009 links to them without adoption; the user decides at step 7             |
+| [2026-10-14 adapter roadmap](2026-10-14-customization-adapter-roadmap.md) and [adapter evidence](../../technotes/customization-adapter-evidence.md)                                      | Route mapping gives skills "N" everywhere and Claude rules "N"; adapter evidence separately lists hooks                                                               | Update the route mapping to this table                                                                               |
+| [ADR-0014](../../adr/0014-versioned-agent-model-mappings.md)                                                                                                                             | None. Accepted offline S/A/B/C model mappings exist for Claude, Codex and Copilot                                                                                     | Reference it from the subagent section; this proposal adds no new resolver                                           |
+| Storage candidates draft `docs/wip/specs/2026-10-23-customization-storage-delivery-candidates.md`                                                                                        | The local uncommitted draft compares candidates and records a user-reported OpenCode explicit-path/cache observation; it is retained context, not an active proposal  | Register retained context in docs/wip/README.md; Q5 does not test or validate its cache claim                        |
+
+Additional required amendments from the user's 2026-10-24 rules decision are
+listed here, not applied to durable records in this PR
+([user decision](#user-decision-2026-10-24)):
+
+| Record                                                                                                                                                        | Required amendment                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [AD-0040][direction], [Topic 0009][contract] and [roadmap][roadmap] rules wording                                                                             | Replace mandatory qualified plugin delivery for Codex/OpenCode with delivery independent of team `AGENTS.md`; explicit OpenCode instruction file paths satisfy that intent when Q5 passes. Keep reader, ownership and activation obligations ([user decision](#user-decision-2026-10-24), [Q5][Q5])                                                 |
+| [#379](https://github.com/driftsys/upskill/issues/379) and Codex rule status                                                                                  | Re-scope K0 blocker to K1 debt, retaining a resume-only attribution control. Record supported with declared limitation after that control is retained; do not relabel Q9's duplicate-body observation a zero-duplicate PASS ([user decision](#user-decision-2026-10-24), [Q9][Q9])                                                                  |
+| [CD-04/CD-11][contract] and [roadmap dependencies][roadmap]                                                                                                   | Record the bounded Codex duplicate allowance and decided skills-before-rules order explicitly. Ownership deduplication and all other reader controls remain; the user records these amendments at step 7 ([user decision](#user-decision-2026-10-24), [Q9][Q9])                                                                                     |
+| [ADR-0003](../../adr/0003-generation-pipeline.md), [format-spec §7](../../specification/format-spec.md) and [Topic 0001](../../topics/0001-content-format.md) | Record shared Claude/Copilot always-on native delivery, declared readers per item, explicit OpenCode file registration and the disposition of the old glob. Do not introduce a schema-2 writer; any declared-reader persistence gap in schema 1 needs its own implementation design ([user decision](#user-decision-2026-10-24), [CD-06][contract]) |
+
+Decision required: at step 7 the user must separately approve (1) adding
+subagents to the MVP, (2) making self-contained packages the default instead of
+the shared-root experiment, and (3) moving authorable bundles out of the MVP.
+The OpenCode explicit skill-source change also needs the user's disposition of
+AD-0040's third listed amendment; Q5 has not executed it. None follows from a
+native PASS ([AD-0040][direction], [roadmap][roadmap], [Q5][Q5]).
 
 ## Requirements and scope
 
@@ -125,10 +148,11 @@ The design must:
 
 Use one canonical source, generation-time composition and managed packages per
 client. A package is the default home for generated skills, subagents, resources
-and any small client adapter. Rules use the qualified native rule route where
-one exists (Claude, Copilot) and a package hook where none does (Codex,
-OpenCode); see "Rules". Where supported, the package is a native plugin root.
-Prefer native components over custom loading code.
+and any small client adapter. Always-on rules use native Claude/Copilot files
+and explicit OpenCode instruction paths once Q5 passes; Codex uses the trusted
+hook/index package. A broken native route uses only a separately qualified
+fallback. Where supported, the package is a native plugin root
+([decision][decision], [Q1][Q1], [Q5][Q5], [Q9][Q9]).
 
 Package ownership is the common abstraction; identical loading mechanisms are
 not required. External registrations or native files are allowed where necessary
@@ -197,10 +221,19 @@ manual project skill also shadows a plugin skill on Copilot (`.github/skills`
 variant wins, assessment 1.0.103); preflight must detect manual-versus-package
 name collisions, not only shared-versus-compatibility ones.
 
-Consequences: the managed package normally becomes a local marketplace source,
-every content update is followed by a native reinstall or upgrade step, and
-running sessions keep the previously loaded bytes. Collaborator onboarding on
-project scope needs an explicit step the proposal must document.
+Update visibility is client-specific; a universal reinstall step is not
+supported by the retained observations ([Q6][Q6], [Q3][Q3], [Q5][Q5]).
+
+| Client and current pin | Update visibility                                            | Evidence boundary                                                                                      |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Claude 2.1.308         | Fresh session sees edited managed source without reinstall   | PASS at project and user scopes; running-session visibility not run ([Q6][Q6], [summary][Q6 summary])  |
+| Copilot 1.0.103        | Native installation reports live loading from managed source | Q3 installation observation, not successful rule-update activation ([Q3][Q3], [summary][Q3 summary])   |
+| Codex 0.164.0          | Unknown until Q8                                             | Native cache-copy lifecycle still needs the Q8 control ([AD-0040][direction], [design ledger][ledger]) |
+| OpenCode 2.1.4         | Not run after failed positives                               | Q5 provides no execution or update visibility result ([Q5][Q5], [summary][Q5 summary])                 |
+
+Collaborator onboarding at project scope needs an explicit task: committed
+registration does not prove native installation, trust or invocation for another
+collaborator ([Q6][Q6], [CD-08][contract]).
 
 The managed root is an open design detail with one fixed constraint: it must not
 be, or sit under, any documented discovery path of any supported client, and it
@@ -218,103 +251,130 @@ remains copy-only, consistent with the repository constraint.
 
 ## Rules
 
-| Client      | Default route                                                            | Package or exception route                                                | Qualification boundary                                                                                                        |
-| ----------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code | Native `.claude/rules/<name>.md` with `paths:`                           | Package-owned rule Markdown read by a plugin context hook (unscoped only) | Native route passed paired controls on 2.1.292; hook route untested; no documented plugin rule component                      |
-| Copilot CLI | Native `.github/instructions/<name>.instructions.md` with `applyTo:`     | Agent Plugins `com.github.copilot/` rules component                       | `.github/copilot-instructions.md` passed on 1.0.98; modular `applyTo` output and the plugin component are untested            |
-| Codex       | Package-owned rule Markdown read by a trusted plugin `SessionStart` hook | None; `AGENTS.md` rewrite is rejected                                     | Passed on 0.163.0 with disable/remove/reinstall/resume; `-c plugins.<id>.enabled=false` FAILED; compaction partially observed |
-| OpenCode    | Package-owned rule Markdown read by an executable plugin context adapter | None; configured `instructions` paths remain unverified for the pinned v2 | Passed on 2.0.32 (one event per rule, resume); hot-disable, reload and compaction untested                                    |
+### User decision, 2026-10-24
 
-This replaces the earlier table that routed Claude through a hook and Copilot
-through the plugin rules component by default. Both earlier choices moved a
-qualified native route to an unqualified one. For Claude, a startup hook cannot
-preserve `paths:` scoping, so under the design rule above every scoped rule
-would become unsupported on the client with the strongest native scoping. For
-Copilot, the `com.github.copilot/rules/` path is not spelled out in any retained
-technote; only the `com.github.copilot/` namespace is documented. The plugin
-component stays a candidate until installed-version loading, scope and `applyTo`
-behavior are tested. Committed native files also reach surfaces this proposal
-defers: `.github/instructions` and `.github/agents` are consumed by Copilot
-cloud agent, code review and VS Code, and `.claude/rules` by Claude IDE
-sessions. Topic 0009 classifies such sharing as unintended unless a separate
-profile declares it. Record these as unresolved readers per item; do not count
-them as intended consumers.
+The user adopted native-first always-on rule delivery after reviewing Q1-Q9.
+Always-on rules are the MVP priority; scoped rules are secondary. Load rules
+natively wherever the client has a native always-on route. Use a package hook
+only where no native route exists, or as a separately qualified fallback when a
+native route breaks. A uniform load mechanism across clients is not a goal.
+Consistency belongs in the single authored source and upskill's existing
+per-client generation ([ADR-0003](../../adr/0003-generation-pipeline.md),
+[Q1][Q1], [Q3][Q3], [Q6][Q6], [Q9][Q9]).
 
-### Exactly one delivery per client, and the `.claude/rules` gate
+The desired property for native routes is activation on clone, a rule file the
+client itself lists, and no per-machine rule installation. Codex remains the
+hook exception and therefore retains native package installation and trust
+steps. Selecting this direction does not claim the still-pending OpenCode or
+Copilot modular-file controls passed ([decision][decision], [Q5][Q5], [Q1][Q1],
+[Q9][Q9]).
 
-Each logical rule has exactly one delivery route per intended client. A client
-never receives the same rule through its native route and through a package
-hook. The native defaults above are therefore exclusive of the exception routes
-for the same item, and the planner must reject a plan that selects both.
+Reasons for the decision:
 
-The native Claude and Copilot defaults create one cross-client duplicate risk:
-Copilot may read project `.claude/rules/**/*.md`. The
-[shared-content-root evaluation](../../technotes/shared-content-root-evaluation.md)
-records that the CLI command reference lists that path while the instruction
-how-to does not; the
-[Copilot research technote](../../technotes/agent-customization/copilot.md)
-lists neither, and no pinned run has tested it. If the pinned Copilot CLI does
-read it, a rule shipped natively to both clients reaches Copilot twice. Before
-the two native defaults are used together in one project, run the Gate 6
-paired-control harness with a `.claude/rules` positive under Copilot and record
-the result. Then:
+1. Evidence: the native rows have retained results at their named pins, while
+   plugin lifecycle is the least-proven part of this campaign. Q3 fails the
+   Copilot rules component, Q6 records native residue and a cache/source
+   distinction, and Q9 records duplicate bodies. OpenCode's current-pin native
+   positive failed, so its explicit-path retry remains required; a retained
+   result does not mean PASS ([Q1][Q1], [Q3][Q3], [Q6][Q6], [Q9][Q9], [Q5][Q5],
+   [historical native controls](../../technotes/m1-gate6-native-qualification.md)).
+2. Onboarding: native files are available on clone. Claude and Codex plugins
+   need per-machine, per-client installation; committed project settings do not
+   install a collaborator's package. Codex hook definition changes require
+   ordinary `/hooks` review; whether changing only the rule index triggers
+   re-trust remains an open control ([Q6][Q6], [Q9][Q9],
+   [design ledger][ledger]).
+3. Debuggability: the user prefers a rule file listed by the client to text
+   injected by a startup script. This is a design preference, not a measured
+   performance result ([decision][decision], [Q6][Q6], [Q9][Q9]).
 
-- Copilot does not read `.claude/rules`: keep both native defaults. No further
-  action.
-- Copilot reads `.claude/rules`: choose one of the following per item, and
-  record it in the plan. (a) Deliver the rule once in `.claude/rules` and let
-  Copilot consume that file; Copilot ignores `paths:`, so this is valid only for
-  unscoped rules shared verbatim. (b) Keep the Copilot native route and move the
-  Claude copy to the package hook; Claude then loses `paths:` scoping, so this
-  is also valid only for unscoped rules. (c) Deliver Copilot through its plugin
-  rules component once that component is qualified, and keep Claude native. A
-  scoped rule intended for both clients in one project is unsupported until (c)
-  or a proven Copilot exclusion exists; report it as unsupported instead of
-  emitting two files.
+### Always-on rules
 
-Codex and OpenCode have no documented default reader of `.claude/rules` or
-`.github/instructions`, and Claude has no documented reader of
-`.github/instructions`, so the remaining pairs carry no known default-discovery
-duplicate vector. Configured readers are a separate matter: an OpenCode
-`instructions` glob, a Copilot explicit import or any user-configured client
-glob can select the native rule destinations as well as the managed root. The
-glob and import inventory in preflight therefore covers `.claude/rules` and
-`.github/instructions`, not only the managed root. Skills and plugin-delivered
-agents avoid the native project-tree discovery paths because they live in the
-managed package or a client cache, not in `.claude/`, `.github/` or
-`.agents/skills`. Note that Claude loaded a project-scope plugin from its local
-marketplace package source, not from a copied cache
-([four-client coexistence controls](../../technotes/gate6-four-client-skill-coexistence.md)),
-so for Claude the managed root's location is what provides isolation. The
-native-file subagent exception for Claude does not have this property and has
-the same Copilot reader problem; see "Subagents".
+| Client      | Decided route                                                                                                                                                                                                                                           | Evidence and acceptance boundary                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | Native `.claude/rules/<name>.md`, no frontmatter                                                                                                                                                                                                        | PASS at 2.1.292 in the [native controls](../../technotes/m1-gate6-native-qualification.md); an independent unscoped native positive also PASS at 2.1.308 ([Q4][Q4], [summary][Q4 summary]). Selected by the [decision][decision]                                                                                                                                                                                              |
+| Copilot CLI | When Claude is also selected for the project, use that same `.claude/rules` file and record Copilot as a declared intended reader, without a `.github/instructions` copy. Otherwise use `.github/instructions/<name>.instructions.md` without `applyTo` | Q1 PASS: Copilot 1.0.103 reads unscoped `.claude/rules`; its native positive is `.github/copilot-instructions.md`, not a direct qualification of the modular no-`applyTo` output. The latter remains a selected route with its native validation obligation ([Q1][Q1], [summary][Q1 summary], [decision][decision])                                                                                                           |
+| Codex       | Package-owned static rule index read by the trusted `SessionStart` hook                                                                                                                                                                                 | **Supported with declared limitation** is the adopted direction; step 7 records it once the resume-only control is retained. Q9 on 0.164.0: fresh positive and final responses PASS, but the former zero-duplicate contract FAILS after reopen plus first automatic compaction; the second compaction records one body per rule ([Q9][Q9], [summary][Q9 summary], [decision][decision])                                       |
+| OpenCode    | Explicit `instructions` file paths, no glob. Fallback: qualified plugin context hook                                                                                                                                                                    | Pending Q5 retry for explicit paths at 2.1.4; both prior positives FAIL and component controls are not run. Hook execution passed historically on 2.0.32, not qualification at 2.1.4. See the [retained explicit-path observation](../README.md#opencode-explicit-path-observation) ([Q5][Q5], [summary][Q5 summary], [historical hook controls](../../technotes/gate6-opencode-user-rule-controls.md), [decision][decision]) |
 
-For Codex and OpenCode, a package's `rules/` directory is an upskill convention,
-not automatic native rule discovery. The hook/adapter supplies the text.
-Generate an explicit, deterministic rule index rather than scanning source globs
-at runtime.
+Declared Codex limitation: after resume followed by compaction, one transient
+duplicate of each rule body may appear until the next compaction. Q9 observes
+two bodies per rule after reopen plus the first automatic compaction and one
+after the second; provider-effective input is unobserved. The user accepts that
+bounded limitation instead of treating #379 as an architecture blocker. Keep one
+resume-only control to attribute the duplicate correctly; this does not rewrite
+the retained Q9 FAIL or make a new unrun control PASS ([Q9][Q9],
+[summary][Q9 summary], [decision][decision]).
 
-Always-on rules and scoped rules are separate capabilities. Startup injection
-with conditional prose does not preserve native path-scoped activation. A route
-must preserve the requested scope or report it unsupported. Resume, compaction,
-subagent inheritance and running sessions require explicit lifecycle tests.
-Removal cannot retract context already retained by a running session.
+### Planner and ownership rules
 
-Codex hooks require ordinary `/hooks` trust review after installation and after
-each definition change. Hook-bearing plugins cannot currently be submitted to
-the public Codex directory; local or manual distribution is the documented path.
-A `metapowers` marketplace entry therefore does not by itself give a trusted
-Codex rule hook.
+- One physical native delivery per rule per project. In a Claude+Copilot project
+  write `.claude/rules/<name>.md` once, record Copilot as a declared intended
+  reader per item in the lockfile, and refuse a second `.github/instructions`
+  copy of that rule. This is a required planner behavior, not a claim of an
+  implemented new lockfile field. Schema-1 production routing remains unchanged
+  ([decision][decision], [Q1][Q1], [CD-04 and CD-06][contract]).
+- Declared readers are per item. Other surfaces/readers, including Claude IDE
+  sessions, Copilot cloud agent, code review and VS Code, remain unresolved
+  under Topic 0009 rather than silently intended. Inventory their actual
+  discovery conditions separately; CLI selection does not declare them consumers
+  ([decision][decision], [CD-01 and CD-03][contract]).
+- A Claude-only rule where Copilot runs must have an explicit compatible
+  intended-reader declaration or be unsupported; a warning is not consent. The
+  shared native route does not authorize Claude-only adaptations visible to
+  Copilot ([decision][decision], [Q1][Q1], [AD-0040 reader policy][direction]).
+- Rules leave managed packages on Claude and Copilot. Packages remain the home
+  for skills, subagents, the Codex hook plus rule index, and the OpenCode
+  fallback hook. Package ownership as the common abstraction means the lockfile
+  owns native rule files and packages alike; it does not require identical
+  loading mechanisms ([decision][decision], [CD-06][contract]).
+- Hooks never call the upskill binary at runtime. They read a static index
+  generated at install time; generation and native context loading remain
+  separate operations ([decision][decision], [Q4 fixture][Q4], [Q9][Q9]).
 
-Cross-client compatibility readers: Copilot documents project `.claude/skills`,
-`.claude/agents` and `.claude/commands` as sources. Whether the pinned Copilot
-CLI reads `.claude/rules/**/*.md` is recorded as a documentation conflict with
-no runtime test. A retained control also showed Copilot `ignoredSkillsLocations`
-failing to block explicit activation of a `.claude/skills` compatibility skill.
-Treat every `.claude/` path as potentially visible to Copilot until a pinned
-test says otherwise. Never put Claude-only adaptations there without proven
-reader controls. Existing team rules must not be rewritten to manufacture
-isolation.
+### Scoped rules
+
+Scoped rules are supported only where a native route enforces scope: Claude
+`paths:`, or Copilot `applyTo:` when Claude is not selected. This is the decided
+capability policy, subject to each native row's retained pin/scope evidence; the
+unscoped Q1 positive alone does not qualify modular `applyTo` behavior. Every
+other scoped request, including a shared Claude+Copilot project, is unsupported
+and must never be widened to always-on. No scoped-rule work is scheduled in this
+slice ([decision][decision], [AD-0040 capability policy][direction], [Q1][Q1]).
+
+Q1b, `.claude/rules` with `paths:` plus matching-file access under Copilot, is
+deferred and unscheduled. The Copilot plugin rules component is retired as a
+candidate at 1.0.103 after Q3's failures at both scopes ([decision][decision],
+[Q1][Q1], [Q3][Q3]).
+
+### Rejected alternative retained as context
+
+A package hook on all four clients reading rules from a managed root was
+rejected as the default. It offers one mechanism and isolation by construction
+when discovery is restricted to its declared package reader; it still needs
+native unintended-reader controls. It makes rule activation depend on plugin
+installation. Copilot session-start injection is untested: Q3 tested its rules
+component, which failed, not a session-start hook. Q4 demonstrates only the
+Claude unscoped hook ([decision][decision], [Q3][Q3], [Q4][Q4],
+[CD-03][contract]).
+
+Retain package hooks as the fallback category for a broken native route, usable
+only after that client's fallback passes qualification. Deferred, unscheduled
+Q3b tests a Copilot plugin session-start hook using Q4's fixture shape. Neither
+Q3 nor Q4 qualifies that Copilot fallback today ([decision][decision], [Q3][Q3],
+[Q4][Q4]).
+
+### Performance comparison
+
+No controlled performance measurement exists for either route. Criterion 7 of
+the
+[retained storage comparison](../README.md#opencode-explicit-path-observation)
+stands: use the same rule bytes and task sequence, record cached and uncached
+tokens, compare native versus hook on one client at a time, and measure
+ordering, repeat/resume, updates and removal. Do not infer a caching advantage
+from a path shape or from the user's explicit-path observation
+([decision][decision], [Q5][Q5],
+[delivery assessment](../../technotes/evidence/2026-10-23-delivery-choice/assessment.md)).
 
 ## Skills and resources
 
@@ -355,18 +415,26 @@ Code Copilot additionally lists `~/.claude/agents`. Copilot documents its own
 agent fields and treats an omitted `tools` list as all tools; Claude-only fields
 such as `permissionMode` are not documented as interpreted. A restricted Claude
 subagent written as a native file can therefore become an unrestricted or
-differently restricted Copilot agent in the same project. Until a pinned Copilot
-negative control shows `.claude/agents` is not read, or Copilot gains a
-selective exclusion, use the native-file exception only in projects without
-Copilot, or report the restricted Claude subagent as unsupported for that
-project. The same reasoning forbids `.claude/skills` and `.claude/commands` as
-exception routes.
+differently restricted Copilot agent in the same project. Q2 now proves
+compatibility discovery and delegation, but not equivalent restriction
+enforcement. Use the native-file exception only in projects without Copilot,
+unless an explicitly intended compatible route passes its restriction controls;
+otherwise report that restricted exception unsupported for the project. Do not
+assume a selective exclusion ([Q2][Q2], [summary][Q2 summary],
+[AD-0040][direction]). The same reasoning forbids `.claude/skills` and
+`.claude/commands` as exception routes.
 
-No runtime subagent evidence exists for Claude, Copilot or Codex. OpenCode
-2.0.32 executed configured and file-backed children as real child sessions and
-produced a native `permission.rejected` for a nonmatching-path edit under one
-unchanged policy; MCP inheritance, delegation limits and rule scoping inside
-children were not tested.
+At Copilot 1.0.103, Q2 records a real child and resource read from a
+Claude-format agent, without independently proving its tool catalog or
+`permissionMode` enforcement. Q3 records a real namespaced user child, but its
+exact-marker response fails and project-overlay activation is unverified. A safe
+restricted-Claude exception is therefore unqualified; Q7 remains the Codex
+registration control, not evidence supplied by these packets ([Q2][Q2],
+[summary][Q2 summary], [Q3][Q3], [design ledger][ledger]). OpenCode 2.0.32
+executed configured and file-backed children as real child sessions and produced
+a native `permission.rejected` for a nonmatching-path edit under one unchanged
+policy; MCP inheritance, delegation limits and rule scoping inside children were
+not tested.
 
 Prefer package-owned subagents with minimal external registration. Permit owned
 native files when necessary. External agents must not remain active after the
@@ -385,12 +453,12 @@ resolver and does not record test model choices.
 
 ## User and project scope
 
-| Client      | User-wide activation                 | Project activation                                                                    |
-| ----------- | ------------------------------------ | ------------------------------------------------------------------------------------- |
-| Claude Code | User plugin scope                    | Native project scope; local scope additionally supports private repository activation |
-| Codex       | User plugin configuration            | Trusted project configuration controls enablement; cache can remain user-wide         |
-| Copilot CLI | User plugin settings/install         | Repository `enabledPlugins` controls repository-only activation                       |
-| OpenCode    | User `opencode.json(c)` registration | Project `opencode.json(c)` or `.opencode/opencode.json(c)` registration               |
+| Client          | User-wide activation                                                                        | Project activation                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude 2.1.308  | User plugin scope PASS in separate project ([Q6][Q6])                                       | Project plugin scope PASS; overlapping user/project activation not tested by Q6 ([summary][Q6 summary], [CD-04][contract])                   |
+| Codex 0.164.0   | Q9 uses previously reviewed user registrations, not arbitrary-workspace delivery ([Q9][Q9]) | Fresh project rule registration not run; Q8 package lifecycle pending ([summary][Q9 summary], [CD-10][contract])                             |
+| Copilot 1.0.103 | User-enabled plugin candidate catalog present; plugin rules component FAIL ([Q3][Q3])       | Project-scope activation unverified (Q3): project-overlay candidate absent; user-enabled candidate present ([Q3][Q3], [summary][Q3 summary]) |
+| OpenCode 2.1.4  | User activation not run in Q5 ([Q5][Q5])                                                    | Project configuration measured; component activation not run after failed positives ([Q5][Q5], [summary][Q5 summary])                        |
 
 Activation scope is not physical storage scope. A user cache can serve a
 project-only installation. User and project installations must resolve one
@@ -427,12 +495,21 @@ activation.
 Disable registrations before reclaiming files. Account for native copies, active
 or resumable sessions and shared owners. Do not delete client caches based only
 on a missing registration. Cross-client operations are recoverable, not a
-claimed distributed atomic transaction. Retained Claude evidence shows native
-uninstall and marketplace removal leaving empty `enabledPlugins` and
-`extraKnownMarketplaces` objects in project settings: manual values and mode
-survived, bytes were not restored. "Preserve unrelated configuration" must
-therefore be specified as a byte-level or key-level contract per client, and the
-residue declared.
+claimed distributed atomic transaction. Native residue needs a separate
+preservation contract for each client; measured restoration is not whole-profile
+equality ([CD-07][contract], [Q6][Q6], [Q3][Q3]).
+
+| Client and pin  | Observed native residue and restoration boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude 2.1.308  | Native removal leaves empty `enabledPlugins` and `extraKnownMarketplaces`; measured settings are then restored exactly. The native `0.0.0` cache directory persists; `0.0.1` is the runtime source version, not an observed refreshed cache ([cache receipt][Q6 cache]). Registries match their baselines; session/log/cache effects are outside whole-profile equality ([Q6][Q6], [summary][Q6 summary]). Q4 also retains its initial onboarding restoration failure and subsequent owned cleanup ([Q4][Q4]) |
+| Copilot 1.0.103 | Native uninstall leaves owned empty `installedPlugins`; measured configuration bytes/mode restored after unrelated-value checks. Session/log/cache/trust state is outside whole-profile equality ([Q3][Q3], [summary][Q3 summary])                                                                                                                                                                                                                                                                            |
+| Codex 0.164.0   | Registration-removal residue contract to be filled by Q8. Q9 changes no registration and only proves unchanged measured configuration/package definitions ([Q9][Q9], [design ledger][ledger])                                                                                                                                                                                                                                                                                                                 |
+| OpenCode 2.1.4  | Successful-route residue contract to be filled by Q5. Failed positives and rejected local installs leave measured configuration unchanged, not whole-profile equality ([Q5][Q5], [summary][Q5 summary])                                                                                                                                                                                                                                                                                                       |
+
+Decision required: approve each per-client byte/key preservation allowance at
+step 7; a retained native residue observation alone does not authorize the
+implementation to preserve it as an accepted change
+([CD-01 and CD-07][contract]).
 
 Keep the single static Rust binary and existing dependency policy. Thin native
 adapters may run in the client's own supported runtime; this does not authorize
@@ -462,9 +539,13 @@ tests were blocked; its catalog checks do not prove invocation. No cache or
 latency superiority was measured. Failed controls listed in this document are
 retained as failures, never as negative passes.
 
-The Copilot plugin rules component and the package-contained subagent choices
-were established from documentation during this discussion, not from retained
-experiments. Do not reuse old successes as proof of these new routes.
+The [rules decision][decision] supersedes the earlier gate options: Q3 retires
+the Copilot rules-component candidate, Q4 remains an unscoped Claude fallback,
+and Q9's duplicate observation becomes an accepted declared limitation under the
+new policy, pending resume-only attribution and step 7 recording. Q5 retains
+failed positives rather than execution qualification. Q7/Q8 still need their own
+indexed, merged packet dispositions ([Q3][Q3], [Q4][Q4], [Q9][Q9], [Q5][Q5],
+[design ledger][ledger]).
 
 Fable should review:
 
@@ -480,10 +561,12 @@ Fable should review:
 6. What package granularity, stable identities and managed roots should be
    chosen?
 7. Which version/platform/scope tests must pass before each route is supported?
-8. Is the superseded-records table complete, and in which order should those
-   amendments land relative to AD-0040 merging?
+8. Does the superseded-records table separate the decided rules amendments from
+   the other direction changes still awaiting step 7 user adoption
+   ([decision][decision], [AD-0040][direction])?
 
-Implementation and production activation remain unapproved.
+The rules direction is adopted; implementation, other direction amendments and
+production activation remain gated ([decision][decision], [CD-10][contract]).
 
 ## Primary references
 
@@ -511,3 +594,31 @@ Repository records: [AD-0003](../../adr/0003-generation-pipeline.md),
 [adapter roadmap](2026-10-14-customization-adapter-roadmap.md),
 [adapter evidence](../../technotes/customization-adapter-evidence.md),
 [Gate 6 native qualification](../../technotes/m1-gate6-native-qualification.md).
+
+## Retained campaign references
+
+These fixed revisions cite the packet branches before merge. PASS and FAIL apply
+only to the recorded macOS arm64 controls, not complete client qualification
+([CD-10][contract]). Q7 and Q8 remain pending in this reconciliation; no local
+unmerged result is promoted here ([CD-11][contract]).
+
+[Q1]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/gate6-copilot-claude-rules-reader.md
+[Q1 summary]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/evidence/2026-10-24-copilot-claude-rules-reader/summary.json
+[Q2]: https://github.com/driftsys/upskill/blob/897876a1ce72bdb6faf8288b883e3dd793470ed6/docs/technotes/gate6-copilot-claude-agents-reader.md
+[Q2 summary]: https://github.com/driftsys/upskill/blob/897876a1ce72bdb6faf8288b883e3dd793470ed6/docs/technotes/evidence/2026-10-24-copilot-claude-agents-reader/summary.json
+[Q6]: https://github.com/driftsys/upskill/blob/0985dfb43c637996a8030c51bbd0e91fad2fe7eb/docs/technotes/gate6-claude-managed-root.md
+[Q6 summary]: https://github.com/driftsys/upskill/blob/0985dfb43c637996a8030c51bbd0e91fad2fe7eb/docs/technotes/evidence/2026-10-24-claude-managed-root/summary.json
+[Q9]: https://github.com/driftsys/upskill/blob/8ffde75620ca0b0993490b136f7015c869f7cc10/docs/technotes/gate6-codex-rule-lifecycle.md
+[Q9 summary]: https://github.com/driftsys/upskill/blob/8ffde75620ca0b0993490b136f7015c869f7cc10/docs/technotes/evidence/2026-10-24-codex-rule-lifecycle/summary.json
+[Q4]: https://github.com/driftsys/upskill/blob/43f7c26c3d64ad55aa5c1f8302ecb1a9573fba81/docs/technotes/gate6-claude-rule-hooks.md
+[Q4 summary]: https://github.com/driftsys/upskill/blob/43f7c26c3d64ad55aa5c1f8302ecb1a9573fba81/docs/technotes/evidence/2026-10-24-claude-rule-hooks/summary.json
+[Q3]: https://github.com/driftsys/upskill/blob/cd8c605674f34fea13c20233d648dcf16dd29cac/docs/technotes/gate6-copilot-plugin-components.md
+[Q3 summary]: https://github.com/driftsys/upskill/blob/cd8c605674f34fea13c20233d648dcf16dd29cac/docs/technotes/evidence/2026-10-24-copilot-plugin-components/summary.json
+[Q5]: https://github.com/driftsys/upskill/blob/6ec187f5422d72e9329c4c7f9cb706468e2ebb6b/docs/technotes/gate6-opencode-current-routes.md
+[Q5 summary]: https://github.com/driftsys/upskill/blob/6ec187f5422d72e9329c4c7f9cb706468e2ebb6b/docs/technotes/evidence/2026-10-24-opencode-current-routes/summary.json
+[contract]: ../../topics/0009-customization-delivery.md
+[direction]: ../../adr/0040-separate-customization-delivery-from-discovery.md
+[roadmap]: ../../roadmap.md
+[ledger]: https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650
+[Q6 cache]: https://github.com/driftsys/upskill/blob/0985dfb43c637996a8030c51bbd0e91fad2fe7eb/docs/technotes/evidence/2026-10-24-claude-managed-root/retry-post-removal-cache.json
+[decision]: #user-decision-2026-10-24
