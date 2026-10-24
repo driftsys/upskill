@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Codex rule lifecycle](gate6-codex-rule-lifecycle.md) — Q9, Codex 0.164.0;
+  repeated native bodies after reopen and automatic compaction; unresolved.
+
 - [Claude managed-root mechanics](gate6-claude-managed-root.md) — Q6, Claude
   2.1.308; both scopes invoke successfully and see source edits before native
   update; earlier authentication failures retained.

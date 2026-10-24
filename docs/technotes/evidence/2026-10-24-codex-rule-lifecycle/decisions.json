@@ -1,0 +1,22 @@
+[
+  {
+    "decision": "Retest unchanged all-sources adapter before proposing a workaround",
+    "reason": "A new client pin could change lifecycle behavior; avoid editing trusted definitions first.",
+    "cost_if_wrong": "Continuity evidence cannot substitute for a fresh project qualification."
+  },
+  {
+    "decision": "Keep Q9 open and the Codex rules route unsupported pending resolution",
+    "reason": "The first automatic compaction repeats the native duplicate-body counterexample.",
+    "cost_if_wrong": "A different supported route may work but is not adopted without evidence."
+  },
+  {
+    "decision": "Do not use private transcript parsing or a session-level sent flag to deduplicate",
+    "reason": "Transcript format is not a supported hook interface; compaction can require reinjection.",
+    "cost_if_wrong": "No automated workaround is delivered in this packet."
+  },
+  {
+    "decision": "Continue Q3-Q8 after retaining this blocking result",
+    "reason": "Other controls decide independent client routes; step 7 cannot promote Codex while #379 remains open.",
+    "cost_if_wrong": "Q9 needs a later bounded candidate and ordinary user hook review."
+  }
+]

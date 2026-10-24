@@ -1,0 +1,22 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q9-continuity-qa7hzl4l",
+    "manifest_sha256": "cf3fc232a74aa9c025616b0800720a3315a2cca06a386632d931e0b2441eb451"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q9-ui-4zbfeu48",
+    "manifest_sha256": "1808581b78893552d028b7fc97e812ae3887a8e8e9060e7a9897d3d37e687906"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q9-negative-7xex99xv",
+    "manifest_sha256": "801ff0dff75f2ca3bcd54c37d8cba4111ffdd05436d798a93f69095cbb432899"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q9-fresh-ked86pq3",
+    "manifest_sha256": "7cd09bf10de4f7a6105ebdd6412f3191f4ecad2cffe622021d54c45b4b53cd08"
+  }
+]

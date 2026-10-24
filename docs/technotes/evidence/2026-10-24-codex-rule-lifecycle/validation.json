@@ -1,0 +1,61 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: missing Q9 helpers; 57 tests, 10 errors",
+    "private_log": "$PACKET_B/q9-lint-red.log",
+    "sha256": "52d67e9b69e816d9283c95d67b6c0994858dcc6c40648ffdb244442b972fca1e"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 57 offline tests",
+    "private_log": "$PACKET_B/q9-lint-green.log",
+    "sha256": "6dbff44c5f3f4f6a2f341223dd8a0bdefa2fd7dc45e7d27226de77c53f4a9eee"
+  },
+  {
+    "stage": "full verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full Rust tests, 57 offline tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-verify.log",
+    "sha256": "55043b4048cc74b9c0de1ff0b70fea416d107f1f15b5ab91032f604a5ea82093"
+  },
+  {
+    "stage": "mutation checks",
+    "result": "PASS: seven mutants rejected; original three checks repeated with retained source and output",
+    "command": "python3 $PACKET_B/q9-mutation-checks.py",
+    "private_log": "$PACKET_B/q9-mutations.log",
+    "sha256": "465fc9d6c128bc8818f010fe3cdfc70b5f90b60ba69e3590546c5fa229fcde10",
+    "private_helper_sha256": "1f1c4a55bd335934b4b84a577a5d895f8999e0efcff71edcfe2f48b381fb10cb"
+  },
+  {
+    "stage": "review regression verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: 57 offline tests, full Rust tests, lint, documentation and build",
+    "private_log": "$PACKET_B/q9-final-verify.log",
+    "sha256": "607230c2c9f8dea7c09c2e1a2c326cb7f0012ce91092e85d79d281ec8dfe88e3"
+  },
+  {
+    "stage": "numbered review regressions",
+    "command": "just lint and just docs-check",
+    "result": "PASS: 59 offline tests and documentation checks",
+    "private_log": "$PACKET_B/q9-numbered-lint.log",
+    "sha256": "43acfdfa75604d02bb7bc31ef46001c78dd2ffbaee2b61983cded37ef44823ce"
+  },
+  {
+    "stage": "numbered review mutation checks",
+    "command": "python3 $PACKET_B/q9-numbered-mutation-checks.py",
+    "result": "PASS: ten mutants rejected; the three numbered findings survived prior tests and now fail",
+    "private_log": "$PACKET_B/q9-numbered-mutations.log",
+    "sha256": "4c9317093d1252f1641ed88bf9f1c6447820dc990385af6e65c022ccd30bcb51",
+    "private_helper_sha256": "c52b36d996826c1dbfc5be608cc600b8013f91f907a6addc2d3f0ab39528b39a"
+  },
+  {
+    "stage": "final numbered finding regression",
+    "command": "just lint; just docs-check; python3 $PACKET_B/q9-final-session-mutation-checks.py",
+    "result": "PASS: 59 offline tests, docs and eleven rejected mutants; matching invalid session identities now pin the identity guard",
+    "private_log": "$PACKET_B/q9-final-session-mutations.log",
+    "sha256": "def8469359cae183295b7a1855d07c9753640f2cf1adbfa129b796469fe81249",
+    "private_helper_sha256": "791942e4f9cbff7e55fefb83bbb116e8a2a13b7e0319e0af8f7eb026a9a4c8b2"
+  }
+]
