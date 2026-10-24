@@ -125,21 +125,28 @@ def copilot_plugin_component_fixture(root, rule_suffix='.md'):
         raise ValueError('Only declared native rule filename variants are allowed')
     if os.path.lexists(root):
         raise ValueError('Fixture root must not exist')
-    root = root.resolve()
-    parts = root.parts
-    if (root.is_relative_to(Path(__file__).resolve().parents[1])
-            or root == Path.home().resolve()
-            or any(p in ('.claude', '.github', '.codex', '.opencode', '.copilot') for p in parts)
-            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
-                   for i in range(len(parts) - 1))):
-        raise ValueError('A new neutral fixture root is required')
-    configured_home = os.environ.get('COPILOT_HOME')
-    if configured_home and root.is_relative_to(Path(configured_home).expanduser().resolve()):
-        raise ValueError('Fixture must be outside the configured client home')
+    requested = root.expanduser().absolute()
+    root = requested.resolve()
     native_homes = ('.claude', '.github', '.codex', '.opencode', '.copilot',
                     '.config/opencode', '.agents/skills', '.agents/plugins')
-    if any(root.is_relative_to((Path.home() / name).resolve()) for name in native_homes):
-        raise ValueError('Fixture must be outside resolved native user roots')
+    forbidden = root.is_relative_to(Path(__file__).resolve().parents[1]) or root == Path.home().resolve()
+    for candidate in (requested, root):
+        parts = tuple(part.casefold() for part in candidate.parts)
+        forbidden |= any(p in ('.claude', '.github', '.codex', '.opencode', '.copilot') for p in parts)
+        forbidden |= any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
+                         for i in range(len(parts) - 1))
+    configured = [Path(value).expanduser().resolve() for key in
+                  ('CLAUDE_CONFIG_DIR', 'COPILOT_HOME', 'CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'OPENCODE_CONFIG')
+                  if (value := os.environ.get(key))]
+    if os.environ.get('XDG_CONFIG_HOME'):
+        configured.append(Path(os.environ['XDG_CONFIG_HOME']).expanduser().resolve() / 'opencode')
+    configured.extend((Path.home() / name).resolve() for name in native_homes)
+    forbidden |= any(root.is_relative_to(location) for location in configured)
+    guidance = ('CLAUDE.md', 'AGENTS.md', 'AGENTS.override.md', *native_homes)
+    forbidden |= any((parent / name).exists() or (parent / name).is_symlink()
+                     for parent in root.parents for name in guidance)
+    if forbidden:
+        raise ValueError('A new neutral fixture root outside native roots and ancestor guidance is required')
     root.mkdir(parents=True, mode=0o700)
     name = 'upskill-q3-' + secrets.token_hex(8)
     package = root / 'delivery/packages' / name

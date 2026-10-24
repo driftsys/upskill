@@ -160,3 +160,15 @@ review, Linux and IDE/hosted surfaces remain unqualified. No production adapter,
 durable record or schema-1 route is changed by this packet
 ([summary](evidence/2026-10-24-codex-rule-lifecycle/summary.json),
 [step 7](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md)).
+
+Final packet-review regressions independently corrupt each resume command,
+process-exit and automatic-input prerequisite. They also correct an inherited
+Copilot fixture guard: case aliases, other clients' configured homes and
+ancestor guidance are rejected before writes. The root-admission tests block all
+filesystem writes and simulate guide presence. These are harness safety checks,
+with no repeated native run or change to earlier observations
+([validation](evidence/2026-10-24-codex-rule-lifecycle/validation.json)).
+
+Independent regression coverage for the retained Q6 settings reconstruction is
+tracked in [debt #401](https://github.com/driftsys/upskill/issues/401). Its
+existing forensic receipts remain retained evidence.

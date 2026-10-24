@@ -274,3 +274,21 @@ class CodexPacketReplayTests(unittest.TestCase):
             write(root,'positive-receipt.json',receipt)
             with self.assertRaises(ValueError):
                 q.replay_codex_rule_lifecycle(root)
+
+    def test_resume_process_policy_and_automatic_input_receipts_are_required(self):
+        for change in ('missing_resume','wrong_session','writable_policy','missing_threshold','child_failure','child_boolean','manual_flag','one_prompt','manual_compact','empty_prompt'):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as temporary:
+                root=Path(temporary);duplicate_packet(root)
+                command=load(root,'resume-command.json');process=load(root,'exit-receipt.json');inputs=load(root,'input-audit.json')
+                if change=='missing_resume':command['command'].remove('resume')
+                elif change=='wrong_session':command['command'][command['command'].index('resume')+1]='another-session'
+                elif change=='writable_policy':command['command'].remove('sandbox_mode="read-only"')
+                elif change=='missing_threshold':command['command'].remove('model_auto_compact_token_limit=1000')
+                elif change=='child_failure':process['native_child_exit_code']=1
+                elif change=='child_boolean':process['native_child_exit_code']=False
+                elif change=='manual_flag':inputs['no_manual_compaction']=False
+                elif change=='one_prompt':inputs['inputs'].pop()
+                elif change=='manual_compact':inputs['inputs'][0]='/compact'
+                else:inputs['inputs'][0]=' '
+                write(root,'resume-command.json',command);write(root,'exit-receipt.json',process);write(root,'input-audit.json',inputs)
+                with self.assertRaises(ValueError):q.replay_codex_rule_lifecycle(root)

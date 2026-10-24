@@ -147,5 +147,53 @@
     "result": "PASS: just fmt then just verify; 124 offline tests, full Rust tests, lint, documentation and build",
     "private_log": "$PACKET_E/q9-quick-fix-verify.log",
     "sha256": "ab7e3d8108b40c3ab526570781be27245ff63f575655df7d0f3ee78cae238b8d"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "FAIL: three root-admission cases, 126 offline tests; before guard changes",
+    "private_log": "$PACKET_E/q9-pass2-red-lint.log",
+    "sha256": "c84b507660abfa44d2b41643a4763091d0ebda2b1248d12b3d84283e1d03bc4a"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: 15 offline Q9 replay tests",
+    "private_log": "$PACKET_E/q9-pass2-replay-green.log",
+    "sha256": "d599eb224cebec1d7dd54fe9e7c30fc6fa50054d990e659fa7efbebca6c46a95"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: 17 offline Copilot component tests",
+    "private_log": "$PACKET_E/q9-pass2-root-green.log",
+    "sha256": "d644e283e6fae2da7c45b82d21c2394287d143b5d8d27c8b2eec938732a33196"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: four independent mutants rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-pass2-mutations.log",
+    "sha256": "63a595c7e024285906b85d526325d5e4ce85d5f5a0be7d0c2ec437f1736ae1ca"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: formatting before full verification",
+    "private_log": "$PACKET_E/q9-pass2-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: full Rust tests, 126 offline tests, lint, documentation and build",
+    "private_log": "$PACKET_E/q9-pass2-verify.log",
+    "sha256": "9385dedf6a06d6fbc351698462b646a9ebe81172671f3d5a660c5336ab9586f4"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: final prose formatting",
+    "private_log": "$PACKET_E/q9-pass2-docs-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final packet review fixes",
+    "result": "PASS: final documentation checks",
+    "private_log": "$PACKET_E/q9-pass2-docs-check.log",
+    "sha256": "d233cc78b6d6c14eb9e5006c1f5cd05237fe982192d8da9eb1655f337e3bdb1e"
   }
 ]
