@@ -1,0 +1,14 @@
+[
+  {
+    "project": "project",
+    "commit": "186c7c9e9aa5adf153772e306049d26a10f4b38d",
+    "parents": "",
+    "tracked_files": []
+  },
+  {
+    "project": "positive_project",
+    "commit": "fffb7b84a57d6d9ec0c805c186d947a62bacf38e",
+    "parents": "",
+    "tracked_files": []
+  }
+]

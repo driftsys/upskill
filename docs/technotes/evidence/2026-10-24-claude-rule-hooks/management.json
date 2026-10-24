@@ -1,0 +1,93 @@
+[
+  {
+    "label": "validate",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "validate",
+      "$FIXTURE/delivery"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "market-add",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "add",
+      "$FIXTURE/delivery",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q4-8ec13b32f738ce46@upskill-q4-8ec13b32f738ce46-market",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "disable",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "disable",
+      "upskill-q4-8ec13b32f738ce46@upskill-q4-8ec13b32f738ce46-market",
+      "--scope",
+      "project"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "uninstall",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q4-8ec13b32f738ce46@upskill-q4-8ec13b32f738ce46-market",
+      "--scope",
+      "project"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "label": "market-remove",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q4-8ec13b32f738ce46-market",
+      "--scope",
+      "project"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  }
+]

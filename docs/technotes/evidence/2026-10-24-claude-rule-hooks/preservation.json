@@ -1,0 +1,70 @@
+{
+  "before": {
+    "$FIXTURE/project/.claude/settings.json": {
+      "sha256": "50c04d868aeb861225dbd3c9902ebc91bcd6b26119e23b17391bd6633eb5ae9d",
+      "mode": 416,
+      "present": true
+    },
+    "$PROFILE/settings.json": {
+      "sha256": null,
+      "mode": null,
+      "present": false
+    }
+  },
+  "after_native_removal": {
+    "$FIXTURE/project/.claude/settings.json": {
+      "sha256": "34cf786c14762d60869d6039dc4416baa9b509f8aaf9fd1a30e4c3d59a7d5d43",
+      "mode": 416,
+      "present": true
+    },
+    "$PROFILE/settings.json": {
+      "sha256": "27dafb2742d0da69a49cc8d206fc9cc429feff09cc3738addcf590d9c4358f97",
+      "mode": 420,
+      "present": true
+    }
+  },
+  "residue": {
+    "$FIXTURE/project/.claude/settings.json": "empty_object_residue",
+    "$PROFILE/settings.json": "preservation_failed"
+  },
+  "restoration": {
+    "$FIXTURE/project/.claude/settings.json": true,
+    "$PROFILE/settings.json": false
+  },
+  "after_restoration": {
+    "$FIXTURE/project/.claude/settings.json": {
+      "sha256": "50c04d868aeb861225dbd3c9902ebc91bcd6b26119e23b17391bd6633eb5ae9d",
+      "mode": 416,
+      "present": true
+    },
+    "$PROFILE/settings.json": {
+      "sha256": "27dafb2742d0da69a49cc8d206fc9cc429feff09cc3738addcf590d9c4358f97",
+      "mode": 420,
+      "present": true
+    }
+  },
+  "registry_before": {
+    "$PROFILE/plugins/known_marketplaces.json": {
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420,
+      "present": true
+    },
+    "$PROFILE/plugins/installed_plugins.json": {
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420,
+      "present": true
+    }
+  },
+  "registry_after": {
+    "$PROFILE/plugins/known_marketplaces.json": {
+      "sha256": "5193a7ee584a418dad388dc1a5bd1f61ef3a8bf6e815b340d3c2d619fe5a51fb",
+      "mode": 420,
+      "present": true
+    },
+    "$PROFILE/plugins/installed_plugins.json": {
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420,
+      "present": true
+    }
+  }
+}

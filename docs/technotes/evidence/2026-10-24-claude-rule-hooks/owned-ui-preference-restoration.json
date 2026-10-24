@@ -1,0 +1,12 @@
+{
+  "reason": "Remove only the newly created dark theme preference selected during ordinary isolated UI onboarding, after every native control completed.",
+  "original_presence": false,
+  "observed_keys": [
+    "theme"
+  ],
+  "observed_sha256": "27dafb2742d0da69a49cc8d206fc9cc429feff09cc3738addcf590d9c4358f97",
+  "restored_presence": false,
+  "restored_exact": true,
+  "initial_automatic_guard_failure_retained": true,
+  "discovery_settings_modified_for_negative_control": false
+}

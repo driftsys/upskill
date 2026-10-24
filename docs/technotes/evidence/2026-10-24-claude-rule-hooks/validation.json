@@ -1,0 +1,45 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: six missing-helper tests, 56 total",
+    "private_log": "$PACKET_A/q4-lint-red.log",
+    "sha256": "cb3babfdec853dd9c3a6d2acacbe26a04b8ca97c2ca99854e6eac600755bdef3"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 56 offline tests",
+    "private_log": "$PACKET_A/q4-lint-green.log",
+    "sha256": "7b3b4986bfde8750d4422038b2c25036c8c32ed14fdf281545306ce19136e4c4"
+  },
+  {
+    "stage": "full-verification",
+    "command": "just verify",
+    "result": "PASS: complete repository verification, 58 offline tests",
+    "private_log": "$PACKET_A/q4-verify.log",
+    "sha256": "1803e68afc03a3fd3ff990a534dfb427f5b253cb00af8cb022f36e1eb8a78683"
+  },
+  {
+    "stage": "final-lint",
+    "command": "just lint",
+    "result": "PASS: 58 offline tests and repository lint",
+    "private_log": "$PACKET_A/q4-final-lint.log",
+    "sha256": "5e2be1e67f27db980d294a65a62688d83b0a94834c60205ca48f83166043bd6e"
+  },
+  {
+    "stage": "final-docs",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_A/q4-final-check-docs.log",
+    "sha256": "ba550ffb8065e7614bc00d24890aba7b3d066f7daaea12e91aed27ca08838876"
+  },
+  {
+    "stage": "shellcheck",
+    "command": "shellcheck tests/fixtures/native-plugins/claude/hook.sh",
+    "exit_code": 0,
+    "result": "PASS",
+    "private_log": "$PACKET_A/final-shellcheck.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]
