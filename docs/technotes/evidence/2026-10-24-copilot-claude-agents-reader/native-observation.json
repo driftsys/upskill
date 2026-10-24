@@ -1,0 +1,22 @@
+{
+  "pin": "Copilot 1.0.103",
+  "method": "Offline replay of the original full private stream and selected public events; no new native request",
+  "private_stream": "$PACKET_A/delegation.stdout.jsonl",
+  "private_stream_sha256": "a798be23fc4cb91b8e033ad27413ad9eb711bf0c37faa1634e0e8736d686d4c3",
+  "selected_events_sha256": "bf19e36e4a4e8667269365c9b713e9ff39661876609c27e1bd34d6ad0dcbe282",
+  "observer": {
+    "state": "success",
+    "delegated": true,
+    "child_tools": [
+      "view"
+    ],
+    "successful_child_tools": [
+      "view"
+    ],
+    "resource_read": true,
+    "response": "CHILD_6c873b50fb7b0965bc379f99c6018b31"
+  },
+  "selected_observer_matches": true,
+  "classification": "delegation_observed",
+  "harness_sha256": "856ea8bbeb54a16ebcbd6841daff0ea6f88a3d1025488ec44885940ed62d3620"
+}
