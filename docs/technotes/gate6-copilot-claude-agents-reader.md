@@ -63,9 +63,11 @@ The affected row is the
 [proposal Subagents section's Claude native-file
 exception](../wip/specs/2026-10-23-customization-delivery-proposal.md#subagents).
 Copilot is a demonstrated reader of this restricted Claude-format file, so
-placing it under `.claude/agents` does not isolate it from Copilot. This run
-shows `Read` tool filtering for the exact fixture and selected account route; it
-does not show unrestricted execution or a restriction violation.
+placing it under `.claude/agents` does not isolate it from Copilot. The native
+event selected `Read` and the only observed child invocation was `view`. The
+child reported editing unavailable. The complete effective child tool catalog
+was not independently captured, so these observations do not prove tool-filter
+enforcement, unrestricted execution or a restriction violation.
 
 Do not generalize that observation into preservation of `permissionMode`,
 agent-local hooks, MCP settings or other Claude-only semantics. No actual
@@ -95,13 +97,15 @@ hashes differ from sanitized retained-event hashes.
 ## Offline checks and remaining limits
 
 Tests preceded the harness change: `just lint` failed on five missing Q2 helper
-tests, then passed all 47 offline tests. Fixture tests cover exact restrictions
-and instructions, resource-only marker placement, fresh names/markers,
-independent empty root commits and inherited Git selector isolation. The
-classifier rejects catalog-only evidence, missing child/tool evidence,
-nonmatching responses and failed invocations. Any observed child call outside
-the declared tool restriction wins over both response text and invocation
-failure, including an outside call that fails.
+tests, then passed all 47 offline tests. Review follow-ups pin missing
+delegation despite read evidence and isolate hostile host hooks/signing; the
+subsequent full verification passes all 48 offline tests. Fixture tests cover
+exact restrictions and instructions, resource-only marker placement, fresh
+names/markers, independent empty root commits and inherited Git selector
+isolation. The classifier rejects catalog-only evidence, missing child/tool
+evidence, nonmatching responses and failed invocations. Any observed child call
+outside the declared tool restriction wins over both response text and
+invocation failure, including an outside call that fails.
 
 The tests do not call clients or qualify native behavior. Broader tool lists,
 permission inheritance, attempted native denials, other Claude fields, user

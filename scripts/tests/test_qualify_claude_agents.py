@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -47,8 +48,30 @@ class ClaudeAgentControls(unittest.TestCase):
                 self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
             self.assertTrue((row['project'] / '.git').is_dir())
 
+    def test_fixture_commit_disables_host_hooks_and_signing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / 'home'
+            home.mkdir()
+            hooks = root / 'hooks'
+            hooks.mkdir()
+            sentinel = root / 'unexpected-host-command'
+            command = '#!/bin/sh\nprintf invoked > ' + shlex.quote(str(sentinel)) + '\nexit 99\n'
+            hook = hooks / 'pre-commit'
+            hook.write_text(command)
+            hook.chmod(0o700)
+            signer = root / 'signer'
+            signer.write_text(command)
+            signer.chmod(0o700)
+            (home / '.gitconfig').write_text('[core]\n hooksPath = ' + str(hooks) + '\n[commit]\n gpgsign = true\n[gpg]\n program = ' + str(signer) + '\n')
+            with mock.patch.dict(os.environ, {'HOME': str(home), 'USERPROFILE': str(home)}):
+                row = q.copilot_claude_agent_fixture(root / 'fixture')
+            self.assertTrue((row['project'] / '.git').is_dir())
+            self.assertFalse(sentinel.exists())
+
     def test_catalog_or_response_alone_cannot_establish_delegation(self):
-        self.assertEqual(q.classify_agent(True, 'success', False, [], 'marker', 'marker'), 'delegation_unobserved')
+        for tools in ([], ['view']):
+            self.assertEqual(q.classify_agent(True, 'success', False, tools, 'marker', 'marker'), 'delegation_unobserved')
         self.assertEqual(q.classify_agent(None, 'success', True, ['view'], 'marker', 'marker'), 'catalog_evidence_missing')
         self.assertEqual(q.classify_agent(True, 'success', True, [], 'marker', 'marker'), 'resource_read_unobserved')
         self.assertEqual(q.classify_agent(False, 'success', True, ['view'], 'marker', 'marker'), 'agent_not_catalogued')

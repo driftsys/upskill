@@ -369,11 +369,16 @@ Copilot, or report the restricted Claude subagent as unsupported for that
 project. The same reasoning forbids `.claude/skills` and `.claude/commands` as
 exception routes.
 
-No runtime subagent evidence exists for Claude, Copilot or Codex. OpenCode
-2.0.32 executed configured and file-backed children as real child sessions and
-produced a native `permission.rejected` for a nonmatching-path edit under one
-unchanged policy; MCP inheritance, delegation limits and rule scoping inside
-children were not tested.
+At the proposal baseline no runtime subagent evidence existed for Claude,
+Copilot or Codex. The later
+[Q2 packet](../../technotes/gate6-copilot-claude-agents-reader.md) records a
+real Copilot 1.0.103 child selected with `Read`, a successful resource read and
+no outside tool invocation. That bounded observation does not establish Claude
+`permissionMode` enforcement or adopt the broad exception route. OpenCode 2.0.32
+executed configured and file-backed children as real child sessions and produced
+a native `permission.rejected` for a nonmatching-path edit under one unchanged
+policy; MCP inheritance, delegation limits and rule scoping inside children were
+not tested.
 
 Prefer package-owned subagents with minimal external registration. Permit owned
 native files when necessary. External agents must not remain active after the

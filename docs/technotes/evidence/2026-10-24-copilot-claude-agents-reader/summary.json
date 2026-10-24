@@ -61,7 +61,7 @@
     }
   ],
   "limits": [
-    "Read-only child tool filtering observed for this fixture; not a general safe exception-route claim.",
+    "Read selection and read-only child behavior observed; effective child tool catalog and enforcement were not independently established.",
     "Child reported editing unavailable; no edit call or permission denial occurred.",
     "permissionMode interpretation and permission-boundary enforcement remain unqualified.",
     "No child shell execution, broader tools list, inherited permissions, MCPs, hooks or other Claude-only fields tested.",

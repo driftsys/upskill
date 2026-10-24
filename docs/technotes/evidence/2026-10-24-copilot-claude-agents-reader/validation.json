@@ -36,5 +36,17 @@
     "result": "PASS: documentation checks",
     "private_log": "q2-rebased-docs.log",
     "sha256": "ab17f556245f7f5586b244b4f00138c7c8a4b4c56c74804799e9368fbc0ebbad"
+  },
+  {
+    "stage": "review delegation mutation",
+    "result": "PASS: missing-delegation mutant rejected; six Q2 tests pass",
+    "private_log": "q2-delegation-mutation.log",
+    "sha256": "7e8aaa5b94122afa893916dd619d2878033a04adff1d55f1c04dde14a64b6782"
+  },
+  {
+    "stage": "review full verification",
+    "result": "PASS: just verify, 48 offline tests",
+    "private_log": "q2-review-verify.log",
+    "sha256": "50e43e0db6296b699cd884ee220c7ecea622e0ed65e646c1bc901458d4efeaf9"
   }
 ]
