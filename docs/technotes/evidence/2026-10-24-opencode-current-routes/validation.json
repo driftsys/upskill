@@ -16,5 +16,26 @@
     "result": "PASS: full repository verification, 66 offline tests",
     "private_log": "$PACKET_B/q5-verify.log",
     "sha256": "7847d3106b70a2842fb24f238426cee84a58f67e0113e5fe8e49bbd6f00e7f5d"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_B/q5-quick-fix-lint.log",
+    "sha256": "527ee4183e1678875703fc72c81567747e0b04b647672a06d251cbc2cb2f24b7"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q5-quick-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 $PACKET_B/q5-quick-mutations.py",
+    "result": "PASS: five callback/permission/package mutations rejected",
+    "private_log": "$PACKET_B/q5-quick-mutations.log",
+    "sha256": "948955fb7b18fbc5096b3c15a161e8376f12b88fe74c8eb6038f44ded042a25f"
   }
 ]

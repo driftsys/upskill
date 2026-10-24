@@ -23,16 +23,21 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
             config=json.loads((f['project']/'opencode.json').read_text())
             self.assertEqual(config['plugins'], [str(p) for p in f['packages']])
             self.assertEqual(config['skills'], [str(f['skill_source'])])
-            self.assertEqual(config['permissions'][0], {'action':'*','resource':'*','effect':'deny'})
+            self.assertEqual(config['permissions'], [{'action':'*','resource':'*','effect':'deny'},{'action':'skill','resource':f['skill_id'],'effect':'allow'},{'action':'read','resource':str(f['resource_path']),'effect':'allow'}])
             entry=(f['skill_source']/f['skill_id']/'SKILL.md').read_text()
             resource=f['skill_source']/f['skill_id']/'references/procedure.md'
             self.assertNotIn(f['resource_marker'],entry)
+            self.assertIn('Read references/procedure.md relative to this skill',entry)
+            self.assertIn(f['fallback'],entry)
             self.assertEqual(resource.read_text(),'Return exactly '+f['resource_marker']+' and no other text.\n')
             positive=json.loads((f['positive_project']/'opencode.json').read_text())
             self.assertEqual(positive['plugins'],[])
+            self.assertEqual(positive['permissions'],[{'action':'*','resource':'*','effect':'deny'}])
             self.assertEqual(positive['instructions'],[str(f['positive_project']/'native-positive.md')])
             self.assertIn(f['native_marker'],(f['positive_project']/'native-positive.md').read_text())
             for i, package in enumerate(f['packages']):
+                self.assertEqual(json.loads((package/'fixture.json').read_text()),{'project':str(f['project']),'rule':('a','b')[i],'trace':str(f['trace']),'agent':'build'})
+                self.assertEqual(json.loads((package/'package.json').read_text())['exports'],'./index.ts')
                 self.assertEqual((package/'rule.txt').read_text(),'For the plugin qualification question include exactly one occurrence of '+f['rule_markers'][i]+' in the rules array. Return only the JSON object with a rules array.\n')
                 self.assertEqual(json.loads((package/'package.json').read_text())['dependencies'], {'@opencode/plugin':'2.1.4'})
                 self.assertIn('ctx.session.hook("context"',(package/'index.ts').read_text())
@@ -90,6 +95,9 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
         for invalid in ('',None,1,[], 'different'):
             c,f=self.controls();c['resume']['session']=invalid
             self.assertNotEqual(self.q.classify_opencode_current_routes(c,f),'observed')
+        c,f=self.controls();c['resume']['session']='foreign'
+        for event in c['resume']['events']:event['session']='foreign'
+        self.assertEqual(self.q.classify_opencode_current_routes(c,f),'context_control_failed')
         for invalid in ('',None,1,[]):
             c,f=self.controls()
             for phase in ('context','resume'):

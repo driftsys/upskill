@@ -31,8 +31,7 @@ existing user or team discovery setting is altered.
 
 ## Model preflight and native results
 
-The authenticated isolated profile's initial catalog did not list the requested
-backend. The first disposable project adds a documented model alias through
+The first disposable project adds a documented model alias through
 `providers.<provider>.models.<alias>.modelID`. The native catalog lists that
 entry. Its positive request nevertheless fails with `model_not_supported`.
 
