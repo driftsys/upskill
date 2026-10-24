@@ -1,0 +1,19 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q7-codex-ozt84mff",
+    "manifest_sha256": "d3a79daa8b6b6bd289597f6538b7439dea6826c3eb34a62ac6cf276377b020e8"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q7-main-91j_xzls",
+    "manifest_sha256": "c40060a285268d246a4a10de047f2205f2514a53293d10428ae4872100947a75",
+    "capture_helpers": {
+      "retain-main-integration-helper.py": "e4517a0d8a9fc6db838714a813d099c941997f36c6ad35c011fcbb996ee1b976"
+    },
+    "method": "Offline current-main integration and guard/tests fixes; no repeated native capture",
+    "source_snapshots": {
+      "source/": "Current-main classification/fixture code and tests; original native source remains in $PACKET_A"
+    }
+  }
+]

@@ -8,6 +8,8 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Codex package-owned agent registration](gate6-codex-agent-registration.md):
+  Q7 native child boundary and plugin-only discovery controls on Codex 0.164.0.
 - [OpenCode current-route controls](gate6-opencode-current-routes.md): Q5,
   OpenCode 2.1.4; failed native positives, unrun component controls and rejected
   local-directory installation.

@@ -1,0 +1,12 @@
+{
+  "before_sha256": "7a8ab424f766c9e0bdaa52ac80923844510a0c31fb48f31da4763a3bce38aea7",
+  "after_native_cleanup": {
+    "sha256": "7a8ab424f766c9e0bdaa52ac80923844510a0c31fb48f31da4763a3bce38aea7",
+    "mode": 384
+  },
+  "changed_top_level_keys": [],
+  "safe_to_restore": true,
+  "exact_after_cleanup": true,
+  "project_exact": true,
+  "auth_copied": false
+}

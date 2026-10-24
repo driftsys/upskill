@@ -1,0 +1,97 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: seven missing-helper tests",
+    "private_log": "$PACKET_A/q7-lint-red.log",
+    "sha256": "2d8312c93f079fa7f7796e2f8958980605f5b591df1e865b184854760fbba13b"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_A/q7-lint-green.log",
+    "sha256": "deb65251e78d7e6d3daba036596d227a9f4d57d2fd527124a5684764defa022b"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: newly declared native-user-root rejection missing",
+    "private_log": "$PACKET_A/q7-user-root-red.log",
+    "sha256": "940111c4faf59e2ccb09129c4fb30ba41709fc08e47e950be3eed15802d32b5b"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 65 offline tests",
+    "private_log": "$PACKET_A/q7-user-root-green.log",
+    "sha256": "e5c5053cc297fdeae4623c1adc8467032a418ada423c49ef5d648d2d946da85c"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification; 65 offline tests",
+    "private_log": "$PACKET_A/q7-final-verify.log",
+    "sha256": "f522e93dd0908932ebf5d166284f29088326461ad7e505ff7277e4a2f0e42e33"
+  },
+  {
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS: final restoration narrative and links",
+    "private_log": "$PACKET_A/q7-restoration-docs-check.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "PASS: 66 offline tests after quick findings",
+    "private_log": "$PACKET_A/q7-quick-fix-lint.log",
+    "sha256": "3b28d2cd118404d127078f094c1b2c38392cabf6fe9305ac06803afe81d7e0b4"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q7-quick-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 $PACKET_A/q7-quick-mutations.py",
+    "result": "PASS: seven fixture/classification mutations rejected",
+    "private_log": "$PACKET_A/q7-quick-mutations-final.log",
+    "sha256": "f28a1e692f762b90635721457c0e30542f94b68ea20ec70953493272dc7950f7"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_A/q7-symlink-home-red.log",
+    "sha256": "210df14a9b5516a6f8b2ad32d7799486979a729a09e258ad1b337e01feade90a"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_A/q7-symlink-fix-verify.log",
+    "sha256": "ebfdab80fce1b16e824a63026fd37ff0afdc37c442b0db92f1b4cf598b16e7d3"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "FAIL: new neutral-root assertion before guard correction",
+    "private_log": "$PACKET_B/q7-main-root-red.log",
+    "sha256": "2f4d31ce1b15051bb22c4b959509acb300940b97a3793c21862a9129ea73f27e"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: ten focused tests",
+    "private_log": "$PACKET_B/q7-main-focused-green.log",
+    "sha256": "cb39b7214421ebae9457c5831bf4ecf19df4aab800bfdb0489d19624252daec6"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q7-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_B/q7-main-verify.log",
+    "sha256": "05f80422a1acbc01341bf1af2f2a0f55f478d28766856a6117f372d954213404"
+  }
+]
