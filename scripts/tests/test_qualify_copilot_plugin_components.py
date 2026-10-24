@@ -231,3 +231,9 @@ class CopilotPluginComponentsTests(unittest.TestCase):
             with mock.patch.dict(self.q.os.environ,{'HOME':str(home),'COPILOT_HOME':'~/relocated-client-home'}):
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(home/'relocated-client-home/instructions/fixture')
             self.assertEqual(set(root.rglob('*')),before)
+
+    def test_neutral_root_rejects_aliases_other_client_homes_and_ancestor_guidance(self):
+        cases=[('/offline/.CLAUDE/fixture',{}),('/offline/custom-codex/fixture',{'CODEX_HOME':'/offline/custom-codex'}),('/offline/team/fixture',{})]
+        for candidate,environment in cases:
+            with self.subTest(candidate=candidate), mock.patch.dict(self.q.os.environ,environment,clear=True), mock.patch.object(self.q.os.path,'lexists',return_value=False), mock.patch.object(Path,'resolve',lambda p:p), mock.patch.object(Path,'home',return_value=Path('/offline/user')), mock.patch.object(Path,'exists',lambda p:str(p)=='/offline/team/AGENTS.md'), mock.patch.object(Path,'mkdir',side_effect=AssertionError('Fixture must reject before writes')):
+                with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(Path(candidate))

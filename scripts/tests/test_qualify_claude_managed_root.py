@@ -210,7 +210,7 @@ class ClaudeManagedRootControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             real_exists, real_symlink = Path.exists, Path.is_symlink
-            for name in ('CLAUDE.md','AGENTS.md','.claude','.copilot','.codex','.opencode','.github','.agents/skills','.agents/plugins','.config/opencode'):
+            for name in ('CLAUDE.md','AGENTS.md','AGENTS.override.md','.claude','.copilot','.codex','.opencode','.github','.agents/skills','.agents/plugins','.config/opencode'):
                 for dangling in (False, True):
                     root = base / 'ancestor' / 'fixture'
                     sentinel = base / name
