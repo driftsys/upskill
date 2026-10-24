@@ -1,0 +1,30 @@
+[
+  {
+    "fixture": "controls",
+    "scope": "project",
+    "commit": "2bb61a657815f3f4c9f269ceb1dfe52929a6293f",
+    "parents": "",
+    "tracked_files": []
+  },
+  {
+    "fixture": "controls",
+    "scope": "user",
+    "commit": "402a9c9bb1e357e3ed9ccb3faf6fed9b652c03a4",
+    "parents": "",
+    "tracked_files": []
+  },
+  {
+    "fixture": "catalog",
+    "scope": "project",
+    "commit": "417b212842c013ad6d2ab297919d6ba2b2e9df22",
+    "parents": "",
+    "tracked_files": []
+  },
+  {
+    "fixture": "catalog",
+    "scope": "user",
+    "commit": "9659ef9d60dc43d9ea9ba2d0cb60eec51c1b52e5",
+    "parents": "",
+    "tracked_files": []
+  }
+]

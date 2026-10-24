@@ -1,0 +1,134 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: five missing-helper tests",
+    "private_log": "$PACKET_A/q3-lint-red.log",
+    "sha256": "c139c5ff90d9547ce098c6a628410e500736c7c291fc6a2b0bfb1da8dc685c05"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 54 offline tests",
+    "private_log": "$PACKET_A/q3-lint-green.log",
+    "sha256": "d31d8f6c1725204096f427eb7e78e746ece3ec97742b2cdcca5b5e8c6835924a"
+  },
+  {
+    "stage": "catalog-red",
+    "command": "just lint",
+    "result": "FAIL: native catalog-positive fixture missing",
+    "private_log": "$PACKET_A/q3-catalog-red.log",
+    "sha256": "3d891266bab7c91ea12b36a6c556bce1fcc29ecdb8f04d2481e464d9917431d9"
+  },
+  {
+    "stage": "catalog-green",
+    "command": "just lint",
+    "result": "PASS: 54 offline tests",
+    "private_log": "$PACKET_A/q3-catalog-green.log",
+    "sha256": "89f2f1e00a4e5b71bfe75fcd45f525f225f8d6cf639199d5c0903e0a22fa8797"
+  },
+  {
+    "stage": "pin-red",
+    "command": "just lint",
+    "result": "FAIL: mixed native pin accepted",
+    "private_log": "$PACKET_A/q3-pin-red.log",
+    "sha256": "9deaeec236130c5b6cd8f22ab413faf5326cd1929ed370f6bb19b09a8ac4d489"
+  },
+  {
+    "stage": "pin-green",
+    "command": "just lint",
+    "result": "PASS: 55 offline tests",
+    "private_log": "$PACKET_A/q3-pin-green.log",
+    "sha256": "1ff7c0141f01346b0b0055124cbe91044500f4574a00ea56b127f0fd56c6bbe9"
+  },
+  {
+    "stage": "full verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full Rust tests, 55 offline tests, lint, docs and build",
+    "private_log": "$PACKET_A/q3-verify.log",
+    "sha256": "d29675a4741d782b3538c641364a345cdde7f06c9a7ad9d8f1b37d0c7f50afd7"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: missing task model accepted",
+    "private_log": "$PACKET_F/q3-explicit-child-model-red.log",
+    "sha256": "4f40a267b13d329d2bc5ee277a87128a1e2bf5f5115d7e18f879878be67bd95f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-explicit-child-model-green.log",
+    "sha256": "c96f7fc7e668f7798d844e30324f8144b46934539633fbea4dfe0ce37c1066d9"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: filename variant unavailable",
+    "private_log": "$PACKET_F/q3-filename-red.log",
+    "sha256": "5b735fce79682e640335bf084952fbf64dee03557719e0212d97c7ccf7cdda9f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-filename-green.log",
+    "sha256": "3e2e652a4b052158da100f0d21ffebf60f4515c2c3987ec3466642d2dd5a0a95"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: complete native rule metadata missing",
+    "private_log": "$PACKET_F/q3-native-metadata-red.log",
+    "sha256": "32d196f05f9edb2e0dfc0e405d30b57368c0980c5668b76d245aef602745f871"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-native-metadata-green.log",
+    "sha256": "aea2cfed12db923f0f4c15c2842649a47fa354a5262b536a935c8fe0a9c4817a"
+  },
+  {
+    "command": "python3 private-review-mutations.py",
+    "result": "PASS: nine adverse variants rejected",
+    "private_log": "$PACKET_F/q3-review-mutations.log",
+    "sha256": "25318dbaa1f5b3933cb17a44a5324a11061c1681a1c77b1de08b0f773e92f993"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: complete repository verification, 62 offline tests",
+    "private_log": "$PACKET_F/q3-final-verify.log",
+    "sha256": "94593f82f25ffe8ff0880927b2d5c1e44295336791fd7a50eda55169da7e8e47"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "just lint",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_F/q3-retry-quick-fix-lint.log",
+    "sha256": "25e1c4eba4290a0e888c55b00856f339fd6f2ce3083dd2ac2c84650ad61e13bb"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 $PACKET_F/q3-retry-quick-mutations.py",
+    "result": "PASS: four new retry guard/fixture mutations rejected",
+    "private_log": "$PACKET_F/q3-retry-quick-mutations.log",
+    "sha256": "a2e46d64799727b031cb305f0bcf5ab33062a3bb1fd2bbea77c60adda05cfcbb"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just lint",
+    "result": "FAIL: native-user-root guard accepted prohibited fixture",
+    "private_log": "$PACKET_F/q3-pass1-root-red.log",
+    "sha256": "96952d2cc587a06ad69eaafbb2a2e6f960e3ed7726ca59014f9fe9fa9b84097f"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 63 offline tests",
+    "private_log": "$PACKET_F/q3-pass1-fix-verify.log",
+    "sha256": "f70b6cf63186b00672138878abfe8f87fafacbdb94677437a82a798fc6c5d1cb"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 $PACKET_F/q3-pass1-mutations.py",
+    "result": "PASS: seven root/response/catalog/fixture mutations rejected",
+    "private_log": "$PACKET_F/q3-pass1-mutations.log",
+    "sha256": "3d2aac18fd8e7be9a720f7ccb0b910e89af6e61778b3fb87a497e1b1078d2d63"
+  }
+]

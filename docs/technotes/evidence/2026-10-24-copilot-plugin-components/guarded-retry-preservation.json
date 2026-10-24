@@ -1,0 +1,9 @@
+{
+  "configuration": {
+    "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+    "mode": 384,
+    "present": true
+  },
+  "exact": true,
+  "unexpected_native_change_retained": false
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "scope": "project",
+    "candidate_name": "upskill-q3-79f5345f54bd750a-child",
+    "candidate_selection_id": "upskill-q3-79f5345f54bd750a:probe",
+    "candidate_present": true,
+    "original_derived_presence_was_wrong": true
+  },
+  {
+    "scope": "user",
+    "candidate_name": "upskill-q3-79f5345f54bd750a-child",
+    "candidate_selection_id": "upskill-q3-79f5345f54bd750a:probe",
+    "candidate_present": true,
+    "original_derived_presence_was_wrong": true
+  }
+]

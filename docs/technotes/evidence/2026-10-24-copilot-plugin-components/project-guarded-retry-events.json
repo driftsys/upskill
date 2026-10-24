@@ -1,0 +1,326 @@
+[
+  {
+    "stage": "native_positive",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "13fd2c78-328f-4e04-9541-e17a99eaf581",
+      "originatingMessageId": "fcb85a96-1afe-4ca5-a77a-334f13ede353",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\":\"NATIVE_bad1be8ee2485ee3a0af6665990f9958\",\"rules\":[]}",
+      "toolRequests": [],
+      "interactionId": "d51c939a-bd08-4775-9254-bdd7143daaa1",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-7e80b7fe-58bd-46e5-9e99-d197999b38d5",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "native_positive",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "installed",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "555966b0-c453-4b14-8223-15d649fe7079",
+      "originatingMessageId": "42331625-54c7-43a1-994e-c7424f632940",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\":\"NATIVE_bad1be8ee2485ee3a0af6665990f9958\",\"rules\":[]}",
+      "toolRequests": [],
+      "interactionId": "893de22e-c119-47f1-a3a3-06bfdc976819",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-ee06a1c1-97e3-448d-9a1f-394ebff2e563",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "installed",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "matching",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "d094cc43-0341-4f68-84ae-2aedb5f0e167",
+      "originatingMessageId": "0f9ea97b-ca18-401a-afef-81e2374e5339",
+      "providerId": "copilot",
+      "content": "",
+      "toolRequests": [
+        {
+          "toolCallId": "chatcmpl-tool-bd1640dd09454663",
+          "name": "view",
+          "arguments": {
+            "path": "$PACKET_F/fixture/project/matching/probe.txt"
+          },
+          "type": "function",
+          "intentionSummary": "view the file at $PACKET_F/fixture/project/matching/probe.txt.",
+          "toolTitle": "Viewing file"
+        }
+      ],
+      "interactionId": "b6fe99f7-0678-4e49-9db8-f85a9812657a",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-0ee74054-05c0-4618-951d-865630193395",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "matching",
+    "type": "tool.execution_start",
+    "agent_id": null,
+    "data": {
+      "toolCallId": "chatcmpl-tool-bd1640dd09454663",
+      "toolName": "view",
+      "arguments": {
+        "path": "$PACKET_F/fixture/project/matching/probe.txt"
+      },
+      "turnId": "0",
+      "toolTitle": "Viewing file",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "matching",
+    "type": "tool.execution_complete",
+    "agent_id": null,
+    "data": {
+      "toolCallId": "chatcmpl-tool-bd1640dd09454663",
+      "interactionId": "b6fe99f7-0678-4e49-9db8-f85a9812657a",
+      "turnId": "0",
+      "rte": false,
+      "success": true,
+      "result": {
+        "content": "Disposable scope resource.\n",
+        "detailedContent": "\ndiff --git a$PACKET_F/fixture/project/matching/probe.txt b$PACKET_F/fixture/project/matching/probe.txt\nindex 0000000..0000000 100644\n--- a$PACKET_F/fixture/project/matching/probe.txt\n+++ b$PACKET_F/fixture/project/matching/probe.txt\n@@ -1,2 +1,2 @@\n Disposable scope resource.\n \n"
+      },
+      "toolTelemetry": {
+        "properties": {
+          "command": "view",
+          "options": "{\"truncateBasedOn\":\"tokenCount\",\"truncateStyle\":\"middle\"}",
+          "inputs": "[\"path\",\"command\"]",
+          "resolvedPathAgainstCwd": "false",
+          "fileExtension": "[\".txt\"]",
+          "viewType": "file"
+        },
+        "restrictedProperties": {},
+        "metrics": {
+          "resultLength": 27,
+          "resultForLlmLength": 27,
+          "context_token_limit": 64000,
+          "context_current_tokens": 2062,
+          "result_token_count": 4
+        }
+      },
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "matching",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "2fa25507-0a44-4148-9c02-2f9d031abd2c",
+      "originatingMessageId": "0f9ea97b-ca18-401a-afef-81e2374e5339",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\": \"NATIVE_bad1be8ee2485ee3a0af6665990f9958\", \"rules\": []}",
+      "toolRequests": [],
+      "interactionId": "b6fe99f7-0678-4e49-9db8-f85a9812657a",
+      "turnId": "1",
+      "rte": false,
+      "apiCallId": "chatcmpl-bd478e81-faf7-434b-a64d-f27d550fd6a9",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "matching",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "nonmatching",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "563b9f95-786f-4437-bb6f-10a62f939338",
+      "originatingMessageId": "88b8b9a1-fe0e-45eb-8332-88033c664ca3",
+      "providerId": "copilot",
+      "content": "",
+      "toolRequests": [
+        {
+          "toolCallId": "chatcmpl-tool-ad6becfffa58078e",
+          "name": "view",
+          "arguments": {
+            "path": "$PACKET_F/fixture/project/nonmatching/probe.txt"
+          },
+          "type": "function",
+          "intentionSummary": "view the file at $PACKET_F/fixture/project/nonmatching/probe.txt.",
+          "toolTitle": "Viewing file"
+        }
+      ],
+      "interactionId": "e198a46d-340e-4e23-b9e7-8682477729f5",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-071a8c12-ec8b-474c-be17-b812f475ff0d",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "nonmatching",
+    "type": "tool.execution_start",
+    "agent_id": null,
+    "data": {
+      "toolCallId": "chatcmpl-tool-ad6becfffa58078e",
+      "toolName": "view",
+      "arguments": {
+        "path": "$PACKET_F/fixture/project/nonmatching/probe.txt"
+      },
+      "turnId": "0",
+      "toolTitle": "Viewing file",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "nonmatching",
+    "type": "tool.execution_complete",
+    "agent_id": null,
+    "data": {
+      "toolCallId": "chatcmpl-tool-ad6becfffa58078e",
+      "interactionId": "e198a46d-340e-4e23-b9e7-8682477729f5",
+      "turnId": "0",
+      "rte": false,
+      "success": true,
+      "result": {
+        "content": "Disposable scope resource.\n",
+        "detailedContent": "\ndiff --git a$PACKET_F/fixture/project/nonmatching/probe.txt b$PACKET_F/fixture/project/nonmatching/probe.txt\nindex 0000000..0000000 100644\n--- a$PACKET_F/fixture/project/nonmatching/probe.txt\n+++ b$PACKET_F/fixture/project/nonmatching/probe.txt\n@@ -1,2 +1,2 @@\n Disposable scope resource.\n \n"
+      },
+      "toolTelemetry": {
+        "properties": {
+          "command": "view",
+          "options": "{\"truncateBasedOn\":\"tokenCount\",\"truncateStyle\":\"middle\"}",
+          "inputs": "[\"path\",\"command\"]",
+          "resolvedPathAgainstCwd": "false",
+          "fileExtension": "[\".txt\"]",
+          "viewType": "file"
+        },
+        "restrictedProperties": {},
+        "metrics": {
+          "resultLength": 27,
+          "resultForLlmLength": 27,
+          "context_token_limit": 64000,
+          "context_current_tokens": 2054,
+          "result_token_count": 4
+        }
+      },
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "nonmatching",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "2e2ef559-5a48-4414-8f25-8864d7042303",
+      "originatingMessageId": "88b8b9a1-fe0e-45eb-8332-88033c664ca3",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\": \"NATIVE_bad1be8ee2485ee3a0af6665990f9958\", \"rules\": []}",
+      "toolRequests": [],
+      "interactionId": "e198a46d-340e-4e23-b9e7-8682477729f5",
+      "turnId": "1",
+      "rte": false,
+      "apiCallId": "chatcmpl-4e9a490c-79d1-40e6-8cb8-7e4f28ca1377",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "nonmatching",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "disabled",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "201a6dd2-03ef-4f43-8449-c1e463f49dd1",
+      "originatingMessageId": "35130814-f8cf-48cd-8de6-5acfd69b1be8",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\":\"NATIVE_bad1be8ee2485ee3a0af6665990f9958\",\"rules\":[]}",
+      "toolRequests": [],
+      "interactionId": "69b122af-89b3-4c7f-be78-0f28a669fd02",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-52c202b3-3c77-4a40-9d6c-250b34e53ff1",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "disabled",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "uninstalled",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "f0386d79-0bee-4e9d-9fc3-c1e96307ce9f",
+      "originatingMessageId": "cbf8b636-8470-4671-94b8-99d947b6dc86",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\":\"NATIVE_bad1be8ee2485ee3a0af6665990f9958\",\"rules\":[]}",
+      "toolRequests": [],
+      "interactionId": "a4b412ca-ab79-4554-8fd8-b182e2835418",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-07a43667-9d81-4c99-879b-f3e208fc9ca8",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "uninstalled",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  },
+  {
+    "stage": "reinstalled",
+    "type": "assistant.message",
+    "agent_id": null,
+    "data": {
+      "messageId": "60411d47-3115-4025-b255-6b19aa055ea6",
+      "originatingMessageId": "4c621d49-9f1d-4ad1-a58c-a6fab0290528",
+      "providerId": "copilot",
+      "content": "\n\n{\"native\": \"NATIVE_bad1be8ee2485ee3a0af6665990f9958\", \"rules\": []}",
+      "toolRequests": [],
+      "interactionId": "70163d04-c996-4df4-a327-d85464bb650b",
+      "turnId": "0",
+      "rte": false,
+      "apiCallId": "chatcmpl-45b8c150-4eaa-4e41-be72-a72745ef8400",
+      "model_matches_requested": true
+    }
+  },
+  {
+    "stage": "reinstalled",
+    "type": "result",
+    "agent_id": null,
+    "data": {},
+    "exitCode": 0
+  }
+]

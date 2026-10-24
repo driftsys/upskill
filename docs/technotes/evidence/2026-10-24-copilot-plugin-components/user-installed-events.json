@@ -1,0 +1,103 @@
+[
+  {
+    "type": "assistant.message",
+    "content": "\n\nI'll check for any component qualification instructions that may have been provided in the working directory or session folder.\n\n",
+    "event_id": "371e874d-f3a7-433c-b706-df13806adb14"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "bash",
+    "tool_call_id": "chatcmpl-tool-b4abc89c7ebd5bcb",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\nLet me explore the fixture directory structure and the agent resource file.\n\n\n",
+    "event_id": "cd379c3b-5c11-4ed5-8ef0-1493a3306b96"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "Read",
+    "tool_call_id": "chatcmpl-tool-b8ab1f27ff559e38",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "Read",
+    "tool_call_id": "chatcmpl-tool-875b7bec0d54a6ca",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "",
+    "event_id": "cbb71ab4-1834-4fce-bb4d-dfba2bdf12b5"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-b16116d7612b0619",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-ad5dbebce96724d2",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a24c31ef2bbd9635",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9693cd42ff5f1613",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\nLet me read the remaining files in the fixture.\n\n\n\n",
+    "event_id": "d47963ac-a8ee-48f2-8816-8b8549f171f4"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a6e46d8dddfb17d1",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8f88acf7f7561db5",
+    "agent_id": null
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-921f37523f0310a4",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\nLet me do a thorough recursive listing to make sure I find all marker-bearing files before composing the answer.\n\n",
+    "event_id": "0bea1348-0ca6-4f66-b843-3a91c67672c4"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "bash",
+    "tool_call_id": "chatcmpl-tool-9bc48a5220efb5a8",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\nI reviewed the entire fixture (4 files total, excluding `.git`):\n- `.github/copilot-instructions.md` \u2014 the auto-loaded project instructions (defines the `native` sentinel and answer format)\n- `agent-resource.txt` \u2014 holds `AGENT_0df7cd90f9632196b5750d2aae087197` (an agent scope resource)\n- `matching/probe.txt`, `nonmatching/probe.txt` \u2014 both \"Disposable scope resource.\"\n\nThe only automatically-loaded component-qualification instruction is the project file, which supplies the fixed `native` value; no separately-loaded qualification-rule markers exist. The `AGENT_...` and probe files are non-auto-loaded distractors, so per \"without those rules the array is empty,\" `rules` is empty.\n\n```json\n{\"native\": \"NATIVE_5685a9813c1a3ad06e23f7b598f48ab8\", \"rules\": []}\n```",
+    "event_id": "d61ee9d5-e03f-41cd-8f97-5eb8ff101cd2"
+  },
+  {
+    "type": "result",
+    "sessionId": "c9b94f27-d070-4b4c-a368-428f4d2645b2",
+    "exitCode": 0
+  }
+]

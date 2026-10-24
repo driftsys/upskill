@@ -120,6 +120,157 @@ def classify_agent(catalog_present, state, delegated, child_tools, response, mar
     return 'delegation_observed'
 
 
+def copilot_plugin_component_fixture(root, rule_suffix='.md'):
+    """Prepare Q3 packages and separate scope projects without team guides."""
+    if rule_suffix not in ('.md', '.instructions.md'):
+        raise ValueError('Only declared native rule filename variants are allowed')
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    root = root.resolve()
+    parts = root.parts
+    if (root.is_relative_to(Path(__file__).resolve().parents[1])
+            or root == Path.home().resolve()
+            or any(p in ('.claude', '.github', '.codex', '.opencode', '.copilot') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
+                   for i in range(len(parts) - 1))):
+        raise ValueError('A new neutral fixture root is required')
+    configured_home = os.environ.get('COPILOT_HOME')
+    if configured_home and root.is_relative_to(Path(configured_home).expanduser().resolve()):
+        raise ValueError('Fixture must be outside the configured client home')
+    root.mkdir(parents=True, mode=0o700)
+    name = 'upskill-q3-' + secrets.token_hex(8)
+    package = root / 'delivery/packages' / name
+    package.mkdir(parents=True)
+    plain = 'PLAIN_' + secrets.token_hex(16)
+    scoped = 'SCOPED_' + secrets.token_hex(16)
+    agent_marker = 'AGENT_' + secrets.token_hex(16)
+    agent_name = name + '-child'
+    catalog_positive_name = name + '-catalog-positive'
+    (package / 'plugin.json').write_text(json.dumps({
+        '$schema': 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+        'name': name, 'version': '0.0.0', 'description': 'Disposable component qualification.'}, indent=2) + '\n')
+    rules = package / 'com.github.copilot/rules'
+    rules.mkdir(parents=True)
+    (rules / ('plain' + rule_suffix)).write_text('---\nname: ' + name + '-plain\n'
+                                  'description: Global component qualification rule.\napplyTo: "**"\n---\n'
+                                  'For the component qualification question include '
+                                  + plain + ' in the rules array.\n')
+    (rules / ('scoped' + rule_suffix)).write_text('---\nname: ' + name + '-scoped\n'
+                                   'description: Scoped component qualification rule.\napplyTo: "matching/**"\n---\n'
+                                   'For the component qualification question include '
+                                   + scoped + ' in the rules array.\n')
+    agents = package / 'com.github.copilot/agents'
+    agents.mkdir(parents=True)
+    (agents / 'probe.agent.md').write_text('---\nname: ' + agent_name + '\n'
+        'description: Explicit component qualification child.\ntools: [read]\n---\n'
+        'Read agent-resource.txt in the current project using the native read tool. '
+        'Return its exact contents without other text. Do not edit any file.\n')
+    market = root / 'delivery/.claude-plugin/marketplace.json'
+    market.parent.mkdir(parents=True)
+    market.write_text(json.dumps({'name': name + '-market', 'owner': {'name': 'Qualification Fixture'},
+        'plugins': [{'name': name, 'source': './packages/' + name}]}, indent=2) + '\n')
+    projects = {}
+    native_markers = {}
+    for scope in ('project', 'user'):
+        project = root / scope
+        instructions = project / '.github/copilot-instructions.md'
+        instructions.parent.mkdir(parents=True)
+        marker = 'NATIVE_' + secrets.token_hex(16)
+        native_markers[scope] = marker
+        instructions.write_text('For the component qualification question return only a JSON object '
+            'with "native": "' + marker + '" and "rules": an array of markers from '
+            'automatically loaded component qualification rules, sorted lexicographically. '
+            'Without those rules the array is empty. Only use tools explicitly requested.\n')
+        catalog_positive = project / '.github/agents/catalog-positive.agent.md'
+        catalog_positive.parent.mkdir(parents=True)
+        catalog_positive.write_text('---\nname: ' + catalog_positive_name + '\n'
+            'description: Native catalog positive for a disposable fixture.\ntools: [read]\n---\n'
+            'Read agent-resource.txt and return its exact contents. Do not edit files.\n')
+        for directory in ('matching', 'nonmatching'):
+            resource = project / directory / 'probe.txt'
+            resource.parent.mkdir(parents=True)
+            resource.write_text('Disposable scope resource.\n')
+        (project / 'agent-resource.txt').write_text(agent_marker + '\n')
+        env = isolated_git_environment()
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture',
+                        '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null',
+                        '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m',
+                        'test: initialize component fixture ' + secrets.token_hex(16)], env=env, check=True)
+        projects[scope] = project
+    return {'root': root, 'package': package, 'marketplace': root / 'delivery',
+            'plugin_name': name, 'market_name': name + '-market', 'projects': projects,
+            'native_markers': native_markers, 'plain_marker': plain, 'scoped_marker': scoped,
+            'agent_name': agent_name, 'agent_marker': agent_marker,
+            'catalog_positive_name': catalog_positive_name, 'pin': '1.0.103', 'rule_suffix': rule_suffix}
+
+
+def copilot_plugin_agent_selection(config_options, plugin_name, agent_name):
+    """Keep native namespaced selection values distinct from display names."""
+    matches = []
+    for option in config_options:
+        if option.get('id') != 'agent':
+            continue
+        for choice in option.get('options', []):
+            value = choice.get('value')
+            if (choice.get('name') == agent_name and isinstance(value, str)
+                    and value.startswith(plugin_name + ':') and value != plugin_name + ':'):
+                matches.append(value)
+    return matches[0] if len(matches) == 1 else None
+
+
+def copilot_delegation_policy(tool_name, arguments, expected_agent, expected_model, resource):
+    """Bound a private Q3 retry; this is not a production permission adapter."""
+    if (not isinstance(tool_name, str) or not isinstance(arguments, dict)
+            or not isinstance(expected_agent, str) or not expected_agent
+            or not isinstance(expected_model, str) or not expected_model):
+        return 'deny'
+    if tool_name.lower() == 'task':
+        if (arguments.get('agent_type') != expected_agent
+                or arguments.get('model') != expected_model
+                or any(arguments.get(k) is not None for k in ('resume', 'agent_id', 'session_id'))
+                or arguments.get('mode') not in (None, 'sync', 'foreground')):
+            return 'deny'
+        return 'allow'
+    if tool_name.lower() in ('view', 'read', 'read_file'):
+        paths = [arguments[k] for k in ('path', 'file_path') if k in arguments]
+        if len(paths) != 1 or not isinstance(paths[0], str) or not paths[0]:
+            return 'deny'
+        path = Path(paths[0])
+        if not path.is_absolute():
+            path = resource.parent / path
+        return 'allow' if path.resolve() == resource.resolve() else 'deny'
+    return 'deny'
+
+
+def classify_copilot_plugin_components(observations, fixture, scope):
+    """Classify one Q3 scope, preserving failed positives and missing controls."""
+    def succeeded(row):
+        return (row.get('state') == 'success' and row.get('completed') is True
+                and row.get('pin') == fixture['pin'])
+
+    native = fixture['native_markers'][scope]
+    positive = observations.get('native_positive', {})
+    if not succeeded(positive) or positive.get('response') != {'native': native, 'rules': []}:
+        return 'positive_control_failed'
+    for stage in ('installed', 'matching', 'nonmatching', 'disabled', 'uninstalled', 'reinstalled'):
+        row = observations.get(stage, {})
+        if not succeeded(row):
+            return 'control_failed'
+        rules = [] if stage in ('disabled', 'uninstalled') else [fixture['plain_marker']]
+        if stage == 'matching':
+            rules.append(fixture['scoped_marker'])
+        if row.get('response') != {'native': native, 'rules': sorted(rules)}:
+            return 'component_response_mismatch'
+        if stage in ('matching', 'nonmatching') and row.get('resource_read') is not True:
+            return 'resource_read_missing'
+    agent = observations.get('agent', {})
+    if (not succeeded(agent) or agent.get('response') != fixture['agent_marker']
+            or any(agent.get(k) is not True for k in ('catalog_present', 'delegated', 'child_resource_read'))):
+        return 'agent_control_failed'
+    return 'observed'
+
+
 def classify(positive, negative, marker, fallback, staging_marker=None):
     if positive != marker:
         return 'positive_control_failed'
