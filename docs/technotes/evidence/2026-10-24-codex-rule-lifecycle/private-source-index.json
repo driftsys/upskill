@@ -18,5 +18,20 @@
     "alias": "$PACKET_D",
     "private_source_path": "/private/tmp/upskill-q9-fresh-ked86pq3",
     "manifest_sha256": "7cd09bf10de4f7a6105ebdd6412f3191f4ecad2cffe622021d54c45b4b53cd08"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-q9-review-5o0rhn7w",
+    "manifest_sha256": "c9185e30f126622252103e78de5bcce5d782685e08a0aa35d11ef109266032e2",
+    "capture_helpers": {
+      "q9-review-observations.py": "9088a3547d7a9e0df6de90046eac4300d1e65e3fbc049bbe79f592f74847353a",
+      "q9-packet-mutations.py": "903d2c7a0f76ded3e9f38d174397eedff84f4d5c369089fafe0e1b4cd53a7356",
+      "retain-q9-review.py": "0ad7fb35223800088899fd06b4c31471560508a67938968e3794fc93494deca4"
+    },
+    "method": "Offline raw/selected window audit and public replay, no repeated native run",
+    "source_snapshots": {
+      "red-source/": "Core changes tests-first snapshot; original native packet source before replay changes",
+      "source/": "Current harness and regression tests"
+    }
   }
 ]

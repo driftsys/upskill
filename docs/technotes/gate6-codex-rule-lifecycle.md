@@ -3,150 +3,158 @@
 Task [#379](https://github.com/driftsys/upskill/issues/379), Q9 of the
 [implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a 2026-10-24 continuity experiment on Codex CLI 0.164.0, macOS arm64.
-The unchanged adapter again records two exact developer rule bodies per logical
-rule after reopening a session and its first automatic compaction. The second
-automatic compaction records one per rule. Correct final responses do not repair
-the first failure. Q9 remains unresolved and #379 stays open.
+Recorded developer-body counts are one per rule at startup, two in the combined
+reopened-session and first automatic-compaction window, then one after the
+second compaction. This is a retained counterexample to the former
+zero-duplicate criterion, not a separate resume-only result
+([summary](evidence/2026-10-24-codex-rule-lifecycle/summary.json),
+[assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json)).
 
-## Contract and decision
+## Current direction and historical criterion
 
-The intended rule contract is one active body per logical rule: fresh startup
-loads one; resume/reopen retains or supplies one; compaction leaves one for the
-next model request. Clear would establish a new context with one copy. Fork must
-preserve the same boundary without duplicating it. Clear and fork have not been
-qualified. The proposed all-sources `SessionStart` adapter emits at startup,
-resume, clear, fork and compact; this packet does not change that adapter.
+The user's
+[2026-10-24 rules decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)
+accepts the transient duplicate as a declared limitation. Step 7 records Codex
+rules as supported with that limitation once a resume-only attribution control
+is retained, and lists the amendment of #379 from a K0 blocker to K1 debt. This
+packet does not implement that amendment or rewrite its historical FAIL
+([handoff Q9](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[packet decisions](evidence/2026-10-24-codex-rule-lifecycle/decisions.json)).
 
-The [official hook documentation](https://learn.chatgpt.com/docs/hooks)
-documents additional developer context, including immediate continuation after
-automatic compaction. It does not promise replacement of an earlier rule body.
-It also states that transcript format is not a stable hook interface. Therefore
-neither private transcript parsing nor a once-per-session sent flag is adopted
-as a workaround: the former has no supported interface contract, and the latter
-may omit needed reinjection after compaction. No native history is deleted.
+The offline classifier retains the stricter diagnostic criterion: a calibrated
+startup and complete resume/compaction observations with one exact body per
+rule. Clear and fork are outside that classifier. A separate resume-only turn
+was not run, so the retained assessment explicitly marks it incomplete and the
+classifier returns `lifecycle_control_failed`. Known native counts remain
+independently checkable; an incomplete diagnostic matrix does not erase the
+observed duplicate or decide current route adoption
+([assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json),
+[window audit](evidence/2026-10-24-codex-rule-lifecycle/native-window-audit.json)).
 
-The [decision record](evidence/2026-10-24-codex-rule-lifecycle/decisions.json)
-records these rulings and their costs. Other client controls continue after this
-retained failure. No production adapter or durable record is amended here. The
-affected proposal row is
-[Rules, Codex](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules).
-That row cannot become supported while #379 is open.
+No runtime transcript parsing, native history deletion or session-level sent
+flag is adopted as a workaround. Diagnostic parsing runs only in the offline
+harness and retention helper. The unchanged candidate hook reads its static rule
+body; it does not call upskill
+([decisions](evidence/2026-10-24-codex-rule-lifecycle/decisions.json),
+[earlier lifecycle diagnosis](gate6-codex-user-session-controls.md)).
 
 ## Method and pins
 
-This row uses Codex CLI 0.164.0 from the
+This row names Codex CLI 0.164.0 from the
 [2026-10-24 campaign](gate6-plugin-profile-inventory.md). The other campaign
-pins are Claude Code 2.1.308, Copilot CLI 1.0.103 and OpenCode 2.1.4; they do
-not run in this packet. Model selection stays private.
+pins, Claude Code 2.1.308, Copilot CLI 1.0.103 and OpenCode 2.1.4, do not run in
+this packet. Model identifiers remain private
+([positive receipt](evidence/2026-10-24-codex-rule-lifecycle/positive-receipt.json),
+[source index](evidence/2026-10-24-codex-rule-lifecycle/private-source-index.json)).
 
-The offline fixture extension in `scripts/qualify-plugin-rules.py` creates a
-neutral managed source with two independent rule packages and a new empty Git
-project. It writes no team guidance files and no symlinks. Existing roots,
-dangling symlinks, repository roots and documented discovery roots are rejected.
-Each rule and fallback has an unpredictable marker. This fresh fixture is
-prepared only: it is not registered or assumed trusted.
+The fresh offline fixture has two independent rule packages and an empty Git
+project. It creates no guidance files, trust configuration or registration. Its
+ordinary hook-review requirement is explicit. Q6 and Q9 now share the neutral
+root guard; tests reject configured roots, discovery roots and ancestor guidance
+without creating guide files
+([fresh fixture](evidence/2026-10-24-codex-rule-lifecycle/fresh-fixture.json),
+[validation](evidence/2026-10-24-codex-rule-lifecycle/validation.json)).
 
-The native continuity experiment instead reuses the isolated normally
-authenticated profile and two unchanged, previously reviewed user-registered
-packages from the earlier campaign. Their callback guard selects an existing
-project. This is a deliberate diagnostic limit: it preserves the user's hook
-review and the prior source/cache definitions, but does not qualify a fresh
-project-scoped registration or new Git identity. The newly prepared project is
-used only for the negative outside the existing callback guard.
+The native continuity run instead reuses the isolated provisioned profile and
+two unchanged, previously reviewed user registrations. Their callback guard
+selects an existing project. This preserves the existing definitions and user
+review, but does not qualify a fresh project registration. The newly prepared
+project supplies only the outside-guard negative
+([positive receipt](evidence/2026-10-24-codex-rule-lifecycle/positive-receipt.json),
+[resume command](evidence/2026-10-24-codex-rule-lifecycle/resume-command.json),
+[negative receipt](evidence/2026-10-24-codex-rule-lifecycle/negative-receipt.json)).
 
-A fresh noninteractive invocation establishes the positive before any candidate.
-The same session is then reopened in the native UI with explicit read-only
-policy and a command-line automatic-compaction threshold of 1000 tokens. Two
-ordinary prompts trigger two automatic compactions in that one UI process; no
-`/compact` command is sent. The threshold override is documented in the
-[configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
-and does not edit discovery settings. Every invocation has its own explicit
-read-only override. Selected native turn contexts also report read-only policy.
+A fresh noninteractive positive completes before the same session is reopened in
+the native UI. Every invocation explicitly selects read-only policy. The UI uses
+an automatic-compaction threshold of 1000 tokens; two ordinary prompts produce
+two compactions. No `/compact` input is sent. The native child terminal is
+resized after its initial zero dimensions, and exits normally with code 0
+([native selection](evidence/2026-10-24-codex-rule-lifecycle/native-selection.json),
+[resume command](evidence/2026-10-24-codex-rule-lifecycle/resume-command.json),
+[input audit](evidence/2026-10-24-codex-rule-lifecycle/input-audit.json),
+[exit receipt](evidence/2026-10-24-codex-rule-lifecycle/exit-receipt.json)).
 
-The environment uses the existing allowlisted isolated-profile builder,
-stripping inherited Git and client overrides. Ordinary trust is preserved; no
-hook trust bypass flag or trust-store edit is used. The native child PTY
-initially has zero window dimensions; its size is corrected and the correction
-is retained in the private packet. Native UI exit completes normally with
-code 0.
+## Observations and attribution
 
-## Observations
+| Control                           | Pin           | Observation                                                     |
+| --------------------------------- | ------------- | --------------------------------------------------------------- |
+| Fresh continuity positive         | Codex 0.164.0 | PASS: expected JSON object; one recorded body per rule          |
+| Separate resume-only turn         | Codex 0.164.0 | NOT RUN; attribution remains incomplete                         |
+| Reopen and automatic compaction 1 | Codex 0.164.0 | Historical FAIL: two recorded bodies per rule                   |
+| Automatic compaction 2            | Codex 0.164.0 | One recorded body per rule; provider-effective input unobserved |
+| Outside guarded project           | Codex 0.164.0 | PASS: empty rules array                                         |
+| Fresh project-scoped registration | Codex 0.164.0 | NOT RUN; prepared fixture not registered                        |
 
-| Control                              | Pin           | Outcome                                                          |
-| ------------------------------------ | ------------- | ---------------------------------------------------------------- |
-| Fresh continuity positive            | Codex 0.164.0 | PASS: exact JSON, one recorded developer body per rule           |
-| Reopen then automatic compaction 1   | Codex 0.164.0 | FAIL: two recorded developer bodies per rule                     |
-| Automatic compaction 2, same session | Codex 0.164.0 | One recorded developer body per rule; effective input unobserved |
-| Outside guarded project              | Codex 0.164.0 | PASS: exact empty rules array                                    |
-| Fresh project-scoped registration    | Codex 0.164.0 | NOT RUN: no safe replacement strategy selected                   |
+The [assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json)
+retains one startup, one resume and two compact callbacks per rule, all in the
+same session. Callback counts are separate from body counts. Three native turns
+complete with read-only context. The
+[window audit](evidence/2026-10-24-codex-rule-lifecycle/native-window-audit.json)
+reproduces the same `1/1`, `2/2`, `1/1` body counts from the full private native
+stream and selected public records.
 
-The [summary](evidence/2026-10-24-codex-rule-lifecycle/summary.json),
-[assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json) and
-[selected native records](evidence/2026-10-24-codex-rule-lifecycle/native-selection.json)
-retain session and turn identities, source line indices, compaction positions,
-exact rule bodies, completed tasks and read-only context. One startup, one
-resume and two compact callbacks per rule belong to the same session. Callback
-counts remain separate from developer-body counts. Three response tasks complete
-in that session; the independent negative completes in another session. No model
-tool call is observed; the native `additional_tools` catalog record is not a
-tool invocation.
+The trace records both resume and compaction callbacks for the combined window.
+It is consistent with queued outputs being delivered together, as the
+[earlier diagnosis](gate6-codex-user-session-controls.md) records. Internal
+queue state is not inspected, and this run cannot attribute the duplicate to
+compaction alone. The remaining resume-only control separates those causes
+([assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json),
+[input audit](evidence/2026-10-24-codex-rule-lifecycle/input-audit.json)).
 
-The first compaction's subsequent native records contain two bodies per rule;
-the second's contain one. Replacement histories contain no exact plaintext rule
-body. Encrypted compaction content and provider-effective input are not
-inspected. Neither the transcript nor the exact response proves uniqueness at
-all effective-input boundaries. Resume without a separate noncompacting turn was
-not separately observed in the reopened UI. The result is a counterexample for
-the unchanged adapter, not a complete Q9 qualification.
+Replacement histories contain no exact plaintext fixture body in the retained
+diagnostic. Encrypted content and provider-effective input are not inspected;
+correct final responses do not prove unique effective delivery. The independent
+negative returns a JSON object with an empty `rules` array. It is a guard
+negative, not a disable/uninstall matrix or proof of arbitrary-workspace
+delivery
+([assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json),
+[negative events](evidence/2026-10-24-codex-rule-lifecycle/negative-events.json)).
 
-The negative uses a new empty Git project outside the existing callback guard.
-Its exact response is `{"rules":[]}`. No existing discovery setting is disabled
-or edited to produce it. It is a guard-negative observation, not the missing
-project-scope disable/uninstall matrix.
+## Offline replay and checks
 
-## Preservation and provenance
+```sh
+python3 scripts/qualify-plugin-rules.py --replay-codex-rule-lifecycle docs/technotes/evidence/2026-10-24-codex-rule-lifecycle
+```
 
-Measured team content, configuration and both installed package definitions
-retain identical hashes and modes after the positive, UI lifecycle and negative.
-There are no direct writes to client plugin caches or team guides. Native
-session, log and database state changes are expected native effects;
-whole-profile byte restoration is not claimed. No registration was changed, so
-there is no new registration to remove. The prepared source remains outside the
-repository.
+The replay binds package-body hashes, startup response/session, native turn
+identities, read-only policy, compaction windows and observed counts to the
+assessment and summary. It explicitly represents the unrun resume-only control.
+A semantic fingerprint allows JSON layout changes while preserving recorded
+values and types; original byte hashes remain separate evidence. Altering a
+recorded count, status, session or qualification flag fails replay
+([rule bodies](evidence/2026-10-24-codex-rule-lifecycle/rule-bodies.json),
+[window audit](evidence/2026-10-24-codex-rule-lifecycle/native-window-audit.json),
+[validation](evidence/2026-10-24-codex-rule-lifecycle/validation.json)).
 
-Raw native sessions, terminal input/output, source files and capture helpers
-remain private. The
-[source index](evidence/2026-10-24-codex-rule-lifecycle/private-source-index.json)
-binds each private manifest. The retained receipt manifest binds sanitized
-selections. Private paths are normalized and model identifiers omitted. Native
-record parsing is used only by the private retention diagnostic, never by the
-candidate hook.
+Tests precede the harness changes. They require structured startup evidence,
+positive-first precedence, complete lifecycle checks before count checks, count
+failures before effective-input uncertainty, every boundary kind, all text
+blocks and strict JSON types. Fixture tests use isolated Git environments for
+both creation and verification and pin the absence of trust/registration writes.
+The validation record retains failures before these changes and the subsequent
+passing checks. These are offline tests, not additional native runs
+([validation](evidence/2026-10-24-codex-rule-lifecycle/validation.json)).
 
-## Offline checks and remaining work
+## Preservation and remaining limits
 
-Tests preceded implementation: `just lint` failed with ten missing-helper errors
-across 57 tests, then passed all 57 tests. The new tests pin copy-only fixtures
-without guidance writes, two distinct rule bodies, role-specific exact payload
-occurrence counts, positive-first classification, stable session identity,
-completion, explicit read-only policy, two automatic compactions, strict integer
-body counts and refusal to qualify unobserved effective input. They never run a
-client.
+Measured team content, configuration and both installed definitions retain their
+original hashes and modes. No registration, guide or cache was directly modified
+by the control. Native session, log and database effects remain outside
+whole-profile equality
+([positive receipt](evidence/2026-10-24-codex-rule-lifecycle/positive-receipt.json),
+[assessment](evidence/2026-10-24-codex-rule-lifecycle/assessment.json)).
 
-A bounded replacement candidate, native effective-copy observability, fresh
-project registration, ordinary review of any changed definitions, separate
-resume/clear/fork controls and the remaining platform/scope/reader matrix remain
-open. Linux and IDE/hosted surfaces are unqualified. Production stays schema 1;
-step 7 cannot promote the Codex rule route from this packet.
+Raw sessions, terminal data and capture helpers remain outside the repository.
+Selected fixture paths are normalized; command receipts retain executable and
+profile locations, and the private index retains local source paths. Model
+identifiers are omitted from committed evidence
+([source index](evidence/2026-10-24-codex-rule-lifecycle/private-source-index.json)).
 
-Numbered review adds near-match payload negatives, compensating duplicate/absent
-rule counts at every boundary and all sibling discovery roots. Additional checks
-reject missing session identity and nonboolean lifecycle evidence, and require
-fresh markers and Git identities across fixtures. The three review mutants pass
-the prior suite and fail the strengthened suite. Ten retained mutations are
-rejected; latest lint passes all 59 offline tests and documentation checks pass.
-These test-only changes do not alter native observations or qualification.
+Remaining nonblocking maintenance is tracked in
+[debt #402](https://github.com/driftsys/upskill/issues/402).
 
-The final numbered finding adds matching invalid identities at both observation
-and boundary levels, avoiding a mismatch that could mask the identity guard. All
-59 offline tests and documentation checks pass; eleven retained mutants are
-rejected. The identity-guard mutant passes the prior suite and fails this case.
+Resume-only attribution, clear/fork, fresh registration, any changed-definition
+review, Linux and IDE/hosted surfaces remain unqualified. No production adapter,
+durable record or schema-1 route is changed by this packet
+([summary](evidence/2026-10-24-codex-rule-lifecycle/summary.json),
+[step 7](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md)).

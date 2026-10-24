@@ -1,15 +1,18 @@
 {
-  "native-selection.json": "b697a7b5546b17bb8d4b8b5f6dd8a3bc27dee731350d941b32b18da54d858dcd",
-  "summary.json": "627771aea2907826a1c7131681ff6e8208278bbf537dff03c7ac3627c9a38852",
-  "assessment.json": "0f4581201518a6f83874e6ce044614e6ab0325e165063595cf861cb0d8a053f5",
-  "positive-events.json": "2184e0d4511f74da9cc97a0f8b773d7df32becb99255ce728891efcf3486fad1",
+  "assessment.json": "4ec9ca2a6b045f17a2531081dd3f86fb5abd5e89ad9b90b9c5c903ceff650eb0",
+  "decisions.json": "9fdc0af5f028e26d84ad4156b5013954076a055ac59fcf4bd6302046a8ce72cf",
   "exit-receipt.json": "7d8fe3b66b1659c5db3b4f73885f00adaa6fcf79db5f68d3850e84d9380b731d",
-  "negative-events.json": "0542d93f90faab2629d23acf9a13bf44d1a30738445a5d6c7c1bdc9fab2bbcb9",
-  "positive-receipt.json": "e245410d59a3d40c28c40b6b74cad49a6b6be9c2ac5dd617b24ba479c4c38461",
-  "decisions.json": "454eb6e5d42174121879392d9b35f6d288563e366b061eddd33602b305caec67",
-  "validation.json": "6ea2c62223f86b318b166c7f1670796bf6232aac9f909b969a40a645af9da325",
-  "private-source-index.json": "6607ac6da72cc9f5fc0570c085afffac8d76f813ce3c1ddce94d5d1e75c43bd9",
   "fresh-fixture.json": "d2e7e2d7443fda8c27bc49c3f46b78c44c6d50a624312d5289cbaa73d37c7813",
+  "input-audit.json": "1291e5524995c8da7a7ff3d4a8c98cc945571553fc04fc477f9711a5ad00985b",
+  "native-selection.json": "b697a7b5546b17bb8d4b8b5f6dd8a3bc27dee731350d941b32b18da54d858dcd",
+  "native-window-audit.json": "151fddb7f5d769061b524cc00734f807fbc6e9fb7413a202b897c8b2364b062f",
+  "negative-events.json": "0542d93f90faab2629d23acf9a13bf44d1a30738445a5d6c7c1bdc9fab2bbcb9",
+  "negative-receipt.json": "1d0707c7f7bbbcf1cf3b22f3123ea6f74a03ba58616a589ed20e0c976397813c",
+  "positive-events.json": "2184e0d4511f74da9cc97a0f8b773d7df32becb99255ce728891efcf3486fad1",
+  "positive-receipt.json": "e245410d59a3d40c28c40b6b74cad49a6b6be9c2ac5dd617b24ba479c4c38461",
+  "private-source-index.json": "9c8bdc089f8a3225726f7d9cbdf8345dc505b2a3004bd9e21171099689a487ff",
   "resume-command.json": "21d220d55e4cd8471617447c53be0b60717c858520cff659ac97b3d287fbb7ac",
-  "negative-receipt.json": "1d0707c7f7bbbcf1cf3b22f3123ea6f74a03ba58616a589ed20e0c976397813c"
+  "rule-bodies.json": "e010e2011e31959b42a5955535a7742027f45bc0feb57398792224d11e81d519",
+  "summary.json": "a498637f25aec544f29989931c531aec204ac98539b8328870bb9cdfcb864d28",
+  "validation.json": "e6301699f2ab469c5929d9d29d10202657dc10bc3c345357dfbe17dac6a66ff2"
 }

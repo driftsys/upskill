@@ -2,8 +2,18 @@
   "pin": "0.164.0",
   "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
   "qualified": false,
-  "status": "FAIL: duplicate native developer bodies after reopen and first automatic compaction",
+  "status": "FAIL: duplicate native developer bodies in the combined reopen/first automatic-compaction window",
   "boundaries": [
+    {
+      "kind": "resume",
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "completed": false,
+      "read_only": true,
+      "automatic": false,
+      "body_counts": null,
+      "effective_input_observed": false,
+      "control_status": "NOT RUN separately; the resumed turn immediately compacted"
+    },
     {
       "kind": "compact",
       "index": 1,
@@ -16,7 +26,11 @@
         "a": 0,
         "b": 0
       },
-      "effective_input_observed": false
+      "effective_input_observed": false,
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "completed": true,
+      "read_only": true,
+      "automatic": true
     },
     {
       "kind": "compact",
@@ -30,7 +44,11 @@
         "a": 0,
         "b": 0
       },
-      "effective_input_observed": false
+      "effective_input_observed": false,
+      "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+      "completed": true,
+      "read_only": true,
+      "automatic": true
     }
   ],
   "callbacks": [
@@ -152,9 +170,22 @@
   "limits": [
     "Provider effective input and encrypted compaction content are not inspected.",
     "Continuity diagnostic uses unchanged previously reviewed user registrations and an existing project; fresh project registration remains unqualified.",
-    "Resume without automatic compaction was not separately submitted in this resumed UI."
+    "Resume without automatic compaction was not separately submitted in this resumed UI.",
+    "The separate resume-only boundary is explicitly NOT RUN; the full lifecycle gate is incomplete even though the combined window has a retained duplicate."
   ],
   "non_message_catalog_records": [
     "additional_tools"
-  ]
+  ],
+  "historical_status": "FAIL: duplicate native developer bodies after reopen and first automatic compaction",
+  "positive_passed": true,
+  "positive": {
+    "session": "01a16d4e-9c6e-7a50-afd6-5a9e85e345c0",
+    "completed": true,
+    "read_only": true,
+    "body_counts": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "classification": "lifecycle_control_failed"
 }

@@ -68,16 +68,40 @@ def fixture_environment(root):
     return env
 
 
-def prepare_claude_managed_root(root):
-    """Build a neutral, copy-only Q6 marketplace without team guidance files."""
+def neutral_fixture_root(root):
+    """Validate a new campaign root before any fixture writes."""
     if os.path.lexists(root):
         raise ValueError('Fixture root must not exist')
-    root = root.resolve()
-    parts = root.parts
-    forbidden = any(part in ('.claude', '.github', '.codex', '.opencode') for part in parts)
-    forbidden = forbidden or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins')) for i in range(len(parts) - 1))
-    if forbidden or root.is_relative_to(REPO) or root == Path.home().resolve() or root.exists():
+    requested = root.expanduser().absolute()
+    root = requested.resolve()
+    if root.exists():
+        raise ValueError('Fixture root must not exist')
+    forbidden = False
+    for candidate in (requested, root):
+        parts = tuple(part.casefold() for part in candidate.parts)
+        forbidden |= any(part in ('.claude', '.github', '.codex', '.copilot', '.opencode') for part in parts)
+        forbidden |= any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode')) for i in range(len(parts) - 1))
+    configured = [Path(value).expanduser().resolve() for key in
+                  ('CLAUDE_CONFIG_DIR', 'COPILOT_HOME', 'CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'OPENCODE_CONFIG')
+                  if (value := os.environ.get(key))]
+    if os.environ.get('XDG_CONFIG_HOME'):
+        configured.append(Path(os.environ['XDG_CONFIG_HOME']).expanduser().resolve() / 'opencode')
+    native_roots = ('.claude', '.copilot', '.codex', '.opencode', '.github', '.agents/skills', '.agents/plugins', '.config/opencode')
+    configured.extend((Path.home() / name).resolve() for name in native_roots)
+    resolved_parts = tuple(part.casefold() for part in root.parts)
+    forbidden |= any(resolved_parts[:len(location.parts)] == tuple(part.casefold() for part in location.parts)
+                     for location in [REPO, *configured])
+    guidance = ('CLAUDE.md', 'AGENTS.md', 'AGENTS.override.md', *native_roots)
+    forbidden |= any((parent / name).exists() or (parent / name).is_symlink()
+                     for parent in root.parents for name in guidance)
+    if forbidden:
         raise ValueError('A new neutral fixture root outside client discovery and the repository is required')
+    return root
+
+
+def prepare_claude_managed_root(root):
+    """Build a neutral, copy-only Q6 marketplace without team guidance files."""
+    root = neutral_fixture_root(root)
     root.mkdir(parents=True, mode=0o700)
     nonce = secrets.token_hex(8)
     plugin = 'upskill-q6-' + nonce
@@ -115,9 +139,9 @@ def classify_claude_settings(before, after, before_mode, after_mode):
         old = json.loads(before) if before is not None else {}
         new = json.loads(after)
     except (ValueError, TypeError):
-        return 'invalid_settings'
+        return 'preservation_failed'
     if not isinstance(old, dict) or not isinstance(new, dict):
-        return 'invalid_settings'
+        return 'preservation_failed'
     added = set(new) - set(old)
     permitted = {'enabledPlugins', 'extraKnownMarketplaces'}
     if added - permitted or any(new[key] != {} for key in added):
@@ -125,20 +149,12 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     remaining = {key: value for key, value in new.items() if key not in added}
     if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
         return 'preservation_failed'
-    return 'empty_object_residue' if added else 'settings_bytes_changed'
+    return 'empty_object_residue' if added else 'preservation_failed'
 
 
 def prepare_codex_rule_lifecycle(root):
     """Prepare Q9 without writing team guidance or assuming hook trust."""
-    if os.path.lexists(root):
-        raise ValueError('Fixture root must not exist')
-    root = root.resolve()
-    parts = root.parts
-    if (root.is_relative_to(REPO) or root == Path.home().resolve()
-            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
-            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
-                   for i in range(len(parts) - 1))):
-        raise ValueError('A new neutral fixture root is required')
+    root = neutral_fixture_root(root)
     root.mkdir(parents=True, mode=0o700)
     project = root / 'project'
     project.mkdir()
@@ -179,15 +195,23 @@ def prepare_codex_rule_lifecycle(root):
 
 
 def count_developer_rule_bodies(messages, bodies):
-    """Count exact payload occurrences in a selected diagnostic input boundary."""
+    """Count exact nonoverlapping bodies across developer text blocks."""
     if (set(bodies) != {'a', 'b'} or any(not isinstance(b, str) or not b for b in bodies.values())
             or len(set(bodies.values())) != 2):
         raise ValueError('Two distinct nonempty rule bodies are required')
+    first, second = bodies.values()
+    if first in second or second in first:
+        raise ValueError('Rule bodies must not contain one another')
     counts = dict.fromkeys(bodies, 0)
     for message in messages:
+        if not isinstance(message, dict):
+            raise ValueError('Diagnostic messages must be objects')
         if message.get('type') != 'message' or message.get('role') != 'developer':
             continue
-        for block in message.get('content', []):
+        content = message.get('content', [])
+        if not isinstance(content, list) or any(not isinstance(block, dict) for block in content):
+            raise ValueError('Developer content must be a list of blocks')
+        for block in content:
             if block.get('type') != 'input_text' or not isinstance(block.get('text'), str):
                 continue
             for rule, body in bodies.items():
@@ -196,12 +220,22 @@ def count_developer_rule_bodies(messages, bodies):
 
 
 def classify_codex_rule_lifecycle(observation):
-    """Require all Q9 boundaries; callbacks and responses cannot prove copies."""
-    if observation.get('positive_passed') is not True:
+    """Gate startup, resume and two compactions; clear and fork are not covered."""
+    def one_each(counts):
+        return (isinstance(counts, dict) and set(counts) == {'a', 'b'}
+                and all(type(n) is int and n == 1 for n in counts.values()))
+
+    session = observation.get('session')
+    positive = observation.get('positive')
+    if (observation.get('positive_passed') is not True or not isinstance(positive, dict)
+            or not isinstance(positive.get('session'), str) or not positive['session'].strip()
+            or positive.get('completed') is not True or positive.get('read_only') is not True
+            or not one_each(positive.get('body_counts'))
+            or (isinstance(session, str) and session.strip() and positive['session'] != session)):
         return 'positive_control_failed'
     boundaries = observation.get('boundaries', [])
-    session = observation.get('session')
-    if (observation.get('pin') != '0.164.0' or not isinstance(session, str) or not session
+    if (observation.get('pin') != '0.164.0' or not isinstance(session, str) or not session.strip()
+            or not isinstance(boundaries, list) or any(not isinstance(b, dict) for b in boundaries)
             or [b.get('kind') for b in boundaries] != ['resume', 'compact', 'compact']):
         return 'lifecycle_control_failed'
     for boundary in boundaries:
@@ -209,13 +243,123 @@ def classify_codex_rule_lifecycle(observation):
                 or boundary.get('read_only') is not True
                 or (boundary['kind'] == 'compact' and boundary.get('automatic') is not True)):
             return 'lifecycle_control_failed'
-        counts = boundary.get('body_counts')
-        if (not isinstance(counts, dict) or set(counts) != {'a', 'b'}
-                or any(type(n) is not int or n != 1 for n in counts.values())):
-            return 'body_count_mismatch'
+    if any(not one_each(boundary.get('body_counts')) for boundary in boundaries):
+        return 'body_count_mismatch'
     if any(b.get('effective_input_observed') is not True for b in boundaries):
         return 'effective_input_unobserved'
     return 'observed_single_copy'
+
+
+def replay_codex_rule_lifecycle(packet):
+    """Replay pinned diagnostic windows without inventing a resume-only result."""
+    def load(name):
+        return json.loads((packet / name).read_text())
+
+    def same_json(actual, expected):
+        return json.dumps(actual, sort_keys=True) == json.dumps(expected, sort_keys=True)
+
+    rows, bodies = load('native-selection.json'), load('rule-bodies.json')
+    positive_events, positive_receipt = load('positive-events.json'), load('positive-receipt.json')
+    command, exit_receipt, inputs = load('resume-command.json'), load('exit-receipt.json'), load('input-audit.json')
+    assessment, summary, audit = load('assessment.json'), load('summary.json'), load('native-window-audit.json')
+    if (not isinstance(rows, list) or not rows
+            or any(not isinstance(row, dict) or type(row.get('line')) is not int
+                   or not isinstance(row.get('payload'), dict) for row in rows)
+            or [row['line'] for row in rows] != sorted({row['line'] for row in rows})):
+        raise ValueError('Q9 native rows require unique ordered source lines')
+    metadata = [row['payload'] for row in rows if row.get('type') == 'session_meta']
+    if len(metadata) != 1:
+        raise ValueError('Q9 requires one native session identity')
+    session, pin = metadata[0].get('id'), metadata[0].get('cli_version')
+    if (pin != '0.164.0' or not isinstance(session, str) or not session.strip()
+            or positive_receipt.get('pin') != pin or command.get('pin') != pin
+            or command.get('session') != session):
+        raise ValueError('Q9 native and command pins or sessions disagree')
+    for rule in ('a', 'b'):
+        expected = [row['sha256'] for row in positive_receipt['before']
+                    if row['path'].endswith('/rule.txt') and ('rule-' + rule + '-') in row['path']]
+        if (len(expected) != 1 or not isinstance(bodies.get(rule), str)
+                or hashlib.sha256(bodies[rule].encode()).hexdigest() != expected[0]):
+            raise ValueError('Q9 body differs from its original package receipt')
+    argv = command['command']
+    if (argv.count('resume') != 1 or argv[argv.index('resume') + 1] != session
+            or 'sandbox_mode="read-only"' not in argv
+            or 'model_auto_compact_token_limit=1000' not in argv
+            or type(exit_receipt.get('native_child_exit_code')) is not int
+            or exit_receipt['native_child_exit_code'] != 0
+            or inputs.get('no_manual_compaction') is not True
+            or len(inputs.get('inputs', [])) != 2
+            or any(not isinstance(text, str) or not text.strip() or '/compact' in text for text in inputs['inputs'])):
+        raise ValueError('Q9 combined UI control or automatic-compaction evidence is incomplete')
+    compacts = [row for row in rows if row.get('type') == 'compacted']
+    contexts = [row for row in rows if row.get('type') == 'turn_context']
+    if (len(compacts) != 2 or len(contexts) != 3
+            or any(row['payload'].get('native_compaction_record_present') is not True for row in compacts)
+            or [row['payload'].get('window_number') for row in compacts] != [1, 2]):
+        raise ValueError('Q9 requires the two retained native compactions')
+    windows = [(rows[0]['line'], compacts[0]['line']),
+               (compacts[0]['line'], compacts[1]['line']),
+               (compacts[1]['line'], rows[-1]['line'] + 1)]
+    counts, turns = [], []
+    for start, end in windows:
+        window = [row for row in rows if start <= row['line'] < end]
+        context = [row for row in window if row.get('type') == 'turn_context']
+        if len(context) != 1:
+            raise ValueError('Q9 window requires one native turn context')
+        context = context[0]
+        turn = context['payload'].get('turn_id')
+        starts = [row for row in rows if row.get('type') == 'event_msg'
+                  and row['payload'].get('type') == 'task_started' and row['payload'].get('turn_id') == turn]
+        ends = [row for row in window if row.get('type') == 'event_msg'
+                and row['payload'].get('type') == 'task_complete' and row['payload'].get('turn_id') == turn]
+        if (not isinstance(turn, str) or not turn.strip() or len(starts) != 1 or len(ends) != 1
+                or not starts[0]['line'] < context['line'] < ends[0]['line']
+                or context['payload'].get('sandbox_policy') != {'type': 'read-only'}):
+            raise ValueError('Q9 native turn identity, completion or read-only policy is incomplete')
+        messages = [row['payload'] for row in window if row.get('type') == 'response_item']
+        counts.append(count_developer_rule_bodies(messages, bodies))
+        turns.append(turn)
+    if len(set(turns)) != 3:
+        raise ValueError('Q9 requires three distinct completed turns')
+    expected_response = positive_receipt['expected_response']
+    try:
+        positive_completed = (type(positive_receipt.get('exit_code')) is int and positive_receipt['exit_code'] == 0
+                              and [row.get('type') for row in positive_events] == ['thread.started', 'item.completed', 'turn.completed']
+                              and positive_events[0].get('thread_id') == session
+                              and positive_events[1]['item'].get('type') == 'agent_message'
+                              and json.loads(positive_events[1]['item']['text']) == expected_response)
+    except (KeyError, TypeError, ValueError):
+        positive_completed = False
+    positive = {'session': session, 'completed': positive_completed, 'read_only': True, 'body_counts': counts[0]}
+    boundaries = [{'kind': 'resume', 'session': session, 'completed': False, 'read_only': True,
+                   'automatic': False, 'body_counts': None, 'effective_input_observed': False,
+                   'control_status': 'NOT RUN separately; the resumed turn immediately compacted'}]
+    for index, row in enumerate(compacts):
+        boundaries.append({'kind': 'compact', 'index': index + 1, 'native_line': row['line'],
+                           'session': session, 'completed': True, 'read_only': True, 'automatic': True,
+                           'body_counts': counts[index + 1], 'effective_input_observed': False})
+    derived = {'pin': pin, 'session': session, 'positive_passed': positive_completed,
+               'positive': positive, 'boundaries': boundaries}
+    classification = classify_codex_rule_lifecycle(derived)
+    status = 'FAIL: duplicate native developer bodies in the combined reopen/first automatic-compaction window'
+    if not any(number > 1 for number in counts[1].values()):
+        status = 'INCOMPLETE: separate resume-only control and effective input remain unobserved'
+    for key in ('pin', 'session', 'positive_passed', 'positive'):
+        if key not in assessment or not same_json(assessment[key], derived[key]):
+            raise ValueError('Q9 assessment differs from retained native evidence: ' + key)
+    if len(assessment.get('boundaries', [])) != 3:
+        raise ValueError('Q9 assessment must name the missing resume-only control')
+    for expected, recorded in zip(boundaries, assessment['boundaries']):
+        if any(key not in recorded or not same_json(recorded[key], value) for key, value in expected.items()):
+            raise ValueError('Q9 recorded boundary differs from native evidence')
+    if (assessment.get('qualified') is not False or summary.get('qualified') is not False
+            or assessment.get('classification') != classification or assessment.get('status') != status
+            or summary.get('status') != status or summary.get('gate_classification') != classification
+            or not same_json(summary.get('recorded_body_counts'), counts)
+            or not same_json(audit.get('selected_window_counts'), counts) or not same_json(audit.get('raw_window_counts'), counts)
+            or audit.get('selected_semantic_sha256') != hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(',', ':')).encode()).hexdigest()):
+        raise ValueError('Q9 classification, count audit or summary differs from replay')
+    return {'classification': classification, 'recorded_body_counts': counts}
 
 
 def prepare(root, client):
@@ -287,16 +431,26 @@ def prepare(root, client):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--prepare', action='store_true', required=True,
-                        help='Create fixtures only; does not run a model or qualify a route')
-    parser.add_argument('--client', choices=VERSIONS, required=True)
-    parser.add_argument('--root', type=Path, required=True, help='New disposable directory outside the repository')
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--prepare', action='store_true',
+                      help='Create fixtures only; does not run a model or qualify a route')
+    mode.add_argument('--replay-codex-rule-lifecycle', type=Path,
+                      help='Replay retained Q9 diagnostic windows offline')
+    parser.add_argument('--client', choices=VERSIONS)
+    parser.add_argument('--root', type=Path, help='New disposable directory outside the repository')
     args = parser.parse_args()
     try:
-        fixture = prepare(args.root, args.client)
+        if args.replay_codex_rule_lifecycle:
+            if args.client or args.root:
+                parser.error('Replay cannot be combined with fixture options')
+            print(json.dumps(replay_codex_rule_lifecycle(args.replay_codex_rule_lifecycle), indent=2))
+        else:
+            if not args.client or not args.root:
+                parser.error('--prepare requires --client and --root')
+            fixture = prepare(args.root, args.client)
+            print(Path(fixture['root']) / 'fixture.json')
     except ValueError as error:
         parser.error(str(error))
-    print(Path(fixture['root']) / 'fixture.json')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,32 @@
+{
+  "observed_at": "2026-10-24T18:17:50.712756+00:00",
+  "method": "Read-only inventory during review after the original control; not a contemporaneous post-removal snapshot",
+  "native_client_rerun": false,
+  "direct_cache_write_or_cleanup": false,
+  "versions": [
+    {
+      "version": "0.0.0",
+      "path": "$PROFILE/plugins/cache/upskill-q6-market-66d31ae858b12d98/upskill-q6-66d31ae858b12d98/0.0.0",
+      "is_directory": true,
+      "is_symlink": false,
+      "symlink_descendants": [],
+      "files": [
+        {
+          "path": ".orphaned_at",
+          "sha256": "ab390b88bf67971c1165a76267487325cf40c7c04fbdf19c03058edeb09212b1",
+          "mode": 420
+        },
+        {
+          "path": ".claude-plugin/plugin.json",
+          "sha256": "46f68ac979cee2a836c22f5db53996c4440699ce70e6c2bab5575aa65498e434",
+          "mode": 420
+        },
+        {
+          "path": "skills/probe-66d31ae858b12d98/SKILL.md",
+          "sha256": "7d72940c78d856f326d0960bedc3b6a1d562d58aeeb28873a10f00cf068aabaf",
+          "mode": 420
+        }
+      ]
+    }
+  ]
+}

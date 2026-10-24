@@ -57,5 +57,65 @@
     "private_log": "$PACKET_B/q9-final-session-mutations.log",
     "sha256": "def8469359cae183295b7a1855d07c9753640f2cf1adbfa129b796469fe81249",
     "private_helper_sha256": "791942e4f9cbff7e55fefb83bbb116e8a2a13b7e0319e0af8f7eb026a9a4c8b2"
+  },
+  {
+    "stage": "Tests before core changes",
+    "result": "FAIL: 13 failures and two errors, 66 tests",
+    "private_log": "$PACKET_E/q9-packet-red-lint.log",
+    "sha256": "47346ba6e23930e0478d5a14004e0bc8837c139ea44d856fd259b0365e2d5c6c"
+  },
+  {
+    "stage": "Tests before shared root guard",
+    "result": "FAIL: configured Codex root accepted",
+    "private_log": "$PACKET_E/q9-root-red.log",
+    "sha256": "750addf0c850c975ba001cff0dc331b7cc781ddccc73e22b033600fb01f9903e"
+  },
+  {
+    "stage": "Tests before semantic source identity",
+    "result": "FAIL: JSON layout changed replay",
+    "private_log": "$PACKET_E/q9-json-layout-red.log",
+    "sha256": "0d6484087daec68dc5df8626566a1adfcb87a41bbb89708b47b46715fcea0377"
+  },
+  {
+    "stage": "Tests before strict recorded types",
+    "result": "FAIL: recorded JSON types accepted",
+    "private_log": "$PACKET_E/q9-json-types-red.log",
+    "sha256": "f35f34d4e8835395ae7c5515866cd3ea56f712b98decb21b8e06c41728677079"
+  },
+  {
+    "stage": "Tests before override-guide guard",
+    "result": "FAIL: ancestor override guide accepted",
+    "private_log": "$PACKET_E/q9-override-root-red.log",
+    "sha256": "f2c12b86a3d27185969890e5d389a884228f625f629046be2254a81d24cba1b0"
+  },
+  {
+    "stage": "Focused replay tests",
+    "result": "PASS: 26 tests",
+    "private_log": "$PACKET_E/q9-replay-green.log",
+    "sha256": "b02934667b3b75a9a983316e8c30f976e82d85e478b9e89307e66102bbe6a25e"
+  },
+  {
+    "stage": "Shared root regression tests",
+    "result": "PASS: 14 tests",
+    "private_log": "$PACKET_E/q9-shared-root-green.log",
+    "sha256": "a3327ac90ad344b29c7b580144777e524cf6fc93bfcde171180ba9114fab54f3"
+  },
+  {
+    "stage": "Review mutation checks",
+    "result": "PASS: 17 independent mutants rejected by assertion failure",
+    "private_log": "$PACKET_E/q9-packet-mutations.log",
+    "sha256": "99d8d1bf2f2e468be8d802ed709e0fb6e266aa593acb813198764a29fd159592"
+  },
+  {
+    "stage": "Review lint",
+    "result": "PASS: 103 offline tests",
+    "private_log": "$PACKET_E/q9-replay-lint-green.log",
+    "sha256": "53c550ec1ebb478eedef4544eb320af302e37bf3f4ce659369d78b79b0334701"
+  },
+  {
+    "stage": "Review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_E/q9-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
   }
 ]

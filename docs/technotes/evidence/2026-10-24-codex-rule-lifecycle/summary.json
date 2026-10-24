@@ -6,7 +6,7 @@
   "date": "2026-10-24",
   "platform": "macOS arm64",
   "pin": "Codex 0.164.0",
-  "status": "FAIL: unchanged all-sources adapter records duplicate native bodies after reopen and first automatic compaction",
+  "status": "FAIL: duplicate native developer bodies in the combined reopen/first automatic-compaction window",
   "controls": [
     {
       "name": "fresh-session continuity positive",
@@ -53,6 +53,23 @@
     "Resume before a separate noncompacting next turn, clear and fork remain unobserved.",
     "No speculative transcript parser, once-per-session state or native history deletion shipped.",
     "Q9 and #379 remain unresolved; Codex rules cannot become supported.",
-    "Production schema 1 and durable adoption unchanged."
+    "Production schema 1 and durable adoption unchanged.",
+    "Offline lifecycle classification is lifecycle_control_failed because resume-only was not run; independently retained native window counts are 1/1, 2/2 and 1/1."
+  ],
+  "historical_status": "FAIL: unchanged all-sources adapter records duplicate native bodies after reopen and first automatic compaction",
+  "gate_classification": "lifecycle_control_failed",
+  "recorded_body_counts": [
+    {
+      "a": 1,
+      "b": 1
+    },
+    {
+      "a": 2,
+      "b": 2
+    },
+    {
+      "a": 1,
+      "b": 1
+    }
   ]
 }

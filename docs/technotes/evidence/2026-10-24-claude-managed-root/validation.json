@@ -115,5 +115,112 @@
     "result": "PASS: full build, Rust tests, lint, 50 offline Python tests and documentation checks",
     "private_log": "$PACKET_B/q6-retry-verify.log",
     "sha256": "4f93d0da4bf6caa85ed12face19cca4ffd8ba45a2375af9e3388cf975b215920"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "FAIL: nine regression failures before harness changes, 62 offline tests",
+    "private_log": "$PACKET_C/q6-review-red-lint.log",
+    "sha256": "0f0519c3c901a7d0eadf01abbe4b9c95adfa21fbde77f58aad30266fbaa8f584"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: 11 focused managed-root tests",
+    "private_log": "$PACKET_C/q6-review-focused-green.log",
+    "sha256": "9a0142f87087803c2904ef32e4970b5fd961406778499c50c3bebb036052187a"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: 62 offline tests",
+    "private_log": "$PACKET_C/q6-review-green-lint.log",
+    "sha256": "b97b43b1863bb351cc15ef2d7b949646e6d745164b590a6201ee7826091b7092"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: six mutants rejected by assertion failure",
+    "private_log": "$PACKET_C/q6-review-mutations.log",
+    "sha256": "e6a1985e4b38937be2899e2b89549a51a451f066f2aaf4652b3327be1575333a"
+  },
+  {
+    "stage": "packet review corrections",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_C/q6-review-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q6-review-final-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+    "source_commit": "faa6d45d63d677ec895f29cc75b88b9457580fe6"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: just verify, 62 offline tests",
+    "private_log": "$PACKET_C/q6-review-final-verify.log",
+    "sha256": "f411f00941aedc6c9c7526b3ed990b8bc2357574153da77f8ef2b430d041c468",
+    "source_commit": "faa6d45d63d677ec895f29cc75b88b9457580fe6"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: 12 focused managed-root tests",
+    "private_log": "$PACKET_C/q6-quick-fix-tests.log",
+    "sha256": "fdf2487db5f5c3642876ac804b3c50daecfda13a8da7290ac810dfa2ae0de9a3",
+    "test_source_snapshot": "$PACKET_C/quick-fix-source/"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: five additional guard mutants rejected by assertion failure",
+    "private_log": "$PACKET_C/q6-quick-fix-mutations.log",
+    "sha256": "988721e0bc32dc3ffb2361ae952baae527b49e74d6fd156c29f204259968014a",
+    "test_source_snapshot": "$PACKET_C/quick-fix-source/"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: 63 offline tests",
+    "private_log": "$PACKET_C/q6-quick-fix-lint.log",
+    "sha256": "0fc092f0a437b737c29cb1b9cfb7daae5ed893ba213183f5b5dc88049b8fdc1f",
+    "test_source_snapshot": "$PACKET_C/quick-fix-source/"
+  },
+  {
+    "stage": "final review validation",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_C/q6-quick-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38",
+    "test_source_snapshot": "$PACKET_C/quick-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "FAIL: three failures before final guard changes, 77 offline tests",
+    "private_log": "$PACKET_C/q6-pass2-red-lint.log",
+    "sha256": "136cdc346091beaf164eb33ab188d593c924807a90892413da683a1152bab8cc",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: 14 focused managed-root tests",
+    "private_log": "$PACKET_C/q6-pass2-focused-green.log",
+    "sha256": "75312dbfcdc7087a0ad5a3a356fdb00cf72462a59e8b2f8416c01f22db1b6ff2",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: five final-review mutants rejected by assertion failure",
+    "private_log": "$PACKET_C/q6-pass2-fix-mutations.log",
+    "sha256": "cfafdefa62a0ec79726497827ccf362537c4c7184ad79513924cc6611aed68cd",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q6-pass2-fix-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: just verify, 77 offline tests",
+    "private_log": "$PACKET_C/q6-pass2-fix-verify.log",
+    "sha256": "13b97815bfcc473d6f4b519578ba06c0b6a948b20b67042b9020a1237daef8a3",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
   }
 ]
