@@ -37,5 +37,23 @@
     "result": "PASS: five callback/permission/package mutations rejected",
     "private_log": "$PACKET_B/q5-quick-mutations.log",
     "sha256": "948955fb7b18fbc5096b3c15a161e8376f12b88fe74c8eb6038f44ded042a25f"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: newly declared native-user-root rejection missing",
+    "private_log": "$PACKET_B/q5-user-root-red.log",
+    "sha256": "a0e9e41f461c26208d01f88d39700d5cf407ec48ab5cbe2d63ee97d43b37a520"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_B/q5-user-root-green.log",
+    "sha256": "766f6f3fa860cade44680e9200b4d26be442c732d83318e10499d076bb02839b"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification; 66 offline tests",
+    "private_log": "$PACKET_B/q5-final-verify.log",
+    "sha256": "a0ea2a072eacaad0330f6c3fe07887d33fb6ba69c887877a970d3d5f45384d52"
   }
 ]

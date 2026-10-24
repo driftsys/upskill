@@ -217,8 +217,8 @@ def prepare_opencode_current_routes(root):
     root = root.resolve()
     parts = root.parts
     if (root.is_relative_to(REPO) or root == Path.home().resolve()
-            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
-            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+            or any(p in ('.claude', '.github', '.codex', '.opencode', '.copilot') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
                    for i in range(len(parts) - 1))):
         raise ValueError('A new neutral fixture root is required')
     root.mkdir(parents=True, mode=0o700)

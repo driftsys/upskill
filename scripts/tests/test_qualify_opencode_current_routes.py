@@ -50,7 +50,7 @@ class OpenCodeCurrentRoutesTests(unittest.TestCase):
     def test_root_protection_and_fresh_markers(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            for p in (root, *(root/s/'fixture' for s in ('.claude','.github','.codex','.opencode','.agents/skills','.agents/plugins'))):
+            for p in (root, *(root/s/'fixture' for s in ('.claude','.github','.codex','.opencode','.copilot','.config/opencode','.agents/skills','.agents/plugins'))):
                 with self.assertRaises(ValueError):self.q.prepare_opencode_current_routes(p)
             a=self.q.prepare_opencode_current_routes(root/'a');b=self.q.prepare_opencode_current_routes(root/'b')
             for key in ('native_marker','resource_marker','fallback','rule_markers','skill_id'):self.assertNotEqual(a[key],b[key])
