@@ -1,0 +1,15 @@
+{
+  "root": "$FIXTURE",
+  "managed_root": "$FIXTURE/delivery",
+  "package": "$FIXTURE/delivery/packages/upskill-q6-472c9cd5748f0b14",
+  "project": "$FIXTURE/project",
+  "user_project": "$FIXTURE/user-project",
+  "plugin_name": "upskill-q6-472c9cd5748f0b14",
+  "market_name": "upskill-q6-market-472c9cd5748f0b14",
+  "skill_name": "probe-472c9cd5748f0b14",
+  "skill": "$FIXTURE/delivery/packages/upskill-q6-472c9cd5748f0b14/skills/probe-472c9cd5748f0b14/SKILL.md",
+  "initial_marker": "INITIAL_3aee47c2b2a7fed152b4f7ef269f6ad9",
+  "edited_marker": "EDITED_e73e8c1de88d0320b5a26483fa657fcf",
+  "fallback": "ABSENT_e8d30acefc7f8c691a944b1c9f3088a8",
+  "manual": "MANUAL_64b683d4c9f207f229c1884337730ec6"
+}

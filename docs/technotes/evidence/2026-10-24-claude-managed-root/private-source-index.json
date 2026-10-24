@@ -1,0 +1,26 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q6-claude-lb2iofuw",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "5ade8df6de7a6aad7a94e9e3d65b56657ea9e7696969b036043eff4727016c20"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q6-claude-lb2iofuw/capture-helper.py",
+    "capture_helper_sha256": "eb1eb936b83aa133b6922801261f44051252380dc1a8d0c803bf5894722813cb"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q6-claude-r7wprs9o",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "a7401a03df3c812d5690bbdc052ff340cff27735cc6a918a61592817015f2c72"
+      }
+    ],
+    "capture_helper_path": "/private/tmp/upskill-q6-claude-r7wprs9o/capture-helper.py",
+    "capture_helper_sha256": "01c68406acc469b15123e280bd05310c3c33fa73c8ceb6bbf849577eb436ea25"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "managed_root": "$FIXTURE/delivery",
+  "package": "$FIXTURE/delivery/packages/upskill-q6-66d31ae858b12d98",
+  "plugin_name": "upskill-q6-66d31ae858b12d98",
+  "market_name": "upskill-q6-market-66d31ae858b12d98",
+  "skill_name": "probe-66d31ae858b12d98",
+  "files": {
+    "delivery/.claude-plugin/marketplace.json": "b143eba7d15a17ee10e8e140fa54cfca29699b4acde3a541e292ff6a44e91439",
+    "delivery/packages/upskill-q6-66d31ae858b12d98/.claude-plugin/plugin.json": "46f68ac979cee2a836c22f5db53996c4440699ce70e6c2bab5575aa65498e434",
+    "delivery/packages/upskill-q6-66d31ae858b12d98/skills/probe-66d31ae858b12d98/SKILL.md": "7d72940c78d856f326d0960bedc3b6a1d562d58aeeb28873a10f00cf068aabaf",
+    "project/.claude/settings.json": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+    "user-project/.claude/settings.json": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb"
+  },
+  "no_symlinks": true
+}

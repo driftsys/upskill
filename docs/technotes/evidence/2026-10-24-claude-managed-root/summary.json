@@ -1,0 +1,601 @@
+{
+  "qualified": false,
+  "q6_completed": true,
+  "task": 384,
+  "control": "Q6",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "client": "Claude Code",
+  "pin": "2.1.308",
+  "scopes": [
+    {
+      "scope": "project",
+      "pin": "2.1.308",
+      "status": "PASS: all three fresh invocations",
+      "steps": [
+        {
+          "label": "project-validate",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "validate",
+            "$FIXTURE/delivery"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "5ead4d2e7173539dc2f30e59beac1dca5e3e80a0c2577f859dcd6a83295fe016",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-market-add",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "add",
+            "$FIXTURE/delivery",
+            "--scope",
+            "project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "a3a1b883cd66a03dd46fa74d71134b878bb765b410ed5637f443e41eacaedf7d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-install",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "install",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "a5a895b1d671911a1100783b107fbdc51b7f0fbdc6bb40f7a7612c94a2a689d7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-list",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "list",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "3890616b3bc79499aedac9be1ffc301ffd82de226e48af21bfa9ceec698e4eb0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-update",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "update",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "bf63cfbcde5002f961adfb647ff6b80f4b6ce02e4d1a006772d34af566593eb7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-uninstall",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "uninstall",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "project"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "d2715c3762f96005f383ceb022ed4851b534454a420be21aabacb836154ed4a7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "project-market-remove",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "remove",
+            "upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "project"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "3248e5dc213c907b6226125017abf76939121a366952808a609b08eee11a210f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "controls": [
+        {
+          "label": "project-installed",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "8559c9ba5ae0d7a26156c25f556d65c589eea0b569b3f32d186d8fc345a812e8",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01GHqscqxA1Tij6d5ia3bveM",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "INITIAL_3aee47c2b2a7fed152b4f7ef269f6ad9",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01GHqscqxA1Tij6d5ia3bveM",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-project-installed.jsonl",
+          "classification": "PASS: exact initial marker"
+        },
+        {
+          "label": "project-edited-without-update",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "915a0e9b339469bc42e8d12f143aeb892cd9340dca39e9e84e971e2cf74886f7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01EFCwQBg1XCg7xkPM5wqHrc",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "EDITED_e73e8c1de88d0320b5a26483fa657fcf",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01EFCwQBg1XCg7xkPM5wqHrc",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-project-edited-without-update.jsonl",
+          "classification": "PASS: exact edited marker"
+        },
+        {
+          "label": "project-after-update",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "309bc7e31f6697372547cb8bb4a9b48fa23977aae7337ea80732193dd9c859cf",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01PfQ9WgkTL7CegEKsRbghYu",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "EDITED_e73e8c1de88d0320b5a26483fa657fcf",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01PfQ9WgkTL7CegEKsRbghYu",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-project-after-update.jsonl",
+          "classification": "PASS: exact edited marker"
+        }
+      ],
+      "edit_visibility": "fresh session reads edited managed source before native update",
+      "native_update": "exit 0; subsequent fresh invocation reads edited source",
+      "reinstall_required_for_observed_edit": false,
+      "settings_residue": {
+        "$FIXTURE/project/.claude/settings.json": "empty_object_residue",
+        "$PROFILE/settings.json": "unchanged"
+      },
+      "settings_restored": [
+        true,
+        true
+      ],
+      "registry_bytes_and_modes_equal": true
+    },
+    {
+      "scope": "user",
+      "pin": "2.1.308",
+      "status": "PASS: all three fresh invocations",
+      "steps": [
+        {
+          "label": "user-validate",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "validate",
+            "$FIXTURE/delivery"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "5ead4d2e7173539dc2f30e59beac1dca5e3e80a0c2577f859dcd6a83295fe016",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-market-add",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "add",
+            "$FIXTURE/delivery",
+            "--scope",
+            "user",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "ad846891fa4dfc04c2bd5b2f16a2bee7dbfc720051a85f6e28e4f8873be3423f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-install",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "install",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "user",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "40028ce002c1cc18ac88802930ce54f2853dccea4c93f0d4e2f8022a7a97a572",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-list",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "list",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "2d81e0bafd21063e4f75ae750d8a6bf31a5d9b507b5ad498bff4849a872ff593",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-update",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "update",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "user",
+            "--json"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "b83a7c15589e6d4d4418985f1e7732cc7cac491eae811d71f8cd8995fe31cdb7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-uninstall",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "uninstall",
+            "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "user"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "3d13a8f7b0e0cf36856728f2d4b540a8e1ab6f945a2cbfc03732f5e2206981f0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "user-market-remove",
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "plugin",
+            "marketplace",
+            "remove",
+            "upskill-q6-market-472c9cd5748f0b14",
+            "--scope",
+            "user"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "e8cb2779e4c08aacbc810edaa53934fa8728cc06042befb5572dd442c78e75a9",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "controls": [
+        {
+          "label": "user-installed",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "ccf6f543f7439afe71c9598137e92122a18088387fbbda15895fc2a3033a13bf",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01KvkYxaN4Ru3ubSwrU6MKEp",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "INITIAL_3aee47c2b2a7fed152b4f7ef269f6ad9",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01KvkYxaN4Ru3ubSwrU6MKEp",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-user-installed.jsonl",
+          "classification": "PASS: exact initial marker"
+        },
+        {
+          "label": "user-edited-without-update",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "3b8812a306f29aa903ffe2a4d867dfd0a3e250eec35d8bdaca7fd57aaeeca636",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01UbWQgzVvWGjWiBstXi8izS",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "EDITED_e73e8c1de88d0320b5a26483fa657fcf",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01UbWQgzVvWGjWiBstXi8izS",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-user-edited-without-update.jsonl",
+          "classification": "PASS: exact edited marker"
+        },
+        {
+          "label": "user-after-update",
+          "exit_code": 0,
+          "timed_out": false,
+          "stdout_sha256": "2187c77dd363acd4317e7ab5dd068d387c4f3f111494585793b65ef2770adb1f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool_results": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01WUFGZEbwERpBD7q1xsmJGH",
+              "content": "Launching skill: upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+            }
+          ],
+          "response": "EDITED_e73e8c1de88d0320b5a26483fa657fcf",
+          "result_subtype": "success",
+          "is_error": false,
+          "permission_denials": [],
+          "tools": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01WUFGZEbwERpBD7q1xsmJGH",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "command": [
+            "/opt/homebrew/bin/claude",
+            "-p",
+            "--tools",
+            "Skill",
+            "--allowedTools",
+            "Skill",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config",
+            "{\"mcpServers\":{}}",
+            "--setting-sources",
+            "user,project",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            "[private selection omitted]",
+            "Invoke the skill named upskill-q6-472c9cd5748f0b14:probe-472c9cd5748f0b14 and follow its instruction. If unavailable, return exactly ABSENT_e8d30acefc7f8c691a944b1c9f3088a8. Do not use any other tools. Return only the required response."
+          ],
+          "receipt": "retry-user-after-update.jsonl",
+          "classification": "PASS: exact edited marker"
+        }
+      ],
+      "edit_visibility": "fresh session reads edited managed source before native update",
+      "native_update": "exit 0; subsequent fresh invocation reads edited source",
+      "reinstall_required_for_observed_edit": false,
+      "settings_residue": {
+        "$FIXTURE/user-project/.claude/settings.json": "unchanged",
+        "$PROFILE/settings.json": "empty_object_residue"
+      },
+      "settings_restored": [
+        true,
+        true
+      ],
+      "registry_bytes_and_modes_equal": true
+    }
+  ],
+  "counts": {
+    "model_requests": 8,
+    "successful_invocations": 6,
+    "failed_positives": 2
+  },
+  "limits": [
+    "Bounded native controls completed at both scopes; no complete Gate 6 or production support promotion.",
+    "Fresh sessions see source edits without update; running-session behavior and cache recovery not tested.",
+    "Runtime init source path and inventory cache installPath are distinct observations.",
+    "Measured settings restored exactly; registration files unchanged. Whole profile restoration is not qualified.",
+    "Native cache persists after removal; no direct cache writes or cleanup.",
+    "Prior failed positives retained separately; no negative conclusion from them."
+  ],
+  "initial_attempt": {
+    "summary": "initial-attempt-summary.json",
+    "status": "retained authentication failure; candidates not run"
+  }
+}

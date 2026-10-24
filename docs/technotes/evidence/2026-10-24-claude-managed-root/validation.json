@@ -1,0 +1,119 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: three missing Q6 helper tests",
+    "private_log": "q6-lint-red.log",
+    "sha256": "15e638d19c37d34e42cbb21763d16c6ac7f4372e0c623ca2134b9bc09cc928ba"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 45 offline tests",
+    "private_log": "q6-lint-green.log",
+    "sha256": "36c062fdb39f50e3962c61c806621c14dacefc7ddebe927e95e5db38c0ad9968"
+  },
+  {
+    "stage": "symlink guard red",
+    "result": "FAIL: dangling root symlink redirected fixture writes",
+    "private_log": "q6-symlink-red.log",
+    "sha256": "8333b95f7030f55ab83ee7594600cf537544660b259c08cf9d45e8f562d0abc7"
+  },
+  {
+    "stage": "symlink guard green",
+    "result": "PASS: four Q6 tests",
+    "private_log": "q6-symlink-green.log",
+    "sha256": "41855a6380634e4d5ef6e6b8a4b4afa9f891b191414433c9328dff783b38b91c"
+  },
+  {
+    "stage": "full verification",
+    "result": "PASS: just verify",
+    "private_log": "q6-verify.log",
+    "sha256": "6aad9a5f8ae56cc6f9833aa560b4891d916239b58f872abfa2f0795299e79dcb"
+  },
+  {
+    "stage": "rebased lint",
+    "result": "PASS: 46 offline tests",
+    "private_log": "q6-rebased-lint.log",
+    "sha256": "a90c7b5eafc03caaf477fb488cde675e32b1175bbebb9007dfbf160d4503f5ea"
+  },
+  {
+    "stage": "rebased documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q6-rebased-docs.log",
+    "sha256": "c64d59167bcc435dff3a2db6e443caa3e9657b61a442442c01279556e61401cb"
+  },
+  {
+    "stage": "final focused tests",
+    "result": "PASS: four Q6 tests, including fresh identities and markers",
+    "private_log": "q6-final-focused.log",
+    "sha256": "931ee622acb24d582aa0e2442389b49137ce32c07e9412d1969bff1cbd11a562"
+  },
+  {
+    "stage": "JSON type regression red",
+    "result": "FAIL: five boolean/number representation changes accepted",
+    "private_log": "q6-types-red.log",
+    "sha256": "ca4a46c9d9ae83cb8e81096a493cd2b04729856ccae05db381de1eeb55b3ee34"
+  },
+  {
+    "stage": "JSON type regression green",
+    "result": "PASS: six Q6 tests",
+    "private_log": "q6-types-green.log",
+    "sha256": "66fb186812f578f1267d329e4ba0b2f82b72da00837e37dbc11e1d52375dcf72"
+  },
+  {
+    "stage": "review mutation checks",
+    "result": "PASS: nonempty marketplace, missing repository guard and JSON type-loss mutants rejected",
+    "private_log": "q6-review-mutations.log",
+    "sha256": "0e73ac3fa8755d9c42d75db981ad52e2433514fa0debf4f3bf4769950fbb4198"
+  },
+  {
+    "stage": "review full verification",
+    "result": "PASS: just verify, 48 offline tests",
+    "private_log": "q6-review-verify.log",
+    "sha256": "b5cb5230deeb0d8a4ae47ddf263a1b48594e9c7c6740040d9cfa50885b945087"
+  },
+  {
+    "stage": "key order mutation",
+    "result": "PASS: key order regression rejected; seven Q6 tests pass",
+    "private_log": "q6-order-mutation.log",
+    "sha256": "9fec4b15a090ee457bc4787550a23a32993593671789add8d9de74a6d6cd696c"
+  },
+  {
+    "stage": "final full verification",
+    "result": "PASS: just verify, 49 offline tests",
+    "private_log": "q6-order-verify.log",
+    "sha256": "b7715c54f399bb483d25d82bd4f7d63db8e1665b06a80136a934cce93bb554b6"
+  },
+  {
+    "stage": "numbered-review focused tests",
+    "result": "PASS: eight Q6 tests",
+    "private_log": "q6-numbered-focused.log",
+    "sha256": "ad6fd909f5b163cf1e4a8b8b126c8c4e06ea52a648fce595ef09b972eff61248"
+  },
+  {
+    "stage": "numbered-review mutation checks",
+    "result": "PASS: mode-only drift, ambient environment, non-object JSON and missing fixture mode mutants rejected",
+    "private_log": "q6-numbered-mutations.log",
+    "sha256": "124222104b534dc4855e755a4a62cb5ca86701a55d3fcfa31f2ba306c6ead778"
+  },
+  {
+    "stage": "numbered-review lint",
+    "result": "PASS: 50 offline tests",
+    "private_log": "q6-numbered-lint.log",
+    "sha256": "d582029fee428f68b9a0326149a4dccc7f675377fe6aa769f4016ea9cfe5c5ec"
+  },
+  {
+    "stage": "numbered-review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q6-numbered-docs.log",
+    "sha256": "834a7130d456670401636af0329b8f05bcc59d66716507a901e061ed599cb7c4"
+  },
+  {
+    "stage": "successful native retry verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full build, Rust tests, lint, 50 offline Python tests and documentation checks",
+    "private_log": "$PACKET_B/q6-retry-verify.log",
+    "sha256": "4f93d0da4bf6caa85ed12face19cca4ffd8ba45a2375af9e3388cf975b215920"
+  }
+]
