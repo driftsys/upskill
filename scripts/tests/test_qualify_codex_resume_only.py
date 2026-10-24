@@ -35,3 +35,25 @@ class ResumeOnlyTests(unittest.TestCase):
         for key,value in [('pin','old'),('session',''),('preserved',False),('preserved',1)]:
             v=self.observation();v[key]=value
             self.assertNotEqual(self.classify(v),'recorded_counts_observed')
+
+    def test_each_rule_count_uses_strict_integer_types_and_startup_requires_one(self):
+        for rule in ['a','b']:
+            for value in [0,2,True,1.0,'1',None,-1]:
+                v=self.observation();v['positive']['body_counts'][rule]=value
+                self.assertEqual(self.classify(v),'positive_control_failed')
+            for value in [True,1.0,'1',None,-1]:
+                v=self.observation();v['resume']['body_counts'][rule]=value
+                self.assertEqual(self.classify(v),'resume_control_failed')
+
+    def test_evidence_booleans_are_not_numeric_substitutes(self):
+        for stage in ['positive','resume']:
+            for key,value in [('read_only',1),('tools_observed',0),('response_matches',1)]:
+                v=self.observation();v[stage][key]=value
+                self.assertEqual(self.classify(v),'positive_control_failed' if stage=='positive' else 'resume_control_failed')
+
+    def test_failure_categories_and_whitespace_session_are_explicit(self):
+        for key,value in [('pin','old'),('preserved',False),('preserved',1)]:
+            v=self.observation();v[key]=value
+            self.assertEqual(self.classify(v),'control_metadata_failed')
+        v=self.observation();v['session']=' ';v['positive']['session']=' ';v['resume']['session']=' '
+        self.assertEqual(self.classify(v),'positive_control_failed')

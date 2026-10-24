@@ -15,5 +15,18 @@
     "private_source_path": "/private/tmp/upskill-q5-explicit-sk3i25mj",
     "manifest_sha256": "ea495b12b4e289032f19371543c4a8247126f89a71702823bc72310b6b763aa7",
     "method": "Shared four-client version receipts before controls"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q9-resume-quick-f4eo6ufg",
+    "manifest_sha256": "fd6b24d0e0c9e16fa14e016c1f8ffb398534d7c1e9ad0a19861452c6508740ae",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "q9-resume-quick-mutations.py": "9f20431275370310cbfd141de8008f29cfa8e5399226de3227b063adb0d3a7d1"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
   }
 ]
