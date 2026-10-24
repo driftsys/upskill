@@ -86,11 +86,15 @@ def prepare_claude_managed_root(root):
                   if (value := os.environ.get(key))]
     if os.environ.get('XDG_CONFIG_HOME'):
         configured.append(Path(os.environ['XDG_CONFIG_HOME']).expanduser().resolve() / 'opencode')
-    forbidden |= any(root == location or root.is_relative_to(location) for location in configured)
-    guidance = ('CLAUDE.md', 'AGENTS.md', '.claude', '.copilot', '.codex', '.opencode', '.github', '.agents/skills', '.agents/plugins', '.config/opencode')
+    native_roots = ('.claude', '.copilot', '.codex', '.opencode', '.github', '.agents/skills', '.agents/plugins', '.config/opencode')
+    configured.extend((Path.home() / name).resolve() for name in native_roots)
+    resolved_parts = tuple(part.casefold() for part in root.parts)
+    forbidden |= any(resolved_parts[:len(location.parts)] == tuple(part.casefold() for part in location.parts)
+                     for location in [REPO, *configured])
+    guidance = ('CLAUDE.md', 'AGENTS.md', *native_roots)
     forbidden |= any((parent / name).exists() or (parent / name).is_symlink()
                      for parent in root.parents for name in guidance)
-    if forbidden or root.is_relative_to(REPO):
+    if forbidden:
         raise ValueError('A new neutral fixture root outside client discovery and the repository is required')
     root.mkdir(parents=True, mode=0o700)
     nonce = secrets.token_hex(8)

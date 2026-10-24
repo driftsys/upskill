@@ -186,7 +186,7 @@ class ClaudeManagedRootControls(unittest.TestCase):
     def test_case_aliases_and_additional_client_roots_are_rejected_before_effects(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
-            for location in ('.Claude/fixture', '.GitHub/fixture', '.CoPiLoT/fixture', '.config/OpenCode/fixture'):
+            for location in ('.Claude/fixture', '.GitHub/fixture', '.CoPiLoT/fixture', '.CoDeX/fixture', '.OpenCode/fixture', '.AGENTS/Skills/fixture', '.AGENTS/Plugins/fixture', '.config/OpenCode/fixture'):
                 root = base / location
                 with self.subTest(location=location), self.assertRaises(ValueError):
                     q.prepare_claude_managed_root(root)
@@ -197,6 +197,10 @@ class ClaudeManagedRootControls(unittest.TestCase):
                 with mock.patch.dict(os.environ, {key:str(override / key)}), self.subTest(key=key), self.assertRaises(ValueError):
                     q.prepare_claude_managed_root(root)
                 self.assertFalse(root.exists())
+                exact = override / key
+                with mock.patch.dict(os.environ, {key:str(exact)}), self.subTest(key=key, exact=True), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(exact)
+                self.assertFalse(exact.exists())
             root = override / 'xdg' / 'opencode' / 'fixture'
             with mock.patch.dict(os.environ, {'XDG_CONFIG_HOME': str(override / 'xdg')}), self.assertRaises(ValueError):
                 q.prepare_claude_managed_root(root)
@@ -233,3 +237,27 @@ class ClaudeManagedRootControls(unittest.TestCase):
                 q.prepare_claude_managed_root(link / 'fixture')
             self.assertFalse((neutral / 'fixture').exists())
             self.assertTrue(link.is_symlink())
+
+    def test_configured_case_aliases_are_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            configured = base / 'CustomClientProfile'
+            configured.mkdir()
+            for key in ('CLAUDE_CONFIG_DIR','COPILOT_HOME','CODEX_HOME','OPENCODE_CONFIG_DIR','OPENCODE_CONFIG'):
+                root = base / 'customclientprofile' / 'fixture'
+                with mock.patch.dict(os.environ, {key:str(configured)}), self.subTest(key=key), self.assertRaises(ValueError):
+                    q.prepare_claude_managed_root(root)
+                self.assertFalse(root.exists())
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX symlink control')
+    def test_resolved_default_client_homes_remain_protected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            home, profile = base / 'home', base / 'neutral-profile'
+            home.mkdir()
+            profile.mkdir()
+            (home / '.claude').symlink_to(profile, target_is_directory=True)
+            root = profile / 'fixture'
+            with mock.patch.dict(os.environ, {'HOME':str(home), 'USERPROFILE':str(home)}), self.assertRaises(ValueError):
+                q.prepare_claude_managed_root(root)
+            self.assertFalse(root.exists())

@@ -187,5 +187,40 @@
     "private_log": "$PACKET_C/q6-quick-fix-docs.log",
     "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38",
     "test_source_snapshot": "$PACKET_C/quick-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "FAIL: three failures before final guard changes, 77 offline tests",
+    "private_log": "$PACKET_C/q6-pass2-red-lint.log",
+    "sha256": "136cdc346091beaf164eb33ab188d593c924807a90892413da683a1152bab8cc",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: 14 focused managed-root tests",
+    "private_log": "$PACKET_C/q6-pass2-focused-green.log",
+    "sha256": "75312dbfcdc7087a0ad5a3a356fdb00cf72462a59e8b2f8416c01f22db1b6ff2",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: five final-review mutants rejected by assertion failure",
+    "private_log": "$PACKET_C/q6-pass2-fix-mutations.log",
+    "sha256": "cfafdefa62a0ec79726497827ccf362537c4c7184ad79513924cc6611aed68cd",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q6-pass2-fix-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
+  },
+  {
+    "stage": "final numbered-review corrections",
+    "result": "PASS: just verify, 77 offline tests",
+    "private_log": "$PACKET_C/q6-pass2-fix-verify.log",
+    "sha256": "13b97815bfcc473d6f4b519578ba06c0b6a948b20b67042b9020a1237daef8a3",
+    "source_snapshot": "$PACKET_C/pass2-fix-source/"
   }
 ]

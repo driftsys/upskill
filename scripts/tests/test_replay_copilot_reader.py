@@ -73,7 +73,7 @@ class CopilotReaderReplayTests(unittest.TestCase):
     def test_result_exit_code_and_identity_are_strict(self):
         for value in [1, False, '0', None]:
             self.assertFalse(q.copilot_response(encode(events(exit_code=value)))[2]['completed_response'])
-        for value in ['', None, [], False]:
+        for value in ['', '   ', '\t\n', None, [], False]:
             rows = events()
             rows[-1]['sessionId'] = value
             self.assertFalse(q.copilot_response(encode(rows))[2]['completed_response'])
@@ -92,14 +92,19 @@ class CopilotReaderReplayTests(unittest.TestCase):
 
     def test_replay_refuses_summary_drift_and_false_negative_from_failed_positive(self):
         original = json.loads((PACKET / 'summary.json').read_text())
-        for mutation in ['classification', 'failed_positive', 'response_identity', 'positive_error', 'candidate_error', 'paths_error', 'completed_identity', 'positive_classification']:
+        for mutation in ['classification', 'failed_positive', 'response_identity', 'positive_error', 'candidate_error', 'paths_error', 'completed_identity', 'positive_classification', 'exit_bool', 'exit_string', 'exit_null', 'exit_missing']:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 packet = Path(temporary)
                 for source in PACKET.iterdir():
                     if source.is_file():
                         (packet / source.name).write_bytes(source.read_bytes())
                 summary = copy.deepcopy(original)
-                if mutation == 'classification':
+                if mutation.startswith('exit_'):
+                    if mutation == 'exit_missing':
+                        del summary['controls'][0]['exit_code']
+                    else:
+                        summary['controls'][0]['exit_code'] = {'exit_bool': False, 'exit_string': '0', 'exit_null': None}[mutation]
+                elif mutation == 'classification':
                     summary['controls'][2]['classification'] = 'reads'
                 elif mutation == 'failed_positive':
                     summary['controls'][0]['exit_code'] = 1

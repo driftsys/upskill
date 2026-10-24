@@ -29,7 +29,7 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "c00d22bf3e4cb8a7a9d1ed072ab1b14b770d143b0b507aad9bb8cf88a014bfe0"
+        "sha256": "f0dea1ac93b154a44ac8150d1fba8baf4663a138ee0e92f3197ee024fa482de1"
       }
     ],
     "capture_helpers": {
@@ -37,12 +37,15 @@
       "q6-review-mutations.py": "1d6bab245fe1271a05ca2e1051d3aa1f2225a1d9d0bf9b06beda9d12b3682651",
       "retain-q6-review.py": "f91d140d9a2ec188588232bdf38a63e6b1e49811875043d1eb096e0bcb7d0a39",
       "q6-quick-fix-mutations.py": "f31772ce0d9c39f406a212c19e7aa8ad1230b2c8fea2d3abbfe164582cf180ff",
-      "retain-q6-quick-fix.py": "b79687bbbf24f947efd205f927d7675fd6ea7c62868001cfedb2cb5e9e66a7e3"
+      "retain-q6-quick-fix.py": "b79687bbbf24f947efd205f927d7675fd6ea7c62868001cfedb2cb5e9e66a7e3",
+      "q6-pass2-fix-mutations.py": "66af269a667c450748038e2fadda060dc385a17198703d7646bbe4096dd1439a",
+      "retain-q6-pass2-fix.py": "89faeb7de1a92393d9a8ec8432376e964f6e7fdd12b798420547c48f24873a41"
     },
     "method": "Offline replay and exact-hash settings reconstruction; later read-only cache inventory, not a repeated native run",
     "source_snapshots": {
       "source/": "Harness and initial regression tests used by full verification",
-      "quick-fix-source/": "Final test-only guard regressions used by focused tests, lint and mutation checks"
+      "quick-fix-source/": "Final test-only guard regressions used by focused tests, lint and mutation checks",
+      "pass2-fix-source/": "Final guard and tests, verified together after merging main Q2"
     }
   }
 ]

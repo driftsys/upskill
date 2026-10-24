@@ -12,6 +12,9 @@ snapshot; a stable name does not imply that external research remains current.
   2.1.308; local marketplace, fresh-session edit visibility and measured
   residue.
 
+- [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md):
+  Q2 catalog and real-child observations; restriction enforcement remains
+  unqualified.
 - [Copilot reader of Claude rules](gate6-copilot-claude-rules-reader.md) — Q1,
   Copilot 1.0.103; plain rule read, paths variant fallback in a tool-free
   request.

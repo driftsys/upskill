@@ -5,9 +5,9 @@
   "initial-attempt-summary.json": "67959dbeb9b5800c7ac0e82428d8782eea839fd9d72ed5fe512819e7269b03ee",
   "other-client-config-presence.json": "d4c9c0fa6690b0d8047c3b269b284c38d9e2e0cf8e4378e3423528b3317229fd",
   "post-removal-cache.json": "82054d4c2c839f6233819b09f21d02a067d3cb45d40d2182d03154fc0cfb806f",
-  "preservation-replay.json": "e6f0b5b215504456084e5036027c98c9b8e8502044c38ea39677ab3dd865b73a",
+  "preservation-replay.json": "7f7c574995db6491f4d365ca10397afb1cd5c9a13dafc785cb276adb34af27c7",
   "preservation.json": "dccb13a763eae3e7963a7d739129468a2a26d64875a60ec8865f72a867ff6b4a",
-  "private-source-index.json": "387981e5db8dfef2b5ed83b752cdcce4f46c7125d6ba8d6b2adf63ca0ada77c1",
+  "private-source-index.json": "2e949e63d420f42776db19c9b2b8de547b0547292f88005c87a799dc03dc7412",
   "project-identities.json": "c313e1e4340eb89a1fd4a8c40aee8ec71f5cac36eb4c35dbf7d5eed759dcd40d",
   "project-install.stdout": "882aee2113fa42b6adeb0778fb76e53dea259c949243d4ea42441a8beeb2bc53",
   "project-installed.jsonl": "e1cecade67a440ec5f9a301f8313c66343af12fa8337032096e08324da03de36",
@@ -55,5 +55,5 @@
   "user-market-remove.stdout": "60493cd60c42fba01a5ac5048c483153201ea4bc54e16e9a94b0ead068be0d30",
   "user-uninstall.stdout": "ab86ef0381c657ae46fc4065f1d3cc7c1f2a49e70c294486bf56e64bde0dee3b",
   "user-validate.stdout": "6c976fad375c62e9b32b49dc5049387e3b6a8ad006743a64d0a04c6c02a61543",
-  "validation.json": "aa9012c77dfabe61883a1ac597a28ba1b462e6a9f4b1e8fc2c1e6acfd36ba988"
+  "validation.json": "04beada9a0e23b273dd091b140165ae8efc48dbd7e8a01cac9f7d22aab358886"
 }

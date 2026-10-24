@@ -169,8 +169,8 @@ verification passed all 49 offline tests. The successful native retry was
 followed by a full verification passing all 50 offline tests.
 
 Review regressions pin absent settings, strict empty-object JSON types, case
-aliases, configured client roots and ancestor guidance. Malformed settings and
-formatting-only changes now return `preservation_failed` directly.
+aliases, configured client roots and ancestor guidance. Changed malformed
+settings and formatting-only changes now return `preservation_failed` directly.
 Ancestor-guide tests mock presence and do not create team instruction files.
 Additional regressions pin all guarded override and ancestor paths, dangling
 guidance, lexical discovery aliases and expanded existing roots. The
