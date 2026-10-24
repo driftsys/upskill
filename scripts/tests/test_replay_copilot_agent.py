@@ -43,11 +43,13 @@ class CopilotAgentReplayTests(unittest.TestCase):
                 self.assertNotEqual(q.classify_agent(True, row['state'], row['delegated'], row['child_tools'], row['response'], MARKER), 'delegation_observed')
 
     def test_task_identity_agent_name_and_failed_resource_reads_cannot_pass(self):
-        for mutation in ['parent_id', 'agent_name', 'resource_path', 'resource_result', 'resource_content', 'parent_exit', 'terminal_delta', 'terminal_metadata', 'late_resource_result', 'parent_tool_result', 'parent_tool_result_bool', 'resource_result_bool', 'child_call_count_bool', 'duplicate_child_call', 'duplicate_parent_task', 'duplicate_child_start', 'duplicate_child_end', 'duplicate_parent_result']:
+        for mutation in ['parent_id', 'task_agent_type', 'agent_name', 'resource_path', 'resource_result', 'resource_content', 'parent_exit', 'terminal_delta', 'terminal_metadata', 'late_resource_result', 'parent_tool_result', 'parent_tool_result_bool', 'resource_result_bool', 'child_call_count_bool', 'child_call_count_mismatch', 'child_call_count_overstated', 'early_resource_result', 'duplicate_resource_result', 'duplicate_child_call', 'duplicate_parent_task', 'duplicate_child_start', 'duplicate_child_end', 'duplicate_parent_result']:
             with self.subTest(mutation=mutation):
                 rows = events()
                 if mutation == 'parent_id':
                     rows[3]['data']['parentToolCallId'] = 'unrelated-task'
+                elif mutation == 'task_agent_type':
+                    rows[0]['data']['arguments']['agent_type'] = 'unrelated-agent'
                 elif mutation == 'agent_name':
                     rows[1]['data']['agentName'] = 'unrelated-agent'
                 elif mutation == 'resource_path':
@@ -73,6 +75,15 @@ class CopilotAgentReplayTests(unittest.TestCase):
                     rows[4]['data']['success'] = 1
                 elif mutation == 'child_call_count_bool':
                     rows[6]['data']['totalToolCalls'] = True
+                elif mutation == 'child_call_count_mismatch':
+                    rows[6]['data']['totalToolCalls'] = 0
+                elif mutation == 'child_call_count_overstated':
+                    rows[6]['data']['totalToolCalls'] = 2
+                elif mutation == 'early_resource_result':
+                    resource = rows.pop(4)
+                    rows.insert(3, resource)
+                elif mutation == 'duplicate_resource_result':
+                    rows.insert(5, copy.deepcopy(rows[4]))
                 elif mutation == 'duplicate_child_call':
                     rows[6]['data']['totalToolCalls'] = 2
                     rows.insert(4, copy.deepcopy(rows[3]))
@@ -116,7 +127,7 @@ class CopilotAgentReplayTests(unittest.TestCase):
             self.assertEqual(replayed, 'restriction_violated')
 
     def test_replay_refuses_metadata_drift_and_failed_parent_process(self):
-        for mutation in ['child_tools', 'classification', 'parent_response', 'catalog', 'process_exit', 'process_exit_bool', 'process_source']:
+        for mutation in ['child_tools', 'classification', 'parent_response', 'catalog', 'unrelated_catalog', 'process_exit', 'process_exit_bool', 'process_timeout', 'process_source', 'stderr_source']:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 packet = Path(temporary)
                 for path in PACKET.iterdir():
@@ -130,16 +141,19 @@ class CopilotAgentReplayTests(unittest.TestCase):
                     row['classification'] = 'restriction_violated'
                 elif mutation == 'parent_response':
                     row['parent_response'] = 'different recorded response'
-                elif mutation == 'catalog':
+                elif mutation in ('catalog', 'unrelated_catalog'):
                     path = packet / 'catalog.json'
                     data = json.loads(path.read_text())
-                    data['fixture_rows'] = []
+                    data['fixture_rows'] = [] if mutation == 'catalog' else [{'value': 'unrelated-agent'}]
                     path.write_text(json.dumps(data))
                 else:
                     path = packet / 'invocation.json'
                     data = json.loads(path.read_text())
-                    if mutation == 'process_source':
-                        data['stdout_sha256'] = 'different raw stream'
+                    if mutation in ('process_source', 'stderr_source'):
+                        key = 'stdout_sha256' if mutation == 'process_source' else 'stderr_sha256'
+                        data[key] = 'different raw stream'
+                    elif mutation == 'process_timeout':
+                        data['timed_out'] = True
                     else:
                         data['exit_code'] = False if mutation == 'process_exit_bool' else 1
                     path.write_text(json.dumps(data))

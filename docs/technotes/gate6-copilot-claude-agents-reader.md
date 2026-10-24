@@ -140,7 +140,9 @@ states, missing or reordered child evidence, metadata after completion, process
 failure and mismatched raw stream identities. The
 [validation receipt](evidence/2026-10-24-copilot-claude-agents-reader/validation.json)
 retains tests-first failures, 63 passing offline tests, full verification and
-six rejected mutants. Source snapshots and validation helpers are retained under
+six rejected mutants. Eight further mutants independently test task and catalog
+identity, timeout, stream hashes, child completion order and uniqueness, and
+child tool counts. Source snapshots and validation helpers are retained under
 `$PACKET_B` in the private source index.
 
 Remaining nonblocking packet and fixture follow-ups are tracked in

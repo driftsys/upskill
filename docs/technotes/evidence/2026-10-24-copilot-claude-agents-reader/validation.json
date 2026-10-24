@@ -120,5 +120,47 @@
     "result": "PASS: six mutants rejected by assertion failure",
     "private_log": "$PACKET_B/q2-replay-mutations.log",
     "sha256": "41ecbd4debb7c0a7b46bb76dbed2a5e072f443b0fa13a400a4958a34c345ed29"
+  },
+  {
+    "stage": "final replay review validation",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q2-replay-final-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "final replay review validation",
+    "result": "PASS: just verify, 63 offline tests",
+    "private_log": "$PACKET_B/q2-replay-final-verify.log",
+    "sha256": "1cd808c48adce513bf309cad972a7c2050028583c04bb0ee2abbb9a6db8e858b"
+  },
+  {
+    "stage": "final replay review validation",
+    "result": "PASS: final documentation checks",
+    "private_log": "$PACKET_B/q2-replay-final-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "QUICK review regression validation",
+    "result": "PASS: focused Q2 replay tests",
+    "private_log": "$PACKET_B/q2-quick-fix-tests.log",
+    "sha256": "1c33b988a8b3d102ea731b198deb5d78db3c5a556f573fc1367d85ba03897b12"
+  },
+  {
+    "stage": "QUICK review regression validation",
+    "result": "PASS: eight independent boundary mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q2-quick-fix-mutations.log",
+    "sha256": "26e03be5de85d78479ae6e583528412ecfa78c1805d8208888e2819aebc36bc2"
+  },
+  {
+    "stage": "QUICK review regression validation",
+    "result": "PASS: 63 offline tests",
+    "private_log": "$PACKET_B/q2-quick-fix-lint.log",
+    "sha256": "9818f9fbeb86fa410415300e482bd4072a47ec7f729e9a40f6978f4ae45e64d6"
+  },
+  {
+    "stage": "QUICK review regression validation",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_B/q2-quick-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
   }
 ]
