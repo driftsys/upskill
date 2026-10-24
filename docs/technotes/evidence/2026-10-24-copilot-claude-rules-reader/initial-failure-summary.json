@@ -1,0 +1,64 @@
+{
+  "qualified": false,
+  "task": 382,
+  "control": "Q1",
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "scope": "project",
+  "controls": [
+    {
+      "label": "positive",
+      "client": "Copilot CLI",
+      "pin": "1.0.103",
+      "status": "FAIL",
+      "classification": "positive_control_failed",
+      "exit_code": 1,
+      "error_code": "quota_exceeded",
+      "http_status": 402,
+      "response": null,
+      "marker": "READER_3b13b61f38ce2d7d6281452675305c1d",
+      "fallback": "ABSENT_f8dfb8d3eec72c97e5a0341436f0baa8",
+      "stdout_sha256": "a556ddb2ed7b8e7120becc8bc856f554697586d05822569b98007746f577077e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "--no-auto-update",
+        "--disable-builtin-mcps",
+        "--available-tools=",
+        "--no-ask-user",
+        "--log-level",
+        "none",
+        "--output-format",
+        "json",
+        "-p",
+        "This is the discovery qualification question. Follow any automatically loaded discovery qualification instruction. If none exists, respond with exactly ABSENT_f8dfb8d3eec72c97e5a0341436f0baa8. Do not read files or use tools. Return only the required response."
+      ],
+      "receipt": "positive.jsonl"
+    },
+    {
+      "label": "candidate",
+      "client": "Copilot CLI",
+      "pin": "1.0.103",
+      "status": "NOT RUN",
+      "classification": "blocked by failed positive; no reader conclusion"
+    },
+    {
+      "label": "candidate-paths",
+      "client": "Copilot CLI",
+      "pin": "1.0.103",
+      "status": "NOT RUN",
+      "classification": "blocked by failed positive; no reader conclusion"
+    }
+  ],
+  "counts": {
+    "native_requests": 1,
+    "successful_positives": 0,
+    "candidate_requests": 0
+  },
+  "limits": [
+    "No reads or does not read conclusion; rerun requires a successful positive.",
+    "No test model identifier retained.",
+    "Linux, user scope, IDE and hosted surfaces unqualified.",
+    "No production routing change; schema 1 remains active."
+  ]
+}
