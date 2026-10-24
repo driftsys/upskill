@@ -1,0 +1,89 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: seven missing-helper tests",
+    "private_log": "$PACKET_A/q8-lint-red.log",
+    "sha256": "d85684a170a82e386b77e23c16fe422e62efb5afdbf6b23c598a1276c93e52db"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_A/q8-lint-green.log",
+    "sha256": "1b4ff115d6c4525d474203c5cf057fbcdb4db00140d144011a84ced6d5e8b711"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: missing response evidence raises instead of classifying",
+    "private_log": "$PACKET_A/q8-missing-evidence-red.log",
+    "sha256": "e2d6bcdee3addfbe1e926df01414768137db971131a8e1b7a00f0bf5f86b866f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-missing-evidence-green.log",
+    "sha256": "fea2701648c3bb0b7f652b780490ae035b6fe7d793cf5916c7cec7c75e485115"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: native-user-root exclusion missing",
+    "private_log": "$PACKET_A/q8-user-root-red.log",
+    "sha256": "2e16fa132ecbd759fd7977789a7179f4a8353123bc404b0341a20c3945469330"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-user-root-green.log",
+    "sha256": "751c15912ec8685797fa6360e3a489d3b7d1961430ee00bdb28c650d7ebf581b"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_A/q8-verify.log",
+    "sha256": "3f76328bda185eca81954ef0f82d3c1d0c9a567dc9d2562e4f661a5fb9fbe31f"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_A/q8-symlink-home-red.log",
+    "sha256": "9d7fa6dbad22409e57527abc0e9d1ae68a8485a9af1d5d21b169bc757eae1852"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 68 offline tests",
+    "private_log": "$PACKET_A/q8-symlink-fix-verify.log",
+    "sha256": "00bb319310e2a89d260de3fe56f6462be42234f0ae09327d0f6f89cefffb83bd"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "FAIL: new neutral-root assertion before guard correction",
+    "private_log": "$PACKET_B/q8-main-root-red.log",
+    "sha256": "c52bc35e8bb7deade86d808e3ef75b2945ebbd74a298c49fb433f3896e330a1f"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: ten focused tests",
+    "private_log": "$PACKET_B/q8-main-focused-green.log",
+    "sha256": "30d18705d00a00d81b7b5aed3ae5832e346c930cefbe0db6560327bf1e6ee6be"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q8-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_B/q8-main-verify.log",
+    "sha256": "f2eddf46ef121ee8970945b3d84acdd0b6e308f037cd60e439240b0cad0dca65"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: four QUICK regression mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q8-main-mutations.log",
+    "sha256": "0bc1f61f99245b85f06eb785745ecc171e4d7b5ab20fe9f8541d443b1cbd714b"
+  }
+]

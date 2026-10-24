@@ -1,0 +1,10 @@
+{
+  "base": "2c713dba95eec1462509aa53287feb57382848ce",
+  "added_functions": [
+    "classify_codex_skill_updates",
+    "prepare_codex_skill_updates"
+  ],
+  "all_other_harness_ast_nodes_match_main": true,
+  "native_client_rerun": false,
+  "old_private_manifest_sha256": "b1db92cf76b0e967b53254d1cf58a45902bf47a45ecff422ad249d654f899332"
+}
