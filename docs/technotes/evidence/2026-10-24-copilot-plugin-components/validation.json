@@ -160,7 +160,7 @@
   },
   {
     "stage": "merged main integration",
-    "result": "PASS: just verify, 77 offline tests",
+    "result": "PASS: just verify, 79 offline tests",
     "private_log": "$PACKET_G/q3-main-integration-verify.log",
     "sha256": "6e51d636342cb7672ea4233d39c2e2b67dabc5c99c108aa942553d0ba3c6073c"
   }

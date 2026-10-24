@@ -164,6 +164,6 @@ unqualified. Durable adoption waits for step 7.
 After integration with merged Q1 and Q2, the
 [main integration audit](evidence/2026-10-24-copilot-plugin-components/main-integration-audit.json)
 records unchanged Q3 function syntax trees and exact syntax-tree equality with
-main for the rest of the harness. Full verification passes all 77 offline tests
+main for the rest of the harness. Full verification passes all 79 offline tests
 ([validation](evidence/2026-10-24-copilot-plugin-components/validation.json)).
 Native observations were not rerun or widened.
