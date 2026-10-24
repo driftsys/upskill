@@ -12,5 +12,19 @@
       "catalog-helper.py": "91698d164a5ac24f7995bafc89b15ca34122651e762addfb3897f1ae9a4a7c3b",
       "delegate-helper.py": "365063872cb8fb4de95f1be279ba9fd4e0b679681002ebc8098d855264f94041"
     }
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q2-review-replay-8h1nbxyo",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "3adb567cebcedaa480f3f298a75968a3078560a80f33db699085ab58205c24a1"
+      }
+    ],
+    "capture_helpers": {
+      "retain-q2-replay.py": "82cf7704b8117fd94e39a95653b22bd8b224e33464d55ccd1da10db5d9340cc2",
+      "q2-replay-mutations.py": "ae3a14c0cb4f3f2e68ff0d12e1fcc8978effcb4e8bc811e9b6db22eca1d29da2"
+    }
   }
 ]

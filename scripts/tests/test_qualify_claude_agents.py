@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import shlex
+import secrets
 from pathlib import Path
 import subprocess
 import tempfile
@@ -88,7 +89,7 @@ class ClaudeAgentControls(unittest.TestCase):
                     self.assertEqual(q.classify_agent(True, state, delegated, ['shell'], response, 'marker'), 'restriction_violated')
 
     def test_unknown_outside_tools_and_missing_catalog_never_hide_a_violation(self):
-        for tool in ('edit', 'unfamiliar_tool'):
+        for tool in ('edit', 'unfamiliar_tool', 'task', 'grep', 'glob', 'Read', 'future_' + secrets.token_hex(8)):
             for tools in ([tool, 'view'], ['view', tool], ['view', tool, 'view']):
                 for catalog, state in ((True, 'success'), (True, 'failure'), (False, 'success'), (None, 'success')):
                     self.assertEqual(q.classify_agent(catalog, state, True, tools, 'marker', 'marker'), 'restriction_violated')
@@ -96,6 +97,6 @@ class ClaudeAgentControls(unittest.TestCase):
             self.assertEqual(q.classify_agent(catalog, 'success', True, ['view', 'create'], 'marker', 'marker'), 'restriction_violated')
 
     def test_failed_invocations_never_establish_delegation(self):
-        for state in ('failure', 'authentication_failure', 'timeout', 'unavailable'):
+        for state in ('failure', 'authentication_failure', 'timeout', 'unavailable', 'cancelled', 'interrupted', 'future-state'):
             for response in ('marker', 'absent', ''):
                 self.assertEqual(q.classify_agent(True, state, True, ['view'], response, 'marker'), state)

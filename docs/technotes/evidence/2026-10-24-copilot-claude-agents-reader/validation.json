@@ -84,5 +84,41 @@
     "result": "PASS: documentation checks",
     "private_log": "q2-order-docs.log",
     "sha256": "b4d12b1b83bdea369d5bf3cbc08ca521985df6a8e6e789b6dc4d29be7311ecc3"
+  },
+  {
+    "stage": "replay tests first",
+    "result": "FAIL: missing observer and replay API",
+    "private_log": "$PACKET_B/q2-replay-lint-red.log",
+    "sha256": "dfd2c3a311ff0b0da1926aae19b9bff8700619a3f2a1e3bf836afbe734d930c8"
+  },
+  {
+    "stage": "event ordering tests first",
+    "result": "FAIL: post-result metadata and late child resource completion",
+    "private_log": "$PACKET_B/q2-event-order-red.log",
+    "sha256": "7005b993f93b2d75614dda6c15a2cc6014ebac0d969b5feb1d2ed72e36afe0c3"
+  },
+  {
+    "stage": "process source tests first",
+    "result": "FAIL: mismatched raw stream identity",
+    "private_log": "$PACKET_B/q2-process-source-red.log",
+    "sha256": "368fdaa478380ddf46cf69f2ed709376bb5183dba10ec67ca387a27264548a1d"
+  },
+  {
+    "stage": "replay tests",
+    "result": "PASS: 63 offline tests",
+    "private_log": "$PACKET_B/q2-replay-tests-green.log",
+    "sha256": "96115fca6aee5bb83a04f7926a24e92702864f3ce34a71300a8f7b84801d9444"
+  },
+  {
+    "stage": "replay lint",
+    "result": "PASS: 63 offline tests",
+    "private_log": "$PACKET_B/q2-replay-lint-green.log",
+    "sha256": "47c7004e6fb04ae2f2915ca676dd0abd2d7ce7be18ead88a21ddfd1db1aa32e3"
+  },
+  {
+    "stage": "replay mutations",
+    "result": "PASS: six mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q2-replay-mutations.log",
+    "sha256": "41ecbd4debb7c0a7b46bb76dbed2a5e072f443b0fa13a400a4958a34c345ed29"
   }
 ]

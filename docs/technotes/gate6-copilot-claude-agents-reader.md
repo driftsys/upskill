@@ -35,8 +35,9 @@ A separate native prompt requests exactly one delegation to that agent. The
 parent exposes and permits `task`, `view` and `create`, disables built-in MCPs
 and auto-update, and does not disable custom discovery. The request instructs
 the parent to delegate without reading or editing files itself. Native parent
-and child events are retained separately and correlated by task/tool-call IDs.
-No user or team discovery settings were edited to manufacture exclusion.
+and child events are retained in one interleaved stream and correlated by
+task/tool-call IDs. No user or team discovery settings were edited to
+manufacture exclusion.
 
 ## Controls
 
@@ -91,8 +92,10 @@ the repository. The
 [private source index](evidence/2026-10-24-copilot-claude-agents-reader/private-source-index.json)
 and hash manifests identify them. Selected native events retain agent/tool IDs,
 child result evidence and final responses, omitting model identifiers, thinking,
-usage and unrelated metadata. Private paths are normalized. Full raw-output
-hashes differ from sanitized retained-event hashes.
+usage and unrelated metadata. Fixture paths in selected events are normalized.
+The private source index retains local source locations, and the command receipt
+retains the executable location. Full raw-output hashes differ from sanitized
+retained-event hashes.
 
 ## Offline checks and remaining limits
 
@@ -104,15 +107,44 @@ exact restrictions and instructions, resource-only marker placement, fresh
 names/markers, independent empty root commits and inherited Git selector
 isolation. The classifier rejects catalog-only evidence, missing child/tool
 evidence, nonmatching responses and failed invocations. Any observed child call
-outside the declared tool restriction wins over both response text and
-invocation failure, including an outside call that fails. Final review
+outside the declared tool restriction takes precedence over both response text
+and invocation failure, including an outside call that fails. Final review
 regressions cover unfamiliar outside tools, violation precedence over missing
-catalog evidence and trailing-response rejection; the latest lint run passes all
-49 offline tests.
+catalog evidence and trailing-response rejection; that review lint run passed
+all 49 offline tests.
 
 Outside-tool regressions additionally cover leading, middle and trailing
 positions among permitted calls, with exact-response case and leading-whitespace
-mismatches rejected. The final lint run passes all 49 offline tests.
+mismatches rejected. That review lint run passed all 49 offline tests.
+
+The public offline replay now connects the native events to the classifier:
+
+```sh
+python3 scripts/qualify-native-instructions.py --replay-copilot-agent docs/technotes/evidence/2026-10-24-copilot-claude-agents-reader
+```
+
+It checks the catalog entry, parent process receipt, matching task and child
+identities, child lifecycle order, successful resource read and exact parent
+response. The classifier receives every attempted child tool, including failed
+calls. Successful calls are recorded separately. A failed outside call therefore
+cannot disappear behind a successful read. The
+[invocation receipt](evidence/2026-10-24-copilot-claude-agents-reader/invocation.json)
+binds process completion to the original raw stream hashes. The
+[native observation audit](evidence/2026-10-24-copilot-claude-agents-reader/native-observation.json)
+records identical observations from the full private stream and the selected
+public events. This is an offline audit of the retained run, with no new native
+request and no broader qualification claim.
+
+Review regressions reject unfamiliar tools, cancelled or unknown invocation
+states, missing or reordered child evidence, metadata after completion, process
+failure and mismatched raw stream identities. The
+[validation receipt](evidence/2026-10-24-copilot-claude-agents-reader/validation.json)
+retains tests-first failures, 63 passing offline tests, full verification and
+six rejected mutants. Source snapshots and validation helpers are retained under
+`$PACKET_B` in the private source index.
+
+Remaining nonblocking packet and fixture follow-ups are tracked in
+[debt #400](https://github.com/driftsys/upskill/issues/400).
 
 The tests do not call clients or qualify native behavior. Broader tool lists,
 permission inheritance, attempted native denials, other Claude fields, user

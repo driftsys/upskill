@@ -8,10 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
-- [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md)
-  — Q2, Copilot 1.0.103; catalog and delegated Read-only observation, permission
-  mode unqualified.
-
+- [Copilot reader of restricted Claude agents](gate6-copilot-claude-agents-reader.md):
+  Q2 catalog and real-child observations; restriction enforcement remains
+  unqualified.
 - [Copilot reader of Claude rules](gate6-copilot-claude-rules-reader.md) — Q1,
   Copilot 1.0.103; plain rule read, paths variant fallback in a tool-free
   request.
