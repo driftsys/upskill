@@ -1,0 +1,12 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q5-opencode-4bb883qw",
+    "manifest_sha256": "8755fa0499a67886950b265fe9dad659d3e8b2eb98a40d24c2e55bfe2dc418f0"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q5-opencode-o211bbds",
+    "manifest_sha256": "e2258b7fe38adfa0fb95bd14dc9cbe6b2b0a9d3581b8b2e6d7a04966ffcbfd85"
+  }
+]

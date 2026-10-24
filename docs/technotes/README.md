@@ -125,3 +125,6 @@ change. Technical notes and evidence assets are outside the published book.
   blockers.
 - [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
   — Bounded native controls; no profile qualification.
+
+- [Current OpenCode routes: failed execution positives](gate6-opencode-current-routes.md)
+  — Q5 on 2.1.4, with retained local install rejection.

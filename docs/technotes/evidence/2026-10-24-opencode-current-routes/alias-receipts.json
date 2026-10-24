@@ -1,0 +1,48 @@
+[
+  {
+    "command": [
+      "/Users/sebastientasson/.opencode/bin/opencode",
+      "plugin",
+      "add",
+      "$PACKET_A/fixture/delivery/packages/upskill-q5-a-04478c654c336d8f"
+    ],
+    "exit_code": 1,
+    "timed_out": false
+  },
+  {
+    "command": [
+      "/Users/sebastientasson/.opencode/bin/opencode",
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "--model",
+      "github-copilot/upskill-private-request",
+      "--title",
+      "Disposable qualification fixture",
+      "Answer the native qualification question. Return only its required response."
+    ],
+    "exit_code": 1,
+    "timed_out": false
+  },
+  {
+    "command": [
+      "/Users/sebastientasson/.opencode/bin/opencode",
+      "--version"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  },
+  {
+    "command": [
+      "/Users/sebastientasson/.opencode/bin/opencode",
+      "session",
+      "export",
+      "ses_e92520c77ffeUhVPu2UrqG98lt",
+      "--standalone",
+      "--sanitize"
+    ],
+    "exit_code": 0,
+    "timed_out": false
+  }
+]

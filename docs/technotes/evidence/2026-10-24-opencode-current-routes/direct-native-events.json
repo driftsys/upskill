@@ -1,0 +1,27 @@
+[
+  {
+    "type": "step_start",
+    "timestamp": 1792841544444,
+    "sessionID": "ses_e92510f69ffesXToKb8YuXAY30",
+    "part": {
+      "id": "prt_16daef2fc001sl7ZXeVTRucz5w",
+      "sessionID": "ses_e92510f69ffesXToKb8YuXAY30",
+      "messageID": "msg_16daef15c001cf3wEHKVu08SqO",
+      "type": "step-start",
+      "snapshot": "ec06978d1d0781d6881f388c524473c23a36858e"
+    }
+  },
+  {
+    "type": "error",
+    "timestamp": 1792841544473,
+    "sessionID": "ses_e92510f69ffesXToKb8YuXAY30",
+    "error": {
+      "type": "provider.invalid-request",
+      "message": "The requested model is not supported.",
+      "status": 400,
+      "response": {
+        "body": "{\"error\":{\"message\":\"The requested model is not supported.\",\"code\":\"model_not_supported\",\"param\":\"model\",\"type\":\"invalid_request_error\"}}\n"
+      }
+    }
+  }
+]

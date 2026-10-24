@@ -210,6 +210,86 @@ def classify_claude_rule_hook(controls, fixture):
     return 'observed'
 
 
+def prepare_opencode_current_routes(root):
+    """Prepare current-release Q5 packages without implicit guidance or cache writes."""
+    if os.path.lexists(root):
+        raise ValueError('Fixture root must not exist')
+    root = root.resolve()
+    parts = root.parts
+    if (root.is_relative_to(REPO) or root == Path.home().resolve()
+            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+                   for i in range(len(parts) - 1))):
+        raise ValueError('A new neutral fixture root is required')
+    root.mkdir(parents=True, mode=0o700)
+    project, positive = root / 'project', root / 'positive'
+    project.mkdir();positive.mkdir()
+    native = 'NATIVE_' + secrets.token_hex(16)
+    resource = 'RESOURCE_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    markers = ['RULE_' + secrets.token_hex(16) for _ in range(2)]
+    trace = root / 'context.jsonl'
+    packages = []
+    for rule, marker in zip(('a', 'b'), markers):
+        package = root / 'delivery/packages' / ('upskill-q5-' + rule + '-' + secrets.token_hex(8))
+        package.mkdir(parents=True)
+        (package / 'rule.txt').write_text('For the plugin qualification question include exactly one occurrence of ' + marker + ' in the rules array. Return only the JSON object with a rules array.\n')
+        write_json(package / 'fixture.json', {'project': str(project), 'rule': rule, 'trace': str(trace), 'agent': 'build'})
+        shutil.copyfile(TEMPLATES / 'opencode/index.ts', package / 'index.ts')
+        write_json(package / 'package.json', {'name': package.name, 'version': '0.0.0', 'type': 'module', 'exports': './index.ts', 'dependencies': {'@opencode/plugin': '2.1.4'}})
+        packages.append(package)
+    source = root / 'delivery/skill-sources'
+    skill_id = 'upskill-q5-' + secrets.token_hex(8)
+    skill = source / skill_id
+    skill.mkdir(parents=True)
+    (skill / 'SKILL.md').write_text('---\nname: ' + skill_id + '\ndescription: Disposable explicit package resource procedure.\n---\nRead references/procedure.md relative to this skill and follow it. Do not infer the response without a successful native resource read. If unavailable return exactly ' + fallback + '. Do not edit files or use a shell.\n')
+    (skill / 'references').mkdir()
+    resource_path = skill / 'references/procedure.md'
+    resource_path.write_text('Return exactly ' + resource + ' and no other text.\n')
+    deny = {'action': '*', 'resource': '*', 'effect': 'deny'}
+    write_json(project / 'opencode.json', {'plugins': [str(p) for p in packages], 'skills': [str(source)], 'permissions': [deny, {'action': 'skill', 'resource': skill_id, 'effect': 'allow'}, {'action': 'read', 'resource': str(resource_path), 'effect': 'allow'}]})
+    native_path = positive / 'native-positive.md'
+    native_path.write_text('For the native qualification question return exactly ' + native + ' and nothing else. Do not use tools.\n')
+    write_json(positive / 'opencode.json', {'plugins': [], 'instructions': [str(native_path)], 'permissions': [deny]})
+    env = fixture_environment(root)
+    for path in (project, positive):
+        subprocess.run(['git', 'init', '-q', str(path)], env=env, check=True)
+        subprocess.run(['git', '-C', str(path), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize current routes fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'project': project, 'positive_project': positive, 'packages': packages, 'skill_source': source, 'skill_id': skill_id, 'resource_path': resource_path, 'native_marker': native, 'resource_marker': resource, 'rule_markers': markers, 'fallback': fallback, 'trace': trace, 'pin': '2.1.4'}
+
+
+def classify_opencode_current_routes(controls, fixture):
+    """Keep failed positives, exact callback counts and resource evidence distinct."""
+    def succeeded(row):
+        return (row.get('pin') == fixture['pin'] and row.get('state') == 'success'
+                and row.get('completed') is True)
+    positive = controls.get('native_positive', {})
+    if not succeeded(positive) or positive.get('response') != fixture['native_marker']:
+        return 'positive_control_failed'
+    session = None
+    for phase in ('context', 'resume'):
+        row = controls.get(phase, {})
+        if not succeeded(row) or row.get('response') != {'rules': sorted(fixture['rule_markers'])}:
+            return 'context_control_failed'
+        current = row.get('session')
+        if not isinstance(current, str) or not current or (session is not None and current != session):
+            return 'context_control_failed'
+        session = current
+        events = row.get('events', [])
+        if (len(events) != 2 or sorted(e.get('rule', '') for e in events) != ['a', 'b']
+                or any(e.get('session') != current for e in events)):
+            return 'context_control_failed'
+    skill = controls.get('skill', {})
+    if (not succeeded(skill) or skill.get('response') != fixture['resource_marker']
+            or skill.get('native_invocation') is not True or skill.get('resource_read') is not True):
+        return 'skill_control_failed'
+    verb = controls.get('plugin_add', {})
+    if (verb.get('pin') != fixture['pin'] or verb.get('recorded') is not True
+            or type(verb.get('exit_code')) is not int):
+        return 'install_verb_unrecorded'
+    return 'observed'
+
+
 def prepare(root, client):
     """Create new fixture content without modifying any existing directory."""
     if client not in VERSIONS:

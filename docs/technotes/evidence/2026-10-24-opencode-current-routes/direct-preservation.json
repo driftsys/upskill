@@ -1,0 +1,40 @@
+{
+  "before": {
+    "$PACKET_B/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "6e00aa77777d99c799e71dcd2dce69375c024930ce2e274d4e640e3d6dd88dfd",
+      "mode": 420
+    },
+    "$PACKET_B/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "6f4faaeadb02b066960b25ae7a2d6a5242ee57ba52ad4d7aab572803366597d8",
+      "mode": 420
+    },
+    "$PROFILE/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "$PROFILE/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    }
+  },
+  "after": {
+    "$PACKET_B/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "6e00aa77777d99c799e71dcd2dce69375c024930ce2e274d4e640e3d6dd88dfd",
+      "mode": 420
+    },
+    "$PACKET_B/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "6f4faaeadb02b066960b25ae7a2d6a5242ee57ba52ad4d7aab572803366597d8",
+      "mode": 420
+    },
+    "$PROFILE/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "$PROFILE/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    }
+  },
+  "exact": true,
+  "limits": "Measured configuration files only; session logs, client-managed caches and auth refresh effects are not whole-profile equality."
+}

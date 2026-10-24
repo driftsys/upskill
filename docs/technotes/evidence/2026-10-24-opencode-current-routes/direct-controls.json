@@ -1,0 +1,21 @@
+{
+  "native_positive": {
+    "pin": "2.1.4",
+    "state": "failure",
+    "completed": false,
+    "response": null,
+    "session": "ses_e92510f69ffesXToKb8YuXAY30",
+    "events": [],
+    "native_tools": [],
+    "exit_code": 1,
+    "timed_out": false,
+    "native_invocation": false,
+    "resource_read": false
+  },
+  "plugin_add": {
+    "pin": "2.1.4",
+    "recorded": true,
+    "exit_code": 1,
+    "timed_out": false
+  }
+}

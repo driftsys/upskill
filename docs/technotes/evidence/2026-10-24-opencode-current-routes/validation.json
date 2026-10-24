@@ -1,0 +1,20 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: eight missing-helper tests, 66 total",
+    "private_log": "$PACKET_B/q5-lint-red.log",
+    "sha256": "325a6a3bdaca9d073159b9c773fd38c180263e220d7ae68cdedba375ce3e37f3"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_B/q5-lint-green.log",
+    "sha256": "fbfd1150d0546c8ebdfaa361e5a1eaac36bfc7fc38ebe3b025a58098495c616e"
+  },
+  {
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 66 offline tests",
+    "private_log": "$PACKET_B/q5-verify.log",
+    "sha256": "7847d3106b70a2842fb24f238426cee84a58f67e0113e5fe8e49bbd6f00e7f5d"
+  }
+]
