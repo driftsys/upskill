@@ -1,0 +1,12 @@
+{
+  "agent_name": "upskill-q2-a90bb92e1b30ec16",
+  "root_commit": "a5900aef64fffac7cd9c1536777bf0814d198a9a",
+  "files": {
+    "allowed.txt": "bcb5994153c6cee047aedf6aa0165499141060ccfa87f34a9da149f03ecabb5a",
+    ".claude/agents/probe.md": "33c5d36d25eac2a82c05fd89bb845ab1041aac86b81c84ecf61cc776d634813e"
+  },
+  "declared_tools": [
+    "Read"
+  ],
+  "permissionMode": "plan"
+}

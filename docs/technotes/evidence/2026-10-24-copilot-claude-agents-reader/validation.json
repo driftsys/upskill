@@ -1,0 +1,88 @@
+[
+  {
+    "stage": "red",
+    "command": "just lint",
+    "result": "FAIL: five missing Q2 helper tests",
+    "private_log": "q2-lint-red.log",
+    "sha256": "10d924231f2f6e65cc8c241267616fc88655638499bf91a3457bb7b20e5ddbc5"
+  },
+  {
+    "stage": "green",
+    "command": "just lint",
+    "result": "PASS: 47 offline tests",
+    "private_log": "q2-lint-green.log",
+    "sha256": "03f0625b932de92d0661be2df1d654b013d46aadd0e9bdc147b4206d9cdd287c"
+  },
+  {
+    "stage": "full verification",
+    "result": "PASS: just verify",
+    "private_log": "q2-verify.log",
+    "sha256": "11a43dd6cf11cdf7ad912d01997edad2c2246506bd53eaac940523dcb0cb91a6"
+  },
+  {
+    "stage": "final focused tests",
+    "result": "PASS: five Q2 tests",
+    "private_log": "q2-final-tests.log",
+    "sha256": "09a52ff86526f479758317ecf44509211091846af3eb8b99770b784e0324ced8"
+  },
+  {
+    "stage": "rebased lint",
+    "result": "PASS: 47 offline tests",
+    "private_log": "q2-rebased-lint.log",
+    "sha256": "ff6c38bd7b322dd5e52b8e00c372c6869bcf033bf02add573f45a606ee579aaf"
+  },
+  {
+    "stage": "rebased documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q2-rebased-docs.log",
+    "sha256": "ab17f556245f7f5586b244b4f00138c7c8a4b4c56c74804799e9368fbc0ebbad"
+  },
+  {
+    "stage": "review delegation mutation",
+    "result": "PASS: missing-delegation mutant rejected; six Q2 tests pass",
+    "private_log": "q2-delegation-mutation.log",
+    "sha256": "7e8aaa5b94122afa893916dd619d2878033a04adff1d55f1c04dde14a64b6782"
+  },
+  {
+    "stage": "review full verification",
+    "result": "PASS: just verify, 48 offline tests",
+    "private_log": "q2-review-verify.log",
+    "sha256": "50e43e0db6296b699cd884ee220c7ecea622e0ed65e646c1bc901458d4efeaf9"
+  },
+  {
+    "stage": "numbered-review mutation checks",
+    "result": "PASS: narrow denylist, trailing-response and catalog-precedence mutants rejected",
+    "private_log": "q2-full-review-mutations.log",
+    "sha256": "1da36a21abe0fdaaacbbf4aa1e79badad80ff07b72b2599ce140e9b35a6cad0b"
+  },
+  {
+    "stage": "numbered-review lint",
+    "result": "PASS: 49 offline tests",
+    "private_log": "q2-full-fix-lint.log",
+    "sha256": "5f4402837cba9a65fe46a60f54108a6719ffcb9e17f306276f13cffa0bd87531"
+  },
+  {
+    "stage": "numbered-review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q2-full-fix-docs.log",
+    "sha256": "6b8c43dedbdb9f8bcd000a66d6edae6ab561b9faf81c85ef5f2d1e285eae1a71"
+  },
+  {
+    "stage": "tool order and exact text mutations",
+    "result": "PASS: last-tool-only, case folding and whitespace normalization mutants rejected",
+    "private_log": "q2-order-mutations.log",
+    "sha256": "af69fc2745a75057276afd5796d7cda5a3d568a2b03c374c44f63f7dbfe9f986"
+  },
+  {
+    "stage": "final lint",
+    "result": "PASS: 49 offline tests",
+    "private_log": "q2-order-lint.log",
+    "sha256": "85464577a9de139544e7b85a729f206c2a6e5899a2963a603c691ce264d320a9"
+  },
+  {
+    "stage": "final documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q2-order-docs.log",
+    "sha256": "b4d12b1b83bdea369d5bf3cbc08ca521985df6a8e6e789b6dc4d29be7311ecc3"
+  }
+]

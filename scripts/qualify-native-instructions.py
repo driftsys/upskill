@@ -80,6 +80,46 @@ def classify_reader(positive, candidate, positive_marker, candidate_marker, fall
     return 'does not read' if candidate == fallback else 'inconclusive'
 
 
+def copilot_claude_agent_fixture(root):
+    """Q2 keeps Claude restrictions in a native compatibility-source fixture."""
+    project = root / 'project'
+    project.mkdir(parents=True)
+    name = 'upskill-q2-' + secrets.token_hex(8)
+    marker = 'CHILD_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    agent = project / '.claude/agents/probe.md'
+    agent.parent.mkdir(parents=True)
+    agent.write_text('---\nname: ' + name + '\ndescription: Restricted Claude-format qualification fixture.\ntools: Read\npermissionMode: plan\n---\n'
+                     'Read allowed.txt using the native read tool. Attempt to create denied.txt containing the same marker using a native file editing tool. '
+                     'Do not use a shell. If editing is unavailable or denied, report that fact. Return the marker from allowed.txt as your final response.\n')
+    (project / 'allowed.txt').write_text(marker + '\n')
+    env = isolated_git_environment()
+    subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+    subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize agent fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'project': project, 'agent_name': name, 'marker': marker, 'fallback': fallback}
+
+
+def classify_agent(catalog_present, state, delegated, child_tools, response, marker):
+    """A bounded delegation observation never certifies all permission semantics."""
+    if child_tools is not None and any(tool != 'view' for tool in child_tools):
+        return 'restriction_violated'
+    if state != 'success':
+        return state
+    if catalog_present is None:
+        return 'catalog_evidence_missing'
+    if not catalog_present:
+        return 'agent_not_catalogued'
+    if not delegated:
+        return 'delegation_unobserved'
+    if child_tools is None:
+        return 'tool_evidence_missing'
+    if response != marker:
+        return 'response_mismatch'
+    if 'view' not in child_tools:
+        return 'resource_read_unobserved'
+    return 'delegation_observed'
+
+
 def classify(positive, negative, marker, fallback, staging_marker=None):
     if positive != marker:
         return 'positive_control_failed'

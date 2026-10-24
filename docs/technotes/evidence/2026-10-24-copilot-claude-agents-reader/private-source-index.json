@@ -1,0 +1,16 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q2-copilot-3ryd1747",
+    "manifests": [
+      {
+        "file": "receipt-hashes.json",
+        "sha256": "b368d924c13bc2327d53dea65d79a33f76eef90c9b443a0305e73cd729e03dfa"
+      }
+    ],
+    "capture_helpers": {
+      "catalog-helper.py": "91698d164a5ac24f7995bafc89b15ca34122651e762addfb3897f1ae9a4a7c3b",
+      "delegate-helper.py": "365063872cb8fb4de95f1be279ba9fd4e0b679681002ebc8098d855264f94041"
+    }
+  }
+]
