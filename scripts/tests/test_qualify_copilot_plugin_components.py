@@ -30,6 +30,9 @@ class CopilotPluginComponentsTests(unittest.TestCase):
             self.assertIn(f['scoped_marker'], scoped)
             agent = (package / 'com.github.copilot/agents/probe.agent.md').read_text()
             self.assertIn(f['agent_name'], agent)
+            self.assertIn('tools: [read]\n',agent)
+            market=json.loads((f['marketplace']/'.claude-plugin/marketplace.json').read_text())
+            self.assertEqual(market,{'name':f['market_name'],'owner':{'name':'Qualification Fixture'},'plugins':[{'name':f['plugin_name'],'source':'./packages/'+f['plugin_name']}]})
             for project in f['projects'].values():
                 self.assertTrue((project / '.github/copilot-instructions.md').is_file())
                 self.assertIn(f['catalog_positive_name'], (project / '.github/agents/catalog-positive.agent.md').read_text())
@@ -147,8 +150,10 @@ class CopilotPluginComponentsTests(unittest.TestCase):
     def test_neutral_root_guard_precedes_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for relative in ('.claude/x','.github/x','.codex/x','.opencode/x','.agents/skills/x','.agents/plugins/x'):
+            for relative in ('.claude/x','.github/x','.codex/x','.opencode/x','.copilot/instructions/x','.config/opencode/x','.agents/skills/x','.agents/plugins/x'):
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/relative)
+            with mock.patch.dict(self.q.os.environ,{'COPILOT_HOME':str(root/'relocated-client-home')}):
+                with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/'relocated-client-home/instructions/fixture')
             with mock.patch.object(self.q,'__file__',str(root.resolve()/'repository/scripts/harness.py')):
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/'repository/fixture')
 
@@ -159,8 +164,10 @@ class CopilotPluginComponentsTests(unittest.TestCase):
         self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','other-child'))
         options[0]['options'].append({'value':'plugin:other','name':'display-child'})
         self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','display-child'))
-        options[0]['id']='model'
-        self.assertIsNone(self.q.copilot_plugin_agent_selection(options,'plugin','display-child'))
+        non_agent={'id':'model','options':[{'value':'plugin:foreign','name':'display-child'}]}
+        self.assertIsNone(self.q.copilot_plugin_agent_selection([non_agent],'plugin','display-child'))
+        agent={'id':'agent','options':[{'value':'plugin:probe','name':'display-child'}]}
+        self.assertEqual(self.q.copilot_plugin_agent_selection([non_agent,agent],'plugin','display-child'),'plugin:probe')
 
     def test_delegation_policy_bounds_agent_model_and_resource(self):
         policy = lambda tool,args: self.q.copilot_delegation_policy(tool,args,'plugin:probe','preferred',Path('/fixture/agent-resource.txt'))
@@ -196,3 +203,8 @@ class CopilotPluginComponentsTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.q.copilot_plugin_component_fixture(root/'bad', rule_suffix='/../../outside')
             self.assertFalse((root/'bad').exists())
+
+    def test_exact_child_marker_rejects_leading_and_trailing_whitespace(self):
+        for response in (' A','A ','\nA\n','\tA'):
+            value,f=self.observations();value['agent']['response']=response
+            self.assertEqual(self.assess(value,f),'agent_control_failed')

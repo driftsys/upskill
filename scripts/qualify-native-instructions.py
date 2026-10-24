@@ -130,10 +130,13 @@ def copilot_plugin_component_fixture(root, rule_suffix='.md'):
     parts = root.parts
     if (root.is_relative_to(Path(__file__).resolve().parents[1])
             or root == Path.home().resolve()
-            or any(p in ('.claude', '.github', '.codex', '.opencode') for p in parts)
-            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'))
+            or any(p in ('.claude', '.github', '.codex', '.opencode', '.copilot') for p in parts)
+            or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
                    for i in range(len(parts) - 1))):
         raise ValueError('A new neutral fixture root is required')
+    configured_home = os.environ.get('COPILOT_HOME')
+    if configured_home and root.is_relative_to(Path(configured_home).expanduser().resolve()):
+        raise ValueError('Fixture must be outside the configured client home')
     root.mkdir(parents=True, mode=0o700)
     name = 'upskill-q3-' + secrets.token_hex(8)
     package = root / 'delivery/packages' / name

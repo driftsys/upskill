@@ -109,5 +109,26 @@
     "result": "PASS: four new retry guard/fixture mutations rejected",
     "private_log": "$PACKET_F/q3-retry-quick-mutations.log",
     "sha256": "a2e46d64799727b031cb305f0bcf5ab33062a3bb1fd2bbea77c60adda05cfcbb"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just lint",
+    "result": "FAIL: native-user-root guard accepted prohibited fixture",
+    "private_log": "$PACKET_F/q3-pass1-root-red.log",
+    "sha256": "96952d2cc587a06ad69eaafbb2a2e6f960e3ed7726ca59014f9fe9fa9b84097f"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 63 offline tests",
+    "private_log": "$PACKET_F/q3-pass1-fix-verify.log",
+    "sha256": "f70b6cf63186b00672138878abfe8f87fafacbdb94677437a82a798fc6c5d1cb"
+  },
+  {
+    "stage": "pass-1-fixes",
+    "command": "python3 $PACKET_F/q3-pass1-mutations.py",
+    "result": "PASS: seven root/response/catalog/fixture mutations rejected",
+    "private_log": "$PACKET_F/q3-pass1-mutations.log",
+    "sha256": "3d2aac18fd8e7be9a720f7ccb0b910e89af6e61778b3fb87a497e1b1078d2d63"
   }
 ]

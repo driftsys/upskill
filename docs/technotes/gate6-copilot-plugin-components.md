@@ -141,7 +141,10 @@ suite passes; catalog and pin assertions then reach 55 tests. Selector/guard,
 filename and metadata assertions extend this to 62 passing offline tests.
 Requiring an explicit child model fails first, then passes. Nine adverse
 mutations are rejected by the strengthened tests. No offline test calls a
-client. Validation logs and their hashes are retained in the packet.
+client. Full-review assertions raise the passing suite to 63 tests and reject
+seven additional root, exact-response, catalog and fixture mutations. Fixture
+roots under `.copilot` or a configured `COPILOT_HOME` are rejected before
+writes. Validation logs and their hashes are retained in the packet.
 
 The affected proposal rows are
 [Rules, Copilot](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
