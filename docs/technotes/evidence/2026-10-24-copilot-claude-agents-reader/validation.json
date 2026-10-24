@@ -66,5 +66,23 @@
     "result": "PASS: documentation checks",
     "private_log": "q2-full-fix-docs.log",
     "sha256": "6b8c43dedbdb9f8bcd000a66d6edae6ab561b9faf81c85ef5f2d1e285eae1a71"
+  },
+  {
+    "stage": "tool order and exact text mutations",
+    "result": "PASS: last-tool-only, case folding and whitespace normalization mutants rejected",
+    "private_log": "q2-order-mutations.log",
+    "sha256": "af69fc2745a75057276afd5796d7cda5a3d568a2b03c374c44f63f7dbfe9f986"
+  },
+  {
+    "stage": "final lint",
+    "result": "PASS: 49 offline tests",
+    "private_log": "q2-order-lint.log",
+    "sha256": "85464577a9de139544e7b85a729f206c2a6e5899a2963a603c691ce264d320a9"
+  },
+  {
+    "stage": "final documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q2-order-docs.log",
+    "sha256": "b4d12b1b83bdea369d5bf3cbc08ca521985df6a8e6e789b6dc4d29be7311ecc3"
   }
 ]

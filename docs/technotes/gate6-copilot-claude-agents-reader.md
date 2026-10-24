@@ -110,6 +110,10 @@ regressions cover unfamiliar outside tools, violation precedence over missing
 catalog evidence and trailing-response rejection; the latest lint run passes all
 49 offline tests.
 
+Outside-tool regressions additionally cover leading, middle and trailing
+positions among permitted calls, with exact-response case and leading-whitespace
+mismatches rejected. The final lint run passes all 49 offline tests.
+
 The tests do not call clients or qualify native behavior. Broader tool lists,
 permission inheritance, attempted native denials, other Claude fields, user
 scope, Linux, IDE/hosted surfaces and integrated upskill lifecycle remain

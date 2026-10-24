@@ -5,7 +5,7 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "d9960056a91d181ba6f2e2ad285dff998d3e1e565dfaf85f7fe338bcd8e6ce95"
+        "sha256": "b368d924c13bc2327d53dea65d79a33f76eef90c9b443a0305e73cd729e03dfa"
       }
     ],
     "capture_helpers": {

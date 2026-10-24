@@ -76,7 +76,7 @@ class ClaudeAgentControls(unittest.TestCase):
         self.assertEqual(q.classify_agent(True, 'success', True, [], 'marker', 'marker'), 'resource_read_unobserved')
         self.assertEqual(q.classify_agent(False, 'success', True, ['view'], 'marker', 'marker'), 'agent_not_catalogued')
         self.assertEqual(q.classify_agent(True, 'success', True, None, 'marker', 'marker'), 'tool_evidence_missing')
-        for response in ('prefix marker', 'marker trailing text', 'marker\n', '', 'different marker'):
+        for response in ('prefix marker', 'marker trailing text', 'marker\n', ' marker', 'MARKER', '', 'different marker'):
             self.assertEqual(q.classify_agent(True, 'success', True, ['view'], response, 'marker'), 'response_mismatch')
         self.assertEqual(q.classify_agent(True, 'success', True, ['view'], 'marker', 'marker'), 'delegation_observed')
 
@@ -89,7 +89,9 @@ class ClaudeAgentControls(unittest.TestCase):
 
     def test_unknown_outside_tools_and_missing_catalog_never_hide_a_violation(self):
         for tool in ('edit', 'unfamiliar_tool'):
-            self.assertEqual(q.classify_agent(True, 'success', True, ['view', tool], 'marker', 'marker'), 'restriction_violated')
+            for tools in ([tool, 'view'], ['view', tool], ['view', tool, 'view']):
+                for catalog, state in ((True, 'success'), (True, 'failure'), (False, 'success'), (None, 'success')):
+                    self.assertEqual(q.classify_agent(catalog, state, True, tools, 'marker', 'marker'), 'restriction_violated')
         for catalog in (False, None):
             self.assertEqual(q.classify_agent(catalog, 'success', True, ['view', 'create'], 'marker', 'marker'), 'restriction_violated')
 
