@@ -1,0 +1,60 @@
+{
+  "profile-before.json": {
+    "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+    "mode": 384,
+    "present": true
+  },
+  "local-install-calibration-restoration.json": {
+    "native_uninstall_exit": 0,
+    "expected": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "after": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384
+    },
+    "exact": true,
+    "method": "Remove only native empty owned installedPlugins key; write only if resulting bytes match pre-control hash. No credential values exported."
+  },
+  "profile-v2-before.json": {
+    "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+    "mode": 384,
+    "present": true
+  },
+  "profile-v2-after-native-removal.json": {
+    "configuration": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "safe_to_restore": true,
+    "added_keys": []
+  },
+  "profile-v2-after-restoration.json": {
+    "configuration": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384,
+      "present": true
+    },
+    "exact": true,
+    "unexpected_native_change_retained": false
+  },
+  "catalog": {
+    "before": {
+      "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+      "mode": 384
+    },
+    "after_native_removal": {
+      "sha256": "07920bffdde0700e391d99a9191624c0687d0dc8a1063d64dc8b7ca2c79f1092",
+      "mode": 384
+    },
+    "allowed_own_empty_key_residue": [
+      "installedPlugins"
+    ],
+    "restored_exact": true,
+    "unexpected_native_change_retained": false,
+    "auth_configuration_copied_or_exported": false
+  }
+}

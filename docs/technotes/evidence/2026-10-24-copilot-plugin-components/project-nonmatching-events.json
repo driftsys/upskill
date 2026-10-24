@@ -1,0 +1,23 @@
+[
+  {
+    "type": "assistant.message",
+    "content": "",
+    "event_id": "77bad577-0626-4c6f-815b-72ec66880eef"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9adf0a54827010af",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\n```json\n{\"native\":\"NATIVE_7683d4d128642e10ccffe30f2161c3a0\",\"rules\":[]}\n```",
+    "event_id": "4901e787-f272-416b-ba4e-8a16b71f983b"
+  },
+  {
+    "type": "result",
+    "sessionId": "f6c73eee-1b11-4873-87c4-357bf5f194ce",
+    "exitCode": 0
+  }
+]

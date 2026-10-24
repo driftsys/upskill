@@ -1,0 +1,306 @@
+[
+  {
+    "type": "assistant.message",
+    "content": "\n\nI'll attempt the delegation to the specified custom agent.\n\n",
+    "event_id": "56631f1a-fa94-40d6-9bcb-efeec8496420"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-83f662b4145d71d6",
+    "agent_id": null
+  },
+  {
+    "type": "assistant.message",
+    "content": "\n\nThe agent type isn't valid. Let me retry with a valid type, using the name as the agent identifier.\n\n",
+    "event_id": "fc3fbce9-38e4-40e7-b8ec-06c7fba8a7f0"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-9f6a6ec47169f4e7",
+    "agent_id": null
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "general-purpose",
+    "tool_call_id": "chatcmpl-tool-9f6a6ec47169f4e7",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-946735c34d056113",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9327b00f9c95d33c",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-959fbf073613be07",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9e00251c4085da21",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-ae496f9a6609145e",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-b21dab7fae4c2439",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-883d92395e2d0157",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9ce8ba5c0ac6f4d0",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-88d7ab76a05caab2",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-931994b98eeeec15",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-90a6e3ac6aa79e9c",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-99f00ab489a5addf",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a74fa03cfa791bab",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-b2f5dcb29a454821",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-bca216871c105284",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "task",
+    "tool_call_id": "chatcmpl-tool-bca216871c105284",
+    "agent_id": "a833c15e-adc4-4a3b-8fa5-07da6bbd7a00"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-912de042b21b56c4",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "task",
+    "tool_call_id": "chatcmpl-tool-912de042b21b56c4",
+    "agent_id": "dd6ff5ca-4289-4f61-8754-8d63d6cc45f7"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-b442a51e9e2a70d0",
+    "agent_id": "9bba70b0-cac4-4761-bbe0-a8a7f6d904c1"
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "task",
+    "tool_call_id": "chatcmpl-tool-b442a51e9e2a70d0",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-94ef7ec78657c2ba",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "task",
+    "tool_call_id": "chatcmpl-tool-94ef7ec78657c2ba",
+    "agent_id": "15d86a8a-b653-4995-840e-d935dedda916"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9c1b0087c074d9e7",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a1489ccaacfe08b6",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-bff978dd7d92d101",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a95819e7c6ae101b",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8192ea959feeef7f",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8e18299b0b8d26eb",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-91686811127cfc63",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a7c9939ae2be481f",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-adab10139b717cd9",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-bec804c804683f66",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-aa692a181a955978",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-ab5d1f630725a6c4",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a5e46363bfa1ec53",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8ec5d4fa7b1267af",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8dcc35ab3776e50f",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-a00ed4f3dcdc5b40",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-8f98e9a69206d7a3",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-ae4ffb7a2b78dbff",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-b84f185b7fbcc761",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-862796953c39560c",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-b636c7e01fcc1eb5",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "task",
+    "tool_call_id": "chatcmpl-tool-b699754fb66d9bdb",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  },
+  {
+    "type": "subagent.started",
+    "agent_name": "task",
+    "tool_call_id": "chatcmpl-tool-b699754fb66d9bdb",
+    "agent_id": "991bae74-1660-4942-b48d-dad65560a720"
+  },
+  {
+    "type": "tool.execution_start",
+    "tool_name": "view",
+    "tool_call_id": "chatcmpl-tool-9528255bb079b38f",
+    "agent_id": "d9880a0c-6b0a-465f-89c9-4015d282e352"
+  }
+]

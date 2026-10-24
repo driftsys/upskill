@@ -1,0 +1,52 @@
+{
+  "qualified": false,
+  "q3_completed": false,
+  "control": "Q3",
+  "task": 388,
+  "date": "2026-10-24",
+  "platform": "macOS arm64",
+  "pin": "Copilot 1.0.103",
+  "status": "FAIL: plugin rule positives; bounded namespaced user-child delegation observed",
+  "scopes": [
+    {
+      "scope": "project",
+      "pin": "Copilot 1.0.103",
+      "native_positive": "PASS: exact native JSON object and empty rules array",
+      "installed_component_positive": "FAIL: empty rules array instead of required rule marker",
+      "matching_nonmatching": "FAIL: required component markers absent; native resource reads observed",
+      "disabled_uninstalled": "Empty arrays retained, not qualified negatives after failed positive",
+      "reinstalled": "FAIL: empty rules array",
+      "agent": "NOT RUN: no plugin candidate in project-overlay ACP catalog",
+      "agent_exact_marker_response": false
+    },
+    {
+      "scope": "user",
+      "pin": "Copilot 1.0.103",
+      "native_positive": "PASS: exact native JSON object and empty rules array",
+      "installed_component_positive": "FAIL: empty rules array instead of required rule marker",
+      "matching_nonmatching": "FAIL: required component markers absent; native resource reads observed",
+      "disabled_uninstalled": "Empty arrays retained, not qualified negatives after failed positive",
+      "reinstalled": "FAIL: empty rules array",
+      "agent": "Real namespaced child and resource read observed; final content includes leading whitespace, so exact marker response fails",
+      "agent_exact_marker_response": false
+    }
+  ],
+  "counts": {
+    "initial_parent_sessions": 14,
+    "initial_unexpected_delegate_selection_events": 4,
+    "guarded_parent_sessions": 16,
+    "guarded_unexpected_delegate_selection_events": 0,
+    "guarded_custom_children": 1
+  },
+  "catalog": "Initial direct-user plugin catalog has candidate at both projects; later disabled-user/project-overlay ACP catalog does not expose it. ACP rejects one-session prompt trust flag.",
+  "local_directory_install": "PASS: native direct local install/uninstall; local marketplace live-load recorded",
+  "limits": [
+    "Failed installed rule positives never qualify absence, scope or whole-plugin support.",
+    "The initial generic-delegation model-policy failure remains retained.",
+    "Guarded replay uses exact namespaced selector, explicit requested model, normal prompt workspace admission and a native-calibrated deny hook.",
+    "A real child does not establish all agent restrictions or project-overlay activation; exact marker response fails leading-whitespace contract.",
+    "No provider-effective uniqueness or universal component reader conclusion.",
+    "Measured configuration restored; session/log/cache/trust effects are not whole-profile equality.",
+    "No production or durable support promotion."
+  ]
+}
