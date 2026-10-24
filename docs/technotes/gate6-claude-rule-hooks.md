@@ -62,9 +62,11 @@ request and its pin. The
 exact user prompts, assistant UUIDs and native turn-completion records. The
 [native selection](evidence/2026-10-24-claude-rule-hooks/ui-native-selection.json)
 retains the manual compact boundary and completion positions. Native hook
-responses complete with exit 0; UI attachments retain each successful hook
-output and its exact single additional-context body. Startup, resume and compact
-events have the same session identity. No model tool call is observed.
+responses complete with exit 0. The retained startup and compact UI attachments
+contain successful hook output and its exact single additional-context body;
+resume is evidenced by its callback trace and exact response. Startup, resume
+and compact events have the same session identity. No model tool call is
+observed.
 
 Callback counts and exact answers are separate observations. This packet does
 not claim that a callback count proves a single provider-effective developer

@@ -41,5 +41,26 @@
     "result": "PASS",
     "private_log": "$PACKET_A/final-shellcheck.log",
     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "just lint",
+    "result": "PASS: 58 offline tests",
+    "private_log": "$PACKET_A/q4-review-fixes-lint.log",
+    "sha256": "dcc510c4890ce343ca8d3413b44576473fdfdbab4706b55dfa58a3f7e3c57d37"
+  },
+  {
+    "stage": "quick-review-fixes",
+    "command": "python3 private-review-mutations.py",
+    "result": "PASS: five invalid variants rejected by strengthened tests",
+    "private_log": "$PACKET_A/q4-review-mutations.log",
+    "sha256": "55a3c93c5ed8dba5691cba80177fb7c4498a1317d68407d43b0633292211605c"
+  },
+  {
+    "stage": "pre-pr-full-verification",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification and 58 offline tests",
+    "private_log": "$PACKET_A/q4-pre-pr-verify.log",
+    "sha256": "33fb2d49264f164974a4c6b92e8b2535e02b5344219db19ba9c90defe2d48647"
   }
 ]

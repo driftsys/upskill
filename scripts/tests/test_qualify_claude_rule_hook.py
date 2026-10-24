@@ -38,7 +38,15 @@ class ClaudeRuleHookTests(unittest.TestCase):
                 result = subprocess.run(['/bin/sh', str(package / 'hook.sh')], input=json.dumps(event), capture_output=True, text=True, env=env, check=True)
                 self.assertEqual(json.loads(result.stdout), expected)
             events = [json.loads(s) for s in f['trace'].read_text().split('\x1e') if s.strip()]
-            self.assertEqual([x['source'] for x in events], ['startup', 'resume', 'compact'])
+            self.assertEqual(events, [{'hook_event_name': 'SessionStart', 'source': source, 'session_id': 'offline', 'cwd': str(f['project'])} for source in ('startup', 'resume', 'compact')])
+            market = json.loads((f['marketplace']/'.claude-plugin/marketplace.json').read_text())
+            self.assertEqual(market, {'name': f['market_name'], 'owner': {'name': 'Qualification Fixture'}, 'plugins': [{'name': f['plugin_name'], 'source': './packages/' + f['plugin_name']}]})
+            settings = f['project']/'.claude/settings.json'
+            manual = json.loads(settings.read_text())
+            self.assertEqual(set(manual), {'env'})
+            self.assertEqual(set(manual['env']), {'UPSKILL_Q4_MANUAL'})
+            self.assertTrue(manual['env']['UPSKILL_Q4_MANUAL'].startswith('MANUAL_'))
+            self.assertEqual(settings.stat().st_mode & 0o777, 0o640)
             for path in f['root'].rglob('*'):
                 self.assertFalse(path.is_symlink())
                 self.assertNotIn(path.name, ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.md'))
@@ -57,11 +65,18 @@ class ClaudeRuleHookTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             f = self.q.prepare_claude_rule_hook(Path(tmp) / 'fixture')
             env = self.q.fixture_environment(f['root']);env['CLAUDE_PLUGIN_ROOT'] = str(f['package'])
-            for bad in ('../outside.json\n', '/tmp/outside.json\n', 'rule-a.json\nrule-b.json\n'):
-                (f['package'] / 'rules/index').write_text(bad)
+            # Every invalid index resolves to readable bytes if the allowlist is removed.
+            for bad in ('../outside.json', '/outside.json', 'rule-a.json\nrule-b.json'):
+                outside = f['package'] / ('rules/' + bad)
+                outside.parent.mkdir(parents=True, exist_ok=True)
+                outside.write_text('OUTSIDE_SENTINEL\n')
+                (f['package'] / 'rules/index').write_text(bad + '\n')
+                before = f['trace'].read_bytes() if f['trace'].exists() else None
                 result = subprocess.run(['/bin/sh', str(f['package'] / 'hook.sh')], input='{}', capture_output=True, text=True, env=env)
-                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.returncode, 2)
                 self.assertEqual(result.stdout, '')
+                after = f['trace'].read_bytes() if f['trace'].exists() else None
+                self.assertEqual(after, before)
 
     def controls(self):
         f = {'pin': '2.1.308', 'native_marker': 'N', 'hook_marker': 'H', 'fallback': 'F'}
@@ -96,10 +111,12 @@ class ClaudeRuleHookTests(unittest.TestCase):
         for key in ('native_compaction_completed',):
             c, f = self.controls();c['compact'][key] = False
             self.assertNotEqual(self.q.classify_claude_rule_hook(c, f), 'observed')
-        for phase in ('resume','compact'):
+        for phase in ('installed','resume','compact'):
             c, f = self.controls();c[phase]['events'][0]['session_id'] = 'different'
             self.assertNotEqual(self.q.classify_claude_rule_hook(c, f), 'observed')
-            c, f = self.controls();c[phase]['events'][0]['source'] = 'startup'
+            c, f = self.controls();c[phase]['events'][0]['source'] = 'resume' if phase == 'installed' else 'startup'
+            self.assertNotEqual(self.q.classify_claude_rule_hook(c, f), 'observed')
+            c, f = self.controls();del c[phase]['events'][0]['source']
             self.assertNotEqual(self.q.classify_claude_rule_hook(c, f), 'observed')
 
     def test_markers_are_fresh_and_repository_home_roots_are_protected(self):
