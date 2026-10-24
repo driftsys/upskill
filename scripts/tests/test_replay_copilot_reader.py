@@ -38,7 +38,8 @@ class CopilotReaderReplayTests(unittest.TestCase):
         self.assertFalse(tools)
         self.assertTrue(evidence['completed_response'])
         self.assertEqual(evidence['event_types'], ['assistant.message', 'result'])
-        for rows in [[], events()[:1], events()[1:], list(reversed(events())), events() + events()]:
+        for rows in [[], events()[:1], events()[1:], list(reversed(events())),
+                     events()[:1] + events(), events() + events()[1:]]:
             with self.subTest(rows=rows):
                 self.assertFalse(q.copilot_response(encode(rows))[2]['completed_response'])
 
@@ -56,6 +57,17 @@ class CopilotReaderReplayTests(unittest.TestCase):
                 self.assertFalse(q.copilot_response(encode([extra] + events()))[2]['completed_response'])
         self.assertTrue(q.copilot_response(encode([{'type': 'tool.execution_start'}] + events()))[1])
         self.assertFalse(q.copilot_response('not json\n' + encode(events()))[2]['completed_response'])
+
+    def test_known_lifecycle_metadata_does_not_disqualify_a_complete_response(self):
+        metadata = ['user.message', 'assistant.turn_start', 'assistant.turn_end',
+                    'assistant.idle', 'assistant.message_start', 'assistant.message_delta',
+                    'assistant.reasoning', 'assistant.reasoning_delta', 'model.call_start',
+                    'model.call_finished', 'model.call_final_result', 'session.indexed_search',
+                    'session.mcp_servers_loaded', 'session.tools_updated']
+        response, tools, evidence = q.copilot_response(encode([{'type': kind} for kind in metadata] + events()))
+        self.assertEqual(response, 'marker')
+        self.assertFalse(tools)
+        self.assertTrue(evidence['completed_response'])
 
     def test_result_exit_code_and_identity_are_strict(self):
         for value in [1, False, '0', None]:
@@ -79,7 +91,7 @@ class CopilotReaderReplayTests(unittest.TestCase):
 
     def test_replay_refuses_summary_drift_and_false_negative_from_failed_positive(self):
         original = json.loads((PACKET / 'summary.json').read_text())
-        for mutation in ['classification', 'failed_positive', 'candidate_error']:
+        for mutation in ['classification', 'failed_positive', 'response_identity', 'positive_error', 'candidate_error', 'paths_error']:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 packet = Path(temporary)
                 for source in PACKET.iterdir():
@@ -90,9 +102,13 @@ class CopilotReaderReplayTests(unittest.TestCase):
                     summary['controls'][2]['classification'] = 'reads'
                 elif mutation == 'failed_positive':
                     summary['controls'][0]['exit_code'] = 1
+                elif mutation == 'response_identity':
+                    summary['controls'][2]['response'] = 'different recorded response'
                 else:
-                    candidate = packet / 'attempt-3-candidate-paths.jsonl'
-                    candidate.write_text(encode([{'type': 'session.error'}] + events(summary['controls'][2]['fallback'])))
+                    index = {'positive_error': 0, 'candidate_error': 1, 'paths_error': 2}[mutation]
+                    row = summary['controls'][index]
+                    (packet / row['receipt']).write_text(encode([{'type': 'session.error'}] + events(row['response'])))
+                    row['completed'] = False
                 (packet / 'summary.json').write_text(json.dumps(summary))
                 with self.assertRaises(ValueError):
                     q.replay_copilot_reader(packet)

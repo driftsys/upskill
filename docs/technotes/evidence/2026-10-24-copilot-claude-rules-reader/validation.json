@@ -59,5 +59,17 @@
     "native_requests": 0,
     "full_private_stream_audit": "raw-event-gate-audit.json",
     "limits": "The other three clients have no retained pre-run pin receipt in this historical packet."
+  },
+  {
+    "phase": "quick review assertions",
+    "offline_tests": 51,
+    "tests": "q1-quick-fix-tests.log",
+    "full_verification": "q1-quick-fix-verify.log",
+    "mutation_helper": "q1-quick-fix-mutations.py",
+    "mutation_results": "q1-quick-fix-mutations.log",
+    "rejected_mutants": 5,
+    "private_packet": "$PACKET_D",
+    "source_snapshot": "quick-fix-source",
+    "native_requests": 0
   }
 ]

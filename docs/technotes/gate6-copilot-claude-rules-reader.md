@@ -117,6 +117,15 @@ to complete private bytes, not sanitized retained events.
 
 ## Offline validation and limits
 
+The public event-gate and replay review fixes pass 51 offline tests and full
+verification. Five rejected mutations cover independently duplicated message and
+result records, failed-native-event propagation, exact orchestration responses
+and summary-response identity. The
+[validation receipt](evidence/2026-10-24-copilot-claude-rules-reader/validation.json)
+binds these logs and source snapshots through the private index. No new native
+request was made. Remaining nonblocking packet-review comments are tracked in
+[debt #399](https://github.com/driftsys/upskill/issues/399).
+
 Tests were written first. `just lint` failed on the two missing Q1 helper
 attributes before implementation, then passed all 42 offline tests. Follow-up
 regressions cover complete fixture directives, frontmatter, fresh separated
