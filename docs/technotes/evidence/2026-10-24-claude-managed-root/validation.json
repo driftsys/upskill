@@ -84,5 +84,29 @@
     "result": "PASS: just verify, 49 offline tests",
     "private_log": "q6-order-verify.log",
     "sha256": "b7715c54f399bb483d25d82bd4f7d63db8e1665b06a80136a934cce93bb554b6"
+  },
+  {
+    "stage": "numbered-review focused tests",
+    "result": "PASS: eight Q6 tests",
+    "private_log": "q6-numbered-focused.log",
+    "sha256": "ad6fd909f5b163cf1e4a8b8b126c8c4e06ea52a648fce595ef09b972eff61248"
+  },
+  {
+    "stage": "numbered-review mutation checks",
+    "result": "PASS: mode-only drift, ambient environment, non-object JSON and missing fixture mode mutants rejected",
+    "private_log": "q6-numbered-mutations.log",
+    "sha256": "124222104b534dc4855e755a4a62cb5ca86701a55d3fcfa31f2ba306c6ead778"
+  },
+  {
+    "stage": "numbered-review lint",
+    "result": "PASS: 50 offline tests",
+    "private_log": "q6-numbered-lint.log",
+    "sha256": "d582029fee428f68b9a0326149a4dccc7f675377fe6aa769f4016ea9cfe5c5ec"
+  },
+  {
+    "stage": "numbered-review documentation",
+    "result": "PASS: documentation checks",
+    "private_log": "q6-numbered-docs.log",
+    "sha256": "834a7130d456670401636af0329b8f05bcc59d66716507a901e061ed599cb7c4"
   }
 ]

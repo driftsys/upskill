@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,7 +15,12 @@ spec.loader.exec_module(q)
 class ClaudeManagedRootControls(unittest.TestCase):
     def test_fixture_is_a_copy_only_local_marketplace_outside_discovery(self):
         with tempfile.TemporaryDirectory() as temporary:
-            row = q.prepare_claude_managed_root(Path(temporary) / 'fixture')
+            previous_mask = os.umask(0o022)
+            try:
+                row = q.prepare_claude_managed_root(Path(temporary) / 'fixture')
+            finally:
+                os.umask(previous_mask)
+            self.assertEqual(row['root'].stat().st_mode & 0o777, 0o700)
             managed = row['managed_root']
             market = json.loads((managed / '.claude-plugin/marketplace.json').read_text())
             self.assertEqual(market, {'name': row['market_name'], 'owner': {'name': 'Qualification Fixture'}, 'plugins': [{'name': row['plugin_name'], 'source': './packages/' + row['plugin_name']}]})
@@ -56,6 +62,48 @@ class ClaudeManagedRootControls(unittest.TestCase):
                 q.prepare_claude_managed_root(sentinel)
             self.assertEqual((sentinel / 'sentinel').read_bytes(), b'preserve')
 
+    def test_fixture_git_ignores_ambient_repository_and_home_configuration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            external = base / 'external'
+            external.mkdir()
+            clean = {key: value for key, value in os.environ.items() if key in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SystemRoot')}
+            clean.update(HOME=str(base / 'baseline-home'), USERPROFILE=str(base / 'baseline-home'))
+            def git(*args):
+                return subprocess.run(['git', '-C', str(external), *args], env=clean, capture_output=True, text=True, check=True).stdout
+            git('init', '-q')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: external repository sentinel')
+            sentinel = external / 'sentinel'
+            sentinel.write_text('staged sentinel\n')
+            git('add', 'sentinel')
+            sentinel.write_text('working sentinel\n')
+            before = (git('rev-parse', 'HEAD'), (external / '.git/index').read_bytes(), (external / '.git/config').read_bytes(), sentinel.read_bytes())
+            home = base / 'ambient-home'
+            home.mkdir()
+            templates = base / 'ambient-templates'
+            templates.mkdir()
+            (templates / 'ambient-sentinel').write_text('unexpected template\n')
+            (home / '.gitconfig').write_text('[init]\n templateDir = ' + templates.as_posix() + '\n')
+            inherited = {**clean, 'CLAUDE_CONFIG_DIR': str(base / 'ambient-claude'), 'COPILOT_HOME': str(base / 'ambient-copilot'), 'CODEX_HOME': str(base / 'ambient-codex'), 'OPENCODE_CONFIG_CONTENT': '{"ambient":true}', 'HOME': str(home), 'USERPROFILE': str(home), 'GIT_DIR': str(external / '.git'), 'GIT_WORK_TREE': str(external), 'GIT_INDEX_FILE': str(external / '.git/index'), 'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'core.worktree', 'GIT_CONFIG_VALUE_0': str(external)}
+            real_run = subprocess.run
+            with mock.patch.dict(os.environ, inherited, clear=True), mock.patch.object(q.subprocess, 'run', wraps=real_run) as captured:
+                row = q.prepare_claude_managed_root(base / 'fixture')
+                self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
+            self.assertTrue(captured.call_args_list)
+            for call in captured.call_args_list:
+                child_env = call.kwargs['env']
+                self.assertFalse(any(key.startswith('GIT_') for key in child_env))
+                self.assertEqual(child_env['HOME'], str(row['root'] / 'home'))
+                self.assertEqual(child_env['CLAUDE_CONFIG_DIR'], str(row['root'] / 'home/.claude'))
+                self.assertEqual(child_env['COPILOT_HOME'], str(row['root'] / 'home/.copilot'))
+                self.assertEqual(child_env['CODEX_HOME'], str(row['root'] / 'home/.codex'))
+                self.assertNotIn('OPENCODE_CONFIG_CONTENT', child_env)
+            for project in (row['project'], row['user_project']):
+                self.assertTrue((project / '.git').is_dir())
+                self.assertFalse((project / '.git/ambient-sentinel').exists())
+            self.assertEqual((git('rev-parse', 'HEAD'), (external / '.git/index').read_bytes(), (external / '.git/config').read_bytes(), sentinel.read_bytes()), before)
+            self.assertFalse((external / '.git/ambient-sentinel').exists())
+
     def test_repository_relative_root_is_rejected_before_writing(self):
         with tempfile.TemporaryDirectory() as temporary:
             repository = (Path(temporary) / 'repository').resolve()
@@ -80,6 +128,7 @@ class ClaudeManagedRootControls(unittest.TestCase):
     def test_only_added_empty_native_registration_objects_are_allowed_residue(self):
         before = b'{"env":{"MANUAL":"preserve"}}\n'
         self.assertEqual(q.classify_claude_settings(before, before, 0o640, 0o640), 'unchanged')
+        self.assertEqual(q.classify_claude_settings(before, before, 0o640, 0o600), 'preservation_failed')
         after = b'{"env":{"MANUAL":"preserve"},"enabledPlugins":{},"extraKnownMarketplaces":{}}\n'
         self.assertEqual(q.classify_claude_settings(before, after, 0o640, 0o640), 'empty_object_residue')
         self.assertEqual(q.classify_claude_settings(None, b'{"enabledPlugins":{}}', None, 0o600), 'empty_object_residue')
@@ -90,6 +139,9 @@ class ClaudeManagedRootControls(unittest.TestCase):
         self.assertEqual(q.classify_claude_settings(before, None, 0o640, None), 'preservation_failed')
         self.assertEqual(q.classify_claude_settings(None, None, None, None), 'unchanged')
         self.assertEqual(q.classify_claude_settings(before, b'invalid', 0o640, 0o640), 'invalid_settings')
+        for value in (b'[]', b'true', b'1', b'\"scalar\"', b'null'):
+            self.assertEqual(q.classify_claude_settings(before, value, 0o640, 0o640), 'invalid_settings')
+            self.assertEqual(q.classify_claude_settings(value, after, 0o640, 0o640), 'invalid_settings')
 
     def test_existing_registration_values_and_json_types_are_preserved(self):
         cases = [
