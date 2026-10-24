@@ -42,7 +42,7 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "36339cde0b2478d0e82f191d86ef030621091fe6f319a90e304553ef334f0af2"
+        "sha256": "d0cc66a1df984f0509d86bc4ae687fd9375a5e409e1bc92a07e7d9d8d5ba74dd"
       }
     ]
   }
