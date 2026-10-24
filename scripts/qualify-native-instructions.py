@@ -137,6 +137,10 @@ def copilot_plugin_component_fixture(root, rule_suffix='.md'):
     configured_home = os.environ.get('COPILOT_HOME')
     if configured_home and root.is_relative_to(Path(configured_home).expanduser().resolve()):
         raise ValueError('Fixture must be outside the configured client home')
+    native_homes = ('.claude', '.github', '.codex', '.opencode', '.copilot',
+                    '.config/opencode', '.agents/skills', '.agents/plugins')
+    if any(root.is_relative_to((Path.home() / name).resolve()) for name in native_homes):
+        raise ValueError('Fixture must be outside resolved native user roots')
     root.mkdir(parents=True, mode=0o700)
     name = 'upskill-q3-' + secrets.token_hex(8)
     package = root / 'delivery/packages' / name

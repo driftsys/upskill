@@ -136,6 +136,11 @@ remain visible beside the clean guarded retry.
 
 ## Offline checks and consequence
 
+Final-review fixes pass all 65 offline tests and reject three further mutants
+for resolved native homes, writes before rejection and tilde expansion. Native
+user homes are resolved independently, including symlinked profiles; rejected
+roots leave no new paths.
+
 Tests precede harness changes. Initial missing helpers fail before the 54-test
 suite passes; catalog and pin assertions then reach 55 tests. Selector/guard,
 filename and metadata assertions extend this to 62 passing offline tests.

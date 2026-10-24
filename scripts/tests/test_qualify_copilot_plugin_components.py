@@ -151,9 +151,13 @@ class CopilotPluginComponentsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for relative in ('.claude/x','.github/x','.codex/x','.opencode/x','.copilot/instructions/x','.config/opencode/x','.agents/skills/x','.agents/plugins/x'):
+                before=set(root.rglob('*'))
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/relative)
+                self.assertEqual(set(root.rglob('*')),before)
             with mock.patch.dict(self.q.os.environ,{'COPILOT_HOME':str(root/'relocated-client-home')}):
+                before=set(root.rglob('*'))
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/'relocated-client-home/instructions/fixture')
+                self.assertEqual(set(root.rglob('*')),before)
             with mock.patch.object(self.q,'__file__',str(root.resolve()/'repository/scripts/harness.py')):
                 with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(root/'repository/fixture')
 
@@ -208,3 +212,22 @@ class CopilotPluginComponentsTests(unittest.TestCase):
         for response in (' A','A ','\nA\n','\tA'):
             value,f=self.observations();value['agent']['response']=response
             self.assertEqual(self.assess(value,f),'agent_control_failed')
+
+    def test_symlinked_default_native_home_is_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);home=root/'home';home.mkdir()
+            target=root/'native-profile-storage';target.mkdir()
+            (home/'.copilot').symlink_to(target,target_is_directory=True)
+            with mock.patch.dict(self.q.os.environ,{'HOME':str(home),'COPILOT_HOME':''}):
+                for candidate in (home/'.copilot/instructions/fixture',target/'instructions/physical-fixture'):
+                    before=set(root.rglob('*'))
+                    with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(candidate)
+                    self.assertEqual(set(root.rglob('*')),before)
+
+    def test_tilde_client_home_is_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);home=root/'home';home.mkdir()
+            before=set(root.rglob('*'))
+            with mock.patch.dict(self.q.os.environ,{'HOME':str(home),'COPILOT_HOME':'~/relocated-client-home'}):
+                with self.assertRaises(ValueError):self.q.copilot_plugin_component_fixture(home/'relocated-client-home/instructions/fixture')
+            self.assertEqual(set(root.rglob('*')),before)

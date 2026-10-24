@@ -130,5 +130,26 @@
     "result": "PASS: seven root/response/catalog/fixture mutations rejected",
     "private_log": "$PACKET_F/q3-pass1-mutations.log",
     "sha256": "3d2aac18fd8e7be9a720f7ccb0b910e89af6e61778b3fb87a497e1b1078d2d63"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: symlinked default native home accepted",
+    "private_log": "$PACKET_F/q3-pass2-root-red.log",
+    "sha256": "2029af5059698f8dea9fcba60d612cd5107216d624fe542b40539e9a6ad072c3"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 65 offline tests",
+    "private_log": "$PACKET_F/q3-pass2-fix-verify.log",
+    "sha256": "f75a31dfa2171fbcb6760e2b1f062e7c42676a69cfd5b6a633f9956bcf8bf8a0"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 $PACKET_F/q3-pass2-mutations.py",
+    "result": "PASS: three final-review boundary mutations rejected",
+    "private_log": "$PACKET_F/q3-pass2-mutations.log",
+    "sha256": "f6a45bffbdfa68ad775830c0cc16408befcfe35420e2f225f7dc136379eae621"
   }
 ]
