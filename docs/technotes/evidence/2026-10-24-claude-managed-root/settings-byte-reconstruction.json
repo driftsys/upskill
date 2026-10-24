@@ -1,0 +1,270 @@
+{
+  "method": "Exact SHA-256 matching reconstruction from captured disposable fixture values; no authentication settings were read",
+  "limitation": "Historical helpers retained hashes rather than original settings byte snapshots; reconstructed bytes do not establish capture timing independently",
+  "receipts": [
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_before",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_before",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_after_removal",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "28b5d203c64f8b9cd99cf1feba20b7c377932f0a6441cf6683aaaecb26590097",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0sCiAgImVuYWJsZWRQbHVnaW5zIjoge30sCiAgImV4dHJhS25vd25NYXJrZXRwbGFjZXMiOiB7fQp9Cg==",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_after_removal",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_after_restoration",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "project",
+      "stage": "settings_after_restoration",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_before",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_before",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_after_removal",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_after_removal",
+      "path": "$PROFILE/settings.json",
+      "present": true,
+      "mode": 420,
+      "sha256": "2fc36cd88ea5b1049defa6877fe98653f6b81a53f95878c26f79a0a06317e94a",
+      "bytes_base64": "ewogICJlbmFibGVkUGx1Z2lucyI6IHt9LAogICJleHRyYUtub3duTWFya2V0cGxhY2VzIjoge30KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_after_restoration",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "0db188d44bfe1a8a0428fbca72ba1d858f5073126c5e0817fabc3a2da75ebcdb",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMX2QzYzI3MzgwZGQzZmFlNWIxYWZlODg1M2Q2NTNmZjU0IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "initial",
+      "scope": "user",
+      "stage": "settings_after_restoration",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_before",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_before",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_after_removal",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "7346a044bf6d07d4d944af8aed0d5e4b20af4e87ef6e4b7ecc216c3b266774e1",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0sCiAgImVuYWJsZWRQbHVnaW5zIjoge30sCiAgImV4dHJhS25vd25NYXJrZXRwbGFjZXMiOiB7fQp9Cg==",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_after_removal",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_after_restoration",
+      "path": "$FIXTURE/project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "project",
+      "stage": "settings_after_restoration",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_before",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_before",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_after_removal",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_after_removal",
+      "path": "$PROFILE/settings.json",
+      "present": true,
+      "mode": 420,
+      "sha256": "2fc36cd88ea5b1049defa6877fe98653f6b81a53f95878c26f79a0a06317e94a",
+      "bytes_base64": "ewogICJlbmFibGVkUGx1Z2lucyI6IHt9LAogICJleHRyYUtub3duTWFya2V0cGxhY2VzIjoge30KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_after_restoration",
+      "path": "$FIXTURE/user-project/.claude/settings.json",
+      "present": true,
+      "mode": 416,
+      "sha256": "4ab6d0978465dbae1057564bf3f34273d2788e2c19fc722002dde94df7d4cd1a",
+      "bytes_base64": "ewogICJlbnYiOiB7CiAgICAiVVBTS0lMTF9RNl9NQU5VQUwiOiAiTUFOVUFMXzY0YjY4M2Q0YzlmMjA3ZjIyOWMxODg0MzM3NzMwZWM2IgogIH0KfQo=",
+      "derivation": "Reconstructed from captured fixture manual marker and JSON serialization; exact historical SHA-256 match, not an original byte snapshot"
+    },
+    {
+      "attempt": "retry",
+      "scope": "user",
+      "stage": "settings_after_restoration",
+      "path": "$PROFILE/settings.json",
+      "present": false,
+      "mode": null,
+      "sha256": null,
+      "bytes_base64": null,
+      "derivation": "Absent receipt"
+    }
+  ]
+}

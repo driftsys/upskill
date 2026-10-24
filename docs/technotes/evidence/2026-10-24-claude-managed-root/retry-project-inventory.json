@@ -1,0 +1,15 @@
+[
+  {
+    "id": "upskill-q6-472c9cd5748f0b14@upskill-q6-market-472c9cd5748f0b14",
+    "version": "0.0.0",
+    "scope": "project",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/cache/upskill-q6-market-472c9cd5748f0b14/upskill-q6-472c9cd5748f0b14/0.0.0",
+    "readFromFolder": "$FIXTURE/delivery/packages/upskill-q6-472c9cd5748f0b14",
+    "folderVersion": "0.0.0",
+    "installedAt": "2026-10-24T07:00:38.258Z",
+    "lastUpdated": "2026-10-24T07:00:38.258Z",
+    "projectPath": "$FIXTURE/project",
+    "projectEnabled": true
+  }
+]

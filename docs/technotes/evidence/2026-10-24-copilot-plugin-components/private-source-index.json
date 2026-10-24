@@ -41,12 +41,13 @@
     "manifests": [
       {
         "file": "receipt-hashes.json",
-        "sha256": "ee3d0e199de800017d2461ddfadd38d5a0f2e7b88cf4805649db2b78626c21f0"
+        "sha256": "93fa08583c16d8bf640734ff8414ae2f90c449e85aa0c673ee4dff455f58e261"
       }
     ],
     "capture_helpers": {
       "retain-q3-main-integration.py": "761b70eb793a91f9c393bc3a1f7a4406d2ddb8edfd4d3bb1784b46ddc4f65b81",
-      "correct-q3-integration-count.py": "ef1b8971bc47446f2dd041072bcc85d734663b1c05d697a038ee9802dbaabf5f"
+      "correct-q3-integration-count.py": "ef1b8971bc47446f2dd041072bcc85d734663b1c05d697a038ee9802dbaabf5f",
+      "retain-q3-q6-integration.py": "438e15f058e461270a7a710a0a92d773bb13e117895660ec8d316f27e6fafa57"
     }
   }
 ]

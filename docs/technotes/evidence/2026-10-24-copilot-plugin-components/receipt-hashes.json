@@ -7,12 +7,13 @@
   "guarded-retry-management.json": "404c445c4bee1ef3e5dad35bc8009de6a35737452b85446df9fab6fab4c66d89",
   "guarded-retry-preservation.json": "a0bb89acd34a2653a77e7f4f74063b0c15ff27caf715a8e0b1fb15511e8b517b",
   "initial-attempt-summary.json": "15ae8fb03105b04f548d8f2609c4787c4f73a4d2cd6ff49f3670c9add70cb719",
+  "latest-main-integration-audit.json": "5f7aa503f7b9e123e5a445aa5a575ba3bb0ba9c69080e9234c5db9a9b9bec337",
   "local-identity-list.stdout": "07170797806066c1b1c419e1c5227d0c7f668f728165dcda06bfb7a44faf08bd",
   "main-integration-audit.json": "09a9b970de6df1d6e5e07eaab52330769c616901639b47444acdbc9ddc6cf6f2",
   "management.json": "2151246affb21a6832200e3e3ab6994db656910f2a44b57f3cb99a19cf1391e4",
   "native-session-audit.json": "f767b3b42cff5e417cc5258acfb036ea340e579888d2c4b132c13effa5687708",
   "preservation.json": "32ff09d5ecdf075d8698aabeb2b80e2defd38aa54b597a9026ebe89a6298e494",
-  "private-source-index.json": "359d23309b34b422d829c39c2f675309f33f17cc841c49ef5af373e943bbce74",
+  "private-source-index.json": "146d50b5439366cc3ccfe1f581e30e21717cfbdbc9a584adc821c8da280b036b",
   "project-agent-events.json": "55bb4b5ac2d0250098d469b37de984e6097f3dad4fea0874d7fcf00caf8f6254",
   "project-catalog.json": "2961edb2a79ab4545126c20b17649b30ccd0989fe9e09fca12801e88e95a2fff",
   "project-controls.json": "6c5d12e3fc08bf0f126283f993517a69ab7e35ed1d14cb91c7e74b13e76d10df",
@@ -44,5 +45,5 @@
   "user-nonmatching-events.json": "7a93df8ec7a108a6338c9283c90d061ed0261c4cb3eece117fd521ddbac21b29",
   "user-uninstalled-events.json": "6127c8ca3f07bb87f3ba4ecac8102b415448f875700b0c31f9b20f1712e094dd",
   "user-v2-install.stdout": "8b5da376ee7e889122c43099b943a31f3ef7f14645529ea6c17defebf66c0ca4",
-  "validation.json": "b9d9fd94e215f7336f49a962f208fdc378dac91f0346c1774e951200b2ad0c99"
+  "validation.json": "fb1d70fe86ef10925728c0aa7434d3191975a70ec25084682e5422f875c5138b"
 }

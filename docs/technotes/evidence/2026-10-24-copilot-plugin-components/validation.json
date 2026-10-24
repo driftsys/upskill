@@ -163,5 +163,17 @@
     "result": "PASS: just verify, 79 offline tests",
     "private_log": "$PACKET_G/q3-main-integration-verify.log",
     "sha256": "6e51d636342cb7672ea4233d39c2e2b67dabc5c99c108aa942553d0ba3c6073c"
+  },
+  {
+    "stage": "merged Q6 integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_G/q3-q6-integration-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "merged Q6 integration",
+    "result": "PASS: just verify, 93 offline tests",
+    "private_log": "$PACKET_G/q3-q6-integration-verify.log",
+    "sha256": "7fc67ef6c9c3a8e223c7b45026988f34f89f65180c2634c9d431ee018b481f5c"
   }
 ]

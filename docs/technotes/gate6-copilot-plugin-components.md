@@ -167,3 +167,8 @@ records unchanged Q3 function syntax trees and exact syntax-tree equality with
 main for the rest of the harness. Full verification passes all 79 offline tests
 ([validation](evidence/2026-10-24-copilot-plugin-components/validation.json)).
 Native observations were not rerun or widened.
+
+Integration with merged Q6 also preserves both harnesses, as recorded in the
+[latest main audit](evidence/2026-10-24-copilot-plugin-components/latest-main-integration-audit.json).
+The subsequent full verification passes 93 offline tests
+([validation](evidence/2026-10-24-copilot-plugin-components/validation.json)).

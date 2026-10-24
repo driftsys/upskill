@@ -73,7 +73,7 @@ class CopilotReaderReplayTests(unittest.TestCase):
     def test_result_exit_code_and_identity_are_strict(self):
         for value in [1, False, '0', None]:
             self.assertFalse(q.copilot_response(encode(events(exit_code=value)))[2]['completed_response'])
-        for value in ['', None, [], False]:
+        for value in ['', '   ', '\t\n', None, [], False]:
             rows = events()
             rows[-1]['sessionId'] = value
             self.assertFalse(q.copilot_response(encode(rows))[2]['completed_response'])

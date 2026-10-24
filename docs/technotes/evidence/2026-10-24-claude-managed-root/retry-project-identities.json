@@ -1,0 +1,16 @@
+[
+  {
+    "scope": "project",
+    "project": "$FIXTURE/project",
+    "commit": "c280a03c0e557bf66b7d8fe24015ba93b6f0af89",
+    "parents": "",
+    "tracked_files": []
+  },
+  {
+    "scope": "user",
+    "project": "$FIXTURE/user-project",
+    "commit": "cca04fd79d92614c65439ef3da8b629ebf8df93f",
+    "parents": "",
+    "tracked_files": []
+  }
+]
