@@ -20,7 +20,7 @@
   "owned-ui-preference-restoration.json": "0790a9e7b0b90139f969e72fbeddf015ab4be4a767fc4db02ac11ba8b3e39de3",
   "post-removal-cache.json": "fa6b86129f953ae5760657c8ed600f520b2090faec49a7e02b13d3913c0cfe25",
   "preservation.json": "a06bd2e2a984289bf2691a5aa819b3022390090c6b9897f64f72b55a09072a9a",
-  "private-source-index.json": "34f1212a36ef5dd5aa8f5dd0ac44fffba3ab0ff0f06cd64805345a293cb53b3b",
+  "private-source-index.json": "6a8f64d350587f275d4ba52132013aa92f6ab4c4b2ddba85d7528bdc5c5e2289",
   "project-identities.json": "a645c18c3e7e34131189ef0a4bfab133816bf4b88e46bb4680542ae27b05ed89",
   "summary.json": "983176655ca9cac9d1e4c45ea26f07c9bcef7087e47c6f51e98ee329083e1978",
   "ui-assessment.json": "4583a602bafc4ca5363d62058adc7401aeeb5bf27ccecfe47d43dca496888b86",
@@ -31,5 +31,5 @@
   "uninstall.stdout": "2c70cd5cfab73e09857c92bf574916dbf855817fdbcecdd0b303a3386ae1a68a",
   "uninstalled.jsonl": "76dc2d5dbc1321a1fe96b19f3884b77ebecfd0f2a6c82ec84395d39b60de622d",
   "validate.stdout": "6c976fad375c62e9b32b49dc5049387e3b6a8ad006743a64d0a04c6c02a61543",
-  "validation.json": "19cf45b6ad2112775b54ae412c67f433d0f8dc5babc0e11c8d02890d55af81b5"
+  "validation.json": "fbcdcd5d8444833a8a596fe6986f4f068c8718520d2fb36dcb7797e7b1e30744"
 }

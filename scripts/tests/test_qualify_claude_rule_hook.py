@@ -193,6 +193,9 @@ class ClaudeRuleHookTests(unittest.TestCase):
         summary=json.loads((packet/'summary.json').read_text());fixture=json.loads((packet/'fixture.json').read_text())
         self.assertEqual(self.q.classify_claude_rule_hook({row['label']:row for row in summary['controls']},fixture),'observed')
         self.assertEqual(summary['classification'],'observed')
+        provenance=json.loads((packet/'control-provenance.json').read_text())
+        self.assertIs(provenance['controls']['resume']['fresh_resume_attachment_observed'],False)
+        self.assertIs(provenance['management']['post_disable_settings_snapshot_retained'],False)
 
     def test_trace_failure_cannot_emit_unrecorded_hook_context(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -219,3 +222,15 @@ class ClaudeRuleHookTests(unittest.TestCase):
                 with mock.patch.object(Path,'exists',exists), mock.patch.object(Path,'mkdir',side_effect=AssertionError('Reject before writes')):
                     with self.assertRaises(ValueError):self.q.prepare_claude_rule_hook(root/'fixture')
                 self.assertFalse((root/'fixture').exists())
+
+    def test_valid_callback_mappings_cannot_replace_event_sequences(self):
+        for phase in ('installed','resume','compact'):
+            for key in (0,'0','event'):
+                c,f=self.controls();event=c[phase]['events'][0].copy();c[phase]['events']={key:event}
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')
+
+    def test_each_callback_metadata_field_is_explicitly_required(self):
+        for phase in ('installed','resume','compact'):
+            for key in ('hook_event_name','cwd','session_id','source'):
+                c,f=self.controls();del c[phase]['events'][0][key]
+                self.assertEqual(self.q.classify_claude_rule_hook(c,f),'lifecycle_control_failed')

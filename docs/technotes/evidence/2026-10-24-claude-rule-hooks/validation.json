@@ -137,5 +137,29 @@
     "result": "PASS: just fmt then just verify; 141 offline tests, full Rust tests, lint, docs and build",
     "private_log": "$PACKET_B/q4-review-verify.log",
     "sha256": "5f4d56c70b811d558ac041bd69cc019029d0e5196ce36d8f7a008a30ec7325e0"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: formatting",
+    "private_log": "$PACKET_B/q4-quick-fix-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: 143 offline tests; test-only updates after unchanged harness full verification with 141 tests",
+    "private_log": "$PACKET_B/q4-quick-fix-lint.log",
+    "sha256": "b970a31bee3341db88038d0ca2210693d653bf5410ebf7b357bb8fbd14cd33ec"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: documentation checks",
+    "private_log": "$PACKET_B/q4-quick-fix-docs.log",
+    "sha256": "8dd174569aa0870cb855d019fee87fc15bf5b56388d190c8f3a1daea5c2dd0d6"
+  },
+  {
+    "stage": "Quick review test regressions",
+    "result": "PASS: six independent callback/provenance mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q4-quick-fix-mutations.log",
+    "sha256": "516ff63e9b228fca3f038724717089c8764c1942b087aace1dc445bece88a89f"
   }
 ]
