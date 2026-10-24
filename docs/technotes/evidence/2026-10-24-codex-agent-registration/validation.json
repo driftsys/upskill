@@ -34,5 +34,40 @@
     "result": "PASS: final restoration narrative and links",
     "private_log": "$PACKET_A/q7-restoration-docs-check.log",
     "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "PASS: 66 offline tests after quick findings",
+    "private_log": "$PACKET_A/q7-quick-fix-lint.log",
+    "sha256": "3b28d2cd118404d127078f094c1b2c38392cabf6fe9305ac06803afe81d7e0b4"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 scripts/check-docs.py",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q7-quick-fix-docs.log",
+    "sha256": "2582feb486655827dc6a6e53e936b5f8285e72b14fd8854e24c01d8697216c38"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "python3 $PACKET_A/q7-quick-mutations.py",
+    "result": "PASS: seven fixture/classification mutations rejected",
+    "private_log": "$PACKET_A/q7-quick-mutations-final.log",
+    "sha256": "f28a1e692f762b90635721457c0e30542f94b68ea20ec70953493272dc7950f7"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_A/q7-symlink-home-red.log",
+    "sha256": "210df14a9b5516a6f8b2ad32d7799486979a729a09e258ad1b337e01feade90a"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_A/q7-symlink-fix-verify.log",
+    "sha256": "ebfdab80fce1b16e824a63026fd37ff0afdc37c442b0db92f1b4cf598b16e7d3"
   }
 ]

@@ -121,6 +121,12 @@ claims.
 
 ## Offline validation and consequence
 
+Quick review strengthens child-marker identity, the forbidden operation and
+restrictions, failure classifications and package metadata. Seven adverse
+mutations are rejected by the latest nine Q7 tests. Resolved native-home
+rejection is checked before writes; final full verification passes 67 offline
+tests.
+
 Seven offline tests are written first. `just lint` fails on missing helpers,
 then passes all 65 offline tests. They pin the neutral layout, identical agent
 bytes, explicit role and local plugin registration, marker separation, inherited

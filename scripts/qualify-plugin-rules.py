@@ -221,6 +221,10 @@ def prepare_codex_agent_registration(root):
             or any(parts[i:i + 2] in (('.agents', 'skills'), ('.agents', 'plugins'), ('.config', 'opencode'))
                    for i in range(len(parts) - 1))):
         raise ValueError('A new neutral fixture root is required')
+    native_homes = ('.claude', '.github', '.codex', '.opencode', '.copilot',
+                    '.config/opencode', '.agents/skills', '.agents/plugins')
+    if any(root.is_relative_to((Path.home() / name).resolve()) for name in native_homes):
+        raise ValueError('Fixture must be outside resolved native user roots')
     root.mkdir(parents=True, mode=0o700)
     project, positive = root / 'project', root / 'positive'
     project.mkdir();positive.mkdir()
