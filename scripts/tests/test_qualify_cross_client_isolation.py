@@ -262,6 +262,21 @@ class CrossClientIsolation(unittest.TestCase):
             alias.symlink_to(row['native_package'], target_is_directory=True)
             with self.assertRaises(ValueError):
                 q.cross_client_package_tree(alias)
+            regular_target = base / 'regular-target.txt'
+            regular_target.write_text('Existing external file.\n')
+            directory_target = base / 'directory-target'
+            directory_target.mkdir()
+            (directory_target / 'nested.txt').write_text('Existing external directory.\n')
+            entry = row['native_package'] / 'external-link'
+            for target in (regular_target, directory_target):
+                with self.subTest(target=target.name):
+                    entry.symlink_to(target, target_is_directory=target.is_dir())
+                    try:
+                        self.assertTrue(entry.exists())
+                        with self.assertRaises(ValueError):
+                            q.cross_client_package_tree(row['native_package'])
+                    finally:
+                        entry.unlink()
             manifest = row['native_manifest']
             manifest.unlink()
             manifest.symlink_to(base / 'missing')
