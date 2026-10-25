@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-25",
+  "control": "Q5 explicit-path second retry",
+  "task": 391,
+  "pin": "OpenCode 2.1.4",
+  "platform": "macOS arm64",
+  "qualified": false,
+  "rules_route_qualified": false,
+  "status": "FAIL: native positive HTTP 429 provider.free-limit; downstream controls NOT RUN",
+  "classification": "positive_control_failed",
+  "controls_run": [
+    "positive"
+  ],
+  "controls_not_run": [
+    "unregistered",
+    "installed",
+    "resume",
+    "updated",
+    "removed",
+    "reinstalled",
+    "outside",
+    "package skill/resource",
+    "fallback context hook"
+  ],
+  "counts": {
+    "native_positive_invocations": 1,
+    "successful_positive_responses": 0,
+    "candidate_model_requests": 0
+  },
+  "model_selection_matches_requested": true,
+  "measured_configuration_and_fixture_files_unchanged": true,
+  "limits": [
+    "Configured model catalog presence does not establish backend availability.",
+    "The failed positive establishes neither explicit-path failure nor rule-reader absence.",
+    "No native instruction file list or provider-effective body counts observed.",
+    "No performance, skill/resource, fallback-hook, Linux or IDE/hosted qualification.",
+    "Native session/cache/log/authentication refresh effects are outside measured configuration preservation.",
+    "No production routing or durable-record amendment."
+  ]
+}

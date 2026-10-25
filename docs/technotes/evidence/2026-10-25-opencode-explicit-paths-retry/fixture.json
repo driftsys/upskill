@@ -1,0 +1,21 @@
+{
+  "root": "$PACKET_A/fixture",
+  "pin": "2.1.4",
+  "project": "$PACKET_A/fixture/project",
+  "positive_project": "$PACKET_A/fixture/positive",
+  "outside_project": "$PACKET_A/fixture/outside",
+  "positive_marker": "NATIVE_21b19baae542b75ef51604f033a1acb9",
+  "fallback": "ABSENT_0de2153bb90646e74bb220addbd102ff",
+  "rule_files": [
+    "$PACKET_A/fixture/delivery/rules/a.md",
+    "$PACKET_A/fixture/delivery/rules/b.md"
+  ],
+  "initial_markers": [
+    "RULE_77a6e4c6b92194293f8bab2363e3e185",
+    "RULE_e4b3cac110b24ae2b52043640b91752c"
+  ],
+  "updated_markers": [
+    "UPDATED_1ac41fe54c5b6f3d155207baf69dde54",
+    "UPDATED_f7868c8146188a8dcfa9f1bc70b7576c"
+  ]
+}

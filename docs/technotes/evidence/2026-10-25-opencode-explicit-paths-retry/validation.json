@@ -1,0 +1,20 @@
+[
+  {
+    "stage": "Existing fixture/classifier baseline before native request",
+    "result": "PASS: seven focused offline tests",
+    "private_log": "$PACKET_A/focused.log",
+    "sha256": "3062928e844f16d2af26a6783d1011b7772ce16e15859e67e6a504e13fda0a01"
+  },
+  {
+    "stage": "Repository verification",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_A/q5-retry-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Repository verification",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_A/q5-retry-verify.log",
+    "sha256": "cd08dc1c6113620c33e2ca3fb85523a39cb103c6af01d493ba39f52701252c69"
+  }
+]

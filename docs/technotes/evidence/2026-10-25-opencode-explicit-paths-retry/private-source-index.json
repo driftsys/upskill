@@ -1,0 +1,20 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q5-native-retry-jv7l08km",
+    "manifest_sha256": "8834d47eaacd37ed27c55005b96227d015a43deb4e5af0bbc22d7d2e2f73f8a2",
+    "capture_helpers": {
+      "campaign-pin-helper.py": "d1c663ce0b721632126125f69d10dbf01e1fd0d99578aec24f13752d2bf13313",
+      "prepare-helper.py": "ac968d4975f81e18aa7e700e888fc100c3d2f2b35fdb5f2213088523cdd18dc6",
+      "native-positive-helper.py": "1944a3f7ce6623bbe6b85e5e74a30a4c47b62b1292ba9956b6d58dd6437bbe3e",
+      "retain-native-helper.py": "9aeef4a427f58f16cd585a9381841527e3e110612009f0e54fad70cb99d9cb5d",
+      "q5-retry-retain-validation.py": "78194697245e61b611efec9f7f374e8944009ee19c57c7b47c70f3f13c8bec57"
+    },
+    "method": "One native positive rejected by free usage limit; downstream controls not run; no repeated positive invocation",
+    "source_snapshots": {
+      "qualify-native-instructions.py": "Unchanged existing Q5 fixture/classifier from reviewed PR404 head d97d844",
+      "qualify-plugin-rules.py": "Shared neutral root/environment helpers",
+      "offline-tests.py": "Seven existing tests run before the model request"
+    }
+  }
+]
