@@ -1,0 +1,2 @@
+Error: failed to load configured marketplace snapshot(s):
+- `upskill-qualification` at /private/tmp/upskill-gate6-codex-installed-20261019/marketplace: marketplace root does not contain a supported manifest

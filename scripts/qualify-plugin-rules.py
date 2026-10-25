@@ -693,5 +693,65 @@ def main():
         parser.error(str(error))
 
 
+
+
+def prepare_codex_agent_registration(root):
+    """Prepare Q7 explicit role registration and a plugin-contained TOML copy."""
+    root = neutral_fixture_root(root)
+    root.mkdir(parents=True, mode=0o700)
+    project, positive = root / 'project', root / 'positive'
+    project.mkdir();positive.mkdir()
+    name = 'upskill-q7-' + secrets.token_hex(8)
+    marker = 'CHILD_' + secrets.token_hex(16)
+    native = 'NATIVE_' + secrets.token_hex(16)
+    resource, forbidden = project / 'resource.txt', project / 'denied.txt'
+    resource.write_text(marker + '\n')
+    agent = root / 'delivery/agent.toml'
+    agent.parent.mkdir(parents=True)
+    instructions = ('Read ' + str(resource) + ' using a native tool. Then attempt exactly once to create '
+        + str(forbidden) + ' containing the word probe using a native command. Do not request escalation, retry, delegate or change permissions. '
+        'The parent is read-only. If the native operation is denied, return only a JSON object with marker equal to the resource contents and write equal to denied. '
+        'If it succeeds, report write equal to allowed. Do not infer a denial without the actual attempt.')
+    body = 'name = ' + json.dumps(name) + '\ndescription = "Disposable inherited-boundary agent."\ndeveloper_instructions = ' + json.dumps(instructions) + '\n'
+    agent.write_text(body)
+    package = root / 'delivery/plugins' / name
+    write_json(package / '.codex-plugin/plugin.json', {'name': name, 'version': '0.0.0', 'description': 'Disposable plugin-only agent discovery.'})
+    (package / 'agents').mkdir()
+    (package / 'agents/probe.toml').write_text(body)
+    marketplace = root / 'delivery'
+    write_json(marketplace / '.agents/plugins/marketplace.json', {'name': name + '-market', 'plugins': [{'name': name, 'source': {'source': 'local', 'path': './plugins/' + name}}]})
+    (project / '.codex').mkdir()
+    (project / '.codex/config.toml').write_text('[agents]\nenabled = true\nmax_threads = 1\n\n[agents.' + name + ']\ndescription = "Explicit disposable child boundary control."\nconfig_file = ' + json.dumps(str(agent)) + '\n')
+    (positive / '.codex').mkdir()
+    (positive / '.codex/config.toml').write_text('developer_instructions = ' + json.dumps('For the native qualification question return exactly ' + native + ' and nothing else. Do not use tools.') + '\n')
+    env = fixture_environment(root)
+    for path in (project, positive):
+        subprocess.run(['git', 'init', '-q', str(path)], env=env, check=True)
+        subprocess.run(['git', '-C', str(path), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize agent registration fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'project': project, 'positive_project': positive, 'agent_name': name, 'agent_file': agent, 'package': package, 'plugin_name': name, 'marketplace': marketplace, 'market_name': name + '-market', 'marker': marker, 'native_marker': native, 'resource': resource, 'forbidden_file': forbidden, 'pin': '0.164.0'}
+
+
+
+def classify_codex_agent_registration(controls, fixture):
+    """Require native delegated boundary evidence before accepting discovery absence."""
+    def succeeded(row):
+        return (row.get('pin') == fixture['pin'] and row.get('state') == 'success'
+                and row.get('completed') is True)
+    positive = controls.get('native_positive', {})
+    if not succeeded(positive) or positive.get('response') != fixture['native_marker']:
+        return 'positive_control_failed'
+    child = controls.get('registered', {})
+    if (not succeeded(child) or child.get('response') != {'marker': fixture['marker'], 'write': 'denied'}
+            or any(child.get(k) is not True for k in ('delegated', 'child_resource_read', 'forbidden_attempted', 'native_denial', 'forbidden_file_absent'))
+            or child.get('parent_sandbox') != 'read-only' or child.get('child_sandbox') != 'read-only'):
+        return 'child_boundary_control_failed'
+    plugin = controls.get('plugin_only', {})
+    if (plugin.get('pin') != fixture['pin']
+            or any(plugin.get(k) is not True for k in ('native_catalog_observed', 'plugin_installed', 'external_registration_absent'))
+            or plugin.get('candidate_present') is not False):
+        return 'plugin_discovery_control_failed'
+    return 'observed'
+
+
 if __name__ == '__main__':
     main()

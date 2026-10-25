@@ -1,0 +1,59 @@
+{
+  "qualified": false,
+  "q7_completed": true,
+  "control": "Q7",
+  "task": 393,
+  "date": "2026-10-24",
+  "pin": "Codex CLI 0.164.0",
+  "platform": "macOS arm64",
+  "scope": "trusted project",
+  "status": "PASS: bounded explicit role, inherited denial and plugin-only discovery; final configuration restored exactly after native notice-counter correction",
+  "controls": {
+    "native_positive": {
+      "pin": "0.164.0",
+      "state": "success",
+      "completed": true,
+      "response": "NATIVE_6decab0a4d20fda6e97811920bc4fead"
+    },
+    "registered": {
+      "pin": "0.164.0",
+      "state": "success",
+      "completed": true,
+      "response": {
+        "marker": "CHILD_d158abc64f8a225d309e1621de5af9d4",
+        "write": "denied"
+      },
+      "delegated": true,
+      "child_resource_read": true,
+      "forbidden_attempted": true,
+      "native_denial": true,
+      "forbidden_file_absent": true,
+      "parent_sandbox": "read-only",
+      "child_sandbox": "read-only"
+    },
+    "plugin_only": {
+      "pin": "0.164.0",
+      "native_catalog_observed": true,
+      "candidate_present": false,
+      "plugin_installed": true,
+      "external_registration_absent": true
+    }
+  },
+  "counts": {
+    "successful_native_positive_responses": 1,
+    "custom_children": 1,
+    "child_resource_reads": 1,
+    "child_forbidden_write_attempts": 1,
+    "native_write_denials": 1,
+    "plugin_only_model_requests": 0
+  },
+  "limits": [
+    "Callback/response controls do not qualify rules or effective-input uniqueness.",
+    "Normal folder trust is separate from hook trust; no hooks were created or reviewed.",
+    "Native plugin management restores its immediate baseline. Pre-UI byte restoration initially failed; subsequent owned notice-counter correction exactly recovers the original hash. Both attempts are retained.",
+    "No Linux/IDE/hosted, arbitrary user-root, MCP inheritance or integrated lifecycle qualification.",
+    "No production or durable support promotion; #379 remains open."
+  ],
+  "measured_configuration_restored": true,
+  "initial_restoration_failure_retained": true
+}

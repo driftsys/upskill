@@ -1,0 +1,10 @@
+{
+  "base": "2c713dba95eec1462509aa53287feb57382848ce",
+  "added_functions": [
+    "classify_codex_agent_registration",
+    "prepare_codex_agent_registration"
+  ],
+  "all_other_harness_ast_nodes_match_main": true,
+  "native_client_rerun": false,
+  "old_private_manifest_sha256": "d3a79daa8b6b6bd289597f6538b7439dea6826c3eb34a62ac6cf276377b020e8"
+}

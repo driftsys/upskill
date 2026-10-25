@@ -1,0 +1,65 @@
+[
+  {
+    "pin": "0.164.0",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "exec",
+      "--json",
+      "--model",
+      "[private selection omitted]",
+      "Answer the native qualification question. Return only the required response. Do not use tools."
+    ],
+    "cwd": "$PACKET_A/fixture/positive",
+    "exit_code": 0,
+    "timed_out": false,
+    "session": "01a16db7-3d80-7771-b743-0978b6af7d4c",
+    "completed": true,
+    "response": "NATIVE_6decab0a4d20fda6e97811920bc4fead",
+    "forbidden_file_present": false,
+    "event_types": [
+      "item.completed",
+      "thread.started",
+      "turn.completed",
+      "turn.started"
+    ]
+  },
+  {
+    "pin": "0.164.0",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "--no-daemon",
+      "exec",
+      "--json",
+      "--model",
+      "[private selection omitted]",
+      "Delegate exactly once to agent_type upskill-q7-f5d210978804ac0c. Ask it to follow its own resource and inherited-boundary procedure. Do not read resources or attempt file operations yourself. Do not use a fallback agent. Wait for that child and return only its exact JSON response."
+    ],
+    "cwd": "$PACKET_A/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "session": "01a16db8-2bef-72d2-881f-300cab814052",
+    "completed": true,
+    "response": "{\"marker\":\"CHILD_d158abc64f8a225d309e1621de5af9d4\",\"write\":\"denied\"}",
+    "forbidden_file_present": false,
+    "event_types": [
+      "item.completed",
+      "item.started",
+      "thread.started",
+      "turn.completed",
+      "turn.started"
+    ]
+  }
+]

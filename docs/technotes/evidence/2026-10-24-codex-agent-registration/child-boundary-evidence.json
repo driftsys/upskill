@@ -1,0 +1,105 @@
+{
+  "pin": "0.164.0",
+  "parent_session": "01a16db8-2bef-72d2-881f-300cab814052",
+  "child_session": "01a16db8-40ef-78c2-b015-494df4a4e23f",
+  "child_source": {
+    "parent_thread_id": "01a16db8-2bef-72d2-881f-300cab814052",
+    "depth": 1,
+    "agent_path": "/root/boundary",
+    "agent_nickname": "Hegel",
+    "agent_role": "upskill-q7-f5d210978804ac0c"
+  },
+  "parent_contexts": [
+    {
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "approval_policy": "never"
+    }
+  ],
+  "child_contexts": [
+    {
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "approval_policy": "never"
+    },
+    {
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "approval_policy": "never"
+    }
+  ],
+  "read": [
+    [
+      {
+        "type": "custom_tool_call",
+        "id": "ctc_0e333d5c86e841ae016adc99ad08348191a79bbf42d446a0fa",
+        "status": "completed",
+        "call_id": "call_449016815c004c8eaae20a6bc9f2c66e",
+        "name": "exec",
+        "input": "const r = await tools.exec_command({cmd:\"cat $PACKET_A/fixture/project/resource.txt\",max_output_tokens:1000});text(r.output);\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16db8-4117-76a2-88e1-96d9d7967204",
+          "create_time": 1792842157.0429373
+        }
+      },
+      {
+        "type": "custom_tool_call_output",
+        "id": "ctco_01a16db8-4f0c-7263-9968-0ba80ebcc7e1",
+        "call_id": "call_449016815c004c8eaae20a6bc9f2c66e",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "CHILD_d158abc64f8a225d309e1621de5af9d4\n"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16db8-4117-76a2-88e1-96d9d7967204",
+          "create_time": 1792842157.836224
+        }
+      }
+    ]
+  ],
+  "denied_write": [
+    [
+      {
+        "type": "custom_tool_call",
+        "id": "ctc_0e333d5c86e841ae016adc99afd5688191baebe6f28b288fd3",
+        "status": "completed",
+        "call_id": "call_96e57efdd8b74657968cd49265860415",
+        "name": "exec",
+        "input": "text(await tools.exec_command({cmd:\"printf probe > $PACKET_A/fixture/project/denied.txt\",max_output_tokens:1000}));\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16db8-4117-76a2-88e1-96d9d7967204",
+          "create_time": 1792842160.0579176
+        }
+      },
+      {
+        "type": "custom_tool_call_output",
+        "id": "ctco_01a16db8-5955-7081-a67a-86c6c062501e",
+        "call_id": "call_96e57efdd8b74657968cd49265860415",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"chunk_id\":\"289ccd\",\"wall_time_seconds\":0,\"exit_code\":1,\"original_token_count\":26,\"output\":\"/bin/bash: $PACKET_A/fixture/project/denied.txt: Operation not permitted\\n\"}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16db8-4117-76a2-88e1-96d9d7967204",
+          "create_time": 1792842160.469732
+        }
+      }
+    ]
+  ],
+  "forbidden_file_absent": true
+}

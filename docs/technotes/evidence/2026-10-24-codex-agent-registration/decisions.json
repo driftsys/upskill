@@ -1,0 +1,22 @@
+[
+  {
+    "decision": "Use ordinary native folder trust for the two reviewed fixture roots; create no hooks",
+    "reason": "Project role/config layers require a trusted workspace. The user delegated routine implementation decisions.",
+    "result": "Normal native trust UI accepted; no model prompt or /hooks action in admission."
+  },
+  {
+    "decision": "Use targeted native marketplace listing after unfiltered listing fails on an existing stale source",
+    "reason": "Changing an existing discovery source would violate the control contract.",
+    "result": "Own installed plugin inventory succeeds without editing the stale source."
+  },
+  {
+    "decision": "Record failed byte restoration after removing only known new trust entries",
+    "reason": "The original user configuration hash could not be reconstructed from the retained pre-control hash. Unknown remaining native bytes are preserved.",
+    "result": "No whole-profile restoration claim. Future controls must hold original configuration bytes in memory across UI admission, controls and cleanup; no credential export."
+  },
+  {
+    "decision": "Correct the native UI notice counter only after the complete candidate bytes match the original pre-UI hash",
+    "reason": "The remaining difference is the availability-notice counter advancing from 3 to 4; restoring 3 and original trailing whitespace reconstructs the exact original bytes.",
+    "result": "Applied after Q8 cleanup; final pre-Q7 configuration hash and mode restored. Initial failure retained unchanged."
+  }
+]
