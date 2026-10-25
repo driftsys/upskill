@@ -26,5 +26,33 @@
     "result": "PASS",
     "private_log": "$PACKET_A/q9-attribution-verify.log",
     "sha256": "9b38b4333d02e0dac82600198da57b681907bd26f722201da297b1d650c8b60b"
+  },
+  {
+    "stage": "Upstream main integration",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q9-attribution-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Upstream main integration",
+    "command": "just lint",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q9-attribution-main-lint.log",
+    "sha256": "91bd17c0e1d8516f9e5ee89129f5c57353c2658e0ccd380ef0c12e282964fa4c"
+  },
+  {
+    "stage": "Upstream main integration",
+    "command": "just docs-check",
+    "result": "PASS",
+    "private_log": "$PACKET_B/q9-attribution-main-docs.log",
+    "sha256": "f3abc320045bc138ec91a066017b77a07e10a9debca4b4778c2234cbb668a1f2"
+  },
+  {
+    "stage": "Quick-review test corrections",
+    "command": "Focused 12-test suite and four offline mutations",
+    "result": "PASS: asymmetric windows and later-prefix replacement covered; all four mutants rejected",
+    "private_log": "$PACKET_B/q9-attribution-quick-mutations.json",
+    "sha256": "b65e075972d5de4671f5293e92be4326a8f0efad9f1537102716d3b64e6543b6"
   }
 ]

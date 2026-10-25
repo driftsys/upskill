@@ -1,0 +1,17 @@
+[
+  {
+    "type": "thread.started",
+    "thread_id": "01a16db8-2bef-72d2-881f-300cab814052"
+  },
+  {
+    "type": "item.completed",
+    "item": {
+      "id": "item_1",
+      "type": "agent_message",
+      "text": "{\"marker\":\"CHILD_d158abc64f8a225d309e1621de5af9d4\",\"write\":\"denied\"}"
+    }
+  },
+  {
+    "type": "turn.completed"
+  }
+]

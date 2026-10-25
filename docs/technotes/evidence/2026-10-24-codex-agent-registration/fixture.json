@@ -1,0 +1,16 @@
+{
+  "root": "$PACKET_A/fixture",
+  "project": "$PACKET_A/fixture/project",
+  "positive_project": "$PACKET_A/fixture/positive",
+  "agent_name": "upskill-q7-f5d210978804ac0c",
+  "agent_file": "$PACKET_A/fixture/delivery/agent.toml",
+  "package": "$PACKET_A/fixture/delivery/plugins/upskill-q7-f5d210978804ac0c",
+  "plugin_name": "upskill-q7-f5d210978804ac0c",
+  "marketplace": "$PACKET_A/fixture/delivery",
+  "market_name": "upskill-q7-f5d210978804ac0c-market",
+  "marker": "CHILD_d158abc64f8a225d309e1621de5af9d4",
+  "native_marker": "NATIVE_6decab0a4d20fda6e97811920bc4fead",
+  "resource": "$PACKET_A/fixture/project/resource.txt",
+  "forbidden_file": "$PACKET_A/fixture/project/denied.txt",
+  "pin": "0.164.0"
+}

@@ -8,5 +8,14 @@
       "retain-helper.py": "cb358c40c33dadfb39feeaa1266e3325ea2a1133b420995f86b02c017f83f36b"
     },
     "method": "Successful startup and same-session resume, no compaction; cumulative and appended native record windows retained separately"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q9-attribution-integration-2fitdqz5",
+    "manifest_sha256": "cb49a3bfcaee6a5f9b5e5b0f9b0989198e79b346ae9d2679a3dac5e73025a383",
+    "capture_helpers": {
+      "retain-integration-helper.py": "d03c6b3b921260a7ec4ec5bc976411ddec95422dbfb7d42dadaa61ee5d86b329"
+    },
+    "method": "Offline main integration only; native source epoch unchanged"
   }
 ]
