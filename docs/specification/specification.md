@@ -238,7 +238,7 @@ Three files outside the per-item path tree are managed idempotently:
   absent. Never overwritten.
 - **`.vscode/settings.json`** — `chat.instructionsFilesLocations` is set; other
   keys preserved.
-- **`opencode.json`** — checked on rule-bearing installs. The entry
+- **`opencode.json`**: checked on rule-bearing installs. The entry
   `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
   including when a later install finds that it was removed. An existing entry
   leaves the file unchanged; unrelated entries and keys are preserved
