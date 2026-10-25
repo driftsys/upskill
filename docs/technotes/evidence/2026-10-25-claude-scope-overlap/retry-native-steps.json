@@ -1,0 +1,745 @@
+[
+  {
+    "label": "00-validate",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "validate",
+      "$PACKET_D/fixture/delivery"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:33.877009+00:00",
+    "finished_at": "2026-10-25T18:20:35.164625+00:00",
+    "stdout_sha256": "90d52987c8971251b2f69d122c42bbf20383e54d8b6c4867df014c09c71c81e5",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "01-initial-user-market-add",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_D/fixture/delivery",
+      "--scope",
+      "user",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:35.165423+00:00",
+    "finished_at": "2026-10-25T18:20:35.977789+00:00",
+    "stdout_sha256": "2f126664e72d4f18b915ba326264fb211f23db7edd7974a9aa6713f514b57395",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "02-initial-user-install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:35.978862+00:00",
+    "finished_at": "2026-10-25T18:20:36.704510+00:00",
+    "stdout_sha256": "538d3ad840eaa68aa40ff13239d414b996f4c7d41f6991de0c58f87579f76b5f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "03-user_initial-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:36.705546+00:00",
+    "finished_at": "2026-10-25T18:20:36.721632+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "04-user_initial-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:36.722019+00:00",
+    "finished_at": "2026-10-25T18:20:37.442961+00:00",
+    "stdout_sha256": "d059e8d1d8ed92bc8716f2b44ea5779521166465e892b61fa3f47449043a6101",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "05-user_initial",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:37.445569+00:00",
+    "finished_at": "2026-10-25T18:20:45.122442+00:00",
+    "stdout_sha256": "285d5c29c1b573482658d4ab9c8cb909fb5e2693f76739dec381ef5f1346b32e",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "06-initial-user-uninstall",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:45.131392+00:00",
+    "finished_at": "2026-10-25T18:20:46.036213+00:00",
+    "stdout_sha256": "44b0af51e151861f02791ad96dfc2c7c1c5d237071a675f783d8a9e886c16d23",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "07-initial-user-market-remove",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:46.037603+00:00",
+    "finished_at": "2026-10-25T18:20:46.758413+00:00",
+    "stdout_sha256": "ea99196530221294493aff5b69fa3c56f56a7c1fdebad34bd44eca74e2642807",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "08-calibration-project-market-add",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_D/fixture/delivery",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:46.759845+00:00",
+    "finished_at": "2026-10-25T18:20:47.510339+00:00",
+    "stdout_sha256": "2888070ff707b3d507a06ad8acce8ff00b356f8662a0ab3b83f1f0eb783f8a6f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "09-calibration-project-install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:47.511141+00:00",
+    "finished_at": "2026-10-25T18:20:48.256844+00:00",
+    "stdout_sha256": "3060745d2665ac54123c17c6f2ec1250a0f4a6745c3909cf92c284c97cab6441",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "10-project_positive-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:48.258934+00:00",
+    "finished_at": "2026-10-25T18:20:48.282164+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "11-project_positive-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:48.283902+00:00",
+    "finished_at": "2026-10-25T18:20:49.115453+00:00",
+    "stdout_sha256": "0c39a0d7d0035368b56b15f53642048fff8566db57466bcca274adbf4a0087b7",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "12-project_positive",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:49.117430+00:00",
+    "finished_at": "2026-10-25T18:20:54.952295+00:00",
+    "stdout_sha256": "f5a9c2f72bc988e57e4a44bc410b69d36b308a85949e8d05f4b750c6fce43891",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "13-calibration-project-uninstall",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:54.971719+00:00",
+    "finished_at": "2026-10-25T18:20:55.874424+00:00",
+    "stdout_sha256": "65e14a57f351808023081566f926f88500a57d46bc24cfc7f8a498d80a8b3bd5",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "14-calibration-project-market-remove",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:55.876624+00:00",
+    "finished_at": "2026-10-25T18:20:56.568199+00:00",
+    "stdout_sha256": "c85262167fee8f8ca0b9bba36546134fe3c8d7b462ee4c9b77e076f52fe1c2c4",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "15-user-market-add",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_D/fixture/delivery",
+      "--scope",
+      "user",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:56.570404+00:00",
+    "finished_at": "2026-10-25T18:20:57.326650+00:00",
+    "stdout_sha256": "2f126664e72d4f18b915ba326264fb211f23db7edd7974a9aa6713f514b57395",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "16-user-install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:57.328379+00:00",
+    "finished_at": "2026-10-25T18:20:58.077695+00:00",
+    "stdout_sha256": "538d3ad840eaa68aa40ff13239d414b996f4c7d41f6991de0c58f87579f76b5f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "17-user_positive-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:58.080216+00:00",
+    "finished_at": "2026-10-25T18:20:58.096177+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "18-user_positive-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:58.097420+00:00",
+    "finished_at": "2026-10-25T18:20:58.789847+00:00",
+    "stdout_sha256": "21720e2bff5c4943cb3f0fe69c44d4bfac05e288ef85646934caa15a73a53a4f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "19-user_positive",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:20:58.791326+00:00",
+    "finished_at": "2026-10-25T18:21:04.757802+00:00",
+    "stdout_sha256": "5c9146e84d9156c6c5f2f688b62f7d5afc3c87b61d176a174eacc362cbc4b188",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "20-overlap-project-install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:04.763259+00:00",
+    "finished_at": "2026-10-25T18:21:05.502466+00:00",
+    "stdout_sha256": "3060745d2665ac54123c17c6f2ec1250a0f4a6745c3909cf92c284c97cab6441",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "21-overlap-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:05.505412+00:00",
+    "finished_at": "2026-10-25T18:21:05.522060+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "22-overlap-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:05.523135+00:00",
+    "finished_at": "2026-10-25T18:21:06.420498+00:00",
+    "stdout_sha256": "2b88e38f25e23beb232c878d29805e85c89aead7aaa5c89aae00e6447278d2f4",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "23-overlap",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:06.422630+00:00",
+    "finished_at": "2026-10-25T18:21:12.581147+00:00",
+    "stdout_sha256": "cb7be28a21bd573f62fce0917b693129018f3fe6babd2a3f4319631bb437e6ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "24-overlap-project-uninstall",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:12.585977+00:00",
+    "finished_at": "2026-10-25T18:21:13.358182+00:00",
+    "stdout_sha256": "65e14a57f351808023081566f926f88500a57d46bc24cfc7f8a498d80a8b3bd5",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "25-user_remaining-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:13.360948+00:00",
+    "finished_at": "2026-10-25T18:21:13.381263+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "26-user_remaining-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:13.382671+00:00",
+    "finished_at": "2026-10-25T18:21:14.202603+00:00",
+    "stdout_sha256": "21720e2bff5c4943cb3f0fe69c44d4bfac05e288ef85646934caa15a73a53a4f",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "27-user_remaining",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:14.204370+00:00",
+    "finished_at": "2026-10-25T18:21:19.838111+00:00",
+    "stdout_sha256": "46013929ff1b50a9249399d637fd687ea2fdbb35cf395d99cf976461a4d38e7c",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "28-second-overlap-project-install",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "install",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:19.845232+00:00",
+    "finished_at": "2026-10-25T18:21:20.668430+00:00",
+    "stdout_sha256": "3060745d2665ac54123c17c6f2ec1250a0f4a6745c3909cf92c284c97cab6441",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "29-second-overlap-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:20.672597+00:00",
+    "finished_at": "2026-10-25T18:21:21.411238+00:00",
+    "stdout_sha256": "756c73f9f5b3329ede1cf39fd1e1e4f31f901e906c037ca9767dfda604c8ff6b",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "30-overlap-user-uninstall",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:21.414765+00:00",
+    "finished_at": "2026-10-25T18:21:22.218610+00:00",
+    "stdout_sha256": "44b0af51e151861f02791ad96dfc2c7c1c5d237071a675f783d8a9e886c16d23",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "31-project_remaining-version",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "--version"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:22.221758+00:00",
+    "finished_at": "2026-10-25T18:21:22.240496+00:00",
+    "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "32-project_remaining-inventory",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:22.244723+00:00",
+    "finished_at": "2026-10-25T18:21:23.144600+00:00",
+    "stdout_sha256": "5fc8c8665125cd43b7e915b77fbf65d6a1ee31bb0a4b8cd97eb810bca962549b",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "33-project_remaining",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "-p",
+      "--tools",
+      "Skill,Read",
+      "--allowedTools",
+      "Skill,Read",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--setting-sources",
+      "user,project",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--max-turns",
+      "5",
+      "--model",
+      "$PRIVATE_MODEL",
+      "Invoke the skill named upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a exactly once and follow its instruction. If unavailable, return exactly ABSENT_0920512a1e034023e137d674c21a129b. Return only the requested response."
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:23.148919+00:00",
+    "finished_at": "2026-10-25T18:21:30.161554+00:00",
+    "stdout_sha256": "cee893d7fb44b336fb24bb7fb5e53f177f494dcdfdb971631461a54a9a0aa1ff",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "34-final-uninstall-project",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:30.171141+00:00",
+    "finished_at": "2026-10-25T18:21:31.117672+00:00",
+    "stdout_sha256": "65e14a57f351808023081566f926f88500a57d46bc24cfc7f8a498d80a8b3bd5",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "35-final-uninstall-user",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "uninstall",
+      "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 1,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:31.119105+00:00",
+    "finished_at": "2026-10-25T18:21:31.948309+00:00",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "23f9ba68efbd82ad1cfee22780c29712ca14d6eeb3b6843316833b8ede1b6706"
+  },
+  {
+    "label": "36-final-market-remove-project",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "project"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 1,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:31.950891+00:00",
+    "finished_at": "2026-10-25T18:21:32.727436+00:00",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "f2423e66e2aa3eb14547b5106c1246e493535b18f00ea45ed3900009a5eb5c6b"
+  },
+  {
+    "label": "37-final-market-remove-user",
+    "command": [
+      "/opt/homebrew/bin/claude",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q10-market-27cf36541c3cd19a",
+      "--scope",
+      "user"
+    ],
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at": "2026-10-25T18:21:32.732737+00:00",
+    "finished_at": "2026-10-25T18:21:33.519156+00:00",
+    "stdout_sha256": "ea99196530221294493aff5b69fa3c56f56a7c1fdebad34bd44eca74e2642807",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

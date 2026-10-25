@@ -1,0 +1,18 @@
+{
+  "root": "$PACKET_D/fixture",
+  "managed_root": "$PACKET_D/fixture/delivery",
+  "package": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+  "project": "$PACKET_D/fixture/project",
+  "user_project": "$PACKET_D/fixture/user-project",
+  "plugin_name": "upskill-q10-27cf36541c3cd19a",
+  "market_name": "upskill-q10-market-27cf36541c3cd19a",
+  "skill_name": "probe-27cf36541c3cd19a",
+  "skill": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/SKILL.md",
+  "fallback": "ABSENT_0920512a1e034023e137d674c21a129b",
+  "manual": "MANUAL_67981d0892f1bb98079af1a8e70f2066",
+  "pin": "2.1.308",
+  "resource_marker": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+  "activation_marker": "ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d",
+  "skill_body": "Activation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n",
+  "resource": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+}

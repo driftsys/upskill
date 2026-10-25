@@ -1,0 +1,963 @@
+{
+  "user_initial": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "user",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:20:36.169Z",
+        "lastUpdated": "2026-10-25T18:20:36.169Z",
+        "projectEnabled": false
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "user",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:20:36.169Z",
+        "lastUpdated": "2026-10-25T18:20:36.169Z"
+      }
+    ],
+    "enabled_scopes": {
+      "user": true,
+      "project": null
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "05-user_initial",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "7eb544c0-a904-4057-a5a2-2cb3531aab4c",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "7a7c9953-ba9b-4c0a-8de4-29d3b6935876",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01Dgvdm8y4JZuDYxKM7rxPD7",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "f55ef945-b5e9-4fe4-984c-ffc0abc6d680",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01Dgvdm8y4JZuDYxKM7rxPD7",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "19789abc-73e8-45cf-bf94-5e4a8ee5034a",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "169108e7-9d87-4e9e-b628-e48bac37b9b2"
+      },
+      {
+        "type": "assistant",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "49a00a16-a283-4636-8df7-dd75c358e64d",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01FrtJ5MvCWVRbg6egKHBVYR",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "daf95649-2223-43d5-9a53-2e9d3cad7aec",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_01FrtJ5MvCWVRbg6egKHBVYR",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "a245d4b6-34b9-4bae-9e94-741f80830f3b",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "fe101b04-d5a2-45ff-83c5-6c5846f15517",
+        "uuid": "9c095cfa-b72d-4592-b304-6f9902745a39",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  },
+  "project_positive": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "project",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:20:47.713Z",
+        "lastUpdated": "2026-10-25T18:20:47.713Z",
+        "projectPath": "$PACKET_D/fixture/project",
+        "projectEnabled": true
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "project",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:20:47.713Z",
+        "lastUpdated": "2026-10-25T18:20:47.713Z",
+        "projectPath": "$PACKET_D/fixture/project"
+      }
+    ],
+    "enabled_scopes": {
+      "user": null,
+      "project": true
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "12-project_positive",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "44c18f12-1e08-42c1-bea0-97b397f28e0c",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "4fc4d333-d61d-4177-a3d4-c80e0fd531de",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01DFN5mDUYxaPzkAhHyrYVYY",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "81cadc90-4f25-4ce1-9ca0-8699edf8c8f5",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01DFN5mDUYxaPzkAhHyrYVYY",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "2aae7c52-b0a1-4931-9f10-9d86f17f8760",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "a3d3890c-48b0-477a-8954-96480bb8452d"
+      },
+      {
+        "type": "assistant",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "90006892-1093-4db6-b008-b1273f8f8048",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01MNRNnEoDvVzY8abLDW6QSb",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "0aba3025-34f9-4eac-981b-0c9fd688c2ca",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_01MNRNnEoDvVzY8abLDW6QSb",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "c221c842-1d12-4c94-8614-af14d1ab3580",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "84f04630-4e35-4ea9-99e2-61f800346f57",
+        "uuid": "6be7786c-a238-4bca-93af-1da383d9348b",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  },
+  "user_positive": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "user",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z",
+        "projectEnabled": false
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "user",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z"
+      }
+    ],
+    "enabled_scopes": {
+      "user": true,
+      "project": null
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "19-user_positive",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "ce0ecb77-8831-4c73-be3e-6f33f477e750",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "6c70abe6-005b-4bb1-b5b4-b620a30d4508",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_019FZHUkXMBLeXPPpos8mCtG",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "a5f4f6ae-864c-4d39-9388-530a9580f6d5",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_019FZHUkXMBLeXPPpos8mCtG",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "9431141d-d6aa-4dbe-b39c-34c09ed46a24",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "c9fcb6c0-3b68-41a4-a95a-13c56e8ca6cc"
+      },
+      {
+        "type": "assistant",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "55756f9c-7b28-4f0c-bef9-9a836f872d58",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01NKkW2B7jbXf8Jc2mgmDMcp",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "a15cd7b6-926a-4fa4-b03f-3593108bed8d",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_01NKkW2B7jbXf8Jc2mgmDMcp",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "9d14087c-b8a9-4489-adf7-a11c93d56767",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "42884e0c-714f-4abe-94f8-fe76464a823e",
+        "uuid": "a95cfb33-1cc5-4d01-9a4e-336b03b58224",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  },
+  "overlap": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "user",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z",
+        "projectEnabled": true
+      },
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "project",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:21:04.968Z",
+        "lastUpdated": "2026-10-25T18:21:04.968Z",
+        "projectPath": "$PACKET_D/fixture/project",
+        "projectEnabled": true
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "user",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z"
+      },
+      {
+        "scope": "project",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:21:04.968Z",
+        "lastUpdated": "2026-10-25T18:21:04.968Z",
+        "projectPath": "$PACKET_D/fixture/project"
+      }
+    ],
+    "enabled_scopes": {
+      "user": true,
+      "project": true
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "23-overlap",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "99ca7f8b-57e4-4e57-aafa-931284e943e7",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "be68368e-679d-4cec-9461-a5af050503f0",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_017A8bwdY4XEeVDTpHZ7BWfs",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "6cd51389-7222-47b1-97d8-e5b4bcf90eb2",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_017A8bwdY4XEeVDTpHZ7BWfs",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "4b985df7-0b61-4cf9-9132-ed60ccc9f20a",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "71859591-cfae-470f-9c59-4222236792ae"
+      },
+      {
+        "type": "assistant",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "db76c1d8-9780-4a64-92d5-a7dd4cde83be",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01FQJscw3LxX1d6HqFY4v2Hx",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "d9aa1bbf-64b6-47ba-94c6-311c216b01ba",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_01FQJscw3LxX1d6HqFY4v2Hx",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "9aaab489-1b4d-492d-afe2-61f7a6808069",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "2632ee0a-eb99-422d-8e3e-ead3891e281c",
+        "uuid": "0971efd7-749e-4c38-87e8-cde9e789df26",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  },
+  "user_remaining": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "user",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z",
+        "projectEnabled": false
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "user",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:20:57.542Z",
+        "lastUpdated": "2026-10-25T18:20:57.542Z"
+      }
+    ],
+    "enabled_scopes": {
+      "user": true,
+      "project": null
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "27-user_remaining",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "3bbaa509-1e28-4f36-8f03-dcb91f0f9839",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "f24fe564-0587-4448-a99f-99db00e70349",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_014wAPzG15f3PAgbsAAmT2St",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "b9824dc9-1be0-4eb6-9a3e-d8b205d9568b",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_014wAPzG15f3PAgbsAAmT2St",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "14792646-2c90-4d8b-9fd2-d9e7c18c3090",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "89826ef3-9bca-42fc-bf9e-0728136a97be"
+      },
+      {
+        "type": "assistant",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "8d54fac3-4669-45d8-a9c8-3f6f492f460e",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_017piTFWSxnSTPgio9m9XiD7",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "86524bda-2e82-4020-a6ff-afab0f21905d",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_017piTFWSxnSTPgio9m9XiD7",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "581836b7-0571-4967-b3a0-721d627a32a2",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "1a02993c-5710-4838-ba38-75d7130dbb06",
+        "uuid": "0948a96e-f151-4352-8272-6a4e0e0d4f26",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  },
+  "project_remaining": {
+    "inventory": [
+      {
+        "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+        "version": "0.0.0",
+        "scope": "project",
+        "enabled": true,
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+        "folderVersion": "0.0.0",
+        "installedAt": "2026-10-25T18:21:20.128Z",
+        "lastUpdated": "2026-10-25T18:21:20.128Z",
+        "projectPath": "$PACKET_D/fixture/project",
+        "projectEnabled": true
+      }
+    ],
+    "bindings": [
+      {
+        "scope": "project",
+        "projectPath": "$PACKET_D/fixture/project",
+        "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+        "version": "0.0.0",
+        "installedAt": "2026-10-25T18:21:20.128Z",
+        "lastUpdated": "2026-10-25T18:21:20.128Z"
+      }
+    ],
+    "enabled_scopes": {
+      "user": null,
+      "project": true
+    },
+    "version": "2.1.308",
+    "cwd": "$PACKET_D/fixture/project",
+    "exit_code": 0,
+    "timed_out": false,
+    "receipt_label": "33-project_remaining",
+    "malformed_stream": false,
+    "events": [
+      {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "e640002b-52ef-41cf-a556-120df599124c",
+        "cwd": "$PACKET_D/fixture/project",
+        "claude_code_version": "2.1.308",
+        "skills": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "slash_commands": [
+          "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+        ],
+        "selection": "Target namespace/bare alias only; unrelated catalog entries omitted"
+      },
+      {
+        "type": "assistant",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "1413f9d3-ec93-4741-a15b-98c03b8e66c7",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01FUJqjdhnr4rgGuH28Ui18F",
+              "name": "Skill",
+              "input": {
+                "skill": "upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "2422323c-2f87-47d4-8137-e4a19df28209",
+        "message": {
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01FUJqjdhnr4rgGuH28Ui18F",
+              "content": "Launching skill: upskill-q10-27cf36541c3cd19a:probe-27cf36541c3cd19a"
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "dd11ad2b-24c5-45f9-9237-a60595066f19",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Base directory for this skill: $PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a\n\nActivation receipt: ACTIVATION_74a4582e32d9c4b4abc5f703c1b3263d.\nRead references/receipt.txt exactly once, relative to this skill base directory.\nReturn only the single line read from that file. Do not invoke another skill or use other tools.\n"
+            }
+          ]
+        }
+      },
+      {
+        "type": "rate_limit_event",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "1e670c34-62be-471e-86a8-c2a01469e175"
+      },
+      {
+        "type": "assistant",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "00e8238e-0220-4515-a13b-98eee97ea570",
+        "message": {
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01MaNWrQk4SVq6sWkwKRp7ak",
+              "name": "Read",
+              "input": {
+                "file_path": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "user",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "9a9e16ee-5278-4a73-9f99-65125b637dab",
+        "message": {
+          "content": [
+            {
+              "tool_use_id": "toolu_01MaNWrQk4SVq6sWkwKRp7ak",
+              "type": "tool_result",
+              "content": "1\tINITIAL_494360c0064564b361eb738dd9b1ee7f\n2\t"
+            }
+          ]
+        }
+      },
+      {
+        "type": "assistant",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "ec46ace3-cd59-4d50-99cd-8f21543b54b0",
+        "message": {
+          "content": []
+        }
+      },
+      {
+        "type": "result",
+        "subtype": "success",
+        "session_id": "7c39d1ea-9f93-4aef-b23b-12457457fc2c",
+        "uuid": "23b3f3b8-ca3e-4b60-be4d-8e9c17b47db5",
+        "is_error": false,
+        "permission_denials": [],
+        "result": "INITIAL_494360c0064564b361eb738dd9b1ee7f",
+        "num_turns": 4
+      }
+    ]
+  }
+}

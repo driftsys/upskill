@@ -1,0 +1,18 @@
+{
+  "source_epoch": "$PACKET_E",
+  "commands": [
+    {
+      "command": "just fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "just verify",
+      "exit_code": 0
+    }
+  ],
+  "offline_suite_tests": 218,
+  "native_capture_harness_and_tests_unchanged": true,
+  "prior_source_epochs_unchanged": true,
+  "native_rerun_for_verification": false,
+  "review": "New retry evidence quick docs advisory: no findings; full code-review passes unchanged"
+}

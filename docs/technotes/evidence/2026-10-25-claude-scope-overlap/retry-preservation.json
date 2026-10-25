@@ -1,0 +1,103 @@
+{
+  "settings_before": {
+    "$PROFILE/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$PACKET_D/fixture/project/.claude/settings.json": {
+      "present": true,
+      "sha256": "666d8fb34cf2a8c2a0461690a32a61ba0cadb5e1437f627213d41254fecb590b",
+      "mode": 416
+    }
+  },
+  "settings_after_native_cleanup": {
+    "$PROFILE/settings.json": {
+      "present": true,
+      "sha256": "2fc36cd88ea5b1049defa6877fe98653f6b81a53f95878c26f79a0a06317e94a",
+      "mode": 420
+    },
+    "$PACKET_D/fixture/project/.claude/settings.json": {
+      "present": true,
+      "sha256": "738dffbe5d3ecc95739307e334352e34108e584815ccc51faada70b3623994cb",
+      "mode": 416
+    }
+  },
+  "residue": {
+    "$PROFILE/settings.json": "empty_object_residue",
+    "$PACKET_D/fixture/project/.claude/settings.json": "empty_object_residue"
+  },
+  "restoration": {
+    "$PROFILE/settings.json": true,
+    "$PACKET_D/fixture/project/.claude/settings.json": true
+  },
+  "settings_after_restoration": {
+    "$PROFILE/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$PACKET_D/fixture/project/.claude/settings.json": {
+      "present": true,
+      "sha256": "666d8fb34cf2a8c2a0461690a32a61ba0cadb5e1437f627213d41254fecb590b",
+      "mode": 416
+    }
+  },
+  "registry_before": {
+    "$PROFILE/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$PROFILE/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    }
+  },
+  "registry_after": {
+    "$PROFILE/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$PROFILE/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    }
+  },
+  "source_before": {
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/.claude-plugin/plugin.json": {
+      "sha256": "a5cc07f78a54a57643dcaee1184eb27323fbc5484147c418e3bb03f2e110ab5d",
+      "mode": 420
+    },
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/SKILL.md": {
+      "sha256": "f024f29977530cff5725ec34f8015ba37bffb4164f14fd3367904193432e71b4",
+      "mode": 420
+    },
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt": {
+      "sha256": "6a0b5e59126c8a45c53f4d1a22a6167669b4fe8ec595cb190ae9aab93820108b",
+      "mode": 420
+    }
+  },
+  "source_after": {
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/.claude-plugin/plugin.json": {
+      "sha256": "a5cc07f78a54a57643dcaee1184eb27323fbc5484147c418e3bb03f2e110ab5d",
+      "mode": 420
+    },
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/SKILL.md": {
+      "sha256": "f024f29977530cff5725ec34f8015ba37bffb4164f14fd3367904193432e71b4",
+      "mode": 420
+    },
+    "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a/skills/probe-27cf36541c3cd19a/references/receipt.txt": {
+      "sha256": "6a0b5e59126c8a45c53f4d1a22a6167669b4fe8ec595cb190ae9aab93820108b",
+      "mode": 420
+    }
+  },
+  "measured_preserved": true,
+  "whole_profile_equal": false,
+  "limits": [
+    "Native authentication, app bookkeeping, session/log/cache effects outside measured equality; no credential copying or direct cache writes."
+  ]
+}

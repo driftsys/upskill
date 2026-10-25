@@ -12,6 +12,18 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
+  : proposed under [#417](https://github.com/driftsys/upskill/issues/417).
+  Defines read-only capture, reader classification, glob/import closure,
+  duplication/drift rejection and planned acceptance examples. Design approval
+  and implementation remain pending; Q11 stays with its separate owner.
+
+- [Per-client package preservation contract](specs/2026-10-25-customization-preservation-contract.md)
+  : D1-D6 preservation policies approved by the user on 2026-10-25 after
+  [#416](https://github.com/driftsys/upskill/pull/416) retained the draft.
+  Concrete adapter profiles, implementation and native qualification remain
+  pending. This does not adopt package defaults or production routes.
+
 - [Customization delivery architecture proposal](specs/2026-10-23-customization-delivery-proposal.md)
   : native-first always-on rules decided by the user on 2026-10-24; other
   architecture amendments remain pending

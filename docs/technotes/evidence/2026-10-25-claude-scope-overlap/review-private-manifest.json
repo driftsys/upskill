@@ -1,0 +1,14 @@
+{
+  "q10-pass1-docs.log": "76402e8e6c88e291f2ff20a65cb5ede68d4da3f4302a2684e2ecf7ee7a0c386e",
+  "q10-pass1-fmt.log": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+  "q10-pass1-green-tests.log": "8be92060260381762c56edbc8afeec60f5eac346e1706072875f895c1aad601d",
+  "q10-pass1-lint.log": "007770a4eeaa0c3c28c13298d14fcbf8b8538de0af4fea6aee3b80fe8c7ec0be",
+  "q10-pass1-mutation-check.py": "494ed4bfe19c7ca058e826e60641384179623c240acedc012cffe1f9ac797dc0",
+  "q10-pass1-mutation-status.log": "661572159b5590dc17e338017132476d42803911684c95a20c44f1814fed3d7c",
+  "q10-pass1-mutations.json": "af5c1d9152082e81f8523afad97df12d1920f24e27cd332acc112f0162b105a4",
+  "q10-pass1-red-tests.log": "06a0ea63d3ed070a69b169f6d2aea8fad746041fc0fee4c2be415971feb8cc4a",
+  "retain-pass1-helper.py": "d14fe33e59cb490bd138de384301e93d87e67291cb086aaa9f2809d8b35e3c74",
+  "review-verification.json": "1511d589aaa7065f4589a6bb3a27c19591dbef3337f75a0b8127b573d15a0643",
+  "scripts/qualify-plugin-rules.py": "c9ceacb345739e9f3176b98c085b0bdb51f47c12b6b569551ce862f51bb279db",
+  "scripts/tests/test_qualify_claude_scope_overlap.py": "174d89e136babee2b5b081f188ca40b6de5cdff4a56bd66b9179ea5e5270b636"
+}

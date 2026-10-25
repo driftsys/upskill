@@ -1,0 +1,13 @@
+{
+  "user_first_positive": true,
+  "fresh_sessions": true,
+  "native_phase_order": [
+    "user_initial",
+    "project_positive",
+    "user_positive",
+    "overlap",
+    "user_remaining",
+    "project_remaining"
+  ],
+  "all_six_phases_completed": true
+}

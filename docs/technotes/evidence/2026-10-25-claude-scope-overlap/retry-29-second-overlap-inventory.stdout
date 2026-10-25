@@ -1,0 +1,62 @@
+[
+  {
+    "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+    "version": "0.0.0",
+    "scope": "user",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+    "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+    "folderVersion": "0.0.0",
+    "installedAt": "2026-10-25T18:20:57.542Z",
+    "lastUpdated": "2026-10-25T18:20:57.542Z",
+    "projectEnabled": true
+  },
+  {
+    "id": "upskill-q10-27cf36541c3cd19a@upskill-q10-market-27cf36541c3cd19a",
+    "version": "0.0.0",
+    "scope": "project",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0",
+    "readFromFolder": "$PACKET_D/fixture/delivery/packages/upskill-q10-27cf36541c3cd19a",
+    "folderVersion": "0.0.0",
+    "installedAt": "2026-10-25T18:21:20.128Z",
+    "lastUpdated": "2026-10-25T18:21:20.128Z",
+    "projectPath": "$PACKET_D/fixture/project",
+    "projectEnabled": true
+  },
+  {
+    "id": "pdf-viewer@synced",
+    "version": "0.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/pdf-viewer"
+  },
+  {
+    "id": "design@synced",
+    "version": "1.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/design"
+  },
+  {
+    "id": "cowork-plugin-management@synced",
+    "version": "0.2.2",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/cowork-plugin-management"
+  },
+  {
+    "id": "engineering@synced",
+    "version": "1.2.0",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/engineering"
+  },
+  {
+    "id": "figma@synced",
+    "version": "2.2.157",
+    "scope": "synced",
+    "enabled": true,
+    "installPath": "$PROFILE/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/figma"
+  }
+]

@@ -1,0 +1,110 @@
+{
+  "task": 409,
+  "control": "Q10 Claude same-package user/project scope overlap",
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "pin": "Claude 2.1.308",
+  "status": "PASS: one visible catalog entry and activation with user/project overlap and after either removal",
+  "qualified": false,
+  "classification": "observed_single_entry_and_activation",
+  "phases": {
+    "user_initial": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "project_positive": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "user_positive": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "overlap": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user",
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "user_remaining": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "project_remaining": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    }
+  },
+  "distinct_native_sessions": 6,
+  "first_user_positive_before_first_project_install": true,
+  "measured_preserved": true,
+  "whole_profile_equal": false,
+  "initial_attempt": "initial-attempt-summary.json",
+  "limits": [
+    "Pinned same-workspace visible evidence only, not provider-effective input or arbitrary package/plugin behavior.",
+    "During overlap one user-scoped marketplace supplies the two package registrations; collaborator onboarding is not qualified.",
+    "Initial project-first failed positive and protocol deviation remain retained.",
+    "Native authentication, app bookkeeping, logs and persisting cache effects are outside measured equality.",
+    "Q10 packet must merge and remain indexed before its entry control is done; Q11 and broader slice-2 gates remain separate.",
+    "No production route or durable-record amendment; Q5 stays deferred."
+  ]
+}
