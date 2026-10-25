@@ -200,16 +200,18 @@ Steps per control:
    observation and qualified implementation ([decision][decision],
    [AD-0040][direction], [CD-10][contract]).
 
-   The Codex outcome is **supported with declared limitation** once the
-   resume-only control is retained. The user accepts the transient duplicate
-   after resume followed by compaction until the next compaction; the
-   implementing maintainer retains the attribution run and updates the debt
-   record at step 7. #379 is re-scoped from K0 blocker to K1 debt, with that one
-   attribution control now merged. Its recorded-history counts are 1/2/1 across
-   startup/cumulative resume/new resume records, with no compaction. This does
-   not establish provider input or duplicate lifetime. The live severity change
-   waits for user adoption and does not turn Q9's original FAIL into a
-   zero-duplicate PASS ([decision][decision], [Q9][Q9], [summary][Q9 summary]).
+   The selected Codex policy is **supported with declared limitation**. The user
+   accepts the declared duplicate allowance rather than blocking route
+   selection. The original combined experiment records two bodies after the
+   first automatic compaction and one after the second. The now-merged
+   resume-only control records startup 1, cumulative resumed history 2 and newly
+   appended records 1 per rule, without compaction. Neither experiment proves
+   provider-effective input or duplicate lifetime. At step 7 the implementing
+   maintainer re-scopes #379 from K0 blocker to K1 debt after user adoption;
+   current labels stay unchanged until then. Keep Q9's original FAIL and the
+   earlier HTTP 401 failure; attribution is not a zero-duplicate PASS
+   ([decision][decision], [Q9][Q9], [summary][Q9 summary],
+   [resume-only][Q9 resume]).
 
    Direction adoption is separate from evidence-driven route amendments. The
    user approves or rejects the remaining package-default, subagent/MVP,

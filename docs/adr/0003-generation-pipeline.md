@@ -83,12 +83,16 @@ Three ancillary files are managed idempotently:
   absent. Never overwritten — protects user customisations.
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
-- **`opencode.json`**: managed only on **first** opencode-rule install in a
-  consumer project. upskill adds `".agents/rules/**/RULE.md"` to the
-  `instructions[]` array (if not already present) and never mutates the file
-  thereafter. opencode's `instructions[]` glob expands to pick up rule additions
-  and removals automatically as files come and go under `.agents/rules/`. Other
-  config keys preserved; existing `instructions[]` entries preserved.
+- **`opencode.json`**: the current implementation checks rule-bearing installs,
+  creates the file if absent and adds `".agents/rules/**/RULE.md"` to
+  `instructions[]` when missing. A later install can restore a removed glob;
+  with the glob already present it leaves the file unchanged. Other keys and
+  existing instruction entries are preserved. This 2026-10-25 as-built
+  clarification corrects the earlier first-install-only description without
+  changing code or qualifying current OpenCode glob expansion
+  ([implementation](../../src/ancillary.rs),
+  [call site](../../src/pipeline/mod.rs),
+  [current-pin failure](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
 Skills do not require an `opencode.json` entry — opencode walks
 `.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in opencode's
