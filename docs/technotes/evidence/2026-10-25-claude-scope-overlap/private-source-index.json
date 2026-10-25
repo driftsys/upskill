@@ -29,5 +29,22 @@
       "q10-pass1-mutation-check.py": "494ed4bfe19c7ca058e826e60641384179623c240acedc012cffe1f9ac797dc0"
     },
     "method": "Full pass-1 offline guard/test corrections; first native failed positive and prior source epochs unchanged"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q10-user-first-0whn4xu_",
+    "manifest_sha256": "82fac94ca2f8c4fa4d500d3a15f36c6a3db87cd897e38d2716a060141741c43c",
+    "capture_helpers": {
+      "capture-helper.py": "a54eb9378be681bf3fc1d1a0bcdd5dcf81adb8eda4d765255f298ef51c6d4617",
+      "retain-helper.py": "81d9e86cd47eb293e090ff58635f5f230ded99540447f51fed32d3b113d334d4",
+      "campaign-pin-helper.py": "1b6929ddb2e95dd799bd04a9bd2e1046be15953967326646bc57fc845604cd2c"
+    },
+    "method": "Successful user-first six-phase retry with native cleanup; all prior source epochs unchanged"
+  },
+  {
+    "alias": "$AUTH_PROBE",
+    "private_source_path": "/private/tmp/upskill-claude-auth-verified-vrkvgx0_",
+    "manifest_sha256": "014608fac31ea1df0fcf51068b55581576cd8dbc3bdc6fc33e8f4ca7a72f4ae6",
+    "method": "Post-run index of authentication-only no-tools API probe outputs; not package qualification; no credential files copied"
   }
 ]

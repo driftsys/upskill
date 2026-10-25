@@ -1,0 +1,94 @@
+{
+  "classification": "observed_single_entry_and_activation",
+  "capture_harness_sha256": "c9ceacb345739e9f3176b98c085b0bdb51f47c12b6b569551ce862f51bb279db",
+  "assessed_phases": {
+    "user_initial": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "project_positive": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "user_positive": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "overlap": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user",
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "user_remaining": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
+    "project_remaining": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    }
+  },
+  "distinct_sessions": 6,
+  "first_user_positive_before_first_project_install": true,
+  "native_rerun_for_replay": false
+}

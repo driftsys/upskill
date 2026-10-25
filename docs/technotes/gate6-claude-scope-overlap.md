@@ -2,142 +2,175 @@
 
 Task [#409](https://github.com/driftsys/upskill/issues/409), Q10 of the
 [delivery handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
-retains a failed first native positive on 2026-10-25. Claude Code 2.1.308
-returned HTTP 401 from the isolated profile. User-only calibration, overlap and
-both surviving-scope controls were not run. This packet does not qualify overlap
-or advance the slice-2 entry gate. Production remains schema 1.
+retains a successful user-first retry on 2026-10-25. Claude Code 2.1.308 showed
+one visible target catalog entry and one activation with both scopes registered
+in the same workspace, then after either scope was removed. The
+[summary](evidence/2026-10-25-claude-scope-overlap/summary.json) records this
+bounded PASS. Production remains schema 1; broader qualification and Q11 remain
+separate gates.
 
-## Method and pins
+The earlier failed positive and its project-first protocol deviation remain in
+the
+[initial summary](evidence/2026-10-25-claude-scope-overlap/initial-attempt-summary.json).
+The retry does not change that attempt's result or reorder its receipts.
 
-The [campaign revision](gate6-plugin-profile-inventory.md) pins Claude 2.1.308,
-Copilot 1.0.103, Codex 0.164.0 and OpenCode 2.1.4 on macOS arm64. Only Claude
-ran a native control. The other commands queried versions, including OpenCode;
+## Pins and authentication
+
+The [retry campaign revision](gate6-plugin-profile-inventory.md) freshly pins
+Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and OpenCode 2.1.4 on macOS
+arm64. Only Claude ran a control. The other commands queried versions;
 [Q5 remains deferred](https://github.com/driftsys/upskill/issues/391).
 
-The existing `scripts/qualify-plugin-rules.py` extends the
+The
+[authentication record](evidence/2026-10-25-claude-scope-overlap/auth-recovery.json)
+retains the recovery prerequisites. The old token was revoked. Initial renewed
+login could not be saved because the isolated home had no default macOS Keychain
+reference. Native `security default-keychain` selected the existing login
+Keychain for that home; the normal home's default and search list were
+unchanged. Ordinary native login then succeeded. The Claude helper also supplies
+`USER` and `LOGNAME` from the native OS account: the sanitized environment
+without those identity keys could not find the saved login. A fresh API request
+then returned `OK`. No credentials were read or copied, no Keychain ACL was
+changed and no client discovery setting was changed. This authentication probe
+does not itself qualify package behavior.
+
+## Fixture and sequence
+
+The existing `scripts/qualify-plugin-rules.py` reuses the
 [Q6 neutral marketplace fixture](gate6-claude-managed-root.md). One package owns
-a namespaced skill and a relative resource. A resource marker appears only in
-the resource, while a distinct activation receipt appears in the skill body.
-Neither marker appears in the request. The fixture lives outside the repository
-and client discovery roots; no team guidance files or symlinks are created. The
-reused Q6 builder also creates an unused second project. That project supplies
-no Q10 observation.
+a namespaced skill and a relative resource. The resource marker appears only in
+the resource; a separate activation receipt appears in the skill body. Neither
+marker appears in the request. The managed source is outside repository and
+client discovery roots. No team guidance files or symlinks are created. The
+reused builder's second project remains unused and supplies no Q10 observation.
 
-The planned sequence was project-only calibration, user-only calibration in the
-same workspace, both scopes, user surviving project removal, then project
-surviving user removal. Each request would start a fresh native session with
-only `Skill` and `Read`, empty strict MCP configuration and ordinary
-permissions. The first failed positive stops later native requests. Native
-cleanup still runs. Native plugin management uses an existing isolated
-authenticated profile; the helper does not copy credentials, modify discovery
-settings or write client plugin caches.
+The
+[native steps](evidence/2026-10-25-claude-scope-overlap/retry-native-steps.json)
+and
+[sequence assessment](evidence/2026-10-25-claude-scope-overlap/retry-sequence-assessment.json)
+retain this order, using the same package identity and workspace:
 
-Starting with project-only calibration deviated from
-[task #409](https://github.com/driftsys/upskill/issues/409), which requires a
-successful user-only positive before project installation. This attempt stopped
-at the initial failed positive. A future retry must start with user-only
-calibration.
+1. Install at user scope and capture the first user-only positive before any
+   project installation. Uninstall it and remove its user marketplace.
+2. Register and install at project scope for a separate project-only positive.
+   Uninstall it and remove the project marketplace.
+3. Reinstall at user scope and capture a refreshed user-only positive.
+4. Add the same package at project scope and capture overlap.
+5. Remove the project registration and capture the surviving user activation.
+6. Reinstall the project registration, remove the user registration and capture
+   the surviving project activation. Perform native cleanup afterward.
 
-## Retained result
+Each request starts a fresh native session with only `Skill` and `Read`, empty
+strict MCP configuration, ordinary permissions and no session persistence. The
+first failed positive would stop subsequent phases. During overlap one
+user-scoped marketplace supplies both package registrations; simultaneous
+user/project marketplace declarations and collaborator onboarding are not
+tested.
 
-The [summary](evidence/2026-10-25-claude-scope-overlap/summary.json) and
-[selected observation](evidence/2026-10-25-claude-scope-overlap/project-positive-observation.json)
-retain these outcomes at Claude 2.1.308:
+## Native observations
 
-| Control                                                              | Pin            | Result                                                         |
-| -------------------------------------------------------------------- | -------------- | -------------------------------------------------------------- |
-| Native marketplace validation, project registration and installation | Claude 2.1.308 | PASS: each command exited 0                                    |
-| Project-only catalog                                                 | Claude 2.1.308 | One target skill and one target slash-command entry            |
-| Project-only invocation positive                                     | Claude 2.1.308 | FAIL: exit 1, HTTP 401 OAuth token rejection, `is_error: true` |
-| User-only positive                                                   | Claude 2.1.308 | Not run                                                        |
-| Both scopes in one workspace                                         | Claude 2.1.308 | Not run                                                        |
-| User surviving project removal                                       | Claude 2.1.308 | Not run                                                        |
-| Project surviving user removal                                       | Claude 2.1.308 | Not run                                                        |
-| Native project uninstall and marketplace removal                     | Claude 2.1.308 | PASS: each command exited 0                                    |
+The
+[selected observations](evidence/2026-10-25-claude-scope-overlap/retry-observations.json)
+retain both scope bindings, exact namespace, native session/tool identities,
+correlated results, full visible skill expansion and resource-only response.
+Each row has one target entry in each of the `skills` and `slash_commands`
+catalogs, one `Skill` call, one visible body expansion and one `Read` call:
 
-The failed result has subtype `success`, but `is_error: true` and exit 1 make it
-a failed positive. No `Skill` tool call, visible skill-body expansion or
-resource read occurred. A catalog entry alone cannot establish activation or
-uniqueness. The
-[command receipts](evidence/2026-10-25-claude-scope-overlap/native-steps.json)
-retain raw output hashes; provider error text, model identifiers, usage and
-unrelated catalog entries remain private.
+| Control                              | Pin            | Result                                       |
+| ------------------------------------ | -------------- | -------------------------------------------- |
+| First user-only positive             | Claude 2.1.308 | PASS: one entry and activation               |
+| Separate project-only positive       | Claude 2.1.308 | PASS: one entry and activation               |
+| Refreshed user-only positive         | Claude 2.1.308 | PASS: one entry and activation               |
+| Both package scopes in one workspace | Claude 2.1.308 | PASS: two bindings, one entry and activation |
+| User surviving project removal       | Claude 2.1.308 | PASS: one user binding and activation        |
+| Project surviving user removal       | Claude 2.1.308 | PASS: one project binding and activation     |
 
-Q6's separate-project passes remain distinct. They do not answer same-workspace
-overlap. Q10 needs a new successful positive after ordinary authentication
-renewal before any overlap inference is possible. No authentication retry was
-attempted in this packet.
+All six native session identities are distinct. Every invocation exits 0 with
+`is_error: false`, no permission denial and the exact resource marker. No
+duplicate target exposure or visible activation was observed. The
+[capture-time replay](evidence/2026-10-25-claude-scope-overlap/retry-offline-replay.json)
+and
+[separate raw-count audit](evidence/2026-10-25-claude-scope-overlap/retry-independent-audit.json)
+check the six phases and user-first order. The central five-phase classifier
+also returns `observed_single_entry_and_activation`; the extra first-user
+calibration is checked through its phase inspector and the sequence audit.
+
+This is pinned visible evidence for one fixture and package version `0.0.0`. It
+does not establish provider-effective input uniqueness, arbitrary package
+behavior, other clients or platforms. The packet must merge with its technote
+indexed before Q10 is done. Q11 and the other slice-2 entry gates remain
+separate; no production route or durable record changes with this packet.
 
 ## Preservation and residue
 
 The
-[preservation record](evidence/2026-10-25-claude-scope-overlap/preservation.json)
-compares settings presence, bytes and modes plus both native registration
-metadata files and package source files. Native removal left only added empty
-`enabledPlugins` and `extraKnownMarketplaces` objects in project settings. User
-settings were unchanged. After recording those empty objects, the helper
-restored the project settings to the original bytes and mode, preserving the
-unrelated manual value. Both registration metadata files and all measured
-package source files matched their original hashes and modes.
+[retry preservation record](evidence/2026-10-25-claude-scope-overlap/retry-preservation.json)
+compares settings presence, bytes and modes, both native registration metadata
+files and package source files. User and project settings each retained only
+added empty `enabledPlugins` and `extraKnownMarketplaces` objects after native
+removal. After recording those objects, the helper restored both settings files
+to their original bytes, modes and presence. The unrelated manual value
+survived. Both registration metadata files and all measured package source files
+matched their original hashes and modes.
+
+Two redundant final cleanup attempts exited 1: the
+[user uninstall](evidence/2026-10-25-claude-scope-overlap/retry-35-final-uninstall-user.stderr)
+found the already removed registration, and
+[project marketplace removal](evidence/2026-10-25-claude-scope-overlap/retry-36-final-market-remove-project.stderr)
+found the declaration already removed after calibration. Required earlier
+removals succeeded, and the measured final metadata equality confirms
+restoration. These command failures remain visible in the receipts.
 
 The
-[cache observation](evidence/2026-10-25-claude-scope-overlap/cache-after.json)
-records that the native `0.0.0` cache path remains a regular directory after
-uninstall. No cache cleanup was performed. Measured preservation passed;
-whole-profile equality is not claimed. Authentication, native app bookkeeping,
-logs and cache effects remain outside that equality claim.
+[retry cache observation](evidence/2026-10-25-claude-scope-overlap/retry-cache-after.json)
+records that native `0.0.0` cache storage remains a regular directory after
+uninstall. No direct cache writes or cleanup were performed. Measured
+preservation passed; whole-profile equality is not claimed. Authentication, the
+isolated home's Keychain reference, native app bookkeeping, logs and cache
+effects remain outside that equality claim.
 
-## Offline classification and provenance
+## Initial failed attempt
 
-The new fixture and classification tests preceded the harness extension.
-`just lint` first failed on missing Q10 helpers, then passed 206 tests. A public
-phase-inspection regression failed before that helper was exposed. A subsequent
-test incorrectly treated the valid `project` scope as invalid; its input was
-corrected to an unknown scope. A further regression showed that a duplicate
-already observed in overlap must remain a failure when later probes are absent.
-It failed before the classifier ordering change. The final pre-native
-[lint receipt](evidence/2026-10-25-claude-scope-overlap/q10-duplicate-green-lint.log)
-passed all 208 tests.
+The
+[original observation](evidence/2026-10-25-claude-scope-overlap/project-positive-observation.json)
+and [original steps](evidence/2026-10-25-claude-scope-overlap/native-steps.json)
+retain the first project-only calibration. Native installation and its catalog
+succeeded, but the invocation exited 1 with HTTP 401 OAuth token rejection and
+`is_error: true`, despite subtype `success`. No skill call, body expansion or
+resource read occurred. User calibration, overlap and surviving-scope controls
+were not run in that attempt. A catalog alone did not establish activation.
 
-The quick review found missing offline examples. Author-added cases now cover
-both native installation resource paths, fixture resource-reading instructions,
-partial additional body receipts, wrong workspace and namespace identities,
-wrong binding versions and two reads after one skill call. All 15 focused tests
-pass, and all eight reviewed mutations are rejected. These test-only additions
-are separate from the unchanged capture-time source and native result; no
-additional quick review of those fixes was run.
+Starting with project calibration deviated from
+[task #409](https://github.com/driftsys/upskill/issues/409), which requires a
+successful user-only positive before project installation. The fresh retry
+corrected the sequence; the original failed positive and deviation remain
+retained. Q6's separate-project results also remain distinct from Q10 overlap.
 
-Full review confirmed a missing stream-completeness guard. A new regression
-failed before the fix: malformed, missing or non-Boolean completeness evidence
-could otherwise be counted. The inspector now requires explicit complete-stream
-evidence; a malformed positive fails calibration, and malformed candidate
-evidence is unobserved. Additional cases cover calibration cardinality, empty or
-unrelated catalogs, reused surviving-scope sessions, tool errors, result
-subtype, exit-status type and duplicate classification after removal. These
-offline corrections do not rerun or alter the retained native attempt. The
-separate
+## Offline checks and provenance
+
+Offline fixture and classification tests preceded the harness extension, with
+`just lint` failing on missing helpers before passing after implementation. Full
+review later found a missing stream-completeness guard; 20 regression examples
+failed before that fix. The inspector now requires explicit complete stream
+evidence. Missing, malformed and non-Boolean completeness evidence cannot
+establish activation. The separate
 [review verification](evidence/2026-10-25-claude-scope-overlap/review-verification.json)
-records the revised source; the earlier verification describes its own source
-epoch.
-
-The classifier requires two successful single-scope positives, exact native
-scope bindings, fresh session identities, catalog visibility, correlated tool
-results, full visible skill-body expansions and a resource-only marker. It
-rejects duplicate exposure or activation, mismatched registrations, incomplete
-controls and preservation failures. It counts visible native evidence, not
-provider-effective input. The
-[offline replay](evidence/2026-10-25-claude-scope-overlap/offline-replay.json)
-uses the capture-time harness and preserves `positive_control_failed` for this
-attempt.
+records 218 suite tests, 21 focused tests and 16 rejected author mutations. The
+[earlier verification](evidence/2026-10-25-claude-scope-overlap/verification.json)
+describes its own source epoch. The
+[retry pre-native lint](evidence/2026-10-25-claude-scope-overlap/retry-q10-retry-pre-native-lint.log)
+again passed all 218 tests before the native retry. No public harness or test
+code changed for this retry.
 
 The
 [private source index](evidence/2026-10-25-claude-scope-overlap/private-source-index.json)
 locates raw transcripts, fixture sources, capture-time harness/tests and helper
-hashes outside the repository. The
-[private manifest](evidence/2026-10-25-claude-scope-overlap/private-manifest.json)
-indexes that source epoch, excluding generated Python bytecode and the manifest
-itself. The
+hashes outside the repository. Earlier epochs remain unchanged. The
+[retry manifest](evidence/2026-10-25-claude-scope-overlap/retry-private-manifest.json)
+indexes the new source epoch, excluding generated Python bytecode and the
+manifest itself. The
 [receipt hashes](evidence/2026-10-25-claude-scope-overlap/receipt-hashes.json)
-cover retained files. Public paths use `$PACKET_A` and `$PROFILE`; complete raw
-output hashes differ from selected retained output hashes. No documentation
-support claim, durable record or production route changes with this packet.
+cover retained files. Public paths use `$PACKET_D` and `$PROFILE` for the retry;
+earlier epochs retain their aliases. Selected events omit model identifiers,
+usage, thinking, unrelated catalogs and assistant prose. Complete raw output
+hashes differ from selected retained output hashes.

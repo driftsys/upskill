@@ -4,47 +4,107 @@
   "date": "2026-10-25",
   "platform": "macOS arm64",
   "pin": "Claude 2.1.308",
-  "status": "FAIL: project-only native positive rejected with HTTP 401; overlap not run",
+  "status": "PASS: one visible catalog entry and activation with user/project overlap and after either removal",
   "qualified": false,
-  "classification": "positive_control_failed",
+  "classification": "observed_single_entry_and_activation",
   "phases": {
+    "user_initial": {
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
+    },
     "project_positive": {
-      "status": "FAIL",
-      "native_exit": 1,
-      "result_subtype": "success",
-      "is_error": true,
-      "error": "HTTP 401 OAuth token rejection",
-      "target_skills_catalog_entries": 1,
-      "target_slash_command_entries": 1,
-      "skill_tool_calls": 0,
-      "resource_reads": 0,
-      "visible_skill_body_expansions": 0
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
     },
     "user_positive": {
-      "status": "not run",
-      "reason": "First native positive failed"
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
     },
     "overlap": {
-      "status": "not run",
-      "reason": "First native positive failed"
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user",
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
     },
     "user_remaining": {
-      "status": "not run",
-      "reason": "First native positive failed"
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "user"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
     },
     "project_remaining": {
-      "status": "not run",
-      "reason": "First native positive failed"
+      "status": "PASS",
+      "pin": "Claude 2.1.308",
+      "scope_bindings": [
+        "project"
+      ],
+      "counts": {
+        "skills_catalog": 1,
+        "slash_commands_catalog": 1,
+        "skill_calls": 1,
+        "visible_body_expansions": 1,
+        "resource_reads": 1
+      }
     }
   },
+  "distinct_native_sessions": 6,
+  "first_user_positive_before_first_project_install": true,
   "measured_preserved": true,
   "whole_profile_equal": false,
+  "initial_attempt": "initial-attempt-summary.json",
   "limits": [
-    "No overlap, activation uniqueness or surviving-scope result can be inferred from a failed positive.",
-    "Project native registration and one target catalog entry were observed; these are not a successful positive.",
-    "Native authentication, app bookkeeping, logs and cache effects are outside measured equality.",
-    "Provider error text, model identifiers, usage and unrelated catalog entries remain private.",
-    "Q5 stays deferred; version-only queries do not retry its provider control.",
-    "No production route, durable record or slice-2 entry gate is promoted."
+    "Pinned same-workspace visible evidence only, not provider-effective input or arbitrary package/plugin behavior.",
+    "During overlap one user-scoped marketplace supplies the two package registrations; collaborator onboarding is not qualified.",
+    "Initial project-first failed positive and protocol deviation remain retained.",
+    "Native authentication, app bookkeeping, logs and persisting cache effects are outside measured equality.",
+    "Q10 packet must merge and remain indexed before its entry control is done; Q11 and broader slice-2 gates remain separate.",
+    "No production route or durable-record amendment; Q5 stays deferred."
   ]
 }

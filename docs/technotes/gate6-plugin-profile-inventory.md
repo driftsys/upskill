@@ -7,6 +7,15 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice-2 entry campaign revision: 2026-10-25, Q10 user-first retry
+
+Fresh receipts pin Claude 2.1.308, Codex 0.164.0, Copilot 1.0.103 and OpenCode
+2.1.4 on macOS arm64 before the user-first Q10 retry. Only Claude runs the
+control; the other commands query versions. The initial failed attempt remains
+separate. Model selection remains private
+([receipts](evidence/2026-10-25-claude-scope-overlap/retry-campaign-pins.json),
+[task #409](https://github.com/driftsys/upskill/issues/409)).
+
 ## Slice-2 entry campaign revision: 2026-10-25, Q10 scope overlap
 
 Fresh four-client receipts precede the Q10 Claude overlap control. Installed
