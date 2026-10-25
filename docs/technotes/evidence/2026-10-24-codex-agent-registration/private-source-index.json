@@ -28,5 +28,18 @@
       "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
     },
     "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q7-full-pass1-ms3mtxn4",
+    "manifest_sha256": "0286b6244c096e2e9bfb37a9bc65ac11d41e0ad01ce723778eec4543af529855",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "7ebc44facebfab045f36d9cb6ef0ac69cf635e0318552042b53aecae62415810",
+      "q7-full-pass1-mutations.py": "d9c0b648ff901556e9f6c3b78091eac350d1d93bb8a05e4e6131ebd6f0710728"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
   }
 ]

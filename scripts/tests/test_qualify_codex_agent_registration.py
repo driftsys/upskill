@@ -98,6 +98,12 @@ class CodexAgentRegistrationTests(unittest.TestCase):
             c,f=self.controls();c['registered'][key]=value
             self.assertEqual(self.q.classify_codex_agent_registration(c,f),'child_boundary_control_failed')
 
+        for sandbox in ['workspace-write','danger-full-access','',None,1,True]:
+            c,f=self.controls();c['registered'].update(parent_sandbox=sandbox,child_sandbox=sandbox)
+            self.assertEqual(self.q.classify_codex_agent_registration(c,f),'child_boundary_control_failed')
+        c,f=self.controls();del c['registered']['parent_sandbox'];del c['registered']['child_sandbox']
+        self.assertEqual(self.q.classify_codex_agent_registration(c,f),'child_boundary_control_failed')
+
     def test_plugin_only_needs_installed_catalog_and_no_registration(self):
         for key in ('native_catalog_observed','plugin_installed','external_registration_absent'):
             for value in (False,None,1):

@@ -12,7 +12,7 @@
   "plugin-add.stdout": "a23dc25c9437f96852db9751f062182cba7f0b7bb2d42529d3ee483813d07775",
   "plugin-list.stderr": "89804797f161ca6a7253db1058c0fb9f64e0245e122fc81c641e49b28a85368a",
   "plugin-preservation.json": "93fc0b21625ccb7142731d128a0200eddbe9309fb0e83d935da6df7286378541",
-  "private-source-index.json": "0da9e633e78e9639d1ab694e7ede959224d0c012fe08ebd627d184dc9c1aabb3",
+  "private-source-index.json": "ccae09d539bd7bb763d6c2b2b93553d0b11899fbc1d60b583ff051885cbe4567",
   "project-identities.json": "560c7b9e29310c5a14127396180b13c2ee7735b875a8eb3cd8e08ea03188bdcd",
   "registered-native-events.json": "c990d621fcf1c4acfb503e3b5655a6adc04183e9a66ca540fd8f1596f5e00bcc",
   "requests.json": "917fcf4e29ee3d68b8035030a54899a23983d2199c544e73deb006e963771462",
@@ -24,5 +24,5 @@
   "summary.json": "3d4d31bb8451edbcc08a9916d0650b7102be1b6622add84d647f3a08aeb3e57a",
   "trust-restoration.json": "6f2a6636b55ad779ceb35ea24ebcc12b80b8ba1b04568cd3d6a87b7798ef640b",
   "user-config-before.json": "48d36bbb09e4b25baf936c7a872c65dcb33c1228d6ec2a36527479d42fda216d",
-  "validation.json": "345fad3604fda3fbb9d8ea610d411c4e17bde13d669293d483fa81a5f73b9bae"
+  "validation.json": "671238b129b5cddef0e42f5659616a2f7361346be8075a84dcc82b8294faffb0"
 }

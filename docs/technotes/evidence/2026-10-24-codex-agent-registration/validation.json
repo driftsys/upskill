@@ -123,5 +123,35 @@
     "result": "PASS: just docs-check",
     "private_log": "$PACKET_C/q7-current-quick-docs.log",
     "sha256": "82b802ba0534a86717d660323e57b8bb97bbf546d94edb086c60ad6b6db3f8d0"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_D/q7-full-pass1-focused.log",
+    "sha256": "ac5a47f724f912f964dc44cf67a8320a985de50e9b40c44e6244f66f3c1e4e5f"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_D/q7-full-pass1-mutations.log",
+    "sha256": "90c24153e5908ccb7da8933e721f23cab046a6a2a4fbb821716c6db5cb8ddaf3"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_D/q7-full-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_D/q7-full-pass1-lint.log",
+    "sha256": "9fb341deab20917bfadcf29ef69aa681b47094beefdecc35e9dbed6251d43412"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_D/q7-full-pass1-docs.log",
+    "sha256": "26bb65a139797dfe58a316934691f54c8f85e521bd52478b0a1ef9d86e8ff5ce"
   }
 ]
