@@ -85,7 +85,7 @@ class ResumeOnlyTests(unittest.TestCase):
         startup=[record(bodies['a']),record(bodies['b'])];resumed=startup+[record(bodies['a']),record(bodies['b'])]
         self.assertEqual(q.codex_resume_body_windows(startup,resumed,bodies),{'startup':{'a':1,'b':1},'resumed_history':{'a':2,'b':2},'resume_new_records':{'a':1,'b':1}})
         self.assertEqual(q.codex_resume_body_windows(startup,startup,bodies)['resume_new_records'],{'a':0,'b':0})
-        startup=[record(bodies['a']),record(bodies['a']),record(bodies['b']),{'type':'event_msg','payload':{}}]
+        startup=[record(bodies['a']),record(bodies['a']),record(bodies['b']),{'type':'event_msg','payload':record(bodies['b'])['payload']}]
         resumed=startup+[record(bodies['b']) for _ in range(3)]
         self.assertEqual(q.codex_resume_body_windows(startup,resumed,bodies),{'startup':{'a':2,'b':1},'resumed_history':{'a':2,'b':4},'resume_new_records':{'a':0,'b':3}})
 
@@ -103,5 +103,5 @@ class ResumeOnlyTests(unittest.TestCase):
     def test_resume_window_shape_is_validated_without_writing_native_history(self):
         self.assertTrue(callable(getattr(q,'codex_resume_body_windows',None)),'Missing resume body window summarizer')
         bodies={'a':'RULE_A_BODY','b':'RULE_B_BODY'}
-        for before,after in [(None,[]),([],[]),([1],[1]),([{}],[{},1]),([{}],[{}, {'type':'response_item','payload':None}])]:
+        for before,after in [(None,[]),([],[]),('invalid',[{}]),([{}],'invalid'),(({},),({},)),([1],[1]),([{}],[{},1]),([{}],[{}, {'type':'response_item','payload':None}])]:
             with self.assertRaises(ValueError):q.codex_resume_body_windows(before,after,bodies)

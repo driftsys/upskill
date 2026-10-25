@@ -68,5 +68,40 @@
     "result": "PASS",
     "private_log": "$PACKET_C/q9-attribution-current-verify.log",
     "sha256": "e5af1cf138d9ffae77d5eb93b4f9816a624130179f43b88f86e5d209239fa1b1"
+  },
+  {
+    "stage": "Full pass 1 test corrections",
+    "command": "Focused 12-test suite",
+    "result": "PASS",
+    "private_log": "$PACKET_D/q9-attribution-pass1-focused.log",
+    "sha256": "72f09eca554e87a45b7156c6109520cf15e8b6ec157dc5c033610649b49b8698"
+  },
+  {
+    "stage": "Full pass 1 test corrections",
+    "command": "Six offline mutations",
+    "result": "PASS",
+    "private_log": "$PACKET_D/q9-attribution-pass1-mutations.json",
+    "sha256": "5da58c10c8eefb048ab2a31e1c9cf4a40bb8a71a9fc799c18615a7fc6d4a56f3"
+  },
+  {
+    "stage": "Full pass 1 test corrections",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_D/q9-attribution-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full pass 1 test corrections",
+    "command": "just lint",
+    "result": "PASS",
+    "private_log": "$PACKET_D/q9-attribution-pass1-lint.log",
+    "sha256": "a2451ea78d9668f1899050ce59646d894d1db864f2405a5a2a6161935656d5d3"
+  },
+  {
+    "stage": "Full pass 1 test corrections",
+    "command": "just docs-check",
+    "result": "PASS",
+    "private_log": "$PACKET_D/q9-attribution-pass1-docs.log",
+    "sha256": "845ebfb4b50b2c3f2e67107570b6f66c2ef495da7888b028f7e7eed0c39ea6ac"
   }
 ]

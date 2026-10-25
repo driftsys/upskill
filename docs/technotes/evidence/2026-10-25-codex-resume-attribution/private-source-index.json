@@ -26,5 +26,14 @@
       "retain-verification-helper.py": "95cbf56e38263409b63b4ff9467cc08afadfe27a3f5d5da149b17a1a5e9893ad"
     },
     "method": "Full current-branch repository verification only; prior native and integration epochs unchanged"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q9-attribution-pass1-ri9hniti",
+    "manifest_sha256": "6767a2449ce24ca3fd83bb0ef4dfd972add3a2977200817128b01af4b8fad2de",
+    "capture_helpers": {
+      "retain-review-helper.py": "fa0c8baa735d65fcf9ab32a3f58bb490f7814f0ff9a431e04e25c9128c497a12"
+    },
+    "method": "Offline test-only corrections; six mutations rejected; runtime helper and all prior source epochs unchanged"
   }
 ]
