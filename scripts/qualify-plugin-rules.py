@@ -220,6 +220,22 @@ def count_developer_rule_bodies(messages, bodies):
 
 
 
+
+def codex_resume_body_windows(startup, resumed, bodies):
+    """Keep cumulative native history distinct from newly appended records."""
+    if (not isinstance(startup, list) or not startup or not isinstance(resumed, list)
+            or any(not isinstance(row, dict) for row in startup + resumed)
+            or resumed[:len(startup)] != startup):
+        raise ValueError('Unchanged nonempty startup history must prefix the resumed history')
+    if any(row.get('type') == 'compacted' for row in resumed):
+        raise ValueError('Resume-only windows require no compaction record')
+    def count(rows):
+        messages = [row.get('payload') for row in rows if row.get('type') == 'response_item']
+        return count_developer_rule_bodies(messages, bodies)
+    return {'startup': count(startup), 'resumed_history': count(resumed),
+            'resume_new_records': count(resumed[len(startup):])}
+
+
 def classify_codex_resume_only(observation):
     """Attribute recorded bodies to resume without claiming effective input."""
     session = observation.get('session')

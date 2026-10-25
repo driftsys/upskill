@@ -1,0 +1,37 @@
+{
+  "task": 379,
+  "control": "Q9 resume-only recorded-history attribution",
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "pin": "Codex 0.164.0",
+  "status": "PASS: resume-only attribution observed; recorded-history uniqueness FAIL",
+  "qualified": false,
+  "resume_attribution_completed": true,
+  "classification": "recorded_counts_observed",
+  "body_windows": {
+    "startup": {
+      "a": 1,
+      "b": 1
+    },
+    "resumed_history": {
+      "a": 2,
+      "b": 2
+    },
+    "resume_new_records": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "compaction_records": 0,
+  "completed_model_turns": 2,
+  "positive_native_invocations": 1,
+  "resume_invocations": 1,
+  "preserved": true,
+  "limits": [
+    "Recorded history only; no claim about provider-effective input or transient lifetime.",
+    "Existing previously trusted user registrations and existing guarded project; no fresh registration qualification.",
+    "Historical combined resume/compaction FAIL and earlier HTTP 401 retry remain unchanged.",
+    "Measured guidance/configuration/definitions preserved; native auth/session/log/cache effects excluded from whole-profile equality.",
+    "User owns step 7 route adoption and proposed #379 severity amendment; no production change."
+  ]
+}

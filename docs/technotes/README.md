@@ -146,3 +146,7 @@ change. Technical notes and evidence assets are outside the published book.
   blockers.
 - [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
   — Bounded native controls; no profile qualification.
+
+- [Codex resume-only attribution](gate6-codex-resume-attribution.md): Codex
+  0.164.0 adds one body per rule on resume, before compaction; recorded history
+  only.

@@ -1,0 +1,23 @@
+{
+  "campaign-pins.json": "40931f2a1c9df6dc65da78c88dae895fab2c1b0c6c96fe8f8c1de0ba5b1769fc",
+  "classification.json": "eff35a92f28148d7612715581d90a4491e5a72916a07afb67ca1f26a3c37ff78",
+  "observation.json": "9e9b28a28bb1c78db436879981a575d84b31dcf20a900cbcc2e3b208f8aac5f2",
+  "positive-events.json": "33c17b2e33547dafad3d8ef54183afa0030ce6089b06da415c0b058d5efd7eab",
+  "positive-native-selection.json": "10325b9d1cfedbe969de5ac8158bad1605222be831b7b1d4290e98f4cc0b9cfa",
+  "positive-receipt.json": "79c088e6d2bdd2f816c295e0a2a8b52c0efa4b95c091b5b6d3f4e14dae47ee8f",
+  "positive-version-receipt.json": "e0593ac66c99330dedfa7875011ea3e7980985737777a9f37c887ca40a9ad1de",
+  "positive-version.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "positive-version.stdout": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+  "preservation.json": "90a14e20ee4b0c6db52cfb657ea0560ef2158e69a998863362d16cae820b9493",
+  "private-source-index.json": "9b1388ce75ff5956fafd0e9caffbdd9ce983c5c361e33a593bea92bd3dea449b",
+  "resume-events.json": "33c17b2e33547dafad3d8ef54183afa0030ce6089b06da415c0b058d5efd7eab",
+  "resume-native-selection.json": "c23642904438c454ffd1156a4e93e77d413d0a8820c4f9cf4f3a3a895117fd38",
+  "resume-receipt.json": "1af50b58d8688527803b4c863941aff3397e59183e08e281a4df5f182c63d6b7",
+  "resume-version-receipt.json": "5f54cf75e85aa2ed52f19eda22e54c00dae262f52b949959e62ea073152f79bd",
+  "resume-version.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "resume-version.stdout": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+  "rule-bodies.json": "e010e2011e31959b42a5955535a7742027f45bc0feb57398792224d11e81d519",
+  "source-audit.json": "6105f6014fe520bf8c884bbdb535b219b82d74b4e87a470e1ce5b08127571408",
+  "summary.json": "078bc419c2b531ca996703507ac7894054943daff853849853bef83dc34b9247",
+  "validation.json": "df2ba2733730e5253dc2e6f10791964c20f822ec5c5b8f84eeb4ff8208710a90"
+}

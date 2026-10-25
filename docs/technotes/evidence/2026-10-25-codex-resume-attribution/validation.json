@@ -1,0 +1,30 @@
+[
+  {
+    "stage": "before helper extension",
+    "command": "just lint",
+    "result": "FAIL: three missing-helper tests",
+    "private_log": "$PACKET_A/q9-attribution-red-lint.log",
+    "sha256": "bd2d8ccc23facaec5fd90ae4bb20dfcd4f11042e9729d8316783cd541e746a70"
+  },
+  {
+    "stage": "after helper extension",
+    "command": "just lint",
+    "result": "PASS: 173 offline tests",
+    "private_log": "$PACKET_A/q9-attribution-green-lint.log",
+    "sha256": "ccd9fa9e7e71bf0815937ffe9261ddcf0e400fae2aee5e50841054b59ad3da4e"
+  },
+  {
+    "stage": "Final repository verification",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q9-attribution-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final repository verification",
+    "command": "just verify",
+    "result": "PASS",
+    "private_log": "$PACKET_A/q9-attribution-verify.log",
+    "sha256": "9b38b4333d02e0dac82600198da57b681907bd26f722201da297b1d650c8b60b"
+  }
+]

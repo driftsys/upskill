@@ -1,0 +1,12 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q9-attribution-3foplkfp",
+    "manifest_sha256": "b65a03c581f12ce9386412b4a8e3e4bb37f43ecfae6fe8afc46e7f9805668a42",
+    "capture_helpers": {
+      "capture-helper.py": "e0a050a137c4f6c79c3f12af51f74d0dae2afbc04aac64650303a26fa38a7cd7",
+      "retain-helper.py": "cb358c40c33dadfb39feeaa1266e3325ea2a1133b420995f86b02c017f83f36b"
+    },
+    "method": "Successful startup and same-session resume, no compaction; cumulative and appended native record windows retained separately"
+  }
+]

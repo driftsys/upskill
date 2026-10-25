@@ -1,0 +1,10 @@
+{
+  "capture_time_harness_sha256": "8467acfd309553a909d151174ae33f339efbcb4913c93cd99a8a3c8752f93cc8",
+  "native_history_prefix_unchanged": true,
+  "recomputed_body_windows_match": true,
+  "both_native_receipts_exit_zero": true,
+  "both_native_responses_match_fixture": true,
+  "distinct_native_turn_ids": true,
+  "positive_raw_session_sha256": "1d1a8bbe9ddea6408cc02a124d69115a6e0b2f2a9514df3e8017d108685a28f4",
+  "resume_raw_session_sha256": "88036ed94e3114a7e4bfa2eac289cd9c313c172b30953a577e6bf2b91ba7ea39"
+}
