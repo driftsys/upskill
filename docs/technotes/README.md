@@ -146,3 +146,6 @@ change. Technical notes and evidence assets are outside the published book.
   blockers.
 - [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
   — Bounded native controls; no profile qualification.
+
+- [Codex plugin skill updates](gate6-codex-skill-updates.md) — Q8 on 0.164.0;
+  source edits stay cached until native refresh.

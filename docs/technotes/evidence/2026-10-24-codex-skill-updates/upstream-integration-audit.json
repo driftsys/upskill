@@ -1,0 +1,12 @@
+{
+  "previous_head": "6e8f82c8744f6759c8ef8a6478b8db8a2cce8b6f",
+  "incoming_main": "e1a5d1ddc63cd88f20af0bcabd901ed7e04d5d5f",
+  "owned_functions_unchanged": [
+    "prepare_codex_skill_updates",
+    "classify_codex_skill_updates"
+  ],
+  "all_other_plugin_harness_ast_nodes_match_main": true,
+  "native_instruction_harness_matches_main": true,
+  "prior_native_packet_records_unchanged": true,
+  "native_model_control_rerun": false
+}

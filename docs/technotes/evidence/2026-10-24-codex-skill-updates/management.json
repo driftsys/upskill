@@ -1,0 +1,141 @@
+[
+  {
+    "label": "version",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "--version"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "marketplace-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "add",
+      "$PACKET_A/fixture/delivery",
+      "--json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "install",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "plugin",
+      "add",
+      "upskill-q8-e0cb7edc26c257ce@upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "installed-inventory",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "plugin",
+      "list",
+      "--marketplace",
+      "upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "installed-catalog",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "debug",
+      "prompt-input",
+      "Do not use tools."
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "cleanup-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "plugin",
+      "remove",
+      "upskill-q8-e0cb7edc26c257ce@upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "cleanup-marketplace-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "-c",
+      "sandbox_mode=\"read-only\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "agents.enabled=false",
+      "--no-daemon",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  }
+]

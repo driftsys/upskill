@@ -548,6 +548,60 @@ def classify_opencode_current_routes(controls, fixture):
     return 'observed'
 
 
+def prepare_codex_skill_updates(root):
+    """Prepare one package skill and independent source-edit response markers."""
+    root = neutral_fixture_root(root)
+    root.mkdir(parents=True, mode=0o700)
+    name = 'upskill-q8-' + secrets.token_hex(8)
+    skill_name = 'procedure-' + secrets.token_hex(8)
+    initial = 'INITIAL_' + secrets.token_hex(16)
+    edited = 'EDITED_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    package = root / 'delivery/plugins' / name
+    write_json(package / '.codex-plugin/plugin.json', {'name': name, 'version': '0.0.0', 'description': 'Disposable skill update qualification.', 'skills': './skills/'})
+    skill = package / 'skills' / skill_name
+    skill.mkdir(parents=True)
+    entry = skill / 'SKILL.md'
+    entry.write_text('---\nname: ' + skill_name + '\ndescription: Disposable native plugin resource procedure.\n---\nRead references/procedure.md relative to this skill and follow it. Do not infer its contents or use another source. If unavailable return exactly ' + fallback + '. Do not edit files, delegate or change configuration.\n')
+    resource = skill / 'references/procedure.md'
+    resource.parent.mkdir()
+    resource.write_text('Return exactly ' + initial + ' and nothing else.\n')
+    marketplace = root / 'delivery'
+    write_json(marketplace / '.agents/plugins/marketplace.json', {'name': name + '-market', 'plugins': [{'name': name, 'source': {'source': 'local', 'path': './plugins/' + name}}]})
+    project, unrelated = root / 'project', root / 'unrelated'
+    env = fixture_environment(root)
+    for path in (project, unrelated):
+        path.mkdir()
+        subprocess.run(['git', 'init', '-q', str(path)], env=env, check=True)
+        subprocess.run(['git', '-C', str(path), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize skill update fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'project': project, 'unrelated_project': unrelated, 'package': package, 'marketplace': marketplace, 'plugin_name': name, 'market_name': name + '-market', 'skill_name': skill_name, 'skill_file': entry, 'resource': resource, 'initial_marker': initial, 'edited_marker': edited, 'fallback': fallback, 'pin': '0.164.0'}
+
+
+def classify_codex_skill_updates(controls, fixture):
+    """Record source edit visibility only after native expansion/resource positives."""
+    def valid(row):
+        return (row.get('pin') == fixture['pin'] and row.get('state') == 'success'
+                and row.get('completed') is True and row.get('native_expansion') is True
+                and row.get('resource_read') is True
+                and isinstance(row.get('native_identity'), str) and bool(row['native_identity'])
+                and isinstance(row.get('load_path'), str) and bool(row['load_path']))
+    installed = controls.get('installed', {})
+    if not valid(installed) or installed.get('response') != fixture['initial_marker']:
+        return 'positive_control_failed'
+    for phase in ('edited_without_reinstall', 'reinstalled'):
+        row = controls.get(phase, {})
+        if not valid(row):
+            return 'lifecycle_control_failed'
+        if row['native_identity'] != installed['native_identity']:
+            return 'identity_mismatch'
+    edited = controls['edited_without_reinstall'].get('response')
+    if edited not in (fixture['initial_marker'], fixture['edited_marker']):
+        return 'edit_response_mismatch'
+    if controls['reinstalled'].get('response') != fixture['edited_marker']:
+        return 'refresh_control_failed'
+    return 'edits_require_refresh' if edited == fixture['initial_marker'] else 'edits_visible_without_refresh'
+
+
 def prepare(root, client):
     """Create new fixture content without modifying any existing directory."""
     if client not in VERSIONS:
