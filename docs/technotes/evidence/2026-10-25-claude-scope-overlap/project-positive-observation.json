@@ -1,0 +1,86 @@
+{
+  "inventory": [
+    {
+      "id": "upskill-q10-1d31752ae01b2497@upskill-q10-market-1d31752ae01b2497",
+      "version": "0.0.0",
+      "scope": "project",
+      "enabled": true,
+      "installPath": "$PROFILE/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0",
+      "readFromFolder": "$PACKET_A/fixture/delivery/packages/upskill-q10-1d31752ae01b2497",
+      "folderVersion": "0.0.0",
+      "installedAt": "2026-10-25T17:26:56.941Z",
+      "lastUpdated": "2026-10-25T17:26:56.941Z",
+      "projectPath": "$PACKET_A/fixture/project",
+      "projectEnabled": true
+    }
+  ],
+  "bindings": [
+    {
+      "scope": "project",
+      "installPath": "$PROFILE/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0",
+      "version": "0.0.0",
+      "installedAt": "2026-10-25T17:26:56.941Z",
+      "lastUpdated": "2026-10-25T17:26:56.941Z",
+      "projectPath": "$PACKET_A/fixture/project"
+    }
+  ],
+  "enabled_scopes": {
+    "user": null,
+    "project": true
+  },
+  "version": "2.1.308",
+  "cwd": "$PACKET_A/fixture/project",
+  "exit_code": 1,
+  "timed_out": false,
+  "receipt_label": "05-project_positive",
+  "malformed_stream": false,
+  "events": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "session_id": "be9c076e-53dc-4940-9c6f-beffa2c55430",
+      "uuid": "5e4dbc7d-1857-4968-b3bc-77fb552f0e7e",
+      "cwd": "$PACKET_A/fixture/project",
+      "claude_code_version": "2.1.308",
+      "skills": [
+        "upskill-q10-1d31752ae01b2497:probe-1d31752ae01b2497"
+      ],
+      "slash_commands": [
+        "upskill-q10-1d31752ae01b2497:probe-1d31752ae01b2497"
+      ],
+      "catalog_selection": "Target namespace and bare-name alias only; unrelated entries omitted"
+    },
+    {
+      "type": "system",
+      "subtype": "api_retry",
+      "session_id": "be9c076e-53dc-4940-9c6f-beffa2c55430",
+      "uuid": "b1357c00-843b-4f02-aadd-b22776bf4b18"
+    },
+    {
+      "type": "system",
+      "subtype": "api_retry",
+      "session_id": "be9c076e-53dc-4940-9c6f-beffa2c55430",
+      "uuid": "c353b85e-6487-46a7-b8de-d5b6f4e58cf4"
+    },
+    {
+      "type": "assistant",
+      "session_id": "be9c076e-53dc-4940-9c6f-beffa2c55430",
+      "uuid": "db1c6c6e-77a8-4377-9071-f1e39bf242fa",
+      "message": {
+        "content": []
+      },
+      "omitted": "Provider error text; no tool calls"
+    },
+    {
+      "type": "result",
+      "subtype": "success",
+      "session_id": "be9c076e-53dc-4940-9c6f-beffa2c55430",
+      "uuid": "1f034491-8a9d-4a72-b6e2-8893bfe6b614",
+      "is_error": true,
+      "permission_denials": [],
+      "num_turns": 1,
+      "result": "$PRIVATE_ERROR_TEXT",
+      "error_category": "HTTP 401 OAuth token rejection"
+    }
+  ]
+}

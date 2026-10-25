@@ -1,0 +1,124 @@
+cargo clippy -- -D warnings
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+cargo fmt -- --check
+prim fmt --check --exclude 'tests/fixtures/**'
+prim lint .
+shellcheck install.sh bootstrap
+python3 scripts/test-precommit-hook.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 2.334s
+
+OK
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+......................................FFFFFFFFF...............................................................................................................................................................
+======================================================================
+FAIL: test_all_phases_fresh_sessions_and_measured_preservation_are_required (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_all_phases_fresh_sessions_and_measured_preservation_are_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 156, in test_all_phases_fresh_sessions_and_measured_preservation_are_required
+    self.assertEqual(self.classify(c,f),'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_both_calibrations_overlap_and_surviving_scopes_are_observed (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_both_calibrations_overlap_and_surviving_scopes_are_observed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 92, in test_both_calibrations_overlap_and_surviving_scopes_are_observed
+    self.assertEqual(self.classify(c, f), 'observed_single_entry_and_activation')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_correlated_resource_reads_completion_and_native_identity_are_required (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_correlated_resource_reads_completion_and_native_identity_are_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 142, in test_correlated_resource_reads_completion_and_native_identity_are_required
+    self.assertEqual(self.classify(c, f), 'control_failed')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_duplicate_catalog_or_body_expansion_is_not_hidden_by_one_skill_call (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_duplicate_catalog_or_body_expansion_is_not_hidden_by_one_skill_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 110, in test_duplicate_catalog_or_body_expansion_is_not_hidden_by_one_skill_call
+    self.assertEqual(self.classify(c, f), 'duplicate_exposure_or_activation')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_failed_positives_precede_candidate_and_preservation_conclusions (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_failed_positives_precede_candidate_and_preservation_conclusions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 99, in test_failed_positives_precede_candidate_and_preservation_conclusions
+    self.assertEqual(self.classify(c, f), 'positive_control_failed')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_fixture_rejects_existing_discovery_roots_and_bad_pins_before_writes (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_fixture_rejects_existing_discovery_roots_and_bad_pins_before_writes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 76, in test_fixture_rejects_existing_discovery_roots_and_bad_pins_before_writes
+    self.assertTrue(callable(getattr(q, 'prepare_claude_scope_overlap', None)), 'Missing Q10 fixture')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 fixture
+
+======================================================================
+FAIL: test_fixture_reuses_neutral_marketplace_with_a_resource_only_response (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_fixture_reuses_neutral_marketplace_with_a_resource_only_response)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 55, in test_fixture_reuses_neutral_marketplace_with_a_resource_only_response
+    self.assertTrue(callable(getattr(q, 'prepare_claude_scope_overlap', None)), 'Missing Q10 fixture')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 fixture
+
+======================================================================
+FAIL: test_missing_native_catalog_or_body_visibility_is_unobserved (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_missing_native_catalog_or_body_visibility_is_unobserved)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 120, in test_missing_native_catalog_or_body_visibility_is_unobserved
+    self.assertEqual(self.classify(c, f), 'activation_evidence_unobserved')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+======================================================================
+FAIL: test_scope_bindings_and_enabled_values_cannot_be_assumed_from_catalog (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_scope_bindings_and_enabled_values_cannot_be_assumed_from_catalog)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 150, in test_scope_bindings_and_enabled_values_cannot_be_assumed_from_catalog
+    self.assertEqual(self.classify(c, f),'registration_mismatch')
+                     ~~~~~~~~~~~~~^^^^^^
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 15, in classify
+    self.assertTrue(callable(getattr(q, 'classify_claude_scope_overlap', None)), 'Missing Q10 classifier')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Missing Q10 classifier
+
+----------------------------------------------------------------------
+Ran 206 tests in 22.846s
+
+FAILED (failures=9)
+error: Recipe `lint` failed on line 20 with exit code 1

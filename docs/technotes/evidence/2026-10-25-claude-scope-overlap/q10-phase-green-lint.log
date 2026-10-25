@@ -1,0 +1,28 @@
+cargo clippy -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.68s
+cargo fmt -- --check
+prim fmt --check --exclude 'tests/fixtures/**'
+prim lint .
+shellcheck install.sh bootstrap
+python3 scripts/test-precommit-hook.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 1.290s
+
+OK
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+..............................................F................................................................................................................................................................
+======================================================================
+FAIL: test_one_phase_can_gate_the_next_native_scope_installation (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_one_phase_can_gate_the_next_native_scope_installation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 174, in test_one_phase_can_gate_the_next_native_scope_installation
+    self.assertEqual(q.inspect_claude_scope_phase(row,f,['project'])[0],'registration_mismatch')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'registration_mismatch'
+
+----------------------------------------------------------------------
+Ran 207 tests in 27.426s
+
+FAILED (failures=1)
+error: Recipe `lint` failed on line 20 with exit code 1

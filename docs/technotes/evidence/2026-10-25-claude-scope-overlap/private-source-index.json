@@ -1,0 +1,13 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q10-scope-ywrp9lak",
+    "manifest_sha256": "99d323cb75368f5d175e45fda84b91dcfffdfe5249873e11938e9879119f4848",
+    "capture_helpers": {
+      "capture-helper.py": "94c59605b5c9347dfa1bc5c8e04481c4f4acedb102b8630e4525ae13962d5d8c",
+      "retain-helper.py": "afe19d60fffca2e2f8ec22b10ec4351c1da039052d6d8379f1c5fedff48cb863",
+      "campaign-pin-helper.py": "0801651e7f94e41088c76515e710e250c77ef67923ab471ea1c85ed21be304c4"
+    },
+    "method": "Failed first project-only positive; native cleanup and measured restoration; no user-positive or overlap run"
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "task": 409,
+  "control": "Q10 Claude same-package user/project scope overlap",
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "pin": "Claude 2.1.308",
+  "status": "FAIL: project-only native positive rejected with HTTP 401; overlap not run",
+  "qualified": false,
+  "classification": "positive_control_failed",
+  "phases": {
+    "project_positive": {
+      "status": "FAIL",
+      "native_exit": 1,
+      "result_subtype": "success",
+      "is_error": true,
+      "error": "HTTP 401 OAuth token rejection",
+      "target_skills_catalog_entries": 1,
+      "target_slash_command_entries": 1,
+      "skill_tool_calls": 0,
+      "resource_reads": 0,
+      "visible_skill_body_expansions": 0
+    },
+    "user_positive": {
+      "status": "not run",
+      "reason": "First native positive failed"
+    },
+    "overlap": {
+      "status": "not run",
+      "reason": "First native positive failed"
+    },
+    "user_remaining": {
+      "status": "not run",
+      "reason": "First native positive failed"
+    },
+    "project_remaining": {
+      "status": "not run",
+      "reason": "First native positive failed"
+    }
+  },
+  "measured_preserved": true,
+  "whole_profile_equal": false,
+  "limits": [
+    "No overlap, activation uniqueness or surviving-scope result can be inferred from a failed positive.",
+    "Project native registration and one target catalog entry were observed; these are not a successful positive.",
+    "Native authentication, app bookkeeping, logs and cache effects are outside measured equality.",
+    "Provider error text, model identifiers, usage and unrelated catalog entries remain private.",
+    "Q5 stays deferred; version-only queries do not retry its provider control.",
+    "No production route, durable record or slice-2 entry gate is promoted."
+  ]
+}

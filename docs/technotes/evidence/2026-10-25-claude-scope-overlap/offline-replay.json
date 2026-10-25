@@ -1,0 +1,14 @@
+{
+  "classification": "positive_control_failed",
+  "capture_time_harness_sha256": "f49da194f2a37af1e0d9c06faea841e750123d210c249a9338e02a08cddd9c8b",
+  "phases_replayed": [
+    "project_positive"
+  ],
+  "counts_checked": {
+    "project_skills": 1,
+    "project_slash_commands": 1,
+    "skill_calls": 0,
+    "resource_reads": 0
+  },
+  "native_rerun": false
+}
