@@ -1,0 +1,56 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q9-resume-got7xwwb",
+    "manifest_sha256": "8b537742d9ee7a07ac52749846c28fb31f6ccf7724697a38912703754c679352",
+    "capture_helpers": {
+      "capture-helper.py": "9c0ee389f8850b801816ff52a8bec57957e173246c172ed0020cd4a502229442",
+      "assess-failure-helper.py": "2a627c3b67c62c62d07e8481dcddabd3819b4cece701236b95af155990d7a332",
+      "retain-helper.py": "b9c9275302553fbdf62b34db27d8fb2e080a7d568e815da4f117d2bcdcbd2448"
+    },
+    "method": "One failed native positive, offline native log assessment, no resume invocation"
+  },
+  {
+    "alias": "$CAMPAIGN_PINS",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-sk3i25mj",
+    "manifest_sha256": "ea495b12b4e289032f19371543c4a8247126f89a71702823bc72310b6b763aa7",
+    "method": "Shared four-client version receipts before controls"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q9-resume-quick-f4eo6ufg",
+    "manifest_sha256": "fd6b24d0e0c9e16fa14e016c1f8ffb398534d7c1e9ad0a19861452c6508740ae",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "q9-resume-quick-mutations.py": "9f20431275370310cbfd141de8008f29cfa8e5399226de3227b063adb0d3a7d1"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q9-full-pass1-yb_02qgu",
+    "manifest_sha256": "d9d80b4b003d8944bca4f94f89044a63252b6fb29e16b03fe5461af173c25ad8",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "cd527d3b0a5483829630d3902733d626f739c17ba5568f40e0ac42d093ef9806",
+      "q9-full-pass1-mutations.py": "e009d6b041e35ed35deb20588acb10cc5a75670eb7503271888baec9f728f50f",
+      "future-native-helper-not-run.py": "ae1dfdcdac0fd5be70889f5148ad031739f4e249e5159bcc2598fc7b9394260a"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged",
+      "future-native-helper-not-run.py": "Collector updated for a future retry; not executed in this packet"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-pr405-integration-cxnzsixt",
+    "manifest_sha256": "fec0a372780f3880c6dcc5cead0bba71e52c1a74db8ad2df90b27da7e3a4eed2",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
+  }
+]
