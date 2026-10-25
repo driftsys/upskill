@@ -32,6 +32,12 @@ cleanup still runs. Native plugin management uses an existing isolated
 authenticated profile; the helper does not copy credentials, modify discovery
 settings or write client plugin caches.
 
+Starting with project-only calibration deviated from
+[task #409](https://github.com/driftsys/upskill/issues/409), which requires a
+successful user-only positive before project installation. This attempt stopped
+at the initial failed positive. A future retry must start with user-only
+calibration.
+
 ## Retained result
 
 The [summary](evidence/2026-10-25-claude-scope-overlap/summary.json) and
@@ -98,8 +104,8 @@ both native installation resource paths, fixture resource-reading instructions,
 partial additional body receipts, wrong workspace and namespace identities,
 wrong binding versions and two reads after one skill call. All 15 focused tests
 pass, and all eight reviewed mutations are rejected. These test-only additions
-are separate from the unchanged capture-time source and native result; no review
-pass over the fixes was run.
+are separate from the unchanged capture-time source and native result; no
+additional quick review of those fixes was run.
 
 Full review confirmed a missing stream-completeness guard. A new regression
 failed before the fix: malformed, missing or non-Boolean completeness evidence
