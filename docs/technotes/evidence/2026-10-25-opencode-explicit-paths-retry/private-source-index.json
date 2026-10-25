@@ -16,5 +16,14 @@
       "qualify-plugin-rules.py": "Shared neutral root/environment helpers",
       "offline-tests.py": "Seven existing tests run before the model request"
     }
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-pr408-integration-o5awbkc4",
+    "manifest_sha256": "b25cbb8fd2f0badd0d3aa5a6430aec0bf8496edf554c69e64cc26036f91021bf",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
   }
 ]

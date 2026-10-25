@@ -1,0 +1,20 @@
+[
+  {
+    "phase": "registered",
+    "pin": "0.164.0",
+    "native_spawn_agent_schema_observed": true,
+    "native_spawn_api_present": true,
+    "custom_role_argument_present": true,
+    "candidate_role_present": true,
+    "raw_catalog_sha256": "320f461f817bf301dee49a60a4f5253148b2915fa9d6242f28aae19bb08e62c3"
+  },
+  {
+    "phase": "plugin-only",
+    "pin": "0.164.0",
+    "native_spawn_agent_schema_observed": true,
+    "native_spawn_api_present": true,
+    "custom_role_argument_present": false,
+    "candidate_role_present": false,
+    "raw_catalog_sha256": "c6dc44c863d182640344f222a3466ab54b80843ba68ad47700ad1a7a0f018c7c"
+  }
+]

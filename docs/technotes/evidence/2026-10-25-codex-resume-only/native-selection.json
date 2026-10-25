@@ -1,0 +1,51 @@
+[
+  {
+    "line": 0,
+    "type": "session_meta",
+    "payload": {
+      "id": "01a17037-ddff-71b1-bda5-f70fb14679bf",
+      "cli_version": "0.164.0",
+      "cwd": "$EXISTING_FIXTURE/project-a"
+    }
+  },
+  {
+    "line": 9,
+    "type": "turn_context",
+    "payload": {
+      "turn_id": "01a17037-dfa3-7752-adb3-a3387d91f1aa",
+      "cwd": "$EXISTING_FIXTURE/project-a",
+      "sandbox_policy": {
+        "type": "read-only"
+      },
+      "approval_policy": "never"
+    }
+  },
+  {
+    "line": 11,
+    "type": "response_item",
+    "payload": {
+      "type": "message",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "For the plugin qualification question include exactly one occurrence of RULE_d2728c69d294cb289b5ad5a332ba5200 in the rules array. Preserve the team marker and other rules.\n"
+        }
+      ]
+    }
+  },
+  {
+    "line": 12,
+    "type": "response_item",
+    "payload": {
+      "type": "message",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "For the plugin qualification question include exactly one occurrence of RULE_893a00c8afdd9712e08a43df8c136513 in the rules array. Preserve the team marker and other rules.\n"
+        }
+      ]
+    }
+  }
+]

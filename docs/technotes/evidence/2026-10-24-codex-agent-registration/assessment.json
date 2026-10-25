@@ -1,0 +1,11 @@
+{
+  "pin": "0.164.0",
+  "qualified": false,
+  "boundary_and_discovery_classification": "observed",
+  "profile_restoration": "Initial FAIL retained; final PASS after hash-confirmed native notice-counter correction (see final-notice-restoration.json)",
+  "limits": [
+    "Actual boundary/role-discovery evidence is separate from profile preservation.",
+    "No hook definitions or hook trust changed.",
+    "Native plugin inventory initially failed on an existing stale marketplace; targeted own-marketplace inventory succeeded without editing it."
+  ]
+}

@@ -19,7 +19,8 @@
   "positive-version.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "positive-version.stdout": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
   "preservation.json": "6a8e5c68f979d2b20978dde91ccfa0cfa563c00b96d09a3d99323d4161011105",
-  "private-source-index.json": "6d7aaf99ed327382baa1ca88b295f768f7774786ced503202543d6cd7fffb044",
+  "private-source-index.json": "cc5b26d886264e445c5889c294c46c52deac0e06a8537e1d36f1fb45c6a812a9",
   "summary.json": "38defc19f7b074863c786f2aa3bacb59539fba06995511bcc4211f0b7846acab",
-  "validation.json": "d3e978e618e465d5eeb3b23cacbc5abdf1174f7131ad3199c49a65be407954c0"
+  "upstream-integration-audit.json": "d1aa6cbe471d83f0756941472853d5ea4a07d82bf4731827844c6e4acf1e158b",
+  "validation.json": "be025f9ceacdb9af022e7491ca15f1f77af0c4be98721681d9b81796a3f2f2c8"
 }

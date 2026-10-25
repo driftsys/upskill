@@ -1,0 +1,16 @@
+{
+  "root": "$PACKET_A/fixture",
+  "project": "$PACKET_A/fixture/project",
+  "unrelated_project": "$PACKET_A/fixture/unrelated",
+  "package": "$PACKET_A/fixture/delivery/plugins/upskill-q8-e0cb7edc26c257ce",
+  "marketplace": "$PACKET_A/fixture/delivery",
+  "plugin_name": "upskill-q8-e0cb7edc26c257ce",
+  "market_name": "upskill-q8-e0cb7edc26c257ce-market",
+  "skill_name": "procedure-a091013ffadfa7a8",
+  "skill_file": "$PACKET_A/fixture/delivery/plugins/upskill-q8-e0cb7edc26c257ce/skills/procedure-a091013ffadfa7a8/SKILL.md",
+  "resource": "$PACKET_A/fixture/delivery/plugins/upskill-q8-e0cb7edc26c257ce/skills/procedure-a091013ffadfa7a8/references/procedure.md",
+  "initial_marker": "INITIAL_dbbd69b06085f72a3d74d3018b8625d7",
+  "edited_marker": "EDITED_a58f21ef7acc139c814c0049662484f5",
+  "fallback": "ABSENT_94a496928530d56d6a207256544f0b03",
+  "pin": "0.164.0"
+}

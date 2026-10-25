@@ -1,0 +1,54 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q7-codex-ozt84mff",
+    "manifest_sha256": "d3a79daa8b6b6bd289597f6538b7439dea6826c3eb34a62ac6cf276377b020e8"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q7-main-91j_xzls",
+    "manifest_sha256": "c40060a285268d246a4a10de047f2205f2514a53293d10428ae4872100947a75",
+    "capture_helpers": {
+      "retain-main-integration-helper.py": "e4517a0d8a9fc6db838714a813d099c941997f36c6ad35c011fcbb996ee1b976"
+    },
+    "method": "Offline current-main integration and guard/tests fixes; no repeated native capture",
+    "source_snapshots": {
+      "source/": "Current-main classification/fixture code and tests; original native source remains in $PACKET_A"
+    }
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q7-current-quick-rrwe7oz2",
+    "manifest_sha256": "7921b9a574402cef913040e1f19b9c6582bb838bbc654162a72878f2ad0f0c9f",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "codex-quick-regression-mutations.py": "12a8b3e6577c61cd18ea74e2518fe10f76b810ca66960d717a2d295c9e5c51ac"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q7-full-pass1-ms3mtxn4",
+    "manifest_sha256": "0286b6244c096e2e9bfb37a9bc65ac11d41e0ad01ce723778eec4543af529855",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "7ebc44facebfab045f36d9cb6ef0ac69cf635e0318552042b53aecae62415810",
+      "q7-full-pass1-mutations.py": "d9c0b648ff901556e9f6c3b78091eac350d1d93bb8a05e4e6131ebd6f0710728"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-pr407-integration-h2ermrgf",
+    "manifest_sha256": "45530e49bcfdc162d03c633523dec1d68dbd5e4656f2ddfc3da311d4a5807e1a",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
+  }
+]

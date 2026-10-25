@@ -1,0 +1,31 @@
+{
+  "native_positive": {
+    "pin": "0.164.0",
+    "state": "success",
+    "completed": true,
+    "response": "NATIVE_6decab0a4d20fda6e97811920bc4fead"
+  },
+  "registered": {
+    "pin": "0.164.0",
+    "state": "success",
+    "completed": true,
+    "response": {
+      "marker": "CHILD_d158abc64f8a225d309e1621de5af9d4",
+      "write": "denied"
+    },
+    "delegated": true,
+    "child_resource_read": true,
+    "forbidden_attempted": true,
+    "native_denial": true,
+    "forbidden_file_absent": true,
+    "parent_sandbox": "read-only",
+    "child_sandbox": "read-only"
+  },
+  "plugin_only": {
+    "pin": "0.164.0",
+    "native_catalog_observed": true,
+    "candidate_present": false,
+    "plugin_installed": true,
+    "external_registration_absent": true
+  }
+}

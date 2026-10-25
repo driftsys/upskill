@@ -1,0 +1,45 @@
+[
+  {
+    "type": "thread.started",
+    "thread_id": "01a17037-ddff-71b1-bda5-f70fb14679bf"
+  },
+  {
+    "type": "turn.started"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "item.completed"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "error"
+  },
+  {
+    "type": "turn.failed"
+  }
+]

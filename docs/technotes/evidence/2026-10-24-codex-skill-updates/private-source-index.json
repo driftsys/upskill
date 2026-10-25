@@ -1,0 +1,56 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q8-codex-nrvhj10l",
+    "manifest_sha256": "b1db92cf76b0e967b53254d1cf58a45902bf47a45ecff422ad249d654f899332"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q8-main-phzdan5x",
+    "manifest_sha256": "9790335ed3d01354e7c12c9b1a3e009da8c43b6ad4692a383988d0f072ff5fd2",
+    "capture_helpers": {
+      "retain-main-integration-helper.py": "e4517a0d8a9fc6db838714a813d099c941997f36c6ad35c011fcbb996ee1b976",
+      "q8-main-mutations.py": "187ffc2292b6bc588ee73ac6a463425ba3eaed8bb3f68dbacbf52de86e446118"
+    },
+    "method": "Offline current-main integration and guard/tests fixes; no repeated native capture",
+    "source_snapshots": {
+      "source/": "Current-main classification/fixture code and tests; original native source remains in $PACKET_A"
+    }
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q8-current-quick-bpuzyvfc",
+    "manifest_sha256": "f7fdb0bb922794fd57d5d58154fe965d312559838e868697c444489adc7a4964",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "codex-quick-regression-mutations.py": "12a8b3e6577c61cd18ea74e2518fe10f76b810ca66960d717a2d295c9e5c51ac"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q8-full-pass1-b76j3srt",
+    "manifest_sha256": "b6f969e800404b118d7be30591726abecd00c25fd61c165d7025ae02bea0bc2c",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "7ebc44facebfab045f36d9cb6ef0ac69cf635e0318552042b53aecae62415810",
+      "q8-full-pass1-mutations.py": "6720e284ce24b5375d59a41eb3577053846b1b39d6825c7daf4ba812836f6c48",
+      "format-correction-helper.py": "a07730400f16d57e18bd343cbe712340385e4e27cdec587f4a220f3ef7fbfa7c"
+    },
+    "source_snapshots": {
+      "source/": "Final offline pass-1 source; trailing blank line removed before publication, no executable change"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-pr406-integration-6z6a9s8d",
+    "manifest_sha256": "dcbba9e12ee8e0a1ae6d70640b07b822cffac280b408c0c58c17518c07e1b546",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "qualified": false,
+  "q8_completed": true,
+  "control": "Q8",
+  "task": 395,
+  "date": "2026-10-24",
+  "pin": "Codex CLI 0.164.0",
+  "platform": "macOS arm64",
+  "scope": "project activation, native user cache",
+  "status": "PASS: namespaced skill/resource activation; managed source edits require native refresh",
+  "classification": "edits_require_refresh",
+  "counts": {
+    "completed_turns": 3,
+    "native_skill_expansions": 3,
+    "resource_reads": 3,
+    "native_catalog_entries_initial": 1
+  },
+  "source_versions": [
+    "0.0.0",
+    "0.0.1"
+  ],
+  "cache_versions_by_control": [
+    "0.0.0",
+    "0.0.0",
+    "0.0.1"
+  ],
+  "measured_configuration_restored": true,
+  "limits": [
+    "The edit changes the supporting resource and package version; skill-body edits are not separately qualified.",
+    "Native expansions and exact results do not establish provider-effective input uniqueness.",
+    "The profile returns exactly to this control baseline; the later Q7 counter correction separately restores the earlier pre-Q7 configuration.",
+    "Unrelated-project isolation, arbitrary user delivery, Linux/IDE/hosted surfaces and integrated ownership/recovery remain unqualified.",
+    "No hooks added/reviewed/bypassed, no direct cache writes, no production routing or durable adoption."
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "label": "refresh-remove",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "--no-daemon",
+      "plugin",
+      "remove",
+      "upskill-q8-e0cb7edc26c257ce@upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "label": "refresh-add",
+    "command": [
+      "/Users/sebastientasson/.local/bin/codex",
+      "-c",
+      "cli_auth_credentials_store=\"file\"",
+      "--no-daemon",
+      "plugin",
+      "add",
+      "upskill-q8-e0cb7edc26c257ce@upskill-q8-e0cb7edc26c257ce-market",
+      "--json"
+    ],
+    "exit_code": 0
+  }
+]
