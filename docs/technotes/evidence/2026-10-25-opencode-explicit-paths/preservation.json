@@ -1,0 +1,100 @@
+{
+  "before": {
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "ac4be0ba187ef0c5b255480fc3ed08725bcee8c6c56bfbe885e3bf8f22ca342c",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "42526e744c524e768d07b30aeb50444734b906b4ca08cca5659348e656d20611",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/outside/opencode.json": {
+      "present": true,
+      "sha256": "42526e744c524e768d07b30aeb50444734b906b4ca08cca5659348e656d20611",
+      "mode": 420
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/positive/manual.txt": {
+      "present": true,
+      "sha256": "0de1c1dcf9c3eaba7207f2144d27636c4f73c830679b19fbf1718ceb756f2d43",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/project/manual.txt": {
+      "present": true,
+      "sha256": "1ae561dbc54edcb6e4a27b8f24da9cd82f18564a64fe3eb9c545009c331b3229",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/outside/manual.txt": {
+      "present": true,
+      "sha256": "dcca64f3f4087764244e61552071654c9e102c0bfe7961b82da06f159f7cb1e1",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/delivery/rules/a.md": {
+      "present": true,
+      "sha256": "674f41f71deccc0ce7589495f9af99e89ad1b5bde76d8a9b63e649fa59b60204",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/delivery/rules/b.md": {
+      "present": true,
+      "sha256": "41bda67c1173e65d6ad1fd02a01ab99537972892510547110da1b5557ae90574",
+      "mode": 420
+    }
+  },
+  "after": {
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "ac4be0ba187ef0c5b255480fc3ed08725bcee8c6c56bfbe885e3bf8f22ca342c",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "42526e744c524e768d07b30aeb50444734b906b4ca08cca5659348e656d20611",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/outside/opencode.json": {
+      "present": true,
+      "sha256": "42526e744c524e768d07b30aeb50444734b906b4ca08cca5659348e656d20611",
+      "mode": 420
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/positive/manual.txt": {
+      "present": true,
+      "sha256": "0de1c1dcf9c3eaba7207f2144d27636c4f73c830679b19fbf1718ceb756f2d43",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/project/manual.txt": {
+      "present": true,
+      "sha256": "1ae561dbc54edcb6e4a27b8f24da9cd82f18564a64fe3eb9c545009c331b3229",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/outside/manual.txt": {
+      "present": true,
+      "sha256": "dcca64f3f4087764244e61552071654c9e102c0bfe7961b82da06f159f7cb1e1",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/delivery/rules/a.md": {
+      "present": true,
+      "sha256": "674f41f71deccc0ce7589495f9af99e89ad1b5bde76d8a9b63e649fa59b60204",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-explicit-sk3i25mj/fixture/delivery/rules/b.md": {
+      "present": true,
+      "sha256": "41bda67c1173e65d6ad1fd02a01ab99537972892510547110da1b5557ae90574",
+      "mode": 420
+    }
+  },
+  "measured_files_unchanged": true,
+  "limits": "Configuration, declared rule files and manual neighbors only; native caches/session/log/authentication refresh effects are not whole-profile equality."
+}

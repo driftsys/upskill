@@ -43,5 +43,14 @@
       "source/": "Final offline pass-1 source; trailing blank line removed before publication, no executable change"
     },
     "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-pr406-integration-6z6a9s8d",
+    "manifest_sha256": "dcbba9e12ee8e0a1ae6d70640b07b822cffac280b408c0c58c17518c07e1b546",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
   }
 ]

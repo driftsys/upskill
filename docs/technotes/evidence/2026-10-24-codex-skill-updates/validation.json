@@ -151,5 +151,23 @@
     "result": "PASS: git diff --check after removing one trailing blank line; no executable change",
     "private_log": "$PACKET_D/format-check.log",
     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_E/pr406-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_E/pr406-main-lint.log",
+    "sha256": "82b73eee13b22c0087464eb2278632d42b2951c0f8a47c11c9b3ccb0d1652b51"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_E/pr406-main-docs.log",
+    "sha256": "7ee34d4b5cd9b0e8ab1cec65dd382712b8924eab883ef72fcb18678fd89c778e"
   }
 ]

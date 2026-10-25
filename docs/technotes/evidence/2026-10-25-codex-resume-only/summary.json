@@ -1,0 +1,26 @@
+{
+  "task": 379,
+  "control": "Q9 resume-only attribution retry",
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "pin": "Codex 0.164.0",
+  "status": "FAIL: native positive HTTP 401; resume not run",
+  "qualified": false,
+  "resume_attribution_completed": false,
+  "classification": "positive_control_failed",
+  "positive_native_body_counts": {
+    "a": 1,
+    "b": 1
+  },
+  "completed_model_turns": 0,
+  "native_positive_invocations": 1,
+  "resume_invocations": 0,
+  "preserved": true,
+  "limits": [
+    "Continuity diagnostic reuses unchanged previously trusted user registrations guarded to an existing project; not fresh registration qualification.",
+    "One recorded startup body per rule does not prove a completed positive or provider-effective input.",
+    "No resume request after failed positive; previous combined resume/compaction evidence unchanged.",
+    "Measured content/configuration bytes and modes preserved; native session/cache/log/authentication effects outside whole-profile equality.",
+    "No hook definition, native cache, team guidance, production route or durable record edited."
+  ]
+}

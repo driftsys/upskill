@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/Users/sebastientasson/.opencode/bin/opencode",
+    "--version"
+  ],
+  "cwd": "$PACKET_A/fixture/positive",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-24T23:03:33.121908+00:00",
+  "finished_at_utc": "2026-10-24T23:03:33.219376+00:00",
+  "stdout_sha256": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "controls_started": false,
+  "pins": [
+    {
+      "client": "claude",
+      "version": "2.1.308",
+      "command": [
+        "/opt/homebrew/bin/claude",
+        "--version"
+      ],
+      "exit_code": 0,
+      "started_at_utc": "2026-10-24T22:56:02.037265+00:00",
+      "finished_at_utc": "2026-10-24T22:56:04.394956+00:00",
+      "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "codex",
+      "version": "0.164.0",
+      "command": [
+        "/Users/sebastientasson/.local/bin/codex",
+        "--version"
+      ],
+      "exit_code": 0,
+      "started_at_utc": "2026-10-24T22:56:04.395415+00:00",
+      "finished_at_utc": "2026-10-24T22:56:04.715515+00:00",
+      "stdout_sha256": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "copilot",
+      "version": "1.0.103",
+      "command": [
+        "/opt/homebrew/bin/copilot",
+        "--no-auto-update",
+        "--version"
+      ],
+      "exit_code": 0,
+      "started_at_utc": "2026-10-24T22:56:04.715774+00:00",
+      "finished_at_utc": "2026-10-24T22:56:05.581825+00:00",
+      "stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "opencode",
+      "version": "2.1.4",
+      "command": [
+        "/Users/sebastientasson/.opencode/bin/opencode",
+        "--version"
+      ],
+      "exit_code": 0,
+      "started_at_utc": "2026-10-24T22:56:05.582170+00:00",
+      "finished_at_utc": "2026-10-24T22:56:05.967010+00:00",
+      "stdout_sha256": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

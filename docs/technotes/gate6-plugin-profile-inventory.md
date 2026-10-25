@@ -7,6 +7,23 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice 1 campaign revision: 2026-10-25
+
+The Q5 explicit-path retry under
+[#391](https://github.com/driftsys/upskill/issues/391) opens a new dated
+campaign on macOS arm64. The date uses Europe/Paris; each
+[version receipt](evidence/2026-10-25-opencode-explicit-paths/campaign-pins.json)
+records its UTC start and finish. All four version probes completed before any
+model control in this campaign. These are installed-version observations,
+without native route qualification.
+
+| Client      | Installed release | Surface         |
+| ----------- | ----------------- | --------------- |
+| Claude Code | 2.1.308           | macOS arm64 CLI |
+| Codex CLI   | 0.164.0           | macOS arm64 CLI |
+| Copilot CLI | 1.0.103           | macOS arm64 CLI |
+| OpenCode    | 2.1.4             | macOS arm64 CLI |
+
 ## Slice 1 campaign revision: 2026-10-24
 
 Task [#382](https://github.com/driftsys/upskill/issues/382) opens a new campaign
