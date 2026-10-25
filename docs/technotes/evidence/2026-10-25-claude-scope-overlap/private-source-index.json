@@ -46,5 +46,14 @@
     "private_source_path": "/private/tmp/upskill-claude-auth-verified-vrkvgx0_",
     "manifest_sha256": "014608fac31ea1df0fcf51068b55581576cd8dbc3bdc6fc33e8f4ca7a72f4ae6",
     "method": "Post-run index of authentication-only no-tools API probe outputs; not package qualification; no credential files copied"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-q10-retry-verification-7pus9ziu",
+    "manifest_sha256": "38030888a203a4ecd47dbeda2cdb24f4b12426de68cb278ed60090f911e802ac",
+    "capture_helpers": {
+      "retain-retry-verification-helper.py": "4179e2eb5d984a68848dc13f785c7a7e36ae3a371b450d7d84c50d6704bcee3e"
+    },
+    "method": "Complete repository verification after successful retry; native and prior source epochs unchanged"
   }
 ]

@@ -159,8 +159,9 @@ records 218 suite tests, 21 focused tests and 16 rejected author mutations. The
 [earlier verification](evidence/2026-10-25-claude-scope-overlap/verification.json)
 describes its own source epoch. The
 [retry pre-native lint](evidence/2026-10-25-claude-scope-overlap/retry-q10-retry-pre-native-lint.log)
-again passed all 218 tests before the native retry. No public harness or test
-code changed for this retry.
+again passed all 218 tests before the native retry. Full post-retry
+[repository verification](evidence/2026-10-25-claude-scope-overlap/retry-verification.json)
+also passed. No public harness or test code changed for this retry.
 
 The
 [private source index](evidence/2026-10-25-claude-scope-overlap/private-source-index.json)
