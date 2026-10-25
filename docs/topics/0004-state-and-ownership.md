@@ -1,13 +1,16 @@
 # State and ownership
 
-Architecture reconciliation (2026-10-19): the
+Architecture reconciliation (2026-10-25): the
 [delivery, discovery and activation contract](0009-customization-delivery.md)
 controls intended production routes and reader intent. Existing Codex
 `AGENTS.md` contribution APIs described here are experimental library
 boundaries, not production independent-rule delivery. Independent Codex/OpenCode
-rules require qualified plugins alongside unchanged team guidance. Reusable
-ownership, preflight and recovery mechanisms do not select a runtime delivery
-route.
+rules remain beside unchanged team guidance through a selected native or hook
+route. The native-first amendment permits explicit OpenCode paths after Q5 PASS
+and selects the trusted Codex hook with its declared recorded-history
+limitation. Reusable ownership, preflight and recovery mechanisms do not select
+or qualify a runtime route, and schema-2 production activation remains blocked
+([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
 This concern owns the requirements and implemented architecture below. Moving
 these records does not change their implementation or approval status.

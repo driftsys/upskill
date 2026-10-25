@@ -5,9 +5,14 @@ examples first. This plan revises existing M1/Gate 6 delivery; it does not
 restart the completed ownership/preflight/recovery foundation or authorize
 activation.
 
-**Goal:** implement and qualify independent Codex/OpenCode plugin rules beside
-team instructions, with explicit cross-client discovery, activation and
-preservation for every customization.
+**Goal:** implement and qualify independent Codex/OpenCode rules on the selected
+native or hook route beside team instructions, with explicit cross-client
+discovery, activation and preservation for every customization. The user's
+2026-10-24 native-first and skills-first amendments supersede this plan's former
+mandatory-plugin and rules-first assumptions. Explicit OpenCode paths await Q5
+PASS; no production route or package default is adopted by this plan
+([AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md),
+[retained disposition](../../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
 **Spec:**
 [corrected Gate 6 design](../specs/2026-10-18-gate6-activation-design.md),
@@ -48,9 +53,11 @@ the four-client gate or turn planned agent/MCP/hooks/tool work into M1 features.
 This extends the completed inventory without adopting a root or resetting
 historical checks. Qualify native feasibility before adapter selection; qualify
 integrated lifecycle after implementation and before route adoption. Gate 6
-retains existing-kind preservation; new owned-skill lifecycle follows it and
-blocks new skill-layout adoption and combined MVP release until qualified. No
-unadopted route gains production effects.
+retains existing-kind preservation. The later user amendment implements skills
+first on passed client candidates; Q10/Q11 and user adoption remain entry gates,
+and integrated qualification still blocks new layout adoption and the combined
+MVP release. No unadopted route gains production effects
+([current sequence](../../roadmap.md#implementation-dependencies)).
 
 Documentation reconciliation is the bounded deliverable of #349. Unchecked
 native feasibility work continues under #337; new owned-skill lifecycle and its
@@ -377,24 +384,44 @@ append-only native phase prefixes without invalidating frozen history.
 Native UI reopen followed by native compaction records two exact developer
 bodies per rule on the next turn, despite one callback per rule per source
 event. The declared JSON response remains correct, but the single-body delivery
-control fails. Resolve the candidate session contract and native proof in
-[#379](https://github.com/driftsys/upskill/issues/379) before adapter selection.
+control fails. This earlier checkpoint required the candidate session contract
+and native proof in [#379](https://github.com/driftsys/upskill/issues/379)
+before adapter selection. The dated follow-up below records the later
+attribution and selected limitation policy without rewriting this failure.
 Historical counts, encrypted compaction and provider effective input remain
 distinct evidence boundaries. Do not implement speculative deduplication or
 expand general hook/permission management to hide this failure. Task 2 stays
 incomplete, all 160 cells remain unqualified and schema-2 activation stays
 blocked; all four-client/platform/scope/reader/IDE obligations remain.
 
+### Dated native-first follow-up (2026-10-25)
+
+Earlier task checkboxes and packet reports above retain their historical scope.
+Q1-Q9 and the retries are now merged/indexed; Q5 remains deferred after failed
+positives, and current-pin OpenCode rule/skill/fallback controls remain
+unqualified. The Q9 resume-only follow-up attributes an extra recorded body to
+resume before compaction, not provider-effective input or duplicate lifetime.
+User adoption re-scopes #379 to K1 debt rather than a route-selection blocker;
+full Gate 6, all-four-client release and schema-2 activation remain blocked by
+their other evidence requirements. A native PASS does not adopt pending package
+or release-scope changes. Do not replay old plugin-only probe steps as a native
+OpenCode requirement or start further Q5 calls while deferred
+([dispositions](../../topics/0009-customization-delivery.md#retained-control-dispositions),
+[adoption decisions](../../topics/0009-customization-delivery.md#decisions-and-entry-controls-still-required)).
+
 ## Task 3: Add reader intent and qualified rule adapters to the foundations
 
 **Files:** extend the relevant `src/target/`, `src/lifecycle/contracts.rs`,
 `src/lifecycle/preflight.rs`, `src/lifecycle/orchestration.rs` and
-`src/lifecycle/desired/` modules; add only the plugin adapter files required by
-Task 2's chosen route. Tests belong beside those modules and in
-`tests/lifecycle_preflight.rs`, `tests/lifecycle_orchestration.rs`,
-`tests/lifecycle_codex_orchestration.rs`, and a separate OpenCode route target.
-Exact structs/signatures require a bounded file-level subplan after Task 2; this
-plan does not pretend the native event/API is already selected.
+`src/lifecycle/desired/` modules; add only adapter files required by the
+qualified selected native or hook route. Plugin-specific examples below apply to
+hook profiles; native-file profiles need their matching file/context and removal
+controls under CD-02, not an artificial plugin requirement. Tests belong beside
+those modules and in `tests/lifecycle_preflight.rs`,
+`tests/lifecycle_orchestration.rs`, `tests/lifecycle_codex_orchestration.rs`,
+and a separate OpenCode route target. Exact structs/signatures require a bounded
+file-level subplan after Task 2; this plan does not claim that complete native
+registration/context behavior is already qualified.
 
 - [ ] Write failing examples
       `compatible_bytes_do_not_authorize_incidental_reader`,

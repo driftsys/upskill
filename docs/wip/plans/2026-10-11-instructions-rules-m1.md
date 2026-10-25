@@ -5,7 +5,7 @@
 > F-A target identities are its base. Keep each reviewable task in its own PR,
 > with code, tests, and documentation together.
 
-Reconciled 2026-10-19: the
+Reconciled 2026-10-25: the
 [delivery contract](../../topics/0009-customization-delivery.md), AD-0040 and
 [corrected Gate 6 design](../specs/2026-10-18-gate6-activation-design.md)
 supersede earlier production use of managed `AGENTS.md` contributions. Completed
@@ -14,7 +14,12 @@ approval.
 
 **Goal:** Install, update, inspect and remove rules for Claude Code, Copilot
 CLI, Codex CLI and OpenCode v2 without changing manual content or weakening
-scope. Codex/OpenCode independent rules require qualified plugin delivery.
+scope. Codex/OpenCode independent rules require a qualified selected native or
+hook route beside unchanged team guidance. The native-first amendment permits
+explicit OpenCode paths after Q5 PASS and selects a trusted Codex hook with its
+declared recorded-history limitation; it does not mandate plugins for native
+routes
+([AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 Copilot VS Code Local remains a separately qualified existing surface.
 
 **Contract:** Follow the

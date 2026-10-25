@@ -179,3 +179,18 @@ selection leaves an item with no selected generation client. The existing
 pipeline does not emit that warning for an empty audience under the implicit
 default selection. A later diagnostic change must state and test its own
 behavior separately.
+
+## Native reader declaration boundary (2026-10-25)
+
+The existing flags, fixed defaults, recorded generation clients and VS Code
+ancillary write remain current behavior. The native-first rule planner must
+record intended readers per item; selecting Copilot CLI does not consent to
+IDE/cloud/review consumption, and selecting Claude alone does not make a visible
+Copilot compatibility reader disappear. Reject unsafe requested profiles before
+effects in the future planner rather than changing user/team discovery settings.
+This is a required delivery contract, not implemented new selection semantics or
+a schema-1 declared-reader field. VS Code's profile and ancillary-write
+disposition remain deferred
+([AD-0040](0040-separate-customization-delivery-from-discovery.md),
+[reader policy](../topics/0009-customization-delivery.md#reader-and-activation-policy),
+[amendment inventory](../topics/0009-customization-delivery.md#amendment-inventory)).

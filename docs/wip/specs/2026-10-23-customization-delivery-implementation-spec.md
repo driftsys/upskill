@@ -3,9 +3,11 @@
 Date: 2026-10-23; rules direction adopted by the user on 2026-10-24 after Q1-Q9
 review. Basis: the proposal's [native-first always-on rules decision][decision]
 is decided, not an option. Other direction amendments remain unadopted. This WIP
-records the required durable amendments but changes no code, durable record or
-production route. [AD-0040][direction], [Topic 0009][contract] and the
-[roadmap][roadmap] keep their current durable status until step 7.
+records the implementation contract. The separate step-7 adoption PR now
+reconciles [AD-0040][direction], [Topic 0009][contract] and the
+[roadmap][roadmap] with merged results; user adoption remains at that PR review.
+No native packet or this WIP activates a production route. See the
+[durable amendment inventory](../../topics/0009-customization-delivery.md#amendment-inventory).
 
 Step 7 adoption owner: the user. At that PR review the user confirms the durable
 wording for the decided native-first rules direction, the #379 K1 debt re-scope
@@ -140,10 +142,16 @@ amended durable records when it gardens the proposal.
 | Q7 | Codex CLI, trusted project               | Package-owned agent TOML referenced from `.codex/config.toml` as `agents.<name>.config_file`. Invoke a real delegated child; attempt an operation the parent sandbox forbids. Separately place the same TOML inside an installed plugin and check discovery.                  | Child runs, inherits the parent boundary (forbidden operation denied), plugin-contained TOML is not discovered unless registered.                                                                                                                                                                                  | Subagents table, Codex row.                                                                                                                                                                                                      |
 | Q9 | Codex CLI, project                       | Retain Q9's reopen/compaction observations and one resume-only follow-up under #379: reopen a positive session, send a turn without compaction and count exact developer bodies per logical rule. Preserve ordinary trust ([Q9][Q9], [decision][decision]).                   | Record separate resume-only body counts and correlate native session/turn identity to attribute the duplicate. Old zero-duplicate criterion remains FAIL in Q9; the user accepts its declared transient limitation. Failed positive leaves attribution blocked ([Q9][Q9], [decision][decision]).                   | Step 7 records supported with declared limitation once resume-only evidence is retained; #379 becomes K1 debt, not a route blocker. Do not rewrite Q9's historical FAIL ([Q9][Q9], [summary][Q9 summary], [decision][decision]). |
 
-Remaining slice-1 execution order: **Q5 retry, Codex resume-only control (Q9
-follow-up), Q8, Q7**. Q5 must separately qualify explicit instruction paths and
-skill/resource delivery; a rule PASS alone does not pass skills packaging
-([decision][decision], [Q5][Q5], [Q9][Q9], [CD-10][contract]).
+Slice-1 packet status on 2026-10-25: Q1-Q9, the Q5 retries and the Q9
+resume-only follow-up are merged and indexed. Q7/Q8 have bounded PASS; Q9
+attributes recorded duplication to resume before compaction. Q5 failed its
+positives and further native retries are deferred by the user, so its package
+and explicit-path qualification remain blocked. The former execution order is
+complete as retained outcomes, not as route qualification. Step 7 adoption is
+now under review; step 8 still needs explicit-path PASS. Rules, skills/resources
+and fallback hooks need separate evidence
+([dispositions](../../topics/0009-customization-delivery.md#retained-control-dispositions),
+[latest Q5 retry][Q5 retry], [resume-only][Q9 resume], [Q8][Q8], [Q7][Q7]).
 
 Q1b (`.claude/rules` with `paths:` plus matching-file access under Copilot) is
 deferred, unscheduled, and not a gate for always-on delivery. Q3b, a Copilot
@@ -161,8 +169,8 @@ Q10 and Q11 are slice-2 entry controls, not additional scheduled slice-1 work
 
 Current campaign pins are Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and
 OpenCode 2.1.4 on macOS arm64. Follow-ups name their actual pin and open a new
-campaign revision if it changes. Q7/Q8 remain pending packet review here;
-older-pin results do not qualify current execution ([Q6][Q6], [Q5][Q5],
+campaign revision if it changes. Q7/Q8 are merged with bounded PASS; older-pin
+results do not qualify current execution ([Q6][Q6], [Q5][Q5],
 [CD-10][contract]).
 
 Steps per control:
@@ -192,15 +200,18 @@ Steps per control:
    observation and qualified implementation ([decision][decision],
    [AD-0040][direction], [CD-10][contract]).
 
-   The Codex outcome is **supported with declared limitation** once the
-   resume-only control is retained. The user accepts the transient duplicate
-   after resume followed by compaction until the next compaction; the
-   implementing maintainer retains the attribution run and updates the debt
-   record at step 7. #379 is re-scoped from K0 blocker to K1 debt, with that one
-   remaining control. This docs-only decision does not claim the live issue
-   labels or durable records have already changed, or turn Q9's original FAIL
-   into a zero-duplicate PASS ([decision][decision], [Q9][Q9],
-   [summary][Q9 summary]).
+   The selected Codex policy is **supported with declared limitation**. The user
+   accepts the declared duplicate allowance rather than blocking route
+   selection. The original combined experiment records two bodies after the
+   first automatic compaction and one after the second. The now-merged
+   resume-only control records startup 1, cumulative resumed history 2 and newly
+   appended records 1 per rule, without compaction. Neither experiment proves
+   provider-effective input or duplicate lifetime. At step 7 the implementing
+   maintainer re-scopes #379 from K0 blocker to K1 debt after user adoption;
+   current labels stay unchanged until then. Keep Q9's original FAIL and the
+   earlier HTTP 401 failure; attribution is not a zero-duplicate PASS
+   ([decision][decision], [Q9][Q9], [summary][Q9 summary],
+   [resume-only][Q9 resume]).
 
    Direction adoption is separate from evidence-driven route amendments. The
    user approves or rejects the remaining package-default, subagent/MVP,
@@ -382,10 +393,11 @@ choice ([decision][decision]):
 
 ## Retained campaign references
 
-These fixed revisions cite the packet branches before merge. PASS and FAIL apply
-only to the recorded macOS arm64 controls, not complete client qualification
-([CD-10][contract]). Q7 and Q8 remain pending in this reconciliation; no local
-unmerged result is promoted here ([CD-11][contract]).
+The original fixed revisions below preserve their historical snapshots; newer
+Q7/Q8 and retry links name retained merged records. PASS and FAIL apply only to
+the recorded macOS arm64 controls, not complete client qualification. The
+[dated durable disposition](../../topics/0009-customization-delivery.md#retained-control-dispositions)
+separates these results from adoption ([CD-10 and CD-11][contract]).
 
 [Q1]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/gate6-copilot-claude-rules-reader.md
 [Q1 summary]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/evidence/2026-10-24-copilot-claude-rules-reader/summary.json
@@ -406,3 +418,7 @@ unmerged result is promoted here ([CD-11][contract]).
 [roadmap]: ../../roadmap.md
 [ledger]: https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650
 [decision]: 2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24
+[Q7]: ../../technotes/gate6-codex-agent-registration.md
+[Q8]: ../../technotes/gate6-codex-skill-updates.md
+[Q9 resume]: ../../technotes/gate6-codex-resume-attribution.md
+[Q5 retry]: ../../technotes/gate6-opencode-explicit-paths-retry.md

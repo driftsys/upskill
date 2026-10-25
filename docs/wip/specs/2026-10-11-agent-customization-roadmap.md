@@ -1,12 +1,16 @@
 # Agent customization delivery roadmap
 
-Architecture reconciliation (2026-10-19): this older three-client-first roadmap
+Architecture reconciliation (2026-10-25): this older three-client-first roadmap
 is historical planning, not current release sequencing. The
 [product roadmap](../../roadmap.md) and
 [delivery contract](../../topics/0009-customization-delivery.md) require the
-four-client scope and independent Codex/OpenCode plugin rules. Earlier
-canonical-instruction milestone descriptions do not authorize production
-`AGENTS.md` contributions or qualify other customizations.
+four-client scope and independently delivered Codex/OpenCode rules on selected
+native or hook routes. The later native-first amendment permits explicit
+OpenCode paths after Q5 PASS, preserves the declared Codex history limitation
+and implements skills before always-on rule work. Earlier canonical-instruction
+milestones do not authorize production `AGENTS.md` contributions or qualify
+other customizations
+([AD-0040 amendment](../../adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
 Date: 2026-10-11. Status: **Proposed delivery roadmap**. Baseline: `b866f5e` (PR
 #250); no adapter implementation is included here.

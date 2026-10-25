@@ -16,6 +16,31 @@ the relevant official documentation and runtime evidence when implementing each
 adapter. Historical research remains informative and does not override the
 active lifecycle plan or its activation gates.
 
+## Native-evidence supplement recorded on 2026-10-25
+
+The
+[durable slice-1 disposition](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)
+now links merged, pinned Q1-Q9 packets separately from this historical research.
+The user's 2026-10-24 native-first always-on direction replaces mandatory
+Codex/OpenCode plugin loading with delivery independent of team guidance.
+Claude/Copilot can share one unscoped native file with per-item intended-reader
+consent. Copilot plugin rules fail at 1.0.103; its other components are separate
+controls. Codex 0.164.0 records duplicated history already on resume without
+compaction; provider-effective input remains unqualified. OpenCode 2.1.4 failed
+positives do not prove absence or disprove explicit paths; Q5 is deferred
+([AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md),
+[Q1](gate6-copilot-claude-rules-reader.md),
+[Q3](gate6-copilot-plugin-components.md),
+[Q9 attribution](gate6-codex-resume-attribution.md),
+[Q5 retry](gate6-opencode-explicit-paths-retry.md)).
+
+Q6 and Q8 observe bounded package/skill resource behavior; Q7 observes explicit
+Codex child registration and inherited read-only denial. These results do not
+adopt package defaults, complete reader/coexistence qualification, change the
+historical matrix's status or supply Linux/IDE evidence
+([Q6](gate6-claude-managed-root.md), [Q8](gate6-codex-skill-updates.md),
+[Q7](gate6-codex-agent-registration.md)).
+
 ## Rolling-documentation discrepancy recorded on 2026-10-20
 
 The 2026-10-14 OpenCode statements below describe that dated research, not a

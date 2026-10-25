@@ -83,12 +83,16 @@ Three ancillary files are managed idempotently:
   absent. Never overwritten — protects user customisations.
 - **`.vscode/settings.json`**: read existing file, set
   `chat.instructionsFilesLocations`, write back. Other keys preserved.
-- **`opencode.json`**: managed only on **first** opencode-rule install in a
-  consumer project. upskill adds `".agents/rules/**/RULE.md"` to the
-  `instructions[]` array (if not already present) and never mutates the file
-  thereafter. opencode's `instructions[]` glob expands to pick up rule additions
-  and removals automatically as files come and go under `.agents/rules/`. Other
-  config keys preserved; existing `instructions[]` entries preserved.
+- **`opencode.json`**: the current implementation checks rule-bearing installs,
+  creates the file if absent and adds `".agents/rules/**/RULE.md"` to
+  `instructions[]` when missing. A later install can restore a removed glob;
+  with the glob already present it leaves the file unchanged. Other keys and
+  existing instruction entries are preserved. This 2026-10-25 as-built
+  clarification corrects the earlier first-install-only description without
+  changing code or qualifying current OpenCode glob expansion
+  ([implementation](../../src/ancillary.rs),
+  [call site](../../src/pipeline/mod.rs),
+  [current-pin failure](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
 Skills do not require an `opencode.json` entry — opencode walks
 `.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in opencode's
@@ -100,6 +104,29 @@ source). Rules require the glob entry because opencode has no equivalent
 > glob does not pass `dot: true` (verified in opencode source). Phase 3 should
 > include a fixture test that confirms `.agents/rules/**/RULE.md` actually
 > matches files under `.agents/`.
+
+### Native-first transition planned on 2026-10-24
+
+The tables above remain the current schema-1 generation/installer contract. The
+selected next rule routes are native Claude rules, one shared Claude/Copilot
+file with per-item intended readers when both clients are selected, native
+Copilot modular files otherwise, a trusted Codex static-index hook, and explicit
+OpenCode instruction paths after Q5 PASS. Managed package ownership also covers
+native files; it does not require every rule to load from a package. Package
+root/registration and declared-reader persistence still need implementation
+work; no new lockfile field is specified here
+([AD-0040](0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24),
+[route and amendment inventory](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
+
+The shipped bridge and OpenCode glob writes remain until the separate step-8
+code PR, gated on Q5 explicit-path PASS. That future PR removes creation without
+a fallback/migration and requires doctor reporting for existing generated
+entries rather than deletion. VS Code's ancillary write remains pending a
+separate profile decision. This record does not claim those future behaviors are
+implemented or that the historical OpenCode glob description establishes current
+2.1.4 conformance
+([shipped specification](../specification/specification.md#34-ancillary-file-handling),
+[Q5 retry](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
 ### State file
 

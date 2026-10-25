@@ -4,10 +4,14 @@
 
 Production-architecture direction is specified by the
 [customization delivery contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md).
-Independent Codex/OpenCode rules require qualified plugins beside unchanged team
-`AGENTS.md`; experimental contribution APIs and generated-file tests do not
-activate that route or schema 2. Current released command behavior below remains
-separate from those planned activation gates.
+Independent Codex/OpenCode rules use a selected native or hook route beside
+unchanged team `AGENTS.md`. The native-first amendment selects a trusted Codex
+hook with its declared recorded-history limitation and permits explicit OpenCode
+paths only after Q5 PASS; it does not mandate a plugin where a native route
+works. Experimental contribution APIs and generated-file tests do not activate
+that route or schema 2. Current released command behavior below remains separate
+from those planned gates
+([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
 ## 1. Overview
 
@@ -234,10 +238,26 @@ Three files outside the per-item path tree are managed idempotently:
   absent. Never overwritten.
 - **`.vscode/settings.json`** — `chat.instructionsFilesLocations` is set; other
   keys preserved.
-- **`opencode.json`** — managed only on **first** opencode-rule install. The
-  entry `".agents/rules/**/RULE.md"` is added to `instructions[]` if not already
-  present, then the file is never mutated again. opencode's glob picks up
-  subsequent rule additions and removals automatically.
+- **`opencode.json`**: checked on rule-bearing installs. The entry
+  `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
+  including when a later install finds that it was removed. An existing entry
+  leaves the file unchanged; unrelated entries and keys are preserved
+  ([implementation](https://github.com/driftsys/upskill/blob/main/src/ancillary.rs),
+  [call site](https://github.com/driftsys/upskill/blob/main/src/pipeline/mod.rs)).
+  The installer relies on client glob expansion; this is a shipped write
+  contract, not qualification of OpenCode 2.1.4 runtime behavior
+  ([retained retry](https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-opencode-explicit-paths-retry.md)).
+
+Planned ancillary transition (2026-10-24 decision, 2026-10-25 reconciliation):
+the behavior above remains shipped behavior. The separate step-8 code PR removes
+bridge creation and the OpenCode glob write only after Q5 explicit-path PASS.
+Existing generated entries are to be reported by doctor, never automatically
+deleted; that report is required future behavior, not a current capability. VS
+Code's write remains pending its deferred profile decision. No docs-only
+adoption changes these commands
+([AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md),
+[Q5 deferred retry](https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-opencode-explicit-paths-retry.md),
+[handoff step 8](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-1-qualification-of-the-gating-routes)).
 
 ## 4. State files
 
