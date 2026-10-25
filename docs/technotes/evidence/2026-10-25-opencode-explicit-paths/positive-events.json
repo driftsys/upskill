@@ -1,0 +1,17 @@
+[
+  {
+    "type": "step_start",
+    "timestamp": 1792883039995,
+    "sessionID": "ses_e8fd7f4d9ffeulh00rp7U9V8fm"
+  },
+  {
+    "type": "error",
+    "timestamp": 1792883040013,
+    "sessionID": "ses_e8fd7f4d9ffeulh00rp7U9V8fm",
+    "error": {
+      "type": "provider.invalid-request",
+      "status": 400,
+      "diagnostic_code": "model_not_supported"
+    }
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "stage": "Tests before harness implementation",
+    "result": "FAIL: six expected missing-helper assertions, 160 tests",
+    "private_log": "$PACKET_A/q5-explicit-red-lint.log",
+    "sha256": "7babcb1c026597ce52699e77e051b4252bebc80fa76973cef58865d5f4523676"
+  },
+  {
+    "stage": "Offline suite after implementation",
+    "result": "PASS: 160 offline tests",
+    "private_log": "$PACKET_A/q5-explicit-green-lint.log",
+    "sha256": "0a8a42f989dbefd1a80ebe3c30e7b4f339572d792a2780ae92221940452ecc05"
+  },
+  {
+    "stage": "Native path ordering regression before correction",
+    "result": "FAIL: valid reversed native path inventory rejected",
+    "private_log": "$PACKET_A/q5-explicit-path-order-red.log",
+    "sha256": "491e9dc87170982c7810560dc11b837ac68f43432cc74498bad3c19b0a09baeb"
+  },
+  {
+    "stage": "Focused fixture/classification tests",
+    "result": "PASS: six tests",
+    "private_log": "$PACKET_A/q5-explicit-focused-green.log",
+    "sha256": "52d5196e35ec66246d361251372470b2e52c76b36726c97cf727da8bfea0f0b3"
+  },
+  {
+    "stage": "Independent regression mutations",
+    "result": "PASS: nine mutants rejected by assertion failure",
+    "private_log": "$PACKET_A/q5-explicit-mutations.log",
+    "sha256": "127f71395c919ea5a4ddfebde8ff74e7fc093ca81d01fa53b5e8280ca2400b58"
+  },
+  {
+    "stage": "Final repository verification",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_A/q5-explicit-full-verify.log",
+    "sha256": "85c7dbc89fcd5669346f00dd706de0ed23bed6f25673077e4b87df3600a228a5"
+  },
+  {
+    "stage": "Final repository verification",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_A/q5-explicit-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "QUICK review regression gaps",
+    "result": "PASS: all three surviving mutants now rejected by assertion failure",
+    "private_log": "$PACKET_A/q5-explicit-quick-mutations.log",
+    "sha256": "6fed10000010078a8ef46f3df655c7a703e01c21629fcfcebc063a321b277f19"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "FAIL: native absence contradiction accepted before correction",
+    "private_log": "$PACKET_B/q5-explicit-pass1-red.log",
+    "sha256": "0ade470be38a641f7feaa508b74c0a850c898121a54a9d1bfc7a4baa9958a626"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: seven focused tests",
+    "private_log": "$PACKET_B/q5-explicit-pass1-green.log",
+    "sha256": "1929830b775d36f9f7407915d2addd4748c200cffd458955c4e4554c900f3fc3"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: three mutants survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_B/q5-explicit-pass1-mutations.log",
+    "sha256": "6d43036eb7a5c30ae1ba55619d07b365b59dd5b53df127077c978d9d2173ca50"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q5-explicit-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full review fixes",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_B/q5-explicit-pass1-verify.log",
+    "sha256": "dd8326a5f0bfc2bdd56be86fd68b91db3dd6bb714ca3d4619bfd26f3650b8211"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q5-explicit-pass2-focused.log",
+    "sha256": "795d872cd929a9c778595fe5bb0368176418a847ce99e47b854ceef902d89d85"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q5-explicit-pass2-mutations.log",
+    "sha256": "3e82af86abf76b4aa04ccc98d335ff7394a629d2020897e15b3b0960cd30b12a"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q5-explicit-pass2-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q5-explicit-pass2-lint.log",
+    "sha256": "aa08d9e004eef21f53a4607d33d499a580fbd28484826ac55b96feb4ba418efd"
+  },
+  {
+    "stage": "Final pass 2 fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q5-explicit-pass2-docs.log",
+    "sha256": "cd76d635eff532d41cfb0bb37cf00a6b9ad612a0aba281e8c6a9ef8ddf945a12"
+  }
+]
