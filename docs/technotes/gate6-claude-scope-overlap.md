@@ -93,6 +93,14 @@ It failed before the classifier ordering change. The final pre-native
 [lint receipt](evidence/2026-10-25-claude-scope-overlap/q10-duplicate-green-lint.log)
 passed all 208 tests.
 
+The quick review found missing offline examples. Author-added cases now cover
+both native installation resource paths, fixture resource-reading instructions,
+partial additional body receipts, wrong workspace and namespace identities,
+wrong binding versions and two reads after one skill call. All 15 focused tests
+pass, and all eight reviewed mutations are rejected. These test-only additions
+are separate from the unchanged capture-time source and native result; no review
+pass over the fixes was run.
+
 The classifier requires two successful single-scope positives, exact native
 scope bindings, fresh session identities, catalog visibility, correlated tool
 results, full visible skill-body expansions and a resource-only marker. It

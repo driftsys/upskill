@@ -37,7 +37,7 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
             phases[phase] = {
                 'version': f['pin'], 'exit_code': 0, 'timed_out': False, 'cwd': str(f['project']),
                 'enabled_scopes': {scope: scope in installed for scope in ['user', 'project']},
-                'bindings': [{'scope': scope, 'version': '0.0.0', 'installPath': '/native-cache/fixture-package/0.0.0',
+                'bindings': [{'scope': scope, 'version': '0.0.0', 'installPath': '/native-cache/' + scope + '/fixture-package/0.0.0',
                               **({'projectPath': str(f['project'])} if scope == 'project' else {})} for scope in installed],
                 'events': [
                     event('system', subtype='init', claude_code_version=f['pin'], cwd=str(f['project']), skills=[namespace], slash_commands=[namespace]),
@@ -62,6 +62,9 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
             self.assertNotIn(f['resource_marker'], f['skill'].read_text())
             self.assertIn(f['activation_marker'], f['skill_body'])
             self.assertIn(f['skill_body'], f['skill'].read_text())
+            self.assertIn('Read references/receipt.txt exactly once', f['skill'].read_text())
+            self.assertIn('Return only the single line read from that file.', f['skill'].read_text())
+            self.assertNotIn(f['fallback'], f['skill'].read_text())
             self.assertEqual(len({f['resource_marker'], f['activation_marker'], f['fallback']}), 3)
             market = json.loads((f['managed_root'] / '.claude-plugin/marketplace.json').read_text())
             self.assertEqual(market['name'], f['market_name'])
@@ -127,6 +130,10 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
         f = self.fixture()
         mutations = [
             lambda p:p.update(version='old'),
+            lambda p:p.update(cwd='/another/workspace'),
+            lambda p:p['events'][0].update(cwd='/another/workspace'),
+            lambda p:p['events'][1]['message']['content'][0]['input'].update(skill='another-package:probe'),
+            lambda p:p['events'][1]['message']['content'][0]['input'].update(skill=f['skill_name']),
             lambda p:p['events'][0].update(claude_code_version='old'),
             lambda p:p['events'][-1].update(session_id='another-session'),
             lambda p:p['events'][-1].update(result=f['fallback']),
@@ -178,3 +185,33 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
         c['phases']['overlap']['events'][0]['skills'].append(f['skill_name'])
         del c['phases']['user_remaining'];del c['phases']['project_remaining']
         self.assertEqual(self.classify(c,f),'duplicate_exposure_or_activation')
+
+    def test_each_native_scope_installation_can_supply_the_relative_resource(self):
+        f=self.fixture()
+        for scope in ['user','project']:
+            c=self.controls(f);row=c['phases']['overlap']
+            self.assertEqual(len({b['installPath'] for b in row['bindings']}),2)
+            binding=next(b for b in row['bindings'] if b['scope']==scope)
+            row['events'][4]['message']['content'][0]['input']['file_path']=str(Path(binding['installPath'])/'skills'/f['skill_name']/'references/receipt.txt')
+            self.assertEqual(self.classify(c,f),'observed_single_entry_and_activation')
+
+    def test_complete_body_plus_partial_second_receipt_is_unobserved(self):
+        f=self.fixture();c=self.controls(f)
+        c['phases']['overlap']['events'][3]['message']['content'].append({'type':'text','text':f['activation_marker']})
+        self.assertEqual(self.classify(c,f),'activation_evidence_unobserved')
+
+    def test_wrong_binding_version_in_either_scope_is_rejected(self):
+        f=self.fixture()
+        for scope in ['user','project']:
+            c=self.controls(f)
+            next(b for b in c['phases']['overlap']['bindings'] if b['scope']==scope)['version']='0.0.1'
+            self.assertEqual(self.classify(c,f),'registration_mismatch')
+
+    def test_two_resource_reads_are_counted_independently_of_one_skill_call(self):
+        f=self.fixture();c=self.controls(f);row=c['phases']['overlap'];events=row['events']
+        call=copy.deepcopy(events[4]);call['message']['content'][0]['id']='second-read'
+        reply=copy.deepcopy(events[5]);reply['message']['content'][0]['tool_use_id']='second-read'
+        events[-1:-1]=[call,reply]
+        reason,evidence=q.inspect_claude_scope_phase(row,f,['user','project'])
+        self.assertIsNone(reason);self.assertEqual(evidence['counts'],[1,1,1,1,2])
+        self.assertEqual(self.classify(c,f),'control_failed')

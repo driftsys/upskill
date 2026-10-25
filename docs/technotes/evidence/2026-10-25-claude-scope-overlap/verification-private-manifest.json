@@ -1,0 +1,12 @@
+{
+  "q10-final-fmt.log": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+  "q10-final-verify.log": "93e820ae30e5545bb3b9da94ade59dbc5b58990d2609b30b95c5915d5573fc47",
+  "q10-mutation-check.py": "974edbfe895af84689deb9a823e87c9faf87782db73e5b622a7d80d32ea820b5",
+  "q10-review-fmt.log": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+  "q10-review-focused-tests.log": "c31208e301cec9b3e4f03471d86bc692a57c1f8d3c48a26ff0e2e5b74d795274",
+  "q10-review-mutation-status.log": "7e0bd0257cfb6f8e3b2409505c4ab299b3456f9575187fad6b27b5ee9c0da943",
+  "q10-review-mutations.json": "30048d964263dc6e2933f14ce26dd7e971bf3c86872b74e25ebc1f73cd6591fc",
+  "retain-verification-helper.py": "aefe36a6bda6a9c62de2a89b98c64339c8ea31ef96c4066e9b9c9985b7eb2308",
+  "scripts/qualify-plugin-rules.py": "f49da194f2a37af1e0d9c06faea841e750123d210c249a9338e02a08cddd9c8b",
+  "scripts/tests/test_qualify_claude_scope_overlap.py": "4129902dbd470deb2ed51ff044ee8098676091a45c44f88f2065156764f5bf3f"
+}

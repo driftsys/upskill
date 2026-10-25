@@ -9,5 +9,15 @@
       "campaign-pin-helper.py": "0801651e7f94e41088c76515e710e250c77ef67923ab471ea1c85ed21be304c4"
     },
     "method": "Failed first project-only positive; native cleanup and measured restoration; no user-positive or overlap run"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q10-verification-vu25fqk2",
+    "manifest_sha256": "cff81e25252f8ed65294ee50b8e336db6c1b79b583218b1b46451c24a5ef2768",
+    "capture_helpers": {
+      "retain-verification-helper.py": "aefe36a6bda6a9c62de2a89b98c64339c8ea31ef96c4066e9b9c9985b7eb2308",
+      "q10-mutation-check.py": "974edbfe895af84689deb9a823e87c9faf87782db73e5b622a7d80d32ea820b5"
+    },
+    "method": "Offline test-only review corrections and repository verification; native source epoch unchanged"
   }
 ]
