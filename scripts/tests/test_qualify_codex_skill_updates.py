@@ -135,3 +135,22 @@ class CodexSkillUpdatesTests(unittest.TestCase):
         for key,value in [('state','authentication_failure'),('response','B')]:
             c,f=self.controls();c['installed'][key]=value;del c['reinstalled'];c['edited_without_reinstall']['completed']=False
             self.assertEqual(self.q.classify_codex_skill_updates(c,f),'positive_control_failed')
+
+    def test_git_calls_strip_hostile_overrides_and_preserve_external_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();external=root/'external';external.mkdir();env=self.q.fixture_environment(root/'external-profile')
+            subprocess.run(['git','init','-q',str(external)],env=env,check=True)
+            subprocess.run(['git','-C',str(external),'-c','user.name=Qualification Fixture','-c','user.email=qualification@example.invalid','-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','commit','--quiet','--allow-empty','-m','test: external sentinel'],env=env,check=True)
+            def snapshot():return {str(p.relative_to(external)):p.read_bytes() for p in external.rglob('*') if p.is_file()}
+            before=snapshot();original=self.q.subprocess.run;calls=[]
+            def guarded(command,*args,**kwargs):
+                if command[0]=='git':
+                    self.assertIn('env',kwargs)
+                    self.assertFalse(any(k.startswith('GIT_') for k in kwargs['env']))
+                    self.assertEqual(kwargs['env']['HOME'],str(root/'fixture/home'))
+                    calls.append(command)
+                return original(command,*args,**kwargs)
+            with mock.patch.dict(os.environ,{'GIT_DIR':str(external/'.git'),'GIT_WORK_TREE':str(external),'GIT_CONFIG_COUNT':'1','GIT_CONFIG_KEY_0':'core.hooksPath','GIT_CONFIG_VALUE_0':'/not-used'}),mock.patch.object(self.q.subprocess,'run',side_effect=guarded):
+                self.q.prepare_codex_skill_updates(root/'fixture')
+            self.assertEqual(len(calls),4)
+            self.assertEqual(snapshot(),before)
