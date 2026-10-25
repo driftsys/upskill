@@ -226,7 +226,8 @@ def classify_codex_resume_only(observation):
     def valid_turn(turn):
         return (isinstance(turn, dict) and turn.get('completed') is True
                 and turn.get('read_only') is True and turn.get('tools_observed') is False
-                and turn.get('response_matches') is True and turn.get('session') == session)
+                and turn.get('response_matches') is True and turn.get('session') == session
+                and isinstance(turn.get('turn_id'), str) and bool(turn['turn_id'].strip()))
     positive = observation.get('positive')
     if (not isinstance(session, str) or not session.strip() or not valid_turn(positive)
             or positive.get('body_counts') != {'a': 1, 'b': 1}
@@ -235,7 +236,7 @@ def classify_codex_resume_only(observation):
     if observation.get('pin') != '0.164.0' or observation.get('preserved') is not True:
         return 'control_metadata_failed'
     resume = observation.get('resume')
-    if not valid_turn(resume):
+    if not valid_turn(resume) or resume['turn_id'] == positive['turn_id']:
         return 'resume_control_failed'
     counts = resume.get('body_counts')
     if (type(resume.get('compaction_records')) is not int or resume['compaction_records'] != 0

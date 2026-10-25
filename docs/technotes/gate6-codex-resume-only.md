@@ -62,3 +62,10 @@ review. No production route or durable record changes in this packet. Existing
 Q8 and Q7 captures can be prepared independently without another model request
 ([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [summary](evidence/2026-10-25-codex-resume-only/summary.json)).
+
+Packet review requires distinct native turn identities for startup and resume,
+in addition to the shared session identity. Tests reject either callback source
+being compact and keep failed-positive precedence over invalid metadata. These
+are offline classifier corrections; the retained native retry still has no
+completed positive or resume invocation
+([validation](evidence/2026-10-25-codex-resume-only/validation.json)).

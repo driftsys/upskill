@@ -9,8 +9,8 @@ q=importlib.util.module_from_spec(spec);spec.loader.exec_module(q)
 class ResumeOnlyTests(unittest.TestCase):
     def observation(self):
         return {'pin':'0.164.0','session':'session-a','preserved':True,
-                'positive':{'completed':True,'read_only':True,'tools_observed':False,'response_matches':True,'session':'session-a','body_counts':{'a':1,'b':1}},
-                'resume':{'completed':True,'read_only':True,'tools_observed':False,'response_matches':True,'session':'session-a','body_counts':{'a':1,'b':1},'compaction_records':0,'callback_sources':['resume','resume']}}
+                'positive':{'turn_id':'startup-turn','completed':True,'read_only':True,'tools_observed':False,'response_matches':True,'session':'session-a','body_counts':{'a':1,'b':1}},
+                'resume':{'turn_id':'resume-turn','completed':True,'read_only':True,'tools_observed':False,'response_matches':True,'session':'session-a','body_counts':{'a':1,'b':1},'compaction_records':0,'callback_sources':['resume','resume']}}
     def classify(self,value):
         self.assertTrue(callable(getattr(q,'classify_codex_resume_only',None)),'Missing resume-only classifier')
         return q.classify_codex_resume_only(value)
@@ -56,4 +56,24 @@ class ResumeOnlyTests(unittest.TestCase):
             v=self.observation();v[key]=value
             self.assertEqual(self.classify(v),'control_metadata_failed')
         v=self.observation();v['session']=' ';v['positive']['session']=' ';v['resume']['session']=' '
+        self.assertEqual(self.classify(v),'positive_control_failed')
+
+    def test_native_turn_ids_are_present_and_distinct_within_the_same_session(self):
+        for stage in ['positive','resume']:
+            for value in ['',None,1,' ']:
+                v=self.observation();v[stage]['turn_id']=value
+                self.assertEqual(self.classify(v),'positive_control_failed' if stage=='positive' else 'resume_control_failed')
+            v=self.observation();del v[stage]['turn_id']
+            self.assertEqual(self.classify(v),'positive_control_failed' if stage=='positive' else 'resume_control_failed')
+        v=self.observation();v['resume']['turn_id']=v['positive']['turn_id']
+        self.assertEqual(self.classify(v),'resume_control_failed')
+        v=self.observation();v['resume']=v['positive'];v['resume'].update(compaction_records=0,callback_sources=['resume','resume'])
+        self.assertEqual(self.classify(v),'resume_control_failed')
+
+    def test_both_callback_sources_and_positive_failure_precedence_are_pinned(self):
+        for index in [0,1]:
+            for source in ['compact','startup','fork',None]:
+                v=self.observation();v['resume']['callback_sources'][index]=source
+                self.assertEqual(self.classify(v),'resume_control_failed')
+        v=self.observation();v['positive']['completed']=False;v['pin']='old';v['preserved']=False
         self.assertEqual(self.classify(v),'positive_control_failed')

@@ -56,5 +56,41 @@
     "result": "PASS: just docs-check",
     "private_log": "$PACKET_B/q9-resume-quick-docs.log",
     "sha256": "b54e584cb58934551fded3e7bdd2c03cc2899dee9ea7cb28ff68e71d6eab2bcc"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "FAIL: new native turn identity regressions before correction",
+    "private_log": "$PACKET_C/q9-full-pass1-red.log",
+    "sha256": "2fa23191b29a21cf87eeffbe87ea4aea2def2003571600bed543b655799cda6b"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q9-full-pass1-focused.log",
+    "sha256": "d9d734ee1c2de67b748aeef1c4126433aa438ad8375ca953916f12b1df11414d"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q9-full-pass1-mutations.log",
+    "sha256": "3a795345a905122efe8655fcffb8b80086887e6e8184517e5a7ac3552b1d9c0a"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q9-full-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q9-full-pass1-lint.log",
+    "sha256": "1fbe10e1e7199e403a8a41122693d168c257fa0b77728c39773689410fa3f8ff"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q9-full-pass1-docs.log",
+    "sha256": "dd10ee72333ccefd22812e8b9edcf4137d6a608359abc3dc03404ec6951936d6"
   }
 ]
