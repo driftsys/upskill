@@ -2,8 +2,11 @@
 
 Date: 2026-10-23; rules direction adopted by the user on 2026-10-24 after
 reviewing Q1-Q9. Status: decided rules direction, pending durable-record
-amendments and implementation. The skills/subagent/package and release-scope
-amendments remain proposals; this decision changes no code or production route
+amendments and implementation. The separate step-7 adoption PR now reconciles
+the
+[durable inventory](../../topics/0009-customization-delivery.md#amendment-inventory).
+The skills/subagent/package and release-scope amendments remain proposals; this
+decision changes no code or production route
 ([user decision](#user-decision-2026-10-24), [AD-0040][direction],
 [roadmap][roadmap]).
 
@@ -16,7 +19,7 @@ identifies its required amendments to the direction accepted on 2026-10-19 in
 [Topic 0009](../../topics/0009-customization-delivery.md), both on `main` since
 PR #334 and extended on 2026-10-20 (PR #350). Where this proposal agrees with
 them it says so. Where it diverges it says so and gives the reason, and the
-three direction amendments are recorded in [AD-0040][direction]; Topic 0009
+pending direction amendments are recorded in [AD-0040][direction]; Topic 0009
 links to that list rather than recording or adopting the amendments itself
 ([Topic 0009][contract]).
 
@@ -61,8 +64,10 @@ Divergences from AD-0040, Topic 0009 and the [roadmap](../../roadmap.md):
 
 ## Records superseded or amended if this proposal is adopted
 
-Adoption requires explicit amendments. This proposal does not silently amend any
-of them.
+Adoption requires explicit amendments. The
+[step-7 durable inventory](../../topics/0009-customization-delivery.md#amendment-inventory)
+now records each disposition against merged evidence. Pending package/release
+choices remain unadopted; shipped path tables are not silently replaced.
 
 | Record                                                                                                                                                                                   | Conflict with this proposal                                                                                                                                           | Required change                                                                                                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +84,9 @@ of them.
 | Storage candidates draft `docs/wip/specs/2026-10-23-customization-storage-delivery-candidates.md`                                                                                        | The local uncommitted draft compares candidates and records a user-reported OpenCode explicit-path/cache observation; it is retained context, not an active proposal  | Register retained context in docs/wip/README.md; Q5 does not test or validate its cache claim                        |
 
 Additional required amendments from the user's 2026-10-24 rules decision are
-listed here, not applied to durable records in this PR
+listed here and reconciled in the separate
+[step-7 record](../../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25),
+with user adoption and live issue changes distinguished from native results
 ([user decision](#user-decision-2026-10-24)):
 
 | Record                                                                                                                                                        | Required amendment                                                                                                                                                                                                                                                                                                                                  |
@@ -224,12 +231,12 @@ name collisions, not only shared-versus-compatibility ones.
 Update visibility is client-specific; a universal reinstall step is not
 supported by the retained observations ([Q6][Q6], [Q3][Q3], [Q5][Q5]).
 
-| Client and current pin | Update visibility                                                        | Evidence boundary                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Claude 2.1.308         | Fresh session sees a combined content-and-version edit without reinstall | PASS at project and user scopes; running-session visibility not run ([Q6][Q6], [summary][Q6 summary])  |
-| Copilot 1.0.103        | Native installation reports live loading from managed source             | Q3 installation observation, not successful rule-update activation ([Q3][Q3], [summary][Q3 summary])   |
-| Codex 0.164.0          | Unknown until Q8                                                         | Native cache-copy lifecycle still needs the Q8 control ([AD-0040][direction], [design ledger][ledger]) |
-| OpenCode 2.1.4         | Not run after failed positives                                           | Q5 provides no execution or update visibility result ([Q5][Q5], [summary][Q5 summary])                 |
+| Client and current pin | Update visibility                                                        | Evidence boundary                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Claude 2.1.308         | Fresh session sees a combined content-and-version edit without reinstall | PASS at project and user scopes; running-session visibility not run ([Q6][Q6], [summary][Q6 summary]) |
+| Copilot 1.0.103        | Native installation reports live loading from managed source             | Q3 installation observation, not successful rule-update activation ([Q3][Q3], [summary][Q3 summary])  |
+| Codex 0.164.0          | Source resource/version edit stays cached until native remove/re-add     | Q8 PASS at project activation; skill-body-only edits and other refresh verbs untested ([Q8][Q8])      |
+| OpenCode 2.1.4         | Not run after failed positives                                           | Q5 provides no execution or update visibility result ([Q5][Q5], [summary][Q5 summary])                |
 
 Collaborator onboarding at project scope needs an explicit task: committed
 registration does not prove native installation, trust or invocation for another
@@ -290,21 +297,24 @@ Reasons for the decision:
 
 ### Always-on rules
 
-| Client      | Decided route                                                                                                                                                                                                                                           | Evidence and acceptance boundary                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code | Native `.claude/rules/<name>.md`, no frontmatter                                                                                                                                                                                                        | PASS at 2.1.292 in the [native controls](../../technotes/m1-gate6-native-qualification.md); an independent unscoped native positive also PASS at 2.1.308 ([Q4][Q4], [summary][Q4 summary]). Selected by the [decision][decision]                                                                                                                                                                                              |
-| Copilot CLI | When Claude is also selected for the project, use that same `.claude/rules` file and record Copilot as a declared intended reader, without a `.github/instructions` copy. Otherwise use `.github/instructions/<name>.instructions.md` without `applyTo` | Q1 PASS: Copilot 1.0.103 reads unscoped `.claude/rules`; its native positive is `.github/copilot-instructions.md`, not a direct qualification of the modular no-`applyTo` output. The latter remains a selected route with its native validation obligation ([Q1][Q1], [summary][Q1 summary], [decision][decision])                                                                                                           |
-| Codex       | Package-owned static rule index read by the trusted `SessionStart` hook                                                                                                                                                                                 | **Supported with declared limitation** is the adopted direction; step 7 records it once the resume-only control is retained. Q9 on 0.164.0: fresh positive and final responses PASS, but the former zero-duplicate contract FAILS after reopen plus first automatic compaction; the second compaction records one body per rule ([Q9][Q9], [summary][Q9 summary], [decision][decision])                                       |
-| OpenCode    | Explicit `instructions` file paths, no glob. Fallback: qualified plugin context hook                                                                                                                                                                    | Pending Q5 retry for explicit paths at 2.1.4; both prior positives FAIL and component controls are not run. Hook execution passed historically on 2.0.32, not qualification at 2.1.4. See the [retained explicit-path observation](../README.md#opencode-explicit-path-observation) ([Q5][Q5], [summary][Q5 summary], [historical hook controls](../../technotes/gate6-opencode-user-rule-controls.md), [decision][decision]) |
+| Client      | Decided route                                                                                                                                                                                                                                           | Evidence and acceptance boundary                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | Native `.claude/rules/<name>.md`, no frontmatter                                                                                                                                                                                                        | PASS at 2.1.292 in the [native controls](../../technotes/m1-gate6-native-qualification.md); an independent unscoped native positive also PASS at 2.1.308 ([Q4][Q4], [summary][Q4 summary]). Selected by the [decision][decision]                                                                                                                                                                                                                    |
+| Copilot CLI | When Claude is also selected for the project, use that same `.claude/rules` file and record Copilot as a declared intended reader, without a `.github/instructions` copy. Otherwise use `.github/instructions/<name>.instructions.md` without `applyTo` | Q1 PASS: Copilot 1.0.103 reads unscoped `.claude/rules`; its native positive is `.github/copilot-instructions.md`, not a direct qualification of the modular no-`applyTo` output. The latter remains a selected route with its native validation obligation ([Q1][Q1], [summary][Q1 summary], [decision][decision])                                                                                                                                 |
+| Codex       | Package-owned static rule index read by the trusted `SessionStart` hook                                                                                                                                                                                 | **Supported with declared limitation** is the adopted direction; the resume-only attribution is retained, with step-7 durable adoption still at user PR review ([follow-up][Q9 resume]). Q9 on 0.164.0: fresh positive and final responses PASS, but the former zero-duplicate contract FAILS after reopen plus first automatic compaction; the second compaction records one body per rule ([Q9][Q9], [summary][Q9 summary], [decision][decision]) |
+| OpenCode    | Explicit `instructions` file paths, no glob. Fallback: qualified plugin context hook                                                                                                                                                                    | Explicit-path retry deferred at 2.1.4 after failed positives; downstream component controls not run ([latest retry][Q5 retry]). Hook execution passed historically on 2.0.32, not qualification at 2.1.4. See the [retained explicit-path observation](../README.md#opencode-explicit-path-observation) ([Q5][Q5], [summary][Q5 summary], [historical hook controls](../../technotes/gate6-opencode-user-rule-controls.md), [decision][decision])   |
 
-Declared Codex limitation: after resume followed by compaction, one transient
-duplicate of each rule body may appear until the next compaction. Q9 observes
-two bodies per rule after reopen plus the first automatic compaction and one
-after the second; provider-effective input is unobserved. The user accepts that
-bounded limitation instead of treating #379 as an architecture blocker. Keep one
-resume-only control to attribute the duplicate correctly; this does not rewrite
-the retained Q9 FAIL or make a new unrun control PASS ([Q9][Q9],
-[summary][Q9 summary], [decision][decision]).
+Declared Codex limitation: the user accepts the recorded duplicate instead of
+using #379 as an architecture blocker. The original combined run records two
+bodies per rule after reopen plus the first automatic compaction and one after
+the second. The 2026-10-25 resume-only follow-up is now retained: startup 1,
+cumulative resumed history 2 and newly appended records 1 per rule, without
+compaction. This attributes the extra recorded copy to resume.
+Provider-effective input and duplicate lifetime remain unqualified; the accepted
+transient allowance is not a new lifetime proof. Keep Q9's historical FAIL
+unchanged, retain the HTTP 401 failure separately, and make the proposed #379 K1
+re-scope at user adoption review ([Q9][Q9], [summary][Q9 summary],
+[resume-only][Q9 resume], [decision][decision]).
 
 ### Planner and ownership rules
 
@@ -428,8 +438,10 @@ At Copilot 1.0.103, Q2 records a real child and resource read from a
 Claude-format agent, without independently proving its tool catalog or
 `permissionMode` enforcement. Q3 records a real namespaced user child, but its
 exact-marker response fails and project-overlay activation is unverified. A safe
-restricted-Claude exception is therefore unqualified; Q7 remains the Codex
-registration control, not evidence supplied by these packets ([Q2][Q2],
+restricted-Claude exception is therefore unqualified; Q7 now supplies bounded
+Codex explicit-registration, real-child and inherited read-only denial evidence,
+not broader restriction or automatic plugin discovery qualification ([Q7][Q7]);
+these Copilot packets supply none of that evidence ([Q2][Q2],
 [summary][Q2 summary], [Q3][Q3], [design ledger][ledger]). OpenCode 2.0.32
 executed configured and file-backed children as real child sessions and produced
 a native `permission.rejected` for a nonmatching-path edit under one unchanged
@@ -453,12 +465,12 @@ resolver and does not record test model choices.
 
 ## User and project scope
 
-| Client          | User-wide activation                                                                        | Project activation                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude 2.1.308  | User plugin scope PASS in separate project ([Q6][Q6])                                       | Project plugin scope PASS; overlapping user/project activation not tested by Q6 ([summary][Q6 summary], [CD-04][contract])                   |
-| Codex 0.164.0   | Q9 uses previously reviewed user registrations, not arbitrary-workspace delivery ([Q9][Q9]) | Fresh project rule registration not run; Q8 package lifecycle pending ([summary][Q9 summary], [CD-10][contract])                             |
-| Copilot 1.0.103 | User-enabled plugin candidate catalog present; plugin rules component FAIL ([Q3][Q3])       | Project-scope activation unverified (Q3): project-overlay candidate absent; user-enabled candidate present ([Q3][Q3], [summary][Q3 summary]) |
-| OpenCode 2.1.4  | User activation not run in Q5 ([Q5][Q5])                                                    | Project configuration measured; component activation not run after failed positives ([Q5][Q5], [summary][Q5 summary])                        |
+| Client          | User-wide activation                                                                        | Project activation                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude 2.1.308  | User plugin scope PASS in separate project ([Q6][Q6])                                       | Project plugin scope PASS; overlapping user/project activation not tested by Q6 ([summary][Q6 summary], [CD-04][contract])                               |
+| Codex 0.164.0   | Q9 uses previously reviewed user registrations, not arbitrary-workspace delivery ([Q9][Q9]) | Fresh project rule registration not run; bounded Q8 project skill/resource and native refresh PASS ([Q8][Q8]) ([summary][Q9 summary], [CD-10][contract]) |
+| Copilot 1.0.103 | User-enabled plugin candidate catalog present; plugin rules component FAIL ([Q3][Q3])       | Project-scope activation unverified (Q3): project-overlay candidate absent; user-enabled candidate present ([Q3][Q3], [summary][Q3 summary])             |
+| OpenCode 2.1.4  | User activation not run in Q5 ([Q5][Q5])                                                    | Project configuration measured; component activation not run after failed positives ([Q5][Q5], [summary][Q5 summary])                                    |
 
 Activation scope is not physical storage scope. A user cache can serve a
 project-only installation. User and project installations must resolve one
@@ -467,9 +479,11 @@ checking uniqueness separately within each scope is insufficient.
 
 Private project installations are an additional capability where supported, not
 an assumed universal third scope. Test unrelated-project non-activation and
-preserve native trust requirements. All user-root delivery remains unqualified:
-the retained Codex user-profile run limited callbacks to two declared project
-paths and is not arbitrary-workspace user delivery.
+preserve native trust requirements. Arbitrary-workspace user delivery remains
+unqualified: Q6 records separate projects, while the Codex rule controls guard
+two declared project paths and Q8 observes one project activation. These are not
+universal user-root delivery or cross-scope overlap qualification ([Q6][Q6],
+[Q9 resume][Q9 resume], [Q8][Q8]).
 
 ## Existing generated output
 
@@ -503,7 +517,7 @@ equality ([CD-07][contract], [Q6][Q6], [Q3][Q3]).
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Claude 2.1.308  | Native removal leaves empty `enabledPlugins` and `extraKnownMarketplaces`; measured settings are then restored exactly. The original removal receipt records `0.0.0`; a later read-only inventory also records a persisting `0.0.1` cache directory ([original cache receipt][Q6 cache], [review inventory](../../technotes/evidence/2026-10-24-claude-managed-root/retry-cache-review-inventory.json)). Registries match their baselines; session/log/cache effects are outside whole-profile equality ([Q6][Q6], [summary][Q6 summary]). Q4 also retains its initial onboarding restoration failure and subsequent owned cleanup ([Q4][Q4]) |
 | Copilot 1.0.103 | Native uninstall leaves owned empty `installedPlugins`; measured configuration bytes/mode restored after unrelated-value checks. Session/log/cache/trust state is outside whole-profile equality ([Q3][Q3], [summary][Q3 summary])                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Codex 0.164.0   | Registration-removal residue contract to be filled by Q8. Q9 changes no registration and only proves unchanged measured configuration/package definitions ([Q9][Q9], [design ledger][ledger])                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Codex 0.164.0   | Q8 restores its control baseline exactly; Q7 separately retains initial restoration failure and later notice-counter correction to its original hash/mode. Native logs/cache bookkeeping are outside whole-profile equality ([Q7][Q7], [Q8][Q8])                                                                                                                                                                                                                                                                                                                                                                                              |
 | OpenCode 2.1.4  | Successful-route residue contract to be filled by Q5. Failed positives and rejected local installs leave measured configuration unchanged, not whole-profile equality ([Q5][Q5], [summary][Q5 summary])                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Decision required: approve each per-client byte/key preservation allowance at
@@ -597,10 +611,12 @@ Repository records: [AD-0003](../../adr/0003-generation-pipeline.md),
 
 ## Retained campaign references
 
-These fixed revisions cite the packet branches before merge. PASS and FAIL apply
-only to the recorded macOS arm64 controls, not complete client qualification
-([CD-10][contract]). Q7 and Q8 remain pending in this reconciliation; no local
-unmerged result is promoted here ([CD-11][contract]).
+The original fixed revisions below retain their historical snapshots. Q7/Q8 and
+retry links now name merged packets. PASS and FAIL apply only to the recorded
+macOS arm64 controls, not complete client qualification or adopted package
+defaults. See the
+[durable dispositions](../../topics/0009-customization-delivery.md#retained-control-dispositions)
+([CD-10 and CD-11][contract]).
 
 [Q1]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/gate6-copilot-claude-rules-reader.md
 [Q1 summary]: https://github.com/driftsys/upskill/blob/a6166cf60d306f21c73b36688afdc49b57dbf5fd/docs/technotes/evidence/2026-10-24-copilot-claude-rules-reader/summary.json
@@ -622,3 +638,7 @@ unmerged result is promoted here ([CD-11][contract]).
 [ledger]: https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650
 [Q6 cache]: https://github.com/driftsys/upskill/blob/0985dfb43c637996a8030c51bbd0e91fad2fe7eb/docs/technotes/evidence/2026-10-24-claude-managed-root/retry-post-removal-cache.json
 [decision]: #user-decision-2026-10-24
+[Q7]: ../../technotes/gate6-codex-agent-registration.md
+[Q8]: ../../technotes/gate6-codex-skill-updates.md
+[Q9 resume]: ../../technotes/gate6-codex-resume-attribution.md
+[Q5 retry]: ../../technotes/gate6-opencode-explicit-paths-retry.md

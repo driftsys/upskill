@@ -2,6 +2,13 @@
 
 AD-0017
 
+Production-scope clarification (2026-10-25): this is an experimental library
+mechanism, not authorization to place managed contributions in team instruction
+files. Its pure planning and owner-evidence contracts remain reusable.
+[AD-0040](0040-separate-customization-delivery-from-discovery.md) and the
+[durable delivery inventory](../topics/0009-customization-delivery.md#amendment-inventory)
+keep production rule delivery independent of team guidance.
+
 ## Context
 
 Owned artifact records store owners and a union of consumers. That union cannot

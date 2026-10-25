@@ -19,19 +19,25 @@ references must be reconciled as part of that feature's review.
   [AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md) lists
   proposed amendments; Topic 0009 links to them without adopting them. The
   [slice-1 spec](specs/2026-10-23-customization-delivery-implementation-spec.md)
-  marks the user's step 7 decisions separately from route evidence
+  marks the user's step 7 decisions separately from route evidence. The
+  [durable step-7 inventory](../topics/0009-customization-delivery.md#amendment-inventory)
+  reconciles merged Q1-Q9 outcomes; package/release choices and implementation
+  remain open, so this proposal/spec are not archived
   ([design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)).
 
 - [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md) and
   [corrected customization delivery plan](plans/2026-10-19-customization-delivery-reconciliation.md)
   — architecture reconciliation requested on 2026-10-19. Independent
-  Codex/OpenCode rules require qualified plugins beside unchanged team
-  `AGENTS.md`. Contribution experiments do not approve the production route.
-  CD-01 through CD-10 cover every customization's discovery, intended readers,
-  preservation and evidence. Implementation/native qualification remain active;
-  production schema-2 activation stays blocked. Earlier original Gate 6 drafts
-  remain preserved in the prior planning worktree; this revised design is the
-  current planning copy.
+  Codex/OpenCode rules remain independent of unchanged team `AGENTS.md`; the
+  later
+  [native-first amendment](../adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)
+  permits explicit OpenCode paths after Q5 PASS rather than mandatory plugins.
+  Contribution experiments do not approve the production route. CD-01 through
+  CD-10 cover every customization's discovery, intended readers, preservation
+  and evidence. Implementation/native qualification remain active; production
+  schema-2 activation stays blocked. Earlier original Gate 6 drafts remain
+  preserved in the prior planning worktree; this revised design is the current
+  planning copy.
 
 - [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
   — four-client MVP sequencing and proposed qualification gates; retained

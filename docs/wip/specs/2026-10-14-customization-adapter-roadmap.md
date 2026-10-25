@@ -65,25 +65,34 @@ grants or with prose references to tool names in a skill.
 **U:** upskill composition. A question mark identifies a candidate requiring
 runtime validation. Packaging/update transport is independent of these labels.
 
-| Customization                           | Claude Code         | Copilot CLI         | Codex               | OpenCode v2      | Cursor, later               | Gemini CLI, later              |
-| --------------------------------------- | ------------------- | ------------------- | ------------------- | ---------------- | --------------------------- | ------------------------------ |
-| Rules, independent of team instructions | N                   | N                   | P, required         | P, required      | N, including packaged rules | N, including extension context |
-| Skills                                  | N                   | N                   | N                   | N                | N                           | N                              |
-| Subagents, unsequenced                  | N                   | N                   | N                   | N                | N                           | N, release verification needed |
-| MCP, following release                  | N config            | N config            | N config            | N config         | N config                    | N config                       |
-| Hooks, following release                | P via native events | P via native events | P via native events | P via plugin API | P via native events         | P via native events            |
-| Permissions, following release          | N controls          | N controls          | N controls          | N controls       | N, surface-specific         | N policy engine                |
-| Plugin installation                     | N lifecycle         | N lifecycle         | N lifecycle         | N lifecycle      | N lifecycle                 | N extension lifecycle          |
-| Bundles                                 | U                   | U                   | U                   | U                | U                           | U                              |
+| Customization                           | Claude Code                             | Copilot CLI                                  | Codex                               | OpenCode v2                                                  | Cursor, later               | Gemini CLI, later              |
+| --------------------------------------- | --------------------------------------- | -------------------------------------------- | ----------------------------------- | ------------------------------------------------------------ | --------------------------- | ------------------------------ |
+| Rules, independent of team instructions | N, shared intended reader when selected | N, shared Claude file or modular native file | P trusted hook, declared limitation | N explicit paths pending Q5; P fallback separately qualified | N, including packaged rules | N, including extension context |
+| Skills                                  | N; package candidate Q6 observed        | N; current-pin package skills pending        | N; package candidate Q8 observed    | N; explicit package source proposed, Q5 pending              | N                           | N                              |
+| Subagents, unsequenced                  | N                                       | N                                            | N                                   | N                                                            | N                           | N, release verification needed |
+| MCP, following release                  | N config                                | N config                                     | N config                            | N config                                                     | N config                    | N config                       |
+| Hooks, following release                | P via native events                     | P via native events                          | P via native events                 | P via plugin API                                             | P via native events         | P via native events            |
+| Permissions, following release          | N controls                              | N controls                                   | N controls                          | N controls                                                   | N, surface-specific         | N policy engine                |
+| Plugin installation                     | N lifecycle                             | N lifecycle                                  | N lifecycle                         | N lifecycle                                                  | N lifecycle                 | N extension lifecycle          |
+| Bundles                                 | U                                       | U                                            | U                                   | U                                                            | U                           | U                              |
 
-Codex/OpenCode plugin rule delivery is the required intended architecture; its
-exact installed lifecycle/API remains unqualified. Earlier additive discovery of
-independent rule files alongside existing team `AGENTS.md` was not established
-for these contracts. Do not claim either client lacks project instructions. If
-injection cannot meet the required semantics, the affected route and broad
-activation remain blocked. Managed `AGENTS.md` contributions are experimental,
-not a production fallback. Every category in the table requires the canonical
-per-client reader/preservation/status matrix and CD acceptance controls.
+Dated reconciliation (2026-10-25): the 2026-10-24 user decision selects
+native-first always-on rules, independent of team guidance rather than mandatory
+plugin loading. Copilot reads the one unscoped Claude file when declared per
+item; otherwise it uses its native modular output. Codex has a trusted hook with
+a recorded-history duplicate limitation. OpenCode explicit paths still await Q5
+PASS, and its fallback needs separate qualification. N/P describe loading
+mechanisms, not adoption of a package default or full route qualification.
+Subagents and authorable-bundle scope changes remain pending user review
+([AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md),
+[retained dispositions](../../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
+Earlier additive discovery of independent rule files alongside existing team
+`AGENTS.md` was not established for these contracts. Do not claim either client
+lacks project instructions. If injection cannot meet the required semantics, the
+affected route and broad activation remain blocked. Managed `AGENTS.md`
+contributions are experimental, not a production fallback. Every category in the
+table requires the canonical per-client reader/preservation/status matrix and CD
+acceptance controls.
 
 Native permissions remain authoritative for the relevant runtime. Later plugin
 checks may supplement them, but a prompt cannot implement sandbox enforcement.
