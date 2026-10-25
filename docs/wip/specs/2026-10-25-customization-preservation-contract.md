@@ -1,12 +1,13 @@
 # Per-client package preservation contract
 
 Date: 2026-10-25. Task [#415](https://github.com/driftsys/upskill/issues/415).
-Status: proposed for explicit user approval. This draft supplies the
-preservation work required by the [slice-2 handoff][handoff]. Recommendations
-below are the author's proposals, not decisions already made by the user.
-Retaining or merging this document does not approve its allowances, qualify an
-adapter or activate a production route. Production remains lockfile schema 1
-([AD-0040][direction]).
+Status: preservation policies D1-D6 approved by the user on 2026-10-25 after
+[PR #416](https://github.com/driftsys/upskill/pull/416) retained the draft. The
+user replied "ok" to the explicit request to approve all six recommendations.
+This records policy-level approval separately from the earlier merge; concrete
+adapter profiles and implementation remain pending. This record does not qualify
+a client, activate a production route or change the production lockfile schema
+([approval record](#approval-and-next-records), [AD-0040][direction]).
 
 ## Purpose and scope
 
@@ -26,12 +27,13 @@ combined release still needs the applicable CD-09/CD-11 evidence
 
 ## Approval overview
 
-These recommendations are independently reviewable; all remain unapproved.
-Policy approval does not authorize an unidentified configuration selector. If a
-client profile's concrete path, field shape or mode contract is still missing,
-complete its evidence and obtain profile approval before implementing effects.
+The user approved these six policy recommendations. Concrete adapter profiles
+remain unapproved. Policy approval does not authorize an unidentified
+configuration selector. If a client profile's concrete path, field shape or mode
+contract is still missing, complete its evidence and obtain profile approval
+before implementing effects.
 
-| Item | Recommendation                                                                                                                                                                                              |
+| Item | Policy                                                                                                                                                                                                      |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D1   | Distinguish exact protected-file preservation from separately reported native cache, authentication, trust, log and session effects. No whole-profile equality claim.                                       |
 | D2   | Allow only operation-created Claude empty containers inside a pre-existing settings file, under the guarded conditions below. No new-file residue allowance.                                                |
@@ -142,13 +144,13 @@ bytes/modes exactly. Q6's native cache survives removal, including
 later-observed `0.0.1` storage; Q10 records persisting `0.0.0` storage. Native
 registry files return to their measured baselines ([Q6][Q6], [Q10][Q10]).
 
-Decision required: **D2, Claude empty-container allowance.** Recommend allowing
-those two empty objects inside a pre-existing settings file only when the
-operation introduced the container, all owned entries and references in it are
-released, unrelated content remains preserved and native remaining-reader checks
-pass. Existing empty objects remain manual baseline. This is declared residue,
-not exact file equality. It does not permit a newly created empty settings file
-to remain, arbitrary mode changes or a whole settings rewrite. The
+Approved policy: **D2, Claude empty-container allowance.** Allow those two empty
+objects inside a pre-existing settings file only when the operation introduced
+the container, all owned entries and references in it are released, unrelated
+content remains preserved and native remaining-reader checks pass. Existing
+empty objects remain manual baseline. This is declared residue, not exact file
+equality. It does not permit a newly created empty settings file to remain,
+arbitrary mode changes or a whole settings rewrite. The
 [Q10 restoration receipt][Q10 restoration] records initially absent user
 settings, a native file observed at `0o0644` after cleanup, and restored
 absence. Project settings already existed at `0o0640`. This is bounded
@@ -180,7 +182,7 @@ is no permission to replace the whole native configuration, adopt manual
 registrations or patch an installation/cache directory ([Q3][Q3],
 [handoff][handoff]).
 
-Decision required: **D3, Copilot empty-container allowance.** Recommend the same
+Approved policy: **D3, Copilot empty-container allowance.** Apply the same
 bounded treatment for an operation-created empty `installedPlugins` container
 inside a pre-existing file: preserve other entries, comments, meaningful order,
 mode and presence; retain it as declared residue only after a passing profile
@@ -205,14 +207,14 @@ multi-effect update that must preserve selected project scope and surviving
 references; Q8 does not qualify every update form ([Q8][Q8],
 [native preservation][contract]).
 
-Decision required: **D4, Codex configuration allowance.** Recommend no
-configuration residue exception initially. Owned registration entries must
-return to the recorded baseline or preserve surviving owners under the qualified
-entry writer. Unrelated notice/trust changes block reconciliation; do not reset
-them merely to recreate a historical hash. Q7's fixture-specific correction is
-not a production repair policy. Normal user trust review remains mandatory;
-index-only hook trust is still a separate unscheduled control ([Q7][Q7],
-[Q8][Q8], [pending controls][contract]).
+Approved policy: **D4, Codex configuration allowance.** Allow no configuration
+residue exception initially. Owned registration entries must return to the
+recorded baseline or preserve surviving owners under the qualified entry writer.
+Unrelated notice/trust changes block reconciliation; do not reset them merely to
+recreate a historical hash. Q7's fixture-specific correction is not a production
+repair policy. Normal user trust review remains mandatory; index-only hook trust
+is still a separate unscheduled control ([Q7][Q7], [Q8][Q8],
+[pending controls][contract]).
 
 ### OpenCode 2.1.4
 
@@ -232,31 +234,31 @@ or removal ([handoff][handoff], [native-first direction][direction]).
 
 ## Native residue and live-use boundary
 
-Decision required: **D1, measured boundary.** Recommend approving the
-per-profile reporting distinction between exact protected files/configuration
-and declared native effects outside that equality. Native cache copies,
-authentication refresh, native trust interaction, logs and session bookkeeping
-can persist only as separately reported native outcomes. This does not authorize
-upskill to edit them, ignore changes inside protected configuration or claim
-whole-profile restoration. Required registrations, file changes and unknown
-effects still need their own result ([preservation review][contract], [Q6][Q6],
-[Q7][Q7], [Q10][Q10]).
+Approved policy: **D1, measured boundary.** Maintain the per-profile reporting
+distinction between exact protected files/configuration and declared native
+effects outside that equality. Native cache copies, authentication refresh,
+native trust interaction, logs and session bookkeeping can persist only as
+separately reported native outcomes. This does not authorize upskill to edit
+them, ignore changes inside protected configuration or claim whole-profile
+restoration. Required registrations, file changes and unknown effects still need
+their own result ([preservation review][contract], [Q6][Q6], [Q7][Q7],
+[Q10][Q10]).
 
-Decision required: **D5, unresolved live-use outcome.** Recommend retaining the
-managed package files and an incomplete operation when running/resumable-session
-use cannot be ruled out. Report observed registration removal separately from
-pending file reclamation. Do not publish a completed removal or drop ownership
-facts while cleanup safety is unresolved. A later qualified native detachment
-observation can allow continuation. This proposes no automatic garbage
-collector, timeout-based deletion or client-cache cleanup. Fresh-session Q6/Q8/
-Q10 results do not prove running/resumed-session detachment
+Approved policy: **D5, unresolved live-use outcome.** Retain the managed package
+files and an incomplete operation when running/resumable-session use cannot be
+ruled out. Report observed registration removal separately from pending file
+reclamation. Do not publish a completed removal or drop ownership facts while
+cleanup safety is unresolved. A later qualified native detachment observation
+can allow continuation. This proposes no automatic garbage collector,
+timeout-based deletion or client-cache cleanup. Fresh-session Q6/Q8/ Q10 results
+do not prove running/resumed-session detachment
 ([lifecycle constraints][proposal], [CD-07][contract]).
 
 ## Capture and credential boundary
 
-Decision required: **D6, shared-configuration capture.** Recommend allowing
-bounded client configuration observation in memory for preservation checks, with
-only non-secret identities, digests and explicit owned values in native-effect
+Approved policy: **D6, shared-configuration capture.** Allow bounded client
+configuration observation in memory for preservation checks, with only
+non-secret identities, digests and explicit owned values in native-effect
 receipts. Never extract credential values, export authentication stores or put
 them in public evidence, logs or new native-effect journals. Ordinary native
 credential use is separate. A shared configuration requiring credential-bearing
@@ -323,14 +325,20 @@ approval. Four-client release qualification remains unchanged ([Q10][Q10],
 
 ## Approval and next records
 
-The user owns D1-D6 approval. Record each accepted/rejected item with its exact
+The user approved the recommended D1-D6 policies on 2026-10-25, in the
+conversation following the explicit request to approve all six recommendations;
+the response was "ok". This approval was separate from the request to merge
+#416. [Task #417](https://github.com/driftsys/upskill/issues/417) records this
+update alongside the independently requested preflight design.
+
+The approval covers policy boundaries, not unknown adapter selectors. Before
+implementing effects, the user must approve each complete profile with its
 client pin, scopes, configuration selector, residue boundary and qualification
-references in the approval review. An item left unanswered remains unapproved.
-Approval of a policy still does not establish a missing native PASS. Neither
-merging this draft nor the Q10 packet adopts the pending package/MVP amendments
+references. Missing profile details remain unapproved. A policy approval cannot
+supply a missing native PASS or adopt package/MVP amendments
 ([AD-0040][direction], [handoff][handoff]).
 
-After explicit approval, the implementation plan must name complete adapter
+After profile approval, the implementation plan must name complete adapter
 profiles, native-effect journal design, remaining acceptance controls and the
 code/record amendment sequence. Later amend Topic 0009's preservation/recovery
 clauses, the selected adapter design, applicable state/execution records and
