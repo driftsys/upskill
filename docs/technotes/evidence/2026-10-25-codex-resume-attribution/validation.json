@@ -54,5 +54,19 @@
     "result": "PASS: asymmetric windows and later-prefix replacement covered; all four mutants rejected",
     "private_log": "$PACKET_B/q9-attribution-quick-mutations.json",
     "sha256": "b65e075972d5de4671f5293e92be4326a8f0efad9f1537102716d3b64e6543b6"
+  },
+  {
+    "stage": "Current main integration full verification",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_C/q9-attribution-current-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Current main integration full verification",
+    "command": "just verify",
+    "result": "PASS",
+    "private_log": "$PACKET_C/q9-attribution-current-verify.log",
+    "sha256": "e5af1cf138d9ffae77d5eb93b4f9816a624130179f43b88f86e5d209239fa1b1"
   }
 ]

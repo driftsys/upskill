@@ -17,5 +17,14 @@
       "retain-integration-helper.py": "d03c6b3b921260a7ec4ec5bc976411ddec95422dbfb7d42dadaa61ee5d86b329"
     },
     "method": "Offline main integration only; native source epoch unchanged"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q9-attribution-verification-0cyx5gvp",
+    "manifest_sha256": "992ece7be0065603dce400426595987d35c842b4016d3cc85793c4058c50bc7a",
+    "capture_helpers": {
+      "retain-verification-helper.py": "95cbf56e38263409b63b4ff9467cc08afadfe27a3f5d5da149b17a1a5e9893ad"
+    },
+    "method": "Full current-branch repository verification only; prior native and integration epochs unchanged"
   }
 ]
