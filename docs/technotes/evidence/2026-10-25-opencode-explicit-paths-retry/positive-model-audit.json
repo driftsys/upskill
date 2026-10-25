@@ -1,0 +1,16 @@
+{
+  "model_matches_requested": true,
+  "session_identity_observed": true,
+  "session_matches": true,
+  "info_keys": [
+    "id",
+    "projectID",
+    "model",
+    "cost",
+    "tokens",
+    "outcome",
+    "time",
+    "title",
+    "location"
+  ]
+}

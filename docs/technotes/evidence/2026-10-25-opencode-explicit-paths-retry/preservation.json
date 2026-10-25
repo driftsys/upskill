@@ -1,0 +1,100 @@
+{
+  "before": {
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "7da7e65adeefeee071d55a592353ade68c05872f7f703a3e285f1f911c0047f8",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "97b8e815189dfeac56bda50d26db89a4a72c5db850bfea00e67f89b40fdd1160",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/outside/opencode.json": {
+      "present": true,
+      "sha256": "97b8e815189dfeac56bda50d26db89a4a72c5db850bfea00e67f89b40fdd1160",
+      "mode": 420
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/positive/manual.txt": {
+      "present": true,
+      "sha256": "2872c9e097acfd04b7b6088ea0911e62ea49e396787f918d06f94328ea11bb7d",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/project/manual.txt": {
+      "present": true,
+      "sha256": "e9c542159e8e2197304b841295a1b5120f0bef3fc2f74fe5c78cbd915714db95",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/outside/manual.txt": {
+      "present": true,
+      "sha256": "921e51f32e06d1227581c14a7609fefeb3c5a45f5d421b43338209621c7103aa",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/delivery/rules/a.md": {
+      "present": true,
+      "sha256": "c8479afa5061c0b7f9164745e47d78aa939fcb7811566d99fae258bdf19da6ec",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/delivery/rules/b.md": {
+      "present": true,
+      "sha256": "3f59a9ce9fb17eced75b61497694c186bd4f9461ef2bee6c511a670f1b7d040c",
+      "mode": 420
+    }
+  },
+  "after": {
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/positive/opencode.json": {
+      "present": true,
+      "sha256": "7da7e65adeefeee071d55a592353ade68c05872f7f703a3e285f1f911c0047f8",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/project/opencode.json": {
+      "present": true,
+      "sha256": "97b8e815189dfeac56bda50d26db89a4a72c5db850bfea00e67f89b40fdd1160",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/outside/opencode.json": {
+      "present": true,
+      "sha256": "97b8e815189dfeac56bda50d26db89a4a72c5db850bfea00e67f89b40fdd1160",
+      "mode": 420
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.json": {
+      "present": false
+    },
+    "/private/tmp/upskill-gate6-opencode-corrected-20261019/home/.config/opencode/opencode.jsonc": {
+      "present": false
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/positive/manual.txt": {
+      "present": true,
+      "sha256": "2872c9e097acfd04b7b6088ea0911e62ea49e396787f918d06f94328ea11bb7d",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/project/manual.txt": {
+      "present": true,
+      "sha256": "e9c542159e8e2197304b841295a1b5120f0bef3fc2f74fe5c78cbd915714db95",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/outside/manual.txt": {
+      "present": true,
+      "sha256": "921e51f32e06d1227581c14a7609fefeb3c5a45f5d421b43338209621c7103aa",
+      "mode": 416
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/delivery/rules/a.md": {
+      "present": true,
+      "sha256": "c8479afa5061c0b7f9164745e47d78aa939fcb7811566d99fae258bdf19da6ec",
+      "mode": 420
+    },
+    "/private/tmp/upskill-q5-native-retry-jv7l08km/fixture/delivery/rules/b.md": {
+      "present": true,
+      "sha256": "3f59a9ce9fb17eced75b61497694c186bd4f9461ef2bee6c511a670f1b7d040c",
+      "mode": 420
+    }
+  },
+  "measured_files_unchanged": true,
+  "limits": "Configuration, declared rule files and manual neighbors only; native caches/session/log/authentication refresh effects are not whole-profile equality."
+}

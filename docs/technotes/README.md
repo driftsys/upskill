@@ -8,6 +8,8 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [OpenCode explicit-path second retry](gate6-opencode-explicit-paths-retry.md):
+  OpenCode 2.1.4 native positive stops at the provider free usage limit.
 - [Codex package-owned agent registration](gate6-codex-agent-registration.md):
   Q7 native child boundary and plugin-only discovery controls on Codex 0.164.0.
 - [Codex resume-only retry: failed positive](gate6-codex-resume-only.md): Q9

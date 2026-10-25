@@ -103,5 +103,26 @@
     "result": "PASS",
     "private_log": "$PACKET_D/q9-attribution-pass1-docs.log",
     "sha256": "845ebfb4b50b2c3f2e67107570b6f66c2ef495da7888b028f7e7eed0c39ea6ac"
+  },
+  {
+    "stage": "Merge current main after PR408",
+    "command": "just fmt",
+    "result": "PASS",
+    "private_log": "$PACKET_E/pr411-merge-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Merge current main after PR408",
+    "command": "just lint",
+    "result": "PASS",
+    "private_log": "$PACKET_E/pr411-merge-lint.log",
+    "sha256": "0e4fa398e611d73690254abd8aa76dbb1634033fd5800ed53060334bf0dce80f"
+  },
+  {
+    "stage": "Merge current main after PR408",
+    "command": "just docs-check",
+    "result": "PASS",
+    "private_log": "$PACKET_E/pr411-merge-docs.log",
+    "sha256": "b9ad2628d732cae2d30b67061b6c049e9546027acf0bf77e03b811d37bd72677"
   }
 ]

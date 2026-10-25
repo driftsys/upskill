@@ -35,5 +35,14 @@
       "retain-review-helper.py": "fa0c8baa735d65fcf9ab32a3f58bb490f7814f0ff9a431e04e25c9128c497a12"
     },
     "method": "Offline test-only corrections; six mutations rejected; runtime helper and all prior source epochs unchanged"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-pr411-main-merge-hmg1i8p6",
+    "manifest_sha256": "f9783bb69e3177c7c5dc9489846801eefd3fb1e444b3d547f40341c724263d4a",
+    "capture_helpers": {
+      "retain-main-merge-helper.py": "5e9c027af148eb33e83350e4a39148f025e286ee7f2ac4ed2b3a60942089e25f"
+    },
+    "method": "Documentation-only main merge; original code, tests, native evidence and previous source epochs unchanged"
   }
 ]
