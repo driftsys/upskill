@@ -35,7 +35,7 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
             def event(kind, **values):
                 return {'type': kind, 'session_id': sid, **values}
             phases[phase] = {
-                'version': f['pin'], 'exit_code': 0, 'timed_out': False, 'cwd': str(f['project']),
+                'version': f['pin'], 'exit_code': 0, 'timed_out': False, 'malformed_stream': False, 'cwd': str(f['project']),
                 'enabled_scopes': {scope: scope in installed for scope in ['user', 'project']},
                 'bindings': [{'scope': scope, 'version': '0.0.0', 'installPath': '/native-cache/' + scope + '/fixture-package/0.0.0',
                               **({'projectPath': str(f['project'])} if scope == 'project' else {})} for scope in installed],
@@ -130,6 +130,8 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
         f = self.fixture()
         mutations = [
             lambda p:p.update(version='old'),
+            lambda p:p.update(exit_code=False),
+            lambda p:p['events'][-1].update(subtype='error_during_execution'),
             lambda p:p.update(cwd='/another/workspace'),
             lambda p:p['events'][0].update(cwd='/another/workspace'),
             lambda p:p['events'][1]['message']['content'][0]['input'].update(skill='another-package:probe'),
@@ -215,3 +217,68 @@ class ClaudeScopeOverlapTests(unittest.TestCase):
         reason,evidence=q.inspect_claude_scope_phase(row,f,['user','project'])
         self.assertIsNone(reason);self.assertEqual(evidence['counts'],[1,1,1,1,2])
         self.assertEqual(self.classify(c,f),'control_failed')
+
+    def test_stream_completeness_must_be_explicit_before_any_phase_is_counted(self):
+        f=self.fixture()
+        for phase in self.controls(f)['phases']:
+            for value in [True,None,0,'missing']:
+                with self.subTest(phase=phase,value=value):
+                    c=self.controls(f)
+                    if value=='missing':del c['phases'][phase]['malformed_stream']
+                    else:c['phases'][phase]['malformed_stream']=value
+                    expected='positive_control_failed' if phase.endswith('_positive') else 'activation_evidence_unobserved'
+                    self.assertEqual(self.classify(c,f),expected)
+
+    def test_each_calibration_requires_one_of_every_observed_component(self):
+        f=self.fixture();namespace=f['plugin_name']+':'+f['skill_name']
+        for phase in ['project_positive','user_positive']:
+            for component in ['skills','slash_commands','Skill','body','Read']:
+                for count in [0,2]:
+                    with self.subTest(phase=phase,component=component,count=count):
+                        c=self.controls(f);events=c['phases'][phase]['events']
+                        if component in ['skills','slash_commands']:events[0][component]=[namespace]*count
+                        elif component=='body':events[3]['message']['content']*=count
+                        else:
+                            index=1 if component=='Skill' else 4
+                            if count==0:del events[index:index+2]
+                            else:
+                                call=copy.deepcopy(events[index]);reply=copy.deepcopy(events[index+1])
+                                call['message']['content'][0]['id']='extra-'+component
+                                reply['message']['content'][0]['tool_use_id']='extra-'+component
+                                events[-1:-1]=[call,reply]
+                        self.assertEqual(self.classify(c,f),'positive_control_failed')
+
+    def test_empty_or_unrelated_catalogs_cannot_establish_any_candidate_phase(self):
+        f=self.fixture()
+        for phase in ['overlap','user_remaining','project_remaining']:
+            for field in ['skills','slash_commands']:
+                for catalog in [[],['another-package:probe']]:
+                    with self.subTest(phase=phase,field=field,catalog=catalog):
+                        c=self.controls(f);c['phases'][phase]['events'][0][field]=catalog
+                        self.assertEqual(self.classify(c,f),'control_failed')
+
+    def test_each_surviving_scope_requires_a_new_native_session(self):
+        f=self.fixture()
+        for phase in ['user_remaining','project_remaining']:
+            c=self.controls(f);sid=c['phases']['overlap']['events'][0]['session_id']
+            for event in c['phases'][phase]['events']:event['session_id']=sid
+            self.assertEqual(self.classify(c,f),'session_identity_mismatch')
+
+    def test_skill_and_read_tool_errors_reject_each_phase_independently(self):
+        f=self.fixture()
+        for phase in self.controls(f)['phases']:
+            for index in [2,5]:
+                with self.subTest(phase=phase,reply_index=index):
+                    c=self.controls(f);c['phases'][phase]['events'][index]['message']['content'][0]['is_error']=True
+                    expected='positive_control_failed' if phase.endswith('_positive') else 'control_failed'
+                    self.assertEqual(self.classify(c,f),expected)
+
+    def test_surviving_scope_duplicates_keep_the_duplicate_classification(self):
+        f=self.fixture()
+        for phase in ['user_remaining','project_remaining']:
+            for component in ['skills','slash_commands','body']:
+                with self.subTest(phase=phase,component=component):
+                    c=self.controls(f);events=c['phases'][phase]['events']
+                    if component=='body':events[3]['message']['content']*=2
+                    else:events[0][component]*=2
+                    self.assertEqual(self.classify(c,f),'duplicate_exposure_or_activation')

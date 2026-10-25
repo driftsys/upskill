@@ -19,5 +19,15 @@
       "q10-mutation-check.py": "974edbfe895af84689deb9a823e87c9faf87782db73e5b622a7d80d32ea820b5"
     },
     "method": "Offline test-only review corrections and repository verification; native source epoch unchanged"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q10-pass1-tyj82g_0",
+    "manifest_sha256": "6fa4dfdf148c4332504a85e3ae7f6a8505f57235db6c7a374fe58c7e6e17108c",
+    "capture_helpers": {
+      "retain-pass1-helper.py": "d14fe33e59cb490bd138de384301e93d87e67291cb086aaa9f2809d8b35e3c74",
+      "q10-pass1-mutation-check.py": "494ed4bfe19c7ca058e826e60641384179623c240acedc012cffe1f9ac797dc0"
+    },
+    "method": "Full pass-1 offline guard/test corrections; first native failed positive and prior source epochs unchanged"
   }
 ]

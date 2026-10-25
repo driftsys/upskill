@@ -30,7 +30,7 @@
   "opencode-version.stdout": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
   "preservation.json": "03f6a27199b3f7d59642c5ad912df8dd5a2fa5cbfba4ea764e12265aee384502",
   "private-manifest.json": "99d323cb75368f5d175e45fda84b91dcfffdfe5249873e11938e9879119f4848",
-  "private-source-index.json": "9185d1c905ce9a00175ec0fd2ab279597c9b7e65289d7decb92de8f6d696660c",
+  "private-source-index.json": "dd364b6a519d729d0bc0c346400f06ee57e5b23670dfc259d16c342708934caf",
   "project-positive-observation.json": "82c1262ae0b8e2e4fc1921223a60e5105bb425a0db3b239f8283079c9adf825c",
   "project_positive-assessment.json": "2dbc3e52ec7c368f57e373b529fa7baa277c9e799be2f6c13dc5a7258c230944",
   "q10-duplicate-green-lint.log": "a61ff553ded3f74bf4942a85bf89da312cb53ca474f39c19125a4f4f9d916f58",
@@ -39,6 +39,8 @@
   "q10-phase-green-lint.log": "5355f8f232042efae1566d5f41a1f316e49759ef0a5a54cd561508fa92ee406b",
   "q10-phase-red-lint.log": "92b38a639a7574244293034efaa255d69a47f6ff64923f66a597a3e1f586da45",
   "q10-red-lint.log": "3f91e39edd6bfc6eedcc2bc41e0297b57381c89e73206decaa0f11cf771d9f2d",
+  "review-private-manifest.json": "6fa4dfdf148c4332504a85e3ae7f6a8505f57235db6c7a374fe58c7e6e17108c",
+  "review-verification.json": "1511d589aaa7065f4589a6bb3a27c19591dbef3337f75a0b8127b573d15a0643",
   "summary.json": "1fd885b62463c6546eecbd2b6bf88ad9f671e3ac54ae22d9e2322014cca82e75",
   "verification-private-manifest.json": "cff81e25252f8ed65294ee50b8e336db6c1b79b583218b1b46451c24a5ef2768",
   "verification.json": "ee9e46286e334e8ee73ed70b4af7931ac92ca935d260c27f620e4cb4254ca467"

@@ -167,6 +167,8 @@ def inspect_claude_scope_phase(row, fixture, scopes):
             or type(row.get('exit_code')) is not int or row.get('timed_out') is not False
             or row.get('version') != fixture['pin'] or row.get('cwd') != project):
         return 'control_failed', None
+    if row.get('malformed_stream') is not False:
+        return 'activation_evidence_unobserved', None
     events = row.get('events')
     if not isinstance(events, list) or any(not isinstance(e, dict) for e in events):
         return 'control_failed', None

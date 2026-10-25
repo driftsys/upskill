@@ -38,16 +38,16 @@ The [summary](evidence/2026-10-25-claude-scope-overlap/summary.json) and
 [selected observation](evidence/2026-10-25-claude-scope-overlap/project-positive-observation.json)
 retain these outcomes at Claude 2.1.308:
 
-| Control                                                              | Result                                                         |
-| -------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Native marketplace validation, project registration and installation | PASS: each command exited 0                                    |
-| Project-only catalog                                                 | One target skill and one target slash-command entry            |
-| Project-only invocation positive                                     | FAIL: exit 1, HTTP 401 OAuth token rejection, `is_error: true` |
-| User-only positive                                                   | Not run                                                        |
-| Both scopes in one workspace                                         | Not run                                                        |
-| User surviving project removal                                       | Not run                                                        |
-| Project surviving user removal                                       | Not run                                                        |
-| Native project uninstall and marketplace removal                     | PASS: each command exited 0                                    |
+| Control                                                              | Pin            | Result                                                         |
+| -------------------------------------------------------------------- | -------------- | -------------------------------------------------------------- |
+| Native marketplace validation, project registration and installation | Claude 2.1.308 | PASS: each command exited 0                                    |
+| Project-only catalog                                                 | Claude 2.1.308 | One target skill and one target slash-command entry            |
+| Project-only invocation positive                                     | Claude 2.1.308 | FAIL: exit 1, HTTP 401 OAuth token rejection, `is_error: true` |
+| User-only positive                                                   | Claude 2.1.308 | Not run                                                        |
+| Both scopes in one workspace                                         | Claude 2.1.308 | Not run                                                        |
+| User surviving project removal                                       | Claude 2.1.308 | Not run                                                        |
+| Project surviving user removal                                       | Claude 2.1.308 | Not run                                                        |
+| Native project uninstall and marketplace removal                     | Claude 2.1.308 | PASS: each command exited 0                                    |
 
 The failed result has subtype `success`, but `is_error: true` and exit 1 make it
 a failed positive. No `Skill` tool call, visible skill-body expansion or
@@ -100,6 +100,19 @@ wrong binding versions and two reads after one skill call. All 15 focused tests
 pass, and all eight reviewed mutations are rejected. These test-only additions
 are separate from the unchanged capture-time source and native result; no review
 pass over the fixes was run.
+
+Full review confirmed a missing stream-completeness guard. A new regression
+failed before the fix: malformed, missing or non-Boolean completeness evidence
+could otherwise be counted. The inspector now requires explicit complete-stream
+evidence; a malformed positive fails calibration, and malformed candidate
+evidence is unobserved. Additional cases cover calibration cardinality, empty or
+unrelated catalogs, reused surviving-scope sessions, tool errors, result
+subtype, exit-status type and duplicate classification after removal. These
+offline corrections do not rerun or alter the retained native attempt. The
+separate
+[review verification](evidence/2026-10-25-claude-scope-overlap/review-verification.json)
+records the revised source; the earlier verification describes its own source
+epoch.
 
 The classifier requires two successful single-scope positives, exact native
 scope bindings, fresh session identities, catalog visibility, correlated tool
