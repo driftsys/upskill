@@ -1,11 +1,13 @@
 # M1 owned-content lifecycle design
 
-Reconciled 2026-10-19 against the
+Reconciled 2026-10-25 against the
 [delivery/discovery/activation contract](../../topics/0009-customization-delivery.md).
 The state/ownership/preflight/recovery foundations remain applicable. Any
 production interpretation of managed Codex `AGENTS.md` contributions is
-superseded by independent qualified Codex/OpenCode plugin rule delivery.
-Canonical-file experiments retain their bounded historical meaning.
+superseded by independent qualified native or hook rule delivery beside team
+guidance. Native-first rules and skills-first implementation order follow the
+user's later amendment; canonical-file experiments retain their bounded meaning
+([AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
 Date: 2026-10-12. Status: **Proposed implementation contract**. Baseline:
 `f7d36bf` (PR #258). Authority:
@@ -16,12 +18,15 @@ Date: 2026-10-12. Status: **Proposed implementation contract**. Baseline:
 
 Deliver rule installation for Claude Code, Copilot CLI, Codex CLI and OpenCode
 v2 while preserving manual content and existing behavior for every client.
-Independent Codex/OpenCode rules use qualified plugins alongside team
-`AGENTS.md`; shared contributions are an experimental mechanism only. The user
-delegated routine design and delivery decisions and the continuing review/merge
-loop. This document selects the operational direction and decomposes its
-prerequisites; it does not claim a schema-2 reader, writer, executor or Codex
-CLI flag exists.
+Independent Codex/OpenCode rules use the selected native or hook route alongside
+team `AGENTS.md`; explicit OpenCode paths await Q5 PASS, and the Codex trusted
+hook retains its declared recorded-history limitation. Shared contributions are
+an experimental mechanism only
+([delivery disposition](../../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
+The user delegated routine design and delivery decisions and the continuing
+review/merge loop. This document selects the operational direction and
+decomposes its prerequisites; it does not claim a schema-2 reader, writer,
+executor or Codex CLI flag exists.
 
 The merged library supplies target identities, a pure Markdown contribution
 editor, validated owned-artifact records and a pure legacy-state projection.
