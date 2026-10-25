@@ -1,0 +1,9 @@
+{
+  "before_sha256": "b3bf571726bc47976b24404c682f6ecd8651867a3fab77dfbe8f1b05d1b62a83",
+  "native_after_sha256": "4932d474e1f3876bba2be1f235ff20b03cda60e2e50f09fc4556a3ccfc8b5ade",
+  "safe_to_restore": true,
+  "restored_exact": true,
+  "project_config_restored_absence": true,
+  "credentials_copied_or_exported": false,
+  "original_bytes_held_in_memory_only": true
+}

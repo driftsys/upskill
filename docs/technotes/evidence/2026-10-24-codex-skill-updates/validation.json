@@ -1,0 +1,173 @@
+[
+  {
+    "command": "just lint",
+    "result": "FAIL: seven missing-helper tests",
+    "private_log": "$PACKET_A/q8-lint-red.log",
+    "sha256": "d85684a170a82e386b77e23c16fe422e62efb5afdbf6b23c598a1276c93e52db"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 66 offline tests",
+    "private_log": "$PACKET_A/q8-lint-green.log",
+    "sha256": "1b4ff115d6c4525d474203c5cf057fbcdb4db00140d144011a84ced6d5e8b711"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: missing response evidence raises instead of classifying",
+    "private_log": "$PACKET_A/q8-missing-evidence-red.log",
+    "sha256": "e2d6bcdee3addfbe1e926df01414768137db971131a8e1b7a00f0bf5f86b866f"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-missing-evidence-green.log",
+    "sha256": "fea2701648c3bb0b7f652b780490ae035b6fe7d793cf5916c7cec7c75e485115"
+  },
+  {
+    "command": "just lint",
+    "result": "FAIL: native-user-root exclusion missing",
+    "private_log": "$PACKET_A/q8-user-root-red.log",
+    "sha256": "2e16fa132ecbd759fd7977789a7179f4a8353123bc404b0341a20c3945469330"
+  },
+  {
+    "command": "just lint",
+    "result": "PASS: 67 offline tests",
+    "private_log": "$PACKET_A/q8-user-root-green.log",
+    "sha256": "751c15912ec8685797fa6360e3a489d3b7d1961430ee00bdb28c650d7ebf581b"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 67 offline tests",
+    "private_log": "$PACKET_A/q8-verify.log",
+    "sha256": "3f76328bda185eca81954ef0f82d3c1d0c9a567dc9d2562e4f661a5fb9fbe31f"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just lint",
+    "result": "FAIL: resolved native user home accepted",
+    "private_log": "$PACKET_A/q8-symlink-home-red.log",
+    "sha256": "9d7fa6dbad22409e57527abc0e9d1ae68a8485a9af1d5d21b169bc757eae1852"
+  },
+  {
+    "stage": "final-packet-validation",
+    "command": "just fmt then just verify",
+    "result": "PASS: full repository verification, 68 offline tests",
+    "private_log": "$PACKET_A/q8-symlink-fix-verify.log",
+    "sha256": "00bb319310e2a89d260de3fe56f6462be42234f0ae09327d0f6f89cefffb83bd"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "FAIL: new neutral-root assertion before guard correction",
+    "private_log": "$PACKET_B/q8-main-root-red.log",
+    "sha256": "c52bc35e8bb7deade86d808e3ef75b2945ebbd74a298c49fb433f3896e330a1f"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: ten focused tests",
+    "private_log": "$PACKET_B/q8-main-focused-green.log",
+    "sha256": "30d18705d00a00d81b7b5aed3ae5832e346c930cefbe0db6560327bf1e6ee6be"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_B/q8-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: just verify",
+    "private_log": "$PACKET_B/q8-main-verify.log",
+    "sha256": "f2eddf46ef121ee8970945b3d84acdd0b6e308f037cd60e439240b0cad0dca65"
+  },
+  {
+    "stage": "current-main integration",
+    "result": "PASS: four QUICK regression mutants rejected by assertion failure",
+    "private_log": "$PACKET_B/q8-main-mutations.log",
+    "sha256": "0bc1f61f99245b85f06eb785745ecc171e4d7b5ab20fe9f8541d443b1cbd714b"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_C/q8-current-quick-focused.log",
+    "sha256": "f4fc470871c06284c4ec147d317da8ccfbc19e52868096cb30bb76dd0838ebcf"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_C/q8-current-quick-mutations.log",
+    "sha256": "09cc3f3d4291e8c8243481007fe478c7a1cafb09cf714e4b54c562021c0f996e"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_C/q8-current-quick-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_C/q8-current-quick-lint.log",
+    "sha256": "18610d129ad21345694b12aaf997ba303b035f8f9fe5e839541878eca11adb07"
+  },
+  {
+    "stage": "QUICK review fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_C/q8-current-quick-docs.log",
+    "sha256": "623ec1cbf9527dba4acd871d7afad90b8cc3ff58546ba3cc300a29258cae0af3"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: focused regression suite",
+    "private_log": "$PACKET_D/q8-full-pass1-focused.log",
+    "sha256": "ca86b58679f6c6a0ea1dd0b0f4670566c78a5238f90b0b5cb88bec3525b2fd4a"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: adverse mutations survive previous tests and fail strengthened assertions",
+    "private_log": "$PACKET_D/q8-full-pass1-mutations.log",
+    "sha256": "71f953b3c4b35e8c6721e610465af5bc1311bde934ebac01b7149098229eac85"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_D/q8-full-pass1-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_D/q8-full-pass1-lint.log",
+    "sha256": "afce49757a25cf7c3f500b27a0c07a45ab0e379b8f685f2e83205f5729bd27b0"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_D/q8-full-pass1-docs.log",
+    "sha256": "fd0cb1c8f6635a83fd451aab415fd838c59b46b1da5f8193864c404d21c3a9aa"
+  },
+  {
+    "stage": "Full pass 1 fixes",
+    "result": "PASS: git diff --check after removing one trailing blank line; no executable change",
+    "private_log": "$PACKET_D/format-check.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_E/pr406-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_E/pr406-main-lint.log",
+    "sha256": "82b73eee13b22c0087464eb2278632d42b2951c0f8a47c11c9b3ccb0d1652b51"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_E/pr406-main-docs.log",
+    "sha256": "7ee34d4b5cd9b0e8ab1cec65dd382712b8924eab883ef72fcb18678fd89c778e"
+  }
+]

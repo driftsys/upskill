@@ -41,5 +41,14 @@
       "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
     },
     "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-pr407-integration-h2ermrgf",
+    "manifest_sha256": "45530e49bcfdc162d03c633523dec1d68dbd5e4656f2ddfc3da311d4a5807e1a",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
   }
 ]

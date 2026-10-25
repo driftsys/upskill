@@ -1,0 +1,47 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-sk3i25mj",
+    "manifest_sha256": "ea495b12b4e289032f19371543c4a8247126f89a71702823bc72310b6b763aa7",
+    "capture_helpers": {
+      "campaign-pin-helper.py": "f0cab9710a347eaf8f85d8fd783d34251d5d002bb7a125d29be244958bdf4c2f",
+      "prepare-helper.py": "7b4aa358b9711f381cbf4568dd7196f3118249abf957b133534c7ee6073a84df",
+      "native-positive-helper.py": "287e72c4e05ead6e79a93a429498ab5410af80bbf7df9712fd4607c8ebb4e8ae",
+      "retain-native-helper.py": "229955ad2987a3ac705fbc20486f65d667c9eace004812374eb674c95bb960fa",
+      "q5-explicit-mutations.py": "b060a38d65a14af8dd526fc4f73e92566b586df8ef1bf53e767a163ec59ae529",
+      "q5-explicit-retain-validation.py": "e22ab2d9267bb7ee4c6b66b9e5cd6f10d223334518bdf043dac11d21f5f922c4",
+      "q5-explicit-quick-mutations.py": "c287715eacf36c75b45e7f0df1cece91081acd0e0cb6f5f644df589412ee5888"
+    },
+    "source_snapshots": {
+      "qualify-native-instructions.py": "Fixture/capture source before native request",
+      "classification-source/": "Offline path-order correction and final classifier/tests"
+    },
+    "method": "One fresh failed native positive; no downstream model requests; offline tests and preservation checks"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-review-jm40cmn7",
+    "manifest_sha256": "95851be25801ce9a1565019370155eaf94794780933f473377586a53babe20ed",
+    "capture_helpers": {
+      "q5-explicit-retain-pass1.py": "0d52fa560fb7ef510fa310c7f61c97915667095900f147d22df413281c5e921b",
+      "q5-explicit-pass1-mutations.py": "507be93ff4b1f024b6430a78e7fae0e8ba273d827e710925c110d537e2dd2fd1"
+    },
+    "source_snapshots": {
+      "source/": "Offline full-review classifier/tests/doc fixes; native capture source remains unchanged in $PACKET_A"
+    },
+    "method": "Offline review fixes, no native or model request"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q5-explicit-pass2-cn7g4p6x",
+    "manifest_sha256": "0ea63eaeea6ee12f69d0f74eadd11d7088a66b3b82f44f849b0f2d558f508c75",
+    "capture_helpers": {
+      "retain-delivery-review-fixes.py": "c8af5131152bb5ced8922f9373ff23a8c5fcaa53e1e16a3c94a54df569081875",
+      "q5-explicit-pass2-mutations.py": "c1998e70467acea8811e33cff2b7c882620c8e17944d852a4a744f595f3085e8"
+    },
+    "source_snapshots": {
+      "source/": "Offline review fixes; earlier native/integration source epochs unchanged"
+    },
+    "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  }
+]

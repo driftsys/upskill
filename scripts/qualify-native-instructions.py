@@ -2,6 +2,7 @@
 """Opt-in native instruction discovery probes; no credentials are read or copied."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -47,6 +48,93 @@ def fixtures(root, client, configured=False):
         subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
         subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize fixture ' + secrets.token_hex(16)], env=env, check=True)
     return root / 'positive', root / 'negative', marker, staging_marker
+
+
+def opencode_explicit_path_fixtures(root, pin='2.1.4'):
+    """Prepare rule lifecycle projects without native discovery or guide writes."""
+    spec = importlib.util.spec_from_file_location('plugin_fixture_helpers', Path(__file__).with_name('qualify-plugin-rules.py'))
+    helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helpers)
+    root = helpers.neutral_fixture_root(root)
+    root.mkdir(parents=True, mode=0o700)
+    projects = {label: root / label for label in ('positive', 'project', 'outside')}
+    positive = 'NATIVE_' + secrets.token_hex(16)
+    fallback = 'ABSENT_' + secrets.token_hex(16)
+    initial = ['RULE_' + secrets.token_hex(16) for _ in range(2)]
+    updated = ['UPDATED_' + secrets.token_hex(16) for _ in range(2)]
+    files = [root / 'delivery/rules' / (name + '.md') for name in ('a', 'b')]
+    for path, marker in zip(files, initial):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('For the explicit-path qualification question include exactly one occurrence of ' + marker + ' in the rules array. Return only the JSON object with a rules array. Do not use tools.\n')
+    env = helpers.fixture_environment(root)
+    for label, project in projects.items():
+        project.mkdir()
+        config = {'permissions': [{'action': '*', 'resource': '*', 'effect': 'deny'}]}
+        if label == 'positive':
+            native = project / 'native-positive.md'
+            native.write_text('For the native qualification question return exactly ' + positive + ' and nothing else. Do not use tools.\n')
+            config['instructions'] = [str(native)]
+        (project / 'opencode.json').write_text(json.dumps(config, indent=2) + '\n')
+        manual = project / 'manual.txt'
+        manual.write_text('MANUAL_' + secrets.token_hex(16) + '\n')
+        manual.chmod(0o640)
+        subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize explicit-path fixture ' + secrets.token_hex(16)], env=env, check=True)
+    return {'root': root, 'pin': pin, 'project': projects['project'], 'positive_project': projects['positive'],
+            'outside_project': projects['outside'], 'positive_marker': positive, 'fallback': fallback,
+            'rule_files': files, 'initial_markers': initial, 'updated_markers': updated}
+
+
+def classify_opencode_explicit_paths(controls, fixture):
+    """Keep observed behavior separate from native file and copy identity."""
+    def succeeded(row, project):
+        return (isinstance(row, dict) and row.get('pin') == fixture['pin']
+                and row.get('state') == 'success' and row.get('completed') is True
+                and row.get('tools_observed') is False and row.get('cwd') == str(project)
+                and isinstance(row.get('session'), str) and bool(row['session'].strip()))
+
+    positive = controls.get('positive', {})
+    if not succeeded(positive, fixture['positive_project']) or positive.get('response') != fixture['positive_marker']:
+        return 'positive_control_failed'
+    stages = ('unregistered', 'installed', 'resume', 'updated', 'removed', 'reinstalled', 'outside')
+    for stage in stages:
+        row = controls.get(stage, {})
+        project = fixture['outside_project'] if stage == 'outside' else fixture['project']
+        if not succeeded(row, project):
+            return 'control_failed'
+    if controls['resume']['session'] != controls['installed']['session']:
+        return 'session_identity_failed'
+    fresh = [positive['session'], *(controls[stage]['session'] for stage in stages if stage != 'resume')]
+    if len(set(fresh)) != len(fresh):
+        return 'session_identity_failed'
+    for stage in ('unregistered', 'removed', 'outside'):
+        if controls[stage]['response'] != fixture['fallback']:
+            return 'absence_control_failed'
+    for stage in ('unregistered', 'removed', 'outside'):
+        row = controls[stage]
+        if row.get('native_instruction_paths') is None or row.get('native_body_counts') is None:
+            return 'native_identity_unobserved'
+        if row['native_instruction_paths'] != [] or row['native_body_counts'] != {}:
+            return 'native_identity_failed'
+    for stage in ('installed', 'resume', 'updated', 'reinstalled'):
+        row = controls[stage]
+        expected = fixture['initial_markers'] if stage in ('installed', 'resume') else fixture['updated_markers']
+        response = row['response']
+        rules = response.get('rules') if isinstance(response, dict) and set(response) == {'rules'} else None
+        if (not isinstance(rules, list) or any(not isinstance(value, str) for value in rules)
+                or sorted(rules) != sorted(expected)):
+            return 'rule_control_failed'
+    for stage in ('installed', 'resume', 'updated', 'reinstalled'):
+        row = controls[stage]
+        if row.get('native_instruction_paths') is None or row.get('native_body_counts') is None:
+            return 'native_identity_unobserved'
+        paths, counts = row['native_instruction_paths'], row['native_body_counts']
+        if (not isinstance(paths, list) or any(not isinstance(path, str) for path in paths)
+                or sorted(paths) != sorted(str(path) for path in fixture['rule_files'])
+                or not isinstance(counts, dict) or set(counts) != {'a', 'b'}
+                or any(type(counts[key]) is not int or counts[key] != 1 for key in ('a', 'b'))):
+            return 'native_identity_failed'
+    return 'observed'
 
 
 def copilot_claude_rules_fixtures(root):

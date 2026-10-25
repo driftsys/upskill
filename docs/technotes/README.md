@@ -10,6 +10,11 @@ snapshot; a stable name does not imply that external research remains current.
 
 - [Codex package-owned agent registration](gate6-codex-agent-registration.md):
   Q7 native child boundary and plugin-only discovery controls on Codex 0.164.0.
+- [Codex resume-only retry: failed positive](gate6-codex-resume-only.md): Q9
+  retry on Codex 0.164.0; HTTP 401 blocks the positive and resume remains unrun.
+- [OpenCode explicit-path retry](gate6-opencode-explicit-paths.md): Q5, OpenCode
+  2.1.4; failed native positive, with downstream controls not run.
+
 - [OpenCode current-route controls](gate6-opencode-current-routes.md): Q5,
   OpenCode 2.1.4; failed native positives, unrun component controls and rejected
   local-directory installation.
@@ -143,3 +148,6 @@ change. Technical notes and evidence assets are outside the published book.
   blockers.
 - [Gate 6 authenticated project rule observations](gate6-authenticated-project-controls.md)
   — Bounded native controls; no profile qualification.
+
+- [Codex plugin skill updates](gate6-codex-skill-updates.md) — Q8 on 0.164.0;
+  source edits stay cached until native refresh.

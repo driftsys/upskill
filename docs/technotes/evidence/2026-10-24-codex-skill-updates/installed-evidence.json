@@ -1,0 +1,40 @@
+{
+  "native_expansion": "<skill>\n<name>upskill-q8-e0cb7edc26c257ce:procedure-a091013ffadfa7a8</name>\n<path>$PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.0/skills/procedure-a091013ffadfa7a8/SKILL.md</path>\n---\nname: procedure-a091013ffadfa7a8\ndescription: Disposable native plugin resource procedure.\n---\nRead references/procedure.md relative to this skill and follow it. Do not infer its contents or use another source. If unavailable return exactly ABSENT_94a496928530d56d6a207256544f0b03. Do not edit files, delegate or change configuration.\n\n</skill>",
+  "resource_reads": [
+    {
+      "call": {
+        "type": "custom_tool_call",
+        "id": "ctc_0f4e980b8eb3fe0b016adc9e6f47448191a8b198824b5e2255",
+        "status": "completed",
+        "call_id": "call_b256be5c8bb34bc5aa933acd9ec86a30",
+        "name": "exec",
+        "input": "text(await tools.exec_command({cmd:\"cat $PROFILE/plugins/cache/upskill-q8-e0cb7edc26c257ce-market/upskill-q8-e0cb7edc26c257ce/0.0.0/skills/procedure-a091013ffadfa7a8/references/procedure.md\",max_output_tokens:2000}));\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16dca-d3e1-7fc3-b24c-aaf78844e64c",
+          "create_time": 1792843375.281668
+        }
+      },
+      "result": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_01a16dca-fd39-7621-a8fd-6a3095850324",
+        "call_id": "call_b256be5c8bb34bc5aa933acd9ec86a30",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"chunk_id\":\"df3b36\",\"wall_time_seconds\":0.0001285,\"exit_code\":0,\"original_token_count\":19,\"output\":\"Return exactly INITIAL_dbbd69b06085f72a3d74d3018b8625d7 and nothing else.\\n\"}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "01a16dca-d3e1-7fc3-b24c-aaf78844e64c",
+          "create_time": 1792843382.07353
+        }
+      }
+    }
+  ],
+  "cache_skill_sha256": "e6cd0b9d2238748862a89ec1bc3317850f1cd5131f18c2b73ee743e9dd3dbcf6",
+  "cache_resource_sha256": "42b1e2df83eb4a913adb59a2c2346973e42b98e01214c27ae50a70b557cb1d49"
+}
