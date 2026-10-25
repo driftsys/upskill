@@ -1,0 +1,106 @@
+{
+  "home_roots": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude/skills": {
+      "present": true,
+      "symlink": false
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins": {
+      "present": true,
+      "symlink": false
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.agents/skills": {
+      "present": false,
+      "symlink": false
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.copilot/skills": {
+      "present": false,
+      "symlink": false
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.github/skills": {
+      "present": false,
+      "symlink": false
+    }
+  },
+  "settings": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "keys": [
+        "additionalModelCostsCache",
+        "additionalModelOptionsAnsweredAt",
+        "additionalModelOptionsCache",
+        "announcementImpressions",
+        "apiCreditLinkStatusCache",
+        "autoCompactWindowsCache",
+        "cachedExperimentData",
+        "cachedExperimentFeatures",
+        "cachedExtraUsageDisabledReason",
+        "cachedGrowthBookFeatures",
+        "cachedGrowthBookFeaturesAt",
+        "changelogLastFetched",
+        "claudeAiMcpEverConnected",
+        "claudeCodeFirstTokenDate",
+        "clientDataCacheSlots",
+        "closedIssuesLastChecked",
+        "firstStartTime",
+        "firstStartVersion",
+        "groveConfigCache",
+        "hasCompletedOnboarding",
+        "hasResetAutoModeOptInForDefaultOffer",
+        "hasVisitedPasses",
+        "lastOnboardingVersion",
+        "machineID",
+        "migrationVersion",
+        "modelAccessCache",
+        "numStartups",
+        "oauthAccount",
+        "officialMarketplaceAutoInstallAttempted",
+        "officialMarketplaceAutoInstalled",
+        "opusProMigrationComplete",
+        "orgModelDefaultCache",
+        "passesEligibilityCache",
+        "passesLastSeenRemaining",
+        "passesUpsellSeenCount",
+        "penguinModeOrgEnabled",
+        "pluginUsage",
+        "projects",
+        "seenNotifications",
+        "skillUsage",
+        "sonnet1m45MigrationComplete",
+        "tipLifetimeShownCounts",
+        "tipsHistory",
+        "userID"
+      ],
+      "discovery_keys": [
+        "pluginUsage",
+        "skillUsage",
+        "officialMarketplaceAutoInstallAttempted",
+        "officialMarketplaceAutoInstalled"
+      ],
+      "value_hashes": {
+        "pluginUsage": "d56bf2d9b9c0979ff613d30283359527541f9be7ae3202066fa587acda55ddc6",
+        "skillUsage": "52511815c42162a12c14969e66babd47765f2a657698ab0206da0cbf9ba47e6d",
+        "officialMarketplaceAutoInstallAttempted": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "officialMarketplaceAutoInstalled": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+      }
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "keys": [],
+      "discovery_keys": [],
+      "value_hashes": {}
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "keys": [
+        "plugins",
+        "version"
+      ],
+      "discovery_keys": [
+        "plugins"
+      ],
+      "value_hashes": {
+        "plugins": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    }
+  },
+  "source_selectors_not_disabled": true,
+  "USER_preserved": true,
+  "secret_overrides_inherited": false
+}

@@ -1,0 +1,310 @@
+EEEEEEEEEEEEEEEEEEEEEEEEE.EE.....F..
+======================================================================
+ERROR: test_activation_wins_over_missing_catalog_and_preservation_failure (test_qualify_cross_client_isolation.CrossClientIsolation.test_activation_wins_over_missing_catalog_and_preservation_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 118, in test_activation_wins_over_missing_catalog_and_preservation_failure
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_all_targets_accept_only_complete_paired_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_all_targets_accept_only_complete_paired_negative)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 99, in test_all_targets_accept_only_complete_paired_negative
+    result = q.classify_cross_client_isolation(self.observation(row), row)
+                                               ~~~~~~~~~~~~~~~~^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_catalog_exposure_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_catalog_exposure_never_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 127, in test_catalog_exposure_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_content_leakage_and_selector_conversion_are_activation (test_qualify_cross_client_isolation.CrossClientIsolation.test_content_leakage_and_selector_conversion_are_activation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 181, in test_content_leakage_and_selector_conversion_are_activation
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='positive', field='state')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='positive', field='complete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='positive', field='response')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='positive', field='catalog_present')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='positive', field='source_path')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='baseline', field='catalog_present')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='baseline', field='activations')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative) (phase='baseline', field='invocation_complete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 110, in test_failed_positive_and_contaminated_baseline_block_negative
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='catalog_complete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='invocation_complete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='complete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='state')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='invocation_attempted')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='invocation_outcome')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='response')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='activations')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='unexpected_tools')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes) (field='catalog_present')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 138, in test_incomplete_or_malformed_candidate_never_passes
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_manifest_mutation_invalidates_pair (test_qualify_cross_client_isolation.CrossClientIsolation.test_manifest_mutation_invalidates_pair)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 195, in test_manifest_mutation_invalidates_pair
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_metadata_drift_and_resource_drift_invalidate_control (test_qualify_cross_client_isolation.CrossClientIsolation.test_metadata_drift_and_resource_drift_invalidate_control)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 146, in test_metadata_drift_and_resource_drift_invalidate_control
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_preservation_computed_independently_and_requires_valid_receipts (test_qualify_cross_client_isolation.CrossClientIsolation.test_preservation_computed_independently_and_requires_valid_receipts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 167, in test_preservation_computed_independently_and_requires_valid_receipts
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+ERROR: test_same_identity_and_complete_skill_tree_across_envelopes (test_qualify_cross_client_isolation.CrossClientIsolation.test_same_identity_and_complete_skill_tree_across_envelopes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 46, in test_same_identity_and_complete_skill_tree_across_envelopes
+    self.assertEqual(row['native_intended'], target)
+                     ~~~^^^^^^^^^^^^^^^^^^^
+KeyError: 'native_intended'
+
+======================================================================
+ERROR: test_selector_unavailable_is_distinct_from_rejected (test_qualify_cross_client_isolation.CrossClientIsolation.test_selector_unavailable_is_distinct_from_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 156, in test_selector_unavailable_is_distinct_from_rejected
+    o = self.observation(row)
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 34, in observation
+    trees_after=row['trees'], packages_after=row['packages'],
+                                             ~~~^^^^^^^^^^^^
+KeyError: 'packages'
+
+======================================================================
+FAIL: test_no_tool_call_is_not_an_explicit_invocation (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_no_tool_call_is_not_an_explicit_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 291, in test_no_tool_call_is_not_an_explicit_invocation
+    self.assertFalse(result['invocation_complete'])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 20 tests in 2.629s
+
+FAILED (failures=1, errors=27)

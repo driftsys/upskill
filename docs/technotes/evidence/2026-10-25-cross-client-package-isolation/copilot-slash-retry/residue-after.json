@@ -1,0 +1,27 @@
+{
+  "session_id": "d4eeab72-0408-4849-99df-548f99b22bb7",
+  "session_directory_present": true,
+  "after_only_files": {
+    "workspace.yaml": {
+      "sha256": "60d4bf9ec8503c75bc867b83ad6bd8eb15a2a853bc0bb3968a0c619ff466bc0b",
+      "mode": 384
+    },
+    "events.jsonl": {
+      "sha256": "cd9af01e64a15587a2a2206a40302c95242667ff0acf75b329de645931ca3c52",
+      "mode": 384
+    },
+    ".workspace-fork.lock": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": 420
+    },
+    "rewind-file-snapshots/tracking.json": {
+      "sha256": "0916b582e1bc5439b7454e8dee676b3d7f24d524cac8715e1d0afd44a8e66e3b",
+      "mode": 420
+    },
+    "checkpoints/index.md": {
+      "sha256": "a6508da52c083afcfd134779a5b6a71a31235f9f154f2aa865ea920d68189734",
+      "mode": 420
+    }
+  },
+  "limit": "No pre-run session-state inventory; no claim of comparative creation or whole-profile equality. Neutral fixture retained privately; no registration cleanup required."
+}

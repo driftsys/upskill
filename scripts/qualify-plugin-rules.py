@@ -57,8 +57,9 @@ def write_json(path, value):
 def fixture_environment(root):
     """Use only declared disposable roots; do not inherit auth/config overrides."""
     root = root.resolve()
+    # Preserve OS account identity for native authentication without token overrides.
     env = {k: v for k, v in os.environ.items()
-           if k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot')}
+           if k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot', 'USER')}
     home = root / 'home'
     env.update(HOME=str(home), USERPROFILE=str(home), CODEX_HOME=str(home / '.codex'),
                CLAUDE_CONFIG_DIR=str(home / '.claude'), COPILOT_HOME=str(home / '.copilot'),
@@ -303,6 +304,50 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
         return 'preservation_failed'
     return 'empty_object_residue' if added else 'preservation_failed'
+
+
+def classify_claude_inline_bookkeeping(before, after, before_mode, after_mode, *, plugin_name, namespace):
+    """Recognize only the measured inline fixture's usage and cache timestamp."""
+    if (type(before_mode) is not int or type(after_mode) is not int
+            or not 0 <= before_mode <= 0o7777 or before_mode != after_mode
+            or not plugin_name or not namespace.startswith(plugin_name + ':')):
+        return 'preservation_failed'
+    if before == after:
+        return 'unchanged'
+    try:
+        old, new = json.loads(before), json.loads(after)
+    except (ValueError, TypeError):
+        return 'preservation_failed'
+    if not isinstance(old, dict) or not isinstance(new, dict):
+        return 'preservation_failed'
+    def same(a, b):
+        return json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+    allowed = {'pluginUsage', 'skillUsage', 'cachedGrowthBookFeaturesAt'}
+    if not same({k: v for k, v in old.items() if k not in allowed},
+                {k: v for k, v in new.items() if k not in allowed}):
+        return 'preservation_failed'
+    old_time, new_time = old.get('cachedGrowthBookFeaturesAt'), new.get('cachedGrowthBookFeaturesAt')
+    if type(old_time) is not int or type(new_time) is not int or new_time < old_time:
+        return 'preservation_failed'
+    changed = old_time != new_time
+    for field, key, fields in (
+            ('pluginUsage', plugin_name + '@inline', {'usageCount', 'lastUsedAt', 'lastUsedNumStartups'}),
+            ('skillUsage', namespace, {'usageCount', 'lastUsedAt'})):
+        previous, current = old.get(field, {}), new.get(field, {})
+        if not isinstance(previous, dict) or not isinstance(current, dict) or key in previous:
+            return 'preservation_failed'
+        if not same(previous, {k: v for k, v in current.items() if k != key}):
+            return 'preservation_failed'
+        if key in current:
+            entry = current[key]
+            if (not isinstance(entry, dict) or set(entry) != fields
+                    or any(type(value) is not int or value < 0 for value in entry.values())
+                    or entry['usageCount'] < 1):
+                return 'preservation_failed'
+            changed = True
+        elif (field in old) != (field in new):
+            return 'preservation_failed'
+    return 'native_bookkeeping_residue' if changed else 'preservation_failed'
 
 
 def prepare_codex_rule_lifecycle(root):
@@ -921,6 +966,248 @@ def codex_resume_body_windows(startup, resumed, bodies):
         return count_developer_rule_bodies(messages, bodies)
     return {'startup': count(startup), 'resumed_history': count(resumed),
             'resume_new_records': count(resumed[len(startup):])}
+
+
+def cross_client_skill_tree(package):
+    """Capture every skill file and mode without following symbolic links."""
+    skills = package / 'skills'
+    if package.is_symlink() or skills.is_symlink() or not skills.is_dir():
+        raise ValueError('A regular skill directory is required')
+    tree = {}
+    for path in sorted(skills.rglob('*')):
+        if path.is_symlink():
+            raise ValueError('Symbolic links are not permitted in qualification skills')
+        if path.is_file():
+            tree[str(path.relative_to(skills))] = snapshot(path)
+        elif not path.is_dir():
+            raise ValueError('Only regular skill files and directories are permitted')
+    if not tree:
+        raise ValueError('At least one skill file is required')
+    return tree
+
+
+def cross_client_package_tree(package):
+    """Fingerprint the complete envelope separately from portable skill equality."""
+    if package.is_symlink() or not package.is_dir():
+        raise ValueError('A regular package directory is required')
+    tree = {}
+    for path in sorted(package.rglob('*')):
+        if path.is_symlink():
+            raise ValueError('Package symbolic links are not permitted')
+        if path.is_file():
+            tree[str(path.relative_to(package))] = snapshot(path)
+        elif not path.is_dir():
+            raise ValueError('Only regular package files and directories are permitted')
+    return tree
+
+
+def prepare_cross_client_isolation(root, *, pins):
+    """Prepare paired Q11 session-selector packages with identical skill trees."""
+    clients = ('claude', 'copilot', 'codex', 'opencode')
+    if any(not isinstance(pins.get(client), str) or not pins[client] for client in clients):
+        raise ValueError('Fresh four-client campaign pins are required')
+    root = neutral_fixture_root(root)
+    root.mkdir(parents=True, mode=0o700)
+    env = fixture_environment(root)
+    targets = {}
+    for client in ('claude', 'copilot'):
+        name = 'upskill-q11-' + secrets.token_hex(8)
+        skill = 'probe-' + secrets.token_hex(8)
+        marker = 'PRESENT_' + secrets.token_hex(16)
+        absent = 'ABSENT_' + secrets.token_hex(16)
+        packages = {}
+        for kind, intended in [('native', client), ('foreign', 'copilot' if client == 'claude' else 'claude')]:
+            package = root / client / 'delivery' / kind / name
+            manifest = {'name': name, 'version': '0.0.0', 'description': 'Disposable cross-client qualification package.'}
+            if intended == 'claude':
+                write_json(package / '.claude-plugin/plugin.json', manifest)
+            else:
+                manifest['$schema'] = 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json'
+                write_json(package / 'plugin.json', manifest)
+            directory = package / 'skills' / skill
+            directory.mkdir(parents=True)
+            (directory / 'SKILL.md').write_text('---\nname: ' + skill + '\ndescription: Explicit cross-client qualification probe.\n---\nReturn exactly ' + marker + ' and nothing else. Do not use any other tools.\n')
+            (directory / 'resource.txt').write_text('Qualification resource: ' + marker + '\n')
+            for file in directory.iterdir():
+                file.chmod(0o644)
+            packages[kind] = package
+        projects = [root / client / name for name in ('positive-project', 'candidate-project')]
+        for project in projects:
+            project.mkdir(parents=True)
+            subprocess.run(['git', 'init', '-q', str(project)], env=env, check=True)
+            subprocess.run(['git', '-C', str(project), '-c', 'user.name=Qualification Fixture', '-c', 'user.email=qualification@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: initialize isolation fixture ' + secrets.token_hex(16)], env=env, check=True)
+        targets[client] = {'client': client, 'pin': pins[client], 'scope': 'session',
+                           'plugin_name': name, 'skill_name': skill, 'namespace': name + ':' + skill,
+                           'marker': marker, 'absent_marker': absent,
+                           'native_package': packages['native'], 'foreign_package': packages['foreign'],
+                           'native_intended': client, 'foreign_intended': 'copilot' if client == 'claude' else 'claude',
+                           'native_manifest': packages['native'] / ('.claude-plugin/plugin.json' if client == 'claude' else 'plugin.json'),
+                           'foreign_manifest': packages['foreign'] / ('plugin.json' if client == 'claude' else '.claude-plugin/plugin.json'),
+                           'positive_project': projects[0], 'candidate_project': projects[1],
+                           'packages': {kind: cross_client_package_tree(package) for kind, package in packages.items()},
+                           'trees': {kind: cross_client_skill_tree(package) for kind, package in packages.items()}}
+    return {'root': root, 'pins': dict(pins), 'targets': targets}
+
+
+def inspect_cross_client_positive(events, fixture, *, exit_code, timed_out=False, malformed_stream=False):
+    """Replay selected native records; a bare-name fallback is not a namespace PASS."""
+    namespace = fixture['namespace']
+    native = str(fixture['native_package'])
+    row = {'pin': fixture['pin'], 'platform': 'macOS arm64',
+           'cwd': str(fixture['positive_project']), 'scope': fixture['scope'],
+           'namespace': namespace, 'catalog_complete': False, 'catalog_present': False,
+           'activations': 0, 'content_activations': 0, 'unexpected_tools': False, 'source_path': None, 'response': None}
+    attempts, outcomes = 0, []
+    if not isinstance(events, list) or any(not isinstance(e, dict) for e in events):
+        events = []
+        malformed_stream = True
+    results = [event for event in events if event.get('type') == 'result']
+    complete = (len(results) == 1 and events[-1] == results[0]
+                and exit_code == 0 and not timed_out and not malformed_stream)
+    result = results[0] if len(results) == 1 else {}
+    if fixture['client'] == 'claude':
+        catalogs = [e for e in events if e.get('type') == 'system' and e.get('subtype') == 'init']
+        if len(catalogs) == 1:
+            catalog = catalogs[0]
+            row['catalog_complete'] = isinstance(catalog.get('slash_commands'), list)
+            row['catalog_present'] = namespace in catalog.get('slash_commands', [])
+            if any(p.get('name') == fixture['plugin_name'] and p.get('path') == native
+                   for p in catalog.get('plugins', [])):
+                row['source_path'] = native
+        starts = [block for e in events if e.get('type') == 'assistant'
+                  for block in e.get('message', {}).get('content', [])
+                  if isinstance(block, dict) and block.get('type') == 'tool_use']
+        ends = [block for e in events if e.get('type') == 'user'
+                for block in e.get('message', {}).get('content', [])
+                if isinstance(block, dict) and block.get('type') == 'tool_result']
+        for start in starts:
+            exact = (isinstance(start.get('id'), str) and bool(start['id'])
+                     and start.get('name') == 'Skill' and start.get('input', {}).get('skill') == namespace)
+            row['unexpected_tools'] |= not exact
+            successes = [end for end in ends if end.get('tool_use_id') == start.get('id')
+                         and end.get('is_error', False) is False]
+            row['activations'] += int(exact and len(successes) == 1)
+            related = start.get('input', {}).get('skill') in (namespace, fixture['skill_name'])
+            row['content_activations'] += int(related and bool(start.get('id')) and len(successes) == 1)
+            if exact:
+                attempts += 1
+                matches = [end for end in ends if end.get('tool_use_id') == start['id']]
+                if len(matches) == 1:
+                    end = matches[0]
+                    missing = 'Unknown skill: ' + namespace in str(end.get('content', ''))
+                    outcomes.append('loaded' if end.get('is_error', False) is False else 'not_found' if missing else 'failed')
+        complete &= (result.get('is_error') is False and result.get('subtype') == 'success'
+                     and result.get('permission_denials') == [])
+        if complete:
+            row['response'] = result.get('result')
+    else:
+        catalogs = [e.get('data', {}).get('skills') for e in events if e.get('type') == 'session.skills_loaded']
+        row['catalog_complete'] = len(catalogs) == 1 and isinstance(catalogs[0], list)
+        if row['catalog_complete']:
+            entries = [skill for skill in catalogs[0] if skill.get('commandName') == namespace and skill.get('enabled') is True]
+            row['catalog_present'] = bool(entries)
+            expected_path = str(Path(native) / 'skills' / fixture['skill_name'] / 'SKILL.md')
+            if len(entries) == 1 and entries[0].get('path') == expected_path:
+                row['source_path'] = native
+        starts = [e.get('data', {}) for e in events if e.get('type') == 'tool.execution_start']
+        ends = [e.get('data', {}) for e in events if e.get('type') == 'tool.execution_complete']
+        for start in starts:
+            exact = (isinstance(start.get('toolCallId'), str) and bool(start['toolCallId'])
+                     and start.get('toolName') == 'skill' and start.get('arguments', {}).get('skill') == namespace)
+            row['unexpected_tools'] |= not exact
+            successes = [end for end in ends if end.get('toolCallId') == start.get('toolCallId') and end.get('success') is True]
+            row['activations'] += int(exact and len(successes) == 1)
+            related = start.get('arguments', {}).get('skill') in (namespace, fixture['skill_name'])
+            row['content_activations'] += int(related and bool(start.get('toolCallId')) and len(successes) == 1)
+            if exact:
+                attempts += 1
+                matches = [end for end in ends if end.get('toolCallId') == start['toolCallId']]
+                if len(matches) == 1:
+                    end = matches[0]
+                    missing = end.get('error', {}).get('message') == 'Skill not found: ' + namespace
+                    outcomes.append('loaded' if end.get('success') is True else 'not_found' if missing else 'failed')
+        complete &= type(result.get('exitCode')) is int and result['exitCode'] == 0
+        if complete:
+            row['response'] = next((e.get('data', {}).get('content') for e in reversed(events)
+                                    if e.get('type') == 'assistant.message'), None)
+    outcome = outcomes[0] if attempts == 1 and len(outcomes) == 1 else 'failed' if attempts else 'not_attempted'
+    row.update(state='success' if complete else 'error', complete=bool(complete),
+               invocation_attempted=attempts > 0, invocation_outcome=outcome,
+               invocation_complete=bool(complete and outcome in ('loaded', 'not_found')))
+    return row
+
+
+def classify_cross_client_isolation(observation, fixture):
+    """Keep bounded isolation and measured preservation as independent results."""
+    def receipts_valid(receipts):
+        if not isinstance(receipts, dict) or not receipts:
+            return False
+        for row in receipts.values():
+            if not isinstance(row, dict) or type(row.get('present')) is not bool:
+                return False
+            if row['present']:
+                digest = row.get('sha256')
+                if (not isinstance(digest, str) or len(digest) != 64
+                        or any(c not in '0123456789abcdef' for c in digest)
+                        or type(row.get('mode')) is not int or not 0 <= row['mode'] <= 0o7777):
+                    return False
+            elif row.get('sha256') is not None or row.get('mode') is not None:
+                return False
+        return True
+    preservation = observation.get('preservation', {})
+    before, after = preservation.get('before'), preservation.get('after')
+    preserved = receipts_valid(before) and receipts_valid(after) and before == after
+    def result(isolation):
+        return {'isolation': isolation, 'preservation': 'unchanged' if preserved else 'preservation_failed'}
+    phases = {key: observation.get(key, {}) for key in ('positive', 'baseline', 'candidate')}
+    for name, phase in phases.items():
+        project = fixture['positive_project'] if name == 'positive' else fixture['candidate_project']
+        if phase and any(phase.get(k) != v for k, v in {
+                'pin': fixture['pin'], 'platform': 'macOS arm64', 'cwd': str(project),
+                'scope': fixture['scope'], 'namespace': fixture['namespace']}.items()):
+            return result('control_metadata_failed')
+    trees = fixture['trees']
+    if (not trees.get('native') or trees.get('native') != trees.get('foreign')
+            or observation.get('trees_after') != trees):
+        return result('invalid_pair')
+    def completed(phase):
+        return (phase.get('state') == 'success'
+                and all(phase.get(k) is True for k in ('complete', 'catalog_complete', 'invocation_complete'))
+                and type(phase.get('activations')) is int and phase['activations'] >= 0
+                and phase.get('unexpected_tools') is False)
+    positive, baseline, candidate = (phases[key] for key in ('positive', 'baseline', 'candidate'))
+    if (not completed(positive) or positive.get('catalog_present') is not True
+            or positive.get('response') != fixture['marker'] or positive.get('activations') != 1
+            or positive.get('source_path') != str(fixture['native_package'])
+            or positive.get('invocation_attempted') is not True or positive.get('invocation_outcome') != 'loaded'):
+        return result('blocked_positive')
+    packages = fixture.get('packages')
+    if (not isinstance(packages, dict) or set(packages) != {'native', 'foreign'}
+            or any(not tree for tree in packages.values()) or observation.get('packages_after') != packages):
+        return result('invalid_pair')
+    selector = observation.get('selector', {})
+    def activated(phase):
+        return (any(type(phase.get(key)) is int and phase[key] > 0 for key in ('activations', 'content_activations'))
+                or isinstance(phase.get('response'), str) and fixture['marker'] in phase['response'])
+    if baseline.get('catalog_present') is True or activated(baseline):
+        return result('baseline_contaminated')
+    if (not completed(baseline) or baseline.get('catalog_present') is not False
+            or baseline.get('response') != fixture['absent_marker'] or baseline.get('activations') != 0
+            or baseline.get('invocation_attempted') is not True or baseline.get('invocation_outcome') != 'not_found'):
+        return result('blocked_baseline')
+    if activated(candidate) or selector.get('status') in ('installed', 'converted'):
+        return result('activation_observed')
+    if candidate.get('catalog_present') is True:
+        return result('catalog_exposure')
+    if selector.get('available') is False and selector.get('status') == 'unavailable':
+        return result('selector_unavailable')
+    if (selector.get('available') is not True or selector.get('completed') is not True
+            or selector.get('status') not in ('selected', 'rejected')
+            or not completed(candidate) or candidate.get('catalog_present') is not False
+            or candidate.get('invocation_attempted') is not True or candidate.get('invocation_outcome') != 'not_found'
+            or candidate.get('activations') != 0 or candidate.get('response') != fixture['absent_marker']):
+        return result('incomplete_evidence')
+    return result('isolation_observed')
 
 
 if __name__ == '__main__':

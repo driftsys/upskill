@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Cross-client package isolation](gate6-cross-client-package-isolation.md): Q11
+  Claude activation of a Copilot-shaped package after calibration; Copilot's
+  opposite direction remains blocked. Earlier failed positives remain retained.
+
 - [Claude package scope overlap](gate6-claude-scope-overlap.md): Q10, Claude
   2.1.308; user-first overlap/removal PASS, with the initial HTTP 401 failure
   retained.

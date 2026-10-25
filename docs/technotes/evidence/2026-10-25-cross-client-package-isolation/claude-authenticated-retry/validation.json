@@ -1,0 +1,18 @@
+{
+  "environment_red": "OS USER regression fails before preserving it; tokens and other overrides stay excluded",
+  "environment_green": "23 generic harness tests pass after the allowlist fix; full pre-native lint passes 226 tests",
+  "bookkeeping_red": "Missing guard produces errors; mode receipt regression fails on three cases before strict mode validation",
+  "focused_green": "33 Q11 tests pass, including authenticated positive/baseline/candidate replay and filtered bookkeeping witness",
+  "guard_mutations": "9/9 rejected with no native calls",
+  "first_full_verify": "just fmt then just verify exit 0, 232 offline tests plus Rust tests, lint, build and documentation checks",
+  "final_full_verify": "just fmt then just verify exit 0: 232 offline tests plus Rust tests, lint, build and documentation checks",
+  "final_verify_log_sha256": "bd28ccf81f2b130b09ae57c323e57f319c88d78ab23988f42552c0930a90fe2d",
+  "coverage_followup": {
+    "focused_tests": 40,
+    "mutations_rejected": 6,
+    "previously_surviving_mutations": 6,
+    "auth_diagnostic": "Later read-only status comparison; zero model requests; configuration receipts unchanged",
+    "full_verify": "just fmt then just verify exit 0: 239 offline tests plus Rust tests, lint, build and documentation checks",
+    "verify_log_sha256": "f6bffd31cc71943b0ff6c8ac6ad31fb69db30ab07903f4bd33bbde98cf7df839"
+  }
+}

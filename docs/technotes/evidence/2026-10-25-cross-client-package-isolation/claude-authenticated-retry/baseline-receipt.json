@@ -1,0 +1,29 @@
+{
+  "command": [
+    "$CLIENT_BIN/claude",
+    "-p",
+    "--tools",
+    "Skill",
+    "--allowedTools",
+    "Skill",
+    "--no-session-persistence",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--setting-sources",
+    "user,project",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    "$PRIVATE_MODEL",
+    "Use the Skill tool exactly once with the exact skill name upskill-q11-d717abd66a1faf22:probe-a824959738214f65. Follow its instruction if it loads. If the native tool reports that this exact skill is unavailable, return exactly ABSENT_46f338d4b5a6ceb1ac4c444ad1ee1bd7. Do not substitute another skill name and do not use other tools. Return only the requested response."
+  ],
+  "cwd": "$RETRY_FIXTURE/claude/candidate-project",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-25T21:02:51.993910+00:00",
+  "finished_at_utc": "2026-10-25T21:02:57.230735+00:00",
+  "stdout_sha256": "edbffbd630c20f5e62fb2aa48fc3ec8c4c5e56254a337ff9de8e35f5250c5663",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,14 @@
+{
+  "pin": "1.0.103",
+  "request": "/upskill-q11-4d5cadbcc3a3bb5d:probe-5f332d03ef2ab8e5",
+  "positive": "failed_exact_response",
+  "native_process_completed": true,
+  "response_exact": false,
+  "response_shape": "two leading newline characters followed by the exact content marker",
+  "bare_skill_load_succeeded": true,
+  "no_prior_namespaced_tool_failure_in_this_attempt": true,
+  "baseline": "not_run",
+  "foreign_candidate": "not_run",
+  "measured_configuration_unchanged": true,
+  "limit": "Explicit slash request is distinct from the initial model-selected namespaced tool argument. Content load alone does not satisfy the unchanged exact response contract."
+}

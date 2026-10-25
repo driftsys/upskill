@@ -1,0 +1,41 @@
+...........EEEE
+======================================================================
+ERROR: test_claude_error_subtype_success_is_still_failed (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_claude_error_subtype_success_is_still_failed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 223, in test_claude_error_subtype_success_is_still_failed
+    result = q.inspect_cross_client_positive(events, row, exit_code=1)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'inspect_cross_client_positive'
+
+======================================================================
+ERROR: test_copilot_requires_exact_correlated_namespaced_success (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_copilot_requires_exact_correlated_namespaced_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 192, in test_copilot_requires_exact_correlated_namespaced_success
+    result = q.inspect_cross_client_positive(events, row, exit_code=0)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'inspect_cross_client_positive'
+
+======================================================================
+ERROR: test_native_errors_or_truncated_streams_cannot_complete (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_native_errors_or_truncated_streams_cannot_complete)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 213, in test_native_errors_or_truncated_streams_cannot_complete
+    result = q.inspect_cross_client_positive(events, self.row('copilot'), **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'inspect_cross_client_positive'
+
+======================================================================
+ERROR: test_wrong_native_source_path_cannot_attribute_positive (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_wrong_native_source_path_cannot_attribute_positive)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 232, in test_wrong_native_source_path_cannot_attribute_positive
+    result = q.inspect_cross_client_positive(events, self.row('copilot'), exit_code=0)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'inspect_cross_client_positive'
+
+----------------------------------------------------------------------
+Ran 15 tests in 1.498s
+
+FAILED (errors=4)

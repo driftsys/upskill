@@ -1,0 +1,58 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "c241a698-2bc6-4ee1-9247-aeb6d0e1c57e",
+    "slash_commands": [
+      "upskill-q11-d717abd66a1faf22:probe-a824959738214f65"
+    ],
+    "plugins": [
+      {
+        "name": "upskill-q11-d717abd66a1faf22",
+        "path": "$RETRY_FIXTURE/claude/delivery/native/upskill-q11-d717abd66a1faf22",
+        "source": "upskill-q11-d717abd66a1faf22@inline",
+        "version": "0.0.0"
+      }
+    ]
+  },
+  {
+    "type": "assistant",
+    "session_id": "c241a698-2bc6-4ee1-9247-aeb6d0e1c57e",
+    "message": {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01QGueGMmd4iAwfA2m8sfJ4J",
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65"
+          },
+          "caller": {
+            "type": "direct"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "user",
+    "session_id": "c241a698-2bc6-4ee1-9247-aeb6d0e1c57e",
+    "message": {
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "toolu_01QGueGMmd4iAwfA2m8sfJ4J",
+          "content": "Launching skill: upskill-q11-d717abd66a1faf22:probe-a824959738214f65"
+        }
+      ]
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "permission_denials": [],
+    "session_id": "c241a698-2bc6-4ee1-9247-aeb6d0e1c57e",
+    "result": "PRESENT_c8135748d1af370fdbefa4d6fde7397a"
+  }
+]

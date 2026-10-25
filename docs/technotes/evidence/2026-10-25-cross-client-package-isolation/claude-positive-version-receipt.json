@@ -1,0 +1,13 @@
+{
+  "command": [
+    "$CLIENT_BIN/claude",
+    "--version"
+  ],
+  "cwd": "$FIXTURE/claude/positive-project",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-25T18:09:13.928588+00:00",
+  "finished_at_utc": "2026-10-25T18:09:14.110076+00:00",
+  "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

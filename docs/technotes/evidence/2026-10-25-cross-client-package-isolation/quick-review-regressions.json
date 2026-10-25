@@ -1,0 +1,91 @@
+{
+  "before": [
+    {
+      "mutation": "ignore_claude_error_flag",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    },
+    {
+      "mutation": "validate_candidate_metadata_only",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    },
+    {
+      "mutation": "ignore_initial_pair_equality",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    },
+    {
+      "mutation": "accept_invalid_present_receipts",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    },
+    {
+      "mutation": "reuse_positive_project",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    },
+    {
+      "mutation": "ignore_claude_tool_correlation",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 20
+    }
+  ],
+  "after": [
+    {
+      "mutation": "ignore_claude_error_flag",
+      "rejected": true,
+      "failures": 1,
+      "errors": 0,
+      "tests_run": 27
+    },
+    {
+      "mutation": "validate_candidate_metadata_only",
+      "rejected": true,
+      "failures": 10,
+      "errors": 0,
+      "tests_run": 27
+    },
+    {
+      "mutation": "ignore_initial_pair_equality",
+      "rejected": true,
+      "failures": 1,
+      "errors": 0,
+      "tests_run": 27
+    },
+    {
+      "mutation": "accept_invalid_present_receipts",
+      "rejected": true,
+      "failures": 8,
+      "errors": 0,
+      "tests_run": 27
+    },
+    {
+      "mutation": "reuse_positive_project",
+      "rejected": true,
+      "failures": 1,
+      "errors": 0,
+      "tests_run": 27
+    },
+    {
+      "mutation": "ignore_claude_tool_correlation",
+      "rejected": true,
+      "failures": 2,
+      "errors": 0,
+      "tests_run": 27
+    }
+  ],
+  "method": "Six independent in-memory source mutations. All survived the original 20 tests; each is rejected by an assertion failure with the strengthened 27 tests. The unchanged implementation passes all 27 tests. No native clients run."
+}

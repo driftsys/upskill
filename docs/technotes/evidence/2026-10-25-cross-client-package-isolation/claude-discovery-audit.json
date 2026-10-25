@@ -1,0 +1,27 @@
+{
+  "roots": {
+    ".claude/skills": {
+      "present": true,
+      "is_symlink": false
+    },
+    ".claude/plugins": {
+      "present": true,
+      "is_symlink": false
+    },
+    ".copilot/skills": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".agents/skills": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".github/skills": {
+      "present": false,
+      "is_symlink": false
+    }
+  },
+  "settings": {},
+  "project_guidance_absent": true,
+  "existing_settings_changed": false
+}

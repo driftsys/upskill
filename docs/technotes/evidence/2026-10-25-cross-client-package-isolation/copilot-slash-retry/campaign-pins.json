@@ -1,0 +1,66 @@
+{
+  "platform": "macOS arm64",
+  "pins": [
+    {
+      "client": "claude",
+      "version": "2.1.308",
+      "command": [
+        "$CLIENT_BIN/claude",
+        "--version"
+      ],
+      "cwd": "$SLASH_PRIVATE_PACKET",
+      "exit_code": 0,
+      "timed_out": false,
+      "started_at_utc": "2026-10-25T18:27:54.405809+00:00",
+      "finished_at_utc": "2026-10-25T18:27:54.659282+00:00",
+      "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "copilot",
+      "version": "1.0.103",
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "--version"
+      ],
+      "cwd": "$SLASH_PRIVATE_PACKET",
+      "exit_code": 0,
+      "timed_out": false,
+      "started_at_utc": "2026-10-25T18:27:54.660369+00:00",
+      "finished_at_utc": "2026-10-25T18:27:55.642562+00:00",
+      "stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "codex",
+      "version": "0.164.0",
+      "command": [
+        "$CLIENT_BIN/codex",
+        "--version"
+      ],
+      "cwd": "$SLASH_PRIVATE_PACKET",
+      "exit_code": 0,
+      "timed_out": false,
+      "started_at_utc": "2026-10-25T18:27:55.651039+00:00",
+      "finished_at_utc": "2026-10-25T18:27:55.831123+00:00",
+      "stdout_sha256": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "client": "opencode",
+      "version": "2.1.4",
+      "command": [
+        "$CLIENT_BIN/opencode",
+        "--version"
+      ],
+      "cwd": "$SLASH_PRIVATE_PACKET",
+      "exit_code": 0,
+      "timed_out": false,
+      "started_at_utc": "2026-10-25T18:27:55.847458+00:00",
+      "finished_at_utc": "2026-10-25T18:27:56.151266+00:00",
+      "stdout_sha256": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+.............F...
+======================================================================
+FAIL: test_missing_native_tool_identity_cannot_count_as_activation (test_qualify_cross_client_isolation.CrossClientNativeReplay.test_missing_native_tool_identity_cannot_count_as_activation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 240, in test_missing_native_tool_identity_cannot_count_as_activation
+    self.assertEqual(result['activations'], 0)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0
+
+----------------------------------------------------------------------
+Ran 17 tests in 2.730s
+
+FAILED (failures=1)

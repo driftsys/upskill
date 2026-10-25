@@ -1,0 +1,31 @@
+{
+  "command": [
+    "/opt/homebrew/bin/claude",
+    "--plugin-dir",
+    "$FIXTURE/claude/delivery/native/upskill-q11-ff0f8e965e40a48c",
+    "-p",
+    "--tools",
+    "Skill",
+    "--allowedTools",
+    "Skill",
+    "--no-session-persistence",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--setting-sources",
+    "user,project",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    "$PRIVATE_MODEL",
+    "Invoke the skill named upskill-q11-ff0f8e965e40a48c:probe-eec0f0c399a11385 exactly once and follow its instruction. If unavailable return exactly ABSENT_47cd3c8eecbb1003f6ef5ebba37a3fa3. Return only the requested response. Use no other tools."
+  ],
+  "cwd": "$FIXTURE/claude/positive-project",
+  "exit_code": 1,
+  "timed_out": false,
+  "started_at_utc": "2026-10-25T18:09:14.110284+00:00",
+  "finished_at_utc": "2026-10-25T18:09:21.077755+00:00",
+  "stdout_sha256": "65be21f286658207d3cb284472bb1b837e79691ba55dba1a36b86a107215af1c",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

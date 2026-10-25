@@ -1,0 +1,11 @@
+{
+  "private_source_path": "/private/tmp/upskill-q11-auth-diagnostic-wt3fhb8b",
+  "environment_source_commit": "ecf23510162a3ca668a3f17431907aedb40cca70",
+  "method": "Later diagnostic repeat; three auth-status commands with only USER presence changed. This is not the original preflight. Raw authentication output was discarded after extracting status fields and computing digests to avoid exporting account metadata.",
+  "files": {
+    "environment-source.py": "b0c3f3a7806f761d9b016ae408ac94cbc134c6c16747acc7f5cb3608936cf03f",
+    "version.stdout": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+    "capture-helper.py": "46d0c11d834d4074f11ee8241552c4c0bd379009e22588f76034bac2d6112dba",
+    "diagnostic.json": "e4d95e986300d0ec27d1dfeac0bc0f90f322d0ab8e16c63b09a743b55a491724"
+  }
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "type": "session.skills_loaded",
+    "data": {
+      "skills": [
+        {
+          "name": "probe-5f332d03ef2ab8e5",
+          "commandName": "upskill-q11-4d5cadbcc3a3bb5d:probe-5f332d03ef2ab8e5",
+          "description": "Explicit cross-client qualification probe.",
+          "source": "plugin",
+          "userInvocable": true,
+          "enabled": true,
+          "path": "$SLASH_FIXTURE/copilot/delivery/native/upskill-q11-4d5cadbcc3a3bb5d/skills/probe-5f332d03ef2ab8e5/SKILL.md"
+        }
+      ]
+    }
+  },
+  {
+    "type": "user.message",
+    "data": {
+      "content": "/upskill-q11-4d5cadbcc3a3bb5d:probe-5f332d03ef2ab8e5",
+      "transformedContent": "<current_datetime>2026-10-25T19:28:00.431+01:00</current_datetime>\n\n/upskill-q11-4d5cadbcc3a3bb5d:probe-5f332d03ef2ab8e5",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "data": {
+      "toolCallId": "chatcmpl-tool-82bf8309801c3082",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "probe-5f332d03ef2ab8e5"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "data": {
+      "toolCallId": "chatcmpl-tool-82bf8309801c3082",
+      "success": true,
+      "result": {
+        "content": "Skill \"probe-5f332d03ef2ab8e5\" loaded successfully. Follow the instructions in the skill context.",
+        "detailedContent": "Skill \"probe-5f332d03ef2ab8e5\" loaded successfully. Follow the instructions in the skill context."
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "data": {
+      "content": "\n\nPRESENT_d491691c338ceebd143f0b764dee5739",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "result",
+    "sessionId": "d4eeab72-0408-4849-99df-548f99b22bb7",
+    "exitCode": 0
+  }
+]

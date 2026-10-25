@@ -1,0 +1,98 @@
+{
+  "positive": {
+    "pin": "2.1.308",
+    "platform": "macOS arm64",
+    "cwd": "$FIXTURE/claude/positive-project",
+    "scope": "session",
+    "namespace": "upskill-q11-ff0f8e965e40a48c:probe-eec0f0c399a11385",
+    "catalog_complete": true,
+    "catalog_present": true,
+    "activations": 0,
+    "content_activations": 0,
+    "unexpected_tools": false,
+    "source_path": "$FIXTURE/claude/delivery/native/upskill-q11-ff0f8e965e40a48c",
+    "response": null,
+    "state": "error",
+    "complete": false,
+    "invocation_attempted": false,
+    "invocation_outcome": "not_attempted",
+    "invocation_complete": false
+  },
+  "trees_after": {
+    "native": {
+      "probe-eec0f0c399a11385/SKILL.md": {
+        "sha256": "0b408687e570417c4d9fc087314d6fef3c6d497730301712824ba6579472a7b6",
+        "mode": 420
+      },
+      "probe-eec0f0c399a11385/resource.txt": {
+        "sha256": "3a782e90a0698e92ed3105a79d32b6ed0e2e0fe3a4c0e72a6f0e898fcc7f67bb",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "probe-eec0f0c399a11385/SKILL.md": {
+        "sha256": "0b408687e570417c4d9fc087314d6fef3c6d497730301712824ba6579472a7b6",
+        "mode": 420
+      },
+      "probe-eec0f0c399a11385/resource.txt": {
+        "sha256": "3a782e90a0698e92ed3105a79d32b6ed0e2e0fe3a4c0e72a6f0e898fcc7f67bb",
+        "mode": 420
+      }
+    }
+  },
+  "preservation": {
+    "before": {
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/config.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+        "present": true,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "mode": 420
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+        "present": true,
+        "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+        "mode": 420
+      }
+    },
+    "after": {
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/config.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+        "present": true,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "mode": 420
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+        "present": true,
+        "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+        "mode": 420
+      }
+    },
+    "restoration": "not needed: session-only selector makes no registration",
+    "whole_profile_equal": false
+  },
+  "baseline": {},
+  "candidate": {},
+  "selector": {
+    "available": true,
+    "status": "not_run",
+    "completed": false
+  }
+}

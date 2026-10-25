@@ -1,0 +1,18 @@
+{
+  "claude": {
+    "catalog_target_present": true,
+    "native_completion_success": false,
+    "authentication_revoked": true,
+    "no_tool_calls": true,
+    "other_synced_plugins_remained_enabled": true
+  },
+  "copilot": {
+    "catalog_command_name_present": true,
+    "catalog_display_name_is_bare": true,
+    "namespaced_skill_request_failed": true,
+    "bare_name_fallback_succeeded": true,
+    "exact_final_response": false,
+    "no_other_tools": true
+  },
+  "scope": "No negative classification follows either failed positive. Native catalog CLI and runtime commandName are distinct surfaces."
+}

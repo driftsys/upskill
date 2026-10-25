@@ -1,0 +1,6 @@
+{
+  "finding": "Copilot empty extraKnownMarketplaces value hash equals Claude empty registry-file hash.",
+  "verification": "The private audit hashes json.dumps(value, sort_keys=True), not the entire settings file. The value is an empty object. Claude known_marketplaces.json is the two-byte JSON object.",
+  "empty_object_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "inference": "Equal hashes of the constant empty JSON object do not establish a copied file or cross-profile dependency. Copilot retains its preexisting disabled Q3 registrations; they were not modified."
+}

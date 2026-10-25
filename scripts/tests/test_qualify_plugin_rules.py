@@ -292,6 +292,20 @@ class PluginRuleTests(unittest.TestCase):
                 self.assertFalse(any(p.name in ('auth.json', 'credentials.json') for p in Path(fixture['root']).rglob('*')))
                 self.assertFalse(any(k.startswith('GIT_') or k.endswith('TOKEN') or k.endswith('API_KEY') for k in env))
 
+    def test_environment_preserves_os_account_without_credential_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {
+                'USER': 'native-account', 'ANTHROPIC_API_KEY': 'ambient-secret',
+                'CLAUDE_CODE_OAUTH_TOKEN': 'ambient-secret', 'GIT_DIR': '/ambient/repository'}, clear=True):
+            env = self.q.fixture_environment(Path(tmp))
+            self.assertEqual(env.get('USER'), 'native-account')
+            self.assertEqual(env['HOME'], str(Path(tmp).resolve() / 'home'))
+            for key in ('ANTHROPIC_API_KEY', 'CLAUDE_CODE_OAUTH_TOKEN', 'GIT_DIR'):
+                self.assertNotIn(key, env)
+
+    def test_environment_does_not_invent_an_os_account(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {}, clear=True):
+            self.assertNotIn('USER', self.q.fixture_environment(Path(tmp)))
+
     def test_opencode_uses_isolated_xdg_without_a_directory_file_override(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {'OPENCODE_CONFIG': '/unrelated/directory'}):
             fixture = self.q.prepare(Path(tmp) / 'fixture', 'opencode')

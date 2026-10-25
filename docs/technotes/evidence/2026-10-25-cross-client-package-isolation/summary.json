@@ -1,0 +1,37 @@
+{
+  "issue": 410,
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "targets": {
+    "claude": {
+      "pin": "2.1.308",
+      "scope": "session --plugin-dir in disposable Git project",
+      "isolation": "blocked_positive",
+      "preservation": "unchanged",
+      "positive_catalog_present": true,
+      "native_namespaced_activations": 0,
+      "baseline": "not_run",
+      "foreign_candidate": "not_run",
+      "blocker": "revoked isolated OAuth authentication"
+    },
+    "copilot": {
+      "pin": "1.0.103",
+      "scope": "session --plugin-dir in disposable Git project",
+      "isolation": "blocked_positive",
+      "preservation": "unchanged",
+      "positive_catalog_present": true,
+      "native_namespaced_activations": 0,
+      "baseline": "not_run",
+      "foreign_candidate": "not_run",
+      "blocker": "namespaced skill tool call fails; bare-name fallback and non-exact response do not qualify positive",
+      "slash_retry": "copilot-slash-retry/summary.json"
+    }
+  },
+  "production_route_changed": false,
+  "other_clients_exercised": false,
+  "preservation_limit": "Equality is limited to originally measured settings/config.json/registry paths. Claude .claude.json and managed settings were not measured before; whole-profile preservation is unqualified.",
+  "latest_controls": {
+    "claude": "claude-authenticated-retry/summary.json",
+    "copilot": "copilot-slash-retry/summary.json"
+  }
+}

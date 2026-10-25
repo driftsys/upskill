@@ -1,0 +1,14 @@
+...F...................
+======================================================================
+FAIL: test_environment_preserves_os_account_for_native_keychain_lookup (test_qualify_plugin_rules.PluginRuleTests.test_environment_preserves_os_account_for_native_keychain_lookup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_plugin_rules.py", line 300, in test_environment_preserves_os_account_for_native_keychain_lookup
+    self.assertEqual(env.get('USER'), 'native-account')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'native-account'
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.565s
+
+FAILED (failures=1)

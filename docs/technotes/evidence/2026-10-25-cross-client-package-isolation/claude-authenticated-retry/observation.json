@@ -1,0 +1,192 @@
+{
+  "positive": {
+    "pin": "2.1.308",
+    "platform": "macOS arm64",
+    "cwd": "$RETRY_FIXTURE/claude/positive-project",
+    "scope": "session",
+    "namespace": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65",
+    "catalog_complete": true,
+    "catalog_present": true,
+    "activations": 1,
+    "content_activations": 1,
+    "unexpected_tools": false,
+    "source_path": "$RETRY_FIXTURE/claude/delivery/native/upskill-q11-d717abd66a1faf22",
+    "response": "PRESENT_c8135748d1af370fdbefa4d6fde7397a",
+    "state": "success",
+    "complete": true,
+    "invocation_attempted": true,
+    "invocation_outcome": "loaded",
+    "invocation_complete": true
+  },
+  "baseline": {
+    "pin": "2.1.308",
+    "platform": "macOS arm64",
+    "cwd": "$RETRY_FIXTURE/claude/candidate-project",
+    "scope": "session",
+    "namespace": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65",
+    "catalog_complete": true,
+    "catalog_present": false,
+    "activations": 0,
+    "content_activations": 0,
+    "unexpected_tools": false,
+    "source_path": null,
+    "response": "ABSENT_46f338d4b5a6ceb1ac4c444ad1ee1bd7",
+    "state": "success",
+    "complete": true,
+    "invocation_attempted": true,
+    "invocation_outcome": "not_found",
+    "invocation_complete": true
+  },
+  "candidate": {
+    "pin": "2.1.308",
+    "platform": "macOS arm64",
+    "cwd": "$RETRY_FIXTURE/claude/candidate-project",
+    "scope": "session",
+    "namespace": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65",
+    "catalog_complete": true,
+    "catalog_present": true,
+    "activations": 1,
+    "content_activations": 1,
+    "unexpected_tools": false,
+    "source_path": "$RETRY_FIXTURE/claude/delivery/foreign/upskill-q11-d717abd66a1faf22",
+    "response": "PRESENT_c8135748d1af370fdbefa4d6fde7397a",
+    "state": "success",
+    "complete": true,
+    "invocation_attempted": true,
+    "invocation_outcome": "loaded",
+    "invocation_complete": true
+  },
+  "trees_after": {
+    "native": {
+      "probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    }
+  },
+  "packages_after": {
+    "native": {
+      ".claude-plugin/plugin.json": {
+        "sha256": "505d35bd984447916b466cccd4715029dbcff1e949e473d275c1d298a81ba742",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "plugin.json": {
+        "sha256": "3affabac623467347169dc26be6ff3a66095cb022f7981c923f56e0e89b1c467",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    }
+  },
+  "selector": {
+    "available": true,
+    "status": "selected",
+    "completed": true
+  },
+  "preservation": {
+    "before": {
+      "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+        "present": true,
+        "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+        "mode": 384
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+        "present": true,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "mode": 420
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+        "present": true,
+        "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+        "mode": 420
+      },
+      "/Library/Application Support/ClaudeCode/managed-settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      }
+    },
+    "after": {
+      "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+        "present": true,
+        "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+        "mode": 384
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+        "present": true,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "mode": 420
+      },
+      "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+        "present": true,
+        "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+        "mode": 420
+      },
+      "/Library/Application Support/ClaudeCode/managed-settings.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      }
+    }
+  }
+}

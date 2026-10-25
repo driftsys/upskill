@@ -1,0 +1,41 @@
+.FFF.............................
+======================================================================
+FAIL: test_mode_receipts_reject_noninteger_and_out_of_range_values (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_mode_receipts_reject_noninteger_and_out_of_range_values) (before_mode=384, after_mode=384.0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 501, in test_mode_receipts_reject_noninteger_and_out_of_range_values
+    self.assertEqual(self.classify(before, after, before_mode=left, after_mode=right), 'preservation_failed')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'native_bookkeeping_residue' != 'preservation_failed'
+- native_bookkeeping_residue
++ preservation_failed
+
+
+======================================================================
+FAIL: test_mode_receipts_reject_noninteger_and_out_of_range_values (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_mode_receipts_reject_noninteger_and_out_of_range_values) (before_mode=-1, after_mode=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 501, in test_mode_receipts_reject_noninteger_and_out_of_range_values
+    self.assertEqual(self.classify(before, after, before_mode=left, after_mode=right), 'preservation_failed')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'native_bookkeeping_residue' != 'preservation_failed'
+- native_bookkeeping_residue
++ preservation_failed
+
+
+======================================================================
+FAIL: test_mode_receipts_reject_noninteger_and_out_of_range_values (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_mode_receipts_reject_noninteger_and_out_of_range_values) (before_mode=4096, after_mode=4096)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 501, in test_mode_receipts_reject_noninteger_and_out_of_range_values
+    self.assertEqual(self.classify(before, after, before_mode=left, after_mode=right), 'preservation_failed')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'native_bookkeeping_residue' != 'preservation_failed'
+- native_bookkeeping_residue
++ preservation_failed
+
+
+----------------------------------------------------------------------
+Ran 31 tests in 4.044s
+
+FAILED (failures=3)

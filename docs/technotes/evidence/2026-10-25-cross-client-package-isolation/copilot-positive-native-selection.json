@@ -1,0 +1,93 @@
+[
+  {
+    "type": "session.skills_loaded",
+    "data": {
+      "skills": [
+        {
+          "name": "probe-ab02695397ea29d3",
+          "commandName": "upskill-q11-25e85dcc9beddb62:probe-ab02695397ea29d3",
+          "description": "Explicit cross-client qualification probe.",
+          "source": "plugin",
+          "userInvocable": true,
+          "enabled": true,
+          "path": "$FIXTURE/copilot/delivery/native/upskill-q11-25e85dcc9beddb62/skills/probe-ab02695397ea29d3/SKILL.md"
+        }
+      ]
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "51491fa8-2ff5-4402-aba6-efa4057321a7",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "data": {
+      "toolCallId": "chatcmpl-tool-95fb68a8a5d64b07",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "upskill-q11-25e85dcc9beddb62:probe-ab02695397ea29d3"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "data": {
+      "toolCallId": "chatcmpl-tool-95fb68a8a5d64b07",
+      "success": false,
+      "error": {
+        "message": "Skill not found: upskill-q11-25e85dcc9beddb62:probe-ab02695397ea29d3",
+        "code": "failure"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "0f1e56a7-e11e-4621-b147-f8ebb7e426d7",
+    "data": {
+      "content": "",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "data": {
+      "toolCallId": "chatcmpl-tool-a0771b22bf71e57e",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "probe-ab02695397ea29d3"
+      },
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "data": {
+      "toolCallId": "chatcmpl-tool-a0771b22bf71e57e",
+      "success": true,
+      "result": {
+        "content": "Skill \"probe-ab02695397ea29d3\" loaded successfully. Follow the instructions in the skill context.",
+        "detailedContent": "Skill \"probe-ab02695397ea29d3\" loaded successfully. Follow the instructions in the skill context."
+      },
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "c4797a9a-e437-408d-ad26-00a478f4098f",
+    "data": {
+      "content": "\n\nPRESENT_3c68a2b9c1c3e324c1d66b4c5622b914",
+      "turnId": "2"
+    }
+  },
+  {
+    "type": "result",
+    "exitCode": 0,
+    "sessionId": "608248c4-3ccb-43c5-932d-3b4effc356d7"
+  }
+]

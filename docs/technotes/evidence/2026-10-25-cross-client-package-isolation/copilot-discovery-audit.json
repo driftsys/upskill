@@ -1,0 +1,42 @@
+{
+  "roots": {
+    ".claude/skills": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".claude/plugins": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".copilot/skills": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".agents/skills": {
+      "present": false,
+      "is_symlink": false
+    },
+    ".github/skills": {
+      "present": false,
+      "is_symlink": false
+    }
+  },
+  "settings": {
+    "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json": {
+      "discovery_keys": [
+        "enabledPlugins",
+        "extraKnownMarketplaces"
+      ],
+      "discovery_values_sha256": {
+        "enabledPlugins": "6d26155714245a3a64620c21d0a3f60535bce2fbe2b18c4e2d97d43d585266d5",
+        "extraKnownMarketplaces": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/config.json": {
+      "discovery_keys": [],
+      "discovery_values_sha256": {}
+    }
+  },
+  "project_guidance_absent": true,
+  "existing_settings_changed": false
+}

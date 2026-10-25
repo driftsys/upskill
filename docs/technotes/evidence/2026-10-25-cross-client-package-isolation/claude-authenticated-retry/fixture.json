@@ -1,0 +1,70 @@
+{
+  "client": "claude",
+  "pin": "2.1.308",
+  "scope": "session",
+  "plugin_name": "upskill-q11-d717abd66a1faf22",
+  "skill_name": "probe-a824959738214f65",
+  "namespace": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65",
+  "marker": "PRESENT_c8135748d1af370fdbefa4d6fde7397a",
+  "absent_marker": "ABSENT_46f338d4b5a6ceb1ac4c444ad1ee1bd7",
+  "native_package": "$RETRY_FIXTURE/claude/delivery/native/upskill-q11-d717abd66a1faf22",
+  "foreign_package": "$RETRY_FIXTURE/claude/delivery/foreign/upskill-q11-d717abd66a1faf22",
+  "native_intended": "claude",
+  "foreign_intended": "copilot",
+  "native_manifest": "$RETRY_FIXTURE/claude/delivery/native/upskill-q11-d717abd66a1faf22/.claude-plugin/plugin.json",
+  "foreign_manifest": "$RETRY_FIXTURE/claude/delivery/foreign/upskill-q11-d717abd66a1faf22/plugin.json",
+  "positive_project": "$RETRY_FIXTURE/claude/positive-project",
+  "candidate_project": "$RETRY_FIXTURE/claude/candidate-project",
+  "packages": {
+    "native": {
+      ".claude-plugin/plugin.json": {
+        "sha256": "505d35bd984447916b466cccd4715029dbcff1e949e473d275c1d298a81ba742",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "plugin.json": {
+        "sha256": "3affabac623467347169dc26be6ff3a66095cb022f7981c923f56e0e89b1c467",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "skills/probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    }
+  },
+  "trees": {
+    "native": {
+      "probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "probe-a824959738214f65/SKILL.md": {
+        "sha256": "b365fd9a36b9e7758dda7c12b8843ccd1fa947e5f5bcc3723745f2f69d72dc7c",
+        "mode": 420
+      },
+      "probe-a824959738214f65/resource.txt": {
+        "sha256": "5dda77ed410c33bf50b6811a40bbe7a81e34e243bebc8c57798f2d6f22818bef",
+        "mode": 420
+      }
+    }
+  }
+}

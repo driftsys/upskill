@@ -1,0 +1,65 @@
+[
+  {
+    "mutation": "drop_native_os_identity",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_unrelated_global_changes",
+    "rejected": true,
+    "failures": 2,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_unrelated_usage_changes",
+    "rejected": true,
+    "failures": 2,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_unknown_usage_fields",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_boolean_old_cache_timestamp",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_boolean_new_cache_timestamp",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_float_mode",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_out_of_range_mode",
+    "rejected": true,
+    "failures": 2,
+    "errors": 0,
+    "tests_run": 56
+  },
+  {
+    "mutation": "allow_boolean_usage_count",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0,
+    "tests_run": 56
+  }
+]

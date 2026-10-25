@@ -1,0 +1,27 @@
+{
+  "private_source_path": "$SLASH_PRIVATE_PACKET",
+  "files": {
+    "fixture.json": "e59bfdb204facb38bea357a6fd40309ba9c2ffcb5fe107439d81984e2e8459ae",
+    "version-codex.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "version-copilot.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "positive.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "version-codex-receipt.json": "30930eb0353eef29fc28176172b209a527e49cc16b5e9fac0d2389511ed65648",
+    "events.json": "7c9c9405fb3721c86e9884a23b1b529cc2ab906d4c78ad03e4eee5414f5e9d47",
+    "version-opencode-receipt.json": "941f2e827f9a9e2d76d8c07e9b1eb75b27e70e0354ea030323d55521a1c8b4d2",
+    "positive-receipt.json": "5d701d236baccb5b58ea684c0e19630be8a0f7254201d11b7f47f7bb3608434b",
+    "version-copilot.stdout": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+    "positive.stdout": "a0a6fea67a48b0f26ac35809cccf8ac1fca70af6bd415bf68e60cde7aacbbd35",
+    "preservation.json": "3cfd9d1b391d44a84b3cd409afdd972b3876b9aa6d2a2c6e2e8aeeccd19c18de",
+    "version-codex.stdout": "1c27284b7f5c74467a59a96821de67dc184c09423d800257b4f2e8eb3b1445a6",
+    "version-claude.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "version-opencode.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "capture-helper.py": "2449fb721c0e5ce4a82ad6ef4d36260b1d2fcbc7e187f90ec75aa6cb5e4dc99f",
+    "retention-helper.py": "f2ec7aee75f0c85930637a403c49dec0fde5af2ce7d42b7b37dd5ab84aec899a",
+    "campaign-pins.json": "2761985b1ab036562d942ab56903e66f75e880af0438ff0b9a07c4bd65b50426",
+    "version-copilot-receipt.json": "bcf562b6428bcc448bdc9b47eb383d819ea7172f77b4a69b9669d0d869b62bc3",
+    "packages-after.json": "1badc2e1f05b4edd0ddf49454b94b12f7b37e85320fca541fc12c5a85eb755f0",
+    "version-opencode.stdout": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+    "version-claude-receipt.json": "1ba521096239aacf86fb85e4e7896cde082fd375e1e9e0f98f8867c5fbc312c0",
+    "version-claude.stdout": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef"
+  }
+}
