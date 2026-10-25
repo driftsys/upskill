@@ -7,6 +7,14 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice 1 campaign revision: 2026-10-25, second retry
+
+The user authorized another Q5 model selection. Fresh version receipts precede
+this separate explicit-path retry; earlier failures retain their own evidence.
+The model selection stays private. Installed releases remain Claude 2.1.308,
+Codex 0.164.0, Copilot 1.0.103 and OpenCode 2.1.4 on macOS arm64
+([receipts](evidence/2026-10-25-opencode-explicit-paths-retry/campaign-pins.json)).
+
 ## Slice 1 campaign revision: 2026-10-25
 
 The Q5 explicit-path retry under

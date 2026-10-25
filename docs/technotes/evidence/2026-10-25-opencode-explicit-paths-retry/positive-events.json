@@ -1,0 +1,17 @@
+[
+  {
+    "type": "step_start",
+    "timestamp": 1792928891416,
+    "sessionID": "ses_e8d1c40c3ffeMZaNGAOumCBlX0"
+  },
+  {
+    "type": "error",
+    "timestamp": 1792928891434,
+    "sessionID": "ses_e8d1c40c3ffeMZaNGAOumCBlX0",
+    "error": {
+      "type": "provider.free-limit",
+      "status": 429,
+      "retry_after_ms": 43909000
+    }
+  }
+]
