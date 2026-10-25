@@ -92,5 +92,23 @@
     "result": "PASS: just docs-check",
     "private_log": "$PACKET_C/q9-full-pass1-docs.log",
     "sha256": "dd10ee72333ccefd22812e8b9edcf4137d6a608359abc3dc03404ec6951936d6"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just fmt",
+    "private_log": "$PACKET_D/pr405-main-fmt.log",
+    "sha256": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just lint",
+    "private_log": "$PACKET_D/pr405-main-lint.log",
+    "sha256": "04003dc625b757e1083ef05c940fc92ea4a995d541e873639e61f875f98ea1e5"
+  },
+  {
+    "stage": "Upstream main integration",
+    "result": "PASS: just docs-check",
+    "private_log": "$PACKET_D/pr405-main-docs.log",
+    "sha256": "de056112a68f1f4892f9cb6a67142861ab13530f33595141aef209e58661ee8d"
   }
 ]

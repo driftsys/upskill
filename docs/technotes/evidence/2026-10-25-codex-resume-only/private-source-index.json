@@ -43,5 +43,14 @@
       "future-native-helper-not-run.py": "Collector updated for a future retry; not executed in this packet"
     },
     "method": "No native client/model calls; final tests/docs and mutation checks after previous full verification"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-pr405-integration-cxnzsixt",
+    "manifest_sha256": "fec0a372780f3880c6dcc5cead0bba71e52c1a74db8ad2df90b27da7e3a4eed2",
+    "capture_helpers": {
+      "retain-integration-helper.py": "9fe109b02dc999602b3d6e9fb2778952a5377ac5c76f05fc8d07774a02c6830a"
+    },
+    "method": "Offline integration of reviewed main; earlier native and review source epochs unchanged; no model control rerun"
   }
 ]

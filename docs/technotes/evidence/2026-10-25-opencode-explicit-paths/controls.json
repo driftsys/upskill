@@ -1,0 +1,16 @@
+{
+  "positive": {
+    "pin": "2.1.4",
+    "state": "failure",
+    "completed": false,
+    "response": "",
+    "tools_observed": false,
+    "session": "ses_e8fd7f4d9ffeulh00rp7U9V8fm",
+    "cwd": "$PACKET_A/fixture/positive",
+    "exit_code": 1,
+    "timed_out": false,
+    "error_event_observed": true,
+    "native_instruction_paths": null,
+    "native_body_counts": null
+  }
+}
