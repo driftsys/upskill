@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/Users/sebastientasson/.local/bin/codex",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "-c",
+    "sandbox_mode=\"read-only\"",
+    "-c",
+    "model_auto_compact_token_limit=100000",
+    "--no-daemon",
+    "exec",
+    "resume",
+    "--json",
+    "-m",
+    "[private selection omitted]",
+    "01a1739e-06b8-7043-b86a-43d004a4a510",
+    "For the plugin qualification question, return only the required JSON object. Do not use any tools."
+  ],
+  "cwd": "$EXISTING_FIXTURE/project-a",
+  "profile": "$PROFILE",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at": "2026-10-25T15:11:44.743057+00:00",
+  "finished_at": "2026-10-25T15:11:49.603706+00:00"
+}

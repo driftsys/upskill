@@ -1,0 +1,8 @@
+{
+  "previous_head": "23c857cda4c585eac626c5bc2da4b75cca8cde99",
+  "incoming_main": "cb72b2d993ec769cba6dde399cc784cdbf8f368a",
+  "resume_window_helper_unchanged": true,
+  "all_other_plugin_harness_ast_nodes_match_main": true,
+  "native_control_rerun": false,
+  "original_native_source_epoch_preserved": true
+}

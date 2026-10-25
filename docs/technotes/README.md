@@ -153,3 +153,7 @@ change. Technical notes and evidence assets are outside the published book.
 
 - [Codex plugin skill updates](gate6-codex-skill-updates.md) — Q8 on 0.164.0;
   source edits stay cached until native refresh.
+
+- [Codex resume-only attribution](gate6-codex-resume-attribution.md): Codex
+  0.164.0 adds one body per rule on resume, before compaction; recorded history
+  only.

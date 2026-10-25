@@ -1,0 +1,52 @@
+{
+  "pin": "0.164.0",
+  "session": "01a1739e-06b8-7043-b86a-43d004a4a510",
+  "preserved": true,
+  "positive": {
+    "session": "01a1739e-06b8-7043-b86a-43d004a4a510",
+    "turn_id": "01a1739e-0aa6-7ec0-afb7-12c6aba8e9ca",
+    "completed": true,
+    "read_only": true,
+    "tools_observed": false,
+    "response_matches": true,
+    "body_counts": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "body_windows": {
+    "startup": {
+      "a": 1,
+      "b": 1
+    },
+    "resumed_history": {
+      "a": 2,
+      "b": 2
+    },
+    "resume_new_records": {
+      "a": 1,
+      "b": 1
+    }
+  },
+  "resume": {
+    "session": "01a1739e-06b8-7043-b86a-43d004a4a510",
+    "turn_id": "01a1739e-20db-7042-89bf-ff56865a3a1b",
+    "completed": true,
+    "read_only": true,
+    "tools_observed": false,
+    "response_matches": true,
+    "body_counts": {
+      "a": 2,
+      "b": 2
+    },
+    "new_record_body_counts": {
+      "a": 1,
+      "b": 1
+    },
+    "compaction_records": 0,
+    "callback_sources": [
+      "resume",
+      "resume"
+    ]
+  }
+}

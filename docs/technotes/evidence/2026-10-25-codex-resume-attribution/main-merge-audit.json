@@ -1,0 +1,9 @@
+{
+  "previous_head": "1764cdf6eddbb9e3b000e78072e134750396a8a1",
+  "incoming_main": "3db2c5cdcd7b4cf01727a8b8e405a4e2e8c84021",
+  "code_and_tests_identical_to_previous_head": true,
+  "existing_q9_packet_files_unchanged_before_metadata_append": true,
+  "incoming_q5_packet_files_match_main": true,
+  "prior_private_source_epochs_unchanged": true,
+  "native_control_rerun": false
+}
