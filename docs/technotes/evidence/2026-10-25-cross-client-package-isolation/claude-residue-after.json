@@ -1,0 +1,27 @@
+{
+  "method": "After-only inventory; no before snapshot for these paths. It does not establish which files were created or changed by this control.",
+  "paths": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "ca1ab8c9830540f3862d2ef72c6a3e4b7e19202439986bb535ff68ddea0f99ac",
+      "mode": 384
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "fixture_disposition": "Neutral packages and disposable Git projects retained privately for replay; no persistent client registrations were created.",
+  "global_config_limit": "Neither possible .claude.json location nor managed settings were included in the original before/after measurement; their restoration/equality is unqualified.",
+  "fixture_root": {
+    "present": true,
+    "directory": true,
+    "mode": 493
+  }
+}

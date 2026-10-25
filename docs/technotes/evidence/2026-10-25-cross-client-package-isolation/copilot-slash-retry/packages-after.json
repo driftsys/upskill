@@ -1,0 +1,30 @@
+{
+  "native": {
+    "plugin.json": {
+      "sha256": "571125da11108b940c125cceec22598c607c81fe246f78410e51ff01894ae547",
+      "mode": 420
+    },
+    "skills/probe-5f332d03ef2ab8e5/SKILL.md": {
+      "sha256": "3c82a0219debf671419b13cc30cf87269e8ebbacbeefcbabeec96b421d8bd08e",
+      "mode": 420
+    },
+    "skills/probe-5f332d03ef2ab8e5/resource.txt": {
+      "sha256": "245f6e4d76a819775e18c4b599472db8bd75d72a56bc6fa086b814474d282987",
+      "mode": 420
+    }
+  },
+  "foreign": {
+    ".claude-plugin/plugin.json": {
+      "sha256": "714bf9058d179a72a16504e2e1d974dd6bb0176303b32fbd0fc49bc703fab044",
+      "mode": 420
+    },
+    "skills/probe-5f332d03ef2ab8e5/SKILL.md": {
+      "sha256": "3c82a0219debf671419b13cc30cf87269e8ebbacbeefcbabeec96b421d8bd08e",
+      "mode": 420
+    },
+    "skills/probe-5f332d03ef2ab8e5/resource.txt": {
+      "sha256": "245f6e4d76a819775e18c4b599472db8bd75d72a56bc6fa086b814474d282987",
+      "mode": 420
+    }
+  }
+}

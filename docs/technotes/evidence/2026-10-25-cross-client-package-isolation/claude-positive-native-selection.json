@@ -1,0 +1,27 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "8a795c73-4f73-4b76-9fbc-56e3b3ce1f06",
+    "slash_commands": [
+      "upskill-q11-ff0f8e965e40a48c:probe-eec0f0c399a11385"
+    ],
+    "plugins": [
+      {
+        "name": "upskill-q11-ff0f8e965e40a48c",
+        "path": "$FIXTURE/claude/delivery/native/upskill-q11-ff0f8e965e40a48c",
+        "source": "upskill-q11-ff0f8e965e40a48c@inline",
+        "version": "0.0.0"
+      }
+    ]
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": true,
+    "permission_denials": [],
+    "session_id": "8a795c73-4f73-4b76-9fbc-56e3b3ce1f06",
+    "result": null,
+    "provider_error_category": "authentication_revoked"
+  }
+]

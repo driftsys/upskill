@@ -1,0 +1,50 @@
+[
+  {
+    "mutation": "stream_completion_is_invocation",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "candidate_without_attempt",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "ignore_content_marker",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "ignore_bare_load",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "ignore_selector_conversion",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "ignore_envelope_change",
+    "rejected": true,
+    "failures": 1,
+    "errors": 0
+  },
+  {
+    "mutation": "mislabel_contaminated_baseline",
+    "rejected": true,
+    "failures": 2,
+    "errors": 0
+  },
+  {
+    "mutation": "accept_missing_tool_id",
+    "rejected": true,
+    "failures": 0,
+    "errors": 1
+  }
+]

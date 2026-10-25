@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Cross-client package isolation](gate6-cross-client-package-isolation.md): Q11
+  failed Claude/Copilot native positives; foreign-package controls unrun.
+
 - [OpenCode explicit-path second retry](gate6-opencode-explicit-paths-retry.md):
   OpenCode 2.1.4 native positive stops at the provider free usage limit.
 - [Codex package-owned agent registration](gate6-codex-agent-registration.md):

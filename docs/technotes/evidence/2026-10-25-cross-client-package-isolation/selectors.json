@@ -1,0 +1,19 @@
+{
+  "selected": {
+    "claude": "--plugin-dir <directory>",
+    "copilot": "--plugin-dir <directory>"
+  },
+  "scope": "session-only; explicit selector, no persistent install",
+  "not_run": [
+    "Claude marketplace add/install",
+    "Copilot direct local install",
+    "Copilot marketplace add/install",
+    "foreign-package candidates for either target"
+  ],
+  "sources": [
+    "https://code.claude.com/docs/en/plugins",
+    "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
+    "https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/plugin-directories"
+  ],
+  "installed_help": "Both installed CLIs advertise --plugin-dir. Copilot skill list has --json; runtime session.skills_loaded carries commandName independently from display name."
+}

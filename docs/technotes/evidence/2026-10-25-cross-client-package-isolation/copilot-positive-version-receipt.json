@@ -1,0 +1,14 @@
+{
+  "command": [
+    "$CLIENT_BIN/copilot",
+    "--no-auto-update",
+    "--version"
+  ],
+  "cwd": "$FIXTURE/copilot/positive-project",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-25T18:09:21.084721+00:00",
+  "finished_at_utc": "2026-10-25T18:09:21.441444+00:00",
+  "stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

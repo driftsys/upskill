@@ -1,0 +1,98 @@
+{
+  "positive": {
+    "pin": "1.0.103",
+    "platform": "macOS arm64",
+    "cwd": "$FIXTURE/copilot/positive-project",
+    "scope": "session",
+    "namespace": "upskill-q11-25e85dcc9beddb62:probe-ab02695397ea29d3",
+    "catalog_complete": true,
+    "catalog_present": true,
+    "activations": 0,
+    "content_activations": 1,
+    "unexpected_tools": true,
+    "source_path": "$FIXTURE/copilot/delivery/native/upskill-q11-25e85dcc9beddb62",
+    "response": "\n\nPRESENT_3c68a2b9c1c3e324c1d66b4c5622b914",
+    "state": "success",
+    "complete": true,
+    "invocation_attempted": true,
+    "invocation_outcome": "not_found",
+    "invocation_complete": true
+  },
+  "trees_after": {
+    "native": {
+      "probe-ab02695397ea29d3/SKILL.md": {
+        "sha256": "f8241807e53d296283d9ddb0c678337109e85ec8a9b1ffded59ff2367124853d",
+        "mode": 420
+      },
+      "probe-ab02695397ea29d3/resource.txt": {
+        "sha256": "27ddfb368644a8ffe966ac23449c3bb9f612b5b32c006861fd9c6aa059731918",
+        "mode": 420
+      }
+    },
+    "foreign": {
+      "probe-ab02695397ea29d3/SKILL.md": {
+        "sha256": "f8241807e53d296283d9ddb0c678337109e85ec8a9b1ffded59ff2367124853d",
+        "mode": 420
+      },
+      "probe-ab02695397ea29d3/resource.txt": {
+        "sha256": "27ddfb368644a8ffe966ac23449c3bb9f612b5b32c006861fd9c6aa059731918",
+        "mode": 420
+      }
+    }
+  },
+  "preservation": {
+    "before": {
+      "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json": {
+        "present": true,
+        "sha256": "3e4344d8919be037ac53cf62e15fd737d6024989e39fea70e03d83f970d169ce",
+        "mode": 384
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/config.json": {
+        "present": true,
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": 384
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/known_marketplaces.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/installed_plugins.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      }
+    },
+    "after": {
+      "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json": {
+        "present": true,
+        "sha256": "3e4344d8919be037ac53cf62e15fd737d6024989e39fea70e03d83f970d169ce",
+        "mode": 384
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/config.json": {
+        "present": true,
+        "sha256": "d95a4a6bc45e69394cdbdb8732a30528ccffe3577796ce0b5bbce8fcbf9727f9",
+        "mode": 384
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/known_marketplaces.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      },
+      "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/installed_plugins.json": {
+        "present": false,
+        "sha256": null,
+        "mode": null
+      }
+    },
+    "restoration": "not needed: session-only selector makes no registration",
+    "whole_profile_equal": false
+  },
+  "baseline": {},
+  "candidate": {},
+  "selector": {
+    "available": true,
+    "status": "not_run",
+    "completed": false
+  }
+}

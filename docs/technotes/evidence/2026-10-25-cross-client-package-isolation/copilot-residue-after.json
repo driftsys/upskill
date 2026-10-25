@@ -1,0 +1,42 @@
+{
+  "method": "After-only inventory; no before snapshot for these paths. It does not establish which files were created or changed by this control.",
+  "paths": {
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7": {
+      "present": true,
+      "directory": true,
+      "mode": 448
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7/workspace.yaml": {
+      "present": true,
+      "sha256": "5ccff1517334cd60421e756362c6aa5604887bedb9a488177e1d2c5390790abb",
+      "mode": 384
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7/events.jsonl": {
+      "present": true,
+      "sha256": "7293cc7d8830ebbf1d3da00ec94bcce59e0032d66a9e56c0d4c6c1dc5001fa32",
+      "mode": 384
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7/.workspace-fork.lock": {
+      "present": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": 420
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7/rewind-file-snapshots/tracking.json": {
+      "present": true,
+      "sha256": "0916b582e1bc5439b7454e8dee676b3d7f24d524cac8715e1d0afd44a8e66e3b",
+      "mode": 420
+    },
+    "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/608248c4-3ccb-43c5-932d-3b4effc356d7/checkpoints/index.md": {
+      "present": true,
+      "sha256": "a6508da52c083afcfd134779a5b6a71a31235f9f154f2aa865ea920d68189734",
+      "mode": 420
+    }
+  },
+  "fixture_disposition": "Neutral packages and disposable Git projects retained privately for replay; no persistent client registrations were created.",
+  "session_id": "608248c4-3ccb-43c5-932d-3b4effc356d7",
+  "fixture_root": {
+    "present": true,
+    "directory": true,
+    "mode": 493
+  }
+}

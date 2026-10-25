@@ -7,6 +7,20 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
+## Slice 2 Q11 campaign revision: 2026-10-25
+
+Fresh four-client receipts precede the separate session-selector Q11 controls.
+Installed releases remain Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and
+OpenCode 2.1.4 on macOS arm64
+([receipts](evidence/2026-10-25-cross-client-package-isolation/campaign-pins.json)).
+Claude and Copilot both fail their native positive contract; foreign-package
+controls remain unrun. This does not qualify isolation, Q10 overlap, or a
+complete slice-2 package profile. Q5 remains deferred. Q10 owns its separate
+campaign revision in PR #414. A separate explicit-slash Copilot attempt also
+retains a fresh four-client capture before execution
+([retry receipts](evidence/2026-10-25-cross-client-package-isolation/copilot-slash-retry/campaign-pins.json));
+its exact-response positive fails, so no foreign candidate runs.
+
 ## Slice 1 campaign revision: 2026-10-25, resume attribution
 
 Ordinary device login restored the isolated Codex profile. A fresh four-client

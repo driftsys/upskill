@@ -1,0 +1,7 @@
+{
+  "profile": "$COPILOT_PROFILE_ROOT/home/.copilot",
+  "lock": "$PROFILE_LOCK",
+  "exclusive": true,
+  "scope": "Q11 commands only; advisory lock cannot exclude nonparticipating processes",
+  "q10": "PR #414 retained cleanup and restoration before this control"
+}

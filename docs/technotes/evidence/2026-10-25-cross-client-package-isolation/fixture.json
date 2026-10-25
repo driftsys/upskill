@@ -1,0 +1,93 @@
+{
+  "root": "$FIXTURE",
+  "pins": {
+    "claude": "2.1.308",
+    "copilot": "1.0.103",
+    "codex": "0.164.0",
+    "opencode": "2.1.4"
+  },
+  "targets": {
+    "claude": {
+      "client": "claude",
+      "pin": "2.1.308",
+      "scope": "session",
+      "plugin_name": "upskill-q11-ff0f8e965e40a48c",
+      "skill_name": "probe-eec0f0c399a11385",
+      "namespace": "upskill-q11-ff0f8e965e40a48c:probe-eec0f0c399a11385",
+      "marker": "PRESENT_6ee2d36795b446c60707632b9ca31b95",
+      "absent_marker": "ABSENT_47cd3c8eecbb1003f6ef5ebba37a3fa3",
+      "native_package": "$FIXTURE/claude/delivery/native/upskill-q11-ff0f8e965e40a48c",
+      "foreign_package": "$FIXTURE/claude/delivery/foreign/upskill-q11-ff0f8e965e40a48c",
+      "positive_project": "$FIXTURE/claude/positive-project",
+      "candidate_project": "$FIXTURE/claude/candidate-project",
+      "trees": {
+        "native": {
+          "probe-eec0f0c399a11385/SKILL.md": {
+            "sha256": "0b408687e570417c4d9fc087314d6fef3c6d497730301712824ba6579472a7b6",
+            "mode": 420
+          },
+          "probe-eec0f0c399a11385/resource.txt": {
+            "sha256": "3a782e90a0698e92ed3105a79d32b6ed0e2e0fe3a4c0e72a6f0e898fcc7f67bb",
+            "mode": 420
+          }
+        },
+        "foreign": {
+          "probe-eec0f0c399a11385/SKILL.md": {
+            "sha256": "0b408687e570417c4d9fc087314d6fef3c6d497730301712824ba6579472a7b6",
+            "mode": 420
+          },
+          "probe-eec0f0c399a11385/resource.txt": {
+            "sha256": "3a782e90a0698e92ed3105a79d32b6ed0e2e0fe3a4c0e72a6f0e898fcc7f67bb",
+            "mode": 420
+          }
+        }
+      },
+      "native_intended": "claude",
+      "foreign_intended": "copilot",
+      "native_manifest": "$FIXTURE/claude/delivery/native/upskill-q11-ff0f8e965e40a48c/.claude-plugin/plugin.json",
+      "foreign_manifest": "$FIXTURE/claude/delivery/foreign/upskill-q11-ff0f8e965e40a48c/plugin.json",
+      "envelope_baseline": "not fingerprinted before this retained run; required by the reviewed builder for a future control"
+    },
+    "copilot": {
+      "client": "copilot",
+      "pin": "1.0.103",
+      "scope": "session",
+      "plugin_name": "upskill-q11-25e85dcc9beddb62",
+      "skill_name": "probe-ab02695397ea29d3",
+      "namespace": "upskill-q11-25e85dcc9beddb62:probe-ab02695397ea29d3",
+      "marker": "PRESENT_3c68a2b9c1c3e324c1d66b4c5622b914",
+      "absent_marker": "ABSENT_6bbafa72d4afec7e698d9ef1fea119e3",
+      "native_package": "$FIXTURE/copilot/delivery/native/upskill-q11-25e85dcc9beddb62",
+      "foreign_package": "$FIXTURE/copilot/delivery/foreign/upskill-q11-25e85dcc9beddb62",
+      "positive_project": "$FIXTURE/copilot/positive-project",
+      "candidate_project": "$FIXTURE/copilot/candidate-project",
+      "trees": {
+        "native": {
+          "probe-ab02695397ea29d3/SKILL.md": {
+            "sha256": "f8241807e53d296283d9ddb0c678337109e85ec8a9b1ffded59ff2367124853d",
+            "mode": 420
+          },
+          "probe-ab02695397ea29d3/resource.txt": {
+            "sha256": "27ddfb368644a8ffe966ac23449c3bb9f612b5b32c006861fd9c6aa059731918",
+            "mode": 420
+          }
+        },
+        "foreign": {
+          "probe-ab02695397ea29d3/SKILL.md": {
+            "sha256": "f8241807e53d296283d9ddb0c678337109e85ec8a9b1ffded59ff2367124853d",
+            "mode": 420
+          },
+          "probe-ab02695397ea29d3/resource.txt": {
+            "sha256": "27ddfb368644a8ffe966ac23449c3bb9f612b5b32c006861fd9c6aa059731918",
+            "mode": 420
+          }
+        }
+      },
+      "native_intended": "copilot",
+      "foreign_intended": "claude",
+      "native_manifest": "$FIXTURE/copilot/delivery/native/upskill-q11-25e85dcc9beddb62/plugin.json",
+      "foreign_manifest": "$FIXTURE/copilot/delivery/foreign/upskill-q11-25e85dcc9beddb62/.claude-plugin/plugin.json",
+      "envelope_baseline": "not fingerprinted before this retained run; required by the reviewed builder for a future control"
+    }
+  }
+}

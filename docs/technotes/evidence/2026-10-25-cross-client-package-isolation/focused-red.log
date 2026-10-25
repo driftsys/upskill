@@ -1,0 +1,136 @@
+EEEEEEEEEEE
+======================================================================
+ERROR: test_activation_wins_over_missing_catalog_and_preservation_failure (test_qualify_cross_client_isolation.CrossClientIsolation.test_activation_wins_over_missing_catalog_and_preservation_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 112, in test_activation_wins_over_missing_catalog_and_preservation_failure
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['copilot']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_all_targets_accept_only_complete_paired_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_all_targets_accept_only_complete_paired_negative)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 94, in test_all_targets_accept_only_complete_paired_negative
+    for row in self.fixture(Path(temporary) / 'fresh')['targets'].values():
+               ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_catalog_exposure_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_catalog_exposure_never_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 121, in test_catalog_exposure_never_passes
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['copilot']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_failed_positive_and_contaminated_baseline_block_negative (test_qualify_cross_client_isolation.CrossClientIsolation.test_failed_positive_and_contaminated_baseline_block_negative)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 100, in test_failed_positive_and_contaminated_baseline_block_negative
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_incomplete_or_malformed_candidate_never_passes (test_qualify_cross_client_isolation.CrossClientIsolation.test_incomplete_or_malformed_candidate_never_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 128, in test_incomplete_or_malformed_candidate_never_passes
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_metadata_drift_and_resource_drift_invalidate_control (test_qualify_cross_client_isolation.CrossClientIsolation.test_metadata_drift_and_resource_drift_invalidate_control)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 139, in test_metadata_drift_and_resource_drift_invalidate_control
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_preservation_computed_independently_and_requires_valid_receipts (test_qualify_cross_client_isolation.CrossClientIsolation.test_preservation_computed_independently_and_requires_valid_receipts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 159, in test_preservation_computed_independently_and_requires_valid_receipts
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_refuses_existing_discovery_and_dangling_roots_without_writes (test_qualify_cross_client_isolation.CrossClientIsolation.test_refuses_existing_discovery_and_dangling_roots_without_writes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 68, in test_refuses_existing_discovery_and_dangling_roots_without_writes
+    self.fixture(root)
+    ~~~~~~~~~~~~^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_same_identity_and_complete_skill_tree_across_envelopes (test_qualify_cross_client_isolation.CrossClientIsolation.test_same_identity_and_complete_skill_tree_across_envelopes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 40, in test_same_identity_and_complete_skill_tree_across_envelopes
+    f = self.fixture(Path(temporary) / 'fresh')
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_selector_unavailable_is_distinct_from_rejected (test_qualify_cross_client_isolation.CrossClientIsolation.test_selector_unavailable_is_distinct_from_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 150, in test_selector_unavailable_is_distinct_from_rejected
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+======================================================================
+ERROR: test_tree_fingerprint_includes_resources_modes_and_rejects_symlinks (test_qualify_cross_client_isolation.CrossClientIsolation.test_tree_fingerprint_includes_resources_modes_and_rejects_symlinks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 78, in test_tree_fingerprint_includes_resources_modes_and_rejects_symlinks
+    row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+          ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 18, in fixture
+    return q.prepare_cross_client_isolation(root, pins=PINS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'prepare_cross_client_isolation'
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.006s
+
+FAILED (errors=11)
