@@ -31,6 +31,7 @@
     "version-opencode.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "baseline-version.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "capture-helper.py": "0c996fa37f6a941e24630d05e739d7abf2f1720f7a6b982e123a8b5093797b7b",
+    "coverage-followup-verify.log": "f6bffd31cc71943b0ff6c8ac6ad31fb69db30ab07903f4bd33bbde98cf7df839",
     "candidate.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "retention-helper.py": "a2c4968be63cf88ae0c74b1a73abdd0c3fcaa0ac62c9e216681b66f4cdc8c3bd",
     "campaign-pins.json": "b7c180e4ecb06e8d347103307b4d7c3b9cb5e5b4bf413c944cf0c80c73d0bbfa",
@@ -38,6 +39,7 @@
     "bookkeeping-continuation-helper.py": "46dd216a5b2d79bf171c7a457205c7804896e6c78a93e77dc05daf2b12af8cd8",
     "baseline-events.json": "a6c7184b3bd73415ef25025a5d9c82ca0d3cc05b0e606cc8313eb5f7a4b477ce",
     "final-focused.log": "a3ee6ddc6c6381374ad3171911eb6d4f6af5fb85d424a618ae67943af566a6ec",
+    "coverage-followup-focused.log": "42ec9cbb01e43900fa644d03e925945d373c5b1a579bed0565f85313542b24cb",
     "version-copilot-receipt.json": "e1d88402ebdf2ff83ad35387df0a5965d2cb38a14d7a1b3d937842bb1a2fe6b3",
     "baseline.stdout": "edbffbd630c20f5e62fb2aa48fc3ec8c4c5e56254a337ff9de8e35f5250c5663",
     "baseline.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -47,6 +49,7 @@
     "classification.json": "0521f0fdcee063754a4a02d9358db545881c48352ce1ed49ddafa4b4868c09db",
     "candidate-observation.json": "3861082f624fd05d0c1e8a0613998ce6d316c380501583be72454f80b9e26a97",
     "final-verify.log": "bd28ccf81f2b130b09ae57c323e57f319c88d78ab23988f42552c0930a90fe2d",
+    "coverage-followup-mutation-helper.py": "b4a31ebf9d03f0a9578ba150eeba9c32ee0f64ff342100077b86dfddd355e1e5",
     "candidate-version-receipt.json": "ebb4167543f794040940a3dad9c6b70afed191e5c29c08a7f4e149eade97f63e",
     "version-opencode.stdout": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
     "version-claude-receipt.json": "1ae53a2fd674970cfbee11d80451094f45cc357215492dc83fa3933a22392071",
@@ -58,6 +61,9 @@
     "capture-source/scripts/qualify-plugin-rules.py": "e04756ab8193bd5225e98a9f24c48d0f76583efdfb2c6e623bc42acb6c832fe8",
     "capture-source/scripts/tests/test_qualify_cross_client_isolation.py": "d8c445c52536a173fd48e387b8b64a12593d40cd82632a5dbce77cff9debd437",
     "capture-source/scripts/tests/test_qualify_plugin_rules.py": "180e9234896c7a587f44c98cf6f276e31cf3542b7480bd915028ba021aee19be",
+    "coverage-followup-source/scripts/qualify-plugin-rules.py": "8f57b89ac5fca272089cda189205c6a7ea83668f19126e5450cba5c3088732e6",
+    "coverage-followup-source/scripts/tests/test_qualify_cross_client_isolation.py": "c83bceee5769e45c67c43ca1bc7fbf5f7e48063b55d91dfa966ead465821aa21",
+    "coverage-followup-source/scripts/tests/test_qualify_plugin_rules.py": "96da305b57e2b8e2b24d71a44bac9e25bad116b7c53665cba20f02a17c3c6c74",
     "final-source/scripts/qualify-plugin-rules.py": "b0c3f3a7806f761d9b016ae408ac94cbc134c6c16747acc7f5cb3608936cf03f",
     "final-source/scripts/tests/test_qualify_cross_client_isolation.py": "0c2d511100d26a774ed4cc19c84562386974976f1137edfb5373e8e1169a9608",
     "final-source/scripts/tests/test_qualify_plugin_rules.py": "180e9234896c7a587f44c98cf6f276e31cf3542b7480bd915028ba021aee19be",
@@ -68,7 +74,8 @@
     "capture-source/": "USER-preserving fixture source before positive",
     "continuation-source/": "Tested bookkeeping guard before baseline/candidate; original config stayed in memory",
     "restoration-source/": "Strict mode guard before restoration; all measured bytes and modes restored",
-    "final-source/": "Final offline guard and native record replay tests; capture streams unchanged"
+    "final-source/": "Final offline guard and native record replay tests; capture streams unchanged",
+    "coverage-followup-source/": "Boundary and chronology assertions after advisory review; production behavior and original native records unchanged"
   },
   "witness": "Filtered native bookkeeping witness extracted in the live capture process; unrelated values represented by canonical JSON hashes. Auth-bearing config bytes never exported or committed."
 }

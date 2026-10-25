@@ -212,13 +212,22 @@ These changes do not rerun a native control or alter an earlier native verdict.
 
 ## Authenticated Claude retry
 
-After the user's normal isolated login, a tool-free request confirms successful
-authentication. A controlled environment comparison shows that retaining the OS
-`USER` variable makes native keychain lookup work with the same isolated roots.
-The harness now preserves that identity variable while continuing to strip
-token, API-key, Git and client-root overrides. Two offline regressions pin
-preservation of `USER`, removal of secret overrides and absence of an invented
-account name. No credentials are copied and no normal-profile fallback is used.
+The native positive below confirms working authentication after the user's
+normal isolated login. The harness preserves OS `USER` while stripping token,
+API-key, Git and client-root overrides. Two offline regressions pin those
+allowlist properties without contacting an authentication service.
+
+A separately indexed
+[later diagnostic repeat](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/auth-diagnostic-repeat.json)
+runs `claude auth status` with `USER`, without it, then with it again. The CLI
+reports logged in, not logged in, then logged in, with identical profile roots
+and all other environment values held constant. The diagnostic has its own
+post-control timestamps and
+[source index](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/auth-diagnostic-source-index.json);
+it is not a reconstruction of the original unretained preflight. Only status
+fields and raw-output digests are retained, excluding account metadata. No model
+request, credential copy or configuration-root fallback is used by this
+diagnostic.
 
 A fresh
 [four-client campaign](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/campaign-pins.json)
@@ -289,3 +298,20 @@ replay of these three native phases and the filtered restoration witness. Full
 verification and source epochs are retained with the packet
 ([source index](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/private-source-index.json),
 [summary](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json)).
+
+### Follow-up coverage
+
+Follow-up assertions reject zero usage counts, every negative permitted usage
+value, noninteger modes in either operand, inconsistent fixture names, malformed
+configurations and nonmapping usage data. Positive cases separately exercise
+cache-only changes, independent usage additions and initially absent containers.
+Receipt replay now requires a positive duration for each invocation and strict
+positive-finish → baseline-start → baseline-finish → candidate-start ordering,
+with all four campaign probes preceding the positive. All 40 focused Q11 tests
+pass and reject the six previously surviving guard and timing mutations
+([before/after evidence](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/coverage-followup-mutations.json)).
+The original native records and isolation verdict are unchanged.
+
+The private restoration helper's write/recheck sequence is documented by its
+source and retained receipts; these offline tests do not constitute an automated
+native-runner test suite.

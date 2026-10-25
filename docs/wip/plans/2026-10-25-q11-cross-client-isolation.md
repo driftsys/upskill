@@ -201,8 +201,9 @@ issue criteria take priority over suggestions that broaden Q11 into Q10.
 
 ## Authenticated Claude retry disposition
 
-- Preserve OS `USER` for normal keychain lookup while stripping auth and client
-  configuration overrides; native credentials stay in their ordinary store.
+- Preserve OS `USER` for the native authentication context while stripping auth
+  and client configuration overrides. A later indexed status diagnostic records
+  the observed USER dependence; native credentials stay in their ordinary store.
 - Fresh pins and fixtures precede a successful Claude namespaced positive and
   explicit native not-found absence baseline. The foreign Copilot-shaped package
   then activates through `--plugin-dir`, giving a retained isolation FAIL.

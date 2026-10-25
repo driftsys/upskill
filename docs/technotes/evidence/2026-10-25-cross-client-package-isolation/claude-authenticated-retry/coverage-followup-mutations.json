@@ -1,0 +1,91 @@
+{
+  "before": [
+    {
+      "mutation": "allow_zero_usage_count",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 33
+    },
+    {
+      "mutation": "allow_negative_usage_values",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 33
+    },
+    {
+      "mutation": "allow_noninteger_before_mode",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 33
+    },
+    {
+      "mutation": "allow_mismatched_namespace",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 33
+    },
+    {
+      "mutation": "overlapping_phases",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 1
+    },
+    {
+      "mutation": "reversed_positive_interval",
+      "rejected": false,
+      "failures": 0,
+      "errors": 0,
+      "tests_run": 1
+    }
+  ],
+  "after": [
+    {
+      "mutation": "allow_zero_usage_count",
+      "rejected": true,
+      "failures": 2,
+      "errors": 0,
+      "tests_run": 40
+    },
+    {
+      "mutation": "allow_negative_usage_values",
+      "rejected": true,
+      "failures": 3,
+      "errors": 0,
+      "tests_run": 40
+    },
+    {
+      "mutation": "allow_noninteger_before_mode",
+      "rejected": true,
+      "failures": 3,
+      "errors": 0,
+      "tests_run": 40
+    },
+    {
+      "mutation": "allow_mismatched_namespace",
+      "rejected": true,
+      "failures": 2,
+      "errors": 0,
+      "tests_run": 40
+    },
+    {
+      "mutation": "overlapping_phases",
+      "rejected": true,
+      "failures": 3,
+      "errors": 0,
+      "tests_run": 1
+    },
+    {
+      "mutation": "reversed_positive_interval",
+      "rejected": true,
+      "failures": 2,
+      "errors": 0,
+      "tests_run": 1
+    }
+  ],
+  "method": "Independent in-memory guard removals and receipt-time mutations; no native model control is rerun. The later auth diagnostic is separately indexed."
+}

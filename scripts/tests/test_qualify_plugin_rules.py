@@ -292,7 +292,7 @@ class PluginRuleTests(unittest.TestCase):
                 self.assertFalse(any(p.name in ('auth.json', 'credentials.json') for p in Path(fixture['root']).rglob('*')))
                 self.assertFalse(any(k.startswith('GIT_') or k.endswith('TOKEN') or k.endswith('API_KEY') for k in env))
 
-    def test_environment_preserves_os_account_for_native_keychain_lookup(self):
+    def test_environment_preserves_os_account_without_credential_overrides(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {
                 'USER': 'native-account', 'ANTHROPIC_API_KEY': 'ambient-secret',
                 'CLAUDE_CODE_OAUTH_TOKEN': 'ambient-secret', 'GIT_DIR': '/ambient/repository'}, clear=True):

@@ -1,4 +1,5 @@
 import copy
+import datetime
 import importlib.util
 import hashlib
 import json
@@ -502,9 +503,91 @@ class ClaudeInlineBookkeeping(unittest.TestCase):
 
     def test_mode_receipts_reject_noninteger_and_out_of_range_values(self):
         before, after = self.states()
-        for left, right in [(0o600, float(0o600)), (-1, -1), (0o10000, 0o10000)]:
+        for left, right in [(0o600, float(0o600)), (float(0o600), 0o600),
+                            (True, 1), (1, True), (False, 0), (0, False),
+                            (-1, -1), (0o10000, 0o10000)]:
             with self.subTest(before_mode=left, after_mode=right):
                 self.assertEqual(self.classify(before, after, before_mode=left, after_mode=right), 'preservation_failed')
+
+
+    def test_usage_numeric_boundaries_reject_zero_counts_and_negative_values(self):
+        before, after = self.states()
+        for field, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            boundary = copy.deepcopy(after)
+            boundary[field][key] = {name: 1 if name == 'usageCount' else 0 for name in boundary[field][key]}
+            self.assertEqual(self.classify(before, boundary), 'native_bookkeeping_residue')
+            for name in boundary[field][key]:
+                for invalid in ([0, -1] if name == 'usageCount' else [-1]):
+                    with self.subTest(container=field, value=name, invalid=invalid):
+                        changed = copy.deepcopy(boundary)
+                        changed[field][key][name] = invalid
+                        self.assertEqual(self.classify(before, changed), 'preservation_failed')
+
+    def test_timestamp_only_and_independent_usage_additions_are_restorable(self):
+        before, populated = self.states()
+        timestamp_only = copy.deepcopy(before)
+        timestamp_only['cachedGrowthBookFeaturesAt'] = populated['cachedGrowthBookFeaturesAt']
+        self.assertEqual(self.classify(before, timestamp_only), 'native_bookkeeping_residue')
+        for field, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            independent = copy.deepcopy(before)
+            independent[field][key] = populated[field][key]
+            self.assertEqual(self.classify(before, independent), 'native_bookkeeping_residue')
+        empty = {key: value for key, value in before.items() if key not in ('pluginUsage', 'skillUsage')}
+        self.assertEqual(self.classify(empty, empty), 'unchanged')
+        for field, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            added = copy.deepcopy(empty)
+            added[field] = {key: populated[field][key]}
+            self.assertEqual(self.classify(empty, added), 'native_bookkeeping_residue')
+        timestamp_only = dict(empty, cachedGrowthBookFeaturesAt=20)
+        self.assertEqual(self.classify(empty, timestamp_only), 'native_bookkeeping_residue')
+
+    def test_inconsistent_fixture_names_are_rejected_even_for_unchanged_bytes(self):
+        before, _ = self.states()
+        data = json.dumps(before).encode()
+        for plugin, namespace in [('', 'package:probe'), ('package', 'other:probe'), ('package', 'probe')]:
+            with self.subTest(plugin=plugin, namespace=namespace):
+                self.assertEqual(q.classify_claude_inline_bookkeeping(data, data, 0o600, 0o600,
+                    plugin_name=plugin, namespace=namespace), 'preservation_failed')
+
+    def test_malformed_and_nonobject_configurations_are_rejected(self):
+        before, after = self.states()
+        valid_before, valid_after = json.dumps(before).encode(), json.dumps(after).encode()
+        for invalid in [b'{', b'[]', b'null', b'17', b'true', b'"text"', None]:
+            for side in ('before', 'after'):
+                with self.subTest(side=side, invalid=invalid):
+                    left, right = (invalid, valid_after) if side == 'before' else (valid_before, invalid)
+                    self.assertEqual(q.classify_claude_inline_bookkeeping(left, right, 0o600, 0o600,
+                        plugin_name='package', namespace='package:probe'), 'preservation_failed')
+
+    def test_nonmapping_usage_containers_and_owned_entries_are_rejected(self):
+        before, after = self.states()
+        for field, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            for invalid in (None, [], 1, 'not-a-map', True):
+                for side in ('before', 'after'):
+                    with self.subTest(container=field, side=side, invalid=invalid):
+                        left, right = copy.deepcopy(before), copy.deepcopy(after)
+                        (left if side == 'before' else right)[field] = invalid
+                        self.assertEqual(self.classify(left, right), 'preservation_failed')
+                with self.subTest(entry=field, invalid=invalid):
+                    changed = copy.deepcopy(after)
+                    changed[field][key] = invalid
+                    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+
+    def test_existing_owned_keys_removed_containers_and_format_only_changes_are_rejected(self):
+        before, after = self.states()
+        for field, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            previous = copy.deepcopy(before)
+            previous[field][key] = after[field][key]
+            changed = dict(previous, cachedGrowthBookFeaturesAt=20)
+            self.assertEqual(self.classify(previous, changed), 'preservation_failed')
+            previous[field] = {}
+            changed = copy.deepcopy(previous)
+            changed.pop(field)
+            changed['cachedGrowthBookFeaturesAt'] = 20
+            self.assertEqual(self.classify(previous, changed), 'preservation_failed')
+        self.assertEqual(q.classify_claude_inline_bookkeeping(
+            json.dumps(before).encode(), json.dumps(before, indent=2).encode(), 0o600, 0o600,
+            plugin_name='package', namespace='package:probe'), 'preservation_failed')
 
 
 class ClaudeAuthenticatedRetry(unittest.TestCase):
@@ -518,10 +601,24 @@ class ClaudeAuthenticatedRetry(unittest.TestCase):
         campaign = self.read('campaign-pins.json')
         pin = next(row for row in campaign['pins'] if row['client'] == 'claude')
         sessions = set()
+        previous_finish = None
+        self.assertEqual(len(campaign['pins']), 4)
+        self.assertEqual({row['client'] for row in campaign['pins']}, set(PINS))
         for phase in ('positive', 'baseline', 'candidate'):
             with self.subTest(phase=phase):
                 receipt, events = self.read(phase + '-receipt.json'), self.read(phase + '-native-selection.json')
                 version = self.read(phase + '-version-receipt.json')
+                started = datetime.datetime.fromisoformat(receipt['started_at_utc'])
+                finished = datetime.datetime.fromisoformat(receipt['finished_at_utc'])
+                self.assertEqual(started.tzinfo, datetime.timezone.utc)
+                self.assertEqual(finished.tzinfo, datetime.timezone.utc)
+                self.assertLess(started, finished)
+                if previous_finish is not None:
+                    self.assertLess(previous_finish, started)
+                else:
+                    for probe in campaign['pins']:
+                        self.assertLess(datetime.datetime.fromisoformat(probe['finished_at_utc']), started)
+                previous_finish = finished
                 project = fixture['positive_project'] if phase == 'positive' else fixture['candidate_project']
                 package = fixture['foreign_package'] if phase == 'candidate' else fixture['native_package']
                 self.assertEqual(receipt['cwd'], project)
@@ -577,3 +674,29 @@ class ClaudeAuthenticatedRetry(unittest.TestCase):
             preservation['before'][global_path]['mode'], preservation['after_native_cleanup'][global_path]['mode'],
             plugin_name=fixture['plugin_name'], namespace=fixture['namespace']), 'native_bookkeeping_residue')
         self.assertEqual(preservation['residue'][global_path], 'native_bookkeeping_residue')
+
+    def test_later_authentication_diagnostic_keeps_roots_and_profile_state(self):
+        diagnostic = self.read('auth-diagnostic-repeat.json')
+        self.assertEqual(diagnostic['differing_environment_keys'], ['USER'])
+        self.assertIs(diagnostic['other_environment_values_equal'], True)
+        self.assertEqual(diagnostic['model_requests'], 0)
+        self.assertIs(diagnostic['raw_auth_output_retained'], False)
+        self.assertEqual(diagnostic['profile_roots'], {
+            'HOME': '$CLAUDE_PROFILE_ROOT/home', 'USERPROFILE': '$CLAUDE_PROFILE_ROOT/home',
+            'CLAUDE_CONFIG_DIR': '$CLAUDE_PROFILE_ROOT/home/.claude'})
+        self.assertEqual(diagnostic['measured_before'], diagnostic['measured_after'])
+        self.assertEqual(diagnostic['measured_before'], self.read('preservation.json')['after_restoration'])
+        probes = diagnostic['probes']
+        self.assertEqual(len(probes), 3)
+        previous_finish = datetime.datetime.fromisoformat(self.read('candidate-receipt.json')['finished_at_utc'])
+        for probe, expected, exit_code in zip(probes, [True, False, True], [0, 1, 0]):
+            with self.subTest(probe=probe['label']):
+                self.assertIs(probe['USER_present'], expected)
+                self.assertIs(probe['logged_in'], expected)
+                self.assertEqual(probe['exit_code'], exit_code)
+                self.assertEqual(probe['command'], ['$CLIENT_BIN/claude', 'auth', 'status'])
+                started = datetime.datetime.fromisoformat(probe['started_at_utc'])
+                finished = datetime.datetime.fromisoformat(probe['finished_at_utc'])
+                self.assertLess(previous_finish, started)
+                self.assertLess(started, finished)
+                previous_finish = finished

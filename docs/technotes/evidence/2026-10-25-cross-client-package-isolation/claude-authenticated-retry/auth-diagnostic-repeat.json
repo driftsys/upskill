@@ -1,0 +1,143 @@
+{
+  "kind": "later read-only diagnostic repeat, after the Q11 native controls",
+  "client_version": "2.1.308 (Claude Code)",
+  "model_requests": 0,
+  "differing_environment_keys": [
+    "USER"
+  ],
+  "other_environment_values_equal": true,
+  "profile_roots": {
+    "HOME": "$CLAUDE_PROFILE_ROOT/home",
+    "USERPROFILE": "$CLAUDE_PROFILE_ROOT/home",
+    "CLAUDE_CONFIG_DIR": "$CLAUDE_PROFILE_ROOT/home/.claude"
+  },
+  "probes": [
+    {
+      "label": "with_USER",
+      "command": [
+        "$CLIENT_BIN/claude",
+        "auth",
+        "status"
+      ],
+      "cwd": "$AUTH_DIAGNOSTIC",
+      "started_at_utc": "2026-10-25T21:51:28.580309+00:00",
+      "finished_at_utc": "2026-10-25T21:51:29.139358+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "229992e4d46d21ddc9ad89d723b2b87cfebc7919b9f2d7469ee5b009f783d4a8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "USER_present": true,
+      "logged_in": true,
+      "auth_method": "claude.ai"
+    },
+    {
+      "label": "without_USER",
+      "command": [
+        "$CLIENT_BIN/claude",
+        "auth",
+        "status"
+      ],
+      "cwd": "$AUTH_DIAGNOSTIC",
+      "started_at_utc": "2026-10-25T21:51:29.139496+00:00",
+      "finished_at_utc": "2026-10-25T21:51:29.302465+00:00",
+      "exit_code": 1,
+      "stdout_sha256": "48c10a277aa42efcf620963eab5491ad6b9c9deb1b510d0ad81eb1326a5a8c8d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "USER_present": false,
+      "logged_in": false,
+      "auth_method": "none"
+    },
+    {
+      "label": "with_USER_again",
+      "command": [
+        "$CLIENT_BIN/claude",
+        "auth",
+        "status"
+      ],
+      "cwd": "$AUTH_DIAGNOSTIC",
+      "started_at_utc": "2026-10-25T21:51:29.302573+00:00",
+      "finished_at_utc": "2026-10-25T21:51:29.499096+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "229992e4d46d21ddc9ad89d723b2b87cfebc7919b9f2d7469ee5b009f783d4a8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "USER_present": true,
+      "logged_in": true,
+      "auth_method": "claude.ai"
+    }
+  ],
+  "measured_before": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+      "mode": 384
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "measured_after": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+      "mode": 384
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "raw_auth_output_retained": false,
+  "selection": "Only logged-in/auth-method fields are retained. Raw stdout/stderr digests were computed in memory; account metadata and credential data are not exported."
+}

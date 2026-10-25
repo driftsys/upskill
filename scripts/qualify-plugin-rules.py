@@ -57,7 +57,7 @@ def write_json(path, value):
 def fixture_environment(root):
     """Use only declared disposable roots; do not inherit auth/config overrides."""
     root = root.resolve()
-    # Native keychain lookup needs the OS account name; credentials stay native.
+    # Preserve OS account identity for native authentication without token overrides.
     env = {k: v for k, v in os.environ.items()
            if k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot', 'USER')}
     home = root / 'home'
