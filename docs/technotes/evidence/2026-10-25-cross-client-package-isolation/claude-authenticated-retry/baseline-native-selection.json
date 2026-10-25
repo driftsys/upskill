@@ -1,0 +1,50 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "a9b0316f-348c-410d-a167-14d181319fee",
+    "slash_commands": [],
+    "plugins": []
+  },
+  {
+    "type": "assistant",
+    "session_id": "a9b0316f-348c-410d-a167-14d181319fee",
+    "message": {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01DBHs8QzjBnBevKUt5grx7S",
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65"
+          },
+          "caller": {
+            "type": "direct"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "user",
+    "session_id": "a9b0316f-348c-410d-a167-14d181319fee",
+    "message": {
+      "content": [
+        {
+          "type": "tool_result",
+          "content": "<tool_use_error>Unknown skill: upskill-q11-d717abd66a1faf22:probe-a824959738214f65</tool_use_error>",
+          "is_error": true,
+          "tool_use_id": "toolu_01DBHs8QzjBnBevKUt5grx7S"
+        }
+      ]
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "permission_denials": [],
+    "session_id": "a9b0316f-348c-410d-a167-14d181319fee",
+    "result": "ABSENT_46f338d4b5a6ceb1ac4c444ad1ee1bd7"
+  }
+]

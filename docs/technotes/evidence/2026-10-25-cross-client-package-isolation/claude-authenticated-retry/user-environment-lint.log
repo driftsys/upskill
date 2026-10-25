@@ -1,0 +1,18 @@
+cargo clippy -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.34s
+cargo fmt -- --check
+prim fmt --check --exclude 'tests/fixtures/**'
+prim lint .
+shellcheck install.sh bootstrap
+python3 scripts/test-precommit-hook.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 1.136s
+
+OK
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+..................................................................................................................................................................................................................................
+----------------------------------------------------------------------
+Ran 226 tests in 22.436s
+
+OK

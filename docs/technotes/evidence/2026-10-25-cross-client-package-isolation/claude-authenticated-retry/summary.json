@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-25",
+  "platform": "macOS arm64",
+  "pin": "2.1.308",
+  "intended_reader": "copilot",
+  "actual_reader": "claude",
+  "selector": "session --plugin-dir",
+  "result": "FAIL",
+  "classification": {
+    "isolation": "activation_observed",
+    "preservation": "unchanged"
+  },
+  "positive": {
+    "catalog": true,
+    "namespaced_activation_count": 1,
+    "exact_response": true
+  },
+  "baseline": {
+    "catalog_absent": true,
+    "native_namespaced_not_found": true,
+    "activation_count": 0,
+    "exact_absence_response": true
+  },
+  "candidate": {
+    "catalog": true,
+    "namespaced_activation_count": 1,
+    "exact_response": true,
+    "runtime_source": "$RETRY_FIXTURE/claude/delivery/foreign/upskill-q11-d717abd66a1faf22"
+  },
+  "package_bytes_and_modes_unchanged": true,
+  "measured_profile_restored": true,
+  "whole_profile_equal": false,
+  "other_clients_model_controls": "not_run",
+  "production_routes_changed": false,
+  "limits": [
+    "One macOS arm64 CLI, package shape and explicit session selector; no persisted marketplace scope, Q10 overlap, IDE or Linux qualification.",
+    "Copilot reading a Claude package remains blocked by its separate exact-response positive.",
+    "Existing discovery settings and synced plugins remain enabled. Explicit pointing is a control, not general discovery suppression."
+  ]
+}

@@ -1,0 +1,89 @@
+EEEEEEE...........................
+======================================================================
+ERROR: test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected) (field='oauthAccount')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 479, in test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected
+    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected) (field='skills')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 479, in test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected
+    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected) (field='pluginUsage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 479, in test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected
+    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected) (field='skillUsage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 479, in test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected
+    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 480, in test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected
+    self.assertEqual(self.classify(before, after, after_mode=0o644), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_only_owned_inline_usage_and_cache_timestamp_are_restorable (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_only_owned_inline_usage_and_cache_timestamp_are_restorable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 468, in test_only_owned_inline_usage_and_cache_timestamp_are_restorable
+    self.assertEqual(self.classify(before, before), 'unchanged')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+======================================================================
+ERROR: test_unexpected_usage_fields_and_scalar_types_are_rejected (test_qualify_cross_client_isolation.ClaudeInlineBookkeeping.test_unexpected_usage_fields_and_scalar_types_are_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 487, in test_unexpected_usage_fields_and_scalar_types_are_rejected
+    self.assertEqual(self.classify(before, changed), 'preservation_failed')
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "$REPO/scripts/tests/test_qualify_cross_client_isolation.py", line 463, in classify
+    return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'qualification' has no attribute 'classify_claude_inline_bookkeeping'
+
+----------------------------------------------------------------------
+Ran 30 tests in 2.245s
+
+FAILED (errors=7)

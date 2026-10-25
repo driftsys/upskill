@@ -57,8 +57,9 @@ def write_json(path, value):
 def fixture_environment(root):
     """Use only declared disposable roots; do not inherit auth/config overrides."""
     root = root.resolve()
+    # Native keychain lookup needs the OS account name; credentials stay native.
     env = {k: v for k, v in os.environ.items()
-           if k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot')}
+           if k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'SystemRoot', 'USER')}
     home = root / 'home'
     env.update(HOME=str(home), USERPROFILE=str(home), CODEX_HOME=str(home / '.codex'),
                CLAUDE_CONFIG_DIR=str(home / '.claude'), COPILOT_HOME=str(home / '.copilot'),
@@ -150,6 +151,50 @@ def classify_claude_settings(before, after, before_mode, after_mode):
     if json.dumps(remaining, sort_keys=True) != json.dumps(old, sort_keys=True):
         return 'preservation_failed'
     return 'empty_object_residue' if added else 'preservation_failed'
+
+
+def classify_claude_inline_bookkeeping(before, after, before_mode, after_mode, *, plugin_name, namespace):
+    """Recognize only the measured inline fixture's usage and cache timestamp."""
+    if (type(before_mode) is not int or type(after_mode) is not int
+            or not 0 <= before_mode <= 0o7777 or before_mode != after_mode
+            or not plugin_name or not namespace.startswith(plugin_name + ':')):
+        return 'preservation_failed'
+    if before == after:
+        return 'unchanged'
+    try:
+        old, new = json.loads(before), json.loads(after)
+    except (ValueError, TypeError):
+        return 'preservation_failed'
+    if not isinstance(old, dict) or not isinstance(new, dict):
+        return 'preservation_failed'
+    def same(a, b):
+        return json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+    allowed = {'pluginUsage', 'skillUsage', 'cachedGrowthBookFeaturesAt'}
+    if not same({k: v for k, v in old.items() if k not in allowed},
+                {k: v for k, v in new.items() if k not in allowed}):
+        return 'preservation_failed'
+    old_time, new_time = old.get('cachedGrowthBookFeaturesAt'), new.get('cachedGrowthBookFeaturesAt')
+    if type(old_time) is not int or type(new_time) is not int or new_time < old_time:
+        return 'preservation_failed'
+    changed = old_time != new_time
+    for field, key, fields in (
+            ('pluginUsage', plugin_name + '@inline', {'usageCount', 'lastUsedAt', 'lastUsedNumStartups'}),
+            ('skillUsage', namespace, {'usageCount', 'lastUsedAt'})):
+        previous, current = old.get(field, {}), new.get(field, {})
+        if not isinstance(previous, dict) or not isinstance(current, dict) or key in previous:
+            return 'preservation_failed'
+        if not same(previous, {k: v for k, v in current.items() if k != key}):
+            return 'preservation_failed'
+        if key in current:
+            entry = current[key]
+            if (not isinstance(entry, dict) or set(entry) != fields
+                    or any(type(value) is not int or value < 0 for value in entry.values())
+                    or entry['usageCount'] < 1):
+                return 'preservation_failed'
+            changed = True
+        elif (field in old) != (field in new):
+            return 'preservation_failed'
+    return 'native_bookkeeping_residue' if changed else 'preservation_failed'
 
 
 def prepare_codex_rule_lifecycle(root):

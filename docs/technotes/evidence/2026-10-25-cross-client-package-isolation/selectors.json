@@ -15,5 +15,7 @@
     "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
     "https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/plugin-directories"
   ],
-  "installed_help": "Both installed CLIs advertise --plugin-dir. Copilot skill list has --json; runtime session.skills_loaded carries commandName independently from display name."
+  "installed_help": "Both installed CLIs advertise --plugin-dir. Copilot skill list has --json; runtime session.skills_loaded carries commandName independently from display name.",
+  "evidence_scope": "Initial failed-positive attempts; not_run entries describe that historical attempt. The latest authenticated Claude candidate ran separately.",
+  "latest_claude_evidence": "claude-authenticated-retry/summary.json"
 }

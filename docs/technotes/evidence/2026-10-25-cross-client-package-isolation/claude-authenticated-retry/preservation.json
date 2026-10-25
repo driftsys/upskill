@@ -1,0 +1,124 @@
+{
+  "before": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+      "mode": 384
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "after_native_cleanup": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "3dbd8137d7d36c42ddc48105a2d5fa3462b16caa4dd1856d7e7ee39fa976f6ed",
+      "mode": 384
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "residue": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": "unchanged",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": "native_bookkeeping_residue",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": "unchanged",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": "unchanged",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": "unchanged",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": "unchanged",
+    "/Library/Application Support/ClaudeCode/managed-settings.json": "unchanged"
+  },
+  "after_restoration": {
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+      "present": true,
+      "sha256": "db2cfcbea4ebe8874a597832c791a817daf6c053c49007e0b4a4ff7a47dcb583",
+      "mode": 384
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+      "present": true,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "mode": 420
+    },
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+      "present": true,
+      "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+      "mode": 420
+    },
+    "/Library/Application Support/ClaudeCode/managed-settings.json": {
+      "present": false,
+      "sha256": null,
+      "mode": null
+    }
+  },
+  "measured_restored": true,
+  "whole_profile_equal": false
+}

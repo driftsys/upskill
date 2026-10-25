@@ -29,5 +29,9 @@
   },
   "production_route_changed": false,
   "other_clients_exercised": false,
-  "preservation_limit": "Equality is limited to originally measured settings/config.json/registry paths. Claude .claude.json and managed settings were not measured before; whole-profile preservation is unqualified."
+  "preservation_limit": "Equality is limited to originally measured settings/config.json/registry paths. Claude .claude.json and managed settings were not measured before; whole-profile preservation is unqualified.",
+  "latest_controls": {
+    "claude": "claude-authenticated-retry/summary.json",
+    "copilot": "copilot-slash-retry/summary.json"
+  }
 }

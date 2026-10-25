@@ -1,11 +1,13 @@
-# Gate 6 cross-client package isolation: blocked positives
+# Gate 6 cross-client package isolation: Claude activation observed
 
 Task [#410](https://github.com/driftsys/upskill/issues/410), Q11 of the
 [implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
-retains two failed native positives on macOS arm64, 2026-10-25. Neither target
-reaches its absence baseline or foreign-package candidate. This packet does not
-establish isolation or unintended cross-client activation. Production routing
-and durable architecture records are unchanged.
+retains a bounded isolation FAIL on macOS arm64, 2026-10-25: Claude 2.1.308
+activates the Copilot-shaped package through the explicit session selector after
+its native positive and clean absence baseline pass. Copilot's opposite
+direction remains blocked by its exact-response positive. Earlier failed
+attempts remain retained unchanged. Production routing and durable architecture
+records are unchanged.
 
 ## Scope and method
 
@@ -18,6 +20,7 @@ deferred. No Codex, OpenCode, Linux, IDE or hosted qualification is inferred.
 Both installed CLIs document `--plugin-dir`. This attempt selects that explicit,
 session-only local-package route for both native positive and foreign candidate.
 This is narrower than persisted project/user marketplace installation. The
+initial
 [selector inventory](evidence/2026-10-25-cross-client-package-isolation/selectors.json)
 records other selectors as unrun. Documentation describes candidate behavior; it
 does not replace native evidence
@@ -51,7 +54,7 @@ positive, selector-free catalog/invocation baseline after the positive process
 exits, then foreign selector with catalog and invocation. A failed positive
 stops the latter phases. Missing catalog alone could never establish isolation.
 
-## Native observations
+## Earlier failed-positive observations
 
 | Target  | Pin     | Positive observation                                                                                                                                                                                | Disposition        |
 | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
@@ -79,13 +82,13 @@ promoted to a namespaced positive. The
 records exit 0; successful process completion alone does not meet the control.
 No agent delegation or other model tool occurs.
 
-Both
+Both initial
 [classifications](evidence/2026-10-25-cross-client-package-isolation/summary.json)
 are independently replayable from selected native records. Baselines and foreign
 candidates are **not run**, rather than isolation passes or failures. In
-particular, this packet says nothing about whether Copilot activates a Claude
-package through its documented legacy manifest reader. Every unexercised
-selector and compatibility reader remains outside this observation.
+particular, those failed-positive attempts say nothing about whether Copilot
+activates a Claude package through its documented legacy manifest reader. Every
+unexercised selector and compatibility reader remains outside this observation.
 
 ## Copilot explicit slash retry
 
@@ -173,16 +176,16 @@ as activation even when the response is not an exact marker match.
 
 The reviewed builder fingerprints package envelopes as well as portable skill
 trees and records each package's intended client and manifest path. Envelope
-hashes were not captured before this native attempt. Its failed positives remain
-valid blockers, but its envelopes cannot support later candidate qualification
-without a fresh before/after capture.
+hashes were not captured before the initial failed-positive attempt. Its failed
+positives remain retained blockers for that attempt; the authenticated retry
+below uses a fresh before/after envelope capture.
 
-Q11 stays open. Claude needs normal isolated authentication renewal before a new
-pinned positive. Copilot's direct slash request loads skill content but still
-fails the exact response contract; a new positive must meet the declared
-response policy before a foreign-package candidate can be interpreted. This
-packet qualifies neither a complete slice-2 package profile nor Q10 overlap.
-Retained results must not be relabeled after a later retry.
+Q11 stays open. Claude's authenticated direction now has a retained activation
+FAIL, rather than an isolation PASS. Copilot's direct slash request loads skill
+content but still fails the exact response contract; a new positive must meet
+the declared response policy before its foreign-package candidate can be
+interpreted. This packet qualifies neither a complete slice-2 package profile
+nor Q10 overlap. Earlier results are not relabeled by the authenticated retry.
 
 The
 [private-source index](evidence/2026-10-25-cross-client-package-isolation/private-source-index.json)
@@ -206,3 +209,83 @@ successful tool results. Other tests pin invalid campaign inputs, package-entry
 guards, the untrimmed slash-retry response and complete public receipt hashes.
 The plan's result enumeration now includes both baseline-blocking outcomes.
 These changes do not rerun a native control or alter an earlier native verdict.
+
+## Authenticated Claude retry
+
+After the user's normal isolated login, a tool-free request confirms successful
+authentication. A controlled environment comparison shows that retaining the OS
+`USER` variable makes native keychain lookup work with the same isolated roots.
+The harness now preserves that identity variable while continuing to strip
+token, API-key, Git and client-root overrides. Two offline regressions pin
+preservation of `USER`, removal of secret overrides and absence of an invented
+account name. No credentials are copied and no normal-profile fallback is used.
+
+A fresh
+[four-client campaign](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/campaign-pins.json)
+precedes the new Claude fixture. The pins remain Claude 2.1.308, Copilot
+1.0.103, Codex 0.164.0 and OpenCode 2.1.4. Only Claude runs model controls in
+this retry. The
+[fixture](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/fixture.json)
+records Claude as the native intended reader and Copilot as the foreign
+package's intended reader, both manifest paths, identical skill/resource bytes
+and modes, and full package-envelope fingerprints.
+
+| Phase             | Selector and native evidence                                                                                                                                          | Result         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Native positive   | Claude-shaped package through `--plugin-dir`; catalog, one exact namespaced `Skill` call, correlated success, exact content marker                                    | PASS           |
+| Absence baseline  | No selector in the candidate project; absent catalog entry, explicit exact namespaced call returns native not-found, exact absence marker, zero activations           | PASS           |
+| Foreign candidate | Copilot-shaped root `plugin.json` package through `--plugin-dir`; catalog, one exact namespaced activation, exact content marker, runtime path in the foreign package | Isolation FAIL |
+
+The three fresh processes have distinct native session IDs. The content marker
+is absent from every prompt. The baseline runs after the positive process exits;
+its successful absence calibration precedes the candidate. The selected records
+and command/version receipts retain those separate boundaries
+([positive](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/positive-native-selection.json),
+[baseline](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/baseline-native-selection.json),
+[candidate](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/candidate-native-selection.json)).
+Phase replay binds the existing positive inspector to each phase's declared cwd
+and source package, checks the actual receipt cwd, and then classifies against
+the original paired fixture. Envelopes, skills and modes remain unchanged; no
+on-disk conversion or persistent installation is observed.
+
+This establishes an activation counterexample for one pinned client, package
+shape and session selector. It does not establish all compatibility readers,
+marketplace scopes, duplicate lifetimes, provider-effective input uniqueness,
+Q10 overlap or other clients. Existing synced plugins and discovery preferences
+remain enabled. Copilot's own failed-positive direction is not rerun or
+inferred.
+
+### Measured preservation
+
+The retry measures both possible `.claude.json` locations, profile settings,
+local settings, installation/marketplace registries and the system managed
+settings file. The live capture retains original configuration bytes only in
+memory. Native inline calls change the numeric feature-cache timestamp and only
+the fixture's `pluginUsage` and `skillUsage` entries. They remain present
+through the baseline and candidate, so the absence control is not manufactured
+by clearing usage state.
+
+A tested pure guard permits only those observed numeric bookkeeping shapes and
+exact owned keys. Unrelated account, discovery, usage or permission changes stop
+restoration. After all native processes exit, the helper records residue,
+rechecks the observed bytes, restores only the measured bookkeeping file, and
+verifies every measured file's original presence, hash and mode. The profile
+lock is released after that check
+([preservation](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/preservation.json),
+[residue](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/native-bookkeeping-residue.json)).
+
+A
+[filtered witness](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/bookkeeping-witness.json)
+retains the fixture's usage values and hashes of all unrelated semantic fields
+and entries. Its replay verifies the selected bookkeeping shape; full original
+auth-bearing configuration is not published. Native authentication, logs, caches
+and synced effects remain outside whole-profile equality. Neutral fixtures stay
+private for replay. No direct native cache writes or cleanup are performed.
+
+The environment regression fails before the allowlist fix. Three bookkeeping
+regressions fail before that guard exists; a mode-type/range regression also
+fails before stricter validation. All 33 focused Q11 tests then pass, including
+replay of these three native phases and the filtered restoration witness. Full
+verification and source epochs are retained with the packet
+([source index](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/private-source-index.json),
+[summary](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json)).

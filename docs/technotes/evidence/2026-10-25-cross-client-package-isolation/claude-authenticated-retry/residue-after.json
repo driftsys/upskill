@@ -1,0 +1,10 @@
+{
+  "fixture_disposition": "Neutral fixture and disposable Git projects retained privately for replay.",
+  "native_cleanup": "Every Claude print process exited; --plugin-dir creates no persistent registration. Only measured inline usage/cache bookkeeping was restored after recording residue.",
+  "excluded_effects": [
+    "Native authentication/keychain refresh",
+    "Native session/log/cache and synced plugin effects"
+  ],
+  "cache_scope": "After-only presence, no whole-profile equality or creation attribution",
+  "profile_plugin_cache_present": true
+}

@@ -1,0 +1,29 @@
+{
+  "other_fields_before_sha256": "0b1f7c49a120852f4b6bedef60de10208855205335a95bea1eaa69a8c8c44c3a",
+  "other_fields_after_sha256": "0b1f7c49a120852f4b6bedef60de10208855205335a95bea1eaa69a8c8c44c3a",
+  "cached_timestamp_before": 1792961294860,
+  "cached_timestamp_after": 1792962227062,
+  "usage": {
+    "pluginUsage": {
+      "owned_key": "upskill-q11-d717abd66a1faf22@inline",
+      "owned_before": null,
+      "owned_after": {
+        "usageCount": 2,
+        "lastUsedAt": 1792962229684,
+        "lastUsedNumStartups": 1
+      },
+      "other_before_sha256": "d56bf2d9b9c0979ff613d30283359527541f9be7ae3202066fa587acda55ddc6",
+      "other_after_sha256": "d56bf2d9b9c0979ff613d30283359527541f9be7ae3202066fa587acda55ddc6"
+    },
+    "skillUsage": {
+      "owned_key": "upskill-q11-d717abd66a1faf22:probe-a824959738214f65",
+      "owned_before": null,
+      "owned_after": {
+        "usageCount": 2,
+        "lastUsedAt": 1792962229683
+      },
+      "other_before_sha256": "52511815c42162a12c14969e66babd47765f2a657698ab0206da0cbf9ba47e6d",
+      "other_after_sha256": "52511815c42162a12c14969e66babd47765f2a657698ab0206da0cbf9ba47e6d"
+    }
+  }
+}

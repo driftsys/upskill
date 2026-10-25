@@ -5,10 +5,12 @@
 > tracking.
 
 **Attempt disposition:** The offline harness and the first failed-positive
-packet are implemented and verified. Both target positives are blocked, so the
-absence baselines and foreign-package controls remain unrun. This plan stays
-active for the unfinished Q11 controls; it is not an archived claim of completed
-qualification. The retained attempt is described in the
+packet are implemented and verified. A fresh authenticated Claude retry now
+passes its native positive and clean baseline, then activates the Copilot-shaped
+package: bounded isolation FAIL. Copilot's opposite direction remains blocked by
+its exact-response positive. This plan stays active for unfinished controls and
+package profiles; it is not an archived claim of complete qualification. The
+retained attempt is described in the
 [technote](../../technotes/gate6-cross-client-package-isolation.md).
 
 **Goal:** Retain bounded evidence for Claude reading a Copilot package and
@@ -196,3 +198,18 @@ issue criteria take priority over suggestions that broaden Q11 into Q10.
 - The original native fixtures lack before-envelope hashes; the reviewed builder
   captures them for future controls. Both original classifications remain
   blocked.
+
+## Authenticated Claude retry disposition
+
+- Preserve OS `USER` for normal keychain lookup while stripping auth and client
+  configuration overrides; native credentials stay in their ordinary store.
+- Fresh pins and fixtures precede a successful Claude namespaced positive and
+  explicit native not-found absence baseline. The foreign Copilot-shaped package
+  then activates through `--plugin-dir`, giving a retained isolation FAIL.
+- Measure actual global `.claude.json` and restore only tested fixture-owned
+  usage and a numeric cache timestamp after process cleanup. Other semantic
+  fields, modes and files must remain unchanged. Record residue before exact
+  restoration.
+- Keep earlier failed attempts and Copilot's blocked opposite direction
+  separate. No production or durable-route amendment follows from this
+  counterexample.

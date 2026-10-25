@@ -445,3 +445,135 @@ class CrossClientNativeReplay(unittest.TestCase):
         for name, path in paths.items():
             with self.subTest(file=name):
                 self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), manifest[name])
+
+
+class ClaudeInlineBookkeeping(unittest.TestCase):
+    def states(self):
+        before = {'oauthAccount': {'id': 'manual-account'}, 'skills': ['manual-source'],
+                  'cachedGrowthBookFeaturesAt': 10,
+                  'pluginUsage': {'manual@market': {'usageCount': 2}},
+                  'skillUsage': {'manual:skill': {'usageCount': 3}}}
+        after = copy.deepcopy(before)
+        after['cachedGrowthBookFeaturesAt'] = 20
+        after['pluginUsage']['package@inline'] = {'usageCount': 1, 'lastUsedAt': 20, 'lastUsedNumStartups': 1}
+        after['skillUsage']['package:probe'] = {'usageCount': 1, 'lastUsedAt': 20}
+        return before, after
+
+    def classify(self, before, after, before_mode=0o600, after_mode=0o600):
+        return q.classify_claude_inline_bookkeeping(json.dumps(before).encode(), json.dumps(after).encode(),
+                                                    before_mode, after_mode, plugin_name='package', namespace='package:probe')
+
+    def test_only_owned_inline_usage_and_cache_timestamp_are_restorable(self):
+        before, after = self.states()
+        self.assertEqual(self.classify(before, before), 'unchanged')
+        self.assertEqual(self.classify(before, after), 'native_bookkeeping_residue')
+
+    def test_manual_auth_discovery_or_unrelated_usage_changes_are_rejected(self):
+        before, after = self.states()
+        for field, value in [('oauthAccount', {'id': 'changed-account'}), ('skills', ['changed-source']),
+                             ('pluginUsage', {'manual@market': {'usageCount': 99}}),
+                             ('skillUsage', {'manual:skill': {'usageCount': 99}})]:
+            with self.subTest(field=field):
+                changed = copy.deepcopy(after)
+                changed[field] = value
+                self.assertEqual(self.classify(before, changed), 'preservation_failed')
+        self.assertEqual(self.classify(before, after, after_mode=0o644), 'preservation_failed')
+
+    def test_unexpected_usage_fields_and_scalar_types_are_rejected(self):
+        before, after = self.states()
+        for field, value in [('cachedGrowthBookFeaturesAt', True), ('cachedGrowthBookFeaturesAt', 1)]:
+            changed = copy.deepcopy(after)
+            changed[field] = value
+            original = copy.deepcopy(before)
+            if value is True:
+                original[field] = 0
+            self.assertEqual(self.classify(original, changed), 'preservation_failed')
+        original = copy.deepcopy(before)
+        original['cachedGrowthBookFeaturesAt'] = True
+        self.assertEqual(self.classify(original, after), 'preservation_failed')
+        for scope, key in [('pluginUsage', 'package@inline'), ('skillUsage', 'package:probe')]:
+            changed = copy.deepcopy(after)
+            changed[scope][key]['extra'] = 1
+            self.assertEqual(self.classify(before, changed), 'preservation_failed')
+            changed = copy.deepcopy(after)
+            changed[scope][key]['usageCount'] = True
+            self.assertEqual(self.classify(before, changed), 'preservation_failed')
+
+
+    def test_mode_receipts_reject_noninteger_and_out_of_range_values(self):
+        before, after = self.states()
+        for left, right in [(0o600, float(0o600)), (-1, -1), (0o10000, 0o10000)]:
+            with self.subTest(before_mode=left, after_mode=right):
+                self.assertEqual(self.classify(before, after, before_mode=left, after_mode=right), 'preservation_failed')
+
+
+class ClaudeAuthenticatedRetry(unittest.TestCase):
+    packet = Path(__file__).parents[2] / 'docs/technotes/evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry'
+
+    def read(self, name):
+        return json.loads((self.packet / name).read_text())
+
+    def test_positive_baseline_and_foreign_activation_replay_independently(self):
+        fixture, observation = self.read('fixture.json'), self.read('observation.json')
+        campaign = self.read('campaign-pins.json')
+        pin = next(row for row in campaign['pins'] if row['client'] == 'claude')
+        sessions = set()
+        for phase in ('positive', 'baseline', 'candidate'):
+            with self.subTest(phase=phase):
+                receipt, events = self.read(phase + '-receipt.json'), self.read(phase + '-native-selection.json')
+                version = self.read(phase + '-version-receipt.json')
+                project = fixture['positive_project'] if phase == 'positive' else fixture['candidate_project']
+                package = fixture['foreign_package'] if phase == 'candidate' else fixture['native_package']
+                self.assertEqual(receipt['cwd'], project)
+                self.assertEqual(version['stdout_sha256'], pin['stdout_sha256'])
+                self.assertEqual(version['exit_code'], 0)
+                self.assertLessEqual(version['finished_at_utc'], receipt['started_at_utc'])
+                if phase == 'baseline':
+                    self.assertNotIn('--plugin-dir', receipt['command'])
+                else:
+                    index = receipt['command'].index('--plugin-dir')
+                    self.assertEqual(receipt['command'][index + 1], package)
+                self.assertNotIn(fixture['marker'], receipt['command'][-1])
+                context = dict(fixture, positive_project=project, native_package=package)
+                parsed = q.inspect_cross_client_positive(events, context, exit_code=receipt['exit_code'], timed_out=receipt['timed_out'])
+                self.assertEqual(parsed, observation[phase])
+                self.assertEqual(parsed['state'], 'success')
+                self.assertTrue(parsed['invocation_complete'])
+                self.assertFalse(parsed['unexpected_tools'])
+                self.assertEqual(parsed['invocation_outcome'], 'not_found' if phase == 'baseline' else 'loaded')
+                self.assertEqual(parsed['activations'], 0 if phase == 'baseline' else 1)
+                self.assertEqual(parsed['response'], fixture['absent_marker'] if phase == 'baseline' else fixture['marker'])
+                init = next(event for event in events if event.get('subtype') == 'init')
+                result = next(event for event in events if event['type'] == 'result')
+                self.assertTrue(result['session_id'])
+                self.assertEqual(init['session_id'], result['session_id'])
+                sessions.add(result['session_id'])
+        self.assertEqual(len(sessions), 3)
+        self.assertEqual(fixture['packages'], observation['packages_after'])
+        self.assertEqual(fixture['trees']['native'], fixture['trees']['foreign'])
+        self.assertEqual(q.classify_cross_client_isolation(observation, fixture),
+                         {'isolation': 'activation_observed', 'preservation': 'unchanged'})
+        self.assertEqual(self.read('classification.json'), q.classify_cross_client_isolation(observation, fixture))
+
+    def test_filtered_bookkeeping_witness_and_exact_restoration_receipts(self):
+        fixture, witness = self.read('fixture.json'), self.read('bookkeeping-witness.json')
+        preservation = self.read('preservation.json')
+        self.assertEqual(preservation['before'], preservation['after_restoration'])
+        self.assertIs(preservation['measured_restored'], True)
+        self.assertIs(preservation['whole_profile_equal'], False)
+        before = {'unchanged_fields_sha256': witness['other_fields_before_sha256'],
+                  'cachedGrowthBookFeaturesAt': witness['cached_timestamp_before']}
+        after = {'unchanged_fields_sha256': witness['other_fields_after_sha256'],
+                 'cachedGrowthBookFeaturesAt': witness['cached_timestamp_after']}
+        for field, expected_key in [('pluginUsage', fixture['plugin_name'] + '@inline'), ('skillUsage', fixture['namespace'])]:
+            selected = witness['usage'][field]
+            self.assertEqual(selected['owned_key'], expected_key)
+            self.assertIsNone(selected['owned_before'])
+            before[field] = {'unchanged_entries_sha256': selected['other_before_sha256']}
+            after[field] = {'unchanged_entries_sha256': selected['other_after_sha256'], expected_key: selected['owned_after']}
+        global_path = next(path for path in preservation['before'] if path.endswith('/.claude/.claude.json'))
+        self.assertEqual(q.classify_claude_inline_bookkeeping(
+            json.dumps(before).encode(), json.dumps(after).encode(),
+            preservation['before'][global_path]['mode'], preservation['after_native_cleanup'][global_path]['mode'],
+            plugin_name=fixture['plugin_name'], namespace=fixture['namespace']), 'native_bookkeeping_residue')
+        self.assertEqual(preservation['residue'][global_path], 'native_bookkeeping_residue')

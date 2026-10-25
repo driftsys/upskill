@@ -7,7 +7,18 @@ after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.
 
-## Slice 2 Q11 campaign revision: 2026-10-25
+## Slice 2 Q11 authenticated Claude retry: 2026-10-25
+
+Fresh
+[four-client receipts](evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/campaign-pins.json)
+precede a new neutral fixture on macOS arm64. The installed pins remain Claude
+2.1.308, Copilot 1.0.103, Codex 0.164.0 and OpenCode 2.1.4. Only Claude executes
+model controls: its native positive and absence baseline pass, then the foreign
+Copilot-shaped package activates through the explicit session selector. This is
+a retained isolation FAIL, not route adoption. Copilot's separate opposite
+control remains blocked. Q5 stays deferred and Q10 remains separate.
+
+## Slice 2 Q11 initial campaign revision: 2026-10-25
 
 Fresh four-client receipts precede the separate session-selector Q11 controls.
 Installed releases remain Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and
