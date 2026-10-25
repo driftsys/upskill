@@ -24,6 +24,22 @@ remains deferred. The retained observations below concern macOS arm64; the
 combined release still needs the applicable CD-09/CD-11 evidence
 ([delivery contract][contract], [handoff][handoff]).
 
+## Approval overview
+
+These recommendations are independently reviewable; all remain unapproved.
+Policy approval does not authorize an unidentified configuration selector. If a
+client profile's concrete path, field shape or mode contract is still missing,
+complete its evidence and obtain profile approval before implementing effects.
+
+| Item | Recommendation                                                                                                                                                                                              |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1   | Distinguish exact protected-file preservation from separately reported native cache, authentication, trust, log and session effects. No whole-profile equality claim.                                       |
+| D2   | Allow only operation-created Claude empty containers inside a pre-existing settings file, under the guarded conditions below. No new-file residue allowance.                                                |
+| D3   | Allow bounded Copilot `installedPlugins` empty-container residue only after its concrete configuration/route profile passes. No project-overlay allowance.                                                  |
+| D4   | Start Codex with no configuration-residue exception and no notice/trust repair authority.                                                                                                                   |
+| D5   | Retain managed bytes and an incomplete operation while existing/resumed-session use is unresolved.                                                                                                          |
+| D6   | Keep bounded shared-configuration preservation checks in memory and persist only non-secret native-effect facts; a credential-bearing whole-file writer needs a separate approved capture/storage contract. |
+
 ## Existing requirements
 
 The following requirements already bind this draft:
@@ -132,9 +148,13 @@ operation introduced the container, all owned entries and references in it are
 released, unrelated content remains preserved and native remaining-reader checks
 pass. Existing empty objects remain manual baseline. This is declared residue,
 not exact file equality. It does not permit a newly created empty settings file
-to remain, arbitrary mode changes or a whole settings rewrite. A qualification
-profile must separately pin native-created file modes and absence restoration;
-Q10's pre-existing settings do not prove that case.
+to remain, arbitrary mode changes or a whole settings rewrite. The
+[Q10 restoration receipt][Q10 restoration] records initially absent user
+settings, a native file observed at `0o0644` after cleanup, and restored
+absence. Project settings already existed at `0o0640`. This is bounded
+absence-restoration and cleanup-time mode evidence, not an observation of mode
+at first creation or a universal native-created mode policy. A qualification
+profile must pin the remaining creation, metadata and recovery cases separately.
 
 A marketplace is a separate shared dependency. In Q10 the project binding
 survives user-package removal while a user-scoped marketplace remains known.
@@ -332,3 +352,4 @@ This proposal itself leaves those durable records unchanged.
 [Q8]: ../../technotes/gate6-codex-skill-updates.md
 [Q10]: ../../technotes/gate6-claude-scope-overlap.md
 [Q5]: ../../technotes/gate6-opencode-explicit-paths-retry.md
+[Q10 restoration]: ../../technotes/evidence/2026-10-25-claude-scope-overlap/retry-preservation.json
