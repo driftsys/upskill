@@ -53,12 +53,17 @@
     "source/scripts/tests/test_qualify_cross_client_isolation.py": "21d301fca7db51482e41897c22ee121dc0853f90f708b6b0de9cec35cb161ab9",
     "replay-source/scripts/qualify-plugin-rules.py": "e2f9cafde955e38322c6b4119c954675c9275756796124321647da3199b920e3",
     "replay-source/scripts/tests/test_qualify_cross_client_isolation.py": "191a8c344cfe7e5bc38fb10f34ac97a202dc8c191447934a968d50d62466acdc",
-    "review-mutation-helper.py": "39f66a3aac904e23e6d930b1c1c02959c45ab8ada27ea4674ac4b78138bf1825"
+    "review-mutation-helper.py": "39f66a3aac904e23e6d930b1c1c02959c45ab8ada27ea4674ac4b78138bf1825",
+    "quick-review-fix-source/scripts/tests/test_qualify_cross_client_isolation.py": "b51c9872aba2153fdb4c80c439d7d6ffd134268d8ed5844d0ddd8d76ed551daa",
+    "quick-review-mutation-helper.py": "8b6b41fd8fe7561eed03e4efa714e072bf8bf147e2385ae217cc816cb8a67a19",
+    "quick-review-focused.log": "4d902235e3a4199d2d757d36215ecbc0c656c8b863c51603a24dbd4a392f4563",
+    "quick-review-verify.log": "30d66f8f32f67cadcb58bcdef6789a6f859135d76ee6c3e7656dcbae9a19eb08"
   },
   "epochs": {
     "source/": "Capture-time fixtures/classifier before positive native runs",
     "replay-source/": "Offline inspector and tests added after capture; raw positive records unchanged",
-    "final-review-fix-source/": "Final reviewed corrections; native streams unchanged; final full verification retained privately"
+    "final-review-fix-source/": "Final reviewed corrections; native streams unchanged; final full verification retained privately",
+    "quick-review-fix-source/": "Tests-only quick-review coverage corrections; production helpers and original native evidence unchanged."
   },
   "raw_source_policy": "Native streams, private model selection, original auth-bearing config and raw provider error text are not committed. Config bytes were not copied or written. Selected native records omit reasoning, usage, unrelated catalog entries and private model identifiers."
 }

@@ -11,5 +11,13 @@
   "final_verify_log_sha256": "5f42e13551b7e8f2134fe99f9a54f694a7cb7601ab3c78db0477b03f835a57dc",
   "first_verify": "Before review fixes: just fmt then just verify exit 0; 214 offline tests",
   "review_mutations": "8/8 rejected using the complete 20-test Q11 suite",
-  "publication_checks": "After adding the slash-retry packet: just fmt, just lint (217 tests) and just docs-check passed. No Rust code changed after full verification."
+  "publication_checks": "After adding the slash-retry packet: just fmt, just lint (217 tests) and just docs-check passed. No Rust code changed after full verification.",
+  "quick_review_fixes": {
+    "focused_tests": 27,
+    "mutations_rejected": 6,
+    "mutations_previously_surviving": 6,
+    "native_controls_rerun": false,
+    "full_verify": "just fmt then just verify: exit 0; 224 offline tests plus Rust tests/build/lint and documentation checks passed",
+    "verify_log_sha256": "30d66f8f32f67cadcb58bcdef6789a6f859135d76ee6c3e7656dcbae9a19eb08"
+  }
 }

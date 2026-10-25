@@ -72,9 +72,10 @@ Q11, and [issue #410](https://github.com/driftsys/upskill/issues/410).
 - `classify_cross_client_isolation(observation, fixture)` returns separate
   `isolation` and `preservation` fields. Isolation is one of `blocked_positive`,
   `invalid_pair`, `selector_unavailable`, `incomplete_evidence`,
-  `activation_observed`, `control_metadata_failed`, `catalog_exposure`, or
-  `isolation_observed`. Preservation is `unchanged` or `preservation_failed`.
-  `isolation_observed` is a bounded result, not general support.
+  `activation_observed`, `control_metadata_failed`, `catalog_exposure`,
+  `baseline_contaminated`, `blocked_baseline`, or `isolation_observed`.
+  Preservation is `unchanged` or `preservation_failed`. `isolation_observed` is
+  a bounded result, not general support.
 - Observation includes pin/platform, selector route and availability, content
   hashes and identities, positive catalog/invocation success, candidate catalog
   and invocation evidence, activation evidence and preservation status.

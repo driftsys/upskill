@@ -1,7 +1,9 @@
 import copy
 import importlib.util
+import hashlib
 import json
 import os
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -43,6 +45,17 @@ class CrossClientIsolation(unittest.TestCase):
                 self.assertEqual(row['client'], target)
                 self.assertEqual(row['pin'], PINS[target])
                 self.assertEqual(row['scope'], 'session')
+                self.assertNotEqual(row['positive_project'], row['candidate_project'])
+                roots = []
+                for key in ('positive_project', 'candidate_project'):
+                    project = row[key]
+                    self.assertTrue((project / '.git').is_dir())
+                    result = subprocess.run(['git', '-C', str(project), 'rev-list', '--parents', '-n', '1', 'HEAD'],
+                                            env=q.fixture_environment(f['root']), capture_output=True, text=True, check=True)
+                    commit = result.stdout.split()
+                    self.assertEqual(len(commit), 1)
+                    roots.append(commit[0])
+                self.assertNotEqual(roots[0], roots[1])
                 self.assertEqual(row['native_intended'], target)
                 self.assertNotEqual(row['foreign_intended'], target)
                 self.assertTrue(row['native_manifest'].is_file())
@@ -142,10 +155,12 @@ class CrossClientIsolation(unittest.TestCase):
     def test_metadata_drift_and_resource_drift_invalidate_control(self):
         with tempfile.TemporaryDirectory() as temporary:
             row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
-            for field in ('pin', 'platform', 'cwd', 'scope', 'namespace'):
-                o = self.observation(row)
-                o['candidate'][field] = 'different'
-                self.assertEqual(q.classify_cross_client_isolation(o, row)['isolation'], 'control_metadata_failed')
+            for phase in ('positive', 'baseline', 'candidate'):
+                for field in ('pin', 'platform', 'cwd', 'scope', 'namespace'):
+                    with self.subTest(phase=phase, field=field):
+                        o = self.observation(row)
+                        o[phase][field] = 'different'
+                        self.assertEqual(q.classify_cross_client_isolation(o, row)['isolation'], 'control_metadata_failed')
             o = copy.deepcopy(self.observation(row))
             o['trees_after']['foreign'].pop(next(iter(o['trees_after']['foreign'])))
             self.assertEqual(q.classify_cross_client_isolation(o, row)['isolation'], 'invalid_pair')
@@ -199,6 +214,67 @@ class CrossClientIsolation(unittest.TestCase):
             self.assertEqual(q.classify_cross_client_isolation(o, row)['isolation'], 'invalid_pair')
 
 
+    def test_initially_unequal_pair_is_invalid_even_without_later_drift(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+            key = next(iter(row['trees']['foreign']))
+            row['trees']['foreign'][key]['sha256'] = 'f' * 64
+            observation = self.observation(row)
+            self.assertEqual(observation['trees_after'], row['trees'])
+            self.assertEqual(q.classify_cross_client_isolation(observation, row)['isolation'], 'invalid_pair')
+
+    def test_equal_present_receipts_require_valid_digest_and_mode(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            row = self.fixture(Path(temporary) / 'fresh')['targets']['claude']
+            valid = {'present': True, 'sha256': 'a' * 64, 'mode': 0o600}
+            observation = self.observation(row)
+            observation['preservation'] = {'before': {'config': valid}, 'after': {'config': dict(valid)}}
+            self.assertEqual(q.classify_cross_client_isolation(observation, row)['preservation'], 'unchanged')
+            for field, value in (('sha256', None), ('sha256', 'a' * 63), ('sha256', 'z' * 64),
+                                 ('mode', None), ('mode', True), ('mode', -1), ('mode', 0o10000)):
+                with self.subTest(field=field, value=value):
+                    receipt = dict(valid, **{field: value})
+                    observation['preservation'] = {'before': {'config': receipt}, 'after': {'config': dict(receipt)}}
+                    self.assertEqual(q.classify_cross_client_isolation(observation, row)['preservation'], 'preservation_failed')
+            for missing in ('sha256', 'mode'):
+                receipt = {key: value for key, value in valid.items() if key != missing}
+                observation['preservation'] = {'before': {'config': receipt}, 'after': {'config': dict(receipt)}}
+                self.assertEqual(q.classify_cross_client_isolation(observation, row)['preservation'], 'preservation_failed')
+
+    def test_missing_or_invalid_campaign_pins_are_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / 'fresh'
+            for client in PINS:
+                for value in (None, '', 123):
+                    with self.subTest(client=client, value=value):
+                        with self.assertRaises(ValueError):
+                            q.prepare_cross_client_isolation(root, pins=dict(PINS, **{client: value}))
+                        self.assertFalse(root.exists())
+                with self.assertRaises(ValueError):
+                    q.prepare_cross_client_isolation(root, pins={key: value for key, value in PINS.items() if key != client})
+                self.assertFalse(root.exists())
+
+    def test_complete_package_rejects_links_and_nonregular_entries(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            row = self.fixture(base / 'fresh')['targets']['claude']
+            alias = base / 'alias'
+            alias.symlink_to(row['native_package'], target_is_directory=True)
+            with self.assertRaises(ValueError):
+                q.cross_client_package_tree(alias)
+            manifest = row['native_manifest']
+            manifest.unlink()
+            manifest.symlink_to(base / 'missing')
+            with self.assertRaises(ValueError):
+                q.cross_client_package_tree(row['native_package'])
+            manifest.unlink()
+            manifest.write_text('{}\n')
+            if hasattr(os, 'mkfifo'):
+                os.mkfifo(row['native_package'] / 'pipe')
+                with self.assertRaises(ValueError):
+                    q.cross_client_package_tree(row['native_package'])
+
+
 class CrossClientNativeReplay(unittest.TestCase):
     def row(self, client):
         return {'client': client, 'pin': PINS[client], 'scope': 'session',
@@ -246,14 +322,12 @@ class CrossClientNativeReplay(unittest.TestCase):
 
     def test_claude_error_subtype_success_is_still_failed(self):
         row = self.row('claude')
-        events = [{'type': 'system', 'subtype': 'init', 'slash_commands': ['package:probe'],
-                   'plugins': [{'name': 'package', 'path': row['native_package']}]},
-                  {'type': 'result', 'subtype': 'success', 'is_error': True,
-                   'permission_denials': [], 'result': 'private provider error'}]
-        result = q.inspect_cross_client_positive(events, row, exit_code=1)
+        events = self.claude_events()
+        events[-1].update(is_error=True, result='private provider error')
+        result = q.inspect_cross_client_positive(events, row, exit_code=0)
         self.assertEqual(result['state'], 'error')
         self.assertTrue(result['catalog_present'])
-        self.assertEqual(result['activations'], 0)
+        self.assertEqual(result['activations'], 1)
         self.assertIsNone(result['response'])
 
     def test_wrong_native_source_path_cannot_attribute_positive(self):
@@ -291,3 +365,68 @@ class CrossClientNativeReplay(unittest.TestCase):
         self.assertFalse(result['invocation_complete'])
         self.assertFalse(result['invocation_attempted'])
         self.assertEqual(result['invocation_outcome'], 'not_attempted')
+
+
+    def claude_events(self):
+        return [
+            {'type': 'system', 'subtype': 'init', 'slash_commands': ['package:probe'],
+             'plugins': [{'name': 'package', 'path': '/fixture/native/package'}]},
+            {'type': 'assistant', 'message': {'content': [{'type': 'tool_use', 'id': 'tool1',
+                                                         'name': 'Skill', 'input': {'skill': 'package:probe'}}]}},
+            {'type': 'user', 'message': {'content': [{'type': 'tool_result', 'tool_use_id': 'tool1',
+                                                    'is_error': False, 'content': 'fixture body'}]}},
+            {'type': 'result', 'subtype': 'success', 'is_error': False, 'permission_denials': [], 'result': 'PRESENT'},
+        ]
+
+    def test_claude_success_requires_correlated_successful_tool_result(self):
+        row = self.row('claude')
+        result = q.inspect_cross_client_positive(self.claude_events(), row, exit_code=0)
+        self.assertEqual(result['state'], 'success')
+        self.assertEqual(result['response'], row['marker'])
+        self.assertEqual(result['activations'], 1)
+        self.assertEqual(result['invocation_outcome'], 'loaded')
+        self.assertTrue(result['invocation_complete'])
+        for field, value in (('tool_use_id', 'unrelated'), ('tool_use_id', None), ('is_error', True)):
+            with self.subTest(field=field, value=value):
+                events = self.claude_events()
+                events[2]['message']['content'][0][field] = value
+                result = q.inspect_cross_client_positive(events, row, exit_code=0)
+                self.assertEqual(result['activations'], 0)
+                self.assertFalse(result['invocation_complete'])
+
+    def test_retained_slash_retry_keeps_raw_response_and_failed_verdict(self):
+        packet = Path(__file__).parents[2] / 'docs/technotes/evidence/2026-10-25-cross-client-package-isolation/copilot-slash-retry'
+        fixture = json.loads((packet / 'fixture.json').read_text())
+        events = json.loads((packet / 'native-selection.json').read_text())
+        summary = json.loads((packet / 'summary.json').read_text())
+        receipt = json.loads((packet / 'positive-receipt.json').read_text())
+        self.assertEqual(receipt['command'][-1], '/' + fixture['namespace'])
+        self.assertEqual(receipt['exit_code'], 0)
+        self.assertFalse(receipt['timed_out'])
+        self.assertEqual(next(e['exitCode'] for e in events if e['type'] == 'result'), 0)
+        response = next(e['data']['content'] for e in reversed(events) if e['type'] == 'assistant.message')
+        self.assertEqual(response, '\n\n' + fixture['marker'])
+        self.assertNotEqual(response, fixture['marker'])
+        self.assertEqual(summary['response_exact'], response == fixture['marker'])
+        self.assertEqual(summary['positive'], 'failed_exact_response')
+        self.assertEqual(summary['baseline'], 'not_run')
+        self.assertEqual(summary['foreign_candidate'], 'not_run')
+        starts = [e['data'] for e in events if e['type'] == 'tool.execution_start']
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(starts[0]['toolName'], 'skill')
+        self.assertEqual(starts[0]['arguments']['skill'], fixture['skill_name'])
+        ends = [e['data'] for e in events if e['type'] == 'tool.execution_complete'
+                and e['data'].get('toolCallId') == starts[0]['toolCallId']]
+        self.assertEqual(len(ends), 1)
+        self.assertIs(ends[0]['success'], True)
+        self.assertIs(summary['bare_skill_load_succeeded'], True)
+
+    def test_retained_packet_hashes_cover_all_public_evidence(self):
+        packet = Path(__file__).parents[2] / 'docs/technotes/evidence/2026-10-25-cross-client-package-isolation'
+        manifest = json.loads((packet / 'receipt-hashes.json').read_text())
+        paths = {str(path.relative_to(packet)): path for path in packet.rglob('*')
+                 if path.is_file() and path.name != 'receipt-hashes.json'}
+        self.assertEqual(set(manifest), set(paths))
+        for name, path in paths.items():
+            with self.subTest(file=name):
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), manifest[name])

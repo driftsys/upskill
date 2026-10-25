@@ -154,8 +154,10 @@ Fixture/classifier tests first fail in `just lint` on missing Q11 interfaces,
 then all 208 offline tests pass. Four native-inspector tests fail before the
 inspector exists. Further tests reject missing tool IDs, stream completion
 without invocation, content leakage, selector conversion and manifest mutation.
-The final focused file contains 20 tests; the complete offline suite contains
-217. Tests replay both retained failed positives without any native call
+At the initial implementation review, the focused file contained 20 tests and
+the complete offline suite contained 217. Quick-review corrections extend these
+to 27 focused and 224 total tests. Tests replay the retained failed positives
+and the explicit slash retry without any native call
 ([validation](evidence/2026-10-25-cross-client-package-isolation/validation.json)).
 
 Classifier tests require metadata and tree integrity, calibrated positive and
@@ -190,3 +192,17 @@ reasoning, usage and unrelated catalog entries. The
 [receipt manifest](evidence/2026-10-25-cross-client-package-isolation/receipt-hashes.json)
 hashes retained artifacts; raw-output hashes remain separate from sanitized-file
 hashes.
+
+## Quick-review coverage corrections
+
+A subsequent quick review found independent guards that the original tests did
+not pin. Six source mutations survived all 20 original focused tests;
+strengthened assertions reject all six while the unchanged implementation passes
+([before/after evidence](evidence/2026-10-25-cross-client-package-isolation/quick-review-regressions.json)).
+The new coverage isolates Claude's error flag at process exit zero, checks every
+phase's metadata, rejects initially unequal content pairs, validates equal
+present-file receipts, requires independent project roots, and correlates Claude
+successful tool results. Other tests pin invalid campaign inputs, package-entry
+guards, the untrimmed slash-retry response and complete public receipt hashes.
+The plan's result enumeration now includes both baseline-blocking outcomes.
+These changes do not rerun a native control or alter an earlier native verdict.
