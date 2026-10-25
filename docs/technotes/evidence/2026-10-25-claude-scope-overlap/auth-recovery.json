@@ -1,0 +1,20 @@
+{
+  "native_login_successful": true,
+  "initial_save_failure": "Isolated HOME had no default macOS Keychain reference",
+  "setup": "Native security default-keychain selected the existing login Keychain for the isolated home; normal-home default/search list unchanged",
+  "identity": "Claude helper supplies USER and LOGNAME from the native OS account for credential lookup",
+  "native_api_probe": {
+    "exit_code": 0,
+    "is_error": false,
+    "reply_OK": true,
+    "HTTP_401": false,
+    "not_logged_in": false
+  },
+  "keychain_acl_changes": false,
+  "client_discovery_settings_changed": false,
+  "whole_profile_equality_claimed": false,
+  "native_api_probe_source": "$AUTH_PROBE",
+  "native_api_probe_raw_sha256": "bbb025dea2e3c2d4d7764375999c66ae7ed066d8affe2ad067944a6a03036e6d",
+  "credential_material_read_or_copied_by_helper": false,
+  "native_credential_access": "Ordinary Claude login and native Keychain credential lookup"
+}

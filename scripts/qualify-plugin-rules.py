@@ -129,6 +129,159 @@ def prepare_claude_managed_root(root):
     return {'root': root, 'managed_root': managed, 'package': package, 'project': projects[0], 'user_project': projects[1], 'plugin_name': plugin, 'market_name': market, 'skill_name': skill, 'skill': skill_path, 'initial_marker': initial, 'edited_marker': edited, 'fallback': fallback, 'manual': manual}
 
 
+
+def prepare_claude_scope_overlap(root, *, pin):
+    """Reuse Q6's neutral marketplace for one logical Q10 skill and resource."""
+    if (not isinstance(pin, str) or len(pin.split('.')) != 3
+            or any(not part.isdigit() for part in pin.split('.'))):
+        raise ValueError('An explicit released client pin is required')
+    f = prepare_claude_managed_root(root)
+    old_package = f['package']
+    f['plugin_name'] = f['plugin_name'].replace('upskill-q6-', 'upskill-q10-', 1)
+    f['market_name'] = f['market_name'].replace('upskill-q6-market-', 'upskill-q10-market-', 1)
+    f['package'] = old_package.with_name(f['plugin_name'])
+    old_package.rename(f['package'])
+    f['skill'] = f['package'] / 'skills' / f['skill_name'] / 'SKILL.md'
+    f['pin'] = pin
+    f['resource_marker'] = f.pop('initial_marker')
+    f.pop('edited_marker')
+    f['activation_marker'] = 'ACTIVATION_' + secrets.token_hex(16)
+    f['skill_body'] = ('Activation receipt: ' + f['activation_marker'] + '.\n'
+                       'Read references/receipt.txt exactly once, relative to this skill base directory.\n'
+                       'Return only the single line read from that file. Do not invoke another skill or use other tools.\n')
+    f['resource'] = f['skill'].parent / 'references/receipt.txt'
+    f['resource'].parent.mkdir()
+    f['resource'].write_text(f['resource_marker'] + '\n')
+    f['skill'].write_text('---\nname: ' + f['skill_name'] + '\ndescription: Explicit scope-overlap qualification skill.\n---\n' + f['skill_body'])
+    write_json(f['managed_root'] / '.claude-plugin/marketplace.json', {'name': f['market_name'], 'owner': {'name': 'Qualification Fixture'}, 'plugins': [{'name': f['plugin_name'], 'source': './packages/' + f['plugin_name']}]})
+    write_json(f['package'] / '.claude-plugin/plugin.json', {'name': f['plugin_name'], 'version': '0.0.0', 'description': 'Disposable Q10 scope overlap fixture.'})
+    return f
+
+
+def inspect_claude_scope_phase(row, fixture, scopes):
+    """Inspect a native phase before admitting another scope or counting overlap."""
+    import re
+    namespace = fixture['plugin_name'] + ':' + fixture['skill_name']
+    project = str(fixture['project'])
+    if (not isinstance(row, dict) or row.get('exit_code') != 0
+            or type(row.get('exit_code')) is not int or row.get('timed_out') is not False
+            or row.get('version') != fixture['pin'] or row.get('cwd') != project):
+        return 'control_failed', None
+    if row.get('malformed_stream') is not False:
+        return 'activation_evidence_unobserved', None
+    events = row.get('events')
+    if not isinstance(events, list) or any(not isinstance(e, dict) for e in events):
+        return 'control_failed', None
+    init = [e for e in events if e.get('type') == 'system' and e.get('subtype') == 'init']
+    results = [e for e in events if e.get('type') == 'result']
+    if len(init) != 1 or len(results) != 1:
+        return 'control_failed', None
+    start, result = init[0], results[0]
+    sid = start.get('session_id')
+    if (not isinstance(sid, str) or not sid.strip()
+            or start.get('claude_code_version') != fixture['pin'] or start.get('cwd') != project
+            or any(e.get('session_id') != sid for e in events if e.get('type') in ('assistant', 'user', 'result'))
+            or result.get('subtype') != 'success' or result.get('is_error') is not False
+            or result.get('permission_denials') != [] or result.get('result') != fixture['resource_marker']):
+        return 'control_failed', None
+    catalogs = [start.get(key) for key in ['skills', 'slash_commands']]
+    if any(not isinstance(items, list) or any(not isinstance(x, str) for x in items) for items in catalogs):
+        return 'activation_evidence_unobserved', None
+    catalog_counts = [sum(x in (namespace, fixture['skill_name']) for x in items) for items in catalogs]
+    calls, replies, texts = [], [], []
+    for event in events:
+        if event.get('type') not in ('assistant', 'user'):
+            continue
+        message = event.get('message')
+        if not isinstance(message, dict) or not isinstance(message.get('content'), list):
+            return 'control_failed', None
+        for block in message['content']:
+            if not isinstance(block, dict):
+                return 'control_failed', None
+            if event['type'] == 'assistant' and block.get('type') == 'tool_use':
+                calls.append(block)
+            if event['type'] == 'user' and block.get('type') == 'tool_result':
+                replies.append(block)
+            if event['type'] == 'user' and block.get('type') == 'text' and isinstance(block.get('text'), str):
+                texts.append(block['text'])
+    ids = [c.get('id') for c in calls]
+    if (not calls or any(not isinstance(i, str) or not i for i in ids)
+            or len(set(ids)) != len(ids) or len(replies) != len(calls)):
+        return 'control_failed', None
+    allowed = {str(fixture['resource'])}
+    bindings = row.get('bindings', [])
+    if not isinstance(bindings, list) or any(not isinstance(b, dict) for b in bindings):
+        return 'registration_mismatch', None
+    settings = row.get('enabled_scopes')
+    if (not isinstance(settings, dict) or set(settings) != {'user', 'project'}
+            or any(settings[s] is not True if s in scopes else settings[s] is not None and settings[s] is not False for s in settings)
+            or any(b.get('scope') not in ('user', 'project') for b in bindings)
+            or sorted(b['scope'] for b in bindings) != sorted(scopes)
+            or any(b.get('version') != '0.0.0' or (b['scope'] == 'project' and b.get('projectPath') != project) for b in bindings)):
+        return 'registration_mismatch', None
+    for binding in bindings:
+        if isinstance(binding.get('installPath'), str):
+            allowed.add(str(Path(binding['installPath']) / 'skills' / fixture['skill_name'] / 'references/receipt.txt'))
+    skill_calls = read_calls = 0
+    marker_pattern = r'(?<!\w)' + re.escape(fixture['resource_marker']) + r'(?!\w)'
+    for call in calls:
+        matches = [b for b in replies if b.get('tool_use_id') == call['id']]
+        if len(matches) != 1 or ('is_error' in matches[0] and matches[0]['is_error'] is not False):
+            return 'control_failed', None
+        value = call.get('input')
+        if not isinstance(value, dict):
+            return 'control_failed', None
+        if call.get('name') == 'Skill' and value.get('skill') == namespace:
+            skill_calls += 1
+        elif call.get('name') == 'Read' and value.get('file_path') in allowed:
+            content = matches[0].get('content')
+            if not isinstance(content, str) or len(re.findall(marker_pattern, content)) != 1:
+                return 'control_failed', None
+            read_calls += 1
+        else:
+            return 'control_failed', None
+    if not skill_calls or not read_calls:
+        return 'control_failed', None
+    bodies = sum(t.count(fixture['skill_body'].strip()) for t in texts)
+    markers = sum(t.count(fixture['activation_marker']) for t in texts)
+    if not bodies or bodies != markers:
+        return 'activation_evidence_unobserved', None
+    return None, {'session': sid, 'counts': [*catalog_counts, skill_calls, bodies, read_calls]}
+
+
+
+def classify_claude_scope_overlap(controls, fixture):
+    """Classify visible catalog/body activations, never provider-effective input."""
+    expected = {'project_positive': ['project'], 'user_positive': ['user'],
+                'overlap': ['project', 'user'], 'user_remaining': ['user'],
+                'project_remaining': ['project']}
+    phases = controls.get('phases', {})
+
+    evidence = {}
+    for phase in ['project_positive', 'user_positive']:
+        reason, row = inspect_claude_scope_phase(phases.get(phase), fixture, expected[phase])
+        if reason or row['counts'] != [1, 1, 1, 1, 1]:
+            return 'positive_control_failed'
+        evidence[phase] = row
+    if controls.get('preserved') is not True:
+        return 'preservation_failed'
+    for phase in ['overlap', 'user_remaining', 'project_remaining']:
+        if phase not in phases:
+            return 'control_incomplete'
+        reason, row = inspect_claude_scope_phase(phases[phase], fixture, expected[phase])
+        if reason:
+            return reason
+        evidence[phase] = row
+        if len({e['session'] for e in evidence.values()}) != len(evidence):
+            return 'session_identity_mismatch'
+        counts = row['counts']
+        if any(n > 1 for n in counts[:4]):
+            return 'duplicate_exposure_or_activation'
+        if counts != [1, 1, 1, 1, 1]:
+            return 'control_failed'
+    return 'observed_single_entry_and_activation'
+
+
 def classify_claude_settings(before, after, before_mode, after_mode):
     """Allow only added empty native registration objects as declared residue."""
     if before == after and before_mode == after_mode:

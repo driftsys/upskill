@@ -1,0 +1,31 @@
+cargo clippy -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.52s
+cargo fmt -- --check
+prim fmt --check --exclude 'tests/fixtures/**'
+prim lint .
+shellcheck install.sh bootstrap
+python3 scripts/test-precommit-hook.py
+..
+----------------------------------------------------------------------
+Ran 2 tests in 2.108s
+
+OK
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+..............................................F.................................................................................................................................................................
+======================================================================
+FAIL: test_observed_duplicate_is_retained_when_later_probes_are_not_run (test_qualify_claude_scope_overlap.ClaudeScopeOverlapTests.test_observed_duplicate_is_retained_when_later_probes_are_not_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$WORKTREE/scripts/tests/test_qualify_claude_scope_overlap.py", line 180, in test_observed_duplicate_is_retained_when_later_probes_are_not_run
+    self.assertEqual(self.classify(c,f),'duplicate_exposure_or_activation')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'control_incomplete' != 'duplicate_exposure_or_activation'
+- control_incomplete
++ duplicate_exposure_or_activation
+
+
+----------------------------------------------------------------------
+Ran 208 tests in 42.568s
+
+FAILED (failures=1)
+error: Recipe `lint` failed on line 20 with exit code 1

@@ -1,0 +1,36 @@
+{
+  "source_epoch": "$PACKET_C",
+  "commands": [
+    {
+      "command": "just fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "just lint",
+      "exit_code": 0
+    },
+    {
+      "command": "just docs-check",
+      "exit_code": 0
+    }
+  ],
+  "offline_suite_tests": 218,
+  "focused_q10_tests": 21,
+  "mutations_rejected": 16,
+  "mutations_survived": 0,
+  "red_regression_failures": 20,
+  "capture_harness_changed_after_native": true,
+  "previous_source_epochs_unchanged": true,
+  "native_rerun": false,
+  "retained_native_replay_classification": "positive_control_failed",
+  "changes": [
+    "Require explicit complete native streams before counting activation.",
+    "Pin calibration cardinality, candidate catalogs, remaining-session freshness and tool errors.",
+    "Pin result subtype, integer exit status and surviving-scope duplicate classification.",
+    "Repeat campaign pin in every technote control row."
+  ],
+  "limits": [
+    "These are offline corrections; no native overlap or activation result is inferred.",
+    "verification.json describes the earlier $PACKET_B source; full repository verification passed there, before this Python-only guard correction."
+  ]
+}

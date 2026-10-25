@@ -8,6 +8,9 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Claude package scope overlap](gate6-claude-scope-overlap.md): Q10, Claude
+  2.1.308; user-first overlap/removal PASS, with the initial HTTP 401 failure
+  retained.
 - [OpenCode explicit-path second retry](gate6-opencode-explicit-paths-retry.md):
   OpenCode 2.1.4 native positive stops at the provider free usage limit.
 - [Codex package-owned agent registration](gate6-codex-agent-registration.md):

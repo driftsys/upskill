@@ -1,0 +1,59 @@
+[
+  {
+    "alias": "$PACKET_A",
+    "private_source_path": "/private/tmp/upskill-q10-scope-ywrp9lak",
+    "manifest_sha256": "99d323cb75368f5d175e45fda84b91dcfffdfe5249873e11938e9879119f4848",
+    "capture_helpers": {
+      "capture-helper.py": "94c59605b5c9347dfa1bc5c8e04481c4f4acedb102b8630e4525ae13962d5d8c",
+      "retain-helper.py": "afe19d60fffca2e2f8ec22b10ec4351c1da039052d6d8379f1c5fedff48cb863",
+      "campaign-pin-helper.py": "0801651e7f94e41088c76515e710e250c77ef67923ab471ea1c85ed21be304c4"
+    },
+    "method": "Failed first project-only positive; native cleanup and measured restoration; no user-positive or overlap run"
+  },
+  {
+    "alias": "$PACKET_B",
+    "private_source_path": "/private/tmp/upskill-q10-verification-vu25fqk2",
+    "manifest_sha256": "cff81e25252f8ed65294ee50b8e336db6c1b79b583218b1b46451c24a5ef2768",
+    "capture_helpers": {
+      "retain-verification-helper.py": "aefe36a6bda6a9c62de2a89b98c64339c8ea31ef96c4066e9b9c9985b7eb2308",
+      "q10-mutation-check.py": "974edbfe895af84689deb9a823e87c9faf87782db73e5b622a7d80d32ea820b5"
+    },
+    "method": "Offline test-only review corrections and repository verification; native source epoch unchanged"
+  },
+  {
+    "alias": "$PACKET_C",
+    "private_source_path": "/private/tmp/upskill-q10-pass1-tyj82g_0",
+    "manifest_sha256": "6fa4dfdf148c4332504a85e3ae7f6a8505f57235db6c7a374fe58c7e6e17108c",
+    "capture_helpers": {
+      "retain-pass1-helper.py": "d14fe33e59cb490bd138de384301e93d87e67291cb086aaa9f2809d8b35e3c74",
+      "q10-pass1-mutation-check.py": "494ed4bfe19c7ca058e826e60641384179623c240acedc012cffe1f9ac797dc0"
+    },
+    "method": "Full pass-1 offline guard/test corrections; first native failed positive and prior source epochs unchanged"
+  },
+  {
+    "alias": "$PACKET_D",
+    "private_source_path": "/private/tmp/upskill-q10-user-first-0whn4xu_",
+    "manifest_sha256": "82fac94ca2f8c4fa4d500d3a15f36c6a3db87cd897e38d2716a060141741c43c",
+    "capture_helpers": {
+      "capture-helper.py": "a54eb9378be681bf3fc1d1a0bcdd5dcf81adb8eda4d765255f298ef51c6d4617",
+      "retain-helper.py": "81d9e86cd47eb293e090ff58635f5f230ded99540447f51fed32d3b113d334d4",
+      "campaign-pin-helper.py": "1b6929ddb2e95dd799bd04a9bd2e1046be15953967326646bc57fc845604cd2c"
+    },
+    "method": "Successful user-first six-phase retry with native cleanup; all prior source epochs unchanged"
+  },
+  {
+    "alias": "$AUTH_PROBE",
+    "private_source_path": "/private/tmp/upskill-claude-auth-verified-vrkvgx0_",
+    "manifest_sha256": "014608fac31ea1df0fcf51068b55581576cd8dbc3bdc6fc33e8f4ca7a72f4ae6",
+    "method": "Post-run index of authentication-only no-tools API probe outputs; not package qualification; no credential files copied"
+  },
+  {
+    "alias": "$PACKET_E",
+    "private_source_path": "/private/tmp/upskill-q10-retry-verification-7pus9ziu",
+    "manifest_sha256": "38030888a203a4ecd47dbeda2cdb24f4b12426de68cb278ed60090f911e802ac",
+    "capture_helpers": {
+      "retain-retry-verification-helper.py": "4179e2eb5d984a68848dc13f785c7a7e36ae3a371b450d7d84c50d6704bcee3e"
+    },
+    "method": "Complete repository verification after successful retry; native and prior source epochs unchanged"
+  }
+]

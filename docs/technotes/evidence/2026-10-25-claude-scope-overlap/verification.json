@@ -1,0 +1,24 @@
+{
+  "commands": [
+    {
+      "command": "just fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "just verify",
+      "exit_code": 0
+    }
+  ],
+  "offline_suite_tests": 212,
+  "focused_q10_tests": 15,
+  "review_mutations_rejected": 8,
+  "review_mutations_survived": 0,
+  "capture_harness_unchanged": true,
+  "native_source_manifest_unchanged": true,
+  "native_rerun": false,
+  "review": "Quick docs advisory: no findings; quick tests advisory addressed with author additions, no pass over fixes",
+  "limits": [
+    "Repository verification began before the test-only review fixes; its later Python suite and documentation checks include those changes.",
+    "No new native qualification and no provider-effective uniqueness claim."
+  ]
+}

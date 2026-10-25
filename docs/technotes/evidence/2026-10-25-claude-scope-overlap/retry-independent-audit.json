@@ -1,0 +1,13 @@
+{
+  "raw_phases_checked": 6,
+  "distinct_sessions": 6,
+  "each_phase_tool_calls": {
+    "Skill": 1,
+    "Read": 1
+  },
+  "each_phase_visible_body_expansions": 1,
+  "correlated_tool_results": true,
+  "exact_resource_results": true,
+  "user_first_order": true,
+  "native_requests_rerun": false
+}

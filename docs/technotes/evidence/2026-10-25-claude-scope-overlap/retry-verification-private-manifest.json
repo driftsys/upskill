@@ -1,0 +1,8 @@
+{
+  "q10-retry-final-fmt.log": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+  "q10-retry-final-verify.log": "c16a9b0095eca121cbbc52d0d2c7d04a22489b6a311e8920069b8555a84f861d",
+  "q10-retry-proof-fmt.log": "38f79a5696f593e3c44ac8e083a8c0b9eb47acc55b4259ed22cc4bda8922ce9c",
+  "retain-retry-verification-helper.py": "4179e2eb5d984a68848dc13f785c7a7e36ae3a371b450d7d84c50d6704bcee3e",
+  "scripts/qualify-plugin-rules.py": "c9ceacb345739e9f3176b98c085b0bdb51f47c12b6b569551ce862f51bb279db",
+  "scripts/tests/test_qualify_claude_scope_overlap.py": "174d89e136babee2b5b081f188ca40b6de5cdff4a56bd66b9179ea5e5270b636"
+}
