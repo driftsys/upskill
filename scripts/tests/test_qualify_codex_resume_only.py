@@ -85,12 +85,20 @@ class ResumeOnlyTests(unittest.TestCase):
         startup=[record(bodies['a']),record(bodies['b'])];resumed=startup+[record(bodies['a']),record(bodies['b'])]
         self.assertEqual(q.codex_resume_body_windows(startup,resumed,bodies),{'startup':{'a':1,'b':1},'resumed_history':{'a':2,'b':2},'resume_new_records':{'a':1,'b':1}})
         self.assertEqual(q.codex_resume_body_windows(startup,startup,bodies)['resume_new_records'],{'a':0,'b':0})
+        startup=[record(bodies['a']),record(bodies['a']),record(bodies['b']),{'type':'event_msg','payload':{}}]
+        resumed=startup+[record(bodies['b']) for _ in range(3)]
+        self.assertEqual(q.codex_resume_body_windows(startup,resumed,bodies),{'startup':{'a':2,'b':1},'resumed_history':{'a':2,'b':4},'resume_new_records':{'a':0,'b':3}})
 
     def test_resume_window_prefix_replacement_or_compaction_cannot_be_hidden(self):
         self.assertTrue(callable(getattr(q,'codex_resume_body_windows',None)),'Missing resume body window summarizer')
         bodies={'a':'RULE_A_BODY','b':'RULE_B_BODY'};startup=[{'type':'event_msg','payload':{'type':'task_complete'}}]
         for after in [[],[{'type':'event_msg','payload':{'type':'other'}}],startup+[{'type':'compacted','payload':{}}]]:
             with self.assertRaises(ValueError):q.codex_resume_body_windows(startup,after,bodies)
+        startup=[{'type':'event_msg','payload':{'id':1}},{'type':'event_msg','payload':{'id':2}}]
+        for after in [startup[:1]+[{'type':'event_msg','payload':{'id':3}}],startup[:1]]:
+            with self.assertRaises(ValueError):q.codex_resume_body_windows(startup,after,bodies)
+        startup=[{'type':'compacted','payload':{}}]
+        with self.assertRaises(ValueError):q.codex_resume_body_windows(startup,startup,bodies)
 
     def test_resume_window_shape_is_validated_without_writing_native_history(self):
         self.assertTrue(callable(getattr(q,'codex_resume_body_windows',None)),'Missing resume body window summarizer')
