@@ -12,11 +12,22 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Q11 intended-client registration and unintended discovery follow-up](specs/2026-10-25-q11-registration-isolation-follow-up.md)
+  : proposed under [#421](https://github.com/driftsys/upskill/issues/421).
+  [Q11](../technotes/gate6-cross-client-package-isolation.md) is merged and
+  indexed with a Claude explicit-selector isolation FAIL and a blocked Copilot
+  reverse direction. Defines Q11b without running it or weakening the retained
+  PASS entry gate. A narrower replacement gate requires the user's decision.
+
 - [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
   : proposed under [#417](https://github.com/driftsys/upskill/issues/417).
   Defines read-only capture, reader classification, glob/import closure,
   duplication/drift rejection and planned acceptance examples. Design approval
-  and implementation remain pending; Q11 stays with its separate owner.
+  and implementation remain pending. The merged
+  [Q11 packet](../technotes/gate6-cross-client-package-isolation.md) records
+  explicit-selector activation; its proposed follow-up stays with the Q11 native
+  owner
+  ([control design](specs/2026-10-25-q11-registration-isolation-follow-up.md)).
 
 - [Per-client package preservation contract](specs/2026-10-25-customization-preservation-contract.md)
   : D1-D6 preservation policies approved by the user on 2026-10-25 after

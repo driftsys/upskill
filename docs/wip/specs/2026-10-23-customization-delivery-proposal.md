@@ -205,7 +205,10 @@ Distinguish three locations:
 Do not write directly into client-owned plugin caches. Register packages through
 supported mechanisms and record the resulting native identity and state. Native
 configuration records can live outside packages. Arbitrary package directories
-are not automatically discovered, and a client name in a path is not isolation.
+are not assumed inert or isolated. Q11 shows Claude 2.1.308 cataloging and
+invoking a Copilot-shaped package when explicitly selected with `--plugin-dir`;
+a client name or manifest shape is not an exclusion boundary ([Q11][Q11],
+[summary][Q11 summary], [reader policy][contract]).
 
 Known installation mechanics that shape the lifecycle:
 
@@ -220,13 +223,20 @@ Known installation mechanics that shape the lifecycle:
 - OpenCode 2.0.32 `plugin add` rejected a local directory; the route that worked
   was an explicit local package path in the owned `plugins` array.
 
-One marketplace listing is cross-installable: Codex's parser accepts
-`.claude-plugin` layouts and VS Code Copilot accepts Copilot, Claude and
-OpenPlugin formats. Use one marketplace entry per client package, or prove with
-a negative control that a client ignores another client's package. A same-name
-manual project skill also shadows a plugin skill on Copilot (`.github/skills`
-variant wins, assessment 1.0.103); preflight must detect manual-versus-package
-name collisions, not only shared-versus-compatibility ones.
+Separate marketplace entries can express intended installation choices, but they
+do not enforce reader isolation. Q11's Claude explicit-selector candidate is
+FAIL after a passed positive and clean baseline; Copilot's reverse direction is
+blocked by its positive response contract. No unintended-reader PASS follows
+from either result. Keep the retained PASS entry gate; the proposed
+[Q11b registration-only control][Q11b] needs its own evidence and a separate
+user decision before it could replace that gate ([Q11][Q11],
+[summary][Q11 summary], [CD-03/CD-11][contract]).
+
+Preflight must inventory incidental readers and manual-versus-package identity
+collisions, including compatibility aliases. A separate listing or namespace
+cannot make a requested audience exclusion safe when native activation remains
+possible under the recorded discovery condition ([reader policy][contract],
+[preflight design](2026-10-25-preflight-discovery-inventory-design.md)).
 
 Update visibility is client-specific; a universal reinstall step is not
 supported by the retained observations ([Q6][Q6], [Q3][Q3], [Q5][Q5]).
@@ -360,12 +370,13 @@ candidate at 1.0.103 after Q3's failures at both scopes ([decision][decision],
 ### Rejected alternative retained as context
 
 A package hook on all four clients reading rules from a managed root was
-rejected as the default. It offers one mechanism and isolation by construction
-when discovery is restricted to its declared package reader; it still needs
-native unintended-reader controls. It makes rule activation depend on plugin
-installation. Copilot session-start injection is untested: Q3 tested its rules
-component, which failed, not a session-start hook. Q4 demonstrates only the
-Claude unscoped hook ([decision][decision], [Q3][Q3], [Q4][Q4],
+rejected as the default. It offers one mechanism; isolation depends on the
+qualified discovery and registration conditions, not package construction. Q11's
+explicit foreign selector crosses that boundary, so unintended-reader controls
+remain required ([Q11][Q11], [CD-03][contract]). It makes rule activation depend
+on plugin installation. Copilot session-start injection is untested: Q3 tested
+its rules component, which failed, not a session-start hook. Q4 demonstrates
+only the Claude unscoped hook ([decision][decision], [Q3][Q3], [Q4][Q4],
 [CD-03][contract]).
 
 Retain package hooks as the fallback category for a broken native route, usable
@@ -642,3 +653,6 @@ defaults. See the
 [Q8]: ../../technotes/gate6-codex-skill-updates.md
 [Q9 resume]: ../../technotes/gate6-codex-resume-attribution.md
 [Q5 retry]: ../../technotes/gate6-opencode-explicit-paths-retry.md
+[Q11]: ../../technotes/gate6-cross-client-package-isolation.md
+[Q11 summary]: ../../technotes/evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json
+[Q11b]: 2026-10-25-q11-registration-isolation-follow-up.md

@@ -167,6 +167,26 @@ Q10 and Q11 are slice-2 entry controls, not additional scheduled slice-1 work
 | Q10 | Same package at user and project scope on one pinned client, in one workspace                               | PASS: one catalog entry and one activation per logical item. FAIL: duplicate exposure or activation; failed native positive blocks the result. Q6's separate projects do not prove overlap ([Q6][Q6], [CD-04][contract])               |
 | Q11 | Another client pointed at a Claude or Copilot package, with relevant native catalog and explicit invocation | Require a successful positive on each client being tested as an unintended reader. PASS: no unintended activation; FAIL: activation. Do not edit existing discovery settings to manufacture the negative ([CD-03][contract], [Q1][Q1]) |
 
+Q10 and Q11 packet status on 2026-10-25: Q10 retains a bounded Claude
+user/project overlap PASS. Q11 is merged and indexed, but Claude 2.1.308
+activates the Copilot-shaped package through explicit session `--plugin-dir`
+after its positive and clean baseline pass: isolation FAIL. Copilot's reverse
+direction remains blocked by its exact-response positive, with foreign candidate
+not run. Packet completion does not satisfy the retained PASS entry gate;
+[#410](https://github.com/driftsys/upskill/issues/410) remains open for
+unresolved qualification ([Q10][Q10], [Q11][Q11], [summary][Q11 summary],
+[CD-03/CD-11][contract]).
+
+Proposed [Q11b][Q11b] separately tests unintended discovery after registration
+only in the intended client, without a foreign selector in the observer.
+Calibrate each client and scope first; retain catalog and explicit invocation,
+known reader conditions and measured preservation. It neither reruns nor
+relabels Q11's failed explicit-selector challenge. Decision required: only the
+user can approve a narrower replacement gate in a separate adoption PR after its
+evidence and any required controlling-record amendments. Until then, Q11's
+existing retained PASS requirement stays in force; this docs follow-up runs no
+native control ([Q11][Q11], [Q11b][Q11b], [CD-03/CD-11][contract]).
+
 Current campaign pins are Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and
 OpenCode 2.1.4 on macOS arm64. Follow-ups name their actual pin and open a new
 campaign revision if it changes. Q7/Q8 are merged with bounded PASS; older-pin
@@ -290,9 +310,12 @@ do not satisfy entry ([design ledger][ledger], [CD-10 and CD-11][contract]).
 Client order: Claude first on Q6 PASS with its bounded residue contract
 approved, Codex when Q8 passes, and OpenCode when Q5 skill/resource controls
 pass. Require retained PASS for Q10 and Q11 for each applicable package profile.
-Copilot package skills require their own passed route; Q3's retired rules
-component is not a gate for native always-on rules, and project plugin
-activation remains unverified ([decision][decision], [Q6][Q6], [Q5][Q5],
+Q10's bounded Claude overlap PASS is retained; Q11's explicit-selector FAIL and
+blocked reverse direction do not meet that requirement. Q11b is a proposed
+additional control, not an approved substitute ([Q10][Q10], [Q11][Q11],
+[Q11b][Q11b]). Copilot package skills require their own passed route; Q3's
+retired rules component is not a gate for native always-on rules, and project
+plugin activation remains unverified ([decision][decision], [Q6][Q6], [Q5][Q5],
 [Q3][Q3], [CD-03 and CD-04][contract]).
 
 Scope remains a pure package generator for skills/resources, one managed root,
@@ -422,3 +445,7 @@ separates these results from adoption ([CD-10 and CD-11][contract]).
 [Q8]: ../../technotes/gate6-codex-skill-updates.md
 [Q9 resume]: ../../technotes/gate6-codex-resume-attribution.md
 [Q5 retry]: ../../technotes/gate6-opencode-explicit-paths-retry.md
+[Q10]: ../../technotes/gate6-claude-scope-overlap.md
+[Q11]: ../../technotes/gate6-cross-client-package-isolation.md
+[Q11 summary]: ../../technotes/evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json
+[Q11b]: 2026-10-25-q11-registration-isolation-follow-up.md
