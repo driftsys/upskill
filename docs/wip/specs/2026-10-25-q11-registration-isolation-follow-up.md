@@ -95,7 +95,9 @@ the owner's native install completes; the final observation starts after native
 removal completes. Retain correlated operation completion and process/session
 startup receipts. Do not reuse a running or resumed baseline session to observe
 a registration change: a startup-cached catalog could hide the candidate.
-Missing freshness or ordering evidence blocks classification ([Q11][Q11],
+Missing freshness or ordering evidence blocks a clean absence result. An already
+calibrated, correlated candidate activation remains FAIL even when subsequent
+cleanup or post-removal evidence is missing or invalid ([Q11][Q11],
 [Claude summary][claude-summary], [Q6][Q6]).
 
 For the observer, PASS requires a successful calibration, clean baseline, known
@@ -103,9 +105,11 @@ applicable reader conditions, no candidate catalog exposure, explicit not-found
 outcomes for its relevant identities, and no correlated activation. Catalog
 exposure without a successful invocation is not a clean isolation PASS; retain
 it as exposure and block the claim until resolved. Any unintended activation is
-FAIL. Failed positive, ambiguous invocation, incomplete inventory or unknown
-native outcome is blocked. Preservation is classified separately; failed
-preservation prevents accepting the profile even if activation is absent
+FAIL. A failed positive, ambiguous invocation, incomplete inventory or unknown
+candidate prerequisite blocks that observation. Once a valid candidate
+activation establishes FAIL, later unknown cleanup or post-removal outcomes do
+not change it. Preservation is classified separately; failed preservation
+prevents accepting the profile even if activation is absent
 ([reader policy][contract], [CD-01/CD-03/CD-10][contract], [Q11][Q11]).
 
 ## What a future PASS could establish

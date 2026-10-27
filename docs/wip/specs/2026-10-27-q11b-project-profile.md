@@ -80,8 +80,10 @@ outcome stops for reconciliation, without blind uninstall or retries.
 
 Every phase records actual cwd, client version, native session identity and
 start/finish times. Catalog exposure without activation blocks PASS; any
-unintended activation is FAIL. Missing freshness, ordering or outcome evidence
-blocks classification. Earlier Q11 results remain unchanged.
+unintended activation is FAIL. A clean absence result requires all freshness,
+ordering and outcome evidence. An already calibrated, correlated candidate
+activation remains FAIL when later cleanup or post-removal evidence is missing
+or invalid. Earlier Q11 results remain unchanged.
 
 ## Preservation inventory and cleanup
 
@@ -174,7 +176,7 @@ separately. These outcomes never supply positive evidence.
 
 The
 [offline guard validation](../../technotes/evidence/2026-10-27-q11b-offline-guards/validation.json)
-records 29 focused tests and 23 independently rejected guard mutations. The
+records 29 focused tests and 24 independently rejected guard mutations. The
 mutations run on temporary copies, including consistent malformed envelopes,
 cross-client inequality, exact alias/response checks, completion and operation
 state, protected-path coverage and activation ordering. This remains synthetic

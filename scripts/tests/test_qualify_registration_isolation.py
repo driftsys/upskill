@@ -241,6 +241,11 @@ class RegistrationIsolation(unittest.TestCase):
                     changed['phases']['candidate']['activations'] = 1
                     changed['phases' if section == 'post_removal' else 'operations'][section] = value
                     self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
+        for key in ('client', 'pin', 'cwd', 'scope', 'namespace', 'session_id', 'started_at', 'finished_at'):
+            changed = copy.deepcopy(self.observation)
+            changed['phases']['candidate']['activations'] = 1
+            changed['phases']['post_removal'][key] = 'invalid-later-observation'
+            self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
         for key, value in [('complete', False), ('state', 'error'), ('cwd', '/other')]:
             changed = copy.deepcopy(self.observation)
             changed['phases']['candidate']['activations'] = 1
