@@ -277,24 +277,25 @@ class RegistrationIsolation(unittest.TestCase):
             self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
                                                      'preservation': 'preservation_failed'})
 
-    def test_later_package_integrity_cannot_erase_candidate_activation(self):
-        for field in ('packages_after', 'skill_trees_after'):
-            for value in (None, {}, [], 'unknown'):
-                with self.subTest(field=field, value=value):
-                    changed = copy.deepcopy(self.observation)
-                    changed['phases']['candidate']['activations'] = 1
-                    changed[field] = value
-                    self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
-                                                             'preservation': 'preservation_failed'})
-        for field, path in [('packages_after', 'skills/probe/resource.txt'),
-                            ('skill_trees_after', 'probe/resource.txt')]:
-            for client in ('claude', 'copilot'):
-                for key, value in [('sha256', 'f' * 64), ('mode', 0o600)]:
-                    changed = copy.deepcopy(self.observation)
-                    changed['phases']['candidate']['activations'] = 1
-                    changed[field][client][path][key] = value
-                    self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
-                                                             'preservation': 'preservation_failed'})
+    def test_later_package_integrity_cannot_erase_observed_activation(self):
+        for phase in ('candidate', 'post_removal'):
+            for field in ('packages_after', 'skill_trees_after'):
+                for value in (None, {}, [], 'unknown'):
+                    with self.subTest(phase=phase, field=field, value=value):
+                        changed = copy.deepcopy(self.observation)
+                        changed['phases'][phase]['activations'] = 1
+                        changed[field] = value
+                        self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
+                                                                 'preservation': 'preservation_failed'})
+            for field, path in [('packages_after', 'skills/probe/resource.txt'),
+                                ('skill_trees_after', 'probe/resource.txt')]:
+                for client in ('claude', 'copilot'):
+                    for key, value in [('sha256', 'f' * 64), ('mode', 0o600)]:
+                        changed = copy.deepcopy(self.observation)
+                        changed['phases'][phase]['activations'] = 1
+                        changed[field][client][path][key] = value
+                        self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
+                                                                 'preservation': 'preservation_failed'})
 
     def test_untrusted_candidate_activation_does_not_bypass_earlier_controls(self):
         for section, key, value, expected in [
@@ -419,6 +420,10 @@ class RegistrationIsolation(unittest.TestCase):
             changed['packages_after'] = copy.deepcopy(fixture['packages'])
             changed['skill_trees_after'] = copy.deepcopy(fixture['skill_trees'])
             self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_pair')
+            for phase in ('candidate', 'post_removal'):
+                activated = copy.deepcopy(changed)
+                activated['phases'][phase]['activations'] = 1
+                self.assertEqual(q.classify_registration_isolation(activated, fixture)['isolation'], 'invalid_pair')
 
     def test_observer_only_post_run_changes_are_rejected(self):
         for field, path in [('packages_after', 'skills/probe/resource.txt'), ('skill_trees_after', 'probe/resource.txt')]:

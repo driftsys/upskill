@@ -2,7 +2,7 @@
   "native_execution": false,
   "qualified": false,
   "harness_sha256": "1a191d5e48e13a83bca9ccb8f19753b709a627234e0eee84d06f85f54b5d1618",
-  "tests_sha256": "efbf961f7189791a0a37d99210432fc195f9f5696a0936455ff48a77d833527b",
+  "tests_sha256": "3f9a9d8c8eb2fdd8398a0f8456c92dd659457141bdfaffef5a637dc6ce45ec8e",
   "command": [
     "python3",
     "-B",
@@ -22,7 +22,7 @@
     "compiled": true,
     "patch": "",
     "failed_assertions": [],
-    "output_sha256": "a78826761c00b3ee14b99ecf753c0d9f242a3462bc2bedbd2964ada7878c1971"
+    "output_sha256": "9ae3dee6a137aa2206a643acc4a7521fc3dfc8eced817bbdde37ea6183e799e1"
   },
   "mutations": [
     {
@@ -35,7 +35,7 @@
         "FAIL: test_cross_client_inequality_with_consistent_envelopes_is_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_cross_client_inequality_with_consistent_envelopes_is_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "9a5a5bc5e04e61aa5e792ba6e742fec157bb40deb73ea5ba046d794da0ca2657"
+      "output_sha256": "88d4a4a4bd8c21cee5aaca78c50e650904ce95400d4ead16eca84838ac1ebf75"
     },
     {
       "name": "tree_path_validation",
@@ -47,7 +47,7 @@
         "FAIL: test_consistent_invalid_tree_paths_digests_and_modes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_consistent_invalid_tree_paths_digests_and_modes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "d1352e9158ac7121345880bac017593653af04a37268f3d4a35bf46a26d27e51"
+      "output_sha256": "4e0039ddc2f5a76df73e859ff5ce006b86fdf37e50399e5fa5f7f12e7dc97812"
     },
     {
       "name": "tree_receipt_validation",
@@ -59,7 +59,7 @@
         "FAIL: test_consistent_invalid_tree_paths_digests_and_modes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_consistent_invalid_tree_paths_digests_and_modes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "cfe2b7ea04d0dfdbf257945a3977b096631e0d017f41daf5c3b37c2897a224a5"
+      "output_sha256": "857560030adbe04212dd24839253c7e83b1270b3608a310a198dcb8a79251d66"
     },
     {
       "name": "receipt_digest_characters",
@@ -73,7 +73,7 @@
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "a73051018dafc56cda8b84efd113057f7eb35c8b5ee13c73db4ae7a47fb60c66"
+      "output_sha256": "331d748964a1d401569e05287fd886cbf2e4b6e8d9f712dfafcd6c80827015a7"
     },
     {
       "name": "receipt_mode_validation",
@@ -87,7 +87,7 @@
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "881c4dacf985da8d9f81567a943d5fe994b7f6765cae15e262d03276f1458d7c"
+      "output_sha256": "1f977ced9c3a7f5bfbf88fc3fd5060ebd6211762099e415a47967430616a6cef"
     },
     {
       "name": "operation_state",
@@ -99,7 +99,7 @@
         "FAIL: test_operation_state_and_inventory_clients_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_operation_state_and_inventory_clients_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_operations'"
       ],
-      "output_sha256": "a693b6255bfdb64ad573c83312dbd6b010850e35f96e99197b1260340edbb49a"
+      "output_sha256": "b1ba8a35cb24eef45fe0e91445691aa3afec74f4f2bb4c061ed4b10f3a3e48d6"
     },
     {
       "name": "unexpected_tools",
@@ -121,7 +121,7 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='unexpected_tools')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "07c9529d9ae63fd7048fd9ab4aaf993147b8464ccbdc45cb5667f84758be3a15"
+      "output_sha256": "03fc31370b912f6fc2cd1f0f8dcb8d729efc2a75c099173aa9e33c43bc0970c3"
     },
     {
       "name": "exact_absence_response",
@@ -135,7 +135,7 @@
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_baseline'"
       ],
-      "output_sha256": "bf8542ccbd5e9899531b767e4ea9c2fb86c0e3943591555eea7389d6bf18ab7b"
+      "output_sha256": "463ae3ac491bbf658027dcf7196548c944a815a5fbae8a83fb9c75f56b9d48c2"
     },
     {
       "name": "owner_install_completion_order",
@@ -147,7 +147,7 @@
         "FAIL: test_timestamp_zone_and_owner_install_completion_are_required (test_qualify_registration_isolation.RegistrationIsolation.test_timestamp_zone_and_owner_install_completion_are_required)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_freshness'"
       ],
-      "output_sha256": "9ca2ad37adfabe1a53656355b621a1a3fc318992db79bf5b596fa4a8c5ad4131"
+      "output_sha256": "02442c9b3a0fb1c8e4afa5ea82491ac2eecf0c3f53c0856021c357286452252d"
     },
     {
       "name": "protected_path_coverage",
@@ -163,7 +163,7 @@
         "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "5b61b0743bae299a408dc12d3582cf39501e6c99a85ee4585fd1403f1466d758"
+      "output_sha256": "ee7c5a8973821a4a287697a1c0be33b549442f7a5e4e2a3359ea70369053a39c"
     },
     {
       "name": "owner_registration",
@@ -191,7 +191,7 @@
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_owner_candidate'"
       ],
-      "output_sha256": "942f957d5c6c7fc2c64ed3da7fe5a6ca977bd981a1a655988234c6510f0f9065"
+      "output_sha256": "b13fcd1915905eecd9d902ba017abcad0d9701f33b2a0515601acfda5ec0ae31"
     },
     {
       "name": "phase_complete",
@@ -215,7 +215,7 @@
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_observer_positive'"
       ],
-      "output_sha256": "40b47b7e7f26cc67b21a9b3430888fef6173951ecea5533b7268bca5b0362404"
+      "output_sha256": "dac96562e6c2eae1c78e3f9e8f8b5d925e5aeec100007f3731ed4794132d150c"
     },
     {
       "name": "phase_catalog_complete",
@@ -237,7 +237,7 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='catalog_complete')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "82c5c5be6047336db2f91a35c569ebf39b7a5af2ca996c4973c3b00b0753f040"
+      "output_sha256": "4a537b454a2fae75373679302d2dc7972b3bf5236a905c619066a6051a1e5931"
     },
     {
       "name": "phase_invocation_complete",
@@ -259,7 +259,7 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='invocation_complete')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "03b68e5cc75c6d3db64b93b66b7521501146a05bb3ddda9bd2c1876cebd26d00"
+      "output_sha256": "65df66ee00af2b8fb148fd4009798e5232aacf489699db121d699946af2103a7"
     },
     {
       "name": "phase_invocation_attempted",
@@ -281,7 +281,7 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='invocation_attempted')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "eec2c2b2b73834d1bc5177534ac4be89cf38e7dfecaf20887efc5181feb0c937"
+      "output_sha256": "ffabd3c78e578e29fa61002eb8444d9e66cd3f99ee27bb5d7d539f4ff45b239b"
     },
     {
       "name": "phase_state",
@@ -303,7 +303,7 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='state')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "701bebb310ad12e4e0022c41c480aedbdf795443889380d4c4488d0fb269c1cf"
+      "output_sha256": "4cada92a611339ee5e0977767c7b1277eddc6c08c83aa44674c4c00c6339a747"
     },
     {
       "name": "alias_identity",
@@ -315,7 +315,7 @@
         "FAIL: test_alias_identity_and_multiple_aliases_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_alias_identity_and_multiple_aliases_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_baseline'"
       ],
-      "output_sha256": "e12d9f917fbdae6d09475341295e28b93d82038b5d9579752347aa1a102466a0"
+      "output_sha256": "e2f1276c8f315d5b4d814413acc4dca62efd31a872428b34e335a2f8bdafe5fc"
     },
     {
       "name": "inventory_client_identity",
@@ -327,7 +327,7 @@
         "FAIL: test_operation_state_and_inventory_clients_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_operation_state_and_inventory_clients_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_inventory'"
       ],
-      "output_sha256": "23c22b0b382fe50f3856a6213ef12c3f26424b6a11b4986c8896138a97574dde"
+      "output_sha256": "e03e9c6cef6795c56211677c31ebb1f2e6b16ea25f5316dc718674c86815b14d"
     },
     {
       "name": "timestamp_zone",
@@ -339,7 +339,7 @@
         "FAIL: test_timestamp_zone_and_owner_install_completion_are_required (test_qualify_registration_isolation.RegistrationIsolation.test_timestamp_zone_and_owner_install_completion_are_required)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_freshness'"
       ],
-      "output_sha256": "240a165ee23a41adb5e8181cea0b17447585d6adb9705e19b779bb785ec23338"
+      "output_sha256": "5b14e797bcbd84f57ec349c23bc96fc3688a07116ea0257c0891820f240254f0"
     },
     {
       "name": "absent_receipt_shape",
@@ -351,7 +351,7 @@
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "485013a1e264d3cc89834b6ed90bf6ed65a541a8b0954da5d97d04e50fdfe77b"
+      "output_sha256": "ee881c5b5e7b988228c67e1e808333d0ce5aa3cd9f756710e70302d1f325e615"
     },
     {
       "name": "packages_after_observer_integrity",
@@ -360,12 +360,12 @@
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1282,7 +1282,7 @@\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n-    pair_changed = (observation.get('packages_after') != packages\n+    pair_changed = (mapping(observation.get('packages_after')).get(owner) != packages[owner]\n                     or observation.get('skill_trees_after') != trees)\n     preserved = preserved and not pair_changed\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n",
       "failed_assertions": [
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
         "FAIL: test_observer_only_post_run_changes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_observer_only_post_run_changes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "a9fef6c7d312518ec0e9f18030db161e8d7d148d123d3ab27628ab1a0ce80621"
+      "output_sha256": "fa3609c2881321153e719b96b2898c09581ad830677a8d10bfa936bd3db232a2"
     },
     {
       "name": "skill_trees_after_observer_integrity",
@@ -374,12 +374,12 @@
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1283,7 +1283,7 @@\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n     pair_changed = (observation.get('packages_after') != packages\n-                    or observation.get('skill_trees_after') != trees)\n+                    or mapping(observation.get('skill_trees_after')).get(owner) != trees[owner])\n     preserved = preserved and not pair_changed\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n     phases = {name: mapping(mapping(observation.get('phases')).get(name)) for name in names}\n",
       "failed_assertions": [
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
         "FAIL: test_observer_only_post_run_changes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_observer_only_post_run_changes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "a9fef6c7d312518ec0e9f18030db161e8d7d148d123d3ab27628ab1a0ce80621"
+      "output_sha256": "fa3609c2881321153e719b96b2898c09581ad830677a8d10bfa936bd3db232a2"
     },
     {
       "name": "activation_deferred_until_cleanup",
@@ -407,7 +407,7 @@
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: 'control_metadata_failed' != 'activation_observed'"
       ],
-      "output_sha256": "3137a0b8f4acf92b41a3e884cf558bd4367e31784b7d0d7b2619991cc452105d"
+      "output_sha256": "c3fc96b360f17893f2042af9d72ba1e866099f24e64f48c5b8eefa03fda00b58"
     },
     {
       "name": "post_removal_metadata_precedes_activation",
@@ -419,7 +419,7 @@
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: 'control_metadata_failed' != 'activation_observed'"
       ],
-      "output_sha256": "424fdef90d0a6a36e60f9a9e9f65510c4cfaf73bbe25a4d2c8f83bc536c35115"
+      "output_sha256": "ee98da29d531d1059a0dd5786e3b9c7d2af18f39e0fc1ee85b444eb19107ddbd"
     },
     {
       "name": "post_removal_session_reuse_precedes_activation",
@@ -431,7 +431,7 @@
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: 'blocked_freshness' != 'activation_observed'"
       ],
-      "output_sha256": "3770f90e26a8a597dbb4fcc2600ad3a319d32e711734340b8d484b46300b980a"
+      "output_sha256": "7725c58ce3b7be41753b13bdd92c47239995d470504b2cb2b94654c61e1a8d52"
     },
     {
       "name": "post_run_integrity_precedes_activation",
@@ -440,26 +440,26 @@
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1390,6 +1390,8 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n+    if pair_changed:\n+        return result('invalid_pair')\n     if activated(candidate):\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n",
       "failed_assertions": [
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=None)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value=None)",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value={})",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value={})",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=[])",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value=[])",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value='unknown')",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value='unknown')",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=None)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value=None)",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value={})",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value={})",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=[])",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value=[])",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value='unknown')",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value='unknown')",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation)",
         "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}"
       ],
-      "output_sha256": "9b2191676b93be9c5fed8206e64fdf89b3e9901ac1cc93ee84a34a979bec81a0"
+      "output_sha256": "6e79be0ff6721666c47712bafb260ccdb625bf318e484619ad0f6fd137457edb"
     },
     {
       "name": "activation_forces_preservation_success",
@@ -470,26 +470,26 @@
       "failed_assertions": [
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=None)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value=None)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value={})",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value={})",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=[])",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value=[])",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value='unknown')",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='packages_after', value='unknown')",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=None)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value=None)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value={})",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value={})",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=[])",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value=[])",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value='unknown')",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='candidate', field='skill_trees_after', value='unknown')",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
-        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation)",
         "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}"
       ],
-      "output_sha256": "c8ca6d9f7645bdf43b000e1982c9d798db9988598d3137b33716c0a991addbf4"
+      "output_sha256": "956b5c33450614e96e74b09ad190d96c85234c15e114908a47a0d6c82c73fdb3"
     },
     {
       "name": "malformed_preservation_overrides_isolation",
@@ -503,7 +503,7 @@
         "FAIL: test_malformed_capture_containers_block_without_exceptions (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_capture_containers_block_without_exceptions)",
         "AssertionError: {'isolation': 'invalid_capture', 'preservation': 'preservation_failed'} != {'isolation': 'discovery_absence_observed', 'preservatio[21 chars]led'}"
       ],
-      "output_sha256": "2091013e4ed3259310abd6a5bc7940506182dc881d09acfe73ad3932e06eeaff"
+      "output_sha256": "e692ecaeba9be1051fc5dd2169a87a137d3e369aeece2a4c2447bc48b193113c"
     },
     {
       "name": "numeric_owner_registration",
@@ -517,7 +517,7 @@
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value=1)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'"
       ],
-      "output_sha256": "bfa08c7b03dadc090df56ac1052813fdc3b09a3e85f78acb82c339069661913a"
+      "output_sha256": "2dd3a84b61f0ad4597b4bb3fefa6602e14b6e6760555e312533346d429020f5c"
     },
     {
       "name": "client_digest_inequality",
@@ -529,7 +529,7 @@
         "FAIL: test_cross_client_inequality_with_consistent_envelopes_is_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_cross_client_inequality_with_consistent_envelopes_is_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "861c364875acc3918007d012b825c484b2416e2d3fc05e9c517f548e090897cb"
+      "output_sha256": "88d4a4a4bd8c21cee5aaca78c50e650904ce95400d4ead16eca84838ac1ebf75"
     },
     {
       "name": "distinct_owner_observer",
@@ -541,7 +541,7 @@
         "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
       ],
-      "output_sha256": "83e6cedf0bdcab62608683f3fa83102664d787b841a74e23641ce7db200470cf"
+      "output_sha256": "ed5d38664f39070e867a71a79675eea04e1b799ccb7b40125f52d04c9139d202"
     },
     {
       "name": "alias_element_validity",
@@ -553,7 +553,7 @@
         "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
       ],
-      "output_sha256": "26f510f87eb5a0a453889417ec4e7c89835624dac8318148b5c67462425f7fba"
+      "output_sha256": "7d587e92e297a2397066fb3705f36f4d9b8539cf43294d54cd8bf64ceb64748b"
     },
     {
       "name": "alias_duplicates",
@@ -565,7 +565,7 @@
         "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
       ],
-      "output_sha256": "1e775b8db6b1a032421e3ae2228066b0ef8cb1f002b688e0208e61d61525af3c"
+      "output_sha256": "7d587e92e297a2397066fb3705f36f4d9b8539cf43294d54cd8bf64ceb64748b"
     },
     {
       "name": "protected_path_element_validity",
@@ -577,7 +577,7 @@
         "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "ddc745c042ba8cb7b0d93c6014218b02d9a2b7f8f565c9b908cd75114c238ca1"
+      "output_sha256": "81ccc0d50e715305aa6515d1b47f4f62afe11529d772693695abccd51912983d"
     },
     {
       "name": "nonempty_protected_paths",
@@ -589,7 +589,7 @@
         "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "ddc745c042ba8cb7b0d93c6014218b02d9a2b7f8f565c9b908cd75114c238ca1"
+      "output_sha256": "81ccc0d50e715305aa6515d1b47f4f62afe11529d772693695abccd51912983d"
     },
     {
       "name": "operation_owner_identity",
@@ -605,9 +605,49 @@
         "FAIL: test_operation_failure_missing_metadata_and_reordered_effects_block (test_qualify_registration_isolation.RegistrationIsolation.test_operation_failure_missing_metadata_and_reordered_effects_block) (operation='owner_remove', key='owner')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_operations'"
       ],
-      "output_sha256": "6d3d3a604ccbf9351cad140a92f0adfd4fbddc2145f16b24eba0ab2683ee9eca"
+      "output_sha256": "3ca4f3c24f5f64e56d0a72b4e82791e6dbbfc007b76cab3efecb9a9dba02d48c"
+    },
+    {
+      "name": "initial_pair_trust_after_activation",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1275,13 +1275,12 @@\n                         and isinstance(row, dict) and set(row) == {'sha256', 'mode'}\n                         and receipt_valid(dict(row, present=True)) for path, row in tree.items()))\n \n-    if (not isinstance(packages, dict) or set(packages) != {owner, observer}\n+    initial_pair_invalid = (not isinstance(packages, dict) or set(packages) != {owner, observer}\n             or not all(tree_valid(tree) for tree in packages.values())\n             or not isinstance(trees, dict) or set(trees) != {owner, observer}\n             or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n-                    if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n-        return result('invalid_pair')\n+                    if path.startswith('skills/')} != trees[client] for client in (owner, observer)))\n     pair_changed = (observation.get('packages_after') != packages\n                     or observation.get('skill_trees_after') != trees)\n     preserved = preserved and not pair_changed\n@@ -1392,6 +1391,8 @@\n     # A correlated activation is a retained counterexample even if cleanup fails.\n     if activated(candidate):\n         return result('activation_observed')\n+    if initial_pair_invalid:\n+        return result('invalid_pair')\n     if not metadata_valid('post_removal'):\n         return result('control_metadata_failed')\n     if not fresh('post_removal'):\n",
+      "failed_assertions": [
+        "FAIL: test_cross_client_inequality_with_consistent_envelopes_is_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_cross_client_inequality_with_consistent_envelopes_is_rejected)",
+        "AssertionError: 'activation_observed' != 'invalid_pair'"
+      ],
+      "output_sha256": "9f481566a6d452660d30c1c1b5e1c0d5261f639208585d038545505b83c9dbd7"
+    },
+    {
+      "name": "post_run_integrity_precedes_post_removal_activation",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1403,10 +1403,10 @@\n     if any(removed.get(key) is not False for key in\n            ('foreign_selector', 'candidate_registered', 'marker_disclosed')):\n         return result('invalid_observer_conditions')\n+    if pair_changed:\n+        return result('invalid_pair')\n     if activated(removed):\n         return result('activation_observed')\n-    if pair_changed:\n-        return result('invalid_pair')\n     if any(phase.get('catalog_present') is True or phase.get('alias_exposure') is True\n            for phase in (candidate, removed)):\n         return result('catalog_exposure')\n",
+      "failed_assertions": [
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='packages_after', value=None)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='packages_after', value={})",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='packages_after', value=[])",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='packages_after', value='unknown')",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='skill_trees_after', value=None)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='skill_trees_after', value={})",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='skill_trees_after', value=[])",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation) (phase='post_removal', field='skill_trees_after', value='unknown')",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_observed_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_observed_activation)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}"
+      ],
+      "output_sha256": "146e6bdd0f7b160b1426ddebd83fabd3a7c759f885406b1a1ee1aa48a6624c31"
     }
   ],
-  "caught": 36,
+  "caught": 38,
   "method": "Temporary copies of only the harness and focused tests; every variant compiles, runs 30 tests, and fails regression assertions without runtime errors. Patches and failed assertions are retained for replay. No native process or profile is used."
 }

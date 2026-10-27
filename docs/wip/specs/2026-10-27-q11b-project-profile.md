@@ -181,7 +181,7 @@ separately. These outcomes never supply positive evidence.
 
 The
 [offline guard validation](../../technotes/evidence/2026-10-27-q11b-offline-guards/validation.json)
-records 30 focused tests and 36 independently rejected guard mutations. The
+records 30 focused tests and 38 independently rejected guard mutations. The
 mutations run on temporary copies, including consistent malformed envelopes,
 cross-client inequality, exact alias/response checks, completion and operation
 state, protected-path coverage and activation ordering. This remains synthetic
