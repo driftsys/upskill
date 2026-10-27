@@ -17,7 +17,11 @@ references must be reconciled as part of that feature's review.
   [Q11](../technotes/gate6-cross-client-package-isolation.md) is merged and
   indexed with a Claude explicit-selector isolation FAIL and a blocked Copilot
   reverse direction. Defines Q11b without running it or weakening the retained
-  PASS entry gate. A narrower replacement gate requires the user's decision.
+  PASS entry gate. A narrower replacement gate requires the user's decision. The
+  [concrete project profile](specs/2026-10-27-q11b-project-profile.md) under
+  [#428](https://github.com/driftsys/upskill/issues/428) specifies the proposed
+  effects and preservation inventory; native execution awaits profile approval.
+  Offline classification tests do not qualify the client profile.
 
 - [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
   : proposed under [#417](https://github.com/driftsys/upskill/issues/417).
