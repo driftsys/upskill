@@ -104,7 +104,7 @@ class RegistrationIsolation(unittest.TestCase):
 
     def test_operation_failure_missing_metadata_and_reordered_effects_block(self):
         for name in self.observation['operations']:
-            for key, value in [('complete', False), ('cwd', '/other'), ('scope', 'user'),
+            for key, value in [('complete', False), ('owner', 'other'), ('cwd', '/other'), ('scope', 'user'),
                                ('namespace', 'other:probe'), ('started_at', self.time(0))]:
                 with self.subTest(operation=name, key=key):
                     changed = copy.deepcopy(self.observation)
@@ -214,7 +214,7 @@ class RegistrationIsolation(unittest.TestCase):
 
     def test_owner_positives_require_affirmative_registration(self):
         for phase in ('owner_positive', 'owner_candidate'):
-            for value in (False, None, 'unknown'):
+            for value in (False, None, 'unknown', 1):
                 with self.subTest(phase=phase, value=value):
                     changed = copy.deepcopy(self.observation)
                     changed['phases'][phase]['candidate_registered'] = value
@@ -232,6 +232,19 @@ class RegistrationIsolation(unittest.TestCase):
             changed = copy.deepcopy(self.observation)
             changed['preservation'] = dict(before=receipts, after=copy.deepcopy(receipts))
             self.assertEqual(self.classify(changed)['preservation'], 'preservation_failed')
+        for paths, receipts in [([], {}), ([None], {None: {'present': False}}),
+                                ([''], {'': {'present': False}})]:
+            fixture = copy.deepcopy(self.fixture)
+            fixture['protected_paths'] = paths
+            changed = copy.deepcopy(self.observation)
+            changed['preservation'] = dict(before=receipts, after=copy.deepcopy(receipts))
+            self.assertEqual(q.classify_registration_isolation(changed, fixture)['preservation'], 'preservation_failed')
+        fixture = copy.deepcopy(self.fixture)
+        fixture['protected_paths'] = ['config', 'other']
+        changed = copy.deepcopy(self.observation)
+        changed['preservation']['before']['other'] = {'present': False}
+        changed['preservation']['after']['other'] = {'present': False}
+        self.assertEqual(q.classify_registration_isolation(changed, fixture)['preservation'], 'unchanged')
 
     def test_candidate_activation_survives_later_cleanup_and_observation_gaps(self):
         for value in (None, {}, [], 'unknown'):
@@ -241,16 +254,47 @@ class RegistrationIsolation(unittest.TestCase):
                     changed['phases']['candidate']['activations'] = 1
                     changed['phases' if section == 'post_removal' else 'operations'][section] = value
                     self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
-        for key in ('client', 'pin', 'cwd', 'scope', 'namespace', 'session_id', 'started_at', 'finished_at'):
+        for key in ('client', 'pin', 'cwd', 'scope', 'namespace', 'started_at', 'finished_at'):
             changed = copy.deepcopy(self.observation)
             changed['phases']['candidate']['activations'] = 1
             changed['phases']['post_removal'][key] = 'invalid-later-observation'
             self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
+        changed = copy.deepcopy(self.observation)
+        changed['phases']['candidate']['activations'] = 1
+        changed['phases']['post_removal']['session_id'] = 'session-observer_positive'
+        self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
         for key, value in [('complete', False), ('state', 'error'), ('cwd', '/other')]:
             changed = copy.deepcopy(self.observation)
             changed['phases']['candidate']['activations'] = 1
             changed['operations']['owner_remove'][key] = value
             self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
+        for preservation in (None, [], {},
+                             {'before': {'config': {'present': True, 'sha256': 'b' * 64, 'mode': 0o640}},
+                              'after': {'config': {'present': True, 'sha256': 'b' * 64, 'mode': 0o600}}}):
+            changed = copy.deepcopy(self.observation)
+            changed['phases']['candidate']['activations'] = 1
+            changed['preservation'] = preservation
+            self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
+                                                     'preservation': 'preservation_failed'})
+
+    def test_later_package_integrity_cannot_erase_candidate_activation(self):
+        for field in ('packages_after', 'skill_trees_after'):
+            for value in (None, {}, [], 'unknown'):
+                with self.subTest(field=field, value=value):
+                    changed = copy.deepcopy(self.observation)
+                    changed['phases']['candidate']['activations'] = 1
+                    changed[field] = value
+                    self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
+                                                             'preservation': 'preservation_failed'})
+        for field, path in [('packages_after', 'skills/probe/resource.txt'),
+                            ('skill_trees_after', 'probe/resource.txt')]:
+            for client in ('claude', 'copilot'):
+                for key, value in [('sha256', 'f' * 64), ('mode', 0o600)]:
+                    changed = copy.deepcopy(self.observation)
+                    changed['phases']['candidate']['activations'] = 1
+                    changed[field][client][path][key] = value
+                    self.assertEqual(self.classify(changed), {'isolation': 'activation_observed',
+                                                             'preservation': 'preservation_failed'})
 
     def test_untrusted_candidate_activation_does_not_bypass_earlier_controls(self):
         for section, key, value, expected in [
@@ -277,11 +321,14 @@ class RegistrationIsolation(unittest.TestCase):
                 self.assertEqual(self.classify(changed)['preservation'], 'unchanged')
             changed = copy.deepcopy(self.observation)
             changed['preservation'] = value
-            self.assertEqual(self.classify(changed)['preservation'], 'preservation_failed')
+            self.assertEqual(self.classify(changed), {'isolation': 'discovery_absence_observed',
+                                                     'preservation': 'preservation_failed'})
             for phase in self.observation['phases']:
                 changed = copy.deepcopy(self.observation)
                 changed['phases'][phase] = value
-                self.assertNotEqual(self.classify(changed)['isolation'], 'discovery_absence_observed')
+                expected = ('blocked_' + phase if phase in ('observer_positive', 'owner_positive', 'owner_candidate')
+                            else 'blocked_freshness')
+                self.assertEqual(self.classify(changed)['isolation'], expected)
             for operation in self.observation['operations']:
                 changed = copy.deepcopy(self.observation)
                 changed['operations'][operation] = value
@@ -296,6 +343,24 @@ class RegistrationIsolation(unittest.TestCase):
                     fixture[key] = value
                     self.assertEqual(q.classify_registration_isolation(self.observation, fixture),
                                      {'isolation': 'invalid_fixture', 'preservation': 'preservation_failed'})
+        for aliases in ([None], [''], [1], ['probe', 'probe']):
+            fixture = copy.deepcopy(self.fixture)
+            fixture['aliases'] = aliases
+            changed = copy.deepcopy(self.observation)
+            for phase in ('baseline', 'candidate', 'post_removal'):
+                changed['phases'][phase]['aliases_checked'] = aliases.copy()
+            self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_fixture')
+        fixture = copy.deepcopy(self.fixture)
+        fixture.update(observer='claude', pins={'claude': '2.1.308'})
+        fixture['packages'] = {'claude': fixture['packages']['claude']}
+        fixture['skill_trees'] = {'claude': fixture['skill_trees']['claude']}
+        changed = copy.deepcopy(self.observation)
+        changed['inventory'].update(observer='claude', pins=fixture['pins'].copy())
+        changed['packages_after'] = copy.deepcopy(fixture['packages'])
+        changed['skill_trees_after'] = copy.deepcopy(fixture['skill_trees'])
+        for phase in changed['phases'].values():
+            phase.update(client='claude', pin='2.1.308')
+        self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_fixture')
         for section in ('before', 'after'):
             for value in (None, [], 'unknown', 1):
                 changed = copy.deepcopy(self.observation)
@@ -346,11 +411,14 @@ class RegistrationIsolation(unittest.TestCase):
                                  'blocked_baseline' if phase == 'baseline' else 'incomplete_evidence')
 
     def test_cross_client_inequality_with_consistent_envelopes_is_rejected(self):
-        self.fixture['packages']['copilot']['skills/probe/resource.txt']['mode'] = 0o600
-        self.fixture['skill_trees']['copilot']['probe/resource.txt']['mode'] = 0o600
-        self.observation['packages_after'] = copy.deepcopy(self.fixture['packages'])
-        self.observation['skill_trees_after'] = copy.deepcopy(self.fixture['skill_trees'])
-        self.assertEqual(self.classify()['isolation'], 'invalid_pair')
+        for key, value in [('mode', 0o600), ('sha256', 'f' * 64)]:
+            fixture = copy.deepcopy(self.fixture)
+            fixture['packages']['copilot']['skills/probe/resource.txt'][key] = value
+            fixture['skill_trees']['copilot']['probe/resource.txt'][key] = value
+            changed = copy.deepcopy(self.observation)
+            changed['packages_after'] = copy.deepcopy(fixture['packages'])
+            changed['skill_trees_after'] = copy.deepcopy(fixture['skill_trees'])
+            self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_pair')
 
     def test_observer_only_post_run_changes_are_rejected(self):
         for field, path in [('packages_after', 'skills/probe/resource.txt'), ('skill_trees_after', 'probe/resource.txt')]:

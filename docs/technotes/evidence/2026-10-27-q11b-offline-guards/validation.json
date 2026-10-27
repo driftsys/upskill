@@ -1,8 +1,8 @@
 {
   "native_execution": false,
   "qualified": false,
-  "harness_sha256": "00373dea867a28399edc564067e6d9795caaedf06c8b9b2ff1871669da0d1e65",
-  "tests_sha256": "1e6e58474d168780687355de1e6c00b9a083801c0e9e550708656cf1c73690ec",
+  "harness_sha256": "1a191d5e48e13a83bca9ccb8f19753b709a627234e0eee84d06f85f54b5d1618",
+  "tests_sha256": "efbf961f7189791a0a37d99210432fc195f9f5696a0936455ff48a77d833527b",
   "command": [
     "python3",
     "-B",
@@ -18,53 +18,53 @@
   "baseline": {
     "name": "baseline",
     "exit_code": 0,
-    "tests": 29,
+    "tests": 30,
     "compiled": true,
     "patch": "",
     "failed_assertions": [],
-    "output_sha256": "810d179f59cf2b7a35f81e6fb1ae7e0d69bcf2984f5c82b2350728f65c84f9fa"
+    "output_sha256": "a78826761c00b3ee14b99ecf753c0d9f242a3462bc2bedbd2964ada7878c1971"
   },
   "mutations": [
     {
       "name": "paired_client_tree_equality",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1278,7 +1278,7 @@\n     if (not isinstance(packages, dict) or set(packages) != {owner, observer}\n             or not all(tree_valid(tree) for tree in packages.values())\n             or not isinstance(trees, dict) or set(trees) != {owner, observer}\n-            or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]\n+            or not all(tree_valid(tree) for tree in trees.values())\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))\n             or observation.get('packages_after') != packages\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1278,7 +1278,7 @@\n     if (not isinstance(packages, dict) or set(packages) != {owner, observer}\n             or not all(tree_valid(tree) for tree in packages.values())\n             or not isinstance(trees, dict) or set(trees) != {owner, observer}\n-            or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]\n+            or not all(tree_valid(tree) for tree in trees.values())\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n",
       "failed_assertions": [
         "FAIL: test_cross_client_inequality_with_consistent_envelopes_is_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_cross_client_inequality_with_consistent_envelopes_is_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "59e621c877379118a14da25105b5e7f3066dcfcbedb3ead1c5dd40f1ca6835bd"
+      "output_sha256": "9a5a5bc5e04e61aa5e792ba6e742fec157bb40deb73ea5ba046d794da0ca2657"
     },
     {
       "name": "tree_path_validation",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1271,7 +1271,6 @@\n     def tree_valid(tree):\n         return (isinstance(tree, dict) and bool(tree)\n                 and all(isinstance(path, str) and bool(path)\n-                        and not any(part in ('', '.', '..') for part in path.split('/'))\n                         and isinstance(row, dict) and set(row) == {'sha256', 'mode'}\n                         and receipt_valid(dict(row, present=True)) for path, row in tree.items()))\n \n",
       "failed_assertions": [
         "FAIL: test_consistent_invalid_tree_paths_digests_and_modes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_consistent_invalid_tree_paths_digests_and_modes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "cfd28a81fd23c03d10f1d4c1415c12927c94d7cb7b18b313f153b13fc5826f4f"
+      "output_sha256": "d1352e9158ac7121345880bac017593653af04a37268f3d4a35bf46a26d27e51"
     },
     {
       "name": "tree_receipt_validation",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1273,7 +1273,7 @@\n                 and all(isinstance(path, str) and bool(path)\n                         and not any(part in ('', '.', '..') for part in path.split('/'))\n                         and isinstance(row, dict) and set(row) == {'sha256', 'mode'}\n-                        and receipt_valid(dict(row, present=True)) for path, row in tree.items()))\n+ for path, row in tree.items()))\n \n     if (not isinstance(packages, dict) or set(packages) != {owner, observer}\n             or not all(tree_valid(tree) for tree in packages.values())\n",
       "failed_assertions": [
         "FAIL: test_consistent_invalid_tree_paths_digests_and_modes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_consistent_invalid_tree_paths_digests_and_modes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "ca3da2a66015a0f402ee2f87e782a98abbe2e13995d360bf6e7e9a49e9d0d133"
+      "output_sha256": "cfe2b7ea04d0dfdbf257945a3977b096631e0d017f41daf5c3b37c2897a224a5"
     },
     {
       "name": "receipt_digest_characters",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1243,7 +1243,6 @@\n             return row.get('sha256') is None and row.get('mode') is None\n         digest = row.get('sha256')\n         return (isinstance(digest, str) and len(digest) == 64\n-                and all(c in '0123456789abcdef' for c in digest)\n                 and type(row.get('mode')) is int and 0 <= row['mode'] <= 0o7777)\n \n     preservation = mapping(observation.get('preservation'))\n",
       "failed_assertions": [
@@ -73,12 +73,12 @@
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "05e8bbb4a69119bd761c82b11b78d16faa80012debb37d61e9dd40c49a06d182"
+      "output_sha256": "a73051018dafc56cda8b84efd113057f7eb35c8b5ee13c73db4ae7a47fb60c66"
     },
     {
       "name": "receipt_mode_validation",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1243,8 +1243,7 @@\n             return row.get('sha256') is None and row.get('mode') is None\n         digest = row.get('sha256')\n         return (isinstance(digest, str) and len(digest) == 64\n-                and all(c in '0123456789abcdef' for c in digest)\n-                and type(row.get('mode')) is int and 0 <= row['mode'] <= 0o7777)\n+                and all(c in '0123456789abcdef' for c in digest))\n \n     preservation = mapping(observation.get('preservation'))\n     before, after = preservation.get('before'), preservation.get('after')\n",
       "failed_assertions": [
@@ -87,26 +87,26 @@
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "25cd3f68053d1f54246f576a3a542765e9e7f5e6fbe8f10f317f513bbd44db41"
+      "output_sha256": "881c4dacf985da8d9f81567a943d5fe994b7f6765cae15e262d03276f1458d7c"
     },
     {
       "name": "operation_state",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1348,7 +1348,7 @@\n     def operation_valid(name, preceding):\n         operation = mapping(operations.get(name))\n         timing = interval(operation)\n-        if (not timing or operation.get('state') != 'success' or operation.get('complete') is not True\n+        if (not timing or operation.get('complete') is not True\n                 or any(operation.get(key) != fixture[key] for key in ('owner', 'cwd', 'scope', 'namespace'))\n                 or timing[0] <= max(times[phase][1] for phase in preceding)):\n             return False\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1349,7 +1349,7 @@\n     def operation_valid(name, preceding):\n         operation = mapping(operations.get(name))\n         timing = interval(operation)\n-        if (not timing or operation.get('state') != 'success' or operation.get('complete') is not True\n+        if (not timing or operation.get('complete') is not True\n                 or any(operation.get(key) != fixture[key] for key in ('owner', 'cwd', 'scope', 'namespace'))\n                 or timing[0] <= max(times[phase][1] for phase in preceding)):\n             return False\n",
       "failed_assertions": [
         "FAIL: test_operation_state_and_inventory_clients_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_operation_state_and_inventory_clients_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_operations'"
       ],
-      "output_sha256": "2c56694e37243ca7512523a9629a22aa0e6f148cbe44eb2325f3347d6d357021"
+      "output_sha256": "a693b6255bfdb64ad573c83312dbd6b010850e35f96e99197b1260340edbb49a"
     },
     {
       "name": "unexpected_tools",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1302,7 +1302,6 @@\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n                         ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n-                and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n \n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1303,7 +1303,6 @@\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n                         ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n-                and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n \n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='unexpected_tools')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -121,38 +121,38 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='unexpected_tools')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "a66f98973828ae520d647ec56baa2096da6042446a7547ad2c86bff0ab1c853f"
+      "output_sha256": "07c9529d9ae63fd7048fd9ab4aaf993147b8464ccbdc45cb5667f84758be3a15"
     },
     {
       "name": "exact_absence_response",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1377,7 +1377,6 @@\n     def absent(phase):\n         return (complete(phase) and phase.get('catalog_present') is False\n                 and phase.get('invocation_outcome') == 'not_found'\n-                and phase.get('response') == fixture['absent_marker']\n                 and phase.get('activations') == 0 and phase.get('content_activations') == 0\n                 and phase.get('alias_activation') is False and phase.get('alias_exposure') is False\n                 and phase.get('alias_not_found') is True\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1378,7 +1378,6 @@\n     def absent(phase):\n         return (complete(phase) and phase.get('catalog_present') is False\n                 and phase.get('invocation_outcome') == 'not_found'\n-                and phase.get('response') == fixture['absent_marker']\n                 and phase.get('activations') == 0 and phase.get('content_activations') == 0\n                 and phase.get('alias_activation') is False and phase.get('alias_exposure') is False\n                 and phase.get('alias_not_found') is True\n",
       "failed_assertions": [
         "FAIL: test_absence_response_is_exact_in_every_negative_phase (test_qualify_registration_isolation.RegistrationIsolation.test_absence_response_is_exact_in_every_negative_phase)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_baseline'",
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_baseline'"
       ],
-      "output_sha256": "59ff3f7e282acf9138356f8692183edf72c4f8462500dae756359db4de5a5dc4"
+      "output_sha256": "bf8542ccbd5e9899531b767e4ea9c2fb86c0e3943591555eea7389d6bf18ab7b"
     },
     {
       "name": "owner_install_completion_order",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1360,7 +1360,6 @@\n         if not operation_valid(name, preceding):\n             return result('blocked_operations')\n     if (times['baseline'][0] <= times['calibration_cleanup'][1]\n-            or times['owner_candidate'][0] <= times['owner_install'][1]\n             or times['candidate'][0] <= times['owner_candidate'][1]):\n         return result('blocked_freshness')\n     negatives = [phases[name] for name in ('baseline', 'candidate', 'post_removal')]\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1361,7 +1361,6 @@\n         if not operation_valid(name, preceding):\n             return result('blocked_operations')\n     if (times['baseline'][0] <= times['calibration_cleanup'][1]\n-            or times['owner_candidate'][0] <= times['owner_install'][1]\n             or times['candidate'][0] <= times['owner_candidate'][1]):\n         return result('blocked_freshness')\n     negatives = [phases[name] for name in ('baseline', 'candidate', 'post_removal')]\n",
       "failed_assertions": [
         "FAIL: test_timestamp_zone_and_owner_install_completion_are_required (test_qualify_registration_isolation.RegistrationIsolation.test_timestamp_zone_and_owner_install_completion_are_required)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_freshness'"
       ],
-      "output_sha256": "49c295d392b0601e23b4312c7f4d6e24940f5d82b2e5a056fecf015149dc2e63"
+      "output_sha256": "9ca2ad37adfabe1a53656355b621a1a3fc318992db79bf5b596fa4a8c5ad4131"
     },
     {
       "name": "protected_path_coverage",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1253,7 +1253,6 @@\n                        and all(isinstance(path, str) and bool(path) for path in protected)\n                        and len(set(protected)) == len(protected))\n     preserved = (protected_valid and isinstance(before, dict) and before == after\n-                 and set(before) == set(protected)\n                  and all(receipt_valid(row) for row in before.values()))\n \n     def result(verdict):\n",
       "failed_assertions": [
@@ -163,14 +163,14 @@
         "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "533652df4d0b8a40e86baf57a4058f87bbb38747d42219e1417c1a010c269b49"
+      "output_sha256": "5b61b0743bae299a408dc12d3582cf39501e6c99a85ee4585fd1403f1466d758"
     },
     {
       "name": "owner_registration",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1309,7 +1309,6 @@\n     for name in ('observer_positive', 'owner_positive', 'owner_candidate'):\n         phase = phases.get(name, {})\n         if (not complete(phase) or phase.get('session_bound') is not True\n-                or name != 'observer_positive' and phase.get('candidate_registered') is not True\n                 or phase.get('marker_disclosed') is not False\n                 or phase.get('catalog_present') is not True\n                 or phase.get('invocation_outcome') != 'loaded' or phase.get('activations') != 1\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1310,7 +1310,6 @@\n     for name in ('observer_positive', 'owner_positive', 'owner_candidate'):\n         phase = phases.get(name, {})\n         if (not complete(phase) or phase.get('session_bound') is not True\n-                or name != 'observer_positive' and phase.get('candidate_registered') is not True\n                 or phase.get('marker_disclosed') is not False\n                 or phase.get('catalog_present') is not True\n                 or phase.get('invocation_outcome') != 'loaded' or phase.get('activations') != 1\n",
       "failed_assertions": [
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_positive', value=False)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_positive'",
@@ -178,23 +178,27 @@
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_positive'",
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_positive', value='unknown')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_positive'",
+        "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_positive', value=1)",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_owner_positive'",
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value=False)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'",
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value=None)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'",
         "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value='unknown')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'",
+        "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value=1)",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'",
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_owner_candidate'"
       ],
-      "output_sha256": "d0f2e51677a18014c895dbcbccd9142818204c0419f9c750c7cacd45c82bb417"
+      "output_sha256": "942f957d5c6c7fc2c64ed3da7fe5a6ca977bd981a1a655988234c6510f0f9065"
     },
     {
       "name": "phase_complete",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1301,7 +1301,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('catalog_complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1302,7 +1302,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('catalog_complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='complete')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -211,14 +215,14 @@
         "FAIL: test_untrusted_candidate_activation_does_not_bypass_earlier_controls (test_qualify_registration_isolation.RegistrationIsolation.test_untrusted_candidate_activation_does_not_bypass_earlier_controls)",
         "AssertionError: 'activation_observed' != 'blocked_observer_positive'"
       ],
-      "output_sha256": "eb09253639244d05aff9e08667def7d00d10bd4e69d727e5b33ffeb23ec17a05"
+      "output_sha256": "40b47b7e7f26cc67b21a9b3430888fef6173951ecea5533b7268bca5b0362404"
     },
     {
       "name": "phase_catalog_complete",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1301,7 +1301,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1302,7 +1302,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='catalog_complete')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -233,14 +237,14 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='catalog_complete')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "392516cf227c6e07f4aecc124bbdd0fa039db8f0c35d27ea22282e2a8bdf9691"
+      "output_sha256": "82c5c5be6047336db2f91a35c569ebf39b7a5af2ca996c4973c3b00b0753f040"
     },
     {
       "name": "phase_invocation_complete",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1301,7 +1301,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'catalog_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1302,7 +1302,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'catalog_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='invocation_complete')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -255,14 +259,14 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='invocation_complete')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "ea079d3da1b243f0bff49dee632d01fe581d9a348aaa522ddcea9654b7014ec5"
+      "output_sha256": "03b68e5cc75c6d3db64b93b66b7521501146a05bb3ddda9bd2c1876cebd26d00"
     },
     {
       "name": "phase_invocation_attempted",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1301,7 +1301,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'catalog_complete', 'invocation_complete'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1302,7 +1302,7 @@\n     def complete(phase):\n         return (phase.get('state') == 'success'\n                 and all(phase.get(key) is True for key in\n-                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n+                        ('complete', 'catalog_complete', 'invocation_complete'))\n                 and phase.get('unexpected_tools') is False\n                 and all(type(phase.get(key)) is int and phase[key] >= 0\n                         for key in ('activations', 'content_activations')))\n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='invocation_attempted')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -277,14 +281,14 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='invocation_attempted')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "7e695f4c6d9236ee7cab85673b154746826057be453da2d6762fc01b0cad4854"
+      "output_sha256": "eec2c2b2b73834d1bc5177534ac4be89cf38e7dfecaf20887efc5181feb0c937"
     },
     {
       "name": "phase_state",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1299,7 +1299,7 @@\n             return result('control_metadata_failed')\n \n     def complete(phase):\n-        return (phase.get('state') == 'success'\n+        return (True\n                 and all(phase.get(key) is True for key in\n                         ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1300,7 +1300,7 @@\n             return result('control_metadata_failed')\n \n     def complete(phase):\n-        return (phase.get('state') == 'success'\n+        return (True\n                 and all(phase.get(key) is True for key in\n                         ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))\n                 and phase.get('unexpected_tools') is False\n",
       "failed_assertions": [
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='observer_positive', key='state')",
         "AssertionError: 'discovery_absence_observed' != 'blocked_observer_positive'",
@@ -299,86 +303,90 @@
         "FAIL: test_phase_completion_and_tool_restrictions_are_independent_guards (test_qualify_registration_isolation.RegistrationIsolation.test_phase_completion_and_tool_restrictions_are_independent_guards) (phase='post_removal', key='state')",
         "AssertionError: 'discovery_absence_observed' != 'incomplete_evidence'"
       ],
-      "output_sha256": "33418b70669285348a6d69d52dce3e6d40cfb68569649cc51760f13c2a55647f"
+      "output_sha256": "701bebb310ad12e4e0022c41c480aedbdf795443889380d4c4488d0fb269c1cf"
     },
     {
       "name": "alias_identity",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1381,7 +1381,7 @@\n                 and phase.get('activations') == 0 and phase.get('content_activations') == 0\n                 and phase.get('alias_activation') is False and phase.get('alias_exposure') is False\n                 and phase.get('alias_not_found') is True\n-                and phase.get('aliases_checked') == fixture['aliases'])\n+                and len(phase.get('aliases_checked', [])) == len(fixture['aliases']))\n \n     baseline, candidate, removed = negatives\n     if activated(baseline) or baseline.get('catalog_present') is True or baseline.get('alias_exposure') is True:\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1382,7 +1382,7 @@\n                 and phase.get('activations') == 0 and phase.get('content_activations') == 0\n                 and phase.get('alias_activation') is False and phase.get('alias_exposure') is False\n                 and phase.get('alias_not_found') is True\n-                and phase.get('aliases_checked') == fixture['aliases'])\n+                and len(phase.get('aliases_checked', [])) == len(fixture['aliases']))\n \n     baseline, candidate, removed = negatives\n     if activated(baseline) or baseline.get('catalog_present') is True or baseline.get('alias_exposure') is True:\n",
       "failed_assertions": [
         "FAIL: test_alias_identity_and_multiple_aliases_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_alias_identity_and_multiple_aliases_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_baseline'"
       ],
-      "output_sha256": "1771a41058d068486beb85c4dca8a12c3a891f2d718618afa813fa0c2e1bb83f"
+      "output_sha256": "e12d9f917fbdae6d09475341295e28b93d82038b5d9579752347aa1a102466a0"
     },
     {
       "name": "inventory_client_identity",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1262,7 +1262,7 @@\n     owner, observer = fixture['owner'], fixture['observer']\n     inventory = mapping(observation.get('inventory'))\n     if (inventory.get('complete') is not True or inventory.get('blocking_reasons') != []\n-            or any(inventory.get(key) != fixture[key] for key in ('owner', 'observer', 'cwd', 'scope', 'pins'))\n+            or any(inventory.get(key) != fixture[key] for key in ('cwd', 'scope', 'pins'))\n             or any(not isinstance(inventory.get(key), list) or not inventory[key]\n                    or any(not isinstance(value, str) or not value for value in inventory[key])\n                    for key in ('effective_roots', 'reader_conditions', 'surfaces'))):\n",
       "failed_assertions": [
         "FAIL: test_operation_state_and_inventory_clients_are_bound (test_qualify_registration_isolation.RegistrationIsolation.test_operation_state_and_inventory_clients_are_bound)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_inventory'"
       ],
-      "output_sha256": "a4e2fccb4482dee3b4472fa5c0b09d821a81971242fce7ed1c600b38e6f511e6"
+      "output_sha256": "23c22b0b382fe50f3856a6213ef12c3f26424b6a11b4986c8896138a97574dde"
     },
     {
       "name": "timestamp_zone",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1324,7 +1324,7 @@\n         try:\n             start = datetime.datetime.fromisoformat(row['started_at'])\n             finish = datetime.datetime.fromisoformat(row['finished_at'])\n-            if start.utcoffset() is None or finish.utcoffset() is None or start >= finish:\n+            if start >= finish:\n                 return None\n             return start, finish\n         except (KeyError, TypeError, ValueError):\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1325,7 +1325,7 @@\n         try:\n             start = datetime.datetime.fromisoformat(row['started_at'])\n             finish = datetime.datetime.fromisoformat(row['finished_at'])\n-            if start.utcoffset() is None or finish.utcoffset() is None or start >= finish:\n+            if start >= finish:\n                 return None\n             return start, finish\n         except (KeyError, TypeError, ValueError):\n",
       "failed_assertions": [
         "FAIL: test_timestamp_zone_and_owner_install_completion_are_required (test_qualify_registration_isolation.RegistrationIsolation.test_timestamp_zone_and_owner_install_completion_are_required)",
         "AssertionError: 'discovery_absence_observed' != 'blocked_freshness'"
       ],
-      "output_sha256": "7f998170df196cc278b8f99b8b7c168c428e6de7ba2a288469bfe864da3fd0ca"
+      "output_sha256": "240a165ee23a41adb5e8181cea0b17447585d6adb9705e19b779bb785ec23338"
     },
     {
       "name": "absent_receipt_shape",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
       "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1240,7 +1240,7 @@\n         if not isinstance(row, dict) or type(row.get('present')) is not bool:\n             return False\n         if not row['present']:\n-            return row.get('sha256') is None and row.get('mode') is None\n+            return True\n         digest = row.get('sha256')\n         return (isinstance(digest, str) and len(digest) == 64\n                 and all(c in '0123456789abcdef' for c in digest)\n",
       "failed_assertions": [
         "FAIL: test_preservation_receipt_shapes_are_validated_independently (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_receipt_shapes_are_validated_independently)",
         "AssertionError: 'unchanged' != 'preservation_failed'"
       ],
-      "output_sha256": "9e71bc94e6827e6a11179a1acde774f0c4eb6c7b90b9eea3c20139bd36b2ad55"
+      "output_sha256": "485013a1e264d3cc89834b6ed90bf6ed65a541a8b0954da5d97d04e50fdfe77b"
     },
     {
       "name": "packages_after_observer_integrity",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1281,7 +1281,7 @@\n             or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))\n-            or observation.get('packages_after') != packages\n+            or observation.get('packages_after', {}).get(owner) != packages[owner]\n             or observation.get('skill_trees_after') != trees):\n         return result('invalid_pair')\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1282,7 +1282,7 @@\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n-    pair_changed = (observation.get('packages_after') != packages\n+    pair_changed = (mapping(observation.get('packages_after')).get(owner) != packages[owner]\n                     or observation.get('skill_trees_after') != trees)\n     preserved = preserved and not pair_changed\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n",
       "failed_assertions": [
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
         "FAIL: test_observer_only_post_run_changes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_observer_only_post_run_changes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "7adf5093774b8730897f7d9a9b44506b3ea0cd31e5c243c3f30ced84e9a0c442"
+      "output_sha256": "a9fef6c7d312518ec0e9f18030db161e8d7d148d123d3ab27628ab1a0ce80621"
     },
     {
       "name": "skill_trees_after_observer_integrity",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1282,7 +1282,7 @@\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))\n             or observation.get('packages_after') != packages\n-            or observation.get('skill_trees_after') != trees):\n+            or observation.get('skill_trees_after', {}).get(owner) != trees[owner]):\n         return result('invalid_pair')\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n     phases = {name: mapping(mapping(observation.get('phases')).get(name)) for name in names}\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1283,7 +1283,7 @@\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n     pair_changed = (observation.get('packages_after') != packages\n-                    or observation.get('skill_trees_after') != trees)\n+                    or mapping(observation.get('skill_trees_after')).get(owner) != trees[owner])\n     preserved = preserved and not pair_changed\n     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')\n     phases = {name: mapping(mapping(observation.get('phases')).get(name)) for name in names}\n",
       "failed_assertions": [
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
         "FAIL: test_observer_only_post_run_changes_are_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_observer_only_post_run_changes_are_rejected)",
         "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
       ],
-      "output_sha256": "ef99fe68115bca8a20cf990a3da472659fa1b7f46571fbf767d2b484852321c3"
+      "output_sha256": "a9fef6c7d312518ec0e9f18030db161e8d7d148d123d3ab27628ab1a0ce80621"
     },
     {
       "name": "activation_deferred_until_cleanup",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1389,7 +1389,7 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n-    if activated(candidate):\n+    if False:\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n         return result('control_metadata_failed')\n@@ -1402,7 +1402,7 @@\n     if any(removed.get(key) is not False for key in\n            ('foreign_selector', 'candidate_registered', 'marker_disclosed')):\n         return result('invalid_observer_conditions')\n-    if activated(removed):\n+    if activated(candidate) or activated(removed):\n         return result('activation_observed')\n     if any(phase.get('catalog_present') is True or phase.get('alias_exposure') is True\n            for phase in (candidate, removed)):\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1390,7 +1390,7 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n-    if activated(candidate):\n+    if False:\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n         return result('control_metadata_failed')\n@@ -1403,7 +1403,7 @@\n     if any(removed.get(key) is not False for key in\n            ('foreign_selector', 'candidate_registered', 'marker_disclosed')):\n         return result('invalid_observer_conditions')\n-    if activated(removed):\n+    if activated(candidate) or activated(removed):\n         return result('activation_observed')\n     if pair_changed:\n         return result('invalid_pair')\n",
       "failed_assertions": [
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps) (section='post_removal', value=None)",
         "AssertionError: 'blocked_freshness' != 'activation_observed'",
@@ -399,21 +407,207 @@
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: 'control_metadata_failed' != 'activation_observed'"
       ],
-      "output_sha256": "92f1586a0101dc6129a0268003b081b8139d4d42c9f331036a4b180a0a4d418b"
+      "output_sha256": "3137a0b8f4acf92b41a3e884cf558bd4367e31784b7d0d7b2619991cc452105d"
     },
     {
       "name": "post_removal_metadata_precedes_activation",
       "exit_code": 1,
-      "tests": 29,
+      "tests": 30,
       "compiled": true,
-      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1389,10 +1389,10 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n+    if not metadata_valid('post_removal'):\n+        return result('control_metadata_failed')\n     if activated(candidate):\n         return result('activation_observed')\n-    if not metadata_valid('post_removal'):\n-        return result('control_metadata_failed')\n     if not fresh('post_removal'):\n         return result('blocked_freshness')\n     if not operation_valid('owner_remove', ('owner_candidate', 'candidate')):\n",
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1390,10 +1390,10 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n+    if not metadata_valid('post_removal'):\n+        return result('control_metadata_failed')\n     if activated(candidate):\n         return result('activation_observed')\n-    if not metadata_valid('post_removal'):\n-        return result('control_metadata_failed')\n     if not fresh('post_removal'):\n         return result('blocked_freshness')\n     if not operation_valid('owner_remove', ('owner_candidate', 'candidate')):\n",
       "failed_assertions": [
         "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
         "AssertionError: 'control_metadata_failed' != 'activation_observed'"
       ],
-      "output_sha256": "01aab89c9063018395f5d45b35010eddaaa132d2af58c91cafb1b2d5705995d5"
+      "output_sha256": "424fdef90d0a6a36e60f9a9e9f65510c4cfaf73bbe25a4d2c8f83bc536c35115"
+    },
+    {
+      "name": "post_removal_session_reuse_precedes_activation",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1390,6 +1390,8 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n+    if phases['post_removal'].get('session_id') in sessions:\n+        return result('blocked_freshness')\n     if activated(candidate):\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n",
+      "failed_assertions": [
+        "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
+        "AssertionError: 'blocked_freshness' != 'activation_observed'"
+      ],
+      "output_sha256": "3770f90e26a8a597dbb4fcc2600ad3a319d32e711734340b8d484b46300b980a"
+    },
+    {
+      "name": "post_run_integrity_precedes_activation",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1390,6 +1390,8 @@\n     if not absent(baseline):\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n+    if pair_changed:\n+        return result('invalid_pair')\n     if activated(candidate):\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n",
+      "failed_assertions": [
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=None)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value={})",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=[])",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value='unknown')",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=None)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value={})",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=[])",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value='unknown')",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "AssertionError: {'isolation': 'invalid_pair', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}"
+      ],
+      "output_sha256": "9b2191676b93be9c5fed8206e64fdf89b3e9901ac1cc93ee84a34a979bec81a0"
+    },
+    {
+      "name": "activation_forces_preservation_success",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1391,6 +1391,7 @@\n         return result('blocked_baseline')\n     # A correlated activation is a retained counterexample even if cleanup fails.\n     if activated(candidate):\n+        preserved = True\n         return result('activation_observed')\n     if not metadata_valid('post_removal'):\n         return result('control_metadata_failed')\n",
+      "failed_assertions": [
+        "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=None)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value={})",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value=[])",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='packages_after', value='unknown')",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=None)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value={})",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value=[])",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation) (field='skill_trees_after', value='unknown')",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_later_package_integrity_cannot_erase_candidate_activation (test_qualify_registration_isolation.RegistrationIsolation.test_later_package_integrity_cannot_erase_candidate_activation)",
+        "AssertionError: {'isolation': 'activation_observed', 'preservation': 'unchanged'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}"
+      ],
+      "output_sha256": "c8ca6d9f7645bdf43b000e1982c9d798db9988598d3137b33716c0a991addbf4"
+    },
+    {
+      "name": "malformed_preservation_overrides_isolation",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1246,6 +1246,8 @@\n                 and all(c in '0123456789abcdef' for c in digest)\n                 and type(row.get('mode')) is int and 0 <= row['mode'] <= 0o7777)\n \n+    if not isinstance(observation.get('preservation'), dict):\n+        return {'isolation': 'invalid_capture', 'preservation': 'preservation_failed'}\n     preservation = mapping(observation.get('preservation'))\n     before, after = preservation.get('before'), preservation.get('after')\n     protected = fixture.get('protected_paths')\n",
+      "failed_assertions": [
+        "FAIL: test_candidate_activation_survives_later_cleanup_and_observation_gaps (test_qualify_registration_isolation.RegistrationIsolation.test_candidate_activation_survives_later_cleanup_and_observation_gaps)",
+        "AssertionError: {'isolation': 'invalid_capture', 'preservation': 'preservation_failed'} != {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}",
+        "FAIL: test_malformed_capture_containers_block_without_exceptions (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_capture_containers_block_without_exceptions)",
+        "AssertionError: {'isolation': 'invalid_capture', 'preservation': 'preservation_failed'} != {'isolation': 'discovery_absence_observed', 'preservatio[21 chars]led'}"
+      ],
+      "output_sha256": "2091013e4ed3259310abd6a5bc7940506182dc881d09acfe73ad3932e06eeaff"
+    },
+    {
+      "name": "numeric_owner_registration",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1310,7 +1310,7 @@\n     for name in ('observer_positive', 'owner_positive', 'owner_candidate'):\n         phase = phases.get(name, {})\n         if (not complete(phase) or phase.get('session_bound') is not True\n-                or name != 'observer_positive' and phase.get('candidate_registered') is not True\n+                or name != 'observer_positive' and phase.get('candidate_registered') != True\n                 or phase.get('marker_disclosed') is not False\n                 or phase.get('catalog_present') is not True\n                 or phase.get('invocation_outcome') != 'loaded' or phase.get('activations') != 1\n",
+      "failed_assertions": [
+        "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_positive', value=1)",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_owner_positive'",
+        "FAIL: test_owner_positives_require_affirmative_registration (test_qualify_registration_isolation.RegistrationIsolation.test_owner_positives_require_affirmative_registration) (phase='owner_candidate', value=1)",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_owner_candidate'"
+      ],
+      "output_sha256": "bfa08c7b03dadc090df56ac1052813fdc3b09a3e85f78acb82c339069661913a"
+    },
+    {
+      "name": "client_digest_inequality",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1278,7 +1278,7 @@\n     if (not isinstance(packages, dict) or set(packages) != {owner, observer}\n             or not all(tree_valid(tree) for tree in packages.values())\n             or not isinstance(trees, dict) or set(trees) != {owner, observer}\n-            or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]\n+            or not all(tree_valid(tree) for tree in trees.values()) or {path: row['mode'] for path, row in trees[owner].items()} != {path: row['mode'] for path, row in trees[observer].items()}\n             or any({path[len('skills/'):]: row for path, row in packages[client].items()\n                     if path.startswith('skills/')} != trees[client] for client in (owner, observer))):\n         return result('invalid_pair')\n",
+      "failed_assertions": [
+        "FAIL: test_cross_client_inequality_with_consistent_envelopes_is_rejected (test_qualify_registration_isolation.RegistrationIsolation.test_cross_client_inequality_with_consistent_envelopes_is_rejected)",
+        "AssertionError: 'discovery_absence_observed' != 'invalid_pair'"
+      ],
+      "output_sha256": "861c364875acc3918007d012b825c484b2416e2d3fc05e9c517f548e090897cb"
+    },
+    {
+      "name": "distinct_owner_observer",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1226,7 +1226,6 @@\n     if (not isinstance(fixture, dict)\n             or any(not isinstance(fixture.get(key), str) or not fixture[key]\n                    for key in ('owner', 'observer', 'scope', 'cwd', 'namespace', 'marker', 'absent_marker'))\n-            or fixture['owner'] == fixture['observer']\n             or not isinstance(fixture.get('pins'), dict)\n             or any(not isinstance(fixture['pins'].get(client), str) or not fixture['pins'][client]\n                    for client in (fixture['owner'], fixture['observer']))\n",
+      "failed_assertions": [
+        "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
+        "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
+      ],
+      "output_sha256": "83e6cedf0bdcab62608683f3fa83102664d787b841a74e23641ce7db200470cf"
+    },
+    {
+      "name": "alias_element_validity",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1232,7 +1232,6 @@\n                    for client in (fixture['owner'], fixture['observer']))\n             or not isinstance(fixture.get('source_paths'), dict)\n             or not isinstance(fixture.get('aliases'), list)\n-            or any(not isinstance(alias, str) or not alias for alias in fixture['aliases'])\n             or len(set(fixture['aliases'])) != len(fixture['aliases'])):\n         return {'isolation': 'invalid_fixture', 'preservation': 'preservation_failed'}\n \n",
+      "failed_assertions": [
+        "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
+        "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
+      ],
+      "output_sha256": "26f510f87eb5a0a453889417ec4e7c89835624dac8318148b5c67462425f7fba"
+    },
+    {
+      "name": "alias_duplicates",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1233,7 +1233,7 @@\n             or not isinstance(fixture.get('source_paths'), dict)\n             or not isinstance(fixture.get('aliases'), list)\n             or any(not isinstance(alias, str) or not alias for alias in fixture['aliases'])\n-            or len(set(fixture['aliases'])) != len(fixture['aliases'])):\n+):\n         return {'isolation': 'invalid_fixture', 'preservation': 'preservation_failed'}\n \n     def receipt_valid(row):\n",
+      "failed_assertions": [
+        "FAIL: test_malformed_fixture_identity_and_containers_block (test_qualify_registration_isolation.RegistrationIsolation.test_malformed_fixture_identity_and_containers_block)",
+        "AssertionError: 'discovery_absence_observed' != 'invalid_fixture'"
+      ],
+      "output_sha256": "1e775b8db6b1a032421e3ae2228066b0ef8cb1f002b688e0208e61d61525af3c"
+    },
+    {
+      "name": "protected_path_element_validity",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1250,7 +1250,6 @@\n     before, after = preservation.get('before'), preservation.get('after')\n     protected = fixture.get('protected_paths')\n     protected_valid = (isinstance(protected, list) and bool(protected)\n-                       and all(isinstance(path, str) and bool(path) for path in protected)\n                        and len(set(protected)) == len(protected))\n     preserved = (protected_valid and isinstance(before, dict) and before == after\n                  and set(before) == set(protected)\n",
+      "failed_assertions": [
+        "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
+        "AssertionError: 'unchanged' != 'preservation_failed'"
+      ],
+      "output_sha256": "ddc745c042ba8cb7b0d93c6014218b02d9a2b7f8f565c9b908cd75114c238ca1"
+    },
+    {
+      "name": "nonempty_protected_paths",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1249,7 +1249,7 @@\n     preservation = mapping(observation.get('preservation'))\n     before, after = preservation.get('before'), preservation.get('after')\n     protected = fixture.get('protected_paths')\n-    protected_valid = (isinstance(protected, list) and bool(protected)\n+    protected_valid = (isinstance(protected, list)\n                        and all(isinstance(path, str) and bool(path) for path in protected)\n                        and len(set(protected)) == len(protected))\n     preserved = (protected_valid and isinstance(before, dict) and before == after\n",
+      "failed_assertions": [
+        "FAIL: test_preservation_requires_exact_declared_path_coverage (test_qualify_registration_isolation.RegistrationIsolation.test_preservation_requires_exact_declared_path_coverage)",
+        "AssertionError: 'unchanged' != 'preservation_failed'"
+      ],
+      "output_sha256": "ddc745c042ba8cb7b0d93c6014218b02d9a2b7f8f565c9b908cd75114c238ca1"
+    },
+    {
+      "name": "operation_owner_identity",
+      "exit_code": 1,
+      "tests": 30,
+      "compiled": true,
+      "patch": "--- a/scripts/qualify-plugin-rules.py\n+++ b/scripts/qualify-plugin-rules.py\n@@ -1350,7 +1350,7 @@\n         operation = mapping(operations.get(name))\n         timing = interval(operation)\n         if (not timing or operation.get('state') != 'success' or operation.get('complete') is not True\n-                or any(operation.get(key) != fixture[key] for key in ('owner', 'cwd', 'scope', 'namespace'))\n+                or any(operation.get(key) != fixture[key] for key in ('cwd', 'scope', 'namespace'))\n                 or timing[0] <= max(times[phase][1] for phase in preceding)):\n             return False\n         times[name] = timing\n",
+      "failed_assertions": [
+        "FAIL: test_operation_failure_missing_metadata_and_reordered_effects_block (test_qualify_registration_isolation.RegistrationIsolation.test_operation_failure_missing_metadata_and_reordered_effects_block) (operation='calibration_cleanup', key='owner')",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_operations'",
+        "FAIL: test_operation_failure_missing_metadata_and_reordered_effects_block (test_qualify_registration_isolation.RegistrationIsolation.test_operation_failure_missing_metadata_and_reordered_effects_block) (operation='owner_install', key='owner')",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_operations'",
+        "FAIL: test_operation_failure_missing_metadata_and_reordered_effects_block (test_qualify_registration_isolation.RegistrationIsolation.test_operation_failure_missing_metadata_and_reordered_effects_block) (operation='owner_remove', key='owner')",
+        "AssertionError: 'discovery_absence_observed' != 'blocked_operations'"
+      ],
+      "output_sha256": "6d3d3a604ccbf9351cad140a92f0adfd4fbddc2145f16b24eba0ab2683ee9eca"
     }
   ],
-  "caught": 24,
-  "method": "Temporary copies of only the harness and focused tests; every variant compiles, runs 29 tests, and fails regression assertions without runtime errors. Patches and failed assertions are retained for replay. No native process or profile is used."
+  "caught": 36,
+  "method": "Temporary copies of only the harness and focused tests; every variant compiles, runs 30 tests, and fails regression assertions without runtime errors. Patches and failed assertions are retained for replay. No native process or profile is used."
 }

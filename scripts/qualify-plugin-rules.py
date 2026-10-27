@@ -1280,10 +1280,11 @@ def classify_registration_isolation(observation, fixture):
             or not isinstance(trees, dict) or set(trees) != {owner, observer}
             or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]
             or any({path[len('skills/'):]: row for path, row in packages[client].items()
-                    if path.startswith('skills/')} != trees[client] for client in (owner, observer))
-            or observation.get('packages_after') != packages
-            or observation.get('skill_trees_after') != trees):
+                    if path.startswith('skills/')} != trees[client] for client in (owner, observer))):
         return result('invalid_pair')
+    pair_changed = (observation.get('packages_after') != packages
+                    or observation.get('skill_trees_after') != trees)
+    preserved = preserved and not pair_changed
     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')
     phases = {name: mapping(mapping(observation.get('phases')).get(name)) for name in names}
     def metadata_valid(name):
@@ -1404,6 +1405,8 @@ def classify_registration_isolation(observation, fixture):
         return result('invalid_observer_conditions')
     if activated(removed):
         return result('activation_observed')
+    if pair_changed:
+        return result('invalid_pair')
     if any(phase.get('catalog_present') is True or phase.get('alias_exposure') is True
            for phase in (candidate, removed)):
         return result('catalog_exposure')

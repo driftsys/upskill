@@ -154,6 +154,11 @@ classified before later removal and post-removal observations; missing or failed
 cleanup cannot erase an established activation FAIL. That result does not claim
 cleanup or preservation succeeded.
 
+Initial package evidence is validated before interpreting any observation. Later
+`packages_after` and `skill_trees_after` integrity evidence is required for a
+clean absence result. Missing or changed later integrity evidence fails
+preservation, but cannot erase an established candidate activation FAIL.
+
 The capture producer remains responsible for native record correlation, session
 binding, disclosure detection and inventory collection. This function does not
 run clients or verify a producer's assertions against raw streams. Its offline
@@ -176,7 +181,7 @@ separately. These outcomes never supply positive evidence.
 
 The
 [offline guard validation](../../technotes/evidence/2026-10-27-q11b-offline-guards/validation.json)
-records 29 focused tests and 24 independently rejected guard mutations. The
+records 30 focused tests and 36 independently rejected guard mutations. The
 mutations run on temporary copies, including consistent malformed envelopes,
 cross-client inequality, exact alias/response checks, completion and operation
 state, protected-path coverage and activation ordering. This remains synthetic
