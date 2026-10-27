@@ -16,6 +16,7 @@ class RegistrationIsolation(unittest.TestCase):
                             cwd='/neutral/project', namespace='package:probe',
                             marker='PRESENT_private', absent_marker='ABSENT_private',
                             aliases=['probe'],
+                            protected_paths=['config'],
                             source_paths={'owner_positive': '/neutral/claude-package',
                                           'observer_positive': '/neutral/copilot-package',
                                           'owner_candidate': '/neutral/claude-package'},
@@ -210,6 +211,194 @@ class RegistrationIsolation(unittest.TestCase):
             changed['packages_after'] = copy.deepcopy(self.fixture['packages'])
             self.assertEqual(self.classify(changed)['isolation'], 'invalid_pair')
             self.fixture['packages'] = original
+
+    def test_owner_positives_require_affirmative_registration(self):
+        for phase in ('owner_positive', 'owner_candidate'):
+            for value in (False, None, 'unknown'):
+                with self.subTest(phase=phase, value=value):
+                    changed = copy.deepcopy(self.observation)
+                    changed['phases'][phase]['candidate_registered'] = value
+                    self.assertEqual(self.classify(changed)['isolation'], 'blocked_' + phase)
+
+    def test_preservation_requires_exact_declared_path_coverage(self):
+        for paths in (None, [], ['config', 'config'], ['config', 'missing'], [None]):
+            with self.subTest(paths=paths):
+                fixture = copy.deepcopy(self.fixture)
+                fixture['protected_paths'] = paths
+                self.assertEqual(q.classify_registration_isolation(self.observation, fixture)['preservation'],
+                                 'preservation_failed')
+        for receipts in ({'unrelated': {'present': False}},
+                         {'config': {'present': False}, 'extra': {'present': False}}):
+            changed = copy.deepcopy(self.observation)
+            changed['preservation'] = dict(before=receipts, after=copy.deepcopy(receipts))
+            self.assertEqual(self.classify(changed)['preservation'], 'preservation_failed')
+
+    def test_candidate_activation_survives_later_cleanup_and_observation_gaps(self):
+        for value in (None, {}, [], 'unknown'):
+            for section in ('post_removal', 'owner_remove'):
+                with self.subTest(section=section, value=value):
+                    changed = copy.deepcopy(self.observation)
+                    changed['phases']['candidate']['activations'] = 1
+                    changed['phases' if section == 'post_removal' else 'operations'][section] = value
+                    self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
+        for key, value in [('complete', False), ('state', 'error'), ('cwd', '/other')]:
+            changed = copy.deepcopy(self.observation)
+            changed['phases']['candidate']['activations'] = 1
+            changed['operations']['owner_remove'][key] = value
+            self.assertEqual(self.classify(changed)['isolation'], 'activation_observed')
+
+    def test_untrusted_candidate_activation_does_not_bypass_earlier_controls(self):
+        for section, key, value, expected in [
+                ('observer_positive', 'complete', False, 'blocked_observer_positive'),
+                ('owner_candidate', 'candidate_registered', False, 'blocked_owner_candidate'),
+                ('baseline', 'response', 'unrelated', 'blocked_baseline'),
+                ('candidate', 'session_bound', False, 'blocked_freshness'),
+                ('candidate', 'foreign_selector', True, 'invalid_observer_conditions')]:
+            changed = copy.deepcopy(self.observation)
+            changed['phases']['candidate']['activations'] = 1
+            changed['phases'][section][key] = value
+            self.assertEqual(self.classify(changed)['isolation'], expected)
+
+    def test_malformed_capture_containers_block_without_exceptions(self):
+        for value in (None, [], 'unknown', 1):
+            with self.subTest(top_level=value):
+                self.assertEqual(q.classify_registration_isolation(value, self.fixture)['isolation'], 'invalid_capture')
+                self.assertEqual(q.classify_registration_isolation(self.observation, value)['isolation'], 'invalid_fixture')
+            for section, expected in [('inventory', 'blocked_inventory'), ('phases', 'blocked_observer_positive'),
+                                      ('operations', 'blocked_operations')]:
+                changed = copy.deepcopy(self.observation)
+                changed[section] = value
+                self.assertEqual(self.classify(changed)['isolation'], expected)
+                self.assertEqual(self.classify(changed)['preservation'], 'unchanged')
+            changed = copy.deepcopy(self.observation)
+            changed['preservation'] = value
+            self.assertEqual(self.classify(changed)['preservation'], 'preservation_failed')
+            for phase in self.observation['phases']:
+                changed = copy.deepcopy(self.observation)
+                changed['phases'][phase] = value
+                self.assertNotEqual(self.classify(changed)['isolation'], 'discovery_absence_observed')
+            for operation in self.observation['operations']:
+                changed = copy.deepcopy(self.observation)
+                changed['operations'][operation] = value
+                self.assertEqual(self.classify(changed)['isolation'], 'blocked_operations')
+
+    def test_malformed_fixture_identity_and_containers_block(self):
+        for key in ('owner', 'observer', 'scope', 'cwd', 'namespace', 'marker', 'absent_marker',
+                    'pins', 'source_paths', 'aliases'):
+            for value in (None, 1):
+                with self.subTest(key=key, value=value):
+                    fixture = copy.deepcopy(self.fixture)
+                    fixture[key] = value
+                    self.assertEqual(q.classify_registration_isolation(self.observation, fixture),
+                                     {'isolation': 'invalid_fixture', 'preservation': 'preservation_failed'})
+        for section in ('before', 'after'):
+            for value in (None, [], 'unknown', 1):
+                changed = copy.deepcopy(self.observation)
+                changed['preservation'][section] = value
+                self.assertEqual(self.classify(changed)['preservation'], 'preservation_failed')
+
+    def test_phase_completion_and_tool_restrictions_are_independent_guards(self):
+        for phase in self.observation['phases']:
+            for key, value in [('state', 'error'), ('complete', False), ('catalog_complete', False),
+                               ('invocation_complete', False), ('invocation_attempted', False),
+                               ('unexpected_tools', True)]:
+                with self.subTest(phase=phase, key=key):
+                    changed = copy.deepcopy(self.observation)
+                    changed['phases'][phase][key] = value
+                    expected = ('blocked_' + phase if phase in ('observer_positive', 'owner_positive', 'owner_candidate')
+                                else 'blocked_baseline' if phase == 'baseline' else 'incomplete_evidence')
+                    self.assertEqual(self.classify(changed)['isolation'], expected)
+
+    def test_operation_state_and_inventory_clients_are_bound(self):
+        for operation in self.observation['operations']:
+            for state in ('error', 'unknown', None):
+                changed = copy.deepcopy(self.observation)
+                changed['operations'][operation]['state'] = state
+                self.assertEqual(self.classify(changed)['isolation'], 'blocked_operations')
+        for client in ('owner', 'observer'):
+            changed = copy.deepcopy(self.observation)
+            changed['inventory'][client] = 'other'
+            self.assertEqual(self.classify(changed)['isolation'], 'blocked_inventory')
+
+    def test_absence_response_is_exact_in_every_negative_phase(self):
+        for phase in ('baseline', 'candidate', 'post_removal'):
+            for response in (None, '', 'unrelated', 'prefix ABSENT_private', '\nABSENT_private', 'ABSENT_private '):
+                changed = copy.deepcopy(self.observation)
+                changed['phases'][phase]['response'] = response
+                self.assertEqual(self.classify(changed)['isolation'],
+                                 'blocked_baseline' if phase == 'baseline' else 'incomplete_evidence')
+
+    def test_alias_identity_and_multiple_aliases_are_bound(self):
+        self.fixture['aliases'] = ['probe', 'compat-probe']
+        for phase in ('baseline', 'candidate', 'post_removal'):
+            self.observation['phases'][phase]['aliases_checked'] = ['probe', 'compat-probe']
+        self.assertEqual(self.classify()['isolation'], 'discovery_absence_observed')
+        for phase in ('baseline', 'candidate', 'post_removal'):
+            for aliases in (['wrong', 'compat-probe'], ['probe'], ['probe', 'wrong']):
+                changed = copy.deepcopy(self.observation)
+                changed['phases'][phase]['aliases_checked'] = aliases
+                self.assertEqual(self.classify(changed)['isolation'],
+                                 'blocked_baseline' if phase == 'baseline' else 'incomplete_evidence')
+
+    def test_cross_client_inequality_with_consistent_envelopes_is_rejected(self):
+        self.fixture['packages']['copilot']['skills/probe/resource.txt']['mode'] = 0o600
+        self.fixture['skill_trees']['copilot']['probe/resource.txt']['mode'] = 0o600
+        self.observation['packages_after'] = copy.deepcopy(self.fixture['packages'])
+        self.observation['skill_trees_after'] = copy.deepcopy(self.fixture['skill_trees'])
+        self.assertEqual(self.classify()['isolation'], 'invalid_pair')
+
+    def test_observer_only_post_run_changes_are_rejected(self):
+        for field, path in [('packages_after', 'skills/probe/resource.txt'), ('skill_trees_after', 'probe/resource.txt')]:
+            for key, value in [('sha256', 'f' * 64), ('mode', 0o600)]:
+                changed = copy.deepcopy(self.observation)
+                changed[field]['copilot'][path][key] = value
+                self.assertEqual(self.classify(changed)['isolation'], 'invalid_pair')
+
+    def test_consistent_invalid_tree_paths_digests_and_modes_are_rejected(self):
+        for invalid_path in ('../escape', '/absolute', 'probe/../escape', 'probe//resource.txt'):
+            fixture = copy.deepcopy(self.fixture)
+            for client in ('claude', 'copilot'):
+                receipt = fixture['skill_trees'][client].pop('probe/resource.txt')
+                fixture['skill_trees'][client][invalid_path] = receipt
+                del fixture['packages'][client]['skills/probe/resource.txt']
+                fixture['packages'][client]['skills/' + invalid_path] = receipt.copy()
+            changed = copy.deepcopy(self.observation)
+            changed['packages_after'] = copy.deepcopy(fixture['packages'])
+            changed['skill_trees_after'] = copy.deepcopy(fixture['skill_trees'])
+            self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_pair')
+        for key, value in [('sha256', 'z' * 64), ('sha256', 'a' * 63), ('mode', True), ('mode', -1), ('mode', 0o10000)]:
+            fixture = copy.deepcopy(self.fixture)
+            for client in ('claude', 'copilot'):
+                fixture['packages'][client]['skills/probe/resource.txt'][key] = value
+                fixture['skill_trees'][client]['probe/resource.txt'][key] = value
+            changed = copy.deepcopy(self.observation)
+            changed['packages_after'] = copy.deepcopy(fixture['packages'])
+            changed['skill_trees_after'] = copy.deepcopy(fixture['skill_trees'])
+            self.assertEqual(q.classify_registration_isolation(changed, fixture)['isolation'], 'invalid_pair')
+
+    def test_timestamp_zone_and_owner_install_completion_are_required(self):
+        changed = copy.deepcopy(self.observation)
+        for section in ('phases', 'operations'):
+            for row in changed[section].values():
+                for key in ('started_at', 'finished_at'):
+                    row[key] = row[key].replace('+00:00', '')
+        self.assertEqual(self.classify(changed)['isolation'], 'blocked_freshness')
+        changed = copy.deepcopy(self.observation)
+        changed['phases']['owner_candidate']['started_at'] = self.time(9)
+        self.assertEqual(self.classify(changed)['isolation'], 'blocked_freshness')
+
+    def test_preservation_receipt_shapes_are_validated_independently(self):
+        for row, expected in [({'present': False}, 'unchanged'),
+                              ({'present': False, 'sha256': 'a' * 64}, 'preservation_failed'),
+                              ({'present': False, 'mode': 0o600}, 'preservation_failed'),
+                              ({'present': True, 'sha256': 'z' * 64, 'mode': 0o600}, 'preservation_failed'),
+                              ({'present': True, 'sha256': 'a' * 64, 'mode': True}, 'preservation_failed'),
+                              ({'present': True, 'sha256': 'a' * 64, 'mode': -1}, 'preservation_failed')]:
+            changed = copy.deepcopy(self.observation)
+            changed['preservation'] = dict(before={'config': row}, after={'config': row.copy()})
+            self.assertEqual(self.classify(changed)['preservation'], expected)
+
+    def test_inconsistent_package_skill_subtrees_are_rejected(self):
         for mutation in ('missing_resource', 'changed_resource', 'extra_skill'):
             original = copy.deepcopy(self.fixture['packages'])
             package = self.fixture['packages']['claude']

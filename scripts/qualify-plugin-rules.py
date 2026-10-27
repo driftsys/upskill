@@ -1218,6 +1218,24 @@ def classify_registration_isolation(observation, fixture):
     binding and marker disclosure. This classifier does not collect inventory,
     authorize a profile, or replace the explicit-selector Q11 control.
     """
+    def mapping(value):
+        return value if isinstance(value, dict) else {}
+
+    if not isinstance(observation, dict):
+        return {'isolation': 'invalid_capture', 'preservation': 'preservation_failed'}
+    if (not isinstance(fixture, dict)
+            or any(not isinstance(fixture.get(key), str) or not fixture[key]
+                   for key in ('owner', 'observer', 'scope', 'cwd', 'namespace', 'marker', 'absent_marker'))
+            or fixture['owner'] == fixture['observer']
+            or not isinstance(fixture.get('pins'), dict)
+            or any(not isinstance(fixture['pins'].get(client), str) or not fixture['pins'][client]
+                   for client in (fixture['owner'], fixture['observer']))
+            or not isinstance(fixture.get('source_paths'), dict)
+            or not isinstance(fixture.get('aliases'), list)
+            or any(not isinstance(alias, str) or not alias for alias in fixture['aliases'])
+            or len(set(fixture['aliases'])) != len(fixture['aliases'])):
+        return {'isolation': 'invalid_fixture', 'preservation': 'preservation_failed'}
+
     def receipt_valid(row):
         if not isinstance(row, dict) or type(row.get('present')) is not bool:
             return False
@@ -1228,16 +1246,21 @@ def classify_registration_isolation(observation, fixture):
                 and all(c in '0123456789abcdef' for c in digest)
                 and type(row.get('mode')) is int and 0 <= row['mode'] <= 0o7777)
 
-    preservation = observation.get('preservation', {})
+    preservation = mapping(observation.get('preservation'))
     before, after = preservation.get('before'), preservation.get('after')
-    preserved = (isinstance(before, dict) and bool(before) and before == after
+    protected = fixture.get('protected_paths')
+    protected_valid = (isinstance(protected, list) and bool(protected)
+                       and all(isinstance(path, str) and bool(path) for path in protected)
+                       and len(set(protected)) == len(protected))
+    preserved = (protected_valid and isinstance(before, dict) and before == after
+                 and set(before) == set(protected)
                  and all(receipt_valid(row) for row in before.values()))
 
     def result(verdict):
         return {'isolation': verdict, 'preservation': 'unchanged' if preserved else 'preservation_failed'}
 
     owner, observer = fixture['owner'], fixture['observer']
-    inventory = observation.get('inventory', {})
+    inventory = mapping(observation.get('inventory'))
     if (inventory.get('complete') is not True or inventory.get('blocking_reasons') != []
             or any(inventory.get(key) != fixture[key] for key in ('owner', 'observer', 'cwd', 'scope', 'pins'))
             or any(not isinstance(inventory.get(key), list) or not inventory[key]
@@ -1262,14 +1285,17 @@ def classify_registration_isolation(observation, fixture):
             or observation.get('skill_trees_after') != trees):
         return result('invalid_pair')
     names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')
-    phases = observation.get('phases', {})
-    for name in names:
-        phase = phases.get(name, {})
+    phases = {name: mapping(mapping(observation.get('phases')).get(name)) for name in names}
+    def metadata_valid(name):
+        phase = phases[name]
         client = owner if name in ('owner_positive', 'owner_candidate') else observer
-        if phase and any(phase.get(key) != value for key, value in {
+        return not phase or all(phase.get(key) == value for key, value in {
                 'client': client, 'pin': fixture['pins'][client], 'cwd': fixture['cwd'],
                 'scope': 'session' if name == 'observer_positive' else fixture['scope'],
-                'namespace': fixture['namespace']}.items()):
+                'namespace': fixture['namespace']}.items())
+
+    for name in names[:-1]:
+        if not metadata_valid(name):
             return result('control_metadata_failed')
 
     def complete(phase):
@@ -1283,6 +1309,7 @@ def classify_registration_isolation(observation, fixture):
     for name in ('observer_positive', 'owner_positive', 'owner_candidate'):
         phase = phases.get(name, {})
         if (not complete(phase) or phase.get('session_bound') is not True
+                or name != 'observer_positive' and phase.get('candidate_registered') is not True
                 or phase.get('marker_disclosed') is not False
                 or phase.get('catalog_present') is not True
                 or phase.get('invocation_outcome') != 'loaded' or phase.get('activations') != 1
@@ -1304,33 +1331,41 @@ def classify_registration_isolation(observation, fixture):
             return None
 
     times, sessions = {}, set()
-    for name in names:
-        phase = phases.get(name, {})
+    def fresh(name):
+        phase = phases[name]
         session = phase.get('session_id')
         times[name] = interval(phase)
         if (not times[name] or not isinstance(session, str) or not session
                 or session in sessions or phase.get('session_bound') is not True):
-            return result('blocked_freshness')
+            return False
         sessions.add(session)
-    operations = observation.get('operations', {})
-    for name, preceding in [('calibration_cleanup', ('observer_positive', 'owner_positive')),
-                            ('owner_install', ('baseline',)),
-                            ('owner_remove', ('owner_candidate', 'candidate'))]:
-        operation = operations.get(name, {})
+        return True
+
+    for name in names[:-1]:
+        if not fresh(name):
+            return result('blocked_freshness')
+    operations = mapping(observation.get('operations'))
+    def operation_valid(name, preceding):
+        operation = mapping(operations.get(name))
         timing = interval(operation)
         if (not timing or operation.get('state') != 'success' or operation.get('complete') is not True
                 or any(operation.get(key) != fixture[key] for key in ('owner', 'cwd', 'scope', 'namespace'))
                 or timing[0] <= max(times[phase][1] for phase in preceding)):
-            return result('blocked_operations')
+            return False
         times[name] = timing
+        return True
+
+    for name, preceding in [('calibration_cleanup', ('observer_positive', 'owner_positive')),
+                            ('owner_install', ('baseline',))]:
+        if not operation_valid(name, preceding):
+            return result('blocked_operations')
     if (times['baseline'][0] <= times['calibration_cleanup'][1]
             or times['owner_candidate'][0] <= times['owner_install'][1]
-            or times['candidate'][0] <= times['owner_candidate'][1]
-            or times['post_removal'][0] <= times['owner_remove'][1]):
+            or times['candidate'][0] <= times['owner_candidate'][1]):
         return result('blocked_freshness')
     negatives = [phases[name] for name in ('baseline', 'candidate', 'post_removal')]
     if any(any(phase.get(key) is not False for key in
-               ('foreign_selector', 'candidate_registered', 'marker_disclosed')) for phase in negatives):
+               ('foreign_selector', 'candidate_registered', 'marker_disclosed')) for phase in negatives[:2]):
         return result('invalid_observer_conditions')
 
     def activated(phase):
@@ -1353,7 +1388,21 @@ def classify_registration_isolation(observation, fixture):
         return result('baseline_contaminated')
     if not absent(baseline):
         return result('blocked_baseline')
-    if any(activated(phase) for phase in (candidate, removed)):
+    # A correlated activation is a retained counterexample even if cleanup fails.
+    if activated(candidate):
+        return result('activation_observed')
+    if not metadata_valid('post_removal'):
+        return result('control_metadata_failed')
+    if not fresh('post_removal'):
+        return result('blocked_freshness')
+    if not operation_valid('owner_remove', ('owner_candidate', 'candidate')):
+        return result('blocked_operations')
+    if times['post_removal'][0] <= times['owner_remove'][1]:
+        return result('blocked_freshness')
+    if any(removed.get(key) is not False for key in
+           ('foreign_selector', 'candidate_registered', 'marker_disclosed')):
+        return result('invalid_observer_conditions')
+    if activated(removed):
         return result('activation_observed')
     if any(phase.get('catalog_present') is True or phase.get('alias_exposure') is True
            for phase in (candidate, removed)):

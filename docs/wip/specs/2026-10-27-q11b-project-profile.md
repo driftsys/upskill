@@ -146,6 +146,12 @@ aliases and the expected source path for each positive. Package envelopes must
 contain exactly their declared portable skill trees, with valid file digests and
 modes. Owner and observer skill/resource bytes must match.
 
+Both owner positives require affirmative `candidate_registered` evidence for the
+declared marketplace route. A valid, correlated candidate activation is
+classified before later removal and post-removal observations; missing or failed
+cleanup cannot erase an established activation FAIL. That result does not claim
+cleanup or preservation succeeded.
+
 The capture producer remains responsible for native record correlation, session
 binding, disclosure detection and inventory collection. This function does not
 run clients or verify a producer's assertions against raw streams. Its offline
@@ -153,8 +159,23 @@ tests use synthetic captures; they provide no native qualification.
 
 `discovery_absence_observed` is a bounded isolation result only. Preservation is
 reported separately: `unchanged` requires complete, valid, equal before/after
-file receipts. This initial classifier conservatively reports
+file receipts covering exactly the fixture's nonempty, duplicate-free
+`protected_paths` list, captured before effects. Missing, substituted or extra
+paths cannot establish preservation. This classifier conservatively reports
 `preservation_failed` for differing receipts, including declared empty-container
 residue; it does not infer approval of that residue. Accepting any residue needs
 its separate captured preservation witness. No result from this classifier
 replaces the existing Q11 entry gate or approves production routing.
+
+Malformed top-level observations or fixture identities return `invalid_capture`
+or `invalid_fixture`. Missing or malformed nested capture mappings block their
+applicable control; malformed preservation mappings fail preservation
+separately. These outcomes never supply positive evidence.
+
+The
+[offline guard validation](../../technotes/evidence/2026-10-27-q11b-offline-guards/validation.json)
+records 29 focused tests and 23 independently rejected guard mutations. The
+mutations run on temporary copies, including consistent malformed envelopes,
+cross-client inequality, exact alias/response checks, completion and operation
+state, protected-path coverage and activation ordering. This remains synthetic
+evidence, with no native client execution or qualification.

@@ -1,0 +1,154 @@
+{
+  "native_execution": false,
+  "qualified": false,
+  "harness_sha256": "00373dea867a28399edc564067e6d9795caaedf06c8b9b2ff1871669da0d1e65",
+  "tests_sha256": "6186a8d8d7dc3752732797ad81d5cd96ee62c86cd3fedb01be3d2cfead64ec10",
+  "baseline": {
+    "name": "baseline",
+    "exit_code": 0,
+    "tests": 29,
+    "output_sha256": "8a390da9b3b5a9cffe21b2373ebf87b3d6cecd605cc76065efe763b15d55f433"
+  },
+  "mutations": [
+    {
+      "name": "paired_client_tree_equality",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "e590d58e08028f333a851b9237216f2c8a306a6be26617dfe7740ee69e259f27"
+    },
+    {
+      "name": "tree_path_validation",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "66a32232d44884729157e78a8dc6555806debcf52bcc17c2432d815cf3edf515"
+    },
+    {
+      "name": "tree_receipt_validation",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "8a38b518c20507a95f1af0c4136f6020d3682e05ed975a38d583c0095f1de319"
+    },
+    {
+      "name": "receipt_digest_characters",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "1c3949f629694ae929a6d617581dd1c286090ea6b89fedd33a7bf36dbee37745"
+    },
+    {
+      "name": "receipt_mode_validation",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "0adfffc6f61991abe126337e5cf068c9ad46163fe5e80fcd7f91d60d6be23276"
+    },
+    {
+      "name": "operation_state",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "557f22963670cb96e61ec3c1a481881f06c31ed18074b41c5b5a0ac44ecb886b"
+    },
+    {
+      "name": "unexpected_tools",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "9304aa2850f66027f24ec2e00e94a603f2a555f5ae7b59807dd356a09dd20122"
+    },
+    {
+      "name": "exact_absence_response",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "5317805a5ae4cc58a3947b5ea6eb453c0e30a5c7ad61550a675c691909ec711b"
+    },
+    {
+      "name": "owner_install_completion_order",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "e66121e9ad7e909a0bafb675183d3d03927500ecda61956ecf4eb326a2694940"
+    },
+    {
+      "name": "protected_path_coverage",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "4b1ef98953d3a7e31a169a2f5889e237919d3b6bb0adb905c5554e76776ca515"
+    },
+    {
+      "name": "owner_registration",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "4b7dc99cbabe5a3710fe289f663a37ed88116473624ea0094f63a82dcaa21fde"
+    },
+    {
+      "name": "phase_complete",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "9c6ab4e476aa9b94b80e095fe8a226128e9b9c9996bf88260a7d0b7fbc7753e8"
+    },
+    {
+      "name": "phase_catalog_complete",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "af14ae9cfe6a012aa632d3c0c41ff8b309e9ce17cfe365c9cdf77771de144f54"
+    },
+    {
+      "name": "phase_invocation_complete",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "287f23a5c4c457e99e115b8af9366cb56ba9b28e97319c0332017cdfe9e71717"
+    },
+    {
+      "name": "phase_invocation_attempted",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "e531d212b5a2e14f1d4563844446d008b0c17a59f6d535783ef434c13cf3130c"
+    },
+    {
+      "name": "phase_state",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "9391ae9eba3da59035895d8432a57dd65825c654387d9656808f6cb24521b6d1"
+    },
+    {
+      "name": "alias_identity",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "2e83bfd466e24dd830a51c4f82a34bd0b2c854519d3d3424e2cf113d50f7b14c"
+    },
+    {
+      "name": "inventory_client_identity",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "1ccbfc16c809419e3e20cb2d9c0f6a0aec854a5e66b3170ee8c3e7fbf92f387b"
+    },
+    {
+      "name": "timestamp_zone",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "868f58ad56a8eabc80a7857c9e2d2da6b774190ccb58d592f344f3ab54719efd"
+    },
+    {
+      "name": "absent_receipt_shape",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "6beaa1ba59eafa2e8c84ccaa04d2ffe1f40ab1c7f4c7e0246d21b80db7cb7f30"
+    },
+    {
+      "name": "packages_after_observer_integrity",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "9cc52bf98d5dce724948d8926efe83063d6e73f5266da2cfaed554202230d5f7"
+    },
+    {
+      "name": "skill_trees_after_observer_integrity",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "3882f1a6e3512d12fe054d0e6b3925158b43aad45e6f1f30339099dd0ab7fc15"
+    },
+    {
+      "name": "activation_deferred_until_cleanup",
+      "exit_code": 1,
+      "tests": 29,
+      "output_sha256": "dc2e5915ab55e8c017bdf771853f4e4b6fa6cb60aeff9a5c1d587d1b7cb7f611"
+    }
+  ],
+  "caught": 23,
+  "method": "Temporary copies of only the harness and focused tests; every variant compiles, runs 29 tests, and rejects a removed or weakened guard. No native process or profile is used."
+}
