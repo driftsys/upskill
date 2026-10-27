@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Prepare disposable native delivery fixtures; offline results never qualify clients."""
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -1208,6 +1209,158 @@ def classify_cross_client_isolation(observation, fixture):
             or candidate.get('activations') != 0 or candidate.get('response') != fixture['absent_marker']):
         return result('incomplete_evidence')
     return result('isolation_observed')
+
+
+def classify_registration_isolation(observation, fixture):
+    """Classify one Q11b cell from captured evidence, without native effects.
+
+    Producers must correlate native records into phase rows, including session
+    binding and marker disclosure. This classifier does not collect inventory,
+    authorize a profile, or replace the explicit-selector Q11 control.
+    """
+    def receipt_valid(row):
+        if not isinstance(row, dict) or type(row.get('present')) is not bool:
+            return False
+        if not row['present']:
+            return row.get('sha256') is None and row.get('mode') is None
+        digest = row.get('sha256')
+        return (isinstance(digest, str) and len(digest) == 64
+                and all(c in '0123456789abcdef' for c in digest)
+                and type(row.get('mode')) is int and 0 <= row['mode'] <= 0o7777)
+
+    preservation = observation.get('preservation', {})
+    before, after = preservation.get('before'), preservation.get('after')
+    preserved = (isinstance(before, dict) and bool(before) and before == after
+                 and all(receipt_valid(row) for row in before.values()))
+
+    def result(verdict):
+        return {'isolation': verdict, 'preservation': 'unchanged' if preserved else 'preservation_failed'}
+
+    owner, observer = fixture['owner'], fixture['observer']
+    inventory = observation.get('inventory', {})
+    if (inventory.get('complete') is not True or inventory.get('blocking_reasons') != []
+            or any(inventory.get(key) != fixture[key] for key in ('owner', 'observer', 'cwd', 'scope', 'pins'))
+            or any(not isinstance(inventory.get(key), list) or not inventory[key]
+                   or any(not isinstance(value, str) or not value for value in inventory[key])
+                   for key in ('effective_roots', 'reader_conditions', 'surfaces'))):
+        return result('blocked_inventory')
+    packages, trees = fixture.get('packages'), fixture.get('skill_trees')
+    def tree_valid(tree):
+        return (isinstance(tree, dict) and bool(tree)
+                and all(isinstance(path, str) and bool(path)
+                        and not any(part in ('', '.', '..') for part in path.split('/'))
+                        and isinstance(row, dict) and set(row) == {'sha256', 'mode'}
+                        and receipt_valid(dict(row, present=True)) for path, row in tree.items()))
+
+    if (not isinstance(packages, dict) or set(packages) != {owner, observer}
+            or not all(tree_valid(tree) for tree in packages.values())
+            or not isinstance(trees, dict) or set(trees) != {owner, observer}
+            or not all(tree_valid(tree) for tree in trees.values()) or trees[owner] != trees[observer]
+            or any({path[len('skills/'):]: row for path, row in packages[client].items()
+                    if path.startswith('skills/')} != trees[client] for client in (owner, observer))
+            or observation.get('packages_after') != packages
+            or observation.get('skill_trees_after') != trees):
+        return result('invalid_pair')
+    names = ('observer_positive', 'owner_positive', 'baseline', 'owner_candidate', 'candidate', 'post_removal')
+    phases = observation.get('phases', {})
+    for name in names:
+        phase = phases.get(name, {})
+        client = owner if name in ('owner_positive', 'owner_candidate') else observer
+        if phase and any(phase.get(key) != value for key, value in {
+                'client': client, 'pin': fixture['pins'][client], 'cwd': fixture['cwd'],
+                'scope': 'session' if name == 'observer_positive' else fixture['scope'],
+                'namespace': fixture['namespace']}.items()):
+            return result('control_metadata_failed')
+
+    def complete(phase):
+        return (phase.get('state') == 'success'
+                and all(phase.get(key) is True for key in
+                        ('complete', 'catalog_complete', 'invocation_complete', 'invocation_attempted'))
+                and phase.get('unexpected_tools') is False
+                and all(type(phase.get(key)) is int and phase[key] >= 0
+                        for key in ('activations', 'content_activations')))
+
+    for name in ('observer_positive', 'owner_positive', 'owner_candidate'):
+        phase = phases.get(name, {})
+        if (not complete(phase) or phase.get('session_bound') is not True
+                or phase.get('marker_disclosed') is not False
+                or phase.get('catalog_present') is not True
+                or phase.get('invocation_outcome') != 'loaded' or phase.get('activations') != 1
+                or phase.get('content_activations') != 1
+                or not isinstance(fixture.get('source_paths', {}).get(name), str)
+                or not fixture['source_paths'][name]
+                or phase.get('source_path') != fixture['source_paths'][name]
+                or phase.get('response') != fixture['marker']):
+            return result('blocked_' + name)
+
+    def interval(row):
+        try:
+            start = datetime.datetime.fromisoformat(row['started_at'])
+            finish = datetime.datetime.fromisoformat(row['finished_at'])
+            if start.utcoffset() is None or finish.utcoffset() is None or start >= finish:
+                return None
+            return start, finish
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    times, sessions = {}, set()
+    for name in names:
+        phase = phases.get(name, {})
+        session = phase.get('session_id')
+        times[name] = interval(phase)
+        if (not times[name] or not isinstance(session, str) or not session
+                or session in sessions or phase.get('session_bound') is not True):
+            return result('blocked_freshness')
+        sessions.add(session)
+    operations = observation.get('operations', {})
+    for name, preceding in [('calibration_cleanup', ('observer_positive', 'owner_positive')),
+                            ('owner_install', ('baseline',)),
+                            ('owner_remove', ('owner_candidate', 'candidate'))]:
+        operation = operations.get(name, {})
+        timing = interval(operation)
+        if (not timing or operation.get('state') != 'success' or operation.get('complete') is not True
+                or any(operation.get(key) != fixture[key] for key in ('owner', 'cwd', 'scope', 'namespace'))
+                or timing[0] <= max(times[phase][1] for phase in preceding)):
+            return result('blocked_operations')
+        times[name] = timing
+    if (times['baseline'][0] <= times['calibration_cleanup'][1]
+            or times['owner_candidate'][0] <= times['owner_install'][1]
+            or times['candidate'][0] <= times['owner_candidate'][1]
+            or times['post_removal'][0] <= times['owner_remove'][1]):
+        return result('blocked_freshness')
+    negatives = [phases[name] for name in ('baseline', 'candidate', 'post_removal')]
+    if any(any(phase.get(key) is not False for key in
+               ('foreign_selector', 'candidate_registered', 'marker_disclosed')) for phase in negatives):
+        return result('invalid_observer_conditions')
+
+    def activated(phase):
+        return (any(type(phase.get(key)) is int and phase[key] > 0
+                    for key in ('activations', 'content_activations'))
+                or phase.get('alias_activation') is True
+                or isinstance(phase.get('response'), str) and fixture['marker'] in phase['response'])
+
+    def absent(phase):
+        return (complete(phase) and phase.get('catalog_present') is False
+                and phase.get('invocation_outcome') == 'not_found'
+                and phase.get('response') == fixture['absent_marker']
+                and phase.get('activations') == 0 and phase.get('content_activations') == 0
+                and phase.get('alias_activation') is False and phase.get('alias_exposure') is False
+                and phase.get('alias_not_found') is True
+                and phase.get('aliases_checked') == fixture['aliases'])
+
+    baseline, candidate, removed = negatives
+    if activated(baseline) or baseline.get('catalog_present') is True or baseline.get('alias_exposure') is True:
+        return result('baseline_contaminated')
+    if not absent(baseline):
+        return result('blocked_baseline')
+    if any(activated(phase) for phase in (candidate, removed)):
+        return result('activation_observed')
+    if any(phase.get('catalog_present') is True or phase.get('alias_exposure') is True
+           for phase in (candidate, removed)):
+        return result('catalog_exposure')
+    if not all(absent(phase) for phase in (candidate, removed)):
+        return result('incomplete_evidence')
+    return result('discovery_absence_observed')
 
 
 if __name__ == '__main__':
