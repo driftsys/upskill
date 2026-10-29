@@ -1,0 +1,53 @@
+{
+  "session_id": "03061bb3-925c-4f64-a769-2bbb0de48f68",
+  "pin": "1.0.103",
+  "cwd": "$PRIVATE_PACKET/fixture/claude/positive-project",
+  "session_start": {
+    "type": "session.start",
+    "id": "1c52b92f-e235-45e5-b179-364fdf2dd40d",
+    "timestamp": "2026-10-29T00:00:10.133Z",
+    "parentId": null
+  },
+  "session_start_data": {
+    "sessionId": "03061bb3-925c-4f64-a769-2bbb0de48f68",
+    "copilotVersion": "1.0.103",
+    "startTime": "2026-10-29T00:00:10.105Z",
+    "context": {
+      "cwd": "$PRIVATE_PACKET/fixture/claude/positive-project",
+      "gitRoot": "$PRIVATE_PACKET/fixture/claude/positive-project",
+      "branch": "master",
+      "headCommit": "979b996034813b88fd1c4eef06eac4692bcae583"
+    }
+  },
+  "native_source_path": "$COPILOT_PROFILE_ROOT/home/.copilot/session-state/03061bb3-925c-4f64-a769-2bbb0de48f68/events.jsonl",
+  "native_source_sha256": "267fd2fb478b2b9963efed98bf090df5409fdc381a0c2e04f00020fc1d374800",
+  "selected_records": [
+    {
+      "id": "e651d25b-5429-4fde-b1f1-ce30c573b854",
+      "type": "user.message",
+      "same_payload": true
+    },
+    {
+      "id": "6c7af0fc-68ba-4723-b1e2-bb7dc6bf4b70",
+      "type": "assistant.message",
+      "same_payload": true
+    },
+    {
+      "id": "d08f64b8-901e-41dc-aef1-74a3e95f2c5f",
+      "type": "tool.execution_start",
+      "same_payload": true
+    },
+    {
+      "id": "188d80d2-3bc4-403c-a5e5-cfb626799159",
+      "type": "tool.execution_complete",
+      "same_payload": false
+    },
+    {
+      "id": "4c7abfd4-af40-475e-bea9-cab0efaeb431",
+      "type": "assistant.message",
+      "same_payload": true
+    }
+  ],
+  "all_native_parent_links_resolve": true,
+  "limitation": "Catalog is ephemeral stdout bound to the single process receipt and session-start parent ID; it is not repeated in persisted native history. Completion payload gains native detail on disk; identity, outcome and toolCallId match."
+}

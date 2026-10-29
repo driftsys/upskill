@@ -1,0 +1,19 @@
+{
+  "pin": "1.0.103",
+  "platform": "macOS arm64",
+  "cwd": "$PRIVATE_PACKET/fixture/claude/positive-project",
+  "scope": "session",
+  "namespace": "upskill-q11-af96a6b8a0a49da5:probe-382d4e5dc0a6675b",
+  "catalog_complete": true,
+  "catalog_present": true,
+  "activations": 0,
+  "content_activations": 1,
+  "unexpected_tools": true,
+  "source_path": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5",
+  "response": "\n\n$CONTENT_MARKER",
+  "state": "success",
+  "complete": true,
+  "invocation_attempted": false,
+  "invocation_outcome": "not_attempted",
+  "invocation_complete": false
+}

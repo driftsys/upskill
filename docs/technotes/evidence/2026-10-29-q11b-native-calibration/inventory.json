@@ -1,0 +1,565 @@
+{
+  "captured_at_utc": "2026-10-29T00:00:06.298418+00:00",
+  "roots": [
+    {
+      "path": "/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "/private/tmp/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.claude/skills",
+      "present": true,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.claude/plugins",
+      "present": true,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.copilot/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.copilot/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.agents/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.agents/plugins",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.github/skills",
+      "present": false,
+      "is_symlink": false
+    },
+    {
+      "path": "$PRIVATE_PACKET/fixture/claude/positive-project/.github/instructions",
+      "present": false,
+      "is_symlink": false
+    }
+  ],
+  "configurations": [
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json",
+      "discovery_keys": [],
+      "active_discovery_keys": [],
+      "active_values_sha256": {}
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json",
+      "discovery_keys": [],
+      "active_discovery_keys": [],
+      "active_values_sha256": {}
+    },
+    {
+      "path": "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json",
+      "discovery_keys": [],
+      "active_discovery_keys": [],
+      "active_values_sha256": {}
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.copilot/config.json",
+      "discovery_keys": [],
+      "active_discovery_keys": [],
+      "active_values_sha256": {}
+    },
+    {
+      "path": "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json",
+      "discovery_keys": [],
+      "active_discovery_keys": [],
+      "active_values_sha256": {}
+    }
+  ],
+  "protected_paths": [
+    "/.agents/plugins",
+    "/.agents/skills",
+    "/.claude/CLAUDE.md",
+    "/.claude/plugins",
+    "/.claude/skills",
+    "/.copilot/plugins",
+    "/.copilot/skills",
+    "/.github/copilot-instructions.md",
+    "/.github/instructions",
+    "/.github/skills",
+    "/AGENTS.md",
+    "/AGENTS.override.md",
+    "/CLAUDE.md",
+    "/Library/Application Support/ClaudeCode/CLAUDE.md",
+    "/Library/Application Support/ClaudeCode/managed-settings.json",
+    "/private/.agents/plugins",
+    "/private/.agents/skills",
+    "/private/.claude/CLAUDE.md",
+    "/private/.claude/plugins",
+    "/private/.claude/skills",
+    "/private/.copilot/plugins",
+    "/private/.copilot/skills",
+    "/private/.github/copilot-instructions.md",
+    "/private/.github/instructions",
+    "/private/.github/skills",
+    "/private/AGENTS.md",
+    "/private/AGENTS.override.md",
+    "/private/CLAUDE.md",
+    "/private/tmp/.agents/plugins",
+    "/private/tmp/.agents/skills",
+    "/private/tmp/.claude/CLAUDE.md",
+    "/private/tmp/.claude/plugins",
+    "/private/tmp/.claude/skills",
+    "/private/tmp/.copilot/plugins",
+    "/private/tmp/.copilot/skills",
+    "/private/tmp/.github/copilot-instructions.md",
+    "/private/tmp/.github/instructions",
+    "/private/tmp/.github/skills",
+    "/private/tmp/AGENTS.md",
+    "/private/tmp/AGENTS.override.md",
+    "/private/tmp/CLAUDE.md",
+    "$CLAUDE_PROFILE_ROOT/home/.agents/plugins",
+    "$CLAUDE_PROFILE_ROOT/home/.agents/skills",
+    "$CLAUDE_PROFILE_ROOT/home/.claude.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/CLAUDE.md",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/config.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/.last_inuse_sweep",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/.claude-plugin/plugin.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/.orphaned_at",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/skills/probe-1d31752ae01b2497/SKILL.md",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/skills/probe-1d31752ae01b2497/references/receipt.txt",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0/.claude-plugin/plugin.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0/.orphaned_at",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0/skills/probe-27cf36541c3cd19a/SKILL.md",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0/skills/probe-27cf36541c3cd19a/references/receipt.txt",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/.last-complete-round",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/.marketplaces.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/manifest.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/skills",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/skills/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/.last-complete-round",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/skills/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/manifest.json",
+    "$CLAUDE_PROFILE_ROOT/home/.copilot/plugins",
+    "$CLAUDE_PROFILE_ROOT/home/.copilot/skills",
+    "$CLAUDE_PROFILE_ROOT/home/.github/copilot-instructions.md",
+    "$CLAUDE_PROFILE_ROOT/home/.github/instructions",
+    "$CLAUDE_PROFILE_ROOT/home/.github/skills",
+    "$CLAUDE_PROFILE_ROOT/home/AGENTS.md",
+    "$CLAUDE_PROFILE_ROOT/home/AGENTS.override.md",
+    "$CLAUDE_PROFILE_ROOT/home/CLAUDE.md",
+    "$COPILOT_PROFILE_ROOT/home/.agents/plugins",
+    "$COPILOT_PROFILE_ROOT/home/.agents/skills",
+    "$COPILOT_PROFILE_ROOT/home/.claude.json",
+    "$COPILOT_PROFILE_ROOT/home/.claude/CLAUDE.md",
+    "$COPILOT_PROFILE_ROOT/home/.claude/plugins",
+    "$COPILOT_PROFILE_ROOT/home/.claude/skills",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/.claude.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/config.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/plugins",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/installed_plugins.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/known_marketplaces.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/settings.local.json",
+    "$COPILOT_PROFILE_ROOT/home/.copilot/skills",
+    "$COPILOT_PROFILE_ROOT/home/.github/copilot-instructions.md",
+    "$COPILOT_PROFILE_ROOT/home/.github/instructions",
+    "$COPILOT_PROFILE_ROOT/home/.github/skills",
+    "$COPILOT_PROFILE_ROOT/home/AGENTS.md",
+    "$COPILOT_PROFILE_ROOT/home/AGENTS.override.md",
+    "$COPILOT_PROFILE_ROOT/home/CLAUDE.md",
+    "$PRIVATE_PACKET/.agents/plugins",
+    "$PRIVATE_PACKET/.agents/skills",
+    "$PRIVATE_PACKET/.claude/CLAUDE.md",
+    "$PRIVATE_PACKET/.claude/plugins",
+    "$PRIVATE_PACKET/.claude/skills",
+    "$PRIVATE_PACKET/.copilot/plugins",
+    "$PRIVATE_PACKET/.copilot/skills",
+    "$PRIVATE_PACKET/.github/copilot-instructions.md",
+    "$PRIVATE_PACKET/.github/instructions",
+    "$PRIVATE_PACKET/.github/skills",
+    "$PRIVATE_PACKET/AGENTS.md",
+    "$PRIVATE_PACKET/AGENTS.override.md",
+    "$PRIVATE_PACKET/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/.agents/plugins",
+    "$PRIVATE_PACKET/fixture/.agents/skills",
+    "$PRIVATE_PACKET/fixture/.claude/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/.claude/plugins",
+    "$PRIVATE_PACKET/fixture/.claude/skills",
+    "$PRIVATE_PACKET/fixture/.copilot/plugins",
+    "$PRIVATE_PACKET/fixture/.copilot/skills",
+    "$PRIVATE_PACKET/fixture/.github/copilot-instructions.md",
+    "$PRIVATE_PACKET/fixture/.github/instructions",
+    "$PRIVATE_PACKET/fixture/.github/skills",
+    "$PRIVATE_PACKET/fixture/AGENTS.md",
+    "$PRIVATE_PACKET/fixture/AGENTS.override.md",
+    "$PRIVATE_PACKET/fixture/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/claude/.agents/plugins",
+    "$PRIVATE_PACKET/fixture/claude/.agents/skills",
+    "$PRIVATE_PACKET/fixture/claude/.claude/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/claude/.claude/plugins",
+    "$PRIVATE_PACKET/fixture/claude/.claude/skills",
+    "$PRIVATE_PACKET/fixture/claude/.copilot/plugins",
+    "$PRIVATE_PACKET/fixture/claude/.copilot/skills",
+    "$PRIVATE_PACKET/fixture/claude/.github/copilot-instructions.md",
+    "$PRIVATE_PACKET/fixture/claude/.github/instructions",
+    "$PRIVATE_PACKET/fixture/claude/.github/skills",
+    "$PRIVATE_PACKET/fixture/claude/AGENTS.md",
+    "$PRIVATE_PACKET/fixture/claude/AGENTS.override.md",
+    "$PRIVATE_PACKET/fixture/claude/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/plugin.json",
+    "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/skills/probe-382d4e5dc0a6675b/SKILL.md",
+    "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/skills/probe-382d4e5dc0a6675b/resource.txt",
+    "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5/.claude-plugin/plugin.json",
+    "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5/skills/probe-382d4e5dc0a6675b/SKILL.md",
+    "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5/skills/probe-382d4e5dc0a6675b/resource.txt",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.agents/plugins",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.agents/skills",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/plugins",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/settings.json",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/settings.local.json",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.claude/skills",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.copilot/plugins",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.copilot/skills",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.github/copilot-instructions.md",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.github/instructions",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/.github/skills",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/AGENTS.md",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/AGENTS.override.md",
+    "$PRIVATE_PACKET/fixture/claude/positive-project/CLAUDE.md",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-26fb8db5fd232412/.claude-plugin/plugin.json",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-26fb8db5fd232412/skills/probe-bbc77604629f9f6a/SKILL.md",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-26fb8db5fd232412/skills/probe-bbc77604629f9f6a/resource.txt",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/native/upskill-q11-26fb8db5fd232412/plugin.json",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/native/upskill-q11-26fb8db5fd232412/skills/probe-bbc77604629f9f6a/SKILL.md",
+    "$PRIVATE_PACKET/fixture/copilot/delivery/native/upskill-q11-26fb8db5fd232412/skills/probe-bbc77604629f9f6a/resource.txt",
+    "$PRIVATE_PACKET/marketplace/.claude-plugin/marketplace.json"
+  ],
+  "blockers": [],
+  "scope": "project",
+  "imports": "No applicable configured imports accepted without resolution",
+  "ide_cloud": "CLI invocation only; MCP and child execution disabled; existing synchronized content fingerprinted without modification"
+}

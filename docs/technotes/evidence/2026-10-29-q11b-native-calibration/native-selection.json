@@ -1,0 +1,116 @@
+[
+  {
+    "type": "session.skills_loaded",
+    "id": "493c24a3-87bd-4d61-9379-c23a1584d1da",
+    "parentId": "1c52b92f-e235-45e5-b179-364fdf2dd40d",
+    "timestamp": "2026-10-29T00:00:11.615Z",
+    "ephemeral": true,
+    "data": {
+      "skills": [
+        {
+          "name": "probe-382d4e5dc0a6675b",
+          "commandName": "upskill-q11-af96a6b8a0a49da5:probe-382d4e5dc0a6675b",
+          "description": "Explicit cross-client qualification probe.",
+          "source": "plugin",
+          "userInvocable": true,
+          "enabled": true,
+          "path": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/skills/probe-382d4e5dc0a6675b/SKILL.md"
+        },
+        {
+          "name": "customize-cloud-agent",
+          "commandName": "customize-cloud-agent",
+          "description": "Skill for customizing the Copilot cloud agent (formerly known as Copilot coding agent) environment, including copilot-setup-steps.yml configuration, preinstalling tools and dependencies, runners, and settings. Use when the user mentions copilot-setup-steps, copilot setup steps, or wants to configure the cloud agent environment.",
+          "source": "builtin",
+          "userInvocable": false,
+          "enabled": true,
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/customize-cloud-agent/SKILL.md"
+        },
+        {
+          "name": "github-pr-media",
+          "commandName": "github-pr-media",
+          "description": "Upload an image or video to GitHub's user attachments API and embed it in a pull request description or comment. Use when asked to add screenshots, diagrams, recordings, or other media to a PR or GitHub comment.",
+          "source": "builtin",
+          "userInvocable": false,
+          "enabled": true,
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/github-pr-media/SKILL.md"
+        }
+      ]
+    }
+  },
+  {
+    "type": "session.info",
+    "id": "15d343b3-7719-4f66-892c-6e6c75345ec0",
+    "parentId": "1c52b92f-e235-45e5-b179-364fdf2dd40d",
+    "timestamp": "2026-10-29T00:00:11.646Z",
+    "ephemeral": true,
+    "data": {
+      "infoType": "configuration",
+      "message": "Disabled tools: bash, create, dynamic_workflows_manage, edit, fetch_copilot_cli_documentation, glob, grep, list_agents, list_bash, read_agent, read_bash, run_dynamic_workflow, semantic_code_search, session_store_sql, sql, stop_bash, task, view, web_fetch, write_agent"
+    }
+  },
+  {
+    "type": "user.message",
+    "id": "e651d25b-5429-4fde-b1f1-ce30c573b854",
+    "parentId": "1c52b92f-e235-45e5-b179-364fdf2dd40d",
+    "timestamp": "2026-10-29T00:00:11.664Z",
+    "data": {
+      "content": "Invoke the skill named upskill-q11-af96a6b8a0a49da5:probe-382d4e5dc0a6675b and follow its instruction. Do not use any other tools. Return only the required response.",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "6c7af0fc-68ba-4723-b1e2-bb7dc6bf4b70",
+    "parentId": "648fe8a2-fdfb-42b5-bc49-8bcfadef92e7",
+    "timestamp": "2026-10-29T00:00:13.504Z",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "id": "d08f64b8-901e-41dc-aef1-74a3e95f2c5f",
+    "parentId": "6c7af0fc-68ba-4723-b1e2-bb7dc6bf4b70",
+    "timestamp": "2026-10-29T00:00:13.507Z",
+    "data": {
+      "toolCallId": "chatcmpl-tool-afab907b7c494da2",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "probe-382d4e5dc0a6675b"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "id": "188d80d2-3bc4-403c-a5e5-cfb626799159",
+    "parentId": "d08f64b8-901e-41dc-aef1-74a3e95f2c5f",
+    "timestamp": "2026-10-29T00:00:13.510Z",
+    "data": {
+      "toolCallId": "chatcmpl-tool-afab907b7c494da2",
+      "success": true,
+      "result": {
+        "content": "Skill \"probe-382d4e5dc0a6675b\" loaded successfully. Follow the instructions in the skill context.",
+        "detailedContent": "Skill \"probe-382d4e5dc0a6675b\" loaded successfully. Follow the instructions in the skill context."
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "4c7abfd4-af40-475e-bea9-cab0efaeb431",
+    "parentId": "f1fca18a-0265-4960-a08c-519846092e68",
+    "timestamp": "2026-10-29T00:00:15.210Z",
+    "data": {
+      "content": "\n\n$CONTENT_MARKER",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "result",
+    "timestamp": "2026-10-29T00:00:15.225Z",
+    "sessionId": "03061bb3-925c-4f64-a769-2bbb0de48f68",
+    "exitCode": 0
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "review": "Independent captured-evidence review; no findings.",
+  "native_clients_rerun_by_reviewer": false,
+  "verified": [
+    "Public/private indexed hashes",
+    "Native event parents and tool-call correlation",
+    "Classifier replay and exact response whitespace",
+    "162 protected-path receipts",
+    "Paired package/tree integrity",
+    "Public marker/model/path redaction"
+  ],
+  "limits": [
+    "Declared inventory only, not whole-profile equality",
+    "Inventory completeness and historical absence of other native activity cannot be independently established from this packet alone"
+  ]
+}

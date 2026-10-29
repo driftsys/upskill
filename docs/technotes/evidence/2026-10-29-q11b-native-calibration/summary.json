@@ -1,0 +1,43 @@
+{
+  "status": "copilot_positive_failed",
+  "qualified": false,
+  "native_calibration": true,
+  "pins": {
+    "claude": "2.1.308",
+    "copilot": "1.0.103",
+    "codex": "0.164.0",
+    "opencode": "2.1.4"
+  },
+  "process_exit_code": 0,
+  "timed_out": false,
+  "malformed_stream": false,
+  "exact_response": false,
+  "namespaced_activations": 0,
+  "content_activations": 1,
+  "unexpected_tools": true,
+  "catalog_present": true,
+  "changed_protected_paths": [],
+  "protected_paths_unchanged": true,
+  "session_start_count": 0,
+  "top_level_session_ids": [
+    "03061bb3-925c-4f64-a769-2bbb0de48f68"
+  ],
+  "claude_positive": "not_run",
+  "baseline": "not_run",
+  "candidate": "not_run",
+  "post_removal": "not_run",
+  "owner_registration": "not_run",
+  "cleanup": "No fixture registration created; session selector ended with process",
+  "retry": "not_run",
+  "session_correlated": true,
+  "session_id": "03061bb3-925c-4f64-a769-2bbb0de48f68",
+  "namespaced_attempts": 0,
+  "bare_name_successes": 1,
+  "response_shape": "Two leading newline characters followed by the exact content marker.",
+  "disposition": "blocked_positive",
+  "isolation": "not_observed",
+  "preservation": "unchanged_for_declared_protected_paths",
+  "scope": "Copilot session-selector calibration only; Claude project route and selector-free observer controls not run.",
+  "gate": "Q11 retained FAIL and slice-2 entry gate unchanged",
+  "native_bookkeeping": "Copilot session/log/cache/usage bookkeeping remains native-managed; no whole-profile equality claim."
+}
