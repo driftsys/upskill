@@ -2,9 +2,9 @@
   "profile": "copilot-native-name-v1",
   "native_execution": false,
   "qualified": false,
-  "focused_tests": 22,
+  "focused_tests": 26,
   "repository_rust_tests": 1418,
-  "repository_offline_tests": 312,
+  "repository_offline_tests": 316,
   "commands": [
     {
       "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_qualify_copilot_native_name.py'",
@@ -46,19 +46,31 @@
       "result": "failed: load before request accepted and missing native data exceptions; both fixed before native attempt"
     },
     {
+      "stage": "quick-review malformed-link regression",
+      "tests": 26,
+      "result": "failed: unhashable parent identities raised; fixed and all regressions pass"
+    },
+    {
       "stage": "final guards and sanitized captured replay",
-      "tests": 22,
+      "tests": 26,
       "result": "passed"
     }
   ],
   "historical_haiku_namespace_to_bare_run": "still blocked; not relabelled",
   "source_sha256": {
-    "scripts/qualify-plugin-rules.py": "cab395b72ce96b8c767d4eb572d8f87f6b1188051273abcd39c695713f29b93e",
-    "scripts/tests/test_qualify_copilot_native_name.py": "69a69d43810a41b2ee16b6dc05736a97053fa272ef4e05e40451573ed95c7a0c",
+    "scripts/qualify-plugin-rules.py": "6f368b9aa920cb8d2b9a04f63f6ae66023acca2eed8fdebc2918ba9e8dd9ce66",
+    "scripts/tests/test_qualify_copilot_native_name.py": "ded7102c770c4df3de3ab2a75d69ed769cb4ef00da8e1924d1feff46d270bead",
     "docs/wip/specs/2026-10-30-q11b-native-name-profile.md": "a0a130ebf865a85cce375accf4e5c2c195cae88e6727e795cbfa9971ecf01ef6"
   },
   "review_findings": {
     "pre_request_load": "fixed with request ancestry regression",
-    "missing_native_data": "fixed with regression for each record type; issue #437"
-  }
+    "missing_native_data": "fixed with regression for each record type; issue #437",
+    "native_identity_test_sensitivity": "consistent-record mutations rejected",
+    "plugin_version_and_errors_and_assistant_disclosure": "all removed guards independently rejected",
+    "malformed_parent_or_type": "fixed with blocked-observation regressions; issue #439",
+    "test_counts": "corrected from actual final log"
+  },
+  "repository_rust_ignored": 2,
+  "rust_result_groups": 89,
+  "guard_mutations_rejected": 4
 }

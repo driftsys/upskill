@@ -58,7 +58,7 @@ class CopilotNativeName(unittest.TestCase):
 
     def test_wrong_plugin_path_body_or_source_blocks(self):
         for key, value in [('pluginName', 'other'), ('path', '/other/probe/SKILL.md'),
-                           ('content', 'changed'), ('name', 'other'), ('source', 'personal')]:
+                           ('content', 'changed'), ('name', 'other'), ('source', 'personal'), ('pluginVersion', 'wrong')]:
             with self.subTest(key=key):
                 original = copy.deepcopy(self.native)
                 self.native[4]['data'][key] = value
@@ -220,6 +220,37 @@ class CopilotNativeName(unittest.TestCase):
         wrong = q.inspect_copilot_native_positive(events, native, fixture,
                 skill_bytes=(packet / 'replay-skill.txt').read_bytes(), exit_code=0)
         self.assertFalse(wrong['calibration_passed'])
+
+    def test_consistent_wrong_native_call_identity_blocks(self):
+        for key, value in [('arguments', {'skill': 'other'}),
+                           ('arguments', {'skill': 'package:probe'}), ('toolName', 'bash')]:
+            with self.subTest(key=key, value=value):
+                before_events, before_native = copy.deepcopy(self.events), copy.deepcopy(self.native)
+                self.events[2]['data'][key] = self.native[2]['data'][key] = value
+                self.assert_blocked()
+                self.events, self.native = before_events, before_native
+
+    def test_native_session_error_blocks_otherwise_consistent_capture(self):
+        self.native.insert(5, dict(type='session.error', id='error', parentId='load', data={'message': 'provider error'}))
+        self.native[6]['parentId'] = self.events[4]['parentId'] = 'error'
+        self.assert_blocked()
+
+    def test_assistant_marker_before_load_blocks(self):
+        disclosure = dict(type='assistant.message', id='disclosure', parentId='user',
+                          data={'content': 'PRIVATE', 'turnId': '0'})
+        self.native[2]['parentId'] = self.events[2]['parentId'] = 'disclosure'
+        self.native.insert(2, disclosure)
+        self.events.insert(2, copy.deepcopy(disclosure))
+        self.assert_blocked()
+
+    def test_unhashable_parent_or_event_type_blocks_without_exception(self):
+        for key in ('parentId', 'type'):
+            for value in ([], {}, 1, None):
+                with self.subTest(key=key, value=value):
+                    before = copy.deepcopy(self.native)
+                    self.native[2][key] = value
+                    self.assert_blocked()
+                    self.native = before
 
     def test_legacy_namespace_parser_remains_unchanged(self):
         row = q.inspect_cross_client_positive(self.events, self.fixture, exit_code=0)

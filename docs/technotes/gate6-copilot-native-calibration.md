@@ -84,3 +84,13 @@ selector-free isolation. The remaining native controls still need their concrete
 capture review and bounded credit budget; a rejected namespace alone cannot
 establish absence, and callable aliases and collisions remain required controls.
 No further model requests ran in this attempt.
+
+Quick review additionally pinned native invocation identity, plugin version,
+native session errors and assistant disclosure with consistent-record mutations.
+All four
+[removed guards](evidence/2026-10-30-q11b-native-name/guard-mutations.json) are
+independently rejected by targeted regressions. Malformed parent identities and
+event types now return blocked observations instead of raising exceptions. These
+offline fixes do not change the captured native result or require another model
+request. [#438](https://github.com/driftsys/upskill/issues/438) and
+[#439](https://github.com/driftsys/upskill/issues/439) track the fixed findings.

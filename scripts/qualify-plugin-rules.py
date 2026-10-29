@@ -1163,7 +1163,8 @@ def inspect_copilot_native_positive(events, native_events, fixture, *, skill_byt
         return blocked
     for stream in (events, native_events):
         if (not isinstance(stream, list) or not stream
-                or any(not isinstance(e, dict) or not isinstance(e.get('data', {}), dict) for e in stream)):
+                or any(not isinstance(e, dict) or not isinstance(e.get('type'), str)
+                       or not e['type'] or not isinstance(e.get('data', {}), dict) for e in stream)):
             return blocked
     if any(not isinstance(e.get('data'), dict) for e in native_events):
         return blocked
@@ -1200,7 +1201,8 @@ def inspect_copilot_native_positive(events, native_events, fixture, *, skill_byt
         identity = event.get('id')
         if (not isinstance(identity, str) or not identity or identity in known
                 or (i == 0 and event.get('parentId') is not None)
-                or (i > 0 and event.get('parentId') not in known)):
+                or (i > 0 and (not isinstance(event.get('parentId'), str)
+                              or event['parentId'] not in known))):
             return row
         known.add(identity)
     startup = native_events[0]

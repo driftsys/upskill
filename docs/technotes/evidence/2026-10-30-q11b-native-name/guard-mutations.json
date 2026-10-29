@@ -1,0 +1,47 @@
+{
+  "native_execution": false,
+  "source_sha256": "6f368b9aa920cb8d2b9a04f63f6ae66023acca2eed8fdebc2918ba9e8dd9ce66",
+  "test_sha256": "ded7102c770c4df3de3ab2a75d69ed769cb4ef00da8e1924d1feff46d270bead",
+  "mutations": [
+    {
+      "mutation": "native-call-identity",
+      "old": "if (data.get('toolName') != 'skill' or data.get('arguments') != {'skill': fixture['skill_name']}\n",
+      "new": "if (False\n",
+      "test": "test_consistent_wrong_native_call_identity_blocks",
+      "failures": 3,
+      "errors": 0,
+      "status": "rejected",
+      "failure_output": "test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) ... \n  test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='arguments', value={'skill': 'other'}) ... FAIL\n  test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='arguments', value={'skill': 'package:probe'}) ... FAIL\n  test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='toolName', value='bash') ... FAIL\n\n======================================================================\nFAIL: test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='arguments', value={'skill': 'other'})\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 230, in test_consistent_wrong_native_call_identity_blocks\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='arguments', value={'skill': 'package:probe'})\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 230, in test_consistent_wrong_native_call_identity_blocks\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_consistent_wrong_native_call_identity_blocks (native_tests.CopilotNativeName.test_consistent_wrong_native_call_identity_blocks) (key='toolName', value='bash')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 230, in test_consistent_wrong_native_call_identity_blocks\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nFAILED (failures=3)\n"
+    },
+    {
+      "mutation": "plugin-version",
+      "old": "'pluginName': fixture['plugin_name'], 'pluginVersion': fixture['plugin_version'],",
+      "new": "'pluginName': fixture['plugin_name'],",
+      "test": "test_wrong_plugin_path_body_or_source_blocks",
+      "failures": 1,
+      "errors": 0,
+      "status": "rejected",
+      "failure_output": "test_wrong_plugin_path_body_or_source_blocks (native_tests.CopilotNativeName.test_wrong_plugin_path_body_or_source_blocks) ... \n  test_wrong_plugin_path_body_or_source_blocks (native_tests.CopilotNativeName.test_wrong_plugin_path_body_or_source_blocks) (key='pluginVersion') ... FAIL\n\n======================================================================\nFAIL: test_wrong_plugin_path_body_or_source_blocks (native_tests.CopilotNativeName.test_wrong_plugin_path_body_or_source_blocks) (key='pluginVersion')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 65, in test_wrong_plugin_path_body_or_source_blocks\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nFAILED (failures=1)\n"
+    },
+    {
+      "mutation": "native-session-error",
+      "old": " or selected(native_events, 'session.error')",
+      "new": "",
+      "test": "test_native_session_error_blocks_otherwise_consistent_capture",
+      "failures": 1,
+      "errors": 0,
+      "status": "rejected",
+      "failure_output": "test_native_session_error_blocks_otherwise_consistent_capture (native_tests.CopilotNativeName.test_native_session_error_blocks_otherwise_consistent_capture) ... FAIL\n\n======================================================================\nFAIL: test_native_session_error_blocks_otherwise_consistent_capture (native_tests.CopilotNativeName.test_native_session_error_blocks_otherwise_consistent_capture)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 236, in test_native_session_error_blocks_otherwise_consistent_capture\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=1)\n"
+    },
+    {
+      "mutation": "assistant-disclosure",
+      "old": "    if any(fixture['marker'] in e['data'].get('content', '') for e in messages\n           if native_events.index(e) < native_events.index(load)):\n        return row\n",
+      "new": "",
+      "test": "test_assistant_marker_before_load_blocks",
+      "failures": 1,
+      "errors": 0,
+      "status": "rejected",
+      "failure_output": "test_assistant_marker_before_load_blocks (native_tests.CopilotNativeName.test_assistant_marker_before_load_blocks) ... FAIL\n\n======================================================================\nFAIL: test_assistant_marker_before_load_blocks (native_tests.CopilotNativeName.test_assistant_marker_before_load_blocks)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 244, in test_assistant_marker_before_load_blocks\n    self.assert_blocked()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"$WORKTREE/scripts/tests/test_qualify_copilot_native_name.py\", line 44, in assert_blocked\n    self.assertFalse(row['calibration_passed'])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=1)\n"
+    }
+  ]
+}
