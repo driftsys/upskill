@@ -3,7 +3,7 @@
   "native_execution": false,
   "qualified": false,
   "focused_tests": 26,
-  "repository_rust_tests": 1418,
+  "repository_rust_tests": 1410,
   "repository_offline_tests": 316,
   "commands": [
     {
@@ -72,5 +72,9 @@
   },
   "repository_rust_ignored": 2,
   "rust_result_groups": 89,
-  "guard_mutations_rejected": 4
+  "guard_mutations_rejected": 4,
+  "unique_rust_suite_groups": 81,
+  "reported_rust_passes_including_child_result_groups": 1418,
+  "rust_count_basis": "Last result per cargo Running/Doc-tests group; excludes child-process duplicate result lines.",
+  "verification_log_sha256": "fe1597fca469af84019d901257cd1ba6aadd9048dfe904247e21886c3d677a1d"
 }
