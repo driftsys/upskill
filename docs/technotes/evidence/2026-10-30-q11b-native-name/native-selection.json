@@ -1,0 +1,138 @@
+[
+  {
+    "type": "session.start",
+    "id": "a48949af-7e0b-4fe6-b91d-003a09afb7a5",
+    "parentId": null,
+    "data": {
+      "sessionId": "0134d506-e1be-44df-921a-f89c4fb74688",
+      "copilotVersion": "1.0.103",
+      "context": {
+        "cwd": "/QUALIFICATION_PACKET/fixture/claude/positive-project"
+      }
+    }
+  },
+  {
+    "type": "user.message",
+    "id": "7ba927d2-96fd-4aea-a410-783c1f6397b8",
+    "parentId": "a48949af-7e0b-4fe6-b91d-003a09afb7a5",
+    "data": {
+      "content": "Invoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response.",
+      "transformedContent": "<current_datetime>2026-10-30T00:21:37.767+01:00</current_datetime>\n\nInvoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response.",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "system.message",
+    "id": "2143199e-37f8-4312-95f3-b749b34f66e4",
+    "parentId": "7ba927d2-96fd-4aea-a410-783c1f6397b8",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_start",
+    "id": "68c13292-efde-4062-a55d-99fe7a4a28e2",
+    "parentId": "2143199e-37f8-4312-95f3-b749b34f66e4",
+    "data": {}
+  },
+  {
+    "type": "session.usage_record",
+    "id": "b5633e16-2ac6-4ecc-9fda-8b4ea945f358",
+    "parentId": "68c13292-efde-4062-a55d-99fe7a4a28e2",
+    "data": {}
+  },
+  {
+    "type": "assistant.message",
+    "id": "10d2042b-0f78-42cb-a1e1-09ba4a02c677",
+    "parentId": "b5633e16-2ac6-4ecc-9fda-8b4ea945f358",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "id": "b0aa283f-4b56-42d6-ad6d-44a80cb0170b",
+    "parentId": "10d2042b-0f78-42cb-a1e1-09ba4a02c677",
+    "data": {
+      "toolCallId": "toolu_017L1PPfGoMz6Tis9qcUFQQu",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "probe-5adeb2ddeb85bdcf"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "id": "57fbc9c9-8e6d-4054-9abc-be5cc59f2d65",
+    "parentId": "b0aa283f-4b56-42d6-ad6d-44a80cb0170b",
+    "data": {
+      "toolCallId": "toolu_017L1PPfGoMz6Tis9qcUFQQu",
+      "success": true,
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "skill.invoked",
+    "id": "13aa5e8f-2e58-499e-bcb6-f46c0af32466",
+    "parentId": "57fbc9c9-8e6d-4054-9abc-be5cc59f2d65",
+    "data": {
+      "name": "probe-5adeb2ddeb85bdcf",
+      "path": "/QUALIFICATION_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md",
+      "source": "plugin",
+      "pluginName": "upskill-q11-eb9fb2b395c458df",
+      "pluginVersion": "0.0.0",
+      "content": "Return exactly $CONTENT_MARKER and nothing else. Do not use any other tools.\n"
+    }
+  },
+  {
+    "type": "skill.context_delivered_ref",
+    "id": "e495ffb2-a1dd-431a-95ea-8af0290787b6",
+    "parentId": "13aa5e8f-2e58-499e-bcb6-f46c0af32466",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_end",
+    "id": "01123497-8ed5-46e3-9378-b9afac9f5972",
+    "parentId": "e495ffb2-a1dd-431a-95ea-8af0290787b6",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_start",
+    "id": "e89702ca-afee-4dc7-97fc-720d70c6a938",
+    "parentId": "01123497-8ed5-46e3-9378-b9afac9f5972",
+    "data": {}
+  },
+  {
+    "type": "session.usage_record",
+    "id": "3abebb05-7f78-4288-baf5-5c62a3f06b91",
+    "parentId": "e89702ca-afee-4dc7-97fc-720d70c6a938",
+    "data": {}
+  },
+  {
+    "type": "assistant.message",
+    "id": "192ca310-0a25-4222-8564-b4840c4af9c5",
+    "parentId": "3abebb05-7f78-4288-baf5-5c62a3f06b91",
+    "data": {
+      "content": "$CONTENT_MARKER",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "assistant.turn_end",
+    "id": "277c9674-5fc3-4e15-a843-ea9a5f4d3da2",
+    "parentId": "192ca310-0a25-4222-8564-b4840c4af9c5",
+    "data": {}
+  },
+  {
+    "type": "session.usage_checkpoint",
+    "id": "61958cd0-4d3e-4ccf-8107-ccecff66709f",
+    "parentId": "277c9674-5fc3-4e15-a843-ea9a5f4d3da2",
+    "data": {}
+  },
+  {
+    "type": "session.shutdown",
+    "id": "84078ec5-c6fd-4b8a-a5fc-ac7aa4e16407",
+    "parentId": "61958cd0-4d3e-4ccf-8107-ccecff66709f",
+    "data": {}
+  }
+]

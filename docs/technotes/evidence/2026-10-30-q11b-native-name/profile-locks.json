@@ -1,0 +1,14 @@
+[
+  {
+    "client": "claude",
+    "profile": "$CLAUDE_PROFILE_ROOT/home/.claude",
+    "lock": "/private/tmp/upskill-native-profile-9e98568ef889834661a8bf2c26d4d6a3b6fd762f083dcc8a0c5f31c084e64cef.lock",
+    "acquired_at_utc": "2026-10-29T23:21:32.926913+00:00"
+  },
+  {
+    "client": "copilot",
+    "profile": "$COPILOT_PROFILE_ROOT/home/.copilot",
+    "lock": "/private/tmp/upskill-native-profile-f91d58c874419c9642608017975c795ffc40f7301912c833b40e47fb8865d069.lock",
+    "acquired_at_utc": "2026-10-29T23:21:32.927180+00:00"
+  }
+]

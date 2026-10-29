@@ -1,0 +1,94 @@
+[
+  {
+    "type": "session.skills_loaded",
+    "id": "d41ad95e-dd81-489d-9804-f22e5ebd679e",
+    "parentId": "a48949af-7e0b-4fe6-b91d-003a09afb7a5",
+    "data": {
+      "skills": [
+        {
+          "name": "probe-5adeb2ddeb85bdcf",
+          "commandName": "upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf",
+          "description": "Explicit cross-client qualification probe.",
+          "source": "plugin",
+          "userInvocable": true,
+          "enabled": true,
+          "path": "/QUALIFICATION_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md"
+        },
+        {
+          "name": "customize-cloud-agent",
+          "commandName": "customize-cloud-agent",
+          "description": "Skill for customizing the Copilot cloud agent (formerly known as Copilot coding agent) environment, including copilot-setup-steps.yml configuration, preinstalling tools and dependencies, runners, and settings. Use when the user mentions copilot-setup-steps, copilot setup steps, or wants to configure the cloud agent environment.",
+          "source": "builtin",
+          "userInvocable": false,
+          "enabled": true,
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/customize-cloud-agent/SKILL.md"
+        },
+        {
+          "name": "github-pr-media",
+          "commandName": "github-pr-media",
+          "description": "Upload an image or video to GitHub's user attachments API and embed it in a pull request description or comment. Use when asked to add screenshots, diagrams, recordings, or other media to a PR or GitHub comment.",
+          "source": "builtin",
+          "userInvocable": false,
+          "enabled": true,
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/github-pr-media/SKILL.md"
+        }
+      ]
+    }
+  },
+  {
+    "type": "user.message",
+    "id": "7ba927d2-96fd-4aea-a410-783c1f6397b8",
+    "parentId": "a48949af-7e0b-4fe6-b91d-003a09afb7a5",
+    "data": {
+      "content": "Invoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response.",
+      "transformedContent": "<current_datetime>2026-10-30T00:21:37.767+01:00</current_datetime>\n\nInvoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response.",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "10d2042b-0f78-42cb-a1e1-09ba4a02c677",
+    "parentId": "b5633e16-2ac6-4ecc-9fda-8b4ea945f358",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "id": "b0aa283f-4b56-42d6-ad6d-44a80cb0170b",
+    "parentId": "10d2042b-0f78-42cb-a1e1-09ba4a02c677",
+    "data": {
+      "toolCallId": "toolu_017L1PPfGoMz6Tis9qcUFQQu",
+      "toolName": "skill",
+      "arguments": {
+        "skill": "probe-5adeb2ddeb85bdcf"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "id": "57fbc9c9-8e6d-4054-9abc-be5cc59f2d65",
+    "parentId": "b0aa283f-4b56-42d6-ad6d-44a80cb0170b",
+    "data": {
+      "toolCallId": "toolu_017L1PPfGoMz6Tis9qcUFQQu",
+      "success": true,
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "192ca310-0a25-4222-8564-b4840c4af9c5",
+    "parentId": "3abebb05-7f78-4288-baf5-5c62a3f06b91",
+    "data": {
+      "content": "$CONTENT_MARKER",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "result",
+    "sessionId": "0134d506-e1be-44df-921a-f89c4fb74688",
+    "exitCode": 0
+  }
+]

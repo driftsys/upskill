@@ -1,0 +1,5 @@
+{
+  "original_skill_sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+  "public_replay_skill_sha256": "ae10ea33426a7eac53b340f4d7a753b6c33790c87cc30ac47877deed057ad83f",
+  "transformation": "Explicit replacement of marker values and temporary roots; irrelevant native data omitted, native IDs/parents retained. Public replay is a sanitized projection. Original private fixture and source bytes were separately replayed successfully."
+}

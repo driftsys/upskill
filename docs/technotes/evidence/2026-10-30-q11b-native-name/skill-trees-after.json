@@ -1,0 +1,22 @@
+{
+  "native": {
+    "probe-5adeb2ddeb85bdcf/SKILL.md": {
+      "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+      "mode": 420
+    },
+    "probe-5adeb2ddeb85bdcf/resource.txt": {
+      "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+      "mode": 420
+    }
+  },
+  "foreign": {
+    "probe-5adeb2ddeb85bdcf/SKILL.md": {
+      "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+      "mode": 420
+    },
+    "probe-5adeb2ddeb85bdcf/resource.txt": {
+      "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+      "mode": 420
+    }
+  }
+}

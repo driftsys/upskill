@@ -1,0 +1,34 @@
+{
+  "status": "copilot_native_name_positive_failed",
+  "qualified": false,
+  "native_calibration": true,
+  "pins": {
+    "claude": "2.1.308",
+    "copilot": "1.0.103",
+    "codex": "0.164.0",
+    "opencode": "2.1.4"
+  },
+  "calibration_profile": "copilot-native-name-v1",
+  "model_verified": true,
+  "process_exit_code": 0,
+  "timed_out": false,
+  "malformed_stream": false,
+  "exact_response": false,
+  "provenance_bound_activations": 0,
+  "content_activations": 0,
+  "unexpected_tools": null,
+  "catalog_present": null,
+  "changed_protected_paths": [],
+  "protected_paths_unchanged": true,
+  "session_start_count": 0,
+  "top_level_session_ids": [
+    "0134d506-e1be-44df-921a-f89c4fb74688"
+  ],
+  "claude_positive": "not_run",
+  "baseline": "not_run",
+  "candidate": "not_run",
+  "post_removal": "not_run",
+  "owner_registration": "not_run",
+  "cleanup": "No fixture registration created; session selector ended with process",
+  "retry": "not_run"
+}

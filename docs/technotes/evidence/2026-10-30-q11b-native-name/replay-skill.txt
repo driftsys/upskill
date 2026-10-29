@@ -1,0 +1,5 @@
+---
+name: probe-5adeb2ddeb85bdcf
+description: Explicit cross-client qualification probe.
+---
+Return exactly $CONTENT_MARKER and nothing else. Do not use any other tools.

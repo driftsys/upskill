@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Copilot native-name calibration](gate6-copilot-native-calibration.md): Q11b
+  revised positive passes with provenance-bound native-name invocation. Other
+  registration-isolation controls remain unrun.
+
 - [Registration isolation calibration](gate6-registration-isolation.md): Q11b,
   Copilot 1.0.103; failed namespaced and exact-response positive on 2026-10-29.
   Owner registration and selector-free discovery controls were not run.

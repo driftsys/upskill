@@ -1138,6 +1138,160 @@ def inspect_cross_client_positive(events, fixture, *, exit_code, timed_out=False
     return row
 
 
+def inspect_copilot_native_positive(events, native_events, fixture, *, skill_bytes,
+                                    exit_code, timed_out=False, malformed_stream=False):
+    """Replay Q11b native-name v1; historical namespace controls stay separate.
+
+    The caller supplies immutable fixture bytes and complete native session
+    history. No client, configuration, or filesystem operation runs here.
+    Only calibration_passed rows are eligible as revised-profile positives.
+    """
+    blocked = {'calibration_profile': 'copilot-native-name-v1',
+               'calibration_passed': False, 'provenance_verified': False,
+               'session_bound': False}
+    if (not isinstance(fixture, dict) or fixture.get('client') != 'copilot'
+            or fixture.get('scope') != 'session'
+            or any(not isinstance(fixture.get(k), str) or not fixture[k] for k in
+                   ('pin', 'positive_project', 'native_package', 'plugin_name',
+                    'plugin_version', 'skill_name', 'namespace', 'marker', 'skill_file_sha256'))
+            or '/' in fixture['skill_name'] or fixture['skill_name'] in ('.', '..')
+            or not Path(fixture['native_package']).is_absolute()
+            or '..' in Path(fixture['native_package']).parts
+            or fixture['namespace'] != fixture['plugin_name'] + ':' + fixture['skill_name']
+            or not isinstance(skill_bytes, bytes)
+            or hashlib.sha256(skill_bytes).hexdigest() != fixture['skill_file_sha256']):
+        return blocked
+    for stream in (events, native_events):
+        if (not isinstance(stream, list) or not stream
+                or any(not isinstance(e, dict) or not isinstance(e.get('data', {}), dict) for e in stream)):
+            return blocked
+    if any(not isinstance(e.get('data'), dict) for e in native_events):
+        return blocked
+    for event in events:
+        data = event.get('data', {})
+        if (event.get('type') == 'tool.execution_start' and not isinstance(data.get('arguments'), dict)
+                or event.get('type') == 'tool.execution_complete' and not isinstance(data.get('error', {}), dict)
+                or event.get('type') == 'session.skills_loaded'
+                and (not isinstance(data.get('skills'), list)
+                     or any(not isinstance(skill, dict) for skill in data['skills']))):
+            return blocked
+    try:
+        text = skill_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        return blocked
+    if not text.startswith('---\n') or '\n---\n' not in text:
+        return blocked
+    body = text.split('\n---\n', 1)[1]
+    if fixture['marker'] not in body:
+        return blocked
+    for stream in (events, native_events):
+        if any(not isinstance(e['data'].get('content'), str) for e in stream
+               if e.get('type') in ('user.message', 'assistant.message')):
+            return blocked
+    row = inspect_cross_client_positive(events, fixture, exit_code=exit_code,
+                                       timed_out=timed_out, malformed_stream=malformed_stream)
+    row.update(blocked)
+    row['invocation_complete'] = False
+    def selected(stream, kind):
+        return [e for e in stream if e.get('type') == kind]
+    # An append-only native chain binds all retained records to one startup.
+    known = set()
+    for i, event in enumerate(native_events):
+        identity = event.get('id')
+        if (not isinstance(identity, str) or not identity or identity in known
+                or (i == 0 and event.get('parentId') is not None)
+                or (i > 0 and event.get('parentId') not in known)):
+            return row
+        known.add(identity)
+    startup = native_events[0]
+    if (startup.get('type') != 'session.start'
+            or len(selected(native_events, 'session.start')) != 1
+            or native_events[-1].get('type') != 'session.shutdown'
+            or len(selected(native_events, 'session.shutdown')) != 1
+            or selected(events, 'session.error') or selected(native_events, 'session.error')):
+        return row
+    start = startup['data']
+    if (not isinstance(start.get('sessionId'), str) or not start['sessionId']
+            or start.get('copilotVersion') != fixture['pin']
+            or not isinstance(start.get('context'), dict)
+            or start['context'].get('cwd') != fixture['positive_project']
+            or events[-1].get('sessionId') != start['sessionId']
+            or not row['complete'] or row['response'] != fixture['marker']):
+        return row
+    catalogs = selected(events, 'session.skills_loaded')
+    if (len(catalogs) != 1 or catalogs[0].get('parentId') != startup['id']
+            or not isinstance(catalogs[0]['data'].get('skills'), list)
+            or any(not isinstance(s, dict) for s in catalogs[0]['data']['skills'])):
+        return row
+    expected_path = str(Path(fixture['native_package']) / 'skills' / fixture['skill_name'] / 'SKILL.md')
+    # Reject collisions rather than guessing the client's name precedence.
+    entries = [s for s in catalogs[0]['data']['skills'] if s.get('name') == fixture['skill_name']
+               or s.get('commandName') in (fixture['namespace'], fixture['skill_name']) or s.get('path') == expected_path]
+    if (len(entries) != 1 or entries[0].get('enabled') is not True
+            or any(entries[0].get(k) != v for k, v in
+            {'name': fixture['skill_name'], 'commandName': fixture['namespace'],
+             'path': expected_path, 'enabled': True}.items())):
+        return row
+    calls, ends, loads = (selected(native_events, k) for k in
+                          ('tool.execution_start', 'tool.execution_complete', 'skill.invoked'))
+    if len(calls) != 1 or len(ends) != 1 or len(loads) != 1:
+        return row
+    call, end, load = calls[0], ends[0], loads[0]
+    data = call['data']
+    if (data.get('toolName') != 'skill' or data.get('arguments') != {'skill': fixture['skill_name']}
+            or not isinstance(data.get('toolCallId'), str) or not data['toolCallId']
+            or end['data'].get('toolCallId') != data['toolCallId']
+            or end['data'].get('success') is not True or end.get('parentId') != call['id']
+            or load.get('parentId') != end['id']
+            or any(load['data'].get(k) != v for k, v in
+                   {'name': fixture['skill_name'], 'path': expected_path, 'source': 'plugin',
+                    'pluginName': fixture['plugin_name'], 'pluginVersion': fixture['plugin_version'],
+                    'content': body}.items())):
+        return row
+    # Every stdout call/completion/message must agree with the same native record.
+    by_id = {e['id']: e for e in native_events}
+    relevant = {'tool.execution_start', 'tool.execution_complete', 'user.message', 'assistant.message'}
+    if ([e.get('id') for e in events if e.get('type') in relevant]
+            != [e['id'] for e in native_events if e.get('type') in relevant]):
+        return row
+    for kind, keys in [('tool.execution_start', ('toolCallId', 'toolName', 'arguments', 'turnId')),
+                       ('tool.execution_complete', ('toolCallId', 'success', 'turnId')),
+                       ('user.message', ('content', 'transformedContent', 'turnId')),
+                       ('assistant.message', ('content', 'turnId'))]:
+        captured, durable = selected(events, kind), selected(native_events, kind)
+        if (len(captured) != len(durable)
+                or any(not isinstance(e.get('id'), str) for e in captured)
+                or {e['id'] for e in captured} != {e['id'] for e in durable}):
+            return row
+        for event in captured:
+            native = by_id.get(event.get('id'), {})
+            if (native.get('type') != kind or event.get('parentId') != native.get('parentId')
+                    or any(event['data'].get(k) != native['data'].get(k) for k in keys)):
+                return row
+    messages = selected(native_events, 'assistant.message')
+    if not messages or native_events.index(load) >= native_events.index(messages[-1]):
+        return row
+    def descends_from(event, predecessor):
+        while event['id'] != predecessor['id'] and event.get('parentId') in by_id:
+            event = by_id[event['parentId']]
+        return event['id'] == predecessor['id']
+    users = selected(native_events, 'user.message')
+    if (len(users) != 1 or not descends_from(call, users[0])
+            or not descends_from(messages[-1], load)
+            or any(fixture['marker'] in json.dumps(e['data']) for e in users)):
+        return row
+    if any(fixture['marker'] in e['data'].get('content', '') for e in messages
+           if native_events.index(e) < native_events.index(load)):
+        return row
+    row.update(calibration_passed=True, provenance_verified=True, session_bound=True,
+               session_id=start['sessionId'], invocation_name=fixture['skill_name'],
+               invocation_attempted=True, invocation_outcome='loaded', invocation_complete=True,
+               activations=1, content_activations=1, unexpected_tools=False,
+               source_path=fixture['native_package'])
+    return row
+
+
+
 def classify_cross_client_isolation(observation, fixture):
     """Keep bounded isolation and measured preservation as independent results."""
     def receipts_valid(receipts):
