@@ -84,7 +84,12 @@ in the private packet. The
 retains their SHA-256 receipts without exporting auth-bearing configuration.
 Public selected records replace markers with explicit symbolic values and paths
 with root placeholders. Response whitespace is preserved through that
-replacement.
+replacement. Quick review found stale owner-package metadata in the initial
+observer fixture projection. The public observer fixture now consistently swaps
+the paired owner/native and observer/native paths, manifests, intended clients
+and fingerprints. The original private capture remains untouched; replay of the
+actual native invocation and result is unchanged
+([#435](https://github.com/driftsys/upskill/issues/435)).
 [Receipt hashes](evidence/2026-10-29-q11b-native-calibration/receipt-hashes.json)
 cover the public packet. The offline classifier and production code are
 unchanged.

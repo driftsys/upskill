@@ -8,17 +8,17 @@
   "marker": "$CONTENT_MARKER",
   "absent_marker": "$ABSENCE_MARKER",
   "native_package": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5",
-  "foreign_package": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5",
-  "native_intended": "claude",
-  "foreign_intended": "copilot",
-  "native_manifest": "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5/.claude-plugin/plugin.json",
-  "foreign_manifest": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/plugin.json",
+  "foreign_package": "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5",
+  "native_intended": "copilot",
+  "foreign_intended": "claude",
+  "native_manifest": "$PRIVATE_PACKET/fixture/claude/delivery/foreign/upskill-q11-af96a6b8a0a49da5/plugin.json",
+  "foreign_manifest": "$PRIVATE_PACKET/fixture/claude/delivery/native/upskill-q11-af96a6b8a0a49da5/.claude-plugin/plugin.json",
   "positive_project": "$PRIVATE_PACKET/fixture/claude/positive-project",
   "candidate_project": "$PRIVATE_PACKET/fixture/claude/candidate-project",
   "packages": {
     "native": {
-      ".claude-plugin/plugin.json": {
-        "sha256": "267d0f4869007c87b10fc56ae43d9e964d8c036c810fa387882654de56e6483c",
+      "plugin.json": {
+        "sha256": "97223385ca375b9f916204104fd796a7990bcd0bb13ede04693272e750d0b116",
         "mode": 384
       },
       "skills/probe-382d4e5dc0a6675b/SKILL.md": {
@@ -31,8 +31,8 @@
       }
     },
     "foreign": {
-      "plugin.json": {
-        "sha256": "97223385ca375b9f916204104fd796a7990bcd0bb13ede04693272e750d0b116",
+      ".claude-plugin/plugin.json": {
+        "sha256": "267d0f4869007c87b10fc56ae43d9e964d8c036c810fa387882654de56e6483c",
         "mode": 384
       },
       "skills/probe-382d4e5dc0a6675b/SKILL.md": {
