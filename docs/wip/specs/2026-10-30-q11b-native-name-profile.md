@@ -7,8 +7,10 @@ and wrong-source loads. Offline checks and independent review precede one fresh
 Haiku 5.5 request. Earlier results keep their original interpretation.
 
 The [retained attempt](../../technotes/gate6-copilot-native-calibration.md)
-passed this revised positive in one fresh process. Whole-cell qualification
-remains incomplete.
+passed this revised positive in one fresh process. The
+[completed follow-up cell](../../technotes/gate6-project-registration-isolation.md)
+records automatic Copilot activation after Claude project registration. The
+result is an isolation FAIL; no production qualification is granted.
 
 This supplements the [project profile](2026-10-27-q11b-project-profile.md), with
 a separately versioned `copilot-native-name-v1` positive. Its preservation

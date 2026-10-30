@@ -1,0 +1,39 @@
+[
+  {
+    "command": [
+      "$CLIENT_BIN/claude",
+      "plugin",
+      "marketplace",
+      "add",
+      "$OWNER_PACKET/marketplace",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at_utc": "2026-10-30T01:29:16.743969+00:00",
+    "finished_at_utc": "2026-10-30T01:29:17.838630+00:00",
+    "stdout_sha256": "139457070d94640375b2c7ca406c5a40a6ce7d78e6ecab75c18c20044930d28e",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "command": [
+      "$CLIENT_BIN/claude",
+      "plugin",
+      "install",
+      "upskill-q11-eb9fb2b395c458df@upskill-q11-eb9fb2b395c458df-owner-7b048dea",
+      "--scope",
+      "project",
+      "--json"
+    ],
+    "cwd": "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project",
+    "exit_code": 0,
+    "timed_out": false,
+    "started_at_utc": "2026-10-30T01:29:17.839210+00:00",
+    "finished_at_utc": "2026-10-30T01:29:18.745355+00:00",
+    "stdout_sha256": "2f2870c2de403436c257dce4ccc107a7b5be5b744584c2b5a74ffb9ba595cf88",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

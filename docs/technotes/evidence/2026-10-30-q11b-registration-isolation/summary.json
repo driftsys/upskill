@@ -1,0 +1,22 @@
+{
+  "isolation": "activation_observed",
+  "qualified": false,
+  "model_process_attempts": 3,
+  "owner_candidate_positive": true,
+  "candidate_catalog_present": true,
+  "candidate_content_activations": 1,
+  "candidate_absence_verified": false,
+  "post_removal_absence_verified": true,
+  "post_removal_content_activations": 0,
+  "cleanup_valid": true,
+  "unknown_operation": false,
+  "registration_remaining": false,
+  "cleanup": [
+    "plugin_uninstalled",
+    "marketplace_removed"
+  ],
+  "failure": null,
+  "preservation_unchanged": false,
+  "project_settings_bytes_unchanged": true,
+  "automatic_retry": false
+}

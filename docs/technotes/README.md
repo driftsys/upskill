@@ -8,6 +8,11 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Project registration isolation](gate6-project-registration-isolation.md):
+  Q11b observes automatic Copilot activation of a Claude-owned project plugin;
+  clean baseline and post-removal, isolation FAIL and separate preservation
+  failure.
+
 - [Copilot native-name calibration](gate6-copilot-native-calibration.md): Q11b
   revised positive passes with provenance-bound native-name invocation. Other
   registration-isolation controls remain unrun.

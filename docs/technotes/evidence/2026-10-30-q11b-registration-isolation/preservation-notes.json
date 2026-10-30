@@ -1,0 +1,10 @@
+{
+  "strict_file_equality": false,
+  "project_settings_sentinel_preserved": true,
+  "project_settings_mode": 416,
+  "project_settings_semantic_residue": "Only the fixture-created empty enabledPlugins and extraKnownMarketplaces containers remain.",
+  "project_settings_formatting": "Native management rewrote the initial compact JSON formatting; initial byte equality is not claimed and no snapshot was restored.",
+  "native_bookkeeping": "Claude usage and plugin sync-round bookkeeping changed. Native cache/registry files remain native-managed; no direct writes, restoration or deletion.",
+  "directory_metadata": "Retained in each private stage witness; whole-file classifier receipts exclude directory observations.",
+  "auth": "User authorized and completed native Claude login before owner-control preservation baseline. No auth-bearing configuration bytes exported."
+}

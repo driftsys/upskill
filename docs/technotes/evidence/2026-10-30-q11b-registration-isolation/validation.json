@@ -1,0 +1,36 @@
+{
+  "native_model_processes": 5,
+  "focused_registration_tests": 31,
+  "repository_offline_tests": 317,
+  "private_observer_guard_tests": 12,
+  "commands": [
+    {
+      "command": "just fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "just verify",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts/tests -p 'test_qualify_registration_isolation.py'",
+      "exit_code": 0
+    }
+  ],
+  "whole_cell_result": {
+    "isolation": "activation_observed",
+    "preservation": "preservation_failed"
+  },
+  "native_attribution": "Linked actual call/completion/load/response; namespace catalog path and loaded file equal the declared owner source; no foreign selector.",
+  "counter_gap_controls": [
+    "missing post-removal capture retains activation_observed",
+    "failed cleanup retains activation_observed",
+    "contaminated baseline blocks admission"
+  ],
+  "scope": "Bounded macOS arm64 CLI owner/observer cell only; no production qualification.",
+  "automatic_paid_process_retries": 0,
+  "source_sha256": {
+    "scripts/qualify-plugin-rules.py": "6f368b9aa920cb8d2b9a04f63f6ae66023acca2eed8fdebc2918ba9e8dd9ce66",
+    "scripts/tests/test_qualify_registration_isolation.py": "3c450ff26d1075f27586af98dd4faaa05d4ce978371529f4b9e9cdc1254b7b22"
+  }
+}

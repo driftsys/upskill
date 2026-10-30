@@ -1,0 +1,23 @@
+{
+  "owner_positive": "not_run",
+  "model_process_attempts": 0,
+  "failure": "[Errno 2] No such file or directory: '/private/tmp/upskill-slice1-model-selection.json'",
+  "unknown_operation": false,
+  "registration_remaining": false,
+  "cleanup": [
+    "plugin_uninstalled",
+    "marketplace_removed"
+  ],
+  "qualified": false,
+  "baseline": "not_run",
+  "candidate": "not_run",
+  "post_removal": "not_run",
+  "project_settings_mode_unchanged": true,
+  "project_settings_bytes_unchanged": false,
+  "settings_residue": "empty_object_residue",
+  "changed_protected_paths": [
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json",
+    "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/settings.json"
+  ]
+}

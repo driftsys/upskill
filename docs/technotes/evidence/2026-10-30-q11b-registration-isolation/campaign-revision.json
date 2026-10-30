@@ -1,0 +1,13 @@
+{
+  "pins": {
+    "claude": "2.1.308",
+    "copilot": "1.0.103",
+    "codex": "0.166.0",
+    "opencode": "2.1.4"
+  },
+  "participant_pins_unchanged": true,
+  "nonparticipant_change": "Codex changed from 0.164.0 to 0.166.0; Codex executed version probes only.",
+  "retained_observer_positive": "The prior native-name positive has the same observer pin, project, logical identity and immutable source bytes; replayed and rechecked without an additional paid request.",
+  "owner_reauthentication": "User-authorized native login completed before owner controls. Observer profile and source packages were rechecked.",
+  "scope": "macOS arm64 CLI; Claude-owned project directory marketplace, Copilot selector-free observer; no IDE, Linux, cloud or other-client qualification."
+}

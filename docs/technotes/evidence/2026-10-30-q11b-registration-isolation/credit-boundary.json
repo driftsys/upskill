@@ -1,0 +1,12 @@
+{
+  "new_model_processes": 5,
+  "owner_positive": 1,
+  "baseline": 1,
+  "owner_candidate": 1,
+  "candidate": 1,
+  "post_removal": 1,
+  "prior_observer_positive_processes_reused": 1,
+  "automatic_paid_retries": 0,
+  "setup_without_model": "The first native setup could not read an expired private model-selector file. It made no model request and native cleanup completed before the Haiku owner positive.",
+  "native_model_ids": "Verified/retained privately; omitted from selected public records."
+}

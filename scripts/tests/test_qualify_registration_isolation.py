@@ -76,6 +76,25 @@ class RegistrationIsolation(unittest.TestCase):
     def classify(self, value=None):
         return q.classify_registration_isolation(self.observation if value is None else value, self.fixture)
 
+    def test_retained_native_registration_cell_keeps_activation_failure(self):
+        import json
+        packet = Path(__file__).parents[2] / 'docs/technotes/evidence/2026-10-30-q11b-registration-isolation'
+        fixture = json.loads((packet / 'cell-fixture.json').read_text())
+        observation = json.loads((packet / 'cell-observation.json').read_text())
+        expected = {'isolation': 'activation_observed', 'preservation': 'preservation_failed'}
+        self.assertEqual(q.classify_registration_isolation(observation, fixture), expected)
+        for gap in ('missing_post_removal', 'failed_cleanup'):
+            changed = copy.deepcopy(observation)
+            if gap == 'missing_post_removal':
+                changed['phases'].pop('post_removal')
+            else:
+                changed['operations']['owner_remove']['complete'] = False
+            self.assertEqual(q.classify_registration_isolation(changed, fixture), expected)
+        contaminated = copy.deepcopy(observation)
+        contaminated['phases']['baseline']['catalog_present'] = True
+        self.assertEqual(q.classify_registration_isolation(contaminated, fixture)['isolation'],
+                         'baseline_contaminated')
+
     def test_complete_cell_has_bounded_discovery_result(self):
         self.assertTrue(callable(getattr(q, 'classify_registration_isolation', None)),
                         'Q11b needs its own registration classifier before native execution')

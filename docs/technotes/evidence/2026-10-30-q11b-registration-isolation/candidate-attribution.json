@@ -1,0 +1,16 @@
+{
+  "plugin_identity_matches": true,
+  "plugin_version_matches": true,
+  "native_path_matches_catalog": true,
+  "loaded_file_equals_declared_owner_source": true,
+  "loaded_source_is_declared_owner_package": true,
+  "loaded_file_sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+  "body_matches": true,
+  "exact_response": true,
+  "tool_call_count": 1,
+  "call_completion_load_response_correlated": true,
+  "foreign_selector": false,
+  "observer_registration_commands": [],
+  "native_load_path": "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md",
+  "owner_source_path": "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md"
+}

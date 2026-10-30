@@ -1,0 +1,94 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "slash_commands": [
+      "upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf"
+    ],
+    "plugins": [
+      {
+        "name": "upskill-q11-eb9fb2b395c458df",
+        "path": "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df",
+        "source": "upskill-q11-eb9fb2b395c458df@upskill-q11-eb9fb2b395c458df-owner-7b048dea",
+        "version": "0.0.0"
+      }
+    ],
+    "unrelated_catalog_entries_omitted": true
+  },
+  {
+    "type": "assistant",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": []
+    }
+  },
+  {
+    "type": "assistant",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01QDEDTAyLmugw27DoFZDAn9",
+          "name": "Skill",
+          "input": {
+            "skill": "upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "type": "user",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "toolu_01QDEDTAyLmugw27DoFZDAn9",
+          "content": "Launching skill: upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf"
+        }
+      ]
+    }
+  },
+  {
+    "type": "user",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Base directory for this skill: $OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf\n\nReturn exactly $CONTENT_MARKER and nothing else. Do not use any other tools.\n"
+        }
+      ]
+    }
+  },
+  {
+    "type": "assistant",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": []
+    }
+  },
+  {
+    "type": "assistant",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "message": {
+      "content": [
+        {
+          "type": "text",
+          "text": "$CONTENT_MARKER"
+        }
+      ]
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "session_id": "2ebc9663-3a0c-4f70-9c50-f2f3e370025f",
+    "is_error": false,
+    "result": "$CONTENT_MARKER",
+    "permission_denials": []
+  }
+]

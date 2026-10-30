@@ -1,0 +1,155 @@
+[
+  {
+    "type": "session.start",
+    "id": "998aa112-950b-49f7-8f3b-c406ca479aaa",
+    "parentId": null,
+    "timestamp": "2026-10-30T01:29:25.146Z",
+    "data": {
+      "sessionId": "67fb3034-5122-4fc0-bfe7-3e93ea35f04e",
+      "copilotVersion": "1.0.103",
+      "context": {
+        "cwd": "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project"
+      }
+    }
+  },
+  {
+    "type": "user.message",
+    "id": "17d24464-9cad-44f3-856a-bf30ca49cbe1",
+    "parentId": "998aa112-950b-49f7-8f3b-c406ca479aaa",
+    "timestamp": "2026-10-30T01:29:26.154Z",
+    "data": {
+      "content": "Invoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response. If unavailable, return exactly $ABSENCE_MARKER.",
+      "transformedContent": "<current_datetime>2026-10-30T02:29:26.154+01:00</current_datetime>\n\nInvoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response. If unavailable, return exactly $ABSENCE_MARKER.",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "system.message",
+    "id": "648e78f2-d4a3-4090-8f06-486f4a3b0bc1",
+    "parentId": "17d24464-9cad-44f3-856a-bf30ca49cbe1",
+    "timestamp": "2026-10-30T01:29:26.167Z",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_start",
+    "id": "a15f15eb-bf24-441b-a227-cd67b6d18eea",
+    "parentId": "648e78f2-d4a3-4090-8f06-486f4a3b0bc1",
+    "timestamp": "2026-10-30T01:29:26.171Z",
+    "data": {}
+  },
+  {
+    "type": "session.usage_record",
+    "id": "e48e3a0c-b90b-482c-ad79-ca17c33252b8",
+    "parentId": "a15f15eb-bf24-441b-a227-cd67b6d18eea",
+    "timestamp": "2026-10-30T01:29:27.106Z",
+    "data": {}
+  },
+  {
+    "type": "assistant.message",
+    "id": "d134b1d9-db1e-4e20-9e42-e2ea3b7efd12",
+    "parentId": "e48e3a0c-b90b-482c-ad79-ca17c33252b8",
+    "timestamp": "2026-10-30T01:29:27.114Z",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "id": "c34d923d-6c45-4e6b-b1f2-eb91538a513d",
+    "parentId": "d134b1d9-db1e-4e20-9e42-e2ea3b7efd12",
+    "timestamp": "2026-10-30T01:29:27.116Z",
+    "data": {
+      "toolName": "skill",
+      "toolCallId": "toolu_01XSKBrMdegfSy4wkFyNEhPp",
+      "arguments": {
+        "skill": "probe-5adeb2ddeb85bdcf"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "id": "19810b00-bbcb-4de1-b6d8-e137e00edda7",
+    "parentId": "c34d923d-6c45-4e6b-b1f2-eb91538a513d",
+    "timestamp": "2026-10-30T01:29:27.121Z",
+    "data": {
+      "toolCallId": "toolu_01XSKBrMdegfSy4wkFyNEhPp",
+      "success": true,
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "skill.invoked",
+    "id": "84f54115-0243-407f-92ee-e96757bb01e6",
+    "parentId": "19810b00-bbcb-4de1-b6d8-e137e00edda7",
+    "timestamp": "2026-10-30T01:29:27.122Z",
+    "data": {
+      "name": "probe-5adeb2ddeb85bdcf",
+      "path": "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md",
+      "content": "Return exactly $CONTENT_MARKER and nothing else. Do not use any other tools.\n",
+      "source": "plugin",
+      "pluginName": "upskill-q11-eb9fb2b395c458df",
+      "pluginVersion": "0.0.0"
+    }
+  },
+  {
+    "type": "skill.context_delivered_ref",
+    "id": "cb4c22db-efcb-4610-a50a-ba954b45a43e",
+    "parentId": "84f54115-0243-407f-92ee-e96757bb01e6",
+    "timestamp": "2026-10-30T01:29:27.125Z",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_end",
+    "id": "e462aa7f-70b1-4e7a-8054-dbd21d4f8afd",
+    "parentId": "cb4c22db-efcb-4610-a50a-ba954b45a43e",
+    "timestamp": "2026-10-30T01:29:27.125Z",
+    "data": {}
+  },
+  {
+    "type": "assistant.turn_start",
+    "id": "4c2c3cd8-d4cd-43f3-8d2c-db628d44e69f",
+    "parentId": "e462aa7f-70b1-4e7a-8054-dbd21d4f8afd",
+    "timestamp": "2026-10-30T01:29:27.126Z",
+    "data": {}
+  },
+  {
+    "type": "session.usage_record",
+    "id": "d96a72c2-2c2f-445d-8d03-4efd2edb7645",
+    "parentId": "4c2c3cd8-d4cd-43f3-8d2c-db628d44e69f",
+    "timestamp": "2026-10-30T01:29:27.804Z",
+    "data": {}
+  },
+  {
+    "type": "assistant.message",
+    "id": "d4b1aedd-501d-44b8-8ccb-cfaacfd85707",
+    "parentId": "d96a72c2-2c2f-445d-8d03-4efd2edb7645",
+    "timestamp": "2026-10-30T01:29:27.817Z",
+    "data": {
+      "content": "$CONTENT_MARKER",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "assistant.turn_end",
+    "id": "6f880bc3-2fff-4437-a24f-b8aacf655bd6",
+    "parentId": "d4b1aedd-501d-44b8-8ccb-cfaacfd85707",
+    "timestamp": "2026-10-30T01:29:27.818Z",
+    "data": {}
+  },
+  {
+    "type": "session.usage_checkpoint",
+    "id": "38a52aba-b447-4e10-a4e7-e0f936d17ce0",
+    "parentId": "6f880bc3-2fff-4437-a24f-b8aacf655bd6",
+    "timestamp": "2026-10-30T01:29:27.820Z",
+    "data": {}
+  },
+  {
+    "type": "session.shutdown",
+    "id": "b393ba17-aa73-4ce5-915e-bc745b1fe5ca",
+    "parentId": "38a52aba-b447-4e10-a4e7-e0f936d17ce0",
+    "timestamp": "2026-10-30T01:29:27.830Z",
+    "data": {}
+  }
+]
