@@ -21,11 +21,14 @@ references must be reconciled as part of that feature's review.
   [concrete project profile](specs/2026-10-27-q11b-project-profile.md) under
   [#428](https://github.com/driftsys/upskill/issues/428) received user approval.
   The [2026-10-29 attempt](../technotes/gate6-registration-isolation.md) stopped
-  at the failed Copilot positive; registration-isolation controls remain unrun.
-  The [native-name revision](specs/2026-10-30-q11b-native-name-profile.md) adds
-  provenance-bound Copilot calibration for future attempts. The profile remains
-  active for qualification reconciliation. Offline classification tests do not
-  qualify the client profile.
+  at the failed Copilot positive. The
+  [native-name revision](specs/2026-10-30-q11b-native-name-profile.md) provided
+  provenance-bound Copilot calibration. The
+  [completed registration cell](../technotes/gate6-project-registration-isolation.md)
+  records automatic Copilot activation of the Claude project registration, clean
+  baseline and post-removal, and separate preservation failure. The profile
+  remains active for qualification reconciliation. Offline classification tests
+  do not qualify the client profile.
 
 - [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
   : proposed under [#417](https://github.com/driftsys/upskill/issues/417).

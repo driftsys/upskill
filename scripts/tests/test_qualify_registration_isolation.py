@@ -1,6 +1,8 @@
 """Offline Q11b controls: no native process is started by this module."""
 import copy
 import importlib.util
+import json
+from datetime import datetime
 from pathlib import Path
 import unittest
 
@@ -94,6 +96,140 @@ class RegistrationIsolation(unittest.TestCase):
         contaminated['phases']['baseline']['catalog_present'] = True
         self.assertEqual(q.classify_registration_isolation(contaminated, fixture)['isolation'],
                          'baseline_contaminated')
+
+    def retained_packet(self):
+        root = Path(__file__).parents[2] / 'docs/technotes/evidence/2026-10-30-q11b-registration-isolation'
+        return {path.stem: json.loads(path.read_text()) for path in root.glob('*.json')}
+
+    def assert_native_packet_consistent(self, packet):
+        """Check primary projections independently of the cell classifier's early FAIL."""
+        fixture = packet['cell-fixture']
+        observation = packet['cell-observation']
+        plugin, bare = fixture['namespace'].split(':')
+        source = fixture['source_paths']['owner_candidate'] + '/skills/' + bare + '/SKILL.md'
+        sessions = set()
+        for phase in ('baseline', 'candidate', 'post_removal'):
+            prefix = phase.replace('_', '-')
+            receipt = packet[prefix + '-receipt']
+            native = packet[prefix + '-native-selection']
+            stdout = packet[prefix + '-stdout-selection']
+            row = observation['phases'][phase]
+            command = receipt['command']
+            self.assertFalse(any(arg == '--plugin-dir' or arg.startswith('--plugin-dir=')
+                                 for arg in command))
+            self.assertEqual(receipt['cwd'], fixture['cwd'])
+            self.assertEqual(receipt['exit_code'], 0)
+            self.assertFalse(receipt['timed_out'])
+            self.assertEqual(row['started_at'], receipt['started_at_utc'])
+            self.assertEqual(row['finished_at'], receipt['finished_at_utc'])
+            self.assertFalse(row['foreign_selector'])
+            self.assertFalse(row['candidate_registered'])
+            def one(kind, events=native):
+                selected = [event for event in events if event['type'] == kind]
+                self.assertEqual(len(selected), 1, (phase, kind))
+                return selected[0]
+            start = one('session.start')
+            session = start['data']['sessionId']
+            self.assertNotIn(session, sessions)
+            sessions.add(session)
+            self.assertEqual(session, row['session_id'])
+            self.assertEqual(one('result', stdout)['sessionId'], session)
+            self.assertEqual(start['data']['copilotVersion'], fixture['pins']['copilot'])
+            self.assertEqual(start['data']['context']['cwd'], fixture['cwd'])
+            by_id = {event['id']: event for event in native}
+            self.assertEqual(len(by_id), len(native))
+            seen = set()
+            for event in native:
+                self.assertTrue(event['parentId'] is None or event['parentId'] in seen)
+                seen.add(event['id'])
+                stamp = datetime.fromisoformat(event['timestamp'].replace('Z', '+00:00'))
+                self.assertLessEqual(datetime.fromisoformat(receipt['started_at_utc']), stamp)
+                self.assertLessEqual(stamp, datetime.fromisoformat(receipt['finished_at_utc']))
+            for event in stdout:
+                if event.get('id') in by_id:
+                    self.assertEqual(event, by_id[event['id']])
+            prompt = one('user.message')['data']['content']
+            self.assertEqual(prompt, command[command.index('-p') + 1])
+            self.assertIn('skill named ' + bare, prompt)
+            self.assertNotIn(fixture['marker'], prompt)
+            call = one('tool.execution_start')
+            self.assertEqual(call['data']['toolName'], 'skill')
+            self.assertEqual(call['data']['arguments'], {'skill': bare})
+            complete = one('tool.execution_complete')
+            self.assertEqual(complete['parentId'], call['id'])
+            self.assertEqual(complete['data']['toolCallId'], call['data']['toolCallId'])
+            final = [event for event in native if event['type'] == 'assistant.message'][-1]
+            ancestor = final
+            ancestors = set()
+            while ancestor['parentId'] is not None:
+                ancestors.add(ancestor['parentId'])
+                ancestor = by_id[ancestor['parentId']]
+            self.assertIn(complete['id'], ancestors)
+            catalog = one('session.skills_loaded', stdout)
+            self.assertEqual(catalog['parentId'], start['id'])
+            targets = [entry for entry in catalog['data']['skills']
+                       if entry['name'] == bare or entry['commandName'] == fixture['namespace']]
+            loaded = [event for event in native if event['type'] == 'skill.invoked']
+            active = phase == 'candidate'
+            self.assertEqual(complete['data']['success'], active)
+            self.assertEqual(len(targets), int(active))
+            self.assertEqual(len(loaded), int(active))
+            expected_response = fixture['marker'] if active else fixture['absent_marker']
+            self.assertEqual(final['data']['content'], expected_response)
+            self.assertEqual(row['response'], expected_response)
+            self.assertEqual(row['catalog_present'], active)
+            self.assertEqual(row['activations'], int(active))
+            self.assertEqual(row['content_activations'], int(active))
+            self.assertEqual(row['invocation_outcome'], 'loaded' if active else 'not_found')
+            if active:
+                load = loaded[0]
+                self.assertEqual(load['parentId'], complete['id'])
+                self.assertIn(load['id'], ancestors)
+                self.assertEqual(load['data'], dict(name=bare, path=source,
+                    content='Return exactly ' + fixture['marker'] +
+                            ' and nothing else. Do not use any other tools.\n',
+                    source='plugin', pluginName=plugin, pluginVersion='0.0.0'))
+                self.assertEqual(targets[0]['path'], source)
+                attribution = packet['candidate-attribution']
+                self.assertEqual(attribution['owner_source_path'], source)
+                self.assertEqual(attribution['native_load_path'], source)
+                self.assertEqual(attribution['loaded_file_sha256'],
+                                 fixture['packages']['claude']['skills/' + bare + '/SKILL.md']['sha256'])
+            else:
+                self.assertEqual(complete['data']['error']['message'], 'Skill not found: ' + bare)
+        self.assertEqual(fixture['source_paths']['owner_positive'],
+                         fixture['source_paths']['owner_candidate'])
+
+    def test_retained_native_projections_bind_automatic_activation_and_absence(self):
+        self.assert_native_packet_consistent(self.retained_packet())
+
+    def test_native_projection_tampering_cannot_hide_behind_assembled_failure(self):
+        packet = self.retained_packet()
+        for mutation in ('selector', 'plugin', 'path', 'completion_link', 'session',
+                         'post_removal_success', 'post_removal_load', 'chronology'):
+            with self.subTest(mutation=mutation):
+                changed = copy.deepcopy(packet)
+                events = changed['candidate-native-selection']
+                load = next(event for event in events if event['type'] == 'skill.invoked')
+                if mutation == 'selector':
+                    changed['candidate-receipt']['command'].extend(['--plugin-dir', '/foreign'])
+                elif mutation in ('plugin', 'path'):
+                    load['data']['pluginName' if mutation == 'plugin' else 'path'] = 'other'
+                elif mutation == 'completion_link':
+                    load['parentId'] = events[0]['id']
+                elif mutation == 'session':
+                    events[0]['data']['sessionId'] = 'other'
+                elif mutation == 'chronology':
+                    changed['candidate-receipt']['started_at_utc'] = '2027-01-01T00:00:00+00:00'
+                else:
+                    post = changed['post-removal-native-selection']
+                    if mutation == 'post_removal_success':
+                        next(event for event in post if event['type'] ==
+                             'tool.execution_complete')['data']['success'] = True
+                    else:
+                        post.append(copy.deepcopy(load))
+                with self.assertRaises(AssertionError):
+                    self.assert_native_packet_consistent(changed)
 
     def test_complete_cell_has_bounded_discovery_result(self):
         self.assertTrue(callable(getattr(q, 'classify_registration_isolation', None)),

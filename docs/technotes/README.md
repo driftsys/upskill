@@ -14,8 +14,9 @@ snapshot; a stable name does not imply that external research remains current.
   failure.
 
 - [Copilot native-name calibration](gate6-copilot-native-calibration.md): Q11b
-  revised positive passes with provenance-bound native-name invocation. Other
-  registration-isolation controls remain unrun.
+  revised positive passes with provenance-bound native-name invocation. The
+  completed [project registration cell](gate6-project-registration-isolation.md)
+  records automatic activation and separate preservation failure.
 
 - [Registration isolation calibration](gate6-registration-isolation.md): Q11b,
   Copilot 1.0.103; failed namespaced and exact-response positive on 2026-10-29.
