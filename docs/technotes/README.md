@@ -8,6 +8,11 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Customization delivery policy comparison](customization-delivery-policy-comparison.md):
+  decision material after Q11b; separate outputs versus shared
+  defaults/variants, four-client reader obligations, worked admission cases and
+  mechanism gaps. Neither layout nor a replacement entry gate is adopted.
+
 - [Project registration isolation](gate6-project-registration-isolation.md):
   Q11b observes automatic Copilot activation of a Claude-owned project plugin;
   clean baseline and post-removal, isolation FAIL and separate preservation

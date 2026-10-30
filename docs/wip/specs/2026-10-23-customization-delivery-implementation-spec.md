@@ -177,21 +177,37 @@ not run. Packet completion does not satisfy the retained PASS entry gate;
 unresolved qualification ([Q10][Q10], [Q11][Q11], [summary][Q11 summary],
 [CD-03/CD-11][contract]).
 
-Proposed [Q11b][Q11b] separately tests unintended discovery after registration
-only in the intended client, without a foreign selector in the observer.
-Calibrate each client and scope first; retain catalog and explicit invocation,
-known reader conditions and measured preservation. It neither reruns nor
-relabels Q11's failed explicit-selector challenge. Decision required: only the
-user can approve a narrower replacement gate in a separate adoption PR after its
-evidence and any required controlling-record amendments. Until then, Q11's
-existing retained PASS requirement stays in force; this docs follow-up runs no
-native control ([Q11][Q11], [Q11b][Q11b], [CD-03/CD-11][contract]).
+[Q11b's first project cell][Q11b result] completed on 2026-10-30. Both native
+positives and a clean selector-free Copilot baseline pass. Registering the local
+package only through Claude 2.1.308's project marketplace causes Copilot 1.0.103
+to catalog and activate the exact declared owner source, without a foreign
+selector or observer registration: **automatic-discovery isolation FAIL**.
+Native owner cleanup completes and a fresh post-removal Copilot reports the
+skill absent. Strict whole-file preservation independently returns
+`preservation_failed`; no snapshot restoration ran. This neither reruns nor
+relabels Q11's failed explicit-selector challenge.
 
-Current campaign pins are Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and
-OpenCode 2.1.4 on macOS arm64. Follow-ups name their actual pin and open a new
-campaign revision if it changes. Q7/Q8 are merged with bounded PASS; older-pin
-results do not qualify current execution ([Q6][Q6], [Q5][Q5],
-[CD-10][contract]).
+The [Q11b control design][Q11b] and earlier failed calibration attempts remain
+retained. The [delivery-policy comparison][policy comparison] is the next
+decision material: separate generated outputs versus shared defaults/variants,
+with reader, resource, selection and preservation obligations. It adopts no
+layout or new audience. D1-D6 preservation policies remain approved, but do not
+supply missing adapter-profile evidence. No further native run or Q5 retry is
+scheduled by this reconciliation.
+
+Decision required: only the user can approve a prospective replacement gate with
+any required controlling-record amendments. Until then, Q11's retained PASS
+entry requirement stays in force; completed Q11b FAIL does not satisfy it or a
+narrower isolation gate. [#410](https://github.com/driftsys/upskill/issues/410)
+remains open ([Q11][Q11], [Q11b result][Q11b result], [CD-03/CD-11][contract]).
+
+The 2026-10-24 campaign pins are Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0
+and OpenCode 2.1.4 on macOS arm64. Q11b's 2026-10-30 continuation records Codex
+0.166.0 as a nonparticipant version probe; participant pins remain unchanged.
+This does not update the earlier Q7/Q8 qualification pins. Follow-ups name their
+actual pin and open a new campaign revision if it changes. Q7/Q8 are merged with
+bounded PASS; older-pin results do not qualify current execution ([Q6][Q6],
+[Q5][Q5], [CD-10][contract]).
 
 Steps per control:
 
@@ -285,38 +301,44 @@ is separate from native route qualification, completion flags inside historical
 packets and closure of #379 or a retry issue ([design ledger][ledger],
 [CD-10][contract]).
 
-## Slice order and required amendment
+## Slice order and adopted amendment
 
 The user selects implementation order slice 2 skills, then slice 3 always-on
-rules. It reverses the [roadmap][roadmap], [AD-0040][direction] and
-[CD-11][contract] rules-before-new-owned-skills dependency. Reason: the native
-Claude/Copilot generation already implements most always-on delivery; the
-remaining rule work is the shared-reader planning, explicit OpenCode paths and
-Codex hook package, while Claude Q6 supplies passed package feasibility. Scoped
-rules are secondary and add no work in this slice ([decision][decision],
-[ADR-0003](../../adr/0003-generation-pipeline.md), [Q6][Q6]).
+rules. The [roadmap][roadmap], [AD-0040][direction] and [CD-11][contract] now
+record this amendment to the former rules-before-new-owned-skills dependency.
+Reason: the native Claude/Copilot generation already implements most always-on
+delivery; the remaining rule work is the shared-reader planning, explicit
+OpenCode paths and Codex hook package, while Claude Q6 supplies passed package
+feasibility. Scoped rules are secondary and add no work in this slice
+([decision][decision], [ADR-0003](../../adr/0003-generation-pipeline.md),
+[Q6][Q6]).
 
-The user records that explicit sequencing amendment at the step 7 durable-record
-PR. The direction is decided here; no owned-skill implementation starts until
-that PR reconciles the unchanged roadmap/CD-11 dependency ([decision][decision],
+The sequencing amendment is recorded in the durable contracts; it no longer
+waits for a rules-first dependency to be reconciled. The remaining step 7
+package/release decisions, concrete preservation profiles and Q10/Q11 entry
+controls still gate owned-skill implementation ([decision][decision],
 [roadmap][roadmap], [CD-11][contract]).
 
 ## Slice 2 outline: skills packaging on passed routes
 
 Entry criteria: **retained PASS** for each client's applicable package,
-invocation and resource controls, plus step 7 adoption and the governing
-rules-first dependency unless the user explicitly amends it. Retained failures
-do not satisfy entry ([design ledger][ledger], [CD-10 and CD-11][contract]).
-Client order: Claude first on Q6 PASS with its bounded residue contract
-approved, Codex when Q8 passes, and OpenCode when Q5 skill/resource controls
-pass. Require retained PASS for Q10 and Q11 for each applicable package profile.
-Q10's bounded Claude overlap PASS is retained; Q11's explicit-selector FAIL and
-blocked reverse direction do not meet that requirement. Q11b is a proposed
-additional control, not an approved substitute ([Q10][Q10], [Q11][Q11],
-[Q11b][Q11b]). Copilot package skills require their own passed route; Q3's
-retired rules component is not a gate for native always-on rules, and project
-plugin activation remains unverified ([decision][decision], [Q6][Q6], [Q5][Q5],
-[Q3][Q3], [CD-03 and CD-04][contract]).
+invocation and resource controls, plus step 7 adoption and the adopted
+skills-before-rules sequencing. This supersedes the former rules-first
+dependency, without waiving native entry or release gates. Retained failures do
+not satisfy entry ([design ledger][ledger], [CD-10 and CD-11][contract]). Client
+order: Claude first on Q6 PASS with its bounded residue contract approved, Codex
+on Q8's bounded PASS subject to the remaining profile and adoption gates, and
+OpenCode when Q5 skill/resource controls pass. Require retained PASS for Q10 and
+Q11 for each applicable package profile. Q10's bounded Claude overlap PASS is
+retained; Q11's explicit-selector FAIL and blocked reverse direction do not meet
+that requirement. Q11b's completed Claude-project/Copilot-observer cell also
+fails isolation; it is not an approved substitute. The
+[policy comparison][policy comparison] prepares the next route and adoption
+decisions without enabling effects ([Q10][Q10], [Q11][Q11],
+[Q11b result][Q11b result]). Copilot package skills require their own passed
+route; Q3's retired rules component is not a gate for native always-on rules,
+and project plugin activation remains unverified ([decision][decision],
+[Q6][Q6], [Q5][Q5], [Q3][Q3], [CD-03 and CD-04][contract]).
 
 Scope remains a pure package generator for skills/resources, one managed root,
 local native registration and add/update/remove/recovery over the inactive
@@ -449,3 +471,5 @@ separates these results from adoption ([CD-10 and CD-11][contract]).
 [Q11]: ../../technotes/gate6-cross-client-package-isolation.md
 [Q11 summary]: ../../technotes/evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json
 [Q11b]: 2026-10-25-q11-registration-isolation-follow-up.md
+[Q11b result]: ../../technotes/gate6-project-registration-isolation.md
+[policy comparison]: ../../technotes/customization-delivery-policy-comparison.md
