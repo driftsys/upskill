@@ -301,7 +301,7 @@ is separate from native route qualification, completion flags inside historical
 packets and closure of #379 or a retry issue ([design ledger][ledger],
 [CD-10][contract]).
 
-## Slice order and adopted amendment
+## Slice order and required amendment
 
 The user selects implementation order slice 2 skills, then slice 3 always-on
 rules. The [roadmap][roadmap], [AD-0040][direction] and [CD-11][contract] now
