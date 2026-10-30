@@ -1,0 +1,22 @@
+{
+  "baseline": "passed",
+  "reason": null,
+  "qualified": false,
+  "model_process_attempts": 1,
+  "native_not_found_observed": true,
+  "invocation_attempted": true,
+  "catalog_complete": true,
+  "catalog_present": false,
+  "activations": 0,
+  "content_activations": 0,
+  "exact_absence_response": true,
+  "session_bound": true,
+  "fresh_session": true,
+  "model_verified": true,
+  "foreign_selector": false,
+  "preservation_unchanged": true,
+  "owner_registration": "not_run",
+  "candidate": "not_run",
+  "post_removal": "not_run",
+  "automatic_retry": false
+}

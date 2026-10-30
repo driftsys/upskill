@@ -1,0 +1,10 @@
+{
+  "reason": "Directory marketplaces load the declared immutable local package; installed registry also reports a cache copy. Initial producer expected the cache path. Native init matches the source path captured before effects and the expected marketplace plugin key.",
+  "source_path": "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df",
+  "source_key": "upskill-q11-eb9fb2b395c458df@upskill-q11-eb9fb2b395c458df-owner-7b048dea",
+  "version": "0.0.0",
+  "source_envelope_matches": true,
+  "model_requests_added": 0,
+  "owner_positive": "passed",
+  "qualified": false
+}

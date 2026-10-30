@@ -8,6 +8,20 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Project registration isolation](gate6-project-registration-isolation.md):
+  Q11b observes automatic Copilot activation of a Claude-owned project plugin;
+  clean baseline and post-removal, isolation FAIL and separate preservation
+  failure.
+
+- [Copilot native-name calibration](gate6-copilot-native-calibration.md): Q11b
+  revised positive passes with provenance-bound native-name invocation. The
+  completed [project registration cell](gate6-project-registration-isolation.md)
+  records automatic activation and separate preservation failure.
+
+- [Registration isolation calibration](gate6-registration-isolation.md): Q11b,
+  Copilot 1.0.103; failed namespaced and exact-response positive on 2026-10-29.
+  Owner registration and selector-free discovery controls were not run.
+
 - [Cross-client package isolation](gate6-cross-client-package-isolation.md): Q11
   Claude activation of a Copilot-shaped package after calibration; Copilot's
   opposite direction remains blocked. Earlier failed positives remain retained.

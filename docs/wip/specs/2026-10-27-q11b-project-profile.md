@@ -1,9 +1,17 @@
 # Q11b: Claude project registration observed by Copilot
 
-Task: [#428](https://github.com/driftsys/upskill/issues/428). Status: proposed
-concrete native-control profile; execution approval pending. This supplements
-the [Q11b control design](2026-10-25-q11-registration-isolation-follow-up.md).
-It does not approve a production adapter or replace Q11's failed entry control.
+Task: [#428](https://github.com/driftsys/upskill/issues/428). Status:
+user-approved concrete native-control profile; attempted on 2026-10-29. Copilot
+calibration failed, so dependent controls were not run. The
+[retained native evidence](../../technotes/gate6-registration-isolation.md)
+records the bounded result. This supplements the
+[Q11b control design](2026-10-25-q11-registration-isolation-follow-up.md). It
+does not approve a production adapter or replace Q11's failed entry control.
+
+The separately approved
+[native-name calibration revision](2026-10-30-q11b-native-name-profile.md)
+applies only to future Copilot attempts with explicit provenance checks. This
+original profile and its failed-positive results remain unchanged.
 
 ## Concrete execution boundary
 
@@ -131,13 +139,13 @@ is authorized by this profile.
 
 ## Approval and delivery
 
-This requests approval only for the bounded native experiment and its stated
-residue/preservation measurements. It does not approve a shared configuration
-writer, production support, another scope or a narrower replacement entry gate.
-Offline fixture/classification tests and independent profile review precede
-execution. Retain a separate evidence packet, receipt hashes, private-source
-index and technote even when a positive fails. Run `just fmt` and `just verify`
-before the resulting PR.
+The user approved this bounded native experiment and its stated
+residue/preservation measurements before execution. It does not approve a shared
+configuration writer, production support, another scope or a narrower
+replacement entry gate. Offline fixture/classification tests and independent
+profile review precede execution. Retain a separate evidence packet, receipt
+hashes, private-source index and technote even when a positive fails. Run
+`just fmt` and `just verify` before the resulting PR.
 
 ## Offline classification boundary
 

@@ -1,0 +1,802 @@
+{
+  "/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/Library/Application Support/ClaudeCode/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/Library/Application Support/ClaudeCode/managed-settings.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "/private/tmp/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json": {
+    "present": true,
+    "sha256": "1a02c514a13d31a8eb7479fc7a25ba27542deeb26fee43e09d3e68ea615ad052",
+    "mode": 384
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/config.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/.last_inuse_sweep": {
+    "present": true,
+    "sha256": "21cc4533f645bd8c0d8491d9475f19d23e55af8441fb7af7be690943180986a5",
+    "mode": 420
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/.orphaned_at": {
+    "present": true,
+    "sha256": "ed817723bc19d61711f74c357179c3cf3d24b21f1982578c2c599ab1d5826956",
+    "mode": 420
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/skills/probe-1d31752ae01b2497/SKILL.md": {
+    "present": true,
+    "sha256": "462a08599bbc38501a5bebef37c917c044ba214fe6185a80a0082f8e4c55476f",
+    "mode": 420
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-1d31752ae01b2497/upskill-q10-1d31752ae01b2497/0.0.0/skills/probe-1d31752ae01b2497/references/receipt.txt": {
+    "present": true,
+    "sha256": "e2d6b1089262196578cb8a509280d426991ea1ee3de3f124e11f6a8f9c32b617",
+    "mode": 420
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/cache/upskill-q10-market-27cf36541c3cd19a/upskill-q10-27cf36541c3cd19a/0.0.0/.orphaned_at": {
+    "present": true,
+    "sha256": "114a2e0e061472b008db3e79a42db64199a4c2541f0812a148a58ca5dcc7576e",
+    "mode": 420
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/installed_plugins.json": {
+    "present": true,
+    "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb",
+    "mode": 384
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/known_marketplaces.json": {
+    "present": true,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "mode": 384
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/.last-complete-round": {
+    "present": true,
+    "sha256": "6d0dfa763273aa4a09ecd7009c2d171188cf94dc2ff58f105e97009bb67ef9da",
+    "mode": 384
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/settings.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.claude/settings.local.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$CLAUDE_PROFILE_ROOT/home/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.claude.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/.claude.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/config.json": {
+    "present": true,
+    "sha256": "ec28c06f6233787c3813f836b8537168ceef4a18ea98cec24a6610e8d9b0220b",
+    "mode": 384
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/installed_plugins.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/plugins/known_marketplaces.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/settings.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/settings.local.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$COPILOT_PROFILE_ROOT/home/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df/plugin.json": {
+    "present": true,
+    "sha256": "ea4b178ad45def78ccbc8663c498322301874d79cd0086a7b6e40edc2e54a5bb",
+    "mode": 384
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md": {
+    "present": true,
+    "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/resource.txt": {
+    "present": true,
+    "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/native/upskill-q11-eb9fb2b395c458df/.claude-plugin/plugin.json": {
+    "present": true,
+    "sha256": "21c144ecc27e7ec790ac081e3089d785361ba5dc2ef9d2884804769072325d63",
+    "mode": 384
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/native/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md": {
+    "present": true,
+    "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/delivery/native/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/resource.txt": {
+    "present": true,
+    "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.agents/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.agents/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/settings.json": {
+    "present": true,
+    "sha256": "546fcb359adb383d7459dd6ba410ea5021c7cc073ab945523924f9148957db57",
+    "mode": 416
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/settings.local.json": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.claude/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.copilot/plugins": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.copilot/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.github/copilot-instructions.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.github/instructions": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/.github/skills": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/AGENTS.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/AGENTS.override.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project/CLAUDE.md": {
+    "present": false,
+    "sha256": null,
+    "mode": null
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-f1049dba5348ac31/.claude-plugin/plugin.json": {
+    "present": true,
+    "sha256": "1885aa19a636a0c7a68b3f07a88804122fc7e9170395e737f739d9a71db8da72",
+    "mode": 384
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-f1049dba5348ac31/skills/probe-0056066507efe7e4/SKILL.md": {
+    "present": true,
+    "sha256": "510023dce44ad40438ae4888616ca19f2c914924bff40efb64dd180897921689",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/foreign/upskill-q11-f1049dba5348ac31/skills/probe-0056066507efe7e4/resource.txt": {
+    "present": true,
+    "sha256": "42c5e38667518fb929658768d949a3a9951c925b0936c9119577194f1f2714ee",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/native/upskill-q11-f1049dba5348ac31/plugin.json": {
+    "present": true,
+    "sha256": "225149f8b7696ddcf8672b8ffd200d1c2048abbfa8a1a1e73040d9038a2ebc9b",
+    "mode": 384
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/native/upskill-q11-f1049dba5348ac31/skills/probe-0056066507efe7e4/SKILL.md": {
+    "present": true,
+    "sha256": "510023dce44ad40438ae4888616ca19f2c914924bff40efb64dd180897921689",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/fixture/copilot/delivery/native/upskill-q11-f1049dba5348ac31/skills/probe-0056066507efe7e4/resource.txt": {
+    "present": true,
+    "sha256": "42c5e38667518fb929658768d949a3a9951c925b0936c9119577194f1f2714ee",
+    "mode": 420
+  },
+  "$OBSERVER_POSITIVE_PACKET/marketplace/.claude-plugin/marketplace.json": {
+    "present": true,
+    "sha256": "2b748d5f5950dacf446af5161dc110f53ba9a065d34d046484b5621662cdc251",
+    "mode": 384
+  },
+  "$SETUP_PACKET/marketplace/.claude-plugin/marketplace.json": {
+    "present": true,
+    "sha256": "ab8353d410ea8a408604a1063154025bef3e50cb96a823c7c5910fb6180309a7",
+    "mode": 384
+  },
+  "$SETUP_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/.claude-plugin/plugin.json": {
+    "present": true,
+    "sha256": "21c144ecc27e7ec790ac081e3089d785361ba5dc2ef9d2884804769072325d63",
+    "mode": 384
+  },
+  "$SETUP_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md": {
+    "present": true,
+    "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+    "mode": 420
+  },
+  "$SETUP_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/resource.txt": {
+    "present": true,
+    "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+    "mode": 420
+  },
+  "$OWNER_PACKET/marketplace/.claude-plugin/marketplace.json": {
+    "present": true,
+    "sha256": "330b29cdb1c2cc7be7c5be644bd4866153a612e5fe76f3420dc73f974ec843c2",
+    "mode": 384
+  },
+  "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/.claude-plugin/plugin.json": {
+    "present": true,
+    "sha256": "21c144ecc27e7ec790ac081e3089d785361ba5dc2ef9d2884804769072325d63",
+    "mode": 384
+  },
+  "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/SKILL.md": {
+    "present": true,
+    "sha256": "88d8954015f9834371159d6391d0b151bd40c937e06a7036a8d94e84d7b719cf",
+    "mode": 420
+  },
+  "$OWNER_PACKET/marketplace/packages/upskill-q11-eb9fb2b395c458df/skills/probe-5adeb2ddeb85bdcf/resource.txt": {
+    "present": true,
+    "sha256": "3ac405a09520be8f79b3c4e9f32a24c098eb704fec13c2b81a3ea8e9deba5a36",
+    "mode": 420
+  }
+}

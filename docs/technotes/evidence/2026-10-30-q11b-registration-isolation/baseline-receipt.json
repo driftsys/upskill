@@ -1,0 +1,32 @@
+{
+  "command": [
+    "$CLIENT_BIN/copilot",
+    "--no-auto-update",
+    "--disable-builtin-mcps",
+    "--no-ask-user",
+    "--trust-folder",
+    "--log-level",
+    "none",
+    "--output-format",
+    "json",
+    "--model",
+    "$PRIVATE_MODEL",
+    "--available-tools",
+    "skill",
+    "--allow-tool",
+    "skill",
+    "--excluded-tools",
+    "task",
+    "--deny-tool",
+    "task",
+    "-p",
+    "Invoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response. If unavailable, return exactly $ABSENCE_MARKER."
+  ],
+  "cwd": "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-30T01:16:38.539004+00:00",
+  "finished_at_utc": "2026-10-30T01:16:45.838919+00:00",
+  "stdout_sha256": "d3cf4b14f1b322b18a5a251abbd84ec13e048de6ea9d519e95fd459fd214a6bb",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

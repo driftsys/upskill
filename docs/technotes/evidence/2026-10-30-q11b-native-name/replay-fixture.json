@@ -1,0 +1,13 @@
+{
+  "client": "copilot",
+  "pin": "1.0.103",
+  "scope": "session",
+  "positive_project": "/QUALIFICATION_PACKET/fixture/claude/positive-project",
+  "native_package": "/QUALIFICATION_PACKET/fixture/claude/delivery/foreign/upskill-q11-eb9fb2b395c458df",
+  "plugin_name": "upskill-q11-eb9fb2b395c458df",
+  "plugin_version": "0.0.0",
+  "skill_name": "probe-5adeb2ddeb85bdcf",
+  "namespace": "upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf",
+  "marker": "$CONTENT_MARKER",
+  "skill_file_sha256": "ae10ea33426a7eac53b340f4d7a753b6c33790c87cc30ac47877deed057ad83f"
+}

@@ -1,0 +1,23 @@
+{
+  "owner_positive": "failed",
+  "model_process_attempts": 1,
+  "failure": null,
+  "unknown_operation": false,
+  "registration_remaining": false,
+  "cleanup": [
+    "plugin_uninstalled",
+    "marketplace_removed"
+  ],
+  "qualified": false,
+  "baseline": "not_run",
+  "candidate": "not_run",
+  "post_removal": "not_run",
+  "project_settings_mode_unchanged": true,
+  "project_settings_bytes_unchanged": true,
+  "settings_residue": "unchanged",
+  "changed_protected_paths": [
+    "$CLAUDE_PROFILE_ROOT/home/.claude/.claude.json",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/.last_inuse_sweep",
+    "$CLAUDE_PROFILE_ROOT/home/.claude/plugins/synced/2499ae09-8743-4997-84ec-3d4516233098_771cd794-84fc-49aa-aceb-e76b26c993cf/.last-complete-round"
+  ]
+}

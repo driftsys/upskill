@@ -1,0 +1,22 @@
+{
+  "baseline": {
+    "session_selection_matches_request": true,
+    "assistant_models_match_selection": true
+  },
+  "candidate": {
+    "session_selection_matches_request": true,
+    "assistant_models_match_selection": true
+  },
+  "post-removal": {
+    "session_selection_matches_request": true,
+    "assistant_models_match_selection": true
+  },
+  "owner-positive": {
+    "assistant_model_family_is_haiku": true,
+    "one_assistant_model": true
+  },
+  "owner-candidate": {
+    "assistant_model_family_is_haiku": true,
+    "one_assistant_model": true
+  }
+}

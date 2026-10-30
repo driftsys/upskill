@@ -1,0 +1,18 @@
+{
+  "campaign-pins.json": "261249559fa0423f57d63cad88cc9d252131d711e72c889ee5ce6bf12f0f54d0",
+  "copilot-positive-observation.json": "77a8e2bf506d20c2ca5fe18a53b97c4166f8ab274a5ebb907e0b47c426b3b730",
+  "copilot-positive-receipt.json": "146400d05169c30f364f07f8b230948baaac0fd6dfcc732027b7281d3e6af4e0",
+  "fixture.json": "893888e9f58035b28f0f859687a925f919e6a43e6b48ec03cc78e549848b6d18",
+  "independent-review.json": "2760e5ae675be9cedb633f61972ed9cc9c2b5e037425f1a5f8628bb9114d0d77",
+  "inventory.json": "dfc651beec5156e600f2fef214c3a2cd0297d110222786e11cb083f995edecbc",
+  "native-selection.json": "3b6e55f8b1178315ed27b4ae087d86e25e0225a00751cfdad2556abfbeb7ca94",
+  "observer-fixture.json": "8bfe4562fe52514ebe3aa0dc645da4e56ce093e169c6722e63e3d89c9fb12509",
+  "packages-after.json": "aa7356fc80755652096264e75eee4d8b8cb4c9fdcdc82020616a6e2ae4d0568a",
+  "preservation-after.json": "0c94f584b47945ef2f78498cd7ceb51507166fcfc688a175a357441b79402f29",
+  "preservation-before.json": "0c94f584b47945ef2f78498cd7ceb51507166fcfc688a175a357441b79402f29",
+  "private-source-index.json": "a5e7625f0743c9a2a98a486f15ae0b2cfedda1b4ba9092a18b57f2256264f16c",
+  "profile-locks.json": "98c117313997bffa29c9cacf59a5d56c3cbb2fc08a00f9521c46009c5ca3f78b",
+  "session-correlation.json": "f5a9fb09cb2be75f629ee1f4a2b6742aef956866e055f6eecf7c4769d84b4950",
+  "skill-trees-after.json": "83a192f02ab20ebfaa37540d47a711cdf9b9937d2ffe8cc72a35821dd099b5fd",
+  "summary.json": "a72ba4c05db57f8b60e87dd1345398209b8b42dab5aca32a37b595aea23d7f65"
+}

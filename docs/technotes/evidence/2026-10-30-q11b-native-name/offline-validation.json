@@ -1,0 +1,80 @@
+{
+  "profile": "copilot-native-name-v1",
+  "native_execution": false,
+  "qualified": false,
+  "focused_tests": 26,
+  "repository_rust_tests": 1410,
+  "repository_offline_tests": 316,
+  "commands": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_qualify_copilot_native_name.py'",
+      "exit_code": 0
+    },
+    {
+      "command": "just fmt",
+      "exit_code": 0
+    },
+    {
+      "command": "just verify",
+      "exit_code": 0
+    }
+  ],
+  "red_green": [
+    {
+      "stage": "missing inspector",
+      "tests": 14,
+      "result": "failed: missing function"
+    },
+    {
+      "stage": "catalog collision and malformed metadata",
+      "tests": 17,
+      "result": "failed: accepted alias collision and malformed-shape exceptions"
+    },
+    {
+      "stage": "malformed arguments and fixture",
+      "tests": 18,
+      "result": "failed: shape exceptions"
+    },
+    {
+      "stage": "stdout order and answer ancestry",
+      "tests": 19,
+      "result": "failed: accepted reordered capture"
+    },
+    {
+      "stage": "independent pre-native review regressions",
+      "tests": 21,
+      "result": "failed: load before request accepted and missing native data exceptions; both fixed before native attempt"
+    },
+    {
+      "stage": "quick-review malformed-link regression",
+      "tests": 26,
+      "result": "failed: unhashable parent identities raised; fixed and all regressions pass"
+    },
+    {
+      "stage": "final guards and sanitized captured replay",
+      "tests": 26,
+      "result": "passed"
+    }
+  ],
+  "historical_haiku_namespace_to_bare_run": "still blocked; not relabelled",
+  "source_sha256": {
+    "scripts/qualify-plugin-rules.py": "6f368b9aa920cb8d2b9a04f63f6ae66023acca2eed8fdebc2918ba9e8dd9ce66",
+    "scripts/tests/test_qualify_copilot_native_name.py": "ded7102c770c4df3de3ab2a75d69ed769cb4ef00da8e1924d1feff46d270bead",
+    "docs/wip/specs/2026-10-30-q11b-native-name-profile.md": "a0a130ebf865a85cce375accf4e5c2c195cae88e6727e795cbfa9971ecf01ef6"
+  },
+  "review_findings": {
+    "pre_request_load": "fixed with request ancestry regression",
+    "missing_native_data": "fixed with regression for each record type; issue #437",
+    "native_identity_test_sensitivity": "consistent-record mutations rejected",
+    "plugin_version_and_errors_and_assistant_disclosure": "all removed guards independently rejected",
+    "malformed_parent_or_type": "fixed with blocked-observation regressions; issue #439",
+    "test_counts": "corrected from actual final log"
+  },
+  "repository_rust_ignored": 2,
+  "rust_result_groups": 89,
+  "guard_mutations_rejected": 4,
+  "unique_rust_suite_groups": 81,
+  "reported_rust_passes_including_child_result_groups": 1418,
+  "rust_count_basis": "Last result per cargo Running/Doc-tests group; excludes child-process duplicate result lines.",
+  "verification_log_sha256": "fe1597fca469af84019d901257cd1ba6aadd9048dfe904247e21886c3d677a1d"
+}

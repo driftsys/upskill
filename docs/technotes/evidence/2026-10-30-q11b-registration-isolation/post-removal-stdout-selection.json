@@ -1,0 +1,95 @@
+[
+  {
+    "type": "session.skills_loaded",
+    "id": "fdf5ffda-316c-450d-9e8f-8d1c57addf29",
+    "parentId": "20e852b1-365b-4b30-bea5-a48f58b570af",
+    "timestamp": "2026-10-30T01:29:32.226Z",
+    "ephemeral": true,
+    "data": {
+      "skills": [
+        {
+          "name": "customize-cloud-agent",
+          "commandName": "customize-cloud-agent",
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/customize-cloud-agent/SKILL.md",
+          "enabled": true,
+          "source": "builtin",
+          "userInvocable": false
+        },
+        {
+          "name": "github-pr-media",
+          "commandName": "github-pr-media",
+          "path": "$COPILOT_PROFILE_ROOT/home/Library/Caches/copilot/pkg/darwin-arm64/1.0.103/builtin/github-pr-media/SKILL.md",
+          "enabled": true,
+          "source": "builtin",
+          "userInvocable": false
+        }
+      ]
+    }
+  },
+  {
+    "type": "user.message",
+    "id": "b1fd137c-d803-4ae5-a8d7-496e6d65bc8f",
+    "parentId": "20e852b1-365b-4b30-bea5-a48f58b570af",
+    "timestamp": "2026-10-30T01:29:32.263Z",
+    "data": {
+      "content": "Invoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response. If unavailable, return exactly $ABSENCE_MARKER.",
+      "transformedContent": "<current_datetime>2026-10-30T02:29:32.263+01:00</current_datetime>\n\nInvoke the skill named probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response. If unavailable, return exactly $ABSENCE_MARKER.",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "3b535654-c49b-49ed-8c25-df99863486d7",
+    "parentId": "83e5de47-8f85-4c24-b10f-69f0d3e482d7",
+    "timestamp": "2026-10-30T01:29:33.124Z",
+    "data": {
+      "content": "",
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_start",
+    "id": "a7871fb2-a084-4c59-a285-449068738fe7",
+    "parentId": "3b535654-c49b-49ed-8c25-df99863486d7",
+    "timestamp": "2026-10-30T01:29:33.126Z",
+    "data": {
+      "toolName": "skill",
+      "toolCallId": "toolu_01GfUJsg3PJJN6Ha3spACy5X",
+      "arguments": {
+        "skill": "probe-5adeb2ddeb85bdcf"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "tool.execution_complete",
+    "id": "d19f14c1-8c25-4312-9c08-f304a707bfc2",
+    "parentId": "a7871fb2-a084-4c59-a285-449068738fe7",
+    "timestamp": "2026-10-30T01:29:33.127Z",
+    "data": {
+      "toolCallId": "toolu_01GfUJsg3PJJN6Ha3spACy5X",
+      "success": false,
+      "error": {
+        "message": "Skill not found: probe-5adeb2ddeb85bdcf",
+        "code": "failure"
+      },
+      "turnId": "0"
+    }
+  },
+  {
+    "type": "assistant.message",
+    "id": "166d8c67-3520-4853-85ae-e0fe68c0708e",
+    "parentId": "eae336a1-e5a9-4173-86c1-27305bfa81ae",
+    "timestamp": "2026-10-30T01:29:33.823Z",
+    "data": {
+      "content": "$ABSENCE_MARKER",
+      "turnId": "1"
+    }
+  },
+  {
+    "type": "result",
+    "timestamp": "2026-10-30T01:29:33.836Z",
+    "sessionId": "017db519-d1c2-4e7c-98ca-02b8cc0e47ec",
+    "exitCode": 0
+  }
+]

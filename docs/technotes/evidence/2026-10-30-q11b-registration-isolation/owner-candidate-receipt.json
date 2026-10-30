@@ -1,0 +1,29 @@
+{
+  "command": [
+    "$CLIENT_BIN/claude",
+    "-p",
+    "--tools",
+    "Skill",
+    "--allowedTools",
+    "Skill",
+    "--no-session-persistence",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--setting-sources",
+    "user,project",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    "$PRIVATE_MODEL",
+    "Invoke the skill named upskill-q11-eb9fb2b395c458df:probe-5adeb2ddeb85bdcf and follow its instruction. Do not use any other tools. Return only the required response."
+  ],
+  "cwd": "$OBSERVER_POSITIVE_PACKET/fixture/claude/positive-project",
+  "exit_code": 0,
+  "timed_out": false,
+  "started_at_utc": "2026-10-30T01:29:18.746980+00:00",
+  "finished_at_utc": "2026-10-30T01:29:24.063054+00:00",
+  "stdout_sha256": "7770063c35597b8d02f51e1a4aae91636162807e866e8ebda7e7f04e6a9607d2",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
