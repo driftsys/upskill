@@ -221,6 +221,17 @@ fn four_profiles_plan_exact_envelopes_and_contained_single_revision_catalogs() {
                 assert_eq!(value["name"], result.native_name);
                 assert_eq!(value["plugins"].as_array().unwrap().len(), 1);
                 assert_eq!(value["plugins"][0]["name"], result.native_name);
+                if surface == TargetSurface::CodexCli {
+                    assert_eq!(
+                        value["plugins"][0]["policy"],
+                        serde_json::json!({
+                            "installation": "AVAILABLE", "authentication": "ON_INSTALL"
+                        })
+                    );
+                    assert_eq!(value["plugins"][0]["category"], "Productivity");
+                } else {
+                    assert_eq!(value["owner"], serde_json::json!({"name": "upskill"}));
+                }
                 let expected = format!("./revisions/{}", result.payload_sha256);
                 if surface == TargetSurface::CodexCli {
                     assert_eq!(
@@ -529,4 +540,128 @@ fn equal_body_bytes_with_different_selected_origin_get_distinct_payload_identity
         path: "SKILL.copilot.md".into(),
     };
     assert!(compile_skill_package(&request(&changed, &root, &owned)).is_err());
+}
+
+#[test]
+fn aliased_resource_golden_pins_field_order_and_present_mode_encoding() {
+    let skill = selected(
+        TargetSurface::ClaudeCli,
+        &[
+            ("SKILL.md", ENTRY, None),
+            ("assets/data.bin", &[0, 255, 1], Some(0o751)),
+        ],
+        Some("alias-demo"),
+    );
+    let root = scope();
+    let owned = owner(&skill);
+    let result = compile_skill_package(&request(&skill, &root, &owned)).unwrap();
+    // Independently encoded from the documented protocol, including different
+    // source/installed names and the big-endian present mode 00 00 01 e9.
+    assert_eq!(
+        result.payload_sha256,
+        "f2d4917282f3bc0a135ccf17c43887c21ac8b540fe5c072330604c46339f0d4a"
+    );
+    assert_eq!(
+        result.package_sha256,
+        "0fa3b4d799333bfcd8956a4cc18576d1197daaebd1941beef07b1d82789d6dad"
+    );
+}
+
+// Keep the generated evidence consistent while isolating a metadata guard.
+fn replace_rendered_metadata(skill: &mut SelectedSkill, field: &str, value: &str) {
+    let (mut metadata, body) = upskill::parse::frontmatter::parse::<serde_yaml_ng::Value>(
+        std::str::from_utf8(&skill.entrypoint.bytes).unwrap(),
+    )
+    .unwrap();
+    metadata[field] = serde_yaml_ng::Value::String(value.into());
+    let yaml = serde_yaml_ng::to_string(&metadata).unwrap();
+    skill.entrypoint.bytes = format!("---\n{yaml}---\n{body}").into_bytes();
+}
+
+#[test]
+fn metadata_identity_rejects_even_when_rendered_entrypoint_matches_mutated_metadata() {
+    let mut skill = selected(TargetSurface::ClaudeCli, &[("SKILL.md", ENTRY, None)], None);
+    let root = scope();
+    let owned = owner(&skill);
+    assert!(compile_skill_package(&request(&skill, &root, &owned)).is_ok());
+    skill.metadata.name = "different".into();
+    replace_rendered_metadata(&mut skill, "name", "different");
+    let error = compile_skill_package(&request(&skill, &root, &owned)).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("metadata binding"),
+        "{error:#}"
+    );
+}
+
+#[test]
+fn metadata_description_limit_rejects_consistently_rendered_oversized_input() {
+    let mut skill = selected(TargetSurface::ClaudeCli, &[("SKILL.md", ENTRY, None)], None);
+    let root = scope();
+    let owned = owner(&skill);
+    let description = "a".repeat(1024);
+    skill.metadata.description = description.clone();
+    replace_rendered_metadata(&mut skill, "description", &description);
+    assert!(compile_skill_package(&request(&skill, &root, &owned)).is_ok());
+    let description = "a".repeat(1025);
+    skill.metadata.description = description.clone();
+    replace_rendered_metadata(&mut skill, "description", &description);
+    let error = compile_skill_package(&request(&skill, &root, &owned)).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("metadata binding"),
+        "{error:#}"
+    );
+}
+
+#[test]
+fn selected_resources_must_be_sorted_even_when_distinct_and_individually_valid() {
+    let mut skill = selected(
+        TargetSurface::ClaudeCli,
+        &[
+            ("SKILL.md", ENTRY, None),
+            ("a.bin", b"a", None),
+            ("b.bin", b"b", Some(0o644)),
+        ],
+        None,
+    );
+    let root = scope();
+    let owned = owner(&skill);
+    assert!(compile_skill_package(&request(&skill, &root, &owned)).is_ok());
+    skill.resources.reverse();
+    let error = compile_skill_package(&request(&skill, &root, &owned)).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("strictly ordered"),
+        "{error:#}"
+    );
+}
+
+#[test]
+fn source_digest_rejects_full_length_nonhex_and_uppercase_values() {
+    let skill = selected(TargetSurface::ClaudeCli, &[("SKILL.md", ENTRY, None)], None);
+    let root = scope();
+    let owned = owner(&skill);
+    for digest in ["g".repeat(64), "A".repeat(64)] {
+        let mut changed = skill.clone();
+        changed.source_manifest_sha256 = digest;
+        let error = compile_skill_package(&request(&changed, &root, &owned)).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("manifest SHA-256"),
+            "{error:#}"
+        );
+    }
+}
+
+#[test]
+fn unsupported_surface_rejects_even_when_selected_record_and_request_agree() {
+    let skill = selected(TargetSurface::ClaudeCli, &[("SKILL.md", ENTRY, None)], None);
+    let root = scope();
+    let owned = owner(&skill);
+    for surface in [TargetSurface::CopilotVscodeLocal, TargetSurface::CodexIde] {
+        let mut changed = skill.clone();
+        changed.surface = surface;
+        let error = compile_skill_package(&request(&changed, &root, &owned)).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("does not support"),
+            "{error:#}"
+        );
+    }
 }

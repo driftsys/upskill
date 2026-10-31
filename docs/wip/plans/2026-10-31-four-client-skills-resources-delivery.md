@@ -88,6 +88,13 @@ source paths.
 
 ## Stage 2: Immutable package planning
 
+**Local status:** Implemented in `07c7dd8`. QUICK review test gaps are addressed
+with independent aliased/resource digest values and isolated validation tests.
+All 16 package tests pass, all ten deliberate regressions are caught, and
+`just verify` passes. The catalog metadata is at the item root so revision
+sources remain within that root. This is local verification, not native
+qualification or merge. GitHub task/PR tracking is pending API connectivity.
+
 **Files:** Create `src/compile/skill_package.rs` and `tests/skill_packages.rs`;
 modify `src/compile/mod.rs`; document the candidate layout in the customization
 delivery topic.
@@ -98,17 +105,17 @@ selected skill, target, qualified scope identity and `ArtifactOwner`. Export
 `SkillPackage` exposes full payload digest, full package digest, immutable
 relative files, stable catalog contribution and native identity. No I/O occurs.
 
-- [ ] Add failing fixtures for all four layouts, full digest/version identity,
+- [x] Add failing fixtures for all four layouts, full digest/version identity,
       mode-sensitive hashing, alias paths, no duplicate default component path,
       exact resource bytes, path collision and repeatable output. Assert stable
       native identity across revision, alias and bundle changes, with different
       scope or installation IDs producing distinct identities.
-- [ ] Run `cargo test --test skill_packages`; confirm intended failures.
-- [ ] Implement domain-framed hashing and client-specific envelopes. OpenCode
+- [x] Run `cargo test --test skill_packages`; confirm intended failures.
+- [x] Implement domain-framed hashing and client-specific envelopes. OpenCode
       produces an explicit-source descriptor, without a JavaScript plugin.
-- [ ] Rerun fixtures and existing resource tests; assert legacy goldens
+- [x] Rerun fixtures and existing resource tests; assert legacy goldens
       unchanged.
-- [ ] Document the layout as inactive and commit
+- [x] Document the layout as inactive and commit
       `feat: plan immutable client skill packages`.
 
 ## Stage 3: Portable intent and native receipt contracts
