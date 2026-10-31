@@ -222,8 +222,11 @@ renders the canonical body and does not apply override bodies. The captured
 compiler rejects an active matching override, including one hidden by `ignore`;
 it does not fall back to canonical content for that requested client. See
 [AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
-and [debt #324](https://github.com/driftsys/upskill/issues/324). Override
-execution requires a separate implementation and compatibility tests.
+and [debt #324](https://github.com/driftsys/upskill/issues/324). The opt-in
+`compile::skill_selection::select_skill` library boundary now implements the
+specified body selection for skills on Claude, Copilot, Codex and OpenCode CLI
+surfaces, subject to the restrictions below. It is not wired into installation
+commands and does not change `compile_item` or the historical installer.
 
 **Specified body-resolution order for a given client.** For historical
 generation client `C` (`claude`, `copilot` or `opencode`), a conforming override
@@ -237,6 +240,43 @@ implementation would resolve the body as follows:
 An override replaces the whole canonical body; it does not append to or compose
 with it. §6.4 cross-references this specified rule and its implementation
 status; this section is the authoritative statement.
+
+#### Opt-in captured skill selection
+
+`select_skill` validates the complete source manifest and topology before
+selection. Invalid captures reject even when the audience excludes the target.
+The canonical skill name must match its source folder; names and aliases follow
+§2.1. Only the four CLI surfaces are accepted. An audience-excluded selection
+returns no output before inspecting overrides, processing directives or checking
+projection capabilities.
+
+For a selected target, the three existing matching override filenames supply
+verbatim UTF-8 bodies without frontmatter. Canonical directives are processed
+only when no matching override is present. A top-level `SKILL.codex.md` rejects,
+even if ignored; Codex uses canonical family directives. `ignore` filters
+resources and cannot suppress an active override. Generated frontmatter uses the
+canonical metadata, with the installed alias bound to both native `name` and
+`skills/<installed-name>/SKILL.md`. A generated blank separator may precede the
+selected body; body bytes themselves are not reformatted.
+
+The initial metadata projection permits `name`, `description`, and present
+canonical `license` and `metadata`. Each emitted field requires an explicit
+matching native capability declaration; missing, duplicate, deferred or
+unsupported mappings reject rather than drop data. These are offline projection
+contracts, not native/runtime qualification. Nonempty native passthrough blocks,
+malformed non-mapping native values and unknown flattened frontmatter fields
+reject. Empty native mappings are accepted. This restriction does not change the
+historical renderer's passthrough behavior.
+
+The result retains body provenance, canonical source digest, dependency
+references and ordered resource evidence. `requires` remains a resolution input,
+not native frontmatter. Top-level source entrypoints and recognized overrides
+are not copied as resources; other resources retain their captured relative
+paths, bytes and modes after subtractive ignore filtering. Selection reads no
+source paths and writes no outputs. Package envelopes, ownership application,
+native registration and lifecycle qualification belong to later delivery stages
+under
+[AD-0041](../adr/0041-separate-client-representations-as-design-baseline.md).
 
 #### Sharing a procedure across client-specific orchestration
 
