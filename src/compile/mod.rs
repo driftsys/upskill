@@ -3,3 +3,5 @@
 pub mod item;
 
 pub mod skill_selection;
+
+pub mod skill_package;

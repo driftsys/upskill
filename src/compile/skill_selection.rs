@@ -139,7 +139,7 @@ pub fn select_skill(request: &SkillSelectionRequest<'_>) -> Result<Option<Select
     }))
 }
 
-fn validate_name(name: &str) -> Result<()> {
+pub(super) fn validate_name(name: &str) -> Result<()> {
     if name.is_empty()
         || name.len() > 64
         || name.starts_with('-')
@@ -226,7 +226,7 @@ fn select_body(
     Ok((body, SkillBodyOrigin::Canonical))
 }
 
-fn render_entrypoint(metadata: &SkillMetadata, body: &str) -> Result<String> {
+pub(super) fn render_entrypoint(metadata: &SkillMetadata, body: &str) -> Result<String> {
     let mut map = Mapping::new();
     map.insert(Value::from("name"), Value::from(metadata.name.clone()));
     map.insert(

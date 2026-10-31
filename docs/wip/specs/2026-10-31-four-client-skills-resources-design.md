@@ -104,19 +104,25 @@ symlinks or put the managed root under a client's automatic discovery tree.
 Discovery inventory must also exclude configured imports/globs reaching it.
 
 Each root contains immutable `revisions/<digest>/` payloads and, where needed,
-one stable `catalog/` pointing to the selected revision. Each payload contains
-`skills/<installed-name>/SKILL.md` and its resources. Native envelopes live at
-the revision root. The catalog advertises exactly one revision, never the
-revision parent directory. Inactive retained revisions are not native sources.
+one stable native catalog manifest pointing to the selected revision. The item
+root itself is the marketplace root; its client-specific metadata directory
+contains `marketplace.json`. A nested `catalog/` root would require an escaping
+source path to reach sibling revisions, which Codex rejects. Each payload
+contains `skills/<installed-name>/SKILL.md` and its resources. Native envelopes
+live at the revision root. The catalog advertises exactly one revision, never
+the revision parent directory. Inactive retained revisions are not native
+sources.
 
 Compute a domain-separated SHA-256 payload identity from target surface, scope
 identity, installation identity, captured source revision, selected-body origin,
-rendered entrypoint and ordered resource paths/bytes/modes. Encode
-length-delimited fields. Derive native version `0.0.0-r<full-payload-hash>`;
-then hash the complete rendered package separately for verification. This avoids
-hashing a manifest's own version into its input. Native acceptance of that
-version is a qualification condition; do not truncate identities or rely on
-version ordering for refresh.
+rendered entrypoint, ordered resource paths/bytes/modes and the native envelope
+template with placeholder version `0.0.0-payload`. Encode length-delimited
+fields. Including that template makes envelope-format changes affect the
+immutable revision identity without a version/hash cycle. Derive native version
+`0.0.0-r<full-payload-hash>`; then hash the complete rendered package separately
+for verification. This avoids hashing a manifest's own version into its input.
+Native acceptance of that version is a qualification condition; do not truncate
+identities or rely on version ordering for refresh.
 
 Define the stable owner key as the length-framed tuple of qualified scope
 identity, installation ID and target surface. Scope identity includes canonical

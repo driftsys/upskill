@@ -561,3 +561,73 @@ for the adapter inventory, never assertions that other clients cannot read them.
 [D-resume-summary]: https://github.com/driftsys/upskill/blob/main/docs/technotes/evidence/2026-10-25-codex-resume-attribution/summary.json
 [D-Q5-retry]: https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-opencode-explicit-paths-retry.md
 [D-resume-failed]: https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-codex-resume-only.md
+
+## Inactive immutable skill package planner
+
+`compile::skill_package::compile_skill_package` is an opt-in pure library
+boundary following
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md).
+It consumes a selected skill, matching owner and target, and a caller-supplied
+canonical scope identity. It returns candidate files and binding inputs without
+reading source paths, writing files, registering plugins or enabling a CLI
+route. Lexical validation does not prove filesystem qualification, source
+authenticity, capability support or discovery isolation; observation and
+application retain those responsibilities.
+
+The item root is `<scope>/.upskill/exports/<client>/<installation-id>/`.
+Immutable files live under `revisions/<payload-sha256>/`, with the selected
+entrypoint at `skills/<installed-name>/SKILL.md` and exact resources beside it.
+The planner revalidates mutable selected records: owner/name/target bindings,
+generated entrypoint consistency, source-digest syntax, and resource paths,
+order, hashes, modes and topology. These checks do not reconstruct or
+authenticate the original source selection.
+
+Candidate envelopes and selectors are separate:
+
+- Claude: revision `.claude-plugin/plugin.json`; stable item-root
+  `.claude-plugin/marketplace.json`.
+- Copilot: revision `.plugin/plugin.json`; stable item-root
+  `.plugin/marketplace.json`.
+- Codex: revision `.codex-plugin/plugin.json` with `skills: "./skills/"`; stable
+  item-root `.agents/plugins/marketplace.json`.
+- OpenCode: no plugin or catalog; an explicit absolute source descriptor points
+  at the selected revision's `skills/` directory. No JavaScript is emitted.
+
+Claude and Copilot use their default skill component directory without adding an
+explicit duplicate. Every catalog contains one plugin entry pointing at
+`./revisions/<payload-sha256>`. The item root, rather than a nested `catalog/`
+directory, is the proposed marketplace registration root. The revision stays
+inside that root; the catalog never advertises all retained revisions. Current
+[Codex source validation](https://github.com/openai/codex/blob/main/codex-rs/core-plugins/src/marketplace.rs)
+requires local plugin paths to remain within the marketplace root. This is an
+interface constraint, not native qualification of the generated package.
+
+Identity uses three domain-separated SHA-256 protocols. Strings/bytes have
+unsigned 64-bit big-endian length prefixes; file lists have a count followed by
+ordered path, bytes and mode evidence. A missing mode is byte `0`; a present
+mode is byte `1` followed by unsigned 32-bit big-endian permission bits.
+
+1. `upskill:skill-owner:v1\0` frames scope kind, canonical scope path,
+   installation ID and target surface. Native plugin/catalog name is
+   `upskill-<full-digest>` and remains stable across source revisions and
+   aliases. Bundle references are resolved elsewhere and do not enter this
+   identity.
+2. `upskill:skill-payload:v1\0` starts with those same fields, then source
+   identity, optional revision (presence byte plus framed value), source name,
+   installed name, captured manifest digest and selected-body origin. Origin is
+   framed `canonical`, or framed `override` followed by its framed path. The
+   ordered revision-relative file list includes the native envelope template
+   with version `0.0.0-payload`. Thus template changes select a new immutable
+   revision. Actual version becomes `0.0.0-r<full-payload-digest>`.
+3. `upskill:skill-package-files:v1\0` hashes the complete ordered
+   revision-relative file list after substituting the actual native version. The
+   mutable catalog is outside this package digest. Returned file paths have the
+   scope-relative revision prefix for later ownership planning.
+
+Full-length names, version acceptance, trust, cache refresh, native scope,
+resource reads, direct/plugin duplicates and unintended readers still require
+separate qualification. The Codex catalog uses available-on-install policy
+metadata; generating it grants no installation or trust. Existing Q10/Q11 and CD
+gates remain unchanged. The planner neither applies an update nor retires an old
+revision; receipt coordination and session-resource preservation belong to later
+lifecycle stages. Production schema 1 remains unchanged.
