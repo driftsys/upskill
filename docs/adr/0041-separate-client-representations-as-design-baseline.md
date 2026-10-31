@@ -3,7 +3,8 @@
 Status: **proposed, awaiting explicit user adoption**. Date: 2026-10-31. Task
 [#452](https://github.com/driftsys/upskill/issues/452). The
 [decision brief](../technotes/customization-baseline-adoption-decision.md)
-records the bounded question and review. This record has no production effects.
+summarizes the proposed choice and its boundaries. This record has no production
+effects.
 
 ## Context
 
