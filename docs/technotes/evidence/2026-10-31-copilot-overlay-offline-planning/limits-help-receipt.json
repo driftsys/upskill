@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-10-31T05:36:18.034732+00:00",
+  "client": "copilot",
+  "reference_pin": "1.0.103",
+  "command": [
+    "$CLIENT_BIN/copilot",
+    "--no-auto-update",
+    "help",
+    "limits"
+  ],
+  "exit_code": 0,
+  "stdout_sha256": "8c4d1597e7fb2816ba8a5e8a916b5d8361410abf2e9b3c0512842feaf3ad0faf",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "observed_minimum_session_ai_credits": 30,
+  "observed_cap_type": "soft",
+  "limits": [
+    "Help text only; no model session or account quota was queried by this command.",
+    "Actual account usage and reserves are private and must be checked freshly before execution."
+  ]
+}

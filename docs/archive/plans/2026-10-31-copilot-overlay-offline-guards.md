@@ -56,3 +56,12 @@ metadata only; replay_copilot_overlay_plan dispatches phase packets.
 
 Execution is inline under the user's approval to continue offline preparation.
 Native profile/model budget execution is not authorized by this plan.
+
+## Retained verification
+
+The
+[offline validation record](../../technotes/evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
+links the historical RED-log hashes/summaries, current source/test hashes, GREEN
+suite counts and mutation definitions/results. RED implementation snapshots were
+not retained; checked steps above are author-recorded execution history, not
+independent native evidence. Native authority remains false.

@@ -1,10 +1,10 @@
 # Proposed Copilot-local plugin exclusion profile
 
 Date: 2026-10-31. Task [#446](https://github.com/driftsys/upskill/issues/446).
-Status: source-backed proposal, not approved for native execution. No model,
-registration or configuration command ran while preparing it. Only version/help
-commands were captured. [PR #444][comparison-pr] merged the comparison; it did
-not adopt A, a new audience or a narrower entry gate.
+Status: source-backed profile; native execution is not implemented by this
+layer. No model, registration or configuration command ran while preparing it.
+Only version/help commands were captured. [PR #444][comparison-pr] merged the
+comparison; it did not adopt A, a new audience or a narrower entry gate.
 
 ## Question and changed condition
 
@@ -204,6 +204,16 @@ and `next_phase`; after all eight steps it returns completion with no next phase
 or declared cap. It cannot verify real approval, remaining account quota, native
 cap enforcement or billed usage.
 
+The pinned CLI's
+[limits help receipt](evidence/2026-10-31-copilot-overlay-offline-planning/limits-help-receipt.json)
+reports a minimum session limit of 30 AI credits and post-response soft-cap
+accounting. A positive planner amount is not necessarily a usable native limit.
+Small amounts in tests are synthetic schema/round-trip inputs, not an approved
+execution allowance. Before native admission, validate the actual client's
+minimum, check live account usage/reset times, leave the agreed reserve, and
+account for response overshoot. A CLI session cap alone cannot protect the
+account reserve; unknown or insufficient headroom blocks execution.
+
 The pure APIs are
 `plan_copilot_overlay_edit(baseline, current, plugin_key,
 action, mode) -> bytes`,
@@ -222,6 +232,13 @@ are the executable references for this layer. The archived
 [plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain its
 working scope and execution ceremony. Existing Q11/Q11b classifiers are
 unchanged.
+
+The
+[offline validation record](evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
+retains historical RED-log hashes/summaries, current source hashes, suite
+results and reproducible mutation definitions/results. Intermediate RED source
+snapshots were not retained; the record does not invent them or establish native
+results.
 
 ## Native sequence and process ceiling
 
@@ -303,11 +320,15 @@ qualify interruption/recovery or authorize a settings writer in the product.
 
 ## Decision after review
 
-The user must approve this concrete fixture/profile and its model allowance
-before provisioning or native effects. Approval is not adoption of package
-layout A, a public default, a new audience, or a changed qualification gate.
-Until then, finish the reviewed documentation and stop. Original Q11/Q11b
-results, their preservation outcomes and [#410][q11-issue] remain unchanged.
+The user approved continuation and then required live allowance/reset checks
+that preserve headroom before any native spending. Treat future use as
+conditional on those checks, the declared fixture/profile and all remaining
+capture/enforcement guards. Account figures and concrete reserve allocations
+remain private; no billing setting or additional-usage purchase is authorized.
+The native capture/approval/quota-enforcement path is not implemented here, so
+planning output cannot admit a run. This instruction adopts no package layout,
+public default, audience or replacement qualification gate. Original Q11/Q11b
+results, preservation outcomes and [#410][q11-issue] remain unchanged.
 
 [comparison-pr]: https://github.com/driftsys/upskill/pull/444
 [q11b]: gate6-project-registration-isolation.md

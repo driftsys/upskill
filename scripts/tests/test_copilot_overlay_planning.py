@@ -24,10 +24,25 @@ class OverlayPlanningCli(unittest.TestCase):
             source.write_text(json.dumps(packet) if raw_text is None else raw_text)
             home = root / 'home'
             home.mkdir()
-            env = dict(os.environ, HOME=str(home), USERPROFILE=str(home), PATH=str(root / 'no-tools'))
+            audit = root / 'audit'
+            audit.mkdir()
+            attempted = root / 'process-attempt'
+            ready = audit / 'ready'
+            (audit / 'sitecustomize.py').write_text(
+                "import sys\nfrom pathlib import Path\n"
+                "def deny_process(event, args):\n"
+                "    if event in ('subprocess.Popen', 'os.system', 'os.exec', 'os.posix_spawn'):\n"
+                f"        Path({str(attempted)!r}).write_text('blocked')\n"
+                "        raise OSError('External processes are forbidden in planning tests')\n"
+                "sys.addaudithook(deny_process)\n"
+                f"Path({str(ready)!r}).write_text('ready')\n")
+            env = dict(os.environ, HOME=str(home), USERPROFILE=str(home), PATH=str(root / 'no-tools'),
+                       PYTHONPATH=str(audit), PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1')
             result = subprocess.run([sys.executable, str(SCRIPT), '--plan-copilot-overlay', str(source), *extra],
                                     cwd=root, env=env, text=True, capture_output=True, check=False)
-            self.assertEqual(sorted(path.name for path in root.iterdir()), ['home', 'packet.json'])
+            self.assertTrue(ready.is_file(), 'Child process audit hook was not installed')
+            self.assertFalse(attempted.exists(), 'Planning CLI attempted an external process')
+            self.assertEqual(sorted(path.name for path in root.iterdir()), ['audit', 'home', 'packet.json'])
             self.assertEqual(list(home.iterdir()), [])
             return result
 
@@ -44,7 +59,10 @@ class OverlayPlanningCli(unittest.TestCase):
     def test_invalid_packet_shapes_and_duplicate_outer_keys_report_usage_errors(self):
         valid = dict(kind='edit', baseline_utf8=BASELINE, current_utf8=BASELINE,
                      plugin_key='owner@market', action='mask', mode=0o600)
-        invalid = [None, [], 1, {}, dict(valid, unknown=True), dict(valid, baseline_utf8=None)]
+        phase = dict(kind='phase', prefix=[], attempts=0, budget={
+            'process_limit': 8, 'copilot_max_ai_credits': '2', 'claude_max_budget_usd': '0.25'})
+        invalid = [None, [], 1, {}, dict(valid, unknown=True), dict(valid, baseline_utf8=None),
+                   dict(phase, unknown=True)]
         for packet in invalid:
             with self.subTest(packet=packet):
                 result = self.run_packet(packet)
@@ -82,14 +100,16 @@ class OverlayEditGuards(unittest.TestCase):
         self.assertEqual(self.edit(action='remask'), MASKED.encode())
 
     def test_current_byte_drift_and_repeated_edits_reject(self):
-        for current, action in [(BASELINE + ' ', 'mask'), (MASKED, 'mask'),
-                                (BASELINE, 'unmask'), (BASELINE, 'release'), (MASKED, 'remask')]:
+        for current, action in [(BASELINE + ' ', 'mask'), (MASKED + ' ', 'unmask'),
+                                (MASKED + ' ', 'release'), (BASELINE + ' ', 'remask'),
+                                (MASKED, 'mask'), (BASELINE, 'unmask'),
+                                (BASELINE, 'release'), (MASKED, 'remask')]:
             with self.subTest(current=current, action=action):
                 with self.assertRaises(ValueError):
                     self.edit(current=current, action=action)
 
     def test_wrong_modes_and_unknown_actions_reject(self):
-        for mode in (0o644, 0o640, 0o700, True):
+        for mode in (0o644, 0o640, 0o700, True, 384.0):
             with self.subTest(mode=mode):
                 with self.assertRaises(ValueError):
                     self.edit(mode=mode)
@@ -97,6 +117,15 @@ class OverlayEditGuards(unittest.TestCase):
             with self.subTest(action=action):
                 with self.assertRaises(ValueError):
                     self.edit(action=action)
+
+    def test_another_valid_identity_is_preserved_in_mask_and_inverse_plans(self):
+        expected = '{\n  "companyAnnouncements": [\n    "manual sentinel"\n  ],\n  "enabledPlugins": {\n    "reviewer-7@local-market": false\n  }\n}\n'
+        self.assertEqual(self.edit(key='reviewer-7@local-market'), expected.encode())
+        for action in ('unmask', 'release'):
+            with self.subTest(action=action):
+                self.assertEqual(self.edit(current=expected, key='reviewer-7@local-market', action=action),
+                                 BASELINE.encode())
+        self.assertEqual(self.edit(key='reviewer-7@local-market', action='remask'), expected.encode())
 
     def test_unsupported_plugin_keys_cannot_inject_or_select_manual_entries(self):
         for key in ('', 'Owner@market', 'owner', 'owner@market@other', '../owner@market',
@@ -106,8 +135,10 @@ class OverlayEditGuards(unittest.TestCase):
                     self.edit(key=key)
 
     def test_nonempty_or_owned_baseline_map_is_not_adopted(self):
-        for entry in ('"manual@market": true', '"owner@market": false'):
-            baseline = BASELINE.replace('{}', '{' + entry + '}')
+        for entry in ({'manual@market': True}, {'owner@market': False}):
+            value = json.loads(BASELINE)
+            value['enabledPlugins'] = entry
+            baseline = json.dumps(value, indent=2) + '\n'
             with self.subTest(entry=entry):
                 with self.assertRaises(ValueError):
                     self.edit(baseline=baseline, current=baseline)
@@ -120,7 +151,8 @@ class OverlayEditGuards(unittest.TestCase):
                      BASELINE.replace('"manual sentinel"', 'false'),
                      BASELINE.replace('"companyAnnouncements": [',
                                       '"companyAnnouncements": [], "companyAnnouncements": ['),
-                     'not JSON']
+                     'not JSON',
+                     json.dumps({'companyAnnouncements': [], 'enabledPlugins': {}}, indent=2) + '\n']
         for baseline in baselines:
             with self.subTest(baseline=baseline):
                 with self.assertRaises(ValueError):
@@ -153,6 +185,7 @@ class OverlayPhaseGuards(unittest.TestCase):
             with self.subTest(index=index):
                 plan = self.plan(self.names[:index], index)
                 self.assertEqual(plan['next_phase'], self.names[index])
+                self.assertIs(plan['planning_complete'], False)
                 self.assertEqual(plan['client'], client)
                 self.assertEqual(plan['expected_overlay'], overlay)
                 self.assertIs(plan['expected_owner_registered'], owner)
@@ -160,6 +193,12 @@ class OverlayPhaseGuards(unittest.TestCase):
                                  else {'unit': 'ai_credits', 'value': '2'})
                 self.assertIs(plan['native_run_authorized'], False)
                 self.assertNotIn('isolation', plan)
+
+    def test_alternative_caps_are_returned_without_defaults_or_normalization(self):
+        budget = {'process_limit': 8, 'copilot_max_ai_credits': '0.75', 'claude_max_budget_usd': '1.30'}
+        self.assertEqual(self.plan([], 0, budget)['declared_cap'], {'unit': 'ai_credits', 'value': '0.75'})
+        self.assertEqual(self.plan(self.names[:1], 1, budget)['declared_cap'],
+                         {'unit': 'usd', 'value': '1.30'})
 
     def test_eight_completed_planning_steps_cannot_emit_a_ninth_process(self):
         plan = self.plan(self.names, 8)
@@ -185,6 +224,8 @@ class OverlayPhaseGuards(unittest.TestCase):
                     self.plan([], attempts)
         with self.assertRaises(ValueError):
             self.plan(self.names[:2], 1)
+        with self.assertRaises(ValueError):
+            self.plan(self.names[:1], True)
 
     def test_partial_or_expanded_process_ceiling_is_not_this_profile(self):
         for limit in (0, 7, 9, True, 8.0, '8'):
