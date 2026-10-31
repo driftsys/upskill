@@ -1,10 +1,48 @@
 # Four-client skills and resources delivery
 
-Status: **proposed implementation design**, 2026-10-31. This applies the
+Status: **approved implementation design**, 2026-10-31. This applies the
 accepted
 [AD-0041](../../adr/0041-separate-client-representations-as-design-baseline.md).
-It does not activate schema 2 or qualify a native route. The choices below are
-engineering recommendations, not additional decisions attributed to the user.
+It does not activate schema 2 or qualify a native route. The approval record
+below identifies the user-approved policies; detailed engineering mechanisms
+remain subject to implementation review.
+
+## Approval record
+
+The user approved storage and packaging on 2026-10-31: one package per logical
+skill and intended client, shared by references to that same installation;
+self-contained resources; the neutral `.upskill/exports` layout; immutable
+revisions; only the selected revision exposed; and safe retention of older
+revisions.
+
+The user also approved the client integration direction on 2026-10-31: native
+plugins with separate manifests and local catalog registrations for Claude,
+Copilot and Codex; explicit native skill-directory configuration for OpenCode;
+project-local admission without transient user-wide activation; and
+machine-local absolute OpenCode paths materialized separately by each
+collaborator. Manual configuration remains preserved. These approvals choose
+implementation direction, not successful native qualification.
+
+The user approved the update/removal policy on 2026-10-31: stage and validate a
+new revision before switching; permit temporary unavailability where needed to
+prevent duplicate exposure; require native resource retention or session
+clearance before refresh/detachment; preserve surviving direct/bundle
+references; stop on local edits or conflicting configuration; observe uncertain
+native outcomes before retrying; and provide no automatic fallback after
+replacement removal. File rollback alone does not establish native recovery.
+
+The user approved source selection and the initial metadata policy on
+2026-10-31: canonical metadata and default body; existing three client body
+overrides replace the default; canonical directives for Codex without new
+override syntax; aliases bind native name and directory; exact resource
+bytes/structure/modes; and an initial name/description/license/metadata
+allowlist with target validation, rejecting nonempty native settings and unknown
+fields until explicit mappings exist. Existing installation behavior remains
+unchanged.
+
+These approvals complete the design review. The staged implementation plan
+remains pending approval. Native activation, schema-2 production admission and
+qualification waivers are not authorized by design approval.
 
 ## Outcome and boundaries
 

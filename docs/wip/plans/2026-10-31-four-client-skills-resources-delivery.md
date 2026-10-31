@@ -4,6 +4,9 @@
 > superpowers:subagent-driven-development or superpowers:executing-plans to
 > implement this plan task by task. This document does not authorize execution.
 
+**Status:** Design approved on 2026-10-31; implementation sequence and execution
+remain pending approval.
+
 **Goal:** Deliver selected skills and their resources through independently
 qualified Claude Code, Copilot CLI, Codex CLI and OpenCode CLI routes.
 
