@@ -93,3 +93,6 @@ records its separate digest encoding.
 - [AD-0039 — Compile captured Codex instructions with a separate reader report](0039-compile-captured-codex-instructions.md)
 
 - [AD-0040 — Separate customization delivery from discovery and activation](0040-separate-customization-delivery-from-discovery.md)
+
+- [AD-0041 — Separate client representations as the design baseline](0041-separate-client-representations-as-design-baseline.md)
+  — Proposed; explicit user adoption pending.

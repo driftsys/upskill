@@ -1,0 +1,76 @@
+{
+  "recorded_at_utc": "2026-10-31T07:31:49.397548+00:00",
+  "base_commit": "46cb2ed114de1ed2bef0da0af379aa2937084670",
+  "question": "Can A be adopted now as an organizing baseline while every unsupported native route remains blocked?",
+  "input_artifact": "review-input.txt",
+  "input_sha256": "ba0cb4c846145659ddc0433512fb15f8edb7c6aa351c98811c9276c274ad6996",
+  "reviewed_document_sha256": {
+    "docs/adr/0041-separate-client-representations-as-design-baseline.md": "c3d30ce67769f1b33190660a7458fb79a30424fc353eb2711652c92fb4d95b87",
+    "docs/technotes/customization-baseline-adoption-decision.md": "9b16049a6ba887dcf0a138956cb68249a8314af6c87e19dd80175bedf003e04a"
+  },
+  "reviews": [
+    {
+      "reviewer": "Astra",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "verdict": "YES",
+      "required_corrections": 0,
+      "output_artifact": "astra-review.txt",
+      "output_presentation": "Transcribed response with Markdown emphasis normalized.",
+      "output_sha256": "c9a0988f80cae2f8abc45650f56f1e20016bd188513f9bc9755aa33cfb3052ad"
+    },
+    {
+      "reviewer": "Fable",
+      "model": "claude-fable-5-1",
+      "effort": "medium",
+      "provider": "Claude CLI",
+      "verdict": "YES WITH REQUIRED CORRECTIONS",
+      "required_corrections": 5,
+      "output_artifact": "fable-review.txt",
+      "output_presentation": "Result field of the successful one-turn CLI JSON output.",
+      "output_sha256": "dd70c9683ec6eb492c3216d18efcec4fb321729a5389aee91332f796cd0a265f"
+    }
+  ],
+  "correction_dispositions": [
+    {
+      "id": "F1",
+      "status": "incorporated",
+      "location": "AD-0041 Source and selection",
+      "change": "Default is generated from the authored default for the client; no default is required and no B-style shared catalog is implied."
+    },
+    {
+      "id": "F2",
+      "status": "incorporated",
+      "location": "AD-0041 Source and selection, Ownership and lifecycle, Adoption and implementation boundaries",
+      "change": "Copy-only preserves the existing contract. Adoption explicitly includes future removal-to-unavailability; current schema-1 remove behavior does not change."
+    },
+    {
+      "id": "F3",
+      "status": "incorporated",
+      "location": "AD-0041 Native routes and sharing",
+      "change": "Only existing internal rule-delivery hook/adapter scope is referenced; general hook management is not authorized."
+    },
+    {
+      "id": "F4",
+      "status": "incorporated",
+      "location": "AD-0041 Context",
+      "change": "Q11b is Claude registration consumed by Copilot; native-preservation failure separately blocks lifecycle claims."
+    },
+    {
+      "id": "F5",
+      "status": "incorporated",
+      "location": "AD-0041 Adoption and implementation boundaries",
+      "change": "A selection does not pre-empt owned-agent scope, OpenCode skill sources or Codex distribution/trust."
+    }
+  ],
+  "builder_check": {
+    "result": "nothing important left",
+    "scope": "Clarified proposed ADR and decision brief; no implementation or adoption authority."
+  },
+  "limits": [
+    "Original verdicts target the frozen input; no second Fable call was made over clarifications.",
+    "Reviewer reconsideration thresholds differ; the brief preserves that distinction.",
+    "No user adoption, native qualification or production behavior is established.",
+    "Private billing/account metadata and raw CLI transport output are not included."
+  ]
+}

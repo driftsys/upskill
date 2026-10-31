@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Bounded customization architecture decision](customization-baseline-adoption-decision.md):
+  proposed A baseline, explicit sharing and selection/lifecycle policies; native
+  routes and production activation remain gated pending user adoption.
+
 - [Copilot-local plugin exclusion profile](copilot-project-plugin-overlay-profile.md):
   source-backed, unexecuted proposal for a per-plugin local override after Q11b;
   matched masked/unmasked/remasked controls and a credit-gated process ceiling.
