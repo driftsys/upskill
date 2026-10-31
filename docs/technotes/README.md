@@ -8,6 +8,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 ## Research
 
+- [Copilot-local plugin exclusion profile](copilot-project-plugin-overlay-profile.md):
+  source-backed, unexecuted proposal for a per-plugin local override after Q11b;
+  matched masked/unmasked/remasked controls and a credit-gated process ceiling.
+
 - [Customization delivery policy comparison](customization-delivery-policy-comparison.md):
   decision material after Q11b; separate outputs versus shared
   defaults/variants, four-client reader obligations, worked admission cases and

@@ -456,6 +456,13 @@ project registration
 complete reader/preservation profile. An unscanned-looking storage root is
 insufficient.
 
+A
+[2026-10-31 source check and concrete profile proposal](copilot-project-plugin-overlay-profile.md)
+now identifies a Copilot-local per-plugin override as a lead for the excluded
+Claude registration. Its masked/unmasked/remasked sequence remains unexecuted
+and needs profile/budget approval. No qualified replacement is established; the
+original absence of qualified evidence and Q11/Q11b failures remain.
+
 A newly documented selector would be a lead, not runtime proof. First identify
 its source, frozen executable/configuration and exact command sequence offline.
 Then prepare a separately reviewable profile: same-client positives, clean
