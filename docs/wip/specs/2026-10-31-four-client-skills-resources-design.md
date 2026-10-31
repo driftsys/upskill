@@ -40,9 +40,10 @@ allowlist with target validation, rejecting nonempty native settings and unknown
 fields until explicit mappings exist. Existing installation behavior remains
 unchanged.
 
-These approvals complete the design review. The staged implementation plan
-remains pending approval. Native activation, schema-2 production admission and
-qualification waivers are not authorized by design approval.
+These approvals complete the design review. The user subsequently approved the
+staged implementation sequence and starting Stage 1 with inline implementation
+and independent review on 2026-10-31. Native activation, schema-2 production
+admission and qualification waivers are not authorized by design approval.
 
 ## Outcome and boundaries
 
