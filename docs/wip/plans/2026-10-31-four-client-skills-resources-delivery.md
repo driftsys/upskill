@@ -52,6 +52,11 @@ state compatibility before wiring owned CLI effects.
 
 ## Stage 1: Pure selected-skill compilation
 
+**Local status:** Implemented in `6029866`; QUICK review findings are addressed
+by the follow-up tests and documentation changes tracked in #458 and #459. All
+22 selector tests pass, all seven deliberate regressions are caught, and
+`just verify` passes. This is local verification, not merge or native admission.
+
 **Files:** Create `src/compile/skill_selection.rs`; modify `src/compile/mod.rs`;
 create `tests/skill_selection.rs`; update the content-format topic with the new
 opt-in boundary. Keep `src/compile/item.rs` rejection behavior intact.
@@ -63,20 +68,20 @@ rendered body and ordered captured resources. Export
 `select_skill(request: &SkillSelectionRequest) -> Result<SelectedSkill>`. The
 request owns or borrows the captured evidence; it never rereads source paths.
 
-- [ ] Write failing tests: audience exclusion precedes override selection;
+- [x] Write failing tests: audience exclusion precedes override selection;
       existing three overrides are verbatim; canonical Codex directives filter;
       `SKILL.codex.md` rejects; alias binds native name and directory;
       passthrough cannot replace identity; nonempty native blocks and unknown
       fields reject; canonical license/metadata emit through capability
       validation or reject; changing original source cannot alter captured
       resources.
-- [ ] Run `cargo test --test skill_selection`; confirm failures identify the
+- [x] Run `cargo test --test skill_selection`; confirm failures identify the
       absent selector or unmet behavior, not fixture/setup errors.
-- [ ] Implement selection and explicit metadata projection, preserving resource
+- [x] Implement selection and explicit metadata projection, preserving resource
       bytes/modes and subtractive ignore semantics from the design.
-- [ ] Rerun the new tests plus `cargo test --test compile_items` and
+- [x] Rerun the new tests plus `cargo test --test compile_items` and
       `cargo test --test generate_skills`; require all to pass unchanged.
-- [ ] Update source-format documentation and commit
+- [x] Update source-format documentation and commit
       `feat: compile selected skill representations`.
 
 ## Stage 2: Immutable package planning

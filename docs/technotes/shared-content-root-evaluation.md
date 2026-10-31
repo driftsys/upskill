@@ -250,11 +250,13 @@ processes those directives; direct native discovery does not.
 For large differences, wrappers can explicitly read a copied
 `references/review-procedure.md` before launching native reviewers. This is a
 candidate runtime resource-loading pattern, not embedded composition. Whole-body
-overrides replace the canonical body. Their execution remains unimplemented: the
-historical installer ignores override bodies and the captured compiler rejects
-active matching overrides under AD-0025. The specified override suffixes remain
-`claude`, `copilot` and `opencode`; a fourth audience does not add a Codex
-override suffix. See
+overrides replace the canonical body. The opt-in
+`compile::skill_selection::select_skill` boundary implements this selection for
+skills, without wiring it into installation commands. The historical installer
+still ignores override bodies, and `compile_item` still rejects active matching
+overrides under AD-0025. The specified override suffixes remain `claude`,
+`copilot` and `opencode`; a fourth audience does not add a Codex override
+suffix. See
 [format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files).
 
 Keep variant sources outside scanned shared catalogs. Qualify one effective
@@ -262,8 +264,9 @@ entrypoint per client, self-contained package resources, native relative reads
 and permission failures, missing resources and relocation. Copying the same
 procedure resource into several client packages does not duplicate a skill
 entrypoint. Runtime file loading neither installs subagents nor grants their
-permissions. Override execution and a future embedding/include feature require
-separate work; this evaluation adopts neither.
+permissions. Integrating override selection into installation commands and a
+future embedding/include feature require separate work; this evaluation adopts
+neither.
 
 ## One logical item per client
 

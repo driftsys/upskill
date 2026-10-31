@@ -276,7 +276,7 @@ paths, bytes and modes after subtractive ignore filtering. Selection reads no
 source paths and writes no outputs. Package envelopes, ownership application,
 native registration and lifecycle qualification belong to later delivery stages
 under
-[AD-0041](../adr/0041-separate-client-representations-as-design-baseline.md).
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md).
 
 #### Sharing a procedure across client-specific orchestration
 
