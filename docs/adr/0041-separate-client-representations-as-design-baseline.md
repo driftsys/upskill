@@ -1,9 +1,9 @@
 # AD-0041 — Separate client representations as the design baseline
 
-Status: **proposed, awaiting explicit user adoption**. Date: 2026-10-31. Task
+Status: **accepted**. Date: 2026-10-31. Task
 [#452](https://github.com/driftsys/upskill/issues/452). The
 [decision brief](../technotes/customization-baseline-adoption-decision.md)
-summarizes the proposed choice and its boundaries. This record has no production
+summarizes the decision and its boundaries. This record has no production
 effects.
 
 ## Context
@@ -26,10 +26,10 @@ activate a route.
 [AD-0040](0040-separate-customization-delivery-from-discovery.md) and
 [Topic 0009](../topics/0009-customization-delivery.md) retain that boundary.
 
-## Proposed decision
+## Decision
 
-If adopted, use **separate generated representations per intended client as the
-design baseline**, with explicitly declared, separately qualified shared
+Use **separate generated representations per intended client as the design
+baseline**, with explicitly declared, separately qualified shared
 representations as exceptions. This selects A's organization; it neither selects
 installed paths nor makes every item a plugin.
 
@@ -92,18 +92,16 @@ Native registration/cache outcomes need their own evidence and safe inverses;
 file rollback alone is insufficient. Existing preservation classes and failure
 outcomes are unchanged.
 
-The proposed default on removing a selected client replacement is
-**unavailability**, not implicit loading of a shared/default body. Switching to
-a default is an explicit new selection, subject to the same preflight and
-qualification. This is a proposed future lifecycle policy, not a change to
-existing schema-1 remove behavior.
+The default on removing a selected client replacement is **unavailability**, not
+implicit loading of a shared/default body. Switching to a default is an explicit
+new selection, subject to the same preflight and qualification. This is a future
+lifecycle policy, not a change to existing schema-1 remove behavior.
 
 ## Adoption and implementation boundaries
 
-Adoption of this record would settle A versus B as the organizing baseline and
-the selection/lifecycle policies above, including default unavailability after
-replacement removal. Approval must explicitly cover that future removal policy;
-it does not change schema-1 behavior. It would not settle:
+This decision settles A versus B as the organizing baseline and the
+selection/lifecycle policies above, including default unavailability after
+replacement removal. It does not change schema-1 behavior or settle:
 
 - An installed `.agents/<client>` path contract, package granularity, per-client
   default packaging, source override syntax or a new lock schema.
@@ -122,7 +120,7 @@ exact version, scope, OS and surface limits. A configured Copilot overlay result
 would qualify only its configured profile; it would not satisfy the retained
 explicit foreign-selector Q11 gate.
 
-Before owned implementation, require the existing step-7 user adoption,
+Before owned implementation, require the remaining step-7 user decisions,
 preservation contracts and applicable Q10/Q11 and CD-01 through CD-11 evidence.
 Skills/resources remain first, followed by rules and then automatic maintenance
 under the adopted roadmap. Existing agent support stays a regression obligation;

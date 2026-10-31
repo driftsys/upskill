@@ -9,8 +9,8 @@ snapshot; a stable name does not imply that external research remains current.
 ## Research
 
 - [Bounded customization architecture decision](customization-baseline-adoption-decision.md):
-  proposed A baseline, explicit sharing and selection/lifecycle policies; native
-  routes and production activation remain gated pending user adoption.
+  accepted A organizing baseline, explicit sharing and selection/lifecycle
+  policies; native routes and production activation remain gated.
 
 - [Copilot-local plugin exclusion profile](copilot-project-plugin-overlay-profile.md):
   source-backed, unexecuted proposal for a per-plugin local override after Q11b;
@@ -19,7 +19,8 @@ snapshot; a stable name does not imply that external research remains current.
 - [Customization delivery policy comparison](customization-delivery-policy-comparison.md):
   decision material after Q11b; separate outputs versus shared
   defaults/variants, four-client reader obligations, worked admission cases and
-  mechanism gaps. Neither layout nor a replacement entry gate is adopted.
+  mechanism gaps. AD-0041 subsequently selects the organizing baseline; exact
+  paths and replacement entry gates remain undecided.
 
 - [Project registration isolation](gate6-project-registration-isolation.md):
   Q11b observes automatic Copilot activation of a Claude-owned project plugin;

@@ -1,10 +1,10 @@
 # Customization architecture decision recap
 
 Date: 2026-10-31. Task [#452](https://github.com/driftsys/upskill/issues/452).
-Status: proposed; adoption pending. The full proposal is
+Status: accepted design baseline. The decision is
 [AD-0041](../adr/0041-separate-client-representations-as-design-baseline.md).
 
-## Proposed direction
+## Direction
 
 Use one authored source and generate a separate representation for each intended
 client. Each item has one effective representation per client, with its
@@ -31,7 +31,7 @@ update, removal and recovery.
 
 Removing a selected client replacement makes it unavailable. Loading a default
 instead requires an explicit, qualified selection; there is no automatic
-fallback. Existing schema-1 behavior is unchanged by this proposal.
+fallback. Existing schema-1 behavior is unchanged by this decision.
 
 ## Boundaries and next step
 
@@ -39,7 +39,7 @@ Exact installed paths and packaging remain implementation decisions. Native
 qualification, preservation requirements and the four-client release gates stay
 in force. An unsupported route remains blocked after design adoption.
 
-After adoption, reconcile the contract, roadmap and active plans, then design
-concrete paths and packaging. Skills/resources remain first, followed by rules
-and automatic maintenance. New owned-subagent MVP scope and other pending scope
-changes require separate decisions.
+Next, design concrete paths and packaging under the reconciled contract, roadmap
+and active plans. Skills/resources remain first, followed by rules and automatic
+maintenance. New owned-subagent MVP scope and other pending scope changes
+require separate decisions.

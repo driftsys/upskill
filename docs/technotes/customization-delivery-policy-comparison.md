@@ -1,11 +1,18 @@
 # Customization delivery policies after Q11b
 
 Date: 2026-10-31. Task [#442](https://github.com/driftsys/upskill/issues/442).
-Status: decision material; neither layout nor replacement qualification gate is
-adopted. This note completes a comparison from retained evidence. It schedules
-no native experiment and changes no generated output, schema or runtime route.
+Status: retained comparison; this note does not adopt installed paths or
+replacement qualification gates. This note completes a comparison from retained
+evidence. It schedules no native experiment and changes no generated output,
+schema or runtime route.
 
-## Decision to make
+Subsequent decision:
+[AD-0041](../adr/0041-separate-client-representations-as-design-baseline.md)
+selects A as the organizing baseline with explicit sharing exceptions. This
+comparison retains its original recommendation and evidence; exact paths,
+package defaults and native qualification remain separate.
+
+## Comparison question
 
 Compare **A, separate generated client representations**, with **B, shared
 installed defaults and client-specific replacements**. My recommendation is to
@@ -131,7 +138,7 @@ is not an additional skill entrypoint.
 - **B:** Using that same registration as an isolating selector; a private
   variant path alone cannot hide a visible shared base
 
-**Current disposition**
+**Disposition at comparison time**
 
 - **A:** Recommended design baseline only; native boundary unresolved
 - **B:** Useful candidate for deliberate sharing; replacements/exclusions
@@ -541,7 +548,7 @@ substitute for exclusions. CD-05 through CD-11 retain resource, permission,
 configuration, ownership and integrated recovery obligations for both layouts.
 Q10's bounded overlap PASS supplies neither layout isolation nor all profiles.
 
-The user still decides:
+At comparison time, the open user decisions were:
 
 1. Whether to adopt A as the design baseline, retain B for explicitly shared
    profiles, or compare them without that preference. Exact storage and package
@@ -556,10 +563,16 @@ The user still decides:
    prospective gate proposal. This package retains it; Q11b's FAIL cannot
    justify a waiver or itself satisfy a narrower isolation gate.
 
-Adoption would require explicit amendments to [AD-0040][direction],
-[CD-03/CD-11][gates] and the [implementation handoff][handoff], as applicable.
-Recording completed evidence in the handoff now does not adopt a layout or gate.
-The inherited package-default, owned-agent MVP, authorable-bundle and OpenCode
+AD-0041 now settles items 1 and 3: A is the organizing baseline with explicitly
+qualified sharing exceptions, and replacement removal defaults to
+unavailability. Loading a default instead requires explicit, qualified
+reselection. Items 2, 4 and 5 remain separate decisions for the applicable
+profiles.
+
+[AD-0040][direction], Topic 0009 and the [implementation handoff][handoff]
+record this bounded adoption. [CD-03/CD-11][gates] remain unchanged; historical
+native evidence does not adopt a different layout, audience or gate. The
+inherited package-default, owned-agent MVP, authorable-bundle and OpenCode
 skill-source decisions remain separate. Schema 1 stays production. Schema-2
 activation and the combined four-client release remain blocked by applicable
 native, platform/scope, permission, preservation and integrated lifecycle gates.

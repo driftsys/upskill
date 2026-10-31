@@ -50,6 +50,21 @@ content kinds and configuration through migration and existing commands. General
 hooks, tools, permissions and expanded MCP management retain their later scope;
 existing restrictions and integrations remain regression obligations.
 
+## Client representation baseline (2026-10-31)
+
+[AD-0041](0041-separate-client-representations-as-design-baseline.md) selects
+separate generated client representations as the organizing baseline, with
+explicitly qualified sharing exceptions. Resources follow the selected
+representation; removal does not silently select a default. This amends the
+organizing direction, not native-first rules, the existing shared-rule policy,
+implementation order, preservation or qualification gates.
+
+Shared-root evaluations and their experiment sequence remain qualification work,
+not the default installed layout. Exact paths, package granularity and pending
+per-client package-default decisions remain separate. Accepting this baseline
+does not complete the remaining step-7 decisions or authorize owned
+implementation.
+
 ## Reconciliation and consequences
 
 This decision supersedes any production implication of AD-0039's managed

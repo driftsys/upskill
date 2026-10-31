@@ -2,19 +2,21 @@
 
 Date: 2026-10-23; rules direction adopted by the user on 2026-10-24 after Q1-Q9
 review. Basis: the proposal's [native-first always-on rules decision][decision]
-is decided, not an option. Other direction amendments remain unadopted. This WIP
-records the implementation contract. The separate step-7 adoption PR now
-reconciles [AD-0040][direction], [Topic 0009][contract] and the
-[roadmap][roadmap] with merged results; user adoption remains at that PR review.
-No native packet or this WIP activates a production route. See the
+is decided, not an option. The bounded organizing baseline is separately adopted
+in
+[AD-0041](../../adr/0041-separate-client-representations-as-design-baseline.md);
+other direction amendments remain unadopted. This WIP records the implementation
+contract under [AD-0040][direction], [Topic 0009][contract] and the
+[roadmap][roadmap]. The remaining step-7 decisions below still require user
+approval. No native packet or this WIP activates a production route. See the
 [durable amendment inventory](../../topics/0009-customization-delivery.md#amendment-inventory).
 
-Step 7 adoption owner: the user. At that PR review the user confirms the durable
-wording for the decided native-first rules direction, the #379 K1 debt re-scope
-and independent-of-team-guidance OpenCode route. Separately adopt or reject the
-pending changes to package defaults, subagents in MVP, authorable bundles,
-explicit OpenCode skill sources. Record the decided implementation order. A
-native PASS cannot adopt those direction changes ([decision][decision],
+Step 7 adoption owner: the user. Separate adoption review must confirm the
+durable wording for the decided native-first rules direction, the #379 K1 debt
+re-scope and independent-of-team-guidance OpenCode route. Separately adopt or
+reject the pending changes to package defaults, subagents in MVP, authorable
+bundles, explicit OpenCode skill sources. Record the decided implementation
+order. A native PASS cannot adopt those direction changes ([decision][decision],
 [AD-0040 proposed amendments][direction], [roadmap][roadmap]).
 
 Audience: the implementing agent that takes over this branch. It knows the
@@ -188,12 +190,14 @@ skill absent. Strict whole-file preservation independently returns
 relabels Q11's failed explicit-selector challenge.
 
 The [Q11b control design][Q11b] and earlier failed calibration attempts remain
-retained. The [delivery-policy comparison][policy comparison] is the next
-decision material: separate generated outputs versus shared defaults/variants,
-with reader, resource, selection and preservation obligations. It adopts no
-layout or new audience. D1-D6 preservation policies remain approved, but do not
-supply missing adapter-profile evidence. No further native run or Q5 retry is
-scheduled by this reconciliation.
+retained. The [delivery-policy comparison][policy comparison] retains the A/B
+evidence.
+[AD-0041](../../adr/0041-separate-client-representations-as-design-baseline.md)
+now selects separate generated client representations with qualified sharing
+exceptions, including explicit selection and removal policies. This does not
+select exact paths, qualify a native route or declare a new audience. D1-D6
+preservation policies remain approved, but do not supply missing adapter-profile
+evidence. No further native run or Q5 retry is scheduled by this reconciliation.
 
 Decision required: only the user can approve a prospective replacement gate with
 any required controlling-record amendments. Until then, Q11's retained PASS
@@ -333,8 +337,8 @@ Q11 for each applicable package profile. Q10's bounded Claude overlap PASS is
 retained; Q11's explicit-selector FAIL and blocked reverse direction do not meet
 that requirement. Q11b's completed Claude-project/Copilot-observer cell also
 fails isolation; it is not an approved substitute. The
-[policy comparison][policy comparison] prepares the next route and adoption
-decisions without enabling effects ([Q10][Q10], [Q11][Q11],
+[policy comparison][policy comparison] retains evidence for the next concrete
+route design under AD-0041, without enabling effects ([Q10][Q10], [Q11][Q11],
 [Q11b result][Q11b result]). Copilot package skills require their own passed
 route; Q3's retired rules component is not a gate for native always-on rules,
 and project plugin activation remains unverified ([decision][decision],

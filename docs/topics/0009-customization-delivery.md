@@ -54,6 +54,34 @@ references; native plugins remain separate packages. Existing plugin/MCP
 functionality must remain compatible without advancing general hooks, tools,
 permissions or expanded MCP management into this implementation.
 
+## Client representation baseline
+
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md)
+selects separate generated representations per intended client, with explicitly
+qualified sharing as an exception. One authored source supplies copied outputs;
+each logical item/client has one selected representation and effective native
+exposure. Resources belong to that selection. A generated authored default is
+not an installed shared catalog, and a default need not exist.
+
+Retain the one-copy unscoped Claude/Copilot rule exception and native-first
+routes. Other sharing requires compatible declared readers, preserved
+capabilities and qualified exclusion, duplicate and lifecycle controls. A
+client-named directory or equal bytes cannot establish isolation.
+
+Selection and lifecycle reuse source capture, provenance, owner/reference
+contracts, preflight, locking, backups and recovery. Preserve manual content,
+local edits, surviving references and native state. Removing a selected client
+replacement makes it unavailable; switching to a default requires an explicit,
+qualified selection. This future lifecycle policy does not change schema-1
+behavior or implement active source overrides.
+
+This adoption does not settle exact paths, package granularity/defaults, new
+owned-agent MVP scope, OpenCode skill sources, Codex distribution/trust or any
+other pending scope amendment. The remaining step-7 decisions, preservation
+contracts, Q10/Q11 and CD-01 through CD-11 gates remain required.
+Skills/resources stay first, then rules and automatic maintenance; the
+four-client release scope is unchanged.
+
 ## Shared content root evaluation
 
 Evaluate `.agents/{rules,skills,agents}` with client-specific adapters under
@@ -406,8 +434,9 @@ that code has changed ([proposal inventory][D-inventory]).
 
 ### Decisions and entry controls still required
 
-Decision required: the user separately accepts or rejects each direction change
-at this PR review. Until then, baseline scope remains in force
+AD-0041 settles the organizing baseline and removal selection policy only. The
+user separately accepts or rejects each remaining direction change below; until
+then, its existing scope remains in force
 ([AD-0040 proposed amendments][D-pending],
 [roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md#mvp--next-release)):
 
