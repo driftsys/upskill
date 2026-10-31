@@ -1,0 +1,241 @@
+{
+  "captured_at_utc": "2026-10-31T06:04:02.852908+00:00",
+  "scope": "offline planner validation only",
+  "implementation_commit": "448fa4f36197e93790f6aaf4e3e747ce66d77fea",
+  "source_sha256": {
+    "scripts/qualify-plugin-rules.py": "a830cf2ea0cbef631fad96b56d92dd0c712c3e0150d4fa1f856770c6849035fb",
+    "scripts/tests/test_copilot_overlay_planning.py": "e45661d38ac84fe0ce5344410f503de934ec6224a8931ced54b499a3623457c0"
+  },
+  "historical_red": [
+    {
+      "stage": "missing_cli_mode",
+      "log_name": "copilot-overlay-guards-red.log",
+      "sha256": "606edf4f8800f4ba212b4f371607d42ccc0a0fa019c9c462b96d44a77710cc63",
+      "tests": 1,
+      "assertion_failures": 1,
+      "source_snapshot_retained": false
+    },
+    {
+      "stage": "missing_edit_guards",
+      "log_name": "copilot-overlay-edit-guards-red.log",
+      "sha256": "3be390753cec0f144fc055d4bad739e5dfd0d7110134012bc276386546988999",
+      "tests": 10,
+      "assertion_failures": 40,
+      "source_snapshot_retained": false
+    },
+    {
+      "stage": "missing_phase_planner",
+      "log_name": "copilot-overlay-phase-red.log",
+      "sha256": "e6e6a064763ecc92886da0be7fa4c1f9ce985c578cb814bb7d047579ec5f45f2",
+      "tests": 17,
+      "assertion_failures": 44,
+      "source_snapshot_retained": false
+    }
+  ],
+  "green": [
+    {
+      "log_name": "copilot-overlay-guards-reviewed-focused.log",
+      "sha256": "7614c782aa647e6af80506c6825666fbddfbadc77e9be44d0ffb9a4e41194be5",
+      "tests": 19,
+      "result": "OK"
+    },
+    {
+      "log_name": "copilot-overlay-guards-reviewed-suite.log",
+      "sha256": "f80237740ff81bb168b8f1f96e9caa351cf05f070152a5121dd7d3f33b60e05e",
+      "tests": 338,
+      "result": "OK"
+    }
+  ],
+  "mutation_method": "Replace exact source text only in an owned temporary copy; load real unit tests and point real CLI acceptance tests to that copy. Child Python audit hooks reject process attempts before execution. Each mutation must cause assertion failures and zero test errors.",
+  "mutations": [
+    {
+      "mutation": "ignore_current_drift",
+      "replace": "current != expected",
+      "with": "False",
+      "rejected": true,
+      "assertion_failures": 8,
+      "errors": 0
+    },
+    {
+      "mutation": "ignore_mode_drift",
+      "replace": "mode != 0o600",
+      "with": "False",
+      "rejected": true,
+      "assertion_failures": 3,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_foreign_identity",
+      "replace": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,63}'",
+      "with": "r'.+'",
+      "rejected": true,
+      "assertion_failures": 8,
+      "errors": 0
+    },
+    {
+      "mutation": "fail_exact_release",
+      "replace": "return masked if action in ('mask', 'remask') else baseline",
+      "with": "return masked",
+      "rejected": true,
+      "assertion_failures": 4,
+      "errors": 0
+    },
+    {
+      "mutation": "ignore_phase_order",
+      "replace": "prefix != [step[0] for step in steps[:len(prefix)]]",
+      "with": "False",
+      "rejected": true,
+      "assertion_failures": 5,
+      "errors": 0
+    },
+    {
+      "mutation": "allow_retry",
+      "replace": "attempts != len(prefix)",
+      "with": "False",
+      "rejected": true,
+      "assertion_failures": 3,
+      "errors": 0
+    },
+    {
+      "mutation": "allow_zero_cap",
+      "replace": "Decimal(cap) <= 0",
+      "with": "False",
+      "rejected": true,
+      "assertion_failures": 4,
+      "errors": 0
+    },
+    {
+      "mutation": "authorize_native_run",
+      "replace": "'native_run_authorized': False",
+      "with": "'native_run_authorized': True",
+      "rejected": true,
+      "assertion_failures": 11,
+      "errors": 0
+    },
+    {
+      "mutation": "swap_client_caps",
+      "replace": "if client == 'claude' else ('ai_credits'",
+      "with": "if client == 'copilot' else ('ai_credits'",
+      "rejected": true,
+      "assertion_failures": 10,
+      "errors": 0
+    },
+    {
+      "mutation": "hash_wrong_bytes",
+      "replace": "hashlib.sha256(updated).hexdigest()",
+      "with": "hashlib.sha256(packet['baseline_utf8'].encode('utf-8')).hexdigest()",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_nonempty_map",
+      "replace": "value['enabledPlugins'] != {} or ",
+      "with": "",
+      "rejected": true,
+      "assertion_failures": 2,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_semantic_inverse_drift",
+      "replace": "current != expected",
+      "with": "(current != expected if action == 'mask' else json.loads(current) != json.loads(expected))",
+      "rejected": true,
+      "assertion_failures": 3,
+      "errors": 0
+    },
+    {
+      "mutation": "attempt_client_and_swallow_error",
+      "replace": "            try:\n                packet = decode_copilot_overlay_json",
+      "with": "            try:\n                subprocess.run(['copilot', '--version'], capture_output=True, check=False)\n            except OSError:\n                pass\n            try:\n                packet = decode_copilot_overlay_json",
+      "rejected": true,
+      "assertion_failures": 10,
+      "errors": 0
+    },
+    {
+      "mutation": "substitute_fixed_identity",
+      "replace": "+ plugin_key +",
+      "with": "+ 'owner@market' +",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "substitute_default_caps",
+      "replace": "'value': budget[key]",
+      "with": "'value': ('0.25' if client == 'claude' else '2')",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_empty_sentinel",
+      "replace": " or not value['companyAnnouncements']",
+      "with": "",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_float_mode",
+      "replace": "type(mode) is not int or ",
+      "with": "",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "premature_planning_completion",
+      "replace": "'planning_complete': len(prefix) == 8",
+      "with": "'planning_complete': True",
+      "rejected": true,
+      "assertion_failures": 8,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_boolean_attempt",
+      "replace": "type(attempts) is not int",
+      "with": "not isinstance(attempts, int)",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_extra_baseline_fields",
+      "replace": "set(value) != {'companyAnnouncements', 'enabledPlugins'}",
+      "with": "not {'companyAnnouncements', 'enabledPlugins'}.issubset(value)",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_empty_sentinel_string",
+      "replace": " or not item",
+      "with": "",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_long_marketplace",
+      "replace": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,63}'",
+      "with": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,127}'",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_extra_phase_fields",
+      "replace": "and set(packet) == {'kind', 'prefix', 'attempts', 'budget'}",
+      "with": "and True",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    }
+  ],
+  "limits": [
+    "Historical RED source snapshots were not retained; logs are author-recorded history retained by hash, not reconstructed native evidence.",
+    "Native qualification/model processes started by these checks: zero. The attempted-client mutation is blocked by child audit hooks.",
+    "No account quota, actual cap enforcement, filesystem application, native evidence or isolation PASS is established."
+  ]
+}

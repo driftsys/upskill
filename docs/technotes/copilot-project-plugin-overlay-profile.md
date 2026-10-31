@@ -1,10 +1,10 @@
 # Proposed Copilot-local plugin exclusion profile
 
 Date: 2026-10-31. Task [#446](https://github.com/driftsys/upskill/issues/446).
-Status: source-backed proposal, not approved for native execution. No model,
-registration or configuration command ran while preparing it. Only version/help
-commands were captured. [PR #444][comparison-pr] merged the comparison; it did
-not adopt A, a new audience or a narrower entry gate.
+Status: source-backed profile; native execution is not implemented by this
+layer. No model, registration or configuration command ran while preparing it.
+Only version/help commands were captured. [PR #444][comparison-pr] merged the
+comparison; it did not adopt A, a new audience or a narrower entry gate.
 
 ## Question and changed condition
 
@@ -163,6 +163,83 @@ Do not grant temporary-directory-wide reads or run hooks from unreviewed
 profiles. If the pinned client cannot enforce the required read/tool boundary,
 stop as unsupported rather than replacing it with prompt prose.
 
+## First offline planning layer
+
+Task [#448](https://github.com/driftsys/upskill/issues/448) adds a pure planning
+mode to the existing qualification script:
+
+```bash
+python3 scripts/qualify-plugin-rules.py --plan-copilot-overlay PACKET.json
+```
+
+The packet is captured, non-secret fixture data. The CLI reads it and prints a
+JSON plan; it does not write a settings file or invoke any client. Invalid
+packets exit 2. All outputs contain `native_run_authorized: false`, including a
+complete eight-step planning prefix. These are not native observations or
+isolation verdicts.
+
+**Edit packets** contain exactly `kind: "edit"`, `baseline_utf8`,
+`current_utf8`, `plugin_key`, `action` and integer `mode: 384` (0600). Baseline
+is canonical two-space UTF-8 JSON with a final newline, exactly a nonempty
+`companyAnnouncements` string list and an empty `enabledPlugins` map.
+Unsupported formatting/content, duplicate keys, nonfinite values, pre-existing
+plugin entries, invalid identities, stale current bytes and changed mode reject.
+The plugin key has exactly two components separated by `@`; each is 1–64
+characters, starts with a lower-case letter or digit and otherwise contains only
+lower-case letters, digits or hyphens. `mask`/`remask` require baseline current
+bytes; `unmask`/`release` require the exact planned masked bytes. The
+`fixture_edit_plan` output supplies `updated_utf8` and its `sha256`; only the
+declared map content changes. No generic settings writer or actual
+filesystem-mode/ownership check is implemented.
+
+**Phase packets** contain exactly `kind: "phase"`, `prefix`, `attempts` and
+`budget`. Prefix is a planning input, not evidence that a phase succeeded. It
+must follow the eight named phases below. Attempts must be the same integer as
+prefix length; retries, reordered/skipped steps and a ninth attempt reject.
+Budget must contain exactly integer `process_limit: 8`, `copilot_max_ai_credits`
+and `claude_max_budget_usd`; both per-client caps are explicit positive decimal
+strings, never defaults. The output selects the next client's declared cap and
+expected overlay/owner condition. Its `phase_plan` includes `planning_complete`
+and `next_phase`; after all eight steps it returns completion with no next phase
+or declared cap. It cannot verify real approval, remaining account quota, native
+cap enforcement or billed usage.
+
+The pinned CLI's
+[limits help receipt](evidence/2026-10-31-copilot-overlay-offline-planning/limits-help-receipt.json)
+reports a minimum session limit of 30 AI credits and post-response soft-cap
+accounting. A positive planner amount is not necessarily a usable native limit.
+Small amounts in tests are synthetic schema/round-trip inputs, not an approved
+execution allowance. Before native admission, validate the actual client's
+minimum, check live account usage/reset times, leave the agreed reserve, and
+account for response overshoot. A CLI session cap alone cannot protect the
+account reserve; unknown or insufficient headroom blocks execution.
+
+The pure APIs are
+`plan_copilot_overlay_edit(baseline, current, plugin_key,
+action, mode) -> bytes`,
+`plan_copilot_overlay_phase(prefix, attempts, budget)
+-> dict` and
+`replay_copilot_overlay_plan(packet) -> dict`. File application, qualified
+roots/locks, native event/resource correlation, actual phase completion,
+managed-policy checks, persistent attempt accounting and native-effect recovery
+remain separate unimplemented boundaries. Passing these guards never admits a
+paid native process or substitutes for the required native replay.
+
+The [implementation](../../scripts/qualify-plugin-rules.py) and
+[offline acceptance tests](../../scripts/tests/test_copilot_overlay_planning.py)
+are the executable references for this layer. The archived
+[spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md) and
+[plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain its
+working scope and execution ceremony. Existing Q11/Q11b classifiers are
+unchanged.
+
+The
+[offline validation record](evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
+retains historical RED-log hashes/summaries, current source hashes, suite
+results and reproducible mutation definitions/results. Intermediate RED source
+snapshots were not retained; the record does not invent them or establish native
+results.
+
 ## Native sequence and process ceiling
 
 At most **eight fresh model processes**, with no automatic process retries. This
@@ -243,11 +320,17 @@ qualify interruption/recovery or authorize a settings writer in the product.
 
 ## Decision after review
 
-The user must approve this concrete fixture/profile and its model allowance
-before provisioning or native effects. Approval is not adoption of package
-layout A, a public default, a new audience, or a changed qualification gate.
-Until then, finish the reviewed documentation and stop. Original Q11/Q11b
-results, their preservation outcomes and [#410][q11-issue] remain unchanged.
+The user approved offline preparation. Native execution requires explicit
+authorization for the concrete fixture/profile and model allowance, followed by
+the requested live allowance/reset checks that preserve headroom. The reserve
+instruction alone does not admit a native run; all remaining capture/enforcement
+guards must also be implemented and satisfied. Account figures and concrete
+reserve allocations remain private; no billing setting or additional-usage
+purchase is authorized. The native capture/approval/quota-enforcement path is
+not implemented here, so planning output cannot admit a run. This instruction
+adopts no package layout, public default, audience or replacement qualification
+gate. Original Q11/Q11b results, preservation outcomes and [#410][q11-issue]
+remain unchanged.
 
 [comparison-pr]: https://github.com/driftsys/upskill/pull/444
 [q11b]: gate6-project-registration-isolation.md
