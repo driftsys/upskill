@@ -1,6 +1,6 @@
 # Upskill roadmap
 
-Updated: **2026-10-25**. Status: **planned delivery scope**. This roadmap
+Updated: **2026-10-31**. Status: **planned delivery scope**. This roadmap
 describes upcoming work, not implemented support. Release numbers and dates will
 be assigned separately.
 
@@ -20,6 +20,14 @@ Plugin packaging and runtime loading are separate decisions: a plugin can
 distribute or update content that the client loads through native conventions.
 Hooks are used where they provide required behavior, rather than for every
 customization.
+
+The organizing baseline is
+[separate generated client representations](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md),
+with explicitly qualified sharing exceptions. Resources follow the selected
+representation, ownership follows references, and removal never silently loads a
+default. This does not select exact installed paths or package defaults,
+complete remaining step-7 decisions, qualify native routes or enable production
+activation.
 
 ## MVP — Next release
 

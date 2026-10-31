@@ -1,11 +1,18 @@
 # Customization delivery policies after Q11b
 
 Date: 2026-10-31. Task [#442](https://github.com/driftsys/upskill/issues/442).
-Status: decision material; neither layout nor replacement qualification gate is
-adopted. This note completes a comparison from retained evidence. It schedules
-no native experiment and changes no generated output, schema or runtime route.
+Status: retained comparison; this note does not adopt installed paths or
+replacement qualification gates. This note completes a comparison from retained
+evidence. It schedules no native experiment and changes no generated output,
+schema or runtime route.
 
-## Decision to make
+Subsequent decision:
+[AD-0041](../adr/0041-separate-client-representations-as-design-baseline.md)
+selects A as the organizing baseline with explicit sharing exceptions. This
+comparison retains its original recommendation and evidence; exact paths,
+package defaults and native qualification remain separate.
+
+## Comparison question
 
 Compare **A, separate generated client representations**, with **B, shared
 installed defaults and client-specific replacements**. My recommendation is to
@@ -131,7 +138,7 @@ is not an additional skill entrypoint.
 - **B:** Using that same registration as an isolating selector; a private
   variant path alone cannot hide a visible shared base
 
-**Current disposition**
+**Disposition at comparison time**
 
 - **A:** Recommended design baseline only; native boundary unresolved
 - **B:** Useful candidate for deliberate sharing; replacements/exclusions
