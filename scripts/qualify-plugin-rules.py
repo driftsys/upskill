@@ -2,9 +2,11 @@
 """Prepare disposable native delivery fixtures; offline results never qualify clients."""
 import argparse
 import datetime
+from decimal import Decimal
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -875,11 +877,21 @@ def main():
                       help='Create fixtures only; does not run a model or qualify a route')
     mode.add_argument('--replay-codex-rule-lifecycle', type=Path,
                       help='Replay retained Q9 diagnostic windows offline')
+    mode.add_argument('--plan-copilot-overlay', type=Path,
+                      help='Plan captured fixture edits or phase order offline; never authorizes native execution')
     parser.add_argument('--client', choices=VERSIONS)
     parser.add_argument('--root', type=Path, help='New disposable directory outside the repository')
     args = parser.parse_args()
     try:
-        if args.replay_codex_rule_lifecycle:
+        if args.plan_copilot_overlay:
+            if args.client or args.root:
+                parser.error('Planning cannot be combined with fixture options')
+            try:
+                packet = decode_copilot_overlay_json(args.plan_copilot_overlay.read_bytes())
+            except OSError as error:
+                raise ValueError('Cannot read overlay planning packet: ' + str(error)) from error
+            print(json.dumps(replay_copilot_overlay_plan(packet), indent=2))
+        elif args.replay_codex_rule_lifecycle:
             if args.client or args.root:
                 parser.error('Replay cannot be combined with fixture options')
             print(json.dumps(replay_codex_rule_lifecycle(args.replay_codex_rule_lifecycle), indent=2))
@@ -1569,6 +1581,102 @@ def classify_registration_isolation(observation, fixture):
     if not all(absent(phase) for phase in (candidate, removed)):
         return result('incomplete_evidence')
     return result('discovery_absence_observed')
+
+
+def decode_copilot_overlay_json(data):
+    """Decode only the offline profile's JSON, rejecting ambiguous objects."""
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('Duplicate overlay JSON key: ' + key)
+            result[key] = value
+        return result
+
+    def reject_constant(value):
+        raise ValueError('Nonfinite overlay JSON value: ' + value)
+
+    if type(data) is not bytes:
+        raise ValueError('Overlay JSON must be captured bytes')
+    return json.loads(data.decode('utf-8'), object_pairs_hook=unique, parse_constant=reject_constant)
+
+
+def plan_copilot_overlay_edit(baseline, current, plugin_key, action, mode):
+    """Plan this canonical fixture's owned edit; never apply it to a file."""
+    if type(mode) is not int or mode != 0o600:
+        raise ValueError('Overlay fixture mode must remain 0600')
+    if not isinstance(plugin_key, str) or not re.fullmatch(
+            r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,63}', plugin_key):
+        raise ValueError('Unsupported owned plugin identity')
+    if action not in ('mask', 'unmask', 'remask', 'release'):
+        raise ValueError('Unsupported overlay edit action')
+    value = decode_copilot_overlay_json(baseline)
+    if (not isinstance(value, dict) or set(value) != {'companyAnnouncements', 'enabledPlugins'}
+            or value['enabledPlugins'] != {} or not isinstance(value['enabledPlugins'], dict)
+            or not isinstance(value['companyAnnouncements'], list) or not value['companyAnnouncements']
+            or any(not isinstance(item, str) or not item for item in value['companyAnnouncements'])):
+        raise ValueError('Overlay baseline must be the declared fixture with an empty plugin map')
+    canonical = (json.dumps(value, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
+    if baseline != canonical:
+        raise ValueError('Unsupported overlay baseline formatting')
+    replacement = ('"enabledPlugins": {\n    "' + plugin_key + '": false\n  }').encode('utf-8')
+    masked = baseline.replace(b'"enabledPlugins": {}', replacement, 1)
+    expected = baseline if action in ('mask', 'remask') else masked
+    if type(current) is not bytes or current != expected:
+        raise ValueError('Overlay current bytes changed or action repeated')
+    return masked if action in ('mask', 'remask') else baseline
+
+
+def plan_copilot_overlay_phase(prefix, attempts, budget):
+    """Plan protocol order/caps only; prefix is not validated native evidence."""
+    steps = (('observer_positive', 'copilot', 'masked', False),
+             ('owner_positive', 'claude', 'masked', True),
+             ('baseline', 'copilot', 'masked', False),
+             ('owner_candidate', 'claude', 'masked', True),
+             ('masked_candidate', 'copilot', 'masked', True),
+             ('unmasked_reference', 'copilot', 'unmasked', True),
+             ('remasked_candidate', 'copilot', 'masked', True),
+             ('post_removal', 'copilot', 'masked', False))
+    if (not isinstance(prefix, list) or len(prefix) > len(steps)
+            or prefix != [step[0] for step in steps[:len(prefix)]]):
+        raise ValueError('Overlay phase prefix is skipped, repeated or out of order')
+    if type(attempts) is not int or attempts != len(prefix) or not 0 <= attempts <= 8:
+        raise ValueError('Overlay attempt count changed; no automatic retry is planned')
+    if (not isinstance(budget, dict)
+            or set(budget) != {'process_limit', 'copilot_max_ai_credits', 'claude_max_budget_usd'}
+            or type(budget['process_limit']) is not int or budget['process_limit'] != 8):
+        raise ValueError('The complete overlay profile needs an explicit eight-process ceiling')
+    for key in ('copilot_max_ai_credits', 'claude_max_budget_usd'):
+        cap = budget[key]
+        if (not isinstance(cap, str) or not re.fullmatch(r'(0|[1-9][0-9]*)(\.[0-9]+)?', cap)
+                or Decimal(cap) <= 0):
+            raise ValueError('Both clients need explicit positive decimal caps')
+    result = {'kind': 'phase_plan', 'planning_complete': len(prefix) == 8,
+              'next_phase': None, 'native_run_authorized': False}
+    if len(prefix) < 8:
+        name, client, overlay, registered = steps[len(prefix)]
+        unit, key = ('usd', 'claude_max_budget_usd') if client == 'claude' else ('ai_credits', 'copilot_max_ai_credits')
+        result.update(next_phase=name, client=client, expected_overlay=overlay,
+                      expected_owner_registered=registered,
+                      declared_cap={'unit': unit, 'value': budget[key]})
+    return result
+
+
+def replay_copilot_overlay_plan(packet):
+    """Produce planning data only, never native evidence or run authority."""
+    if (isinstance(packet, dict) and packet.get('kind') == 'phase'
+            and set(packet) == {'kind', 'prefix', 'attempts', 'budget'}):
+        return plan_copilot_overlay_phase(packet['prefix'], packet['attempts'], packet['budget'])
+    fields = {'kind', 'baseline_utf8', 'current_utf8', 'plugin_key', 'action', 'mode'}
+    if not isinstance(packet, dict) or set(packet) != fields or packet.get('kind') != 'edit':
+        raise ValueError('Unsupported overlay planning packet')
+    if any(not isinstance(packet[key], str) for key in ('baseline_utf8', 'current_utf8')):
+        raise ValueError('Overlay fixture captures must be UTF-8 strings')
+    updated = plan_copilot_overlay_edit(packet['baseline_utf8'].encode('utf-8'),
+                                      packet['current_utf8'].encode('utf-8'),
+                                      packet['plugin_key'], packet['action'], packet['mode'])
+    return {'kind': 'fixture_edit_plan', 'updated_utf8': updated.decode('utf-8'),
+            'sha256': hashlib.sha256(updated).hexdigest(), 'native_run_authorized': False}
 
 
 if __name__ == '__main__':

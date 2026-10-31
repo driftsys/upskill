@@ -163,6 +163,66 @@ Do not grant temporary-directory-wide reads or run hooks from unreviewed
 profiles. If the pinned client cannot enforce the required read/tool boundary,
 stop as unsupported rather than replacing it with prompt prose.
 
+## First offline planning layer
+
+Task [#448](https://github.com/driftsys/upskill/issues/448) adds a pure planning
+mode to the existing qualification script:
+
+```bash
+python3 scripts/qualify-plugin-rules.py --plan-copilot-overlay PACKET.json
+```
+
+The packet is captured, non-secret fixture data. The CLI reads it and prints a
+JSON plan; it does not write a settings file or invoke any client. Invalid
+packets exit 2. All outputs contain `native_run_authorized: false`, including a
+complete eight-step planning prefix. These are not native observations or
+isolation verdicts.
+
+**Edit packets** contain exactly `kind: "edit"`, `baseline_utf8`,
+`current_utf8`, `plugin_key`, `action` and integer `mode: 384` (0600). Baseline
+is canonical two-space UTF-8 JSON with a final newline, exactly a nonempty
+`companyAnnouncements` string list and an empty `enabledPlugins` map.
+Unsupported formatting/content, duplicate keys, nonfinite values, pre-existing
+plugin entries, invalid identities, stale current bytes and changed mode reject.
+The plugin key has exactly two components separated by `@`; each is 1–64
+characters, starts with a lower-case letter or digit and otherwise contains only
+lower-case letters, digits or hyphens. `mask`/`remask` require baseline current
+bytes; `unmask`/`release` require the exact planned masked bytes. The
+`fixture_edit_plan` output supplies `updated_utf8` and its `sha256`; only the
+declared map content changes. No generic settings writer or actual
+filesystem-mode/ownership check is implemented.
+
+**Phase packets** contain exactly `kind: "phase"`, `prefix`, `attempts` and
+`budget`. Prefix is a planning input, not evidence that a phase succeeded. It
+must follow the eight named phases below. Attempts must be the same integer as
+prefix length; retries, reordered/skipped steps and a ninth attempt reject.
+Budget must contain exactly integer `process_limit: 8`, `copilot_max_ai_credits`
+and `claude_max_budget_usd`; both per-client caps are explicit positive decimal
+strings, never defaults. The output selects the next client's declared cap and
+expected overlay/owner condition. Its `phase_plan` includes `planning_complete`
+and `next_phase`; after all eight steps it returns completion with no next phase
+or declared cap. It cannot verify real approval, remaining account quota, native
+cap enforcement or billed usage.
+
+The pure APIs are
+`plan_copilot_overlay_edit(baseline, current, plugin_key,
+action, mode) -> bytes`,
+`plan_copilot_overlay_phase(prefix, attempts, budget)
+-> dict` and
+`replay_copilot_overlay_plan(packet) -> dict`. File application, qualified
+roots/locks, native event/resource correlation, actual phase completion,
+managed-policy checks, persistent attempt accounting and native-effect recovery
+remain separate unimplemented boundaries. Passing these guards never admits a
+paid native process or substitutes for the required native replay.
+
+The [implementation](../../scripts/qualify-plugin-rules.py) and
+[offline acceptance tests](../../scripts/tests/test_copilot_overlay_planning.py)
+are the executable references for this layer. The archived
+[spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md) and
+[plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain its
+working scope and execution ceremony. Existing Q11/Q11b classifiers are
+unchanged.
+
 ## Native sequence and process ceiling
 
 At most **eight fresh model processes**, with no automatic process retries. This
