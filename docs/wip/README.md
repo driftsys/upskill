@@ -12,6 +12,12 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Four-client skills and resources delivery](specs/2026-10-31-four-client-skills-resources-design.md)
+  and its
+  [staged plan](plans/2026-10-31-four-client-skills-resources-delivery.md) :
+  proposed concrete layout, selection and native lifecycle design following
+  accepted AD-0041. No native route or schema-2 CLI is activated.
+
 - [Copilot-local plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
   : proposed under [#446](https://github.com/driftsys/upskill/issues/446).
   Primary references and Copilot 1.0.103 help support investigating one owned
