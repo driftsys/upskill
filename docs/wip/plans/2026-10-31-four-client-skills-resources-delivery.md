@@ -65,8 +65,10 @@ opt-in boundary. Keep `src/compile/item.rs` rejection behavior intact.
 `TargetSurface`, installed name and permission/capability context. Produce
 `SelectedSkill` containing canonical metadata, selected-body provenance,
 rendered body and ordered captured resources. Export
-`select_skill(request: &SkillSelectionRequest) -> Result<SelectedSkill>`. The
-request owns or borrows the captured evidence; it never rereads source paths.
+`select_skill(request: &SkillSelectionRequest) -> Result<Option<SelectedSkill>>`.
+An audience-excluded target returns `None`; invalid source or projection returns
+an error. The request owns or borrows the captured evidence; it never rereads
+source paths.
 
 - [x] Write failing tests: audience exclusion precedes override selection;
       existing three overrides are verbatim; canonical Codex directives filter;
