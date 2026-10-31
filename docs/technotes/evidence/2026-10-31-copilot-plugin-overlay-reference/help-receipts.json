@@ -1,0 +1,73 @@
+{
+  "captured_at_utc": "2026-10-31T04:34:52.314419+00:00",
+  "client": "copilot",
+  "version": "1.0.103",
+  "platform": "macOS arm64",
+  "commands": [
+    {
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "0381297224b3ae763df6f5434597b39b5ea5d26a42cab604ad8d346d69487237",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "552e521ede2e6bfd01b2ec4b0d3e54b96a167c2b49fcbc9e8452a6a0250b3d3f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "config",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "618edeb159e3d102b3ec301493c916a20b22bcff906b8ca248ab8ec21ae86a3f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "plugin",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "9151bf5cd1c1edaf96d567c3e54ba3fade86c6f26c8f9584e48ef12d4534897b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "$CLIENT_BIN/copilot",
+        "--no-auto-update",
+        "skill",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "0b74a4d04c05871002ad9ea735e358282b37d947295a6a32bcd80d2fd0b7ed0d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "help_observations": [
+    "local repository config target documented by installed help",
+    "JSON plugin inventory documented by installed help",
+    "JSON skill inventory documented by installed help"
+  ],
+  "limits": [
+    "Help output only; enabledPlugins precedence and activation not executed.",
+    "No config read/write, registration or model command executed.",
+    "No native profile or isolation result established."
+  ]
+}

@@ -12,6 +12,12 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Copilot-local plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
+  : proposed under [#446](https://github.com/driftsys/upskill/issues/446).
+  Primary references and Copilot 1.0.103 help support investigating one owned
+  local plugin-map entry. Native execution, fixture provisioning and model
+  allowance require approval; no new run or gate amendment is adopted.
+
 - [Customization delivery policy comparison](../technotes/customization-delivery-policy-comparison.md)
   : decision package under
   [#442](https://github.com/driftsys/upskill/issues/442) after the completed
