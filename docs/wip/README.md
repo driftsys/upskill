@@ -12,6 +12,14 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Customization delivery policy comparison](../technotes/customization-delivery-policy-comparison.md)
+  : decision package under
+  [#442](https://github.com/driftsys/upskill/issues/442) after the completed
+  Q11b isolation FAIL. Recommends separate representations as a design baseline
+  without adopting it. Shared-profile consent, concrete selectors/preservation
+  and any gate amendment still require their own decision and evidence. No
+  further native experiment is scheduled.
+
 - [Q11 intended-client registration and unintended discovery follow-up](specs/2026-10-25-q11-registration-isolation-follow-up.md)
   : proposed under [#421](https://github.com/driftsys/upskill/issues/421).
   [Q11](../technotes/gate6-cross-client-package-isolation.md) is merged and
@@ -121,7 +129,10 @@ untouched in the original worktree. The
 [design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)
 identifies the draft and requires its disposition; the
 [delivery proposal](specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)
-records this retained-context choice.
+records this retained-context choice. The
+[self-contained policy comparison](../technotes/customization-delivery-policy-comparison.md)
+now evaluates its A/B alternatives against retained Q11/Q11b evidence without
+moving the draft or adopting a layout.
 
 ### OpenCode explicit-path observation
 
