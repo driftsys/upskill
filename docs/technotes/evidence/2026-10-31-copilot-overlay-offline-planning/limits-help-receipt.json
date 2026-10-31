@@ -16,5 +16,6 @@
   "limits": [
     "Help text only; no model session or account quota was queried by this command.",
     "Actual account usage and reserves are private and must be checked freshly before execution."
-  ]
+  ],
+  "observed_accounting_timing": "Usage becomes available after a model response; overshoot can occur before the next call is blocked."
 }

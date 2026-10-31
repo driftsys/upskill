@@ -129,7 +129,7 @@ class OverlayEditGuards(unittest.TestCase):
 
     def test_unsupported_plugin_keys_cannot_inject_or_select_manual_entries(self):
         for key in ('', 'Owner@market', 'owner', 'owner@market@other', '../owner@market',
-                    'owner"@market', 'owner@market.name', 'o' * 65 + '@market'):
+                    'owner"@market', 'owner@market.name', 'o' * 65 + '@market', 'owner@' + 'm' * 65):
             with self.subTest(key=key):
                 with self.assertRaises(ValueError):
                     self.edit(key=key)
@@ -146,9 +146,10 @@ class OverlayEditGuards(unittest.TestCase):
     def test_unsupported_format_shape_duplicates_and_nonfinite_values_reject(self):
         baselines = [BASELINE.rstrip(), json.dumps(json.loads(BASELINE)),
                      '{"enabledPlugins": {}}',
-                     BASELINE.replace('"enabledPlugins": {}', '"enabledPlugins": [], "unknown": 1'),
+                     json.dumps(dict(json.loads(BASELINE), unknown=1), indent=2) + '\n',
                      BASELINE.replace('"manual sentinel"', 'NaN'),
                      BASELINE.replace('"manual sentinel"', 'false'),
+                     BASELINE.replace('"manual sentinel"', '""'),
                      BASELINE.replace('"companyAnnouncements": [',
                                       '"companyAnnouncements": [], "companyAnnouncements": ['),
                      'not JSON',

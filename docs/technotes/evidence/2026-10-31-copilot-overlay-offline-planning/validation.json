@@ -1,10 +1,10 @@
 {
-  "captured_at_utc": "2026-10-31T05:45:57.794283+00:00",
+  "captured_at_utc": "2026-10-31T06:04:02.852908+00:00",
   "scope": "offline planner validation only",
   "implementation_commit": "448fa4f36197e93790f6aaf4e3e747ce66d77fea",
   "source_sha256": {
     "scripts/qualify-plugin-rules.py": "a830cf2ea0cbef631fad96b56d92dd0c712c3e0150d4fa1f856770c6849035fb",
-    "scripts/tests/test_copilot_overlay_planning.py": "988a2193014aae094ac5616823596e180a16e5aec15df9aa6309000db1b5582f"
+    "scripts/tests/test_copilot_overlay_planning.py": "e45661d38ac84fe0ce5344410f503de934ec6224a8931ced54b499a3623457c0"
   },
   "historical_red": [
     {
@@ -35,13 +35,13 @@
   "green": [
     {
       "log_name": "copilot-overlay-guards-reviewed-focused.log",
-      "sha256": "92d727a5f4caac0be3b1dd9c1cca6140244801a890b4ed6825a945b2505a9e85",
+      "sha256": "7614c782aa647e6af80506c6825666fbddfbadc77e9be44d0ffb9a4e41194be5",
       "tests": 19,
       "result": "OK"
     },
     {
       "log_name": "copilot-overlay-guards-reviewed-suite.log",
-      "sha256": "4146220046398b56fcd0642f69f9cc975ec5b3b8e3fa14f44f417fbc89132ff7",
+      "sha256": "f80237740ff81bb168b8f1f96e9caa351cf05f070152a5121dd7d3f33b60e05e",
       "tests": 338,
       "result": "OK"
     }
@@ -69,7 +69,7 @@
       "replace": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,63}'",
       "with": "r'.+'",
       "rejected": true,
-      "assertion_failures": 7,
+      "assertion_failures": 8,
       "errors": 0
     },
     {
@@ -196,6 +196,30 @@
       "mutation": "accept_boolean_attempt",
       "replace": "type(attempts) is not int",
       "with": "not isinstance(attempts, int)",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_extra_baseline_fields",
+      "replace": "set(value) != {'companyAnnouncements', 'enabledPlugins'}",
+      "with": "not {'companyAnnouncements', 'enabledPlugins'}.issubset(value)",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_empty_sentinel_string",
+      "replace": " or not item",
+      "with": "",
+      "rejected": true,
+      "assertion_failures": 1,
+      "errors": 0
+    },
+    {
+      "mutation": "accept_long_marketplace",
+      "replace": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,63}'",
+      "with": "r'[a-z0-9][a-z0-9-]{0,63}@[a-z0-9][a-z0-9-]{0,127}'",
       "rejected": true,
       "assertion_failures": 1,
       "errors": 0

@@ -320,15 +320,17 @@ qualify interruption/recovery or authorize a settings writer in the product.
 
 ## Decision after review
 
-The user approved continuation and then required live allowance/reset checks
-that preserve headroom before any native spending. Treat future use as
-conditional on those checks, the declared fixture/profile and all remaining
-capture/enforcement guards. Account figures and concrete reserve allocations
-remain private; no billing setting or additional-usage purchase is authorized.
-The native capture/approval/quota-enforcement path is not implemented here, so
-planning output cannot admit a run. This instruction adopts no package layout,
-public default, audience or replacement qualification gate. Original Q11/Q11b
-results, preservation outcomes and [#410][q11-issue] remain unchanged.
+The user approved offline preparation. Native execution requires explicit
+authorization for the concrete fixture/profile and model allowance, followed by
+the requested live allowance/reset checks that preserve headroom. The reserve
+instruction alone does not admit a native run; all remaining capture/enforcement
+guards must also be implemented and satisfied. Account figures and concrete
+reserve allocations remain private; no billing setting or additional-usage
+purchase is authorized. The native capture/approval/quota-enforcement path is
+not implemented here, so planning output cannot admit a run. This instruction
+adopts no package layout, public default, audience or replacement qualification
+gate. Original Q11/Q11b results, preservation outcomes and [#410][q11-issue]
+remain unchanged.
 
 [comparison-pr]: https://github.com/driftsys/upskill/pull/444
 [q11b]: gate6-project-registration-isolation.md
