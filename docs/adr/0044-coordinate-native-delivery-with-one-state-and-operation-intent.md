@@ -158,9 +158,25 @@ evidence blobs; it performs no I/O, migration or publication.
 identities, rejects physical aliases and acquires nonblocking writer guards in
 ascending device/inode order. Failure releases every acquired guard. These
 advisory locks release on process exit; they provide no pending markers or
-post-crash exclusion. Filesystem-profile admission remains separate. The
-qualified multi-root store and durable coordinator remain unimplemented. Stage 5
-is open.
+post-crash exclusion. Filesystem-profile admission remains separate from those
+locks.
+
+`native_delivery::store::NativeEvidenceStore` now stores immutable typed blobs
+under `.upskill/native-evidence` in an explicitly qualified user root. It
+borrows the matching writer guard, reuses descriptor-based execution primitives
+and qualifies the existing filesystem profiles, mount binding, metadata and link
+controls. Its owned directory uses mode `0700`, its files use `0600`, and its
+ignore file excludes all entries. Tracked evidence rejects, including when an
+ancestor alias reaches a repository. Root and directory identities plus a random
+local nonce bind `owner.json`; a domain-separated digest of those exact owner
+bytes supplies the expected namespace. Copied, unowned or partially initialized
+stores require reconciliation. Equal blobs are verified and synced; conflicting
+bytes remain untouched. No evidence garbage collection is supplied.
+
+The private evidence store does not publish lockfile JSON, operation intent or
+pending markers. Interrupted blob-publication tests establish process restart
+behavior, not power-loss durability or native recovery. The multi-root operation
+store and durable coordinator remain unimplemented. Stage 5 is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are

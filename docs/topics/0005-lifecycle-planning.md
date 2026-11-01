@@ -1319,3 +1319,25 @@ non-cooperating editors, freeze path bindings, qualify filesystem profiles or
 record durable operation intent. Locks release after normal exit or a crash.
 Pending markers and recovery coordination remain required before native effects
 can be admitted.
+
+## Inactive qualified private native evidence
+
+`native_delivery::store::NativeEvidenceStore` opens or initializes
+`.upskill/native-evidence` beneath an exact qualified user root while borrowing
+its writer guard. `open` creates nothing; `initialize` rejects unowned or
+partial stores. The directory uses `0700`, files use `0600`, and `.gitignore`
+excludes all entries. Force-tracked content rejects, including through ancestor
+aliases. The existing APFS/ext4/tmpfs profile, descriptor, mount, metadata and
+link checks apply; this API admits no native client profile.
+
+The store derives its namespace from owned root/directory identities and a local
+nonce, preserves immutable typed blobs and validates reference syntax before
+path selection. A blob must match its framed kind, length and digest. Equal
+existing bytes are verified and synced; corruption or changed ownership rejects
+without replacement. Copied store records cannot become authority in another
+directory. Namespace/root equality remains required when parsing state.
+
+This private evidence is not another installation lock. The API neither loads
+nor publishes the authoritative graph, journals operations, creates pending
+markers nor retires old evidence. Full state integration, multi-root crash
+exclusion and native recovery remain later Stage 5 work.

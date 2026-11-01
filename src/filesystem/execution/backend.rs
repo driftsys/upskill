@@ -27,7 +27,7 @@ fn sync_recovery(file: &File, kind: &'static str) -> Result<()> {
     file.sync_all()?;
     Ok(())
 }
-pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
+pub(in crate::filesystem) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
     let metadata = file.metadata()?;
     ensure!(
         metadata.mode() & 0o7000 == 0,
@@ -72,7 +72,10 @@ pub(super) fn require_plain_metadata(file: &File) -> Result<ExtendedMetadata> {
     }
     Ok(attributes)
 }
-pub(super) fn qualify_metadata(scope: &QualifiedScope, location: &FileLocation) -> Result<()> {
+pub(in crate::filesystem) fn qualify_metadata(
+    scope: &QualifiedScope,
+    location: &FileLocation,
+) -> Result<()> {
     let snapshot = scope.observe_destinations(std::slice::from_ref(location))?;
     let mut dir = scope.reopen_directory()?;
     let mount = Mount::of(&dir, Mount::queries())?;
@@ -110,12 +113,12 @@ pub(super) fn qualify_metadata(scope: &QualifiedScope, location: &FileLocation) 
     }
     snapshot.verify_unchanged()
 }
-pub(super) fn nonce() -> Result<String> {
+pub(in crate::filesystem) fn nonce() -> Result<String> {
     let mut bytes = [0u8; 16];
     File::open("/dev/urandom")?.read_exact(&mut bytes)?;
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
-pub(super) fn directory(parent: &File, name: &str) -> Result<File> {
+pub(in crate::filesystem) fn directory(parent: &File, name: &str) -> Result<File> {
     Ok(File::from(openat(
         parent,
         name,
@@ -123,7 +126,7 @@ pub(super) fn directory(parent: &File, name: &str) -> Result<File> {
         Mode::empty(),
     )?))
 }
-pub(super) fn spelling(parent: &File, name: &str) -> Result<()> {
+pub(in crate::filesystem) fn spelling(parent: &File, name: &str) -> Result<()> {
     for entry in Dir::read_from(parent)? {
         if entry?.file_name().to_bytes() == name.as_bytes() {
             return Ok(());
@@ -131,7 +134,7 @@ pub(super) fn spelling(parent: &File, name: &str) -> Result<()> {
     }
     anyhow::bail!("directory component spelling changed: {name}")
 }
-pub(super) fn identity(file: &File) -> Result<(u64, u64)> {
+pub(in crate::filesystem) fn identity(file: &File) -> Result<(u64, u64)> {
     let m = file.metadata()?;
     Ok((m.dev(), m.ino()))
 }
@@ -175,7 +178,7 @@ pub(super) fn observe(
         })
         .collect()
 }
-pub(super) fn sync_post(
+pub(in crate::filesystem) fn sync_post(
     scope: &QualifiedScope,
     location: &FileLocation,
     expected: &Option<crate::files::plan::FileValue>,
@@ -211,7 +214,20 @@ pub(super) fn apply_create_only(
         action.after.is_some() && (action.before.is_none() || action.before == action.after),
         "create-only action cannot replace or remove content"
     );
-    apply_named_with_policy(scope, action, &nonce()?, index, true)
+    apply_named_with_policy(scope, action, &nonce()?, index, true, None)
+}
+/// Create only beneath an already-pinned parent; never recreate missing parents.
+pub(in crate::filesystem) fn apply_create_only_bound(
+    scope: &QualifiedScope,
+    action: &PlannedFile,
+    index: usize,
+    parent_identity: (u64, u64),
+) -> Result<()> {
+    ensure!(
+        action.after.is_some() && (action.before.is_none() || action.before == action.after),
+        "create-only action cannot replace or remove content"
+    );
+    apply_named_with_policy(scope, action, &nonce()?, index, true, Some(parent_identity))
 }
 fn apply_named(
     scope: &QualifiedScope,
@@ -219,7 +235,7 @@ fn apply_named(
     token: &str,
     index: usize,
 ) -> Result<()> {
-    apply_named_with_policy(scope, action, token, index, false)
+    apply_named_with_policy(scope, action, token, index, false, None)
 }
 fn apply_named_with_policy(
     scope: &QualifiedScope,
@@ -227,6 +243,7 @@ fn apply_named_with_policy(
     token: &str,
     index: usize,
     create_only: bool,
+    parent_identity: Option<(u64, u64)>,
 ) -> Result<()> {
     qualify_metadata(scope, &action.location)?;
     let locations = [action.location.clone()];
@@ -235,11 +252,27 @@ fn apply_named_with_policy(
         before.observations()[0].value == action.before,
         "destination changed before execution action"
     );
+    if let Some(expected) = parent_identity {
+        ensure!(
+            identity(&parent(scope, &action.location, false)?.0)? == expected,
+            "private publication parent binding changed"
+        );
+    }
     if action.before == action.after {
         before.verify_unchanged()?;
         return Ok(());
     }
-    let (dir, name) = parent(scope, &action.location, action.after.is_some())?;
+    let (dir, name) = parent(
+        scope,
+        &action.location,
+        action.after.is_some() && parent_identity.is_none(),
+    )?;
+    if let Some(expected) = parent_identity {
+        ensure!(
+            identity(&dir)? == expected,
+            "private publication parent binding changed"
+        );
+    }
     let snapshot = scope.observe_destinations(&locations)?;
     ensure!(
         snapshot.observations()[0].value == action.before,

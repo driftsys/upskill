@@ -47,10 +47,7 @@ pub(super) fn add(
 pub(super) fn index(blobs: &[EvidenceBlob]) -> Result<Blobs> {
     let mut indexed = Blobs::new();
     for blob in blobs {
-        ensure!(
-            reference(blob.reference.kind.clone(), &blob.bytes)? == blob.reference,
-            "private evidence kind, digest or length differs from bytes"
-        );
+        validate_blob(blob)?;
         ensure!(
             indexed
                 .insert(
@@ -80,6 +77,28 @@ pub(super) fn resolve<'a>(
         "private evidence reference differs"
     );
     Ok(&blob.bytes)
+}
+
+/// Validate a reference before it can select a storage path.
+pub(crate) fn validate_reference(reference: &EvidenceReference) -> Result<()> {
+    ensure!(
+        reference.digest.len() == 64
+            && reference
+                .digest
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "invalid private evidence digest"
+    );
+    Ok(())
+}
+
+pub(crate) fn validate_blob(blob: &EvidenceBlob) -> Result<()> {
+    validate_reference(&blob.reference)?;
+    ensure!(
+        reference(blob.reference.kind.clone(), &blob.bytes)? == blob.reference,
+        "private evidence kind, digest or length differs from bytes"
+    );
+    Ok(())
 }
 
 #[cfg(test)]

@@ -51,6 +51,13 @@ impl NativeRootLocks<'_> {
 /// writer guards without waiting. On any failure, acquired guards are dropped.
 /// No filesystem-profile admission, source authority or native success follows.
 pub fn lock_native_roots<'a>(roots: &[NativeRoot<'a>]) -> Result<NativeRootLocks<'a>> {
+    lock_native_roots_with(roots, QualifiedScope::try_lock_writer)
+}
+
+fn lock_native_roots_with<'a>(
+    roots: &[NativeRoot<'a>],
+    mut acquire: impl FnMut(&'a QualifiedScope) -> Result<ScopeWriterGuard<'a>>,
+) -> Result<NativeRootLocks<'a>> {
     ensure!(
         !roots.is_empty(),
         "native delivery requires at least one root"
@@ -76,7 +83,7 @@ pub fn lock_native_roots<'a>(roots: &[NativeRoot<'a>]) -> Result<NativeRootLocks
     let mut scopes = Vec::new();
     let mut guards = Vec::new();
     for (binding, scope) in ordered {
-        guards.push(scope.try_lock_writer()?);
+        guards.push(acquire(scope)?);
         bindings.push(binding);
         scopes.push(scope);
     }
@@ -105,6 +112,90 @@ fn order_roots(ordered: &mut [(NativeRootBinding, &QualifiedScope)]) -> Result<(
 mod tests {
     use super::*;
     use crate::ownership::OwnershipScope;
+
+    fn released(scope: &QualifiedScope) {
+        // Other unit tests can fork while a guard is held. Allow inherited
+        // descriptions to close on exec; a retained guard still times out.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            match scope.try_lock_writer() {
+                Ok(guard) => {
+                    drop(guard);
+                    return;
+                }
+                Err(error) => {
+                    assert!(
+                        std::time::Instant::now() < deadline,
+                        "guard remained held: {error}"
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn changed_earlier_root_during_later_acquisition_rejects_and_releases_all_guards() {
+        for first_scope in [OwnershipScope::Project, OwnershipScope::User] {
+            let tmp = tempfile::tempdir().unwrap();
+            let a = tmp.path().join("a");
+            let b = tmp.path().join("b");
+            std::fs::create_dir(&a).unwrap();
+            std::fs::create_dir(&b).unwrap();
+            let mut paths = [a, b];
+            use std::os::unix::fs::MetadataExt;
+            paths.sort_by_key(|path| {
+                let metadata = std::fs::metadata(path).unwrap();
+                (metadata.dev(), metadata.ino())
+            });
+            let earlier = InstallationRoot {
+                scope: first_scope,
+                path: paths[0].clone(),
+            };
+            let later = InstallationRoot {
+                scope: if first_scope == OwnershipScope::Project {
+                    OwnershipScope::User
+                } else {
+                    OwnershipScope::Project
+                },
+                path: paths[1].clone(),
+            };
+            let first = QualifiedScope::open(&earlier).unwrap();
+            let second = QualifiedScope::open(&later).unwrap();
+            let retained = tmp.path().join("retained");
+            let mut count = 0;
+            let result = lock_native_roots_with(
+                &[
+                    NativeRoot {
+                        root: later.clone(),
+                        scope: &second,
+                    },
+                    NativeRoot {
+                        root: earlier.clone(),
+                        scope: &first,
+                    },
+                ],
+                |scope| {
+                    count += 1;
+                    if count == 2 {
+                        std::fs::rename(&earlier.path, &retained).unwrap();
+                        std::fs::create_dir(&earlier.path).unwrap();
+                    }
+                    scope.try_lock_writer()
+                },
+            );
+            assert_eq!(count, 2);
+            assert!(result.is_err(), "changed earlier root returned a lock set");
+            // The real guards must release even when the final collective check fails.
+            let moved = QualifiedScope::open(&InstallationRoot {
+                path: retained,
+                ..earlier
+            })
+            .unwrap();
+            released(&moved);
+            released(&second);
+        }
+    }
 
     #[test]
     fn physical_order_and_alias_detection_use_both_device_and_inode() {

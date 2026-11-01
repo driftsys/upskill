@@ -18,3 +18,6 @@ pub use scope::{QualifiedScope, ScopeBinding, ScopeWriterGuard};
 
 mod paths;
 pub(crate) use paths::may_overlap as paths_may_overlap;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) mod native_evidence;

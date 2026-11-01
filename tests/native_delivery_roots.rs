@@ -88,6 +88,30 @@ fn roots_lock_in_physical_order_hold_every_guard_and_release_without_files() {
             .collect::<Vec<_>>(),
         expected
     );
+    for (actual, logical, directory) in [
+        (
+            bindings.iter().find(|r| r.root == ra).unwrap(),
+            &ra,
+            a.path(),
+        ),
+        (
+            bindings.iter().find(|r| r.root == rb).unwrap(),
+            &rb,
+            b.path(),
+        ),
+    ] {
+        let metadata = fs::metadata(directory).unwrap();
+        assert_eq!(&actual.root, logical);
+        assert_eq!(actual.binding.selected, logical.path);
+        assert_eq!(
+            actual.binding.resolved,
+            fs::canonicalize(directory).unwrap()
+        );
+        assert_eq!(
+            (actual.binding.device, actual.binding.inode),
+            (metadata.dev(), metadata.ino())
+        );
+    }
     assert!(sa.try_lock_writer().is_err());
     assert!(sb.try_lock_writer().is_err());
     locks.verify_bindings().unwrap();
@@ -136,7 +160,7 @@ fn roots_reject_forged_bindings_duplicates_and_ancestor_aliases_before_locking()
 }
 
 #[test]
-fn partial_lock_failure_releases_earlier_roots_and_later_replacement_is_detected() {
+fn partial_lock_failure_releases_earlier_roots_and_each_root_replacement_is_detected() {
     let _serial = SERIAL.lock().unwrap_or_else(|error| error.into_inner());
     let a = tempfile::tempdir().unwrap();
     let b = tempfile::tempdir().unwrap();
@@ -159,15 +183,18 @@ fn partial_lock_failure_releases_earlier_roots_and_later_replacement_is_detected
     assert!(lock_native_roots(&pair).is_err());
     drop(pair[0].scope.try_lock_writer().unwrap());
     drop(held);
-    let locks = lock_native_roots(&pair).unwrap();
-    locks.verify_bindings().unwrap();
-    let retained = tempfile::tempdir().unwrap();
-    let old = retained.path().join("retained-root");
-    fs::rename(a.path(), &old).unwrap();
-    fs::create_dir(a.path()).unwrap();
-    assert!(locks.verify_bindings().is_err());
-    drop(locks);
-    fs::rename(&old, a.path().join("old-root")).unwrap();
+    for changed in [a.path(), b.path()] {
+        let locks = lock_native_roots(&pair).unwrap();
+        locks.verify_bindings().unwrap();
+        let retained = tempfile::tempdir().unwrap();
+        let old = retained.path().join("retained-root");
+        fs::rename(changed, &old).unwrap();
+        fs::create_dir(changed).unwrap();
+        assert!(locks.verify_bindings().is_err());
+        drop(locks);
+        fs::remove_dir(changed).unwrap();
+        fs::rename(&old, changed).unwrap();
+    }
 }
 
 struct Process(Child);

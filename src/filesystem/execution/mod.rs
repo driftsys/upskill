@@ -9,7 +9,7 @@ impl ExecutionRequest {
     }
 }
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-mod backend;
+pub(in crate::filesystem) mod backend;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod journal;
 #[cfg(target_os = "macos")]
