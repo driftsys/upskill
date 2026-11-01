@@ -32,10 +32,18 @@ pub fn capture_for_surface(
     context: &NativeStateContext,
     surface: TargetSurface,
 ) -> NativeOperationCapture {
+    capture_with_body(context, surface, "Fixture body.")
+}
+
+pub fn capture_with_body(
+    context: &NativeStateContext,
+    surface: TargetSurface,
+    body: &str,
+) -> NativeOperationCapture {
     let tmp = tempfile::tempdir().unwrap();
     fs::write(
         tmp.path().join("SKILL.md"),
-        "---\nschema: 1\ndescription: Fixture.\n---\nFixture body.\n",
+        format!("---\nschema: 1\ndescription: Fixture.\n---\n{body}\n"),
     )
     .unwrap();
     let source = capture_source(tmp.path()).unwrap();

@@ -1,10 +1,12 @@
-//! Durable preparation only. No application/native effects or completed state.
+//! Durable intent and effect recipes. No application/native effects or completed state.
 use super::roots::NativeRootLocks;
 use super::state::NativeStateContext;
 use super::store::{NativeEvidenceStore, NativeStateStore};
 use crate::ownership::InstallationRoot;
 use anyhow::{Context, Result, ensure};
+mod checkpoints;
 mod codec;
+mod execution;
 mod model;
 mod planning;
 use codec::*;
@@ -88,6 +90,8 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
             intent_sha256: intent_digest(&bytes),
             generation: 0,
             status: NativeJournalStatus::Prepared,
+            execution: None,
+            checkpoints: vec![],
         };
         self.state
             .evidence()
@@ -123,7 +127,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         Ok(PreparedNativeOperation { id })
     }
 
-    /// Inspect immutable intent and initial journal under exactly the recorded
+    /// Inspect immutable intent and the prepared recipe under exactly the recorded
     /// roots. Missing markers report incomplete preparation. No retry or cleanup
     /// follows, and this does not observe application/native completion.
     pub fn inspect(&self, id: &str) -> Result<NativeOperationInspection> {
@@ -139,8 +143,12 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         ensure!(
             journal.schema == 1
                 && journal.operation_id == id
-                && journal.generation == 0
-                && journal.status == NativeJournalStatus::Prepared,
+                && match (&journal.status, &journal.execution) {
+                    (NativeJournalStatus::Prepared, None) =>
+                        journal.generation == 0 && journal.checkpoints.is_empty(),
+                    (NativeJournalStatus::Executing, Some(_)) => journal.generation >= 1,
+                    _ => false,
+                },
             "unsupported native journal"
         );
         let bytes = self
@@ -175,6 +183,10 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
             plan == intent.plan && patches == intent.configuration_patches,
             "native intent differs from replayed captured plan"
         );
+        if let Some(execution) = &journal.execution {
+            execution::validate(&intent, execution, &prior)?;
+            checkpoints::validate(&journal, execution)?;
+        }
         let mut markers_complete = true;
         for marker in &intent.marker_namespaces {
             let Some(store) = self.marker_store(&marker.root.root, false)? else {

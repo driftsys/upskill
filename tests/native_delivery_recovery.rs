@@ -1948,7 +1948,13 @@ fn qualified_state_context_can_expand_and_shrink_only_with_held_roots() {
         ])
         .unwrap();
         let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
-        let state = state_for_qualified_context(store.context());
+        let mut state = state_for_qualified_context(store.context());
+        state.skills.graph.installations.clear();
+        state.skills.graph.references.clear();
+        state.skills.revisions.clear();
+        state.skills.receipts.clear();
+        state.intents.clear();
+        state.files.clear();
         let action = store.prepare_state_file(&state).unwrap();
         fs::write(
             project.path().join(".upskill-lock.json"),
@@ -1978,6 +1984,28 @@ fn qualified_state_context_can_expand_and_shrink_only_with_held_roots() {
         .unwrap();
         let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
         assert_eq!(store.load().unwrap(), Some(state.clone()));
+        let mut foreign = state.clone();
+        foreign.context.scope = additional.clone();
+        foreign.context.additional_roots.clear();
+        assert!(
+            store
+                .prepare_state_file(&foreign)
+                .unwrap_err()
+                .to_string()
+                .contains("principal/private")
+        );
+        let operations = upskill::native_delivery::journal::NativeOperationStore::initialize(
+            &locks, &primary, &private,
+        )
+        .unwrap();
+        let prepared = operations.prepare(&Default::default()).unwrap();
+        let inspection = operations.inspect(prepared.id()).unwrap();
+        assert!(inspection.markers_complete);
+        assert_eq!(
+            inspection.intent.context.additional_roots,
+            vec![additional.clone()]
+        );
+        assert_eq!(operations.context(), store.context());
         let mut expanded = state.clone();
         expanded.context.additional_roots = vec![additional.clone()];
         let action = store.prepare_state_file(&expanded).unwrap();

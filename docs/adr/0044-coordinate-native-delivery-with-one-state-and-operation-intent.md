@@ -67,13 +67,14 @@ digest and length. Serialization and parsing establish no filesystem or native
 authority.
 
 The completed state stores confirmed outcomes only. Unknown/rejected outcomes
-and planned inverses remain in operation intent until recovery resolves them.
-Never serialize a desired preview and call it completed state. An operation may
-commit state only after files and native selections are observed as intended.
-Existing schemas are not migrated automatically, and #332 remains a production
-admission dependency. The earlier inactive schema-3 proposal is not accepted by
-the schema-4 reader; it had no representation for exports staged without a
-confirmed native binding. Older readers must fail closed on this new envelope.
+and planned inverses remain in the private operation journal until recovery
+resolves them. Never serialize a desired preview and call it completed state. An
+operation may commit state only after files and native selections are observed
+as intended. Existing schemas are not migrated automatically, and #332 remains a
+production admission dependency. The earlier inactive schema-3 proposal is not
+accepted by the schema-4 reader; it had no representation for exports staged
+without a confirmed native binding. Older readers must fail closed on this new
+envelope.
 
 ### Staging ownership and context transitions
 
@@ -83,8 +84,10 @@ and a nonempty sorted subset of its immutable revision-file paths. Catalogs,
 configuration selectors, duplicate captures and foreign paths reject. The single
 applied ownership table includes those paths, validated against the recompiled
 package and fixed file policy. A staging record proves no native activation,
-unavailability or detachment; native-bound history still requires its existing
-confirmed receipt lineage.
+unavailability or detachment; detached revision history still requires its
+existing confirmed receipt lineage. Reachable revisions with unavailable intent
+may remain without a current native receipt; a revision record alone proves no
+native activation.
 
 This permits retaining partial exports when restoring an operation that never
 became active. Restore must independently confirm the prior native binding or
@@ -147,15 +150,17 @@ metadata/link/mount controls; do not add path-only journal writes that bypass
 those controls.
 
 Intent contains the exact prior state, intended graph/intent/revisions, all
-staging/selector/configuration file preconditions, native prestate, planned
-inverse, profile attribution, resource-retention evidence and ordered
-checkpoints. The journal is recovery evidence for one operation, not a second
-installation lock. Durably record pending native effects before invoking them,
-and retain uncertain outcomes after timeouts or exceptions. Apply inactive
-staging first; change selectors and native bindings under their qualified
-transition profile; observe both; only then commit the integrated state. Release
-markers only after durable state and completion evidence are verified. Retain
-old revisions; this stage authorizes no resource garbage collection.
+staging/selector/configuration file preconditions, native prestate and
+resource-retention evidence. Before effects, the journal adds the immutable
+execution recipe with planned inverses and profile attribution, then ordered
+pending/observation checkpoints. The journal is recovery evidence for one
+operation, not a second installation lock. Durably record pending native effects
+before invoking them, and retain uncertain outcomes after timeouts or
+exceptions. Apply inactive staging first; change selectors and native bindings
+under their qualified transition profile; observe both; only then commit the
+integrated state. Release markers only after durable state and completion
+evidence are verified. Retain old revisions; this stage authorizes no resource
+garbage collection.
 
 ### Recovery and completion
 
@@ -257,9 +262,9 @@ lease or native completion. Fresh processes exercise interruption after intent
 and after every marker, including shared-root exclusion after process exit.
 
 The store does not stage application files, invoke a client, publish installed
-state or retire markers/evidence. Native effect profiles, ordered effect
-checkpoints, inverse execution and the observation/recovery coordinator remain
-unimplemented. Stage 5 is open.
+state or retire markers/evidence. The effect recipe/checkpoint metadata below is
+implemented; effect execution, inverse execution and the observation/recovery
+coordinator remain unimplemented. Stage 5 is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are
@@ -267,3 +272,47 @@ substeps of Stage 5; no substep alone closes it. Exercise crashes around intent,
 markers, file effects, native effects, observations and final commit, including
 shared secondary-root contention after a crash. No CLI or four-client release
 admission follows from these infrastructure tests.
+
+### Durable effect recipes and pending checkpoints
+
+`NativeDeliveryAdapter` separates read-only profile/capture/inverse planning
+from apply, independent observe and inverse operations. Profiles bind ID,
+revision, surface, scope, client version, platform, exposure order and
+command/file-only kind. These are attribution records; no real profile is
+admitted here.
+
+`prepare_execution` requires complete root markers and an unchanged captured
+state/files view. It calls only profile and inverse planning, then stores one
+immutable recipe in the private journal. Every captured target has an attributed
+profile, including targets without a native change. Profiles on one surface must
+agree on exposure order. Immutable exports precede before-native exposures,
+native steps and after-native exposures. Shared exposure files require an
+unambiguous order across their client consumers. The recipe retains opaque
+private inverse payloads and exact file/native requests. Inspection replays the
+file order and checks request/profile bindings against immutable intent.
+
+Prepared journals still omit recipe/checkpoint fields at generation zero.
+Publishing the recipe moves the journal to `Executing` at generation one; each
+later checkpoint increments the generation. All checkpoints start `Queued`.
+`begin_execution_step` syncs the next step as `Pending` before returning it. It
+rejects skipped steps, already acknowledged steps and an existing pending step.
+This metadata does not replace qualified file preflight or authorize replay. It
+executes no effect.
+
+`record_native_attempt` retains confirmed/rejected/unknown outcomes and optional
+failure details without acknowledging the step. `observe_pending_step` records
+fresh file bytes/mode or an independently supplied native effect observation.
+File acknowledgements require the exact after-value. Native acknowledgements
+require matching operation/profile/target attribution, an unchanged adapter
+profile and observed effect relation `After`. An observer failure, unknown or
+diverged relation remains Pending with evidence retained. Invalid attribution
+rejects without replacing the journal. Earlier attempts and observations remain
+recorded after a later acknowledgement.
+
+Effect relation is deliberately separate from effective native binding. An
+installed but unexposed package can have an acknowledged native step while its
+binding remains absent. The later coordinator must independently verify the
+final intended bindings and all files before authoritative state publication.
+The current APIs neither run commands nor apply files, publish completed state,
+restore an operation or retire markers. Fresh-process tests retain recipe
+metadata after process exit; they make no power-loss or native recovery claim.

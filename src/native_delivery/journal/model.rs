@@ -50,6 +50,7 @@ pub struct NativeOperationIntent {
 #[serde(deny_unknown_fields)]
 pub enum NativeJournalStatus {
     Prepared,
+    Executing,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -59,6 +60,10 @@ pub struct NativeOperationJournal {
     pub intent_sha256: String,
     pub generation: u64,
     pub status: NativeJournalStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<crate::native_delivery::adapter::NativeExecutionPlan>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub checkpoints: Vec<crate::native_delivery::adapter::NativeStepCheckpoint>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

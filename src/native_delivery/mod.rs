@@ -22,3 +22,5 @@ pub mod store;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub mod journal;
+
+pub mod adapter;

@@ -42,6 +42,7 @@ fn probe() {
         .collect();
     let locks = lock_native_roots(&entries).unwrap();
     let store = NativeOperationStore::initialize(&locks, &records[0], &records[1]).unwrap();
+    let execution_checkpoint = target == "after_execution";
     TEST_HOOK.with(|hook| {
         *hook.borrow_mut() = Some(Box::new(move |label, current, id| {
             if label == target && current == index {
@@ -51,7 +52,53 @@ fn probe() {
             Ok(())
         }));
     });
-    store.prepare(&NativeOperationCapture::default()).unwrap();
+    let prepared = store.prepare(&NativeOperationCapture::default()).unwrap();
+    if execution_checkpoint {
+        struct NoCalls;
+        impl crate::native_delivery::adapter::NativeDeliveryAdapter for NoCalls {
+            fn profile(
+                &mut self,
+                _: &crate::lifecycle::native_receipt::SkillTarget,
+                _: &InstallationRoot,
+            ) -> Result<crate::native_delivery::adapter::NativeDeliveryProfile> {
+                anyhow::bail!("unexpected profile")
+            }
+            fn capture(
+                &mut self,
+                _: &crate::lifecycle::native_receipt::SkillTarget,
+                _: &InstallationRoot,
+            ) -> Result<crate::lifecycle::native_receipt::NativeSkillObservation> {
+                anyhow::bail!("unexpected capture")
+            }
+            fn plan_inverse(
+                &mut self,
+                _: &crate::native_delivery::adapter::NativeEffectRequest,
+            ) -> Result<Vec<u8>> {
+                anyhow::bail!("unexpected inverse planning")
+            }
+            fn apply(
+                &mut self,
+                _: &crate::native_delivery::adapter::PlannedNativeEffect,
+            ) -> Result<crate::lifecycle::native_receipt::NativeBindingOutcome> {
+                anyhow::bail!("unexpected apply")
+            }
+            fn observe(
+                &mut self,
+                _: &crate::native_delivery::adapter::PlannedNativeEffect,
+            ) -> Result<crate::native_delivery::adapter::NativeEffectObservation> {
+                anyhow::bail!("unexpected observation")
+            }
+            fn inverse(
+                &mut self,
+                _: &crate::native_delivery::adapter::PlannedNativeEffect,
+            ) -> Result<crate::lifecycle::native_receipt::NativeBindingOutcome> {
+                anyhow::bail!("unexpected inverse")
+            }
+        }
+        store
+            .prepare_execution(prepared.id(), &mut NoCalls)
+            .unwrap();
+    }
     panic!("requested native preparation checkpoint not reached");
 }
 #[test]
@@ -61,6 +108,7 @@ fn interrupted_intent_and_each_marker_are_inspected_in_a_fresh_process() {
         ("after_marker", 0),
         ("after_marker", 1),
         ("after_marker", 2),
+        ("after_execution", 0),
     ] {
         let tmp = tempfile::tempdir().unwrap();
         let records = roots(tmp.path());
@@ -109,9 +157,16 @@ fn interrupted_intent_and_each_marker_are_inspected_in_a_fresh_process() {
         };
         assert_eq!(
             inspection.markers_complete,
-            checkpoint == "after_marker" && index == 2
+            (checkpoint == "after_marker" && index == 2) || checkpoint == "after_execution"
         );
-        assert_eq!(inspection.journal.status, NativeJournalStatus::Prepared);
+        assert_eq!(
+            inspection.journal.status,
+            if checkpoint == "after_execution" {
+                NativeJournalStatus::Executing
+            } else {
+                NativeJournalStatus::Prepared
+            }
+        );
         assert!(!records[0].path.join(".upskill-lock.json").exists());
         if checkpoint == "after_marker" {
             // Only this marked root is shared with the next operation.

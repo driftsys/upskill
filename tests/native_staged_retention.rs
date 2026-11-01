@@ -187,22 +187,129 @@ fn a_retry_uses_real_partial_observations_and_promotes_only_the_planned_candidat
 }
 
 #[test]
+fn promotion_preserves_another_payloads_exact_staged_subset() {
+    let context = context();
+    let mut capture = fixture::capture(&context);
+    let old = fixture::capture_with_body(
+        &context,
+        upskill::target::TargetSurface::ClaudeCli,
+        "Older payload.",
+    );
+    let mut current = empty(&context);
+    for (index, revision) in [capture.candidates[0].clone(), old.candidates[0].clone()]
+        .into_iter()
+        .enumerate()
+    {
+        let file = &revision.package.revision_files[0];
+        let observation = ObservedFile {
+            location: FileLocation {
+                root: context.scope.clone(),
+                path: file.path.clone(),
+            },
+            value: Some(FileValue {
+                bytes: file.bytes.clone(),
+                mode: Some(0o600),
+            }),
+        };
+        if let Some(existing) = capture
+            .file_observations
+            .iter_mut()
+            .find(|row| row.location == observation.location)
+        {
+            *existing = observation;
+        } else {
+            capture.file_observations.push(observation);
+        }
+        current.staged.push(StagedSkillRevision {
+            paths: vec![file.path.clone()],
+            revision,
+            operation_id: format!("{index:032x}"),
+        });
+    }
+    let retained = current.staged[1].clone();
+    capture.native_observations[0].retention = NativeResourceRetention::CachePreserved {
+        evidence_id: "retention-control".into(),
+    };
+    let plan = plan_native_skill_files(&SkillDeliveryInput {
+        current: &current,
+        scope: &context.scope,
+        graph_changes: &capture.graph_changes,
+        intents: &capture.intents,
+        candidates: &capture.candidates,
+        native_observations: &capture.native_observations,
+        file_observations: &capture.file_observations,
+    })
+    .unwrap();
+    assert_eq!(plan.staged, vec![retained.clone()]);
+    assert_eq!(plan.revisions, capture.candidates);
+    for path in &retained.paths {
+        let file = plan
+            .stage_files
+            .iter()
+            .find(|file| &file.location.path == path)
+            .unwrap();
+        assert_eq!(file.before, file.after);
+        assert_eq!(
+            file.before.as_ref().unwrap().bytes,
+            retained
+                .revision
+                .package
+                .revision_files
+                .iter()
+                .find(|file| &file.path == path)
+                .unwrap()
+                .bytes
+        );
+        assert_eq!(
+            plan.file_ownership
+                .iter()
+                .filter(|file| &file.path == path)
+                .count(),
+            1
+        );
+    }
+}
+
+#[test]
 fn empty_duplicate_foreign_and_selector_staging_paths_are_rejected() {
     let context = context();
     let capture = fixture::capture(&context);
     let revision = capture.candidates[0].clone();
     let first = revision.package.revision_files[0].path.clone();
-    for paths in [
-        vec![],
-        vec![first.clone(), first.clone()],
-        vec!["../outside".into()],
-        vec![
-            revision
-                .package
-                .catalog_file
-                .as_ref()
-                .map_or_else(|| "not-an-export".into(), |file| file.path.clone()),
-        ],
+    let observations = [ObservedFile {
+        location: FileLocation {
+            root: context.scope.clone(),
+            path: first.clone(),
+        },
+        value: Some(FileValue {
+            bytes: revision.package.revision_files[0].bytes.clone(),
+            mode: Some(0o600),
+        }),
+    }];
+    for (paths, expected) in [
+        (vec![first.clone()], None),
+        (
+            vec![],
+            Some("staged paths must be a nonempty unique sorted subset"),
+        ),
+        (
+            vec![first.clone(), first.clone()],
+            Some("staged paths must be a nonempty unique sorted subset"),
+        ),
+        (
+            vec!["../outside".into()],
+            Some("staging ownership cannot select a catalog or foreign file"),
+        ),
+        (
+            vec![
+                revision
+                    .package
+                    .catalog_file
+                    .as_ref()
+                    .map_or_else(|| "not-an-export".into(), |file| file.path.clone()),
+            ],
+            Some("staging ownership cannot select a catalog or foreign file"),
+        ),
     ] {
         let mut current = empty(&context);
         current.staged.push(StagedSkillRevision {
@@ -211,18 +318,21 @@ fn empty_duplicate_foreign_and_selector_staging_paths_are_rejected() {
             paths,
         });
         let changes = GraphChanges::default();
-        assert!(
-            plan_native_skill_files(&SkillDeliveryInput {
-                current: &current,
-                scope: &context.scope,
-                graph_changes: &changes,
-                intents: &[],
-                candidates: &[],
-                native_observations: &capture.native_observations,
-                file_observations: &[]
-            })
-            .is_err()
-        );
+        let result = plan_native_skill_files(&SkillDeliveryInput {
+            current: &current,
+            scope: &context.scope,
+            graph_changes: &changes,
+            intents: &[],
+            candidates: &[],
+            native_observations: &capture.native_observations,
+            file_observations: &observations,
+        });
+        match expected {
+            None => {
+                result.unwrap();
+            }
+            Some(message) => assert!(result.unwrap_err().to_string().contains(message)),
+        }
     }
 }
 

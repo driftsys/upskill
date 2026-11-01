@@ -1389,7 +1389,7 @@ without applying, retrying or deleting anything.
 
 Preparation is not native completion. Native observations remain supplied
 claims, and marker coverage grants no future effect authority. Profile
-admission, effect checkpoints, inverse execution, observation-first recovery,
+admission, effect execution, inverse execution, observation-first recovery,
 state publication and terminal marker retirement remain later Stage 5 work. No
 production CLI route or prior-schema migration is admitted here.
 
@@ -1397,10 +1397,12 @@ production CLI route or prior-schema migration is admitted here.
 
 `SkillDeliveryState.staged` keeps a revision capture, origin operation ID and
 the exact owned subset of immutable export paths. It selects no catalog and
-declares no native binding. Native-bound `revisions` and their receipt lineage
-remain separate. This allows partial exports to survive restore without
-fabricated activation or detachment evidence. The applied ownership table
-remains in the single authoritative state.
+declares no native binding. `revisions` remains separate; a detached revision
+requires confirmed receipt lineage. Reachable revisions with unavailable intent
+may have no current receipt, so a revision alone proves no native activation.
+This allows partial exports to survive restore without fabricated activation or
+detachment evidence. The applied ownership table remains in the single
+authoritative state.
 
 Planning validates and retains these paths with their real observed values. Only
 a matching desired candidate plans promotion into bound revision history;
@@ -1413,3 +1415,24 @@ The inactive native state format is schema 4, and the private intent format is
 schema 2. Earlier inactive schema-3 state and schema-1 intent are rejected
 rather than silently reinterpreted. Production schemas 1/2, CLI dispatch and
 native admission remain unchanged.
+
+## Native effect recipe and checkpoint metadata
+
+`NativeOperationStore::prepare_execution` calls only the adapter's read-only
+profile and inverse planning methods. It validates complete markers and captured
+file/state preconditions, then persists one ordered recipe: immutable exports,
+before-native exposures, native effects and after-native exposures. Profiles
+bind exact client/version/platform/scope attribution; shared exposures reject
+ambiguous ordering. Inspection checks the recipe against immutable intent.
+
+The journal moves from generation-zero `Prepared` to generation-one `Executing`.
+`begin_execution_step` syncs the next `Queued` step as `Pending` before
+returning it, rejecting skips or a second begin of the pending step. It grants
+no replay or filesystem preflight authority. Native attempt outcomes remain
+evidence; even `Confirmed` cannot acknowledge a step. `observe_pending_step`
+uses actual file bytes/mode or an independent, attributed native observation.
+Unknown, diverged and failed native observations stay pending with their history
+retained. An observed native effect does not prove final effective binding.
+These APIs apply no files/commands and publish no completed state. The
+execution/recovery coordinator and terminal marker retirement remain unfinished
+Stage 5 work.
