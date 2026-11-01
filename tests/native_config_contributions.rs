@@ -327,7 +327,7 @@ fn higher_layer_masking_and_inherited_duplicate_sources_are_rejected() {
 #[test]
 fn tracked_overlays_external_roots_and_copied_ownership_are_rejected() {
     let mut config = capture(ConfigFormat::Jsonc, None);
-    let change = key(&["managed"], Some(json!(true)));
+    let mut change = key(&["managed"], Some(json!(true)));
     config.target.tracked = true;
     assert!(plan_config_patch(&config, &change).is_err());
     config.target.tracked = false;
@@ -339,9 +339,16 @@ fn tracked_overlays_external_roots_and_copied_ownership_are_rejected() {
     config.target.file.location.root = config.scope.clone();
     let patch = plan_config_patch(&config, &change).unwrap();
     apply_capture(&mut config, patch);
+    expect_owned(&config, &mut change);
+    assert!(plan_config_patch(&config, &change).is_ok());
     config.scope.path = "/other/checkout".into();
     config.target.file.location.root = config.scope.clone();
-    assert!(plan_config_patch(&config, &change).is_err());
+    assert!(
+        plan_config_patch(&config, &change)
+            .unwrap_err()
+            .to_string()
+            .contains("ownership belongs to another document")
+    );
 }
 
 #[test]
@@ -592,4 +599,181 @@ fn new_configuration_files_select_private_mode_and_existing_modes_survive() {
         let patch = plan_config_patch(&config, &key(&["managed"], Some(json!(true)))).unwrap();
         assert_eq!(patch.file.after.unwrap().mode, Some(0o640));
     }
+}
+
+fn array_entry(id: &str, value: &str) -> ConfigContribution {
+    ConfigContribution {
+        id: id.into(),
+        selector: ConfigSelector::ArrayEntry {
+            path: vec!["paths".into()],
+            value: json!(value),
+        },
+        expected: None,
+        desired: Some(json!(value)),
+    }
+}
+
+#[test]
+fn array_removal_after_manual_edits_preserves_only_manual_entries_and_comments() {
+    for (format, original, edited) in [
+        (
+            ConfigFormat::Jsonc,
+            "{\"paths\":[\"/manual\" /* keep */,]}",
+            "{\"paths\":[\"/manual\" /* keep extra */,]}",
+        ),
+        (
+            ConfigFormat::Toml,
+            "paths = [\"/manual\", # keep\n]\n",
+            "paths = [\"/manual\", # keep extra\n]\n",
+        ),
+    ] {
+        let mut config = capture(format, Some(original));
+        let mut change = array_entry("example", "/owned");
+        let patch = plan_config_patch(&config, &change).unwrap();
+        apply_capture(&mut config, patch);
+        expect_owned(&config, &mut change);
+        config.target.file.value.as_mut().unwrap().bytes =
+            bytes(&config).replace("keep", "keep extra").into_bytes();
+        change.desired = None;
+        let patch = plan_config_patch(&config, &change).unwrap();
+        assert_eq!(patch.file.before, config.target.file.value);
+        assert_eq!(patch.file.after.unwrap().bytes, edited.as_bytes());
+        assert!(patch.ownership_after.is_none());
+    }
+}
+
+#[test]
+fn updating_an_owned_array_entry_rejects_only_the_new_inherited_identity() {
+    for (format, original, inherited) in [
+        (
+            ConfigFormat::Jsonc,
+            "{\"paths\":[]}",
+            "{\"paths\":[\"/new\"]}",
+        ),
+        (ConfigFormat::Toml, "paths = []\n", "paths = [\"/new\"]\n"),
+    ] {
+        let mut config = capture(format, Some(original));
+        let mut change = array_entry("example", "/old");
+        let patch = plan_config_patch(&config, &change).unwrap();
+        apply_capture(&mut config, patch);
+        expect_owned(&config, &mut change);
+        change.desired = Some(json!("/new"));
+        assert!(plan_config_patch(&config, &change).is_ok());
+        let mut lower = config.target.clone();
+        lower.file.location.path = "inherited.config".into();
+        lower.file.value.as_mut().unwrap().bytes = inherited.as_bytes().to_vec();
+        config.lower_layers.push(lower);
+        assert!(
+            plan_config_patch(&config, &change)
+                .unwrap_err()
+                .to_string()
+                .contains("desired source already occurs in another configuration layer")
+        );
+    }
+}
+
+#[test]
+fn manual_mode_changes_disable_baseline_restoration_without_deleting_the_file() {
+    for (format, original, expected_bytes) in [
+        (ConfigFormat::Jsonc, None, "{}"),
+        (
+            ConfigFormat::Jsonc,
+            Some("{\"manual\":1}"),
+            "{\"manual\":1}",
+        ),
+        (ConfigFormat::Toml, None, "\n"),
+        (ConfigFormat::Toml, Some("# manual\n"), "\n# manual\n"),
+    ] {
+        let mut config = capture(format, original);
+        let baseline = config.target.file.value.clone();
+        let mut change = key(&["managed"], Some(json!(true)));
+        let patch = plan_config_patch(&config, &change).unwrap();
+        apply_capture(&mut config, patch);
+        expect_owned(&config, &mut change);
+        change.desired = None;
+        assert_eq!(
+            plan_config_patch(&config, &change).unwrap().file.after,
+            baseline
+        );
+        config.target.file.value.as_mut().unwrap().mode = Some(0o640);
+        let patch = plan_config_patch(&config, &change).unwrap();
+        assert_eq!(patch.file.before, config.target.file.value);
+        let after = patch.file.after.unwrap();
+        assert_eq!(after.mode, Some(0o640));
+        assert_eq!(after.bytes, expected_bytes.as_bytes());
+        assert!(patch.ownership_after.is_none());
+    }
+}
+
+#[test]
+fn independent_owners_share_one_array_and_retire_without_removing_each_other() {
+    for (format, original) in [
+        (ConfigFormat::Jsonc, "{\"paths\":[\"/manual\",]}"),
+        (ConfigFormat::Toml, "paths = [\"/manual\", # keep\n]\n"),
+    ] {
+        let mut config = capture(format, Some(original));
+        let mut one = array_entry("one", "/one");
+        let mut two = array_entry("two", "/two");
+        let patch = plan_config_patch(&config, &one).unwrap();
+        apply_capture(&mut config, patch);
+        let patch = plan_config_patch(&config, &two).unwrap();
+        apply_capture(&mut config, patch);
+        assert_eq!(config.ownership.as_ref().unwrap().entries.len(), 2);
+        assert!(bytes(&config).contains("/one"));
+        assert!(bytes(&config).contains("/two"));
+        expect_owned(&config, &mut one);
+        one.desired = None;
+        let patch = plan_config_patch(&config, &one).unwrap();
+        apply_capture(&mut config, patch);
+        assert!(!bytes(&config).contains("/one"));
+        assert!(bytes(&config).contains("/two"));
+        assert!(bytes(&config).contains("/manual"));
+        assert_eq!(config.ownership.as_ref().unwrap().entries.len(), 1);
+        assert_eq!(config.ownership.as_ref().unwrap().entries[0].id, "two");
+        expect_owned(&config, &mut two);
+        two.desired = None;
+        let patch = plan_config_patch(&config, &two).unwrap();
+        assert_eq!(patch.file.after.unwrap().bytes, original.as_bytes());
+        assert!(patch.ownership_after.is_none());
+    }
+}
+
+#[test]
+fn lower_layer_scalar_conflicts_reject_without_a_higher_layer_mask() {
+    for (format, empty, inherited) in [
+        (ConfigFormat::Jsonc, "{}", "{\"managed\":false}"),
+        (ConfigFormat::Toml, "", "managed = false\n"),
+    ] {
+        let mut config = capture(format, Some(empty));
+        let change = key(&["managed"], Some(json!(true)));
+        assert!(plan_config_patch(&config, &change).is_ok());
+        let mut lower = config.target.clone();
+        lower.file.location.path = "inherited.config".into();
+        lower.file.value.as_mut().unwrap().bytes = inherited.as_bytes().to_vec();
+        config.lower_layers.push(lower);
+        assert!(
+            plan_config_patch(&config, &change)
+                .unwrap_err()
+                .to_string()
+                .contains("selector conflicts with an inherited layer")
+        );
+    }
+}
+
+#[test]
+fn removing_a_nested_jsonc_entry_retains_empty_parents_after_manual_edits() {
+    let mut config = capture(ConfigFormat::Jsonc, Some("{}"));
+    let mut change = key(&["managed", "child"], Some(json!(true)));
+    let patch = plan_config_patch(&config, &change).unwrap();
+    apply_capture(&mut config, patch);
+    expect_owned(&config, &mut change);
+    config.target.file.value.as_mut().unwrap().bytes =
+        b"{\"managed\":{\"child\":true},/* added */\"manual\":2}".to_vec();
+    change.desired = None;
+    let patch = plan_config_patch(&config, &change).unwrap();
+    assert_eq!(
+        patch.file.after.unwrap().bytes,
+        b"{\"managed\":{},/* added */\"manual\":2}"
+    );
+    assert!(patch.ownership_after.is_none());
 }
