@@ -229,8 +229,12 @@ complete adapter trait. OpenCode has a candidate batch planner for owned
 absolute sources that preserves existing legacy configuration form. Native
 local-catalog capture, effects/inverses, effective observations, other client
 adapters and runtime qualification remain open. The
-[prepared Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md)
-requires separate native-execution approval; it authorizes no model spending.
+[Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md) ran
+once after explicit approval, with no model spending. Its
+[bounded observations](../../technotes/2026-11-01-claude-local-catalog-contract.md)
+show full-name/version acceptance and project registry metadata, but exact
+settings preservation failed. It qualifies no native profile or stable cleanup;
+repeat execution requires separate authorization.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;

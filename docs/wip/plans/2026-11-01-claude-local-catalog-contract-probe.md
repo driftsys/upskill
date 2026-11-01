@@ -1,7 +1,9 @@
 # Claude local catalog contract probe
 
-Status: prepared, awaiting explicit approval for native execution. This is a
-bounded contract probe, not qualification or production admission.
+Status: executed once after explicit user approval, 2026-11-01. All twelve
+commands completed; exact settings preservation failed. See the
+[bounded observations and receipts](../../technotes/2026-11-01-claude-local-catalog-contract.md).
+This is a bounded contract probe, not qualification or production admission.
 
 The
 [approved design](../specs/2026-10-31-four-client-skills-resources-design.md)
@@ -87,4 +89,6 @@ A settings rewrite is a preservation failure even if semantically equivalent.
 No model command, skill invocation, competing-client observer, existing session
 or provider input is tested. No result changes Q11/Q11b isolation results,
 resource-retention status, profile admission or production dispatch. The
-four-client study remains informative input on its separate branch.
+four-client study remains informative input and is now integrated in this
+branch. The original execution envelope above is retained as provenance; it does
+not authorize a repeat.

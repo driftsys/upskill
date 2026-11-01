@@ -1,0 +1,491 @@
+{
+  "status": "bounded contract observations; preservation failed; no qualification",
+  "date": "2026-11-01",
+  "platform": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "macos": "15.6.1"
+  },
+  "source_commit": "559404b",
+  "private_evidence": "/private/tmp/upskill-claude-contract-ebiihhzh/packet/execution-2026-11-01",
+  "native_version": "2.1.308 (Claude Code)",
+  "launcher": "/opt/homebrew/Caskroom/claude-code/2.1.308/claude",
+  "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+  "model_calls": 0,
+  "spending": 0,
+  "native_commands": 12,
+  "native_workers_quiescence_qualified": false,
+  "stable_cleanup_qualified": false,
+  "activation_qualified": false,
+  "production_admission_changed": false,
+  "normalization": "$PACKET replaces only the disposable packet root in argv and parsed native JSON; stdout/stderr digests refer to original captured UTF-8 bytes",
+  "artifacts": {
+    "plan.json": {
+      "sha256": "f9bbd9ab64becabef97de84209f8f5c260bd6b64b966a236bbc5f932834fdb76",
+      "bytes": 2579
+    },
+    "run.py": {
+      "sha256": "7f2c9d5e1ea7b43bf04ac661bb271079acb51c54c2a74e602eec7cfc025f3109",
+      "bytes": 8441
+    },
+    "one_command.rs": {
+      "sha256": "1e9cfccb69a827d2fd3577b4cdbc1338d325176d58be84fc4254aa9419557aee",
+      "bytes": 1881
+    },
+    "one-command": {
+      "sha256": "b95a032ae14f074b9bcca3b8ce494bd8fb9929ad9ae94c99cf27208641040521",
+      "bytes": 2053976
+    },
+    "libupskill-56e6e7af4a558928.rlib": {
+      "sha256": "1710b2fe96a2c45f2c11f28d523f05c1acfb2632602740cd2b0a6cdde4c1fec5",
+      "bytes": 154160560
+    }
+  },
+  "protected_files": [
+    {
+      "path": "project/.claude/settings.json",
+      "baseline": {
+        "present": true,
+        "mode": "0o600",
+        "sha256": "f0a5030131f8fde8553118744f223053a4f9e425e0c54de9a93a088bb2629bba"
+      },
+      "final_sample": {
+        "present": true,
+        "mode": "0o600",
+        "sha256": "9c8b0be20591a47975e878c2fa08efcafab15271791ccff41c686d62bfc6628e"
+      },
+      "exact_match": false
+    },
+    {
+      "path": "project/.claude/settings.local.json",
+      "baseline": {
+        "present": false
+      },
+      "final_sample": {
+        "present": false
+      },
+      "exact_match": true
+    },
+    {
+      "path": "home/.claude/settings.json",
+      "baseline": {
+        "present": false
+      },
+      "final_sample": {
+        "present": false
+      },
+      "exact_match": true
+    },
+    {
+      "path": "home/.claude/settings.local.json",
+      "baseline": {
+        "present": false
+      },
+      "final_sample": {
+        "present": false
+      },
+      "exact_match": true
+    },
+    {
+      "path": "home/.claude/plugins/known_marketplaces.json",
+      "baseline": {
+        "present": false
+      },
+      "final_sample": {
+        "present": true,
+        "mode": "0o600",
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "exact_match": false
+    },
+    {
+      "path": "home/.claude/plugins/installed_plugins.json",
+      "baseline": {
+        "present": false
+      },
+      "final_sample": {
+        "present": true,
+        "mode": "0o600",
+        "sha256": "230f778f6e70cad02660c5624ac4f4458e5fc271cb3fc87a390b3b7003a6b6bb"
+      },
+      "exact_match": false
+    }
+  ],
+  "settings_before": "{\n  \"companyAnnouncements\": [\n    \"contract-preservation-sentinel\"\n  ],\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n",
+  "settings_final_sample": "{\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {},\n  \"companyAnnouncements\": [\n    \"contract-preservation-sentinel\"\n  ]\n}\n",
+  "commands": [
+    {
+      "index": 1,
+      "arguments": [
+        "--version"
+      ],
+      "at": "2026-11-01T22:24:56.319966+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "observation": "Exact pinned version reported",
+      "export_unchanged": true
+    },
+    {
+      "index": 2,
+      "arguments": [
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:06.101078+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [],
+      "export_unchanged": true
+    },
+    {
+      "index": 3,
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:14.410940+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [],
+      "export_unchanged": true
+    },
+    {
+      "index": 4,
+      "arguments": [
+        "plugin",
+        "validate",
+        "$PACKET/project/.upskill/exports/claude/native-contract-probe"
+      ],
+      "at": "2026-11-01T22:25:22.778888+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "054b9d78f342224b75e140b5d3c0b4e3ca5c3fb0511ba1635a4141145887da7e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "observation": "Catalog validation succeeded with warnings for missing marketplace description and plugin author",
+      "export_unchanged": true
+    },
+    {
+      "index": 5,
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "add",
+        "$PACKET/project/.upskill/exports/claude/native-contract-probe",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:30.898176+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "80fb4086f3f3fdaa5302f116c1a1ca9ee863078edb91636228e0934f5d19dea3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": {
+        "command": "marketplace-add",
+        "outcome": "ok",
+        "marketplace": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "message": "Successfully added marketplace: upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0 (declared in project settings)"
+      },
+      "export_unchanged": true
+    },
+    {
+      "index": 6,
+      "arguments": [
+        "plugin",
+        "install",
+        "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:38.838074+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "79d669299d533a6ab2f9132f40085135108ffaa59ae66b186c1793a26edb2df5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": {
+        "command": "install",
+        "outcome": "ok",
+        "plugin": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "pluginId": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "scope": "project",
+        "message": "Successfully installed plugin: upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0 (scope: project)"
+      },
+      "export_unchanged": true
+    },
+    {
+      "index": 7,
+      "arguments": [
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:47.043286+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "eb8245e86381ae3c3b2460f880a4fba05254fbdb995458334cc03b196aada659",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [
+        {
+          "id": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+          "version": "0.0.0-r95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+          "scope": "project",
+          "enabled": true,
+          "installPath": "$PACKET/home/.claude/plugins/cache/upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0/upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0/0.0.0-r95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+          "readFromFolder": "$PACKET/project/.upskill/exports/claude/native-contract-probe/revisions/95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+          "folderVersion": "0.0.0-r95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+          "installedAt": "2026-11-01T22:25:35.814Z",
+          "lastUpdated": "2026-11-01T22:25:35.814Z",
+          "projectPath": "$PACKET/project",
+          "projectEnabled": true
+        }
+      ],
+      "export_unchanged": true
+    },
+    {
+      "index": 8,
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:25:55.054285+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "6da5909fb53d57dd6e61e17654a42024a0f655838f45e59080c162bff6b4ae35",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [
+        {
+          "name": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+          "source": "directory",
+          "path": "$PACKET/project/.upskill/exports/claude/native-contract-probe",
+          "installLocation": "$PACKET/project/.upskill/exports/claude/native-contract-probe"
+        }
+      ],
+      "export_unchanged": true
+    },
+    {
+      "index": 9,
+      "arguments": [
+        "plugin",
+        "uninstall",
+        "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "at": "2026-11-01T22:26:03.646848+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "f2bf15f6a5923a6c6eb2461a5caf32c4ca97dd8bf1e5dfcd6853c85bfaabdc65",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": {
+        "command": "uninstall",
+        "outcome": "ok",
+        "plugin": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "pluginId": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "scope": "project",
+        "keptData": false,
+        "message": "Successfully uninstalled plugin: upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0 (scope: project)"
+      },
+      "export_unchanged": true
+    },
+    {
+      "index": 10,
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "--scope",
+        "project",
+        "--json"
+      ],
+      "at": "2026-11-01T22:26:12.138522+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "ebcdfab62652a483b3ae2f2208064a1acaa2fb57f18305c9a729b8056bf546a3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": {
+        "command": "marketplace-remove",
+        "outcome": "ok",
+        "marketplace": "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0",
+        "message": "Successfully removed marketplace: upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0 (from project settings)"
+      },
+      "export_unchanged": true
+    },
+    {
+      "index": 11,
+      "arguments": [
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:26:20.456322+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [],
+      "export_unchanged": true
+    },
+    {
+      "index": 12,
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ],
+      "at": "2026-11-01T22:26:28.528223+00:00",
+      "cleanup_signal_sent": false,
+      "direct_child_reaped": true,
+      "executable_unchanged": true,
+      "exit_code": 0,
+      "group": "Empty",
+      "output_complete": true,
+      "reason": "Exited",
+      "scope_unchanged": true,
+      "transport_complete": true,
+      "binding_qualified": false,
+      "stdout_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native_json_normalized": [],
+      "export_unchanged": true
+    }
+  ],
+  "registry_samples_normalized": {
+    "6": {
+      "home/.claude/plugins/known_marketplaces.json": {
+        "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0": {
+          "source": {
+            "source": "directory",
+            "path": "$PACKET/project/.upskill/exports/claude/native-contract-probe"
+          },
+          "installLocation": "$PACKET/project/.upskill/exports/claude/native-contract-probe",
+          "lastUpdated": "2026-11-01T22:25:27.712Z"
+        }
+      },
+      "home/.claude/plugins/installed_plugins.json": {
+        "version": 2,
+        "plugins": {
+          "upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0@upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0": [
+            {
+              "scope": "project",
+              "installPath": "$PACKET/home/.claude/plugins/cache/upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0/upskill-abf246364bf8157a4733c703b56a9abf148788fb747d0f5a92bccb22b571c4b0/0.0.0-r95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+              "version": "0.0.0-r95bde28c505242a7af12e31433e17c076c021c26effdc600e609d91ca36a0664",
+              "installedAt": "2026-11-01T22:25:35.814Z",
+              "lastUpdated": "2026-11-01T22:25:35.814Z",
+              "projectPath": "$PACKET/project"
+            }
+          ]
+        }
+      }
+    },
+    "12": {
+      "home/.claude/plugins/known_marketplaces.json": {},
+      "home/.claude/plugins/installed_plugins.json": {
+        "version": 2,
+        "plugins": {}
+      }
+    }
+  }
+}
