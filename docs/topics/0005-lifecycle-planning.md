@@ -1543,3 +1543,19 @@ supplied inventory has no match. Concrete adapters must still bind a successful
 complete transport observation to its qualified runtime/context, validate the
 selected source and independently establish effective behavior. Client mutation
 methods, production admission and CLI dispatch remain pending.
+
+The inactive Linux/macOS `read_plugin_inventory` candidate reader now connects
+that decoder to the bounded process runner. It accepts an empty-argument command
+template and issues only `--version`, followed by `plugin list --json`. Both
+queries use the same captured launcher, explicit environment and qualified CWD.
+An unexpected runtime version stops before listing. Nonzero exits, timeouts,
+overflow, incomplete output, unresolved groups, unreaped leaders or
+scope/launcher drift reject before returning metadata. Raw diagnostics remain in
+memory and are not included in typed errors.
+
+`ClaudeInventoryCapture` carries the reported inventory, CWD directory binding
+and launcher capture. This binds only those process facts; it does not qualify
+effective configuration roots, delegated executables, cached/fresh provider
+input, escaped workers, ownership or resource retention. Production must pass
+the separate profile gate before invoking a client adapter. The reader has no
+production CLI route and no native mutation methods.

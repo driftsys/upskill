@@ -260,3 +260,114 @@ fn wrong_scalar_types_empty_values_and_nul_values_do_not_become_usable_metadata(
         }
     }
 }
+
+#[test]
+fn plugin_name_catalog_and_exact_project_path_are_independent_lookup_dimensions() {
+    let mut owned = row("user");
+    owned["enabled"] = false.into();
+    let inventory =
+        ClaudePluginInventory::parse("2.1.308", &serde_json::to_vec(&[owned.clone()]).unwrap())
+            .unwrap();
+    assert!(
+        inventory
+            .find("different-plugin@catalog", ClaudeLookupScope::User)
+            .unwrap()
+            .is_none()
+    );
+    let mut other = owned.clone();
+    other["id"] = "different-plugin@catalog".into();
+    other["version"] = "different-installed-version".into();
+    let mut foreign = row("managed");
+    foreign["id"] = "unrelated@other-catalog".into();
+    let inventory = ClaudePluginInventory::parse(
+        "2.1.308",
+        &serde_json::to_vec(&[other, owned, foreign]).unwrap(),
+    )
+    .unwrap();
+    let entry = inventory
+        .find("owned@catalog", ClaudeLookupScope::User)
+        .unwrap()
+        .unwrap();
+    assert_eq!(entry.id, "owned@catalog");
+    assert_eq!(entry.version, "0.0.0-rabc");
+    assert!(!entry.enabled);
+    let entry = inventory
+        .find("different-plugin@catalog", ClaudeLookupScope::User)
+        .unwrap()
+        .unwrap();
+    assert_eq!(entry.id, "different-plugin@catalog");
+    assert_eq!(entry.version, "different-installed-version");
+
+    let mut parent = row("project");
+    parent["version"] = "parent-version".into();
+    let mut nested = row("project");
+    nested["projectPath"] = "/project/nested".into();
+    nested["version"] = "nested-version".into();
+    let inventory =
+        ClaudePluginInventory::parse("2.1.308", &serde_json::to_vec(&[parent, nested]).unwrap())
+            .unwrap();
+    for (path, version) in [
+        ("/project", "parent-version"),
+        ("/project/nested", "nested-version"),
+    ] {
+        let entry = inventory
+            .find("owned@catalog", ClaudeLookupScope::Project(Path::new(path)))
+            .unwrap()
+            .unwrap();
+        assert_eq!(entry.id, "owned@catalog");
+        assert_eq!(entry.project_path.as_deref(), Some(Path::new(path)));
+        assert_eq!(entry.version, version);
+    }
+    assert!(
+        inventory
+            .find("owned@catalog", ClaudeLookupScope::Project(Path::new("/")))
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        inventory
+            .find(
+                "owned@catalog",
+                ClaudeLookupScope::Project(Path::new("/project/nested/deeper"))
+            )
+            .unwrap()
+            .is_none()
+    );
+}
+#[test]
+fn installed_folder_versions_and_scope_path_refusals_remain_distinct() {
+    let mut entry = row("project");
+    entry["version"] = "installed-old".into();
+    entry["folderVersion"] = "folder-new".into();
+    entry["enabled"] = false.into();
+    entry["projectEnabled"] = true.into();
+    let inventory =
+        ClaudePluginInventory::parse("2.1.308", &serde_json::to_vec(&[entry.clone()]).unwrap())
+            .unwrap();
+    let value = &inventory.entries()[0];
+    assert_eq!(value.version, "installed-old");
+    assert_eq!(value.folder_version.as_deref(), Some("folder-new"));
+    assert!(!value.enabled);
+    assert_eq!(value.project_enabled, Some(true));
+    assert_eq!(
+        inventory
+            .find(
+                "owned@catalog",
+                ClaudeLookupScope::Project(Path::new("/project/../outside"))
+            )
+            .unwrap_err(),
+        ClaudeInventoryError::AmbiguousScope
+    );
+    entry["projectPath"] = "/project/../outside".into();
+    let inventory =
+        ClaudePluginInventory::parse("2.1.308", &serde_json::to_vec(&[entry]).unwrap()).unwrap();
+    assert_eq!(
+        inventory
+            .find(
+                "owned@catalog",
+                ClaudeLookupScope::Project(Path::new("/outside"))
+            )
+            .unwrap_err(),
+        ClaudeInventoryError::AmbiguousScope
+    );
+}

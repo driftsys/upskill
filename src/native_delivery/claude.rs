@@ -52,6 +52,12 @@ pub enum ClaudeLookupScope<'a> {
 }
 /// Metadata projection only. It deliberately has no serde representation and
 /// cannot be supplied as a native binding/effect/retention receipt.
+///
+/// ```compile_fail
+/// use upskill::native_delivery::claude::ClaudePluginInventory;
+/// let inventory = ClaudePluginInventory::parse("2.1.308", b"[]").unwrap();
+/// let _ = serde_json::to_vec(&inventory);
+/// ```
 pub struct ClaudePluginInventory {
     entries: Vec<ClaudePluginEntry>,
 }
@@ -149,3 +155,8 @@ impl ClaudePluginInventory {
         Ok(found)
     }
 }
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod observe;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub use observe::{ClaudeInventoryCapture, ClaudeInventoryReadError, read_plugin_inventory};
