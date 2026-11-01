@@ -10,16 +10,24 @@ use upskill::native_delivery::claude::{
 fn fake(root: &std::path::Path) -> upskill::native_delivery::process::NativeCommandSpec {
     let mut spec = script(
         root,
-        r#"printf '%s\n' "$*" >> "$CALLS"
-case "$*" in
-  --version)
+        r#"if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  query=version
+elif [ "$#" -eq 3 ] && [ "$1" = plugin ] && [ "$2" = list ] && [ "$3" = --json ]; then
+  query=plugins
+else
+  printf 'unexpected argument boundaries' >&2; exit 3
+fi
+printf '%s\n' "$#" "$@" >> "$ARGUMENTS"
+printf '%s\n' "$*" >> "$CALLS"
+case "$query" in
+  version)
     printf '%s\n' "$VERSION"
     case "$VERSION_MODE" in
       refuse) printf 'private-version-stderr' >&2; exit 17;;
       oversize) n=0; while [ "$n" -lt 300 ]; do printf ' '; n=$((n+1)); done;;
     esac
     exit 0;;
-  'plugin list --json')
+  plugins)
     case "$MODE" in
       refuse) printf 'private-native-stderr' >&2; exit 17;;
       timeout) while :; do :; done;;
@@ -31,7 +39,11 @@ case "$*" in
 esac"#,
     );
     std::fs::write(root.join("inventory.json"), b"[]").unwrap();
-    for (name, file) in [("CALLS", "calls"), ("INVENTORY", "inventory.json")] {
+    for (name, file) in [
+        ("CALLS", "calls"),
+        ("ARGUMENTS", "arguments"),
+        ("INVENTORY", "inventory.json"),
+    ] {
         spec.environment
             .insert(name.into(), root.join(file).into_os_string());
     }
@@ -59,6 +71,10 @@ fn reader_binds_fixed_version_then_inventory_to_the_same_qualified_cwd() {
         assert_eq!(
             format!("{capture:?}"),
             "ClaudeInventoryCapture { entries: 1, .. }"
+        );
+        assert_eq!(
+            std::fs::read(root.join("arguments")).unwrap(),
+            b"1\n--version\n3\nplugin\nlist\n--json\n"
         );
         assert!(spec.arguments.is_empty());
     });
@@ -171,4 +187,19 @@ fn unsuccessful_or_oversized_version_text_cannot_authorize_listing() {
             assert!(!format!("{error:?}").contains("private-version"));
         });
     }
+}
+
+// Catches accepting a supported-version prefix with extra untrusted text.
+#[test]
+fn supported_version_with_suffix_cannot_authorize_plugin_listing() {
+    with_scope(|root, scope, guard| {
+        let mut spec = fake(root);
+        spec.environment
+            .insert("VERSION".into(), "2.1.308 (Claude Code)-modified".into());
+        assert!(matches!(
+            read_plugin_inventory(scope, guard, &spec, &AtomicBool::new(false)),
+            Err(ClaudeInventoryReadError::VersionMismatch)
+        ));
+        assert_eq!(std::fs::read(root.join("calls")).unwrap(), b"--version\n");
+    });
 }

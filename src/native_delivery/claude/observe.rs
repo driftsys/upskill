@@ -205,4 +205,72 @@ mod tests {
             );
         }
     }
+    // The decode seam simulates an external rename after completed transport,
+    // before final scope revalidation, without timing a filesystem race.
+    #[test]
+    fn scope_change_after_completed_query_cannot_publish_metadata() {
+        use crate::ownership::{InstallationRoot, OwnershipScope};
+        use std::collections::BTreeMap;
+        use std::os::unix::fs::PermissionsExt;
+        use std::path::PathBuf;
+        fn decode_and_move(_: &str, bytes: &[u8]) -> Result<(), ClaudeInventoryError> {
+            let root: PathBuf =
+                serde_json::from_slice(bytes).map_err(|_| ClaudeInventoryError::Malformed)?;
+            std::fs::rename(&root, root.with_extension("moved")).unwrap();
+            Ok(())
+        }
+        let fixture = tempfile::tempdir().unwrap();
+        let root = fixture.path().join("scope");
+        std::fs::create_dir(&root).unwrap();
+        let scope = QualifiedScope::open(&InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: root.clone(),
+        })
+        .unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let launcher = root.join("fake-native");
+        std::fs::write(
+            &launcher,
+            r#"#!/bin/sh
+if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  printf '%s\n' '2.1.308 (Claude Code)'
+elif [ "$#" -eq 3 ] && [ "$1" = plugin ] && [ "$2" = list ] && [ "$3" = --json ]; then
+  printf '%s' "$ROOT_JSON"
+else
+  exit 3
+fi
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let command = NativeCommandSpec {
+            executable: NativeExecutable::capture(&launcher).unwrap(),
+            arguments: vec![],
+            environment: BTreeMap::from([
+                ("HOME".into(), fixture.path().as_os_str().to_owned()),
+                (
+                    "ROOT_JSON".into(),
+                    serde_json::to_string(&root).unwrap().into(),
+                ),
+            ]),
+            timeout: std::time::Duration::from_secs(2),
+            output_limit: 4096,
+        };
+        let result = read_metadata(
+            &scope,
+            &guard,
+            &command,
+            &AtomicBool::new(false),
+            &["plugin", "list", "--json"],
+            decode_and_move,
+        );
+        assert!(
+            root.with_extension("moved").is_dir(),
+            "decode never reached its positive control"
+        );
+        assert!(matches!(
+            result,
+            Err(ClaudeInventoryReadError::ScopeChanged)
+        ));
+    }
 }
