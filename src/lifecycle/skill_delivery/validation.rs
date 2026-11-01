@@ -178,7 +178,12 @@ pub(super) fn validate<'a>(input: &SkillDeliveryInput<'a>) -> Result<Validated<'
     }
     let mut current_revision_keys = BTreeSet::new();
     let mut historical_bindings = BTreeMap::new();
-    for revision in &input.current.revisions {
+    for revision in input
+        .current
+        .revisions
+        .iter()
+        .chain(input.current.staged.iter().map(|staged| &staged.revision))
+    {
         validate_revision(revision, input.scope)?;
         ensure!(
             current_revision_keys.insert(revision_key(revision)),
@@ -204,6 +209,30 @@ pub(super) fn validate<'a>(input: &SkillDeliveryInput<'a>) -> Result<Validated<'
             validate_binding(&revision.installation.owner, &installation.owner)
                 .context("historical revision installation identity")?;
         }
+    }
+
+    for staged in &input.current.staged {
+        ensure!(
+            staged.operation_id.len() == 32
+                && staged
+                    .operation_id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
+            "invalid staging operation identity"
+        );
+        ensure!(
+            !staged.paths.is_empty() && staged.paths.windows(2).all(|pair| pair[0] < pair[1]),
+            "staged paths must be a nonempty unique sorted subset"
+        );
+        ensure!(
+            staged.paths.iter().all(|path| staged
+                .revision
+                .package
+                .revision_files
+                .iter()
+                .any(|file| file.path == *path)),
+            "staging ownership cannot select a catalog or foreign file"
+        );
     }
 
     let mut intents = BTreeMap::new();

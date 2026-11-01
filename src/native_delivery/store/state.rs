@@ -5,7 +5,7 @@ use crate::files::permissions::{
 use crate::files::plan::{FileLocation, FileValue, PlannedFile};
 use crate::filesystem::DestinationSnapshot;
 use crate::native_delivery::roots::NativeRootLocks;
-use crate::native_delivery::state::{NativeDeliveryState, NativeStateContext};
+use crate::native_delivery::state::{NativeDeliveryState, NativeStateContext, declared_context};
 use crate::ownership::InstallationRoot;
 use anyhow::{Context, Result, ensure};
 
@@ -80,17 +80,15 @@ impl<'locks, 'scope: 'locks> NativeStateStore<'locks, 'scope> {
         &self.context
     }
 
-    /// Capture the sole authoritative lockfile and validate all referenced
-    /// private evidence. Existing schemas are rejected without migration.
+    /// Capture the sole authoritative lockfile and validate referenced evidence.
+    /// Declared additional roots must be held; extra held roots permit context
+    /// transitions. Prior schemas reject without migration.
     pub fn load(&self) -> Result<Option<NativeDeliveryState>> {
         let snapshot = self.snapshot()?;
         let state = snapshot.observations()[0]
             .value
             .as_ref()
-            .map(|value| {
-                self.evidence
-                    .load_state(std::str::from_utf8(&value.bytes)?, &self.context)
-            })
+            .map(|value| self.parse_captured_state(&value.bytes))
             .transpose()?;
         snapshot.verify_unchanged()?;
         self.roots.verify_bindings()?;
@@ -101,15 +99,11 @@ impl<'locks, 'scope: 'locks> NativeStateStore<'locks, 'scope> {
     /// exact file precondition and reference-only JSON. The coordinator must
     /// establish observed native completion before applying this state action.
     pub fn prepare_state_file(&self, state: &NativeDeliveryState) -> Result<PlannedFile> {
-        ensure!(
-            state.context == self.context,
-            "native state context differs from the held roots"
-        );
+        self.require_context(&state.context)?;
         let snapshot = self.snapshot()?;
         let before = snapshot.observations()[0].value.clone();
         if let Some(value) = &before {
-            self.evidence
-                .load_state(std::str::from_utf8(&value.bytes)?, &self.context)?;
+            self.parse_captured_state(&value.bytes)?;
         }
         let mode = select_file_mode(
             before.as_ref().map_or(DestinationMode::Absent, |value| {
@@ -129,6 +123,25 @@ impl<'locks, 'scope: 'locks> NativeStateStore<'locks, 'scope> {
                 mode: Some(mode),
             }),
         })
+    }
+
+    pub(crate) fn parse_captured_state(&self, bytes: &[u8]) -> Result<NativeDeliveryState> {
+        let json = std::str::from_utf8(bytes)?;
+        let context = declared_context(json)?;
+        self.require_context(&context)?;
+        self.evidence.load_state(json, &context)
+    }
+    fn require_context(&self, context: &NativeStateContext) -> Result<()> {
+        ensure!(
+            context.scope == self.context.scope
+                && context.private_root == self.context.private_root
+                && context.namespace == self.context.namespace,
+            "native state principal/private context differs from held roots"
+        );
+        for root in &context.additional_roots {
+            self.roots.scope_and_guard(root)?;
+        }
+        self.roots.verify_bindings()
     }
 
     pub(crate) fn evidence(&self) -> &NativeEvidenceStore<'locks> {

@@ -104,6 +104,7 @@ pub(super) fn plan(
     input: &SkillDeliveryInput<'_>,
     checked: &validation::Validated<'_>,
     revisions: &[PackageRevision],
+    staged: &[StagedSkillRevision],
     profile: PermissionProfile,
 ) -> Result<PlannedSkillFiles> {
     let mut prior = input.current.graph.artifacts.clone();
@@ -111,6 +112,21 @@ pub(super) fn plan(
     for revision in &input.current.revisions {
         let owner = logical_owner(&input.current.graph.installations, revision);
         for file in &revision.package.revision_files {
+            prior.push(owned(
+                &desired(input.scope, file, revision, profile)?,
+                &owner,
+            ));
+        }
+    }
+    for staged in &input.current.staged {
+        let revision = &staged.revision;
+        let owner = logical_owner(&input.current.graph.installations, revision);
+        for file in revision
+            .package
+            .revision_files
+            .iter()
+            .filter(|file| staged.paths.binary_search(&file.path).is_ok())
+        {
             prior.push(owned(
                 &desired(input.scope, file, revision, profile)?,
                 &owner,
@@ -144,6 +160,21 @@ pub(super) fn plan(
             .entry(owner.installation_id.clone())
             .or_insert_with(|| (owner, Vec::new()));
         for file in &revision.package.revision_files {
+            row.1.push(desired(input.scope, file, revision, profile)?);
+        }
+    }
+    for staged in staged {
+        let revision = &staged.revision;
+        let owner = logical_owner(&checked.graph.installations, revision);
+        let row = sets
+            .entry(owner.installation_id.clone())
+            .or_insert_with(|| (owner, Vec::new()));
+        for file in revision
+            .package
+            .revision_files
+            .iter()
+            .filter(|file| staged.paths.binary_search(&file.path).is_ok())
+        {
             row.1.push(desired(input.scope, file, revision, profile)?);
         }
     }

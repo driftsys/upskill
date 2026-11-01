@@ -61,6 +61,7 @@ fn empty() -> SkillDeliveryState {
             legacy: None,
         },
         revisions: vec![],
+        staged: vec![],
         receipts: vec![],
     }
 }
@@ -659,7 +660,7 @@ fn native_state_round_trip_keeps_one_graph_and_private_evidence_out_of_lockfile(
     let snapshot = state.clone();
     let encoded = serialize_native_state(&state).unwrap();
     let json: serde_json::Value = serde_json::from_str(&encoded.json).unwrap();
-    assert_eq!(json["schema"], 3);
+    assert_eq!(json["schema"], 4);
     assert_eq!(json["file_policy"], "native-skill-files-v1");
     assert!(json["receipts"][0].get("captured_prestate").is_none());
     assert_eq!(
@@ -734,7 +735,7 @@ fn native_state_rejects_unknown_fields_versions_duplicate_json_and_conflicting_r
     ] {
         let mut value = base.clone();
         match mutation {
-            "version" => value["schema"] = 4.into(),
+            "version" => value["schema"] = 5.into(),
             "policy" => value["file_policy"] = "future-policy".into(),
             "unknown" => value["extra"] = true.into(),
             "nested-unknown" => {
@@ -769,7 +770,7 @@ fn native_state_rejects_unknown_fields_versions_duplicate_json_and_conflicting_r
     }
     let duplicate = encoded
         .json
-        .replacen("\"schema\": 3", "\"schema\": 4, \"schema\": 3", 1);
+        .replacen("\"schema\": 4", "\"schema\": 5, \"schema\": 4", 1);
     assert_ne!(duplicate, encoded.json);
     assert!(parse_native_state(&duplicate, &state.context, &encoded.private_evidence).is_err());
 }
@@ -1455,7 +1456,7 @@ fn qualified_store_binds_expected_state_context_and_validates_references_before_
     let error = store
         .load_state(&serde_json::to_string(&wire).unwrap(), &state.context)
         .unwrap_err();
-    assert!(format!("{error:#}").contains("requires schema 3"));
+    assert!(format!("{error:#}").contains("requires schema 4"));
     assert_eq!(store.load_state(&json, &state.context).unwrap(), state);
 }
 
@@ -1787,7 +1788,7 @@ fn durable_native_intent_preserves_real_captures_and_rejects_drift_before_public
             target: key(TargetSurface::ClaudeCli),
         }],
     };
-    let capture = NativeOperationCapture {
+    let mut capture = NativeOperationCapture {
         graph_changes: GraphChanges {
             installations: vec![revision.installation.clone()],
             add_references: vec![Reference::DirectInstallation {
@@ -1818,6 +1819,78 @@ fn durable_native_intent_preserves_real_captures_and_rejects_drift_before_public
                 .starts_with("intent-"))
     );
     fs::remove_file(&manual_path).unwrap();
+    for name in ["lower", "higher"] {
+        let path = format!(".claude/{name}.json");
+        let bytes = format!("{{\"{name}\":true}}").into_bytes();
+        fs::write(home.path().join(&path), &bytes).unwrap();
+        fs::set_permissions(home.path().join(&path), fs::Permissions::from_mode(0o600)).unwrap();
+        let layer = ConfigLayer {
+            format: ConfigFormat::Jsonc,
+            file: ObservedFile {
+                location: FileLocation {
+                    root: private.clone(),
+                    path,
+                },
+                value: Some(FileValue {
+                    bytes,
+                    mode: Some(0o600),
+                }),
+            },
+            tracked: false,
+            ignored: false,
+        };
+        if name == "lower" {
+            capture.configurations[0].before.lower_layers.push(layer);
+        } else {
+            capture.configurations[0].before.higher_layers.push(layer);
+        }
+    }
+    let layers: Vec<_> = std::iter::once(&capture.configurations[0].before.target)
+        .chain(&capture.configurations[0].before.lower_layers)
+        .chain(&capture.configurations[0].before.higher_layers)
+        .cloned()
+        .collect();
+    for layer in layers {
+        let path = layer
+            .file
+            .location
+            .root
+            .path
+            .join(&layer.file.location.path);
+        let baseline = layer.file.value.unwrap();
+        for change in ["bytes", "mode"] {
+            if change == "bytes" {
+                fs::write(&path, b"{\"changed\":true}").unwrap();
+            } else {
+                fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).unwrap();
+            }
+            let error = store.prepare(&capture).unwrap_err();
+            assert!(format!("{error:#}").contains("captured file changed"));
+            assert!(
+                !fs::read_dir(home.path().join(".upskill/native-evidence"))
+                    .unwrap()
+                    .any(|entry| entry
+                        .unwrap()
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("intent-"))
+            );
+            assert!(
+                !project
+                    .path()
+                    .join(".upskill/native-pending/pending.json")
+                    .exists()
+            );
+            assert!(
+                !home
+                    .path()
+                    .join(".upskill/native-pending/pending.json")
+                    .exists()
+            );
+            fs::write(&path, &baseline.bytes).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(baseline.mode.unwrap())).unwrap();
+        }
+    }
     let operation = store.prepare(&capture).unwrap();
     let inspection = store.inspect(operation.id()).unwrap();
     assert_eq!(inspection.intent.capture, capture);
@@ -1837,4 +1910,108 @@ fn durable_native_intent_preserves_real_captures_and_rejects_drift_before_public
     assert!(!project.path().join(".upskill-lock.json").exists());
     let marker = fs::read(project.path().join(".upskill/native-pending/pending.json")).unwrap();
     assert!(!String::from_utf8(marker).unwrap().contains("PRIVATE_"));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn qualified_state_context_can_expand_and_shrink_only_with_held_roots() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::roots::{NativeRoot, lock_native_roots};
+    use upskill::native_delivery::store::NativeStateStore;
+    let project = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let extra = tempfile::tempdir().unwrap();
+    let primary = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: project.path().into(),
+    };
+    let private = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let additional = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: extra.path().into(),
+    };
+    let state = {
+        let ps = QualifiedScope::open(&primary).unwrap();
+        let hs = QualifiedScope::open(&private).unwrap();
+        let locks = lock_native_roots(&[
+            NativeRoot {
+                root: primary.clone(),
+                scope: &ps,
+            },
+            NativeRoot {
+                root: private.clone(),
+                scope: &hs,
+            },
+        ])
+        .unwrap();
+        let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
+        let state = state_for_qualified_context(store.context());
+        let action = store.prepare_state_file(&state).unwrap();
+        fs::write(
+            project.path().join(".upskill-lock.json"),
+            action.after.unwrap().bytes,
+        )
+        .unwrap();
+        state
+    };
+    {
+        let ps = QualifiedScope::open(&primary).unwrap();
+        let hs = QualifiedScope::open(&private).unwrap();
+        let es = QualifiedScope::open(&additional).unwrap();
+        let locks = lock_native_roots(&[
+            NativeRoot {
+                root: primary.clone(),
+                scope: &ps,
+            },
+            NativeRoot {
+                root: private.clone(),
+                scope: &hs,
+            },
+            NativeRoot {
+                root: additional.clone(),
+                scope: &es,
+            },
+        ])
+        .unwrap();
+        let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
+        assert_eq!(store.load().unwrap(), Some(state.clone()));
+        let mut expanded = state.clone();
+        expanded.context.additional_roots = vec![additional.clone()];
+        let action = store.prepare_state_file(&expanded).unwrap();
+        fs::write(
+            project.path().join(".upskill-lock.json"),
+            action.after.unwrap().bytes,
+        )
+        .unwrap();
+        assert_eq!(store.load().unwrap(), Some(expanded));
+        let contraction = store.prepare_state_file(&state).unwrap();
+        assert_ne!(
+            contraction.before.as_ref().unwrap().bytes,
+            contraction.after.as_ref().unwrap().bytes
+        );
+        assert_eq!(state.context.additional_roots, Vec::new());
+    }
+    {
+        let ps = QualifiedScope::open(&primary).unwrap();
+        let hs = QualifiedScope::open(&private).unwrap();
+        let locks = lock_native_roots(&[
+            NativeRoot {
+                root: primary.clone(),
+                scope: &ps,
+            },
+            NativeRoot {
+                root: private.clone(),
+                scope: &hs,
+            },
+        ])
+        .unwrap();
+        let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
+        assert!(
+            store.load().is_err(),
+            "unheld declared additional root was accepted"
+        );
+    }
 }

@@ -38,12 +38,23 @@ pub struct SkillDeliveryIntent {
     pub selection: SkillIntentSelection,
 }
 
+/// Exact owned subset of immutable exports retained without a native binding
+/// claim. The origin identifies the operation that observed this staging set.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StagedSkillRevision {
+    pub revision: PackageRevision,
+    pub operation_id: String,
+    pub paths: Vec<String>,
+}
+
 /// A single in-memory view, not a persisted installation lock.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkillDeliveryState {
     pub scope: InstallationRoot,
     pub graph: CombinedState,
     pub revisions: Vec<PackageRevision>,
+    pub staged: Vec<StagedSkillRevision>,
     pub receipts: Vec<NativeBindingReceipt>,
 }
 
@@ -64,6 +75,7 @@ pub struct SkillDeliveryPlan {
     pub graph: ReconciledGraph,
     pub intents: Vec<SkillDeliveryIntent>,
     pub revisions: Vec<PackageRevision>,
+    pub staged: Vec<StagedSkillRevision>,
     pub file_ownership: Vec<OwnedArtifact>,
     pub stage_files: Vec<PlannedFile>,
     pub selector_files: Vec<PlannedFile>,
@@ -136,6 +148,7 @@ fn plan_with_profile(
             .current
             .revisions
             .iter()
+            .chain(input.current.staged.iter().map(|staged| &staged.revision))
             .any(|revision| self::target(revision).index_key() == *key);
         if before.is_some() || has_retained_resources {
             ensure!(
@@ -155,11 +168,23 @@ fn plan_with_profile(
             retention: observation.retention.clone(),
         });
     }
-    let file_plan = files::plan(input, &checked, &revisions, profile)?;
+    let staged: Vec<_> = input
+        .current
+        .staged
+        .iter()
+        .filter(|staged| {
+            !revisions
+                .iter()
+                .any(|revision| revision_key(revision) == revision_key(&staged.revision))
+        })
+        .cloned()
+        .collect();
+    let file_plan = files::plan(input, &checked, &revisions, &staged, profile)?;
     Ok(SkillDeliveryPlan {
         graph: checked.graph,
         intents: input.intents.to_vec(),
         revisions,
+        staged,
         file_ownership: file_plan.ownership,
         stage_files: file_plan.staging,
         selector_files: file_plan.selectors,

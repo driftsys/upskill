@@ -19,7 +19,7 @@ both existing codecs unchanged. Admit no native profile or migration here.
 
 ### One integrated state
 
-Use an explicitly versioned schema-3 envelope at the existing authoritative
+Use an explicitly versioned schema-4 envelope at the existing authoritative
 `.upskill-lock.json` location when this opt-in infrastructure is called. It
 holds one `CombinedState` logical graph, complete desired skill intent, retained
 revision captures, latest confirmed native binding receipts, applied skill-file
@@ -31,7 +31,7 @@ remain unchanged. Do not create a separate authoritative skills lock.
 
 Raw native prestate and configuration snapshots, including rollback baselines,
 can contain unrelated manual settings. Never embed these bytes in the project
-lockfile. Its schema-3 envelope stores content-addressed, typed references to
+lockfile. Its schema-4 envelope stores content-addressed, typed references to
 private evidence under a qualified user root. The evidence store has a local
 namespace identity; parsing requires the expected namespace and root context, so
 copied machine receipts do not become authority in another store. Evidence
@@ -71,7 +71,38 @@ and planned inverses remain in operation intent until recovery resolves them.
 Never serialize a desired preview and call it completed state. An operation may
 commit state only after files and native selections are observed as intended.
 Existing schemas are not migrated automatically, and #332 remains a production
-admission dependency. Older readers must fail closed on this new envelope.
+admission dependency. The earlier inactive schema-3 proposal is not accepted by
+the schema-4 reader; it had no representation for exports staged without a
+confirmed native binding. Older readers must fail closed on this new envelope.
+
+### Staging ownership and context transitions
+
+Keep retained staging distinct from native-bound revision history.
+`StagedSkillRevision` records one captured revision, a canonical operation ID
+and a nonempty sorted subset of its immutable revision-file paths. Catalogs,
+configuration selectors, duplicate captures and foreign paths reject. The single
+applied ownership table includes those paths, validated against the recompiled
+package and fixed file policy. A staging record proves no native activation,
+unavailability or detachment; native-bound history still requires its existing
+confirmed receipt lineage.
+
+This permits retaining partial exports when restoring an operation that never
+became active. Restore must independently confirm the prior native binding or
+absence. Never manufacture a detachment receipt to retain staged files. A later
+plan retains the owned subset using actual observations, requires cache/session
+clearance before a transition involving retained staging and plans promotion
+only for a matching candidate. Native observation remains required before
+committing that promotion. No resource garbage collection follows from either
+role.
+
+The authoritative state records its declared additional roots, while an
+operation can hold a larger set for a context transition. The integrated store
+checks stable principal/private roots and private namespace, then requires every
+declared root to be in the held lock set before loading its private evidence.
+New state can expand or contract the declared set only within those held roots.
+The pure codec still requires exact equality with its supplied expected context.
+Recovery of an operation still requires the exact root bindings recorded in that
+operation.
 
 ### Fixed private skill-file projection
 
@@ -152,7 +183,7 @@ adapter outcomes.
 ## Implementation and admission
 
 Current implementation: pure permission projection, the validated codec and live
-multi-root writer exclusion exist. The codec emits schema-3 JSON plus private
+multi-root writer exclusion exist. The codec emits schema-4 JSON plus private
 evidence blobs; it performs no I/O, migration or publication.
 `native_delivery::roots` binds exact logical root paths to revalidated directory
 identities, rejects physical aliases and acquires nonblocking writer guards in
@@ -194,9 +225,9 @@ The state APIs do not publish the authoritative lockfile. Interrupted
 blob-publication tests establish process restart behavior, not power-loss
 durability or native recovery.
 
-`NativeOperationStore::prepare` now writes a typed YAML intent and an initial
-JSON journal into the qualified private evidence directory. The intent retains
-exact prior state, captured graph edits, selected revisions, native
+`NativeOperationStore::prepare` now writes a typed YAML schema-2 intent and an
+initial JSON journal into the qualified private evidence directory. The intent
+retains exact prior state, captured graph edits, selected revisions, native
 observations, configuration snapshots/associations and the replayable
 skill/configuration plans. YAML preserves supported non-string source metadata
 keys. Strict typed round trips and replay reject a different preview even when

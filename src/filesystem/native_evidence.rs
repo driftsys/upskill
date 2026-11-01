@@ -64,8 +64,8 @@ struct Owner {
 }
 
 /// Private immutable native evidence beneath an explicitly selected user root.
-/// The borrowed writer guard must remain held. This store publishes no graph,
-/// operation intent, pending marker or native effect. Checks sample bindings;
+/// The borrowed writer guard must remain held. Its public evidence/state methods
+/// publish no graph, operation intent, pending marker or native effect. Checks sample bindings;
 /// they do not exclude non-cooperating editors or establish native authority.
 pub struct NativeEvidenceStore<'a> {
     scope: &'a QualifiedScope,

@@ -15,10 +15,7 @@ use std::collections::BTreeMap;
 impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
     pub(super) fn prior(&self, value: &Option<FileValue>) -> Result<NativeDeliveryState> {
         if let Some(value) = value {
-            return self
-                .state
-                .evidence()
-                .load_state(std::str::from_utf8(&value.bytes)?, self.context());
+            return self.state.parse_captured_state(&value.bytes);
         }
         Ok(NativeDeliveryState {
             context: self.context().clone(),
@@ -36,6 +33,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
                     legacy: None,
                 },
                 revisions: vec![],
+                staged: vec![],
                 receipts: vec![],
             },
             intents: vec![],

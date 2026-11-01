@@ -1275,7 +1275,7 @@ contract is specified in
 
 `native_delivery::state` encodes one validated graph, complete desired skill
 intent, retained captures, confirmed native receipts and applied export
-ownership in an explicit schema-3 envelope. Existing schema-1/2 codecs and CLI
+ownership in an explicit schema-4 envelope. Existing schema-1/2 codecs and CLI
 dispatch remain unchanged. It does not migrate or write a lockfile, register a
 client or complete a native transaction.
 
@@ -1300,8 +1300,9 @@ supported metadata structures and non-string mapping keys. Custom YAML tags on
 additional metadata values remain unsupported by the portable source parser.
 Duplicate JSON keys reject before decoding.
 
-The durable store, multi-root markers, coordinator and client adapters remain
-pending under
+The codec grants no durable coordination or client admission. The private store
+and pending markers are described below; effect coordination and client adapters
+remain pending under
 [AD-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-coordinate-native-delivery-with-one-state-and-operation-intent.md).
 
 ## Inactive native root binding and locking
@@ -1355,9 +1356,16 @@ evidence and returns exact file preconditions without applying them. It selects
 `0600` for a new state file and preserves an existing ordinary mode. Binding or
 captured-file changes during preparation reject.
 
-No API here publishes the authoritative graph, journals operations, creates
-pending markers or retires evidence. Durable multi-root intent, crash exclusion,
-coordinator recovery and native admission remain later Stage 5 work.
+A loaded state's declared additional roots may be a subset of the held roots.
+Principal/private roots and the private namespace must match, and every declared
+root must be held before evidence loading. State preparation can expand or
+contract that declaration within the held set; operation recovery still requires
+its exact recorded root set. The pure codec's expected-context check remains
+exact.
+
+The public state APIs publish no authoritative graph or operation journal and
+retire no evidence. Durable intent and markers are described below; effect
+coordination, recovery and native admission remain later Stage 5 work.
 
 ## Inactive durable native preparation
 
@@ -1384,3 +1392,24 @@ claims, and marker coverage grants no future effect authority. Profile
 admission, effect checkpoints, inverse execution, observation-first recovery,
 state publication and terminal marker retirement remain later Stage 5 work. No
 production CLI route or prior-schema migration is admitted here.
+
+## Retained staging without a native binding
+
+`SkillDeliveryState.staged` keeps a revision capture, origin operation ID and
+the exact owned subset of immutable export paths. It selects no catalog and
+declares no native binding. Native-bound `revisions` and their receipt lineage
+remain separate. This allows partial exports to survive restore without
+fabricated activation or detachment evidence. The applied ownership table
+remains in the single authoritative state.
+
+Planning validates and retains these paths with their real observed values. Only
+a matching desired candidate plans promotion into bound revision history;
+committing that promotion still requires independent native observation. Cache
+preservation or session clearance is required for a native transition involving
+retained staging. Unknown native presence cannot be adopted from a staging
+record. No record authorizes resource deletion.
+
+The inactive native state format is schema 4, and the private intent format is
+schema 2. Earlier inactive schema-3 state and schema-1 intent are rejected
+rather than silently reinterpreted. Production schemas 1/2, CLI dispatch and
+native admission remain unchanged.

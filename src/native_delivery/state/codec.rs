@@ -4,7 +4,7 @@ use crate::compile::skill_selection::SelectedSkill;
 use crate::lifecycle::native_receipt::{
     NativeBindingOutcome, NativeBindingReceipt, NativeSkillSelection,
 };
-use crate::lifecycle::skill_delivery::PackageRevision;
+use crate::lifecycle::skill_delivery::{PackageRevision, StagedSkillRevision};
 use crate::lifecycle::state::CombinedState;
 use crate::lifecycle::state::Installation;
 use anyhow::{Context, Result, ensure};
@@ -39,6 +39,32 @@ struct Revision {
     selected_yaml: String,
     package: SkillPackage,
 }
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Staged {
+    revision: Revision,
+    operation_id: String,
+    paths: Vec<String>,
+}
+fn encode_revision(revision: &PackageRevision) -> Result<Revision> {
+    let selected_yaml = serde_yaml_ng::to_string(&revision.selected)?;
+    ensure!(
+        selected(&selected_yaml)? == revision.selected,
+        "selected evidence cannot round-trip losslessly"
+    );
+    Ok(Revision {
+        installation: revision.installation.clone(),
+        selected_yaml,
+        package: revision.package.clone(),
+    })
+}
+fn decode_revision(revision: Revision) -> Result<PackageRevision> {
+    Ok(PackageRevision {
+        installation: revision.installation,
+        selected: selected(&revision.selected_yaml)?,
+        package: revision.package,
+    })
+}
 fn selected(json: &str) -> Result<SelectedSkill> {
     let value: serde_yaml_ng::Value = serde_yaml_ng::from_str(json)?;
     let selected: SelectedSkill = serde_yaml_ng::from_value(value.clone())?;
@@ -58,6 +84,7 @@ struct Wire {
     graph: CombinedState,
     intents: Vec<SkillDeliveryIntent>,
     revisions: Vec<Revision>,
+    staged: Vec<Staged>,
     receipts: Vec<Receipt>,
     files: Vec<OwnedArtifact>,
     configurations: Vec<Configuration>,
@@ -111,7 +138,7 @@ pub fn serialize_native_state(state: &NativeDeliveryState) -> Result<EncodedNati
         });
     }
     let wire = Wire {
-        schema: 3,
+        schema: 4,
         file_policy: super::super::SKILL_FILE_POLICY.into(),
         context: state.context.clone(),
         graph: state.skills.graph.clone(),
@@ -120,16 +147,17 @@ pub fn serialize_native_state(state: &NativeDeliveryState) -> Result<EncodedNati
             .skills
             .revisions
             .iter()
-            .map(|r| {
-                let selected_yaml = serde_yaml_ng::to_string(&r.selected)?;
-                ensure!(
-                    selected(&selected_yaml)? == r.selected,
-                    "selected evidence cannot round-trip losslessly"
-                );
-                Ok(Revision {
-                    installation: r.installation.clone(),
-                    selected_yaml,
-                    package: r.package.clone(),
+            .map(encode_revision)
+            .collect::<Result<Vec<_>>>()?,
+        staged: state
+            .skills
+            .staged
+            .iter()
+            .map(|staged| {
+                Ok(Staged {
+                    revision: encode_revision(&staged.revision)?,
+                    operation_id: staged.operation_id.clone(),
+                    paths: staged.paths.clone(),
                 })
             })
             .collect::<Result<Vec<_>>>()?,
@@ -202,11 +230,16 @@ pub fn parse_native_state(
             revisions: wire
                 .revisions
                 .into_iter()
-                .map(|r| {
-                    Ok(PackageRevision {
-                        installation: r.installation,
-                        selected: selected(&r.selected_yaml)?,
-                        package: r.package,
+                .map(decode_revision)
+                .collect::<Result<Vec<_>>>()?,
+            staged: wire
+                .staged
+                .into_iter()
+                .map(|staged| {
+                    Ok(StagedSkillRevision {
+                        revision: decode_revision(staged.revision)?,
+                        operation_id: staged.operation_id,
+                        paths: staged.paths,
                     })
                 })
                 .collect::<Result<Vec<_>>>()?,
@@ -220,19 +253,29 @@ pub fn parse_native_state(
     Ok(state)
 }
 
-fn state_wire(json: &str, expected: &NativeStateContext) -> Result<Wire> {
+fn decoded_wire(json: &str) -> Result<Wire> {
     let wire: Wire = decode(json).context("decode integrated native state")?;
-    ensure!(wire.schema == 3, "native state requires schema 3");
+    ensure!(wire.schema == 4, "native state requires schema 4");
     ensure!(
         wire.file_policy == super::super::SKILL_FILE_POLICY,
         "unsupported native skill file policy"
     );
+    validate::context(&wire.context)?;
+    Ok(wire)
+}
+fn state_wire(json: &str, expected: &NativeStateContext) -> Result<Wire> {
+    let wire = decoded_wire(json)?;
+    validate::context(expected)?;
     ensure!(
         wire.context == *expected,
         "native state belongs to another root or private namespace"
     );
-    validate::context(expected)?;
     Ok(wire)
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) fn declared_context(json: &str) -> Result<NativeStateContext> {
+    Ok(decoded_wire(json)?.context)
 }
 
 /// Validate only the envelope context and reference declarations before lookup.

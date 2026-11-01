@@ -104,6 +104,31 @@ pub(super) fn state(state: &NativeDeliveryState) -> Result<()> {
             }
         }
     }
+    let configuration_keys = keys.clone();
+    for staged in &state.skills.staged {
+        let revision = &staged.revision;
+        let key = SkillTarget {
+            installation_id: revision.installation.owner.installation_id.clone(),
+            surface: revision.selected.surface,
+        };
+        keys.insert(target(&key), key);
+        for file in revision
+            .package
+            .revision_files
+            .iter()
+            .filter(|file| staged.paths.binary_search(&file.path).is_ok())
+        {
+            ensure!(
+                bytes
+                    .insert(
+                        location(&revision.installation.root, &file.path),
+                        file.bytes.clone()
+                    )
+                    .is_none(),
+                "staged export overlaps another retained revision"
+            );
+        }
+    }
     for receipt in &state.skills.receipts {
         if let Some(selection) = &receipt.after {
             let revision = state
@@ -226,7 +251,7 @@ pub(super) fn state(state: &NativeDeliveryState) -> Result<()> {
         expected == file_rows,
         "applied native ownership differs from captured packages"
     );
-    configurations(state, &keys)
+    configurations(state, &configuration_keys)
 }
 
 fn configurations(

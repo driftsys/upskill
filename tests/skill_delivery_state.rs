@@ -50,6 +50,7 @@ fn empty(scope: &InstallationRoot) -> SkillDeliveryState {
         scope: scope.clone(),
         graph: empty_graph(),
         revisions: vec![],
+        staged: vec![],
         receipts: vec![],
     }
 }

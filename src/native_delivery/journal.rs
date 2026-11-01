@@ -66,7 +66,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         let observations = self.observe_capture(capture)?;
         let id = self.state.evidence().new_operation_id()?;
         let intent = NativeOperationIntent {
-            schema: 1,
+            schema: 2,
             operation_id: id.clone(),
             context: self.context().clone(),
             roots: self.roots.bindings().to_vec(),
@@ -154,7 +154,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         );
         let intent: NativeOperationIntent = yaml(&bytes)?;
         ensure!(
-            intent.schema == 1
+            intent.schema == 2
                 && intent.operation_id == id
                 && intent.context == *self.context()
                 && intent.roots == self.roots.bindings(),
