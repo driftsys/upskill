@@ -63,3 +63,6 @@ pub use codec::{parse_native_state, serialize_native_state};
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(crate) use evidence::{validate_blob, validate_reference};
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) use codec::evidence_references;

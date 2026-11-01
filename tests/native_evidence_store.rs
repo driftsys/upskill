@@ -43,7 +43,24 @@ fn private_store_round_trip_is_immutable_and_reopens_in_same_namespace() {
     assert_eq!(fs::read_dir(tmp.path()).unwrap().count(), 0);
     let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
     let namespace = store.namespace().to_owned();
-    assert!(!namespace.is_empty());
+    use sha2::{Digest, Sha256};
+    let owner = fs::read(tmp.path().join(DIR).join("owner.json")).unwrap();
+    let mut framed = b"upskill:native-evidence-namespace:v1\0".to_vec();
+    framed.extend_from_slice(&(owner.len() as u64).to_be_bytes());
+    framed.extend_from_slice(&owner);
+    let expected: String = Sha256::digest(&framed)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    assert_eq!(namespace, expected);
+    let independent = tempfile::tempdir().unwrap();
+    let independent_root = self::root(independent.path());
+    let independent_scope = QualifiedScope::open(&independent_root).unwrap();
+    let independent_guard = independent_scope.try_lock_writer().unwrap();
+    let independent_store =
+        NativeEvidenceStore::initialize(&independent_root, &independent_scope, &independent_guard)
+            .unwrap();
+    assert_ne!(namespace, independent_store.namespace());
     assert!(store.read(&blob().reference).unwrap().is_none());
     store.put(&blob()).unwrap();
     store.put(&blob()).unwrap();
@@ -78,9 +95,16 @@ fn invalid_references_and_corrupt_payloads_never_publish_or_escape() {
     let scope = QualifiedScope::open(&root).unwrap();
     let guard = scope.try_lock_writer().unwrap();
     let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
-    for digest in ["../outside", "", "ABCDEF", &"a".repeat(65)] {
+    for digest in [
+        "../outside".to_owned(),
+        String::new(),
+        "ABCDEF".into(),
+        "a".repeat(65),
+        "A".repeat(64),
+        "g".repeat(64),
+    ] {
         let mut bad = blob();
-        bad.reference.digest = digest.into();
+        bad.reference.digest = digest;
         assert!(store.put(&bad).is_err());
         assert!(store.read(&bad.reference).is_err());
     }
@@ -96,10 +120,10 @@ fn invalid_references_and_corrupt_payloads_never_publish_or_escape() {
     assert_eq!(fs::read_dir(tmp.path().join(DIR)).unwrap().count(), 2);
     store.put(&blob()).unwrap();
     let path = tmp.path().join(DIR).join(name());
-    fs::write(&path, b"corrupt").unwrap();
+    fs::write(&path, b"bad").unwrap();
     assert!(store.read(&blob().reference).is_err());
     assert!(store.put(&blob()).is_err());
-    assert_eq!(fs::read(path).unwrap(), b"corrupt");
+    assert_eq!(fs::read(path).unwrap(), b"bad");
 }
 
 #[test]
@@ -285,4 +309,25 @@ fn unsafe_parent_directories_reject_before_creating_private_entries() {
         assert_eq!(fs::read_dir(outside.path()).unwrap().count(), 1);
         assert_eq!(fs::read(outside.path().join("manual")).unwrap(), b"keep");
     }
+}
+
+#[test]
+fn different_selected_root_and_physical_alias_reject_before_creation() {
+    let a = tempfile::tempdir().unwrap();
+    let b = tempfile::tempdir().unwrap();
+    let aliases = tempfile::tempdir().unwrap();
+    fs::create_dir(a.path().join("child")).unwrap();
+    symlink(a.path(), aliases.path().join("alias")).unwrap();
+    let root = root(&a.path().join("child"));
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    for wrong in [
+        self::root(b.path()),
+        self::root(&aliases.path().join("alias/child")),
+    ] {
+        assert!(NativeEvidenceStore::initialize(&wrong, &scope, &guard).is_err());
+        assert_eq!(fs::read_dir(&root.path).unwrap().count(), 0);
+        assert_eq!(fs::read_dir(b.path()).unwrap().count(), 0);
+    }
+    NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
 }

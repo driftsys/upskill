@@ -173,10 +173,27 @@ bytes supplies the expected namespace. Copied, unowned or partially initialized
 stores require reconciliation. Equal blobs are verified and synced; conflicting
 bytes remain untouched. No evidence garbage collection is supplied.
 
-The private evidence store does not publish lockfile JSON, operation intent or
-pending markers. Interrupted blob-publication tests establish process restart
-behavior, not power-loss durability or native recovery. The multi-root operation
-store and durable coordinator remain unimplemented. Stage 5 is open.
+`store_state_evidence` validates supplied state, syncs all required private
+blobs and returns reference-only JSON. `load_state` checks the expected private
+root/namespace and envelope declarations before reading exactly the referenced
+blobs, then performs complete codec validation. Unreferenced evidence remains
+untouched and is not another source of graph authority.
+
+`NativeStateStore` holds the complete root-lock set, derives context from its
+primary/private roots and orders additional logical roots independently of
+physical lock order. It captures only the existing `.upskill-lock.json` as the
+authoritative graph. `prepare_state_file` rejects unsupported prior state,
+validates the supplied context, syncs private evidence and returns an exact file
+precondition plus JSON. New state files select `0600`; existing ordinary modes
+are preserved. It verifies captured state and all root bindings before returning
+and never applies the state action. Principal/additional roots supplied directly
+to the lower evidence API remain claims; the integrated wrapper binds them to
+the held root set.
+
+These APIs do not publish lockfile JSON, operation intent or pending markers.
+Interrupted blob-publication tests establish process restart behavior, not
+power-loss durability or native recovery. The multi-root operation store and
+durable coordinator remain unimplemented. Stage 5 is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are

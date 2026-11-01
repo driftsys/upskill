@@ -257,6 +257,7 @@ fn apply_named_with_policy(
             identity(&parent(scope, &action.location, false)?.0)? == expected,
             "private publication parent binding changed"
         );
+        super::checkpoint("after_bound_parent_validation", index)?;
     }
     if action.before == action.after {
         before.verify_unchanged()?;

@@ -155,16 +155,7 @@ pub fn parse_native_state(
     expected: &NativeStateContext,
     evidence: &[EvidenceBlob],
 ) -> Result<NativeDeliveryState> {
-    let wire: Wire = decode(json).context("decode integrated native state")?;
-    ensure!(wire.schema == 3, "native state requires schema 3");
-    ensure!(
-        wire.file_policy == super::super::SKILL_FILE_POLICY,
-        "unsupported native skill file policy"
-    );
-    ensure!(
-        wire.context == *expected,
-        "native state belongs to another root or private namespace"
-    );
+    let wire = state_wire(json, expected)?;
     let blobs = evidence::index(evidence)?;
     let receipts = wire
         .receipts
@@ -227,4 +218,54 @@ pub fn parse_native_state(
     };
     validate::state(&state).context("validate integrated native state")?;
     Ok(state)
+}
+
+fn state_wire(json: &str, expected: &NativeStateContext) -> Result<Wire> {
+    let wire: Wire = decode(json).context("decode integrated native state")?;
+    ensure!(wire.schema == 3, "native state requires schema 3");
+    ensure!(
+        wire.file_policy == super::super::SKILL_FILE_POLICY,
+        "unsupported native skill file policy"
+    );
+    ensure!(
+        wire.context == *expected,
+        "native state belongs to another root or private namespace"
+    );
+    validate::context(expected)?;
+    Ok(wire)
+}
+
+/// Validate only the envelope context and reference declarations before lookup.
+/// Full graph/configuration validation still requires the referenced evidence.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) fn evidence_references(
+    json: &str,
+    expected: &NativeStateContext,
+) -> Result<Vec<EvidenceReference>> {
+    let wire = state_wire(json, expected)?;
+    let mut references = std::collections::BTreeMap::new();
+    for (reference, kind) in wire
+        .receipts
+        .iter()
+        .map(|r| (&r.prestate, EvidenceKind::NativePrestate))
+        .chain(
+            wire.configurations
+                .iter()
+                .map(|c| (&c.snapshot, EvidenceKind::ConfigurationSnapshot)),
+        )
+    {
+        ensure!(
+            reference.kind == kind,
+            "private evidence reference kind differs from its field"
+        );
+        evidence::validate_reference(reference)?;
+        let key = (reference.kind.clone(), reference.digest.clone());
+        if let Some(previous) = references.insert(key, reference.clone()) {
+            ensure!(
+                previous == *reference,
+                "conflicting private evidence reference lengths"
+            );
+        }
+    }
+    Ok(references.into_values().collect())
 }

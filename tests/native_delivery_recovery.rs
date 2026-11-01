@@ -1318,3 +1318,346 @@ fn native_state_rejects_duplicate_private_blobs_without_losing_the_valid_control
             .contains("duplicate private evidence")
     );
 }
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn qualified_store_round_trips_state_using_only_referenced_private_evidence() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::state::{EvidenceBlob, EvidenceKind, EvidenceReference};
+    use upskill::native_delivery::store::NativeEvidenceStore;
+    let home = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
+    let unrelated = EvidenceBlob {
+        reference: EvidenceReference {
+            kind: EvidenceKind::NativePrestate,
+            digest: "5eadfd350ace3da982d31480c7aa2f9f5d3b9fda1838b35196e9068c83f969bc".into(),
+            length: 3,
+        },
+        bytes: vec![0, 255, 1],
+    };
+    store.put(&unrelated).unwrap();
+    let unrelated_path = home
+        .path()
+        .join(".upskill/native-evidence")
+        .join(format!("native-prestate-{}", unrelated.reference.digest));
+    fs::write(&unrelated_path, b"unreferenced retained bytes").unwrap();
+    let mut state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    state.context.private_root = root.clone();
+    state.context.namespace = store.namespace().into();
+    with_configuration(&mut state);
+    let json = store.store_state_evidence(&state).unwrap();
+    assert!(!json.contains("PRIVATE_NATIVE_SEED"));
+    assert!(!json.contains("PRIVATE_CONFIG_SEED"));
+    assert_eq!(store.load_state(&json, &state.context).unwrap(), state);
+    assert_eq!(
+        fs::read(&unrelated_path).unwrap(),
+        b"unreferenced retained bytes"
+    );
+    assert!(!home.path().join(".upskill-lock.json").exists());
+    drop(store);
+    let reopened = NativeEvidenceStore::open(&root, &scope, &guard)
+        .unwrap()
+        .unwrap();
+    assert_eq!(reopened.load_state(&json, &state.context).unwrap(), state);
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn qualified_store_rejects_missing_corrupt_and_invalid_state_evidence() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::state::EvidenceKind;
+    use upskill::native_delivery::store::NativeEvidenceStore;
+    let home = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
+    let mut state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    state.context.private_root = root;
+    state.context.namespace = store.namespace().into();
+    let mut invalid = state.clone();
+    invalid.files[0].owners.clear();
+    assert!(store.store_state_evidence(&invalid).is_err());
+    assert_eq!(
+        fs::read_dir(home.path().join(".upskill/native-evidence"))
+            .unwrap()
+            .count(),
+        2
+    );
+    let json = store.store_state_evidence(&state).unwrap();
+    let encoded = serialize_native_state(&state).unwrap();
+    let blob = encoded
+        .private_evidence
+        .iter()
+        .find(|blob| blob.reference.kind == EvidenceKind::NativePrestate)
+        .unwrap();
+    let path = home
+        .path()
+        .join(".upskill/native-evidence")
+        .join(format!("native-prestate-{}", blob.reference.digest));
+    fs::remove_file(&path).unwrap();
+    assert!(store.load_state(&json, &state.context).is_err());
+    assert!(!path.exists());
+    store.put(blob).unwrap();
+    let corrupt = vec![b'X'; blob.bytes.len()];
+    fs::write(&path, &corrupt).unwrap();
+    assert!(store.load_state(&json, &state.context).is_err());
+    assert_eq!(fs::read(&path).unwrap(), corrupt);
+    assert!(!home.path().join(".upskill-lock.json").exists());
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn qualified_store_binds_expected_state_context_and_validates_references_before_lookup() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::store::NativeEvidenceStore;
+    let home = tempfile::tempdir().unwrap();
+    let other = tempfile::tempdir().unwrap();
+    let root = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let scope = QualifiedScope::open(&root).unwrap();
+    let guard = scope.try_lock_writer().unwrap();
+    let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
+    let mut state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    state.context.private_root = root;
+    state.context.namespace = store.namespace().into();
+    let json = store.store_state_evidence(&state).unwrap();
+    for field in ["root", "namespace"] {
+        let mut wrong = state.clone();
+        if field == "root" {
+            wrong.context.private_root.path = other.path().into();
+        } else {
+            wrong.context.namespace = "another-namespace".into();
+        }
+        let encoded = serialize_native_state(&wrong).unwrap();
+        assert!(store.store_state_evidence(&wrong).is_err());
+        assert!(store.load_state(&encoded.json, &wrong.context).is_err());
+        assert!(store.load_state(&json, &wrong.context).is_err());
+    }
+    let mut wire: serde_json::Value = serde_json::from_str(&json).unwrap();
+    wire["receipts"][0]["prestate"]["digest"] = "../manual".into();
+    let error = store
+        .load_state(&serde_json::to_string(&wire).unwrap(), &state.context)
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("invalid private evidence digest"));
+    wire["schema"] = 99.into();
+    let error = store
+        .load_state(&serde_json::to_string(&wire).unwrap(), &state.context)
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("requires schema 3"));
+    assert_eq!(store.load_state(&json, &state.context).unwrap(), state);
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn state_for_qualified_context(context: &NativeStateContext) -> NativeDeliveryState {
+    let mut revision = revision(TargetSurface::ClaudeCli, "Body.");
+    revision.installation.root = context.scope.clone();
+    revision.package = compile_skill_package(&SkillPackageRequest {
+        selected: &revision.selected,
+        surface: revision.selected.surface,
+        scope: &context.scope,
+        owner: &revision.installation.owner,
+    })
+    .unwrap();
+    let mut state = native_state(&revision);
+    state.context = context.clone();
+    state.skills.scope = context.scope.clone();
+    for receipt in &mut state.skills.receipts {
+        receipt.scope = context.scope.clone();
+    }
+    for file in &mut state.files {
+        file.root = context.scope.clone();
+    }
+    state
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn multi_root_state_store_loads_only_authoritative_lockfile_and_prepares_without_publishing() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::roots::{NativeRoot, lock_native_roots};
+    use upskill::native_delivery::store::NativeStateStore;
+    let project = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let additional = tempfile::tempdir().unwrap();
+    let second_additional = tempfile::tempdir().unwrap();
+    use std::os::unix::fs::MetadataExt;
+    let physical = |path: &std::path::Path| {
+        let metadata = fs::metadata(path).unwrap();
+        (metadata.dev(), metadata.ino())
+    };
+    let (early, late) = if physical(additional.path()) < physical(second_additional.path()) {
+        (additional.path(), second_additional.path())
+    } else {
+        (second_additional.path(), additional.path())
+    };
+    let primary = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: project.path().into(),
+    };
+    let private = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let extra = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: late.into(),
+    };
+    let extra_user = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: early.into(),
+    };
+    let ps = QualifiedScope::open(&primary).unwrap();
+    let hs = QualifiedScope::open(&private).unwrap();
+    let es = QualifiedScope::open(&extra).unwrap();
+    let us = QualifiedScope::open(&extra_user).unwrap();
+    let locks = lock_native_roots(&[
+        NativeRoot {
+            root: extra_user.clone(),
+            scope: &us,
+        },
+        NativeRoot {
+            root: private.clone(),
+            scope: &hs,
+        },
+        NativeRoot {
+            root: extra.clone(),
+            scope: &es,
+        },
+        NativeRoot {
+            root: primary.clone(),
+            scope: &ps,
+        },
+    ])
+    .unwrap();
+    assert!(
+        NativeStateStore::open(&locks, &primary, &private)
+            .unwrap()
+            .is_none()
+    );
+    let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
+    assert_eq!(store.context().scope, primary);
+    assert_eq!(store.context().private_root, private);
+    assert_eq!(store.context().additional_roots, vec![extra, extra_user]);
+    assert!(store.load().unwrap().is_none());
+    let mut state = state_for_qualified_context(store.context());
+    with_configuration(&mut state);
+    let action = store.prepare_state_file(&state).unwrap();
+    assert_eq!(
+        action.location,
+        FileLocation {
+            root: primary.clone(),
+            path: ".upskill-lock.json".into()
+        }
+    );
+    assert_eq!(action.before, None);
+    assert_eq!(action.after.as_ref().unwrap().mode, Some(0o600));
+    assert!(!project.path().join(".upskill-lock.json").exists());
+    assert_eq!(fs::read_dir(additional.path()).unwrap().count(), 0);
+    assert_eq!(fs::read_dir(second_additional.path()).unwrap().count(), 0);
+    // Simulate an earlier publisher; this test asserts capture/preconditions,
+    // not execution or native completion of the returned plan.
+    let json = &action.after.as_ref().unwrap().bytes;
+    fs::write(project.path().join(".upskill-lock.json"), json).unwrap();
+    fs::set_permissions(
+        project.path().join(".upskill-lock.json"),
+        fs::Permissions::from_mode(0o640),
+    )
+    .unwrap();
+    assert_eq!(store.load().unwrap(), Some(state.clone()));
+    let noop = store.prepare_state_file(&state).unwrap();
+    assert_eq!(noop.before, noop.after);
+    assert_eq!(noop.after.unwrap().mode, Some(0o640));
+    drop(store);
+    let reopened = NativeStateStore::open(&locks, &primary, &private)
+        .unwrap()
+        .unwrap();
+    assert_eq!(reopened.load().unwrap(), Some(state.clone()));
+    let retained = tempfile::tempdir().unwrap();
+    fs::rename(additional.path(), retained.path().join("extra")).unwrap();
+    fs::create_dir(additional.path()).unwrap();
+    assert!(reopened.load().is_err());
+    assert!(reopened.prepare_state_file(&state).is_err());
+    assert_eq!(
+        fs::read(project.path().join(".upskill-lock.json")).unwrap(),
+        *json
+    );
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn multi_root_state_store_rejects_legacy_state_wrong_context_and_unlocked_roots() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_delivery::roots::{NativeRoot, lock_native_roots};
+    use upskill::native_delivery::store::NativeStateStore;
+    let project = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let foreign = tempfile::tempdir().unwrap();
+    let primary = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: project.path().into(),
+    };
+    let private = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let wrong = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: foreign.path().into(),
+    };
+    let ps = QualifiedScope::open(&primary).unwrap();
+    let hs = QualifiedScope::open(&private).unwrap();
+    let locks = lock_native_roots(&[
+        NativeRoot {
+            root: primary.clone(),
+            scope: &ps,
+        },
+        NativeRoot {
+            root: private.clone(),
+            scope: &hs,
+        },
+    ])
+    .unwrap();
+    assert!(NativeStateStore::initialize(&locks, &wrong, &private).is_err());
+    assert_eq!(fs::read_dir(home.path()).unwrap().count(), 0);
+    let store = NativeStateStore::initialize(&locks, &primary, &private).unwrap();
+    let state = state_for_qualified_context(store.context());
+    let mut wrong = state.clone();
+    wrong.context.additional_roots.push(InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: foreign.path().into(),
+    });
+    assert!(store.prepare_state_file(&wrong).is_err());
+    let legacy = b"{\"schema\":1,\"installations\":[]}";
+    fs::write(project.path().join(".upskill-lock.json"), legacy).unwrap();
+    assert!(store.load().is_err());
+    assert!(store.prepare_state_file(&state).is_err());
+    assert_eq!(
+        fs::read(project.path().join(".upskill-lock.json")).unwrap(),
+        legacy
+    );
+    assert_eq!(
+        fs::read_dir(home.path().join(".upskill/native-evidence"))
+            .unwrap()
+            .count(),
+        2
+    );
+    let retained = project.path().join("retained");
+    fs::rename(project.path().join(".upskill-lock.json"), &retained).unwrap();
+    let relocated = tempfile::tempdir().unwrap();
+    fs::rename(&primary.path, relocated.path().join("primary")).unwrap();
+    fs::create_dir(&primary.path).unwrap();
+    assert!(store.load().is_err());
+    assert!(store.prepare_state_file(&state).is_err());
+}

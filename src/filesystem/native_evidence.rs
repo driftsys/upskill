@@ -4,7 +4,9 @@ use super::qualification::Mount;
 use super::{QualifiedScope, ScopeBinding, ScopeWriterGuard};
 use crate::files::plan::{FileLocation, FileValue, PlannedFile};
 use crate::native_delivery::state::{
-    EvidenceBlob, EvidenceKind, EvidenceReference, validate_blob, validate_reference,
+    EvidenceBlob, EvidenceKind, EvidenceReference, NativeDeliveryState, NativeStateContext,
+    evidence_references, parse_native_state, serialize_native_state, validate_blob,
+    validate_reference,
 };
 use crate::ownership::{InstallationRoot, OwnershipScope};
 use anyhow::{Context, Result, ensure};
@@ -198,6 +200,50 @@ impl<'a> NativeEvidenceStore<'a> {
         };
         validate_blob(&blob)?;
         Ok(Some(blob))
+    }
+
+    /// Validate supplied state, durably store its private evidence and return
+    /// reference-only JSON. This never publishes the authoritative lockfile or
+    /// establishes observed completion of a native transaction.
+    pub fn store_state_evidence(&self, state: &NativeDeliveryState) -> Result<String> {
+        self.require_context(&state.context)?;
+        let encoded = serialize_native_state(state)?;
+        for blob in &encoded.private_evidence {
+            self.put(blob)?;
+        }
+        self.load_state(&encoded.json, &state.context)?;
+        Ok(encoded.json)
+    }
+
+    /// Load supplied JSON using only its exact private evidence references.
+    /// Schema/context/reference declarations validate before evidence lookup;
+    /// the complete codec validates the reconstructed graph and configurations.
+    /// Caller-supplied principal/additional roots are claims, not capabilities.
+    pub fn load_state(
+        &self,
+        json: &str,
+        expected: &NativeStateContext,
+    ) -> Result<NativeDeliveryState> {
+        self.require_context(expected)?;
+        let references = evidence_references(json, expected)?;
+        let blobs = references
+            .iter()
+            .map(|reference| {
+                self.read(reference)?
+                    .context("missing referenced private native evidence")
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let state = parse_native_state(json, expected, &blobs)?;
+        self.verify()?;
+        Ok(state)
+    }
+
+    fn require_context(&self, expected: &NativeStateContext) -> Result<()> {
+        ensure!(
+            expected.private_root == self.root && expected.namespace == self.namespace,
+            "native state context does not match the qualified private store"
+        );
+        self.verify()
     }
 
     fn verify(&self) -> Result<()> {

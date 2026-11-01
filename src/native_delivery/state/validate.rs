@@ -17,7 +17,7 @@ fn location(root: &InstallationRoot, path: &str) -> Location {
 fn target(key: &SkillTarget) -> (String, &'static str) {
     (key.installation_id.clone(), key.surface.name())
 }
-fn context(context: &NativeStateContext) -> Result<()> {
+pub(super) fn context(context: &NativeStateContext) -> Result<()> {
     for root in std::iter::once(&context.scope)
         .chain(std::iter::once(&context.private_root))
         .chain(&context.additional_roots)

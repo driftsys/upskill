@@ -33,6 +33,21 @@ impl NativeRootLocks<'_> {
         &self.bindings
     }
 
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(crate) fn scope_and_guard(
+        &self,
+        root: &InstallationRoot,
+    ) -> Result<(&QualifiedScope, &ScopeWriterGuard<'_>)> {
+        crate::compile::skill_package::scope_identity(root)?;
+        self.verify_bindings()?;
+        let index = self
+            .bindings
+            .iter()
+            .position(|binding| binding.root == *root)
+            .ok_or_else(|| anyhow::anyhow!("native state root is not in the held lock set"))?;
+        Ok((self.scopes[index], &self.guards[index]))
+    }
+
     /// Revalidate every selected path and pinned directory while holding locks.
     /// This does not freeze the namespace or exclude non-cooperating editors.
     pub fn verify_bindings(&self) -> Result<()> {

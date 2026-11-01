@@ -1337,7 +1337,24 @@ existing bytes are verified and synced; corruption or changed ownership rejects
 without replacement. Copied store records cannot become authority in another
 directory. Namespace/root equality remains required when parsing state.
 
-This private evidence is not another installation lock. The API neither loads
-nor publishes the authoritative graph, journals operations, creates pending
-markers nor retires old evidence. Full state integration, multi-root crash
-exclusion and native recovery remain later Stage 5 work.
+This private evidence is not another installation lock. `store_state_evidence`
+validates supplied state, syncs its private blobs and returns reference-only
+JSON. `load_state` checks its expected root/namespace and envelope declarations,
+reads only referenced blobs and performs full codec validation. Unreferenced
+blobs are neither loaded nor removed. These methods consume supplied state data;
+they do not observe principal/additional root capabilities or native outcomes.
+
+`NativeStateStore` binds that codec/store boundary to the full root-lock set. It
+derives the expected root context, keeps additional logical roots in stable
+scope/path order and captures the authoritative `.upskill-lock.json` through the
+qualified primary scope. `load` returns its validated state or absence; an
+unsupported schema rejects without migration. `open` describes private-store
+availability, so a missing private store does not imply an absent installed
+graph. `prepare_state_file` validates prior and supplied state, syncs private
+evidence and returns exact file preconditions without applying them. It selects
+`0600` for a new state file and preserves an existing ordinary mode. Binding or
+captured-file changes during preparation reject.
+
+No API here publishes the authoritative graph, journals operations, creates
+pending markers or retires evidence. Durable multi-root intent, crash exclusion,
+coordinator recovery and native admission remain later Stage 5 work.
