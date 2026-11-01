@@ -49,6 +49,16 @@ replace those independent observations. Use only owned plugin/marketplace
 selectors; no broad disable, prune or trust command belongs in an inverse.
 Capture native cache paths separately from the immutable managed export paths.
 
+The inactive
+[Claude command planner](../../src/native_delivery/claude/commands.rs) now emits
+fixed argv for catalog validation, registration, install, update, uninstall and
+scoped marketplace removal. It checks the retained version, Claude command
+route, full native digest name and matching managed catalog and revision paths.
+These are consistency checks on supplied records; they do not establish
+ownership, catalog contents, trust or qualification. Every mutation still needs
+a durable invocation checkpoint and independent effect observation. No command
+executes through this planner and the production registry stays empty.
+
 The retained [Q11b result](gate6-project-registration-isolation.md) and its
 preservation failures remain constraints. The
 [Copilot-local exclusion proposal](copilot-project-plugin-overlay-profile.md)

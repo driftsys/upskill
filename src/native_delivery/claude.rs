@@ -1,7 +1,9 @@
 //! Claude plugin-inventory decoding for the retained 2.1.308 wire shape.
 //!
 //! These are native metadata claims, not ownership, effective activation,
-//! resource retention or profile qualification. No client command is invoked.
+//! resource retention or profile qualification. The decoder performs no I/O;
+//! the candidate reader invokes fixed metadata commands. Production admission
+//! remains separate.
 use serde::Deserialize;
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
@@ -160,3 +162,8 @@ impl ClaudePluginInventory {
 mod observe;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub use observe::{ClaudeInventoryCapture, ClaudeInventoryReadError, read_plugin_inventory};
+
+mod commands;
+pub use commands::{
+    ClaudeCommandError, ClaudePluginAction, ClaudePluginCommand, plan_plugin_command,
+};

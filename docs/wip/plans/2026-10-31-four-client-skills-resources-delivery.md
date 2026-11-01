@@ -179,6 +179,13 @@ Planning is pure; application uses qualified file preconditions.
 
 ## Stage 5: Durable native coordination
 
+**Local status:** Implemented in `cf2f877` and the preceding durable-store
+commits. The real coordinator has fake-adapter lifecycle acceptance tests and
+fresh-process forward/inverse checkpoint sweeps. It preserves uncertain native
+outcomes, explicit recovery choices, resource-retention gates and exact owned
+configuration preconditions. This completes the inactive coordinator stage; it
+does not establish any real client profile or authorize production dispatch.
+
 **Files:** Create `src/native_delivery/mod.rs`,
 `src/native_delivery/adapter.rs`, `src/native_delivery/journal.rs` and
 `src/native_delivery/recovery.rs`; modify `src/lib.rs`; create
@@ -192,20 +199,30 @@ typed outcomes `Confirmed`, `Rejected` and `Unknown`. Define
 durable operation store and adapter. Return `Complete` or `RecoveryRequired`
 with attributable observations; no stdout from library code.
 
-- [ ] Write failing fake-adapter acceptance tests for every interruption between
+- [x] Write failing fake-adapter acceptance tests for every interruption between
       prepare, durable intent, native effect, observation, selection commit and
       retirement. Include timeout-after-effect, failed inverse, manual changes,
       cross-root contention, no-op drift and uncertain live-session retention. A
       fake native cache invalidated by reinstall must block refresh until cache
       retention or session clearance is proven, despite intact export revisions.
-- [ ] Run `cargo test --test native_delivery_recovery`; confirm failures.
-- [ ] Implement deterministic multi-root locking, durable intent before native
+- [x] Run `cargo test --test native_delivery_recovery`; confirm failures.
+- [x] Implement deterministic multi-root locking, durable intent before native
       mutation and observation-first recovery. Preserve unknown outcomes and old
       resource revisions; prohibit automatic retry and file-only success claims.
-- [ ] Rerun checkpoint tests plus existing file execution recovery tests.
-- [ ] Commit `feat: coordinate recoverable native skill delivery`.
+- [x] Rerun checkpoint tests plus existing file execution recovery tests.
+- [x] Commit `feat: coordinate recoverable native skill delivery`.
 
 ## Stage 6: Native adapters, qualification and CLI admission
+
+**Local status:** In progress. Exact-profile production admission remains
+closed. The bounded subprocess runner, Claude metadata decoder and fixed
+version/list reader are implemented. Claude command planning and an offline
+actual-compiler probe fixture now cover fixed explicitly scoped argv. These
+pieces do not yet implement the complete adapter trait. Native local-catalog
+capture, effects/inverses, effective observations, other client adapters and
+runtime qualification remain open. The
+[prepared Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md)
+requires separate native-execution approval; it authorizes no model spending.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
@@ -248,6 +265,10 @@ qualification cells below remain open.
 
 ## Handoff
 
-The next executable task after design approval is Stage 1. It can be tested
-without native clients, profile mutations or model credits. This plan chooses no
-release date and does not convert retained native failures into support claims.
+Continue Stage 6 from the implemented inactive infrastructure. Complete the
+client adapters and fake-native lifecycle acceptance, then execute only approved
+qualification profiles. Preserve failed/unrun gates explicitly and keep the
+production registry closed until the complete route qualifies. Final independent
+review, gardening, hosted checks and delivery are still required. This plan
+chooses no release date and does not convert retained failures into support
+claims.

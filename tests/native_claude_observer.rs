@@ -12,7 +12,13 @@ fn fake(root: &std::path::Path) -> upskill::native_delivery::process::NativeComm
         root,
         r#"printf '%s\n' "$*" >> "$CALLS"
 case "$*" in
-  --version) printf '%s\n' "$VERSION"; exit 0;;
+  --version)
+    printf '%s\n' "$VERSION"
+    case "$VERSION_MODE" in
+      refuse) printf 'private-version-stderr' >&2; exit 17;;
+      oversize) n=0; while [ "$n" -lt 300 ]; do printf ' '; n=$((n+1)); done;;
+    esac
+    exit 0;;
   'plugin list --json')
     case "$MODE" in
       refuse) printf 'private-native-stderr' >&2; exit 17;;
@@ -146,4 +152,23 @@ fn caller_cancellation_and_wrong_guard_cannot_invoke_the_client() {
         });
         assert!(!root.join("calls").exists());
     });
+}
+
+#[test]
+fn unsuccessful_or_oversized_version_text_cannot_authorize_listing() {
+    for mode in ["refuse", "oversize"] {
+        with_scope(|root, scope, guard| {
+            let mut spec = fake(root);
+            spec.environment.insert("VERSION_MODE".into(), mode.into());
+            assert!(spec.output_limit > 256);
+            let error =
+                read_plugin_inventory(scope, guard, &spec, &AtomicBool::new(false)).unwrap_err();
+            assert!(matches!(
+                error,
+                ClaudeInventoryReadError::UnresolvedTransport
+            ));
+            assert_eq!(std::fs::read(root.join("calls")).unwrap(), b"--version\n");
+            assert!(!format!("{error:?}").contains("private-version"));
+        });
+    }
 }
