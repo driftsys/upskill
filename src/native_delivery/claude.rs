@@ -167,7 +167,10 @@ impl ClaudePluginInventory {
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod observe;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub use observe::{ClaudeInventoryCapture, ClaudeInventoryReadError, read_plugin_inventory};
+pub use observe::{
+    ClaudeInventoryCapture, ClaudeInventoryReadError, ClaudeMarketplaceCapture,
+    read_marketplace_inventory, read_plugin_inventory,
+};
 
 mod commands;
 pub use commands::{

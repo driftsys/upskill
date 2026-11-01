@@ -1,5 +1,5 @@
 //! Fixed Claude metadata queries. Production profile admission stays separate.
-use super::{ClaudeInventoryError, ClaudePluginInventory};
+use super::{ClaudeInventoryError, ClaudeMarketplaceInventory, ClaudePluginInventory};
 use crate::filesystem::{QualifiedScope, ScopeBinding, ScopeWriterGuard};
 use crate::native_delivery::process::{
     NativeCommandSpec, NativeExecutable, NativeGroupState, NativeProcessError, NativeProcessOutput,
@@ -64,6 +64,69 @@ pub fn read_plugin_inventory(
     template: &NativeCommandSpec,
     cancellation: &AtomicBool,
 ) -> Result<ClaudeInventoryCapture, ClaudeInventoryReadError> {
+    let (inventory, cwd) = read_metadata(
+        scope,
+        guard,
+        template,
+        cancellation,
+        &["plugin", "list", "--json"],
+        ClaudePluginInventory::parse,
+    )?;
+    Ok(ClaudeInventoryCapture {
+        inventory,
+        cwd,
+        executable: template.executable.clone(),
+    })
+}
+
+/// Marketplace metadata from two fixed local processes. This is not a native
+/// binding, effect, file-prestate or qualification receipt.
+pub struct ClaudeMarketplaceCapture {
+    pub inventory: ClaudeMarketplaceInventory,
+    pub cwd: ScopeBinding,
+    pub executable: NativeExecutable,
+}
+impl fmt::Debug for ClaudeMarketplaceCapture {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClaudeMarketplaceCapture")
+            .field("entries", &self.inventory.entries().len())
+            .finish_non_exhaustive()
+    }
+}
+/// Query only `--version`, then `plugin marketplace list --json`, with the
+/// same captured launcher, explicit environment and qualified CWD. Template
+/// arguments must be empty. Diagnostics and raw output are discarded in memory.
+/// This candidate reader grants no production admission, ownership or absence
+/// authority and does not capture original registry/settings bytes or modes.
+pub fn read_marketplace_inventory(
+    scope: &QualifiedScope,
+    guard: &ScopeWriterGuard<'_>,
+    template: &NativeCommandSpec,
+    cancellation: &AtomicBool,
+) -> Result<ClaudeMarketplaceCapture, ClaudeInventoryReadError> {
+    let (inventory, cwd) = read_metadata(
+        scope,
+        guard,
+        template,
+        cancellation,
+        &["plugin", "marketplace", "list", "--json"],
+        ClaudeMarketplaceInventory::parse,
+    )?;
+    Ok(ClaudeMarketplaceCapture {
+        inventory,
+        cwd,
+        executable: template.executable.clone(),
+    })
+}
+
+fn read_metadata<T>(
+    scope: &QualifiedScope,
+    guard: &ScopeWriterGuard<'_>,
+    template: &NativeCommandSpec,
+    cancellation: &AtomicBool,
+    arguments: &[&str],
+    decode: fn(&str, &[u8]) -> Result<T, ClaudeInventoryError>,
+) -> Result<(T, ScopeBinding), ClaudeInventoryReadError> {
     if !template.arguments.is_empty() {
         return Err(ClaudeInventoryReadError::UnexpectedArguments);
     }
@@ -82,14 +145,9 @@ pub fn read_plugin_inventory(
     if version.stdout.trim_ascii() != b"2.1.308 (Claude Code)" {
         return Err(ClaudeInventoryReadError::VersionMismatch);
     }
-    let listed = run_native_process(
-        scope,
-        guard,
-        &command(&["plugin", "list", "--json"], 1024 * 1024),
-        cancellation,
-    )?;
+    let listed = run_native_process(scope, guard, &command(arguments, 1024 * 1024), cancellation)?;
     require_complete(&listed)?;
-    let inventory = ClaudePluginInventory::parse("2.1.308", &listed.stdout)?;
+    let inventory = decode("2.1.308", &listed.stdout)?;
     if scope
         .binding()
         .map_err(|_| ClaudeInventoryReadError::ScopeChanged)?
@@ -97,11 +155,7 @@ pub fn read_plugin_inventory(
     {
         return Err(ClaudeInventoryReadError::ScopeChanged);
     }
-    Ok(ClaudeInventoryCapture {
-        inventory,
-        cwd,
-        executable: template.executable.clone(),
-    })
+    Ok((inventory, cwd))
 }
 
 #[cfg(test)]

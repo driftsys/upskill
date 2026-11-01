@@ -95,8 +95,18 @@ directory claims; installed-plugin lookup requires an exact selector and scope.
 Unknown fields are discarded after recursive duplicate-key validation. Parsed
 empty maps and arrays do not encode original file absence, bytes or modes, and
 these views cannot serve as ownership, effective binding or restoration
-receipts. No registry writer or additional native query is introduced. They do
-not resolve Copilot's documented name limit, another client's packaging
+receipts. No registry writer is introduced.
+
+A candidate marketplace reader now uses only `--version` followed by
+`plugin marketplace list --json` through the bounded subprocess runner, with one
+captured launcher, explicit environment and qualified CWD. It requires complete
+transport and the exact supported version, then returns the allowlisted
+marketplace view. Fake-executable tests cover command order, context, refusals,
+bounds, cancellation and malformed inventory. No additional real native query
+ran; the original registry files, settings bytes/modes and effective native
+configuration still need separate approved capture. This reader is not a
+production adapter and supplies no absence, ownership or activation receipt.
+They do not resolve Copilot's documented name limit, another client's packaging
 acceptance or different Claude versions. Exact preservation remains a blocker
 for this candidate native command sequence; resolving it requires a separately
 reviewed owned configuration contract and passing preservation controls, not
