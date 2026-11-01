@@ -225,9 +225,10 @@ actual-compiler probe fixture cover fixed explicitly scoped argv. Copilot and
 Codex candidate planners now cover their captured user-context command families;
 both reject project operations, and Codex local-package refresh rejects instead
 of using Git upgrade or remove/re-add. These pieces do not yet implement the
-complete adapter trait. Native local-catalog capture, effects/inverses,
-effective observations, other client adapters and runtime qualification remain
-open. The
+complete adapter trait. OpenCode has a candidate batch planner for owned
+absolute sources that preserves existing legacy configuration form. Native
+local-catalog capture, effects/inverses, effective observations, other client
+adapters and runtime qualification remain open. The
 [prepared Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md)
 requires separate native-execution approval; it authorizes no model spending.
 

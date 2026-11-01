@@ -41,3 +41,5 @@ pub(crate) mod test_support;
 pub mod codex;
 pub mod copilot;
 mod user_plugin_command;
+
+pub mod opencode;

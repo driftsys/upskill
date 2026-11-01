@@ -135,6 +135,28 @@ allows operation IDs or HTTP method/path requests, but this capture establishes
 neither an inventory endpoint/schema nor its freshness or isolation semantics.
 No server or API request was started.
 
+The [current V2 skills guide](https://opencode.ai/v2/docs/skills) and
+[configuration schema](https://opencode.ai/config.json), inspected on
+2026-11-01, specify a top-level `skills` array of source strings. The schema
+also accepts the deprecated object form with `paths` and `urls` arrays. These
+web documents do not establish the installed 2.1.4 runtime contract.
+
+The inactive [OpenCode source planner](../../src/native_delivery/opencode.rs)
+now plans one owned configuration patch for a batch of source changes. New
+contributions use the preferred array; an existing legacy object retains its
+form and unrelated URL entries. Refresh replaces the exact owned absolute
+selected-revision `skills/` source. Removal preserves surviving owners and can
+restore exact original bytes, mode or file absence under the existing rollback
+preconditions. Project overlays must remain ignored and untracked; external
+user-config roots, duplicate exact sources and conflicting layers reject. Mixed
+inherited representations may reject pending a qualified mapping.
+
+This is a pure preview from caller-supplied approved non-secret captures. It
+makes no native call and grants no effective-source, skill-ID uniqueness,
+retention, quiescence or admission proof. The coordinator still gates exposure
+and requires independent effective observations; no native observer is supplied
+by this planner.
+
 Implement the approved absolute selected-revision skill source as an owned
 configuration exposure, with file-only action ordering in the existing
 coordinator. Do not invent `debug skill`, introduce a runtime JavaScript plugin

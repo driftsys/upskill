@@ -273,3 +273,55 @@ fn invalid_selection_controls_keep_other_catalog_and_revision_fields_consistent(
         }
     }
 }
+
+#[test]
+fn only_the_managed_name_prefix_is_accepted_for_a_valid_lowercase_digest() {
+    for surface in [TargetSurface::CopilotCli, TargetSurface::CodexCli] {
+        for name in ["b".repeat(64), format!("foreign-{}", "b".repeat(64))] {
+            let (profile, target, mut selection) = input(surface);
+            selection.native_name = name;
+            assert_eq!(
+                plan(surface, &profile, &target, &selection, Action::Install).unwrap_err(),
+                Error::InvalidSelection
+            );
+        }
+    }
+}
+#[test]
+fn the_other_marketplace_profile_cannot_use_this_planners_valid_version_and_selection() {
+    for surface in [TargetSurface::CopilotCli, TargetSurface::CodexCli] {
+        let (mut profile, target, selection) = input(surface);
+        profile.surface = if surface == TargetSurface::CopilotCli {
+            TargetSurface::CodexCli
+        } else {
+            TargetSurface::CopilotCli
+        };
+        assert_eq!(
+            plan(surface, &profile, &target, &selection, Action::Install).unwrap_err(),
+            Error::UnsupportedProfile
+        );
+    }
+}
+#[test]
+fn coherent_non_utf8_absolute_scope_and_catalog_are_rejected() {
+    use std::os::unix::ffi::OsStringExt;
+    for surface in [TargetSurface::CopilotCli, TargetSurface::CodexCli] {
+        let (mut profile, target, mut selection) = input(surface);
+        profile.scope.path = OsString::from_vec(b"/fixture/private-\xff-home".to_vec()).into();
+        let namespace = if surface == TargetSurface::CopilotCli {
+            "copilot"
+        } else {
+            "codex"
+        };
+        selection.binding = SkillPackageBinding::LocalMarketplace {
+            directory: profile
+                .scope
+                .path
+                .join(format!(".upskill/exports/{namespace}/owned-1")),
+        };
+        assert_eq!(
+            plan(surface, &profile, &target, &selection, Action::Install).unwrap_err(),
+            Error::InvalidSelection
+        );
+    }
+}

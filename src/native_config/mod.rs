@@ -598,3 +598,18 @@ pub fn plan_config_contributions(
         ownership_after: current.ownership,
     })
 }
+
+/// Read one JSONC field using the same duplicate-key and scope checks as edits.
+/// This is in-memory inspection, not capture authenticity or secret filtering.
+pub(crate) fn captured_json_value(
+    config: &CapturedConfig,
+    path: &[String],
+) -> Result<Option<Value>> {
+    validate_capture(config)?;
+    ensure!(
+        config.target.format == ConfigFormat::Jsonc,
+        "JSONC configuration required"
+    );
+    let root = parse(ConfigFormat::Jsonc, source(&config.target)?)?;
+    Ok(root.lookup(path)?.and_then(|node| node.value.clone()))
+}
