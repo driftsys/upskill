@@ -17,7 +17,14 @@ use upskill::target::{
 };
 
 fn directory(path: &Path) -> Result<()> {
-    std::fs::create_dir_all(path)?;
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(path)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -35,26 +42,34 @@ fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     }
     Ok(())
 }
-fn main() -> Result<()> {
-    let mut arguments = std::env::args_os().skip(1);
+fn arguments(mut arguments: impl Iterator<Item = std::ffi::OsString>) -> Result<PathBuf> {
     let root = PathBuf::from(
         arguments
             .next()
             .context("usage: native_adapter_fixture ABSENT_ABSOLUTE_ROOT")?,
     );
     ensure!(arguments.next().is_none(), "unexpected fixture arguments");
+    Ok(root)
+}
+fn main() -> Result<()> {
+    let root = arguments(std::env::args_os().skip(1))?;
+    let plan = prepare(&root)?;
+    println!("{}", plan.display());
+    Ok(())
+}
+fn prepare(root: &Path) -> Result<PathBuf> {
     ensure!(root.is_absolute(), "fixture root must be absolute");
     ensure!(
         !root.components().any(|part| part == Component::ParentDir),
         "fixture root must not contain parent components"
     );
     ensure!(
-        std::fs::symlink_metadata(&root)
+        std::fs::symlink_metadata(root)
             .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound),
         "fixture root must be absent"
     );
-    std::fs::create_dir(&root)?;
-    directory(&root)?;
+    std::fs::create_dir(root)?;
+    directory(root)?;
     let root = root.canonicalize()?;
     for name in ["home", "project", "source", "outside"] {
         directory(&root.join(name))?;
@@ -152,6 +167,258 @@ fn main() -> Result<()> {
         "native_name":package.native_name,"version":package.version,"revision_root":package.revision_root,
         "payload_sha256":package.payload_sha256,"package_sha256":package.package_sha256,"commands":commands});
     write(&root.join("plan.json"), &serde_json::to_vec_pretty(&plan)?)?;
-    println!("{}", root.join("plan.json").display());
-    Ok(())
+    Ok(root.join("plan.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+    use sha2::{Digest, Sha256};
+
+    fn files(root: &Path) -> Vec<PathBuf> {
+        fn visit(path: &Path, result: &mut Vec<PathBuf>) {
+            for entry in std::fs::read_dir(path).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    visit(&path, result);
+                } else {
+                    result.push(path);
+                }
+            }
+        }
+        let mut result = vec![];
+        visit(root, &mut result);
+        result.sort();
+        result
+    }
+    #[test]
+    fn argument_and_root_refusals_preserve_existing_content() {
+        assert!(arguments(std::iter::empty()).is_err());
+        assert!(arguments(["one".into(), "two".into()].into_iter()).is_err());
+        assert_eq!(
+            arguments(["one".into()].into_iter()).unwrap(),
+            PathBuf::from("one")
+        );
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(temp.path().join("manual"), b"manual bytes").unwrap();
+        assert!(prepare(temp.path()).is_err());
+        assert_eq!(
+            std::fs::read(temp.path().join("manual")).unwrap(),
+            b"manual bytes"
+        );
+        assert!(!temp.path().join("project").exists());
+        std::fs::create_dir(temp.path().join("unused")).unwrap();
+        assert!(prepare(&temp.path().join("unused/../packet")).is_err());
+        assert!(!temp.path().join("packet").exists());
+        assert_eq!(
+            std::fs::read_dir(temp.path().join("unused"))
+                .unwrap()
+                .count(),
+            0
+        );
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("missing-target", temp.path().join("link")).unwrap();
+            assert!(prepare(&temp.path().join("link")).is_err());
+            assert!(
+                std::fs::symlink_metadata(temp.path().join("link"))
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
+        }
+    }
+    #[test]
+    #[ignore = "invoked by the parent with an isolated working directory"]
+    fn relative_root_probe() {
+        assert!(std::env::var_os("UPSKILL_FIXTURE_ROOT_PROBE").is_some());
+        assert!(prepare(Path::new("relative-fixture")).is_err());
+        assert!(!Path::new("relative-fixture").exists());
+    }
+    #[test]
+    fn relative_root_refuses_in_an_owned_child_working_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--ignored",
+                "--exact",
+                "tests::relative_root_probe",
+                "--nocapture",
+            ])
+            .current_dir(temp.path())
+            .env_clear()
+            .env("HOME", temp.path())
+            .env("UPSKILL_FIXTURE_ROOT_PROBE", "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed"));
+        assert!(!temp.path().join("relative-fixture").exists());
+    }
+    #[test]
+    fn fixture_publishes_exact_package_bytes_and_a_bounded_project_sequence() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("packet");
+        let plan_path = prepare(&root).unwrap();
+        let root = root.canonicalize().unwrap();
+        let plan: Value = serde_json::from_slice(&std::fs::read(plan_path).unwrap()).unwrap();
+        assert_eq!(plan["model_calls"], 0);
+        assert_eq!(plan["maximum_native_commands"], 12);
+        assert_eq!(plan["timeout_seconds_per_command"], 20);
+        assert_eq!(plan["client_version"], "2.1.308");
+        let name = plan["native_name"].as_str().unwrap();
+        assert_eq!(name.len(), 72);
+        assert!(name.starts_with("upskill-"));
+        let payload = plan["payload_sha256"].as_str().unwrap();
+        assert_eq!(payload.len(), 64);
+        assert_eq!(plan["version"], format!("0.0.0-r{payload}"));
+        let item = ".upskill/exports/claude/native-contract-probe";
+        assert_eq!(plan["revision_root"], format!("{item}/revisions/{payload}"));
+        let project = root.join("project");
+        let revision = project.join(plan["revision_root"].as_str().unwrap());
+        let catalog = project.join(item);
+        assert_eq!(plan["cwd"], json!(project));
+        assert_eq!(plan["home"], json!(root.join("home")));
+        assert_eq!(plan["catalog"], json!(catalog));
+        let manifest: Value = serde_json::from_slice(
+            &std::fs::read(revision.join(".claude-plugin/plugin.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            manifest,
+            json!({"name": name, "description": "Native adapter contract fixture.", "version": plan["version"]})
+        );
+        let marketplace: Value = serde_json::from_slice(
+            &std::fs::read(catalog.join(".claude-plugin/marketplace.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            marketplace,
+            json!({"name": name,"owner":{"name":"upskill"},"plugins":[{"name":name,"source":format!("./revisions/{payload}")}]})
+        );
+        let entrypoint = b"---\nname: contract-probe\ndescription: Native adapter contract fixture.\n---\n\nRead the local resource when explicitly requested.\n";
+        assert_eq!(
+            std::fs::read(revision.join("skills/contract-probe/SKILL.md")).unwrap(),
+            entrypoint
+        );
+        assert_eq!(
+            std::fs::read(revision.join("skills/contract-probe/resources/probe.txt")).unwrap(),
+            b"Native contract resource. No model request is part of this fixture.\n"
+        );
+        let mut hash = Sha256::new();
+        hash.update(b"upskill:skill-package-files:v1\0");
+        hash.update(3_u64.to_be_bytes());
+        for (path, mode) in [
+            (".claude-plugin/plugin.json", None),
+            ("skills/contract-probe/SKILL.md", None),
+            (
+                "skills/contract-probe/resources/probe.txt",
+                if cfg!(unix) { Some(0o600_u32) } else { None },
+            ),
+        ] {
+            let bytes = std::fs::read(revision.join(path)).unwrap();
+            for value in [path.as_bytes(), bytes.as_slice()] {
+                hash.update((value.len() as u64).to_be_bytes());
+                hash.update(value);
+            }
+            match mode {
+                None => hash.update([0]),
+                Some(mode) => {
+                    hash.update([1]);
+                    hash.update(mode.to_be_bytes());
+                }
+            }
+        }
+        let package_hash = hash
+            .finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        assert_eq!(plan["package_sha256"], package_hash);
+        assert_eq!(std::fs::read(project.join(".claude/settings.json")).unwrap(), b"{\n  \"companyAnnouncements\": [\n    \"contract-preservation-sentinel\"\n  ],\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n");
+        let selector = format!("{name}@{name}");
+        assert_eq!(
+            plan["commands"],
+            json!([
+                ["--version"],
+                ["plugin", "list", "--json"],
+                ["plugin", "marketplace", "list", "--json"],
+                ["plugin", "validate", catalog],
+                [
+                    "plugin",
+                    "marketplace",
+                    "add",
+                    catalog,
+                    "--scope",
+                    "project",
+                    "--json"
+                ],
+                [
+                    "plugin", "install", selector, "--scope", "project", "--json"
+                ],
+                ["plugin", "list", "--json"],
+                ["plugin", "marketplace", "list", "--json"],
+                [
+                    "plugin",
+                    "uninstall",
+                    selector,
+                    "--scope",
+                    "project",
+                    "--json"
+                ],
+                [
+                    "plugin",
+                    "marketplace",
+                    "remove",
+                    name,
+                    "--scope",
+                    "project",
+                    "--json"
+                ],
+                ["plugin", "list", "--json"],
+                ["plugin", "marketplace", "list", "--json"]
+            ])
+        );
+        let before: Vec<_> = files(&root)
+            .into_iter()
+            .map(|path| {
+                let bytes = std::fs::read(&path).unwrap();
+                (path, bytes)
+            })
+            .collect();
+        assert_eq!(before.len(), 8);
+        assert!(prepare(&root).is_err());
+        let after: Vec<_> = files(&root)
+            .into_iter()
+            .map(|path| {
+                let bytes = std::fs::read(&path).unwrap();
+                (path, bytes)
+            })
+            .collect();
+        assert_eq!(after, before);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fn check(path: &Path) {
+                let metadata = std::fs::metadata(path).unwrap();
+                assert_eq!(
+                    metadata.permissions().mode() & 0o777,
+                    if metadata.is_dir() { 0o700 } else { 0o600 },
+                    "{}",
+                    path.display()
+                );
+                if metadata.is_dir() {
+                    for entry in std::fs::read_dir(path).unwrap() {
+                        check(&entry.unwrap().path());
+                    }
+                }
+            }
+            check(&root);
+        }
+    }
 }

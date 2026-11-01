@@ -184,7 +184,9 @@ commits. The real coordinator has fake-adapter lifecycle acceptance tests and
 fresh-process forward/inverse checkpoint sweeps. It preserves uncertain native
 outcomes, explicit recovery choices, resource-retention gates and exact owned
 configuration preconditions. This completes the inactive coordinator stage; it
-does not establish any real client profile or authorize production dispatch.
+does not establish any real client profile or authorize production dispatch. The
+[retained verification evidence](../../technotes/2026-11-01-native-coordination-verification.md)
+records recovered RED excerpts, fresh GREEN results and their limitations.
 
 **Files:** Create `src/native_delivery/mod.rs`,
 `src/native_delivery/adapter.rs`, `src/native_delivery/journal.rs` and
@@ -205,7 +207,9 @@ with attributable observations; no stdout from library code.
       cross-root contention, no-op drift and uncertain live-session retention. A
       fake native cache invalidated by reinstall must block refresh until cache
       retention or session clearance is proven, despite intact export revisions.
-- [x] Run `cargo test --test native_delivery_recovery`; confirm failures.
+- [x] Run coordinator acceptance before implementation; confirm the absent
+      adapter/coordinator APIs fail compilation in `native_coordinator`. The
+      retained logs do not preserve the historical command argument vector.
 - [x] Implement deterministic multi-root locking, durable intent before native
       mutation and observation-first recovery. Preserve unknown outcomes and old
       resource revisions; prohibit automatic retry and file-only success claims.

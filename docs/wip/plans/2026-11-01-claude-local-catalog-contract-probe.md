@@ -58,12 +58,23 @@ credential-bearing data; stop and retain only a non-secret diagnostic fact.
 Record launcher identity and namespace stability around commands. HOME isolation
 does not establish keychain or system-policy isolation.
 
-If a command refuses before mutation, stop. If a mutation has uncertain or
-partial effects, inspect using the remaining planned inventory commands before
-any cleanup decision. Cleanup is authorized only for the exact fixture selector
-and catalog, in project scope, within the twelve-command cap. If those commands
-cannot establish cleanup, preserve the isolated packet and report the unresolved
-state; do not delete native caches or modify the normal user profile.
+If a command refuses before mutation, stop. After any timeout, cancellation,
+incomplete transport, unresolved process group or otherwise uncertain/partial
+mutation, stop the native sequence. Do not run further inventory or cleanup
+commands until an independent witness establishes that all relevant native
+workers have stopped. Reaping the direct child or finding its process group
+empty does not establish quiescence of escaped or orphaned workers. No such
+additional witness is admitted by this packet: unknown liveness means retain the
+isolated packet and report Unknown, without inventory-based absence or cleanup
+claims. Do not delete caches, roots or evidence to hide that state.
+
+On the fully completed transport path, the planned cleanup commands may touch
+only the exact fixture selector and catalog, in project scope and within the
+twelve-command cap. Inventory and settings samples remain bounded observations;
+do not claim stable cleanup without a qualified quiescence witness. A failed
+cleanup leaves the packet intact and the outcome unresolved. Never modify the
+normal user profile or infer that matching files alone establish native
+recovery.
 
 ## Evidence and limits
 

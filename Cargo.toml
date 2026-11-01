@@ -57,3 +57,7 @@ panic = "abort"
 # and test builds match release behaviour on valid input.
 [profile.dev.package.dprint-core]
 debug-assertions = false
+
+[[example]]
+name = "native_adapter_fixture"
+test = true

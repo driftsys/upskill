@@ -169,3 +169,53 @@ fn mismatched_or_unsafe_managed_selection_cannot_escape_its_owned_catalog() {
         );
     }
 }
+
+#[test]
+fn malformed_payload_is_rejected_even_when_the_revision_path_matches_it() {
+    for payload in [String::new(), "a".repeat(63), "A".repeat(64), "a\0".into()] {
+        let (profile, target, mut selection) = input();
+        selection.revision_root = format!(".upskill/exports/claude/owned-1/revisions/{payload}");
+        selection.payload_sha256 = payload;
+        assert_eq!(
+            plan_plugin_command(&profile, &target, &selection, ClaudePluginAction::Install)
+                .unwrap_err(),
+            ClaudeCommandError::InvalidSelection
+        );
+    }
+}
+#[test]
+fn coherent_unsafe_scope_and_catalog_paths_are_rejected() {
+    for path in [
+        "relative",
+        "/fixture/../project with spaces",
+        "/fixture/private\0scope",
+    ] {
+        let (mut profile, target, mut selection) = input();
+        profile.scope.path = path.into();
+        selection.binding = SkillPackageBinding::LocalMarketplace {
+            directory: profile.scope.path.join(".upskill/exports/claude/owned-1"),
+        };
+        assert_eq!(
+            plan_plugin_command(&profile, &target, &selection, ClaudePluginAction::Install)
+                .unwrap_err(),
+            ClaudeCommandError::InvalidSelection
+        );
+    }
+}
+#[test]
+fn invalid_installation_ids_are_rejected_even_with_matching_catalog_and_revision() {
+    for id in ["", "bad.name", "bad name", "badé"] {
+        let (profile, mut target, mut selection) = input();
+        target.installation_id = id.into();
+        let item = format!(".upskill/exports/claude/{id}");
+        selection.binding = SkillPackageBinding::LocalMarketplace {
+            directory: profile.scope.path.join(&item),
+        };
+        selection.revision_root = format!("{item}/revisions/{PAYLOAD}");
+        assert_eq!(
+            plan_plugin_command(&profile, &target, &selection, ClaudePluginAction::Install)
+                .unwrap_err(),
+            ClaudeCommandError::InvalidSelection
+        );
+    }
+}
