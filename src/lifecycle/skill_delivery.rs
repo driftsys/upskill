@@ -1,6 +1,7 @@
 //! Pure native skill intent and file planning; no completed state or codec.
 
 use anyhow::{Result, ensure};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod files;
 mod validation;
@@ -15,20 +16,23 @@ use crate::compile::skill_selection::{SelectedSkill, SkillBodyOrigin};
 use crate::files::plan::{ObservedFile, PlannedFile};
 use crate::ownership::{InstallationRoot, OwnedArtifact};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PackageRevision {
     pub installation: Installation,
     pub selected: SelectedSkill,
     pub package: SkillPackage,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum SkillIntentSelection {
     Selected { body_origin: SkillBodyOrigin },
     Unavailable,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SkillDeliveryIntent {
     pub key: SkillTarget,
     pub selection: SkillIntentSelection,

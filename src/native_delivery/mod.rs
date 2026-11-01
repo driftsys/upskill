@@ -13,3 +13,5 @@ pub const SKILL_FILE_POLICY: &str = "native-skill-files-v1";
 pub fn plan_native_skill_files(input: &SkillDeliveryInput<'_>) -> Result<SkillDeliveryPlan> {
     crate::lifecycle::skill_delivery::plan_native_files(input)
 }
+
+pub mod state;

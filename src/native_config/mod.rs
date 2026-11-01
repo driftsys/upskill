@@ -1,5 +1,6 @@
 //! Pure owned contributions to captured native configuration documents.
 use anyhow::{Context, Result, bail, ensure};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::ops::Range;
 
@@ -10,17 +11,20 @@ use crate::ownership::InstallationRoot;
 use crate::target::TargetSurface;
 use serde_json::Value;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum ConfigFormat {
     Jsonc,
     Toml,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum ConfigSelector {
     Key(Vec<String>),
     ArrayEntry { path: Vec<String>, value: Value },
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// One captured layer. Tracking/ignore flags are caller-supplied provenance.
 pub struct ConfigLayer {
     pub format: ConfigFormat,
@@ -28,21 +32,24 @@ pub struct ConfigLayer {
     pub tracked: bool,
     pub ignored: bool,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OwnedConfigEntry {
     pub id: String,
     pub selector: ConfigSelector,
     pub value: Value,
     pub raw_sha256: String,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// Exact baseline restoration remains eligible only while `expected` matches
 /// the complete current file, including mode. External edits disable it.
 pub struct ConfigRollback {
     pub baseline: Option<FileValue>,
     pub expected: FileValue,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigOwnership {
     pub location: FileLocation,
     pub surface: TargetSurface,
@@ -50,7 +57,8 @@ pub struct ConfigOwnership {
     pub entries: Vec<OwnedConfigEntry>,
     pub rollback: Option<ConfigRollback>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// Complete effective native layers in caller-established precedence order.
 /// These records do not prove authenticity, qualification or native support.
 pub struct CapturedConfig {

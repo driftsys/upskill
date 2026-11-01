@@ -3,8 +3,10 @@
 use crate::compile::skill_package::{SkillPackage, SkillPackageBinding};
 use crate::ownership::InstallationRoot;
 use crate::target::TargetSurface;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SkillTarget {
     pub installation_id: String,
     pub surface: TargetSurface,
@@ -16,7 +18,8 @@ impl SkillTarget {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NativeSkillSelection {
     pub native_name: String,
     pub payload_sha256: String,
@@ -37,7 +40,7 @@ impl NativeSkillSelection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NativeBindingOutcome {
     Confirmed,
     Rejected,

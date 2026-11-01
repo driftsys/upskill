@@ -1,5 +1,6 @@
 //! Opt-in pure selection of captured skills for four CLI surfaces.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -26,13 +27,15 @@ pub struct SkillSelectionRequest<'a> {
     pub capabilities: &'a [CapabilityDeclaration],
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum SkillBodyOrigin {
     Canonical,
     Override { path: String },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SkillMetadata {
     pub name: String,
     pub description: String,
@@ -40,7 +43,8 @@ pub struct SkillMetadata {
     pub metadata: Option<Metadata>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SelectedSkill {
     pub surface: TargetSurface,
     pub source_name: String,

@@ -1,5 +1,6 @@
 //! Pure plans for complete owned whole-file sets and captured before-state values.
 
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 
@@ -12,17 +13,20 @@ use crate::ownership::{
 };
 use crate::target::TargetSurface;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileLocation {
     pub root: InstallationRoot,
     pub path: String,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileValue {
     pub bytes: Vec<u8>,
     pub mode: Option<u32>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ObservedFile {
     pub location: FileLocation,
     pub value: Option<FileValue>,

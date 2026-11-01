@@ -8,6 +8,7 @@ use crate::ownership::{ArtifactOwner, InstallationRoot, OwnershipScope};
 use crate::pipeline::{ItemKind, is_entrypoint_or_override};
 use crate::target::TargetSurface;
 use anyhow::{Context, Result, bail};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::path::{Component, PathBuf};
@@ -21,13 +22,15 @@ pub struct SkillPackageRequest<'a> {
     pub owner: &'a ArtifactOwner,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum SkillPackageBinding {
     LocalMarketplace { directory: PathBuf },
     ExplicitSkillSource { directory: PathBuf },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SkillPackage {
     pub item_root: String,
     pub revision_root: String,

@@ -8,6 +8,7 @@ use crate::parse::frontmatter;
 use crate::pipeline::{effective_name, filter_ignored, is_entrypoint_or_override};
 use crate::source_manifest::validate_manifest;
 use anyhow::{Context, Result, bail};
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Component, Path, PathBuf};
 
@@ -23,7 +24,8 @@ pub struct ItemCompileRequest {
     pub clients: Vec<Client>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CompiledItemFile {
     pub path: String,
     pub bytes: Vec<u8>,

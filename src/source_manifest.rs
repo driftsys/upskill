@@ -3,6 +3,7 @@
 //! Observation uses ordinary synchronous filesystem APIs. It is not an atomic
 //! snapshot or a containment guarantee, and does not establish source authenticity.
 
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -10,7 +11,8 @@ use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};
 
 /// Exact bytes and available permission evidence captured at a relative path.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CapturedSourceFile {
     pub path: String,
     pub bytes: Vec<u8>,

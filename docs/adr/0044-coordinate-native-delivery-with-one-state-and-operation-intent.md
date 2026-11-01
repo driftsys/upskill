@@ -29,12 +29,39 @@ ownership is represented once, outside the logical graph, including captures
 whose logical owner has detached. Unrelated graph artifacts and legacy data
 remain unchanged. Do not create a separate authoritative skills lock.
 
+Raw native prestate and configuration snapshots, including rollback baselines,
+can contain unrelated manual settings. Never embed these bytes in the project
+lockfile. Its schema-3 envelope stores content-addressed, typed references to
+private evidence under a qualified user root. The evidence store has a local
+namespace identity; parsing requires the expected namespace and root context, so
+copied machine receipts do not become authority in another store. Evidence
+contains no independently authoritative installation graph. The lockfile remains
+the only selector of the current graph and current evidence references.
+
+The pure codec returns lockfile JSON plus the required immutable private blobs;
+it writes neither. Parsing requires every referenced blob, checks kind, length
+and framed digest, then validates the reconstructed view. Missing/corrupt
+private evidence rejects. The later qualified store must create private blobs
+before committing their references, exclude them from tracked project content,
+and retain referenced evidence. Private evidence uses mode `0600`; it does not
+live in a committed project artifact. Native configuration ownership is
+validated against a private captured document and exact per-entry target
+associations.
+
 The new codec must reject unsupported versions, unknown structural fields,
 duplicate identities, copied scope roots, dangling selections, inconsistent
 captures/packages and conflicting file ownership. Recompile captured packages
 and check complete intent against the graph and confirmed native selections.
 Validate applied file ownership separately from source permission evidence.
-Serialization and parsing establish no filesystem or native authority.
+Selected skill captures are encoded as typed YAML documents inside the JSON
+envelope, preserving YAML metadata keys and tags without lossy JSON conversion.
+Decoded structural fields must survive typed round trips; duplicate JSON keys
+reject before typed decoding. The codec preserves the supplied logical graph and
+legacy ordering. Private evidence uses the domain `upskill:native-evidence:v1`,
+followed by a big-endian u64 kind-byte length, the UTF-8 kind bytes, a
+big-endian u64 payload-byte length and the exact bytes. References carry kind,
+digest and length. Serialization and parsing establish no filesystem or native
+authority.
 
 The completed state stores confirmed outcomes only. Unknown/rejected outcomes
 and planned inverses remain in operation intent until recovery resolves them.
@@ -121,9 +148,10 @@ adapter outcomes.
 
 ## Implementation and admission
 
-Current implementation: only the pure permission projection exists. The schema-3
-codec, qualified multi-root store and durable coordinator specified here remain
-unimplemented; Stage 5 is open.
+Current implementation: pure permission projection and the validated codec
+exist. The codec emits schema-3 JSON plus private evidence blobs; it performs no
+I/O, migration or publication. The qualified multi-root store and durable
+coordinator remain unimplemented. Stage 5 is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are

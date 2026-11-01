@@ -1270,3 +1270,35 @@ This is a pure Stage 5 prerequisite. It supplies no state codec, journal, native
 adapter, file effect or completed transaction. The remaining coordination
 contract is specified in
 [AD-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-coordinate-native-delivery-with-one-state-and-operation-intent.md).
+
+## Inactive integrated native state codec
+
+`native_delivery::state` encodes one validated graph, complete desired skill
+intent, retained captures, confirmed native receipts and applied export
+ownership in an explicit schema-3 envelope. Existing schema-1/2 codecs and CLI
+dispatch remain unchanged. It does not migrate or write a lockfile, register a
+client or complete a native transaction.
+
+`serialize_native_state` returns JSON and immutable private evidence blobs.
+Native prestate and full configuration/rollback snapshots stay in those blobs;
+the JSON contains typed references with framed SHA-256 and length. A later
+qualified store must publish them privately under the selected user root before
+publishing the lockfile references. These blobs are evidence, not another
+installation graph. `parse_native_state` requires the expected scope, private
+root, local namespace and referenced evidence. Missing/corrupt evidence, swapped
+kinds, copied contexts, unsupported schemas/policies and unknown structural
+fields reject. Namespace/digest checks validate supplied claims; physical
+qualification and native observation remain coordinator responsibilities.
+
+The codec recompiles packages, checks exact applied ownership and confirmed
+selection, and validates configuration ownership against private snapshots and
+per-entry target bindings. It retains detached revisions without inventing
+active graph nodes, preserving historical Git revisions separately from current
+file ownership. Unrelated graph artifacts, legacy order and origin records
+survive. Typed selected captures use YAML inside the JSON envelope so YAML
+metadata keys and tags retain their semantics. Duplicate JSON keys reject before
+decoding.
+
+The durable store, multi-root markers, coordinator and client adapters remain
+pending under
+[AD-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-coordinate-native-delivery-with-one-state-and-operation-intent.md).
