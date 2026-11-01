@@ -1148,3 +1148,159 @@ fn native_state_retains_verbatim_override_capture_and_rejects_invalid_contexts()
         assert!(serialize_native_state(&bad).is_err(), "{mutation}");
     }
 }
+
+#[test]
+fn native_state_configuration_envelope_must_match_unchanged_private_snapshot() {
+    let mut state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    with_configuration(&mut state);
+    let encoded = serialize_native_state(&state).unwrap();
+    assert_eq!(
+        parse_native_state(&encoded.json, &state.context, &encoded.private_evidence).unwrap(),
+        state
+    );
+    let base: serde_json::Value = serde_json::from_str(&encoded.json).unwrap();
+    for mutation in ["location", "surface"] {
+        let mut value = base.clone();
+        match mutation {
+            "location" => value["configurations"][0]["location"]["path"] = "other.json".into(),
+            "surface" => value["configurations"][0]["surface"] = "copilot.cli".into(),
+            _ => unreachable!(),
+        }
+        assert!(
+            parse_native_state(
+                &value.to_string(),
+                &state.context,
+                &encoded.private_evidence
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("snapshot binding differs")
+        );
+    }
+}
+
+#[test]
+fn native_state_expected_context_must_include_the_exact_additional_roots() {
+    let mut state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    state.context.additional_roots.push(InstallationRoot {
+        scope: OwnershipScope::User,
+        path: "/external/xdg".into(),
+    });
+    let encoded = serialize_native_state(&state).unwrap();
+    assert_eq!(
+        parse_native_state(&encoded.json, &state.context, &encoded.private_evidence).unwrap(),
+        state
+    );
+    let mut missing = state.context.clone();
+    missing.additional_roots.clear();
+    assert!(
+        parse_native_state(&encoded.json, &missing, &encoded.private_evidence)
+            .unwrap_err()
+            .to_string()
+            .contains("another root or private namespace")
+    );
+    let mut different = state.context.clone();
+    different.additional_roots[0].path = "/different/xdg".into();
+    assert!(
+        parse_native_state(&encoded.json, &different, &encoded.private_evidence)
+            .unwrap_err()
+            .to_string()
+            .contains("another root or private namespace")
+    );
+}
+
+#[test]
+fn native_state_config_owner_cannot_switch_to_an_existing_foreign_surface() {
+    let claude = revision(TargetSurface::ClaudeCli, "Body.");
+    let mut copilot = revision(TargetSurface::CopilotCli, "Body.");
+    assert_eq!(
+        claude.installation.source_evidence,
+        copilot.installation.source_evidence
+    );
+    let mut state = native_state(&claude);
+    let mut other = native_state(&copilot);
+    state.skills.graph.installations[0]
+        .requested
+        .push(TargetSurface::CopilotCli);
+    state.skills.revisions[0]
+        .installation
+        .requested
+        .push(TargetSurface::CopilotCli);
+    copilot.installation.requested = state.skills.graph.installations[0].requested.clone();
+    state.skills.revisions.push(copilot);
+    state.skills.receipts.append(&mut other.skills.receipts);
+    state.files.append(&mut other.files);
+    state.intents.push(intent(TargetSurface::CopilotCli));
+    with_configuration(&mut state);
+    let encoded = serialize_native_state(&state).unwrap();
+    assert_eq!(
+        parse_native_state(&encoded.json, &state.context, &encoded.private_evidence).unwrap(),
+        state
+    );
+    state.configurations[0].owners[0].target.surface = TargetSurface::CopilotCli;
+    assert!(
+        serialize_native_state(&state)
+            .unwrap_err()
+            .to_string()
+            .contains("owner target is unknown or has a different surface")
+    );
+}
+
+#[test]
+fn custom_tags_on_additional_metadata_are_rejected_by_the_source_parser() {
+    let source = tempfile::tempdir().unwrap();
+    fs::write(source.path().join("SKILL.md"),"---\nschema: 1\ndescription: Demo.\nmetadata:\n  tagged: !fixture\n    key: value\n---\nBody.\n").unwrap();
+    let manifest = capture_source(source.path()).unwrap();
+    let capabilities = ["name", "description", "metadata"].map(|name| CapabilityDeclaration {
+        surface: TargetSurface::ClaudeCli,
+        key: CapabilityKey::new(CapabilityCategory::Skills, name),
+        representation: Representation::Native,
+        requirement: Requirement::RequiredBehavior,
+        reason: "offline fixture",
+    });
+    let plain = tempfile::tempdir().unwrap();
+    fs::write(
+        plain.path().join("SKILL.md"),
+        "---\nschema: 1\ndescription: Demo.\nmetadata:\n  tagged:\n    key: value\n---\nBody.\n",
+    )
+    .unwrap();
+    let plain_manifest = capture_source(plain.path()).unwrap();
+    assert!(
+        select_skill(&SkillSelectionRequest {
+            source: &plain_manifest,
+            folder_name: "demo",
+            alias: None,
+            surface: TargetSurface::ClaudeCli,
+            capabilities: &capabilities
+        })
+        .unwrap()
+        .is_some()
+    );
+    let result = select_skill(&SkillSelectionRequest {
+        source: &manifest,
+        folder_name: "demo",
+        alias: None,
+        surface: TargetSurface::ClaudeCli,
+        capabilities: &capabilities,
+    });
+    let error = format!("{:#}", result.unwrap_err());
+    assert!(error.contains("parsing YAML frontmatter"));
+}
+
+#[test]
+fn native_state_rejects_duplicate_private_blobs_without_losing_the_valid_control() {
+    let state = native_state(&revision(TargetSurface::ClaudeCli, "Body."));
+    let encoded = serialize_native_state(&state).unwrap();
+    assert_eq!(
+        parse_native_state(&encoded.json, &state.context, &encoded.private_evidence).unwrap(),
+        state
+    );
+    let mut duplicates = encoded.private_evidence.clone();
+    duplicates.push(duplicates[0].clone());
+    assert!(
+        parse_native_state(&encoded.json, &state.context, &duplicates)
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate private evidence")
+    );
+}

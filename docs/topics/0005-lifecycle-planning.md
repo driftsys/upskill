@@ -1295,9 +1295,10 @@ selection, and validates configuration ownership against private snapshots and
 per-entry target bindings. It retains detached revisions without inventing
 active graph nodes, preserving historical Git revisions separately from current
 file ownership. Unrelated graph artifacts, legacy order and origin records
-survive. Typed selected captures use YAML inside the JSON envelope so YAML
-metadata keys and tags retain their semantics. Duplicate JSON keys reject before
-decoding.
+survive. Typed selected captures use YAML inside the JSON envelope to preserve
+supported metadata structures and non-string mapping keys. Custom YAML tags on
+additional metadata values remain unsupported by the portable source parser.
+Duplicate JSON keys reject before decoding.
 
 The durable store, multi-root markers, coordinator and client adapters remain
 pending under

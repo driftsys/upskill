@@ -54,10 +54,13 @@ captures/packages and conflicting file ownership. Recompile captured packages
 and check complete intent against the graph and confirmed native selections.
 Validate applied file ownership separately from source permission evidence.
 Selected skill captures are encoded as typed YAML documents inside the JSON
-envelope, preserving YAML metadata keys and tags without lossy JSON conversion.
-Decoded structural fields must survive typed round trips; duplicate JSON keys
-reject before typed decoding. The codec preserves the supplied logical graph and
-legacy ordering. Private evidence uses the domain `upskill:native-evidence:v1`,
+envelope, preserving supported YAML metadata structures and non-string mapping
+keys without lossy JSON conversion. Custom YAML tags on additional metadata
+values, such as `!fixture`, are not admitted by the portable source parser; this
+codec adds no support for them. Decoded structural fields must survive typed
+round trips; duplicate JSON keys reject before typed decoding. The codec
+preserves the supplied logical graph and legacy ordering. Private evidence uses
+the bytes `b"upskill:native-evidence:v1\0"`, including one trailing NUL byte,
 followed by a big-endian u64 kind-byte length, the UTF-8 kind bytes, a
 big-endian u64 payload-byte length and the exact bytes. References carry kind,
 digest and length. Serialization and parsing establish no filesystem or native
