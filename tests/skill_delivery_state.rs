@@ -1,4 +1,6 @@
 //! End-to-end pure ownership and receipt planning over captured packages.
+#[path = "common/scope_path.rs"]
+mod scope_path;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -29,7 +31,7 @@ use upskill::target::{
 fn root(path: &str) -> InstallationRoot {
     InstallationRoot {
         scope: OwnershipScope::Project,
-        path: path.into(),
+        path: scope_path::absolute(path),
     }
 }
 fn empty_graph() -> CombinedState {

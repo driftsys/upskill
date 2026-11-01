@@ -323,3 +323,41 @@ fn legacy_urls_only_object_gains_paths_without_changing_its_existing_source() {
     let patch = plan_skill_sources(&profile, &config, &[change]).unwrap();
     assert_eq!(patch.file.after.unwrap().bytes, original.as_bytes());
 }
+
+#[test]
+fn legacy_object_fields_and_each_array_type_are_checked_independently() {
+    for skills in [
+        json!({"unknown": []}),
+        json!({"paths": "not-an-array"}),
+        json!({"urls": "not-an-array"}),
+        json!({"paths": ["/manual", 1]}),
+        json!({"urls": ["https://example.invalid/catalog/", false]}),
+    ] {
+        let source = serde_json::to_string(&json!({"skills":skills})).unwrap();
+        let (profile, config, change) = input(Some(&source));
+        assert_eq!(
+            plan_skill_sources(&profile, &config, &[change]).unwrap_err(),
+            OpenCodeSourceError::UnsupportedConfiguration
+        );
+    }
+}
+#[test]
+fn a_managed_prefix_requires_a_complete_lowercase_hexadecimal_suffix() {
+    for suffix in ["a".repeat(63), "A".repeat(64), "z".repeat(64)] {
+        let (profile, config, mut change) = input(Some("{}"));
+        change.after.as_mut().unwrap().native_name = format!("upskill-{suffix}");
+        assert_eq!(
+            plan_skill_sources(&profile, &config, &[change]).unwrap_err(),
+            OpenCodeSourceError::InvalidSelection
+        );
+    }
+}
+#[test]
+fn a_source_change_requires_a_nonempty_observation_id() {
+    let (profile, config, mut change) = input(Some("{}"));
+    change.observation_id.clear();
+    assert_eq!(
+        plan_skill_sources(&profile, &config, &[change]).unwrap_err(),
+        OpenCodeSourceError::InvalidChange
+    );
+}

@@ -1,4 +1,6 @@
 //! Acceptance tests for inactive, immutable per-client skill package plans.
+#[path = "common/scope_path.rs"]
+mod scope_path;
 
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
@@ -91,7 +93,7 @@ fn selected(
 fn scope() -> InstallationRoot {
     InstallationRoot {
         scope: OwnershipScope::Project,
-        path: PathBuf::from("/workspace"),
+        path: scope_path::absolute("/workspace"),
     }
 }
 fn owner(skill: &SelectedSkill) -> ArtifactOwner {
@@ -310,7 +312,7 @@ fn scope_surface_and_installation_identity_do_not_share_native_names() {
             },
             InstallationRoot {
                 scope: root.scope,
-                path: PathBuf::from("/another-checkout"),
+                path: scope_path::absolute("/another-checkout"),
             },
         ] {
             let result = compile_skill_package(&request(&skill, &changed, &owned)).unwrap();
@@ -393,14 +395,19 @@ fn invalid_scope_owner_or_selection_binding_rejects_without_output() {
     let skill = selected(TargetSurface::ClaudeCli, &[("SKILL.md", ENTRY, None)], None);
     let root = scope();
     let owned = owner(&skill);
-    for path in ["relative", "/workspace/../escape", "/workspace/./alias"] {
+    for path in [
+        PathBuf::from("relative"),
+        scope_path::absolute("/workspace").join("..").join("escape"),
+        scope_path::absolute("/workspace").join(".").join("alias"),
+    ] {
         let changed = InstallationRoot {
             scope: root.scope,
-            path: path.into(),
+            path,
         };
         assert!(
             compile_skill_package(&request(&skill, &changed, &owned)).is_err(),
-            "{path}"
+            "{:?}",
+            changed.path
         );
     }
     for id in ["", "../escape", "x/y", "x.y"] {
@@ -508,18 +515,24 @@ fn framed_protocol_matches_independently_encoded_golden() {
     let root = scope();
     let owned = owner(&skill);
     let result = compile_skill_package(&request(&skill, &root, &owned)).unwrap();
-    assert_eq!(
-        result.native_name,
-        "upskill-ca3f92288d5cf8ff96fb316d5b7c07953a11b35a401ae2f852a721763cac5af5"
-    );
-    assert_eq!(
-        result.payload_sha256,
-        "54ad588c40a1eb9035980be00719a214ee83d307a7df78888efd8ec688e48186"
-    );
-    assert_eq!(
-        result.package_sha256,
-        "e46f4c71974f8618aca1cb58d3d5066520d37048cc7982a7c260c9f953456ce5"
-    );
+    // Root spelling participates in the framed identity. Windows vectors were
+    // independently encoded with C:\workspace, retaining all Unix controls.
+    let (name, payload, package) = if cfg!(windows) {
+        (
+            "upskill-20ce025e73798ca87972fb736f0e41923ca5f2074d5d5164cd1279fd996d1118",
+            "53e97de98a21c6227286e061c8a5b8a87a16f30171f8e87ebf5f1c1bc86cf2c4",
+            "b1618ac0ebdbd2d214ee2ae82e86a9a8e786ff5e54a8e93b92d25c2e29e9182e",
+        )
+    } else {
+        (
+            "upskill-ca3f92288d5cf8ff96fb316d5b7c07953a11b35a401ae2f852a721763cac5af5",
+            "54ad588c40a1eb9035980be00719a214ee83d307a7df78888efd8ec688e48186",
+            "e46f4c71974f8618aca1cb58d3d5066520d37048cc7982a7c260c9f953456ce5",
+        )
+    };
+    assert_eq!(result.native_name, name);
+    assert_eq!(result.payload_sha256, payload);
+    assert_eq!(result.package_sha256, package);
 }
 
 #[test]
@@ -557,14 +570,19 @@ fn aliased_resource_golden_pins_field_order_and_present_mode_encoding() {
     let result = compile_skill_package(&request(&skill, &root, &owned)).unwrap();
     // Independently encoded from the documented protocol, including different
     // source/installed names and the big-endian present mode 00 00 01 e9.
-    assert_eq!(
-        result.payload_sha256,
-        "f2d4917282f3bc0a135ccf17c43887c21ac8b540fe5c072330604c46339f0d4a"
-    );
-    assert_eq!(
-        result.package_sha256,
-        "0fa3b4d799333bfcd8956a4cc18576d1197daaebd1941beef07b1d82789d6dad"
-    );
+    let (payload, package) = if cfg!(windows) {
+        (
+            "e947eb031cae36825a6e5e2ddb98687bd07a3b79a8b1ae59436288eab358ef38",
+            "33688f00cc188f8aa982895e1b2260e7c5b3e02ad4b55ef23601c204007f1f38",
+        )
+    } else {
+        (
+            "f2d4917282f3bc0a135ccf17c43887c21ac8b540fe5c072330604c46339f0d4a",
+            "0fa3b4d799333bfcd8956a4cc18576d1197daaebd1941beef07b1d82789d6dad",
+        )
+    };
+    assert_eq!(result.payload_sha256, payload);
+    assert_eq!(result.package_sha256, package);
 }
 
 // Keep the generated evidence consistent while isolating a metadata guard.

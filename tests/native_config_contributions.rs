@@ -1,4 +1,6 @@
 //! Acceptance coverage for pure, owned native configuration edits.
+#[path = "common/scope_path.rs"]
+mod scope_path;
 use serde_json::json;
 use upskill::files::plan::{FileLocation, FileValue, ObservedFile};
 use upskill::native_config::{
@@ -11,7 +13,7 @@ use upskill::target::TargetSurface;
 fn capture(format: ConfigFormat, source: Option<&str>) -> CapturedConfig {
     let scope = InstallationRoot {
         scope: OwnershipScope::Project,
-        path: "/workspace/project".into(),
+        path: scope_path::absolute("/workspace/project"),
     };
     let path = if format == ConfigFormat::Toml {
         ".codex/config.toml"
@@ -341,7 +343,7 @@ fn tracked_overlays_external_roots_and_copied_ownership_are_rejected() {
     apply_capture(&mut config, patch);
     expect_owned(&config, &mut change);
     assert!(plan_config_patch(&config, &change).is_ok());
-    config.scope.path = "/other/checkout".into();
+    config.scope.path = scope_path::absolute("/other/checkout");
     config.target.file.location.root = config.scope.clone();
     assert!(
         plan_config_patch(&config, &change)
