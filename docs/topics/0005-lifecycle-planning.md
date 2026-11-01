@@ -1303,3 +1303,19 @@ Duplicate JSON keys reject before decoding.
 The durable store, multi-root markers, coordinator and client adapters remain
 pending under
 [AD-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-coordinate-native-delivery-with-one-state-and-operation-intent.md).
+
+## Inactive native root binding and locking
+
+`QualifiedScope::binding` revalidates a pinned directory and returns its
+selected path, resolved path, device and inode. The returned record carries no
+filesystem capability. `native_delivery::roots::lock_native_roots` requires
+exact normalized logical root paths, rejects duplicate or aliased physical
+directories and holds all writer guards in ascending device/inode order.
+Acquisition is nonblocking; any failure releases previously acquired guards. The
+returned lock set can revalidate all bindings while held.
+
+This is live advisory writer exclusion on Linux/macOS. It does not exclude
+non-cooperating editors, freeze path bindings, qualify filesystem profiles or
+record durable operation intent. Locks release after normal exit or a crash.
+Pending markers and recovery coordination remain required before native effects
+can be admitted.

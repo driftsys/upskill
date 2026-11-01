@@ -1159,11 +1159,17 @@ fn native_state_configuration_envelope_must_match_unchanged_private_snapshot() {
         state
     );
     let base: serde_json::Value = serde_json::from_str(&encoded.json).unwrap();
-    for mutation in ["location", "surface"] {
+    for mutation in ["location", "surface", "root-path", "root-scope"] {
         let mut value = base.clone();
         match mutation {
             "location" => value["configurations"][0]["location"]["path"] = "other.json".into(),
             "surface" => value["configurations"][0]["surface"] = "copilot.cli".into(),
+            "root-path" => {
+                value["configurations"][0]["location"]["root"]["path"] = "/other/home".into()
+            }
+            "root-scope" => {
+                value["configurations"][0]["location"]["root"]["scope"] = "project".into()
+            }
             _ => unreachable!(),
         }
         assert!(
@@ -1203,6 +1209,14 @@ fn native_state_expected_context_must_include_the_exact_additional_roots() {
     different.additional_roots[0].path = "/different/xdg".into();
     assert!(
         parse_native_state(&encoded.json, &different, &encoded.private_evidence)
+            .unwrap_err()
+            .to_string()
+            .contains("another root or private namespace")
+    );
+    let mut different_scope = state.context.clone();
+    different_scope.additional_roots[0].scope = OwnershipScope::Project;
+    assert!(
+        parse_native_state(&encoded.json, &different_scope, &encoded.private_evidence)
             .unwrap_err()
             .to_string()
             .contains("another root or private namespace")

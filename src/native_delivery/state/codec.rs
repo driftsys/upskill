@@ -34,7 +34,7 @@ struct Configuration {
 #[serde(deny_unknown_fields)]
 struct Revision {
     installation: Installation,
-    // Selected metadata can contain YAML mapping keys/tags which JSON cannot
+    // Selected metadata can contain YAML mapping keys which JSON cannot
     // represent losslessly. Keep a strict typed YAML capture inside the envelope.
     selected_yaml: String,
     package: SkillPackage,

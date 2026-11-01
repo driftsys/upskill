@@ -4,6 +4,16 @@ use anyhow::Result;
 
 use crate::ownership::InstallationRoot;
 
+/// Captured directory identity. This record is not a filesystem capability.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScopeBinding {
+    pub selected: std::path::PathBuf,
+    pub resolved: std::path::PathBuf,
+    pub device: u64,
+    pub inode: u64,
+}
+
 /// An existing directory pinned to its selected native filesystem identity.
 ///
 /// Linux and macOS are supported. Other platforms return an explicit error.
@@ -60,6 +70,16 @@ impl QualifiedScope {
             let _ = root;
             anyhow::bail!("qualified scope roots are unsupported on this operating system")
         }
+    }
+
+    /// Capture and revalidate the selected directory binding without writes.
+    pub fn binding(&self) -> Result<ScopeBinding> {
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            self.root.binding()
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        anyhow::bail!("qualified scope binding capture is unsupported on this operating system")
     }
 
     /// Revalidate the selected path, canonical path and pinned identity.
@@ -252,6 +272,16 @@ mod backend {
                 resolved,
                 identity,
                 directory,
+            })
+        }
+
+        pub(super) fn binding(&self) -> Result<super::ScopeBinding> {
+            self.verify_binding()?;
+            Ok(super::ScopeBinding {
+                selected: self.selected.clone(),
+                resolved: self.resolved.clone(),
+                device: self.identity.device,
+                inode: self.identity.inode,
             })
         }
 

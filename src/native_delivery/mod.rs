@@ -15,3 +15,5 @@ pub fn plan_native_skill_files(input: &SkillDeliveryInput<'_>) -> Result<SkillDe
 }
 
 pub mod state;
+
+pub mod roots;

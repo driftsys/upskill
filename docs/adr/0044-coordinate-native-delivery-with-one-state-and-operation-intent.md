@@ -151,10 +151,16 @@ adapter outcomes.
 
 ## Implementation and admission
 
-Current implementation: pure permission projection and the validated codec
-exist. The codec emits schema-3 JSON plus private evidence blobs; it performs no
-I/O, migration or publication. The qualified multi-root store and durable
-coordinator remain unimplemented. Stage 5 is open.
+Current implementation: pure permission projection, the validated codec and live
+multi-root writer exclusion exist. The codec emits schema-3 JSON plus private
+evidence blobs; it performs no I/O, migration or publication.
+`native_delivery::roots` binds exact logical root paths to revalidated directory
+identities, rejects physical aliases and acquires nonblocking writer guards in
+ascending device/inode order. Failure releases every acquired guard. These
+advisory locks release on process exit; they provide no pending markers or
+post-crash exclusion. Filesystem-profile admission remains separate. The
+qualified multi-root store and durable coordinator remain unimplemented. Stage 5
+is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are
