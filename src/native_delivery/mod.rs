@@ -37,3 +37,7 @@ pub use journal::coordinator;
 
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
 pub(crate) mod test_support;
+
+pub mod codex;
+pub mod copilot;
+mod user_plugin_command;

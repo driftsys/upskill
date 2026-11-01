@@ -221,10 +221,13 @@ with attributable observations; no stdout from library code.
 **Local status:** In progress. Exact-profile production admission remains
 closed. The bounded subprocess runner, Claude metadata decoder and fixed
 version/list reader are implemented. Claude command planning and an offline
-actual-compiler probe fixture now cover fixed explicitly scoped argv. These
-pieces do not yet implement the complete adapter trait. Native local-catalog
-capture, effects/inverses, effective observations, other client adapters and
-runtime qualification remain open. The
+actual-compiler probe fixture cover fixed explicitly scoped argv. Copilot and
+Codex candidate planners now cover their captured user-context command families;
+both reject project operations, and Codex local-package refresh rejects instead
+of using Git upgrade or remove/re-add. These pieces do not yet implement the
+complete adapter trait. Native local-catalog capture, effects/inverses,
+effective observations, other client adapters and runtime qualification remain
+open. The
 [prepared Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md)
 requires separate native-execution approval; it authorizes no model spending.
 

@@ -80,9 +80,15 @@ disable to satisfy project admission. A configured repository route requires its
 own qualified capture, writer and effective-observer contract. Separately
 resolve the approved full-digest name acceptance question against the exact
 native pin; this command capture performs no manifest/name validation and
-changes no generated name. The earlier
-[component packet](gate6-copilot-plugin-components.md) does not qualify these
-missing controls.
+changes no generated name. The inactive
+[Copilot command planner](../../src/native_delivery/copilot.rs) now emits only
+the captured user-context registration/install/update/uninstall/removal argv,
+including `--no-auto-update`. It rejects every project operation before
+returning argv and preserves the full native name. The declared user scope must
+still be bound to the correct HOME and effective configuration by a qualified
+executor; there is no native acceptance, activation or ownership proof here. The
+earlier [component packet](gate6-copilot-plugin-components.md) does not qualify
+these missing controls.
 
 ## Codex: marketplace management is distinct from project activation
 
@@ -101,6 +107,15 @@ A future adapter must establish a project-only admission sequence without a
 transient user binding. Do not import the old remove/re-add sequence as a safe
 project contract: [Q8](gate6-codex-skill-updates.md) observed visibility but did
 not prove that intermediate scopes stayed inactive.
+
+The inactive [Codex command planner](../../src/native_delivery/codex.rs) now
+emits captured user-context local registration, add, remove and
+marketplace-removal argv with JSON output. Every project operation rejects.
+Local-package update also rejects: the captured marketplace upgrade command
+refreshes Git snapshots, so it is not a local revision switch. The planner adds
+no feature/configuration or scope override and never substitutes remove/re-add.
+HOME/configuration binding, native effects, cache retention and qualification
+remain open.
 
 Native removal can invalidate cache-backed resources. Require observed native
 retention or session clearance before refresh/removal, even while all managed

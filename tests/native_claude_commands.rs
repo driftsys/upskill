@@ -1,4 +1,5 @@
 //! Inactive command planning: no native executable or provider is invoked.
+#![cfg(unix)]
 use std::ffi::OsString;
 use upskill::compile::skill_package::SkillPackageBinding;
 use upskill::lifecycle::native_receipt::{NativeSkillSelection, SkillTarget};
