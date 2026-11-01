@@ -239,10 +239,22 @@ impl GroupChild {
         }
     }
     fn finish(&mut self) -> Result<(ExitStatus, NativeGroupState, bool), NativeProcessError> {
+        self.finish_with(
+            |pid| kill_process_group(pid, Signal::KILL),
+            Child::wait,
+            test_kill_process_group,
+        )
+    }
+    fn finish_with(
+        &mut self,
+        mut signal: impl FnMut(Pid) -> rustix::io::Result<()>,
+        mut reap: impl FnMut(&mut Child) -> std::io::Result<ExitStatus>,
+        mut probe: impl FnMut(Pid) -> rustix::io::Result<()>,
+    ) -> Result<(ExitStatus, NativeGroupState, bool), NativeProcessError> {
         // The unreaped leader reserves this PID/group identity during signalling.
         // Never signal this group after reaping: its numeric identity can be reused.
-        let signalled = kill_process_group(self.pid, Signal::KILL);
-        let status = self.child.wait();
+        let signalled = signal(self.pid);
+        let status = reap(&mut self.child);
         self.reaped = true;
         let status = status
             .map_err(|error| NativeProcessError::ProcessControl("reaping", error.raw_os_error()))?;
@@ -251,7 +263,7 @@ impl GroupChild {
         // Retain the signal result separately; never call it native completion.
         let deadline = Instant::now() + DRAIN;
         loop {
-            if test_kill_process_group(self.pid) == Err(rustix::io::Errno::SRCH) {
+            if probe(self.pid) == Err(rustix::io::Errno::SRCH) {
                 return Ok((status, NativeGroupState::Empty, signalled.is_ok()));
             }
             if Instant::now() >= deadline {
@@ -313,6 +325,17 @@ impl<R: Read> Pipe<R> {
         Ok(false)
     }
 }
+fn poll_output<R: Read, S: Read>(
+    out: &mut Pipe<R>,
+    err: &mut Pipe<S>,
+    remaining: &mut usize,
+) -> Option<NativeStopReason> {
+    match (out.drain(remaining), err.drain(remaining)) {
+        (Err(_), _) | (_, Err(_)) => Some(NativeStopReason::OutputReadFailed),
+        (Ok(true), _) | (_, Ok(true)) => Some(NativeStopReason::OutputLimit),
+        _ => None,
+    }
+}
 fn validate(spec: &NativeCommandSpec) -> Result<(), NativeProcessError> {
     if spec.timeout.is_zero()
         || spec.timeout > Duration::from_secs(300)
@@ -341,7 +364,14 @@ pub fn run_native_process(
     spec: &NativeCommandSpec,
     cancellation: &AtomicBool,
 ) -> Result<NativeProcessOutput, NativeProcessError> {
-    run_with_clock(scope, guard, spec, cancellation, |start| start.elapsed())
+    run_with_clock(
+        scope,
+        guard,
+        spec,
+        cancellation,
+        |start| start.elapsed(),
+        || Ok(()),
+    )
 }
 
 fn run_with_clock(
@@ -350,6 +380,7 @@ fn run_with_clock(
     spec: &NativeCommandSpec,
     cancellation: &AtomicBool,
     elapsed: impl Fn(Instant) -> Duration,
+    before_launch: impl FnOnce() -> Result<(), NativeProcessError>,
 ) -> Result<NativeProcessOutput, NativeProcessError> {
     validate(spec)?;
     let directory = native_effects::command_directory(scope, guard)
@@ -380,6 +411,7 @@ fn run_with_clock(
     if cancellation.load(Ordering::SeqCst) {
         return Err(NativeProcessError::CancelledBeforeLaunch);
     }
+    before_launch()?;
     let child = command
         .spawn()
         .map_err(|_| NativeProcessError::SpawnFailed)?;
@@ -415,16 +447,9 @@ fn run_with_clock(
     let start = Instant::now();
     let mut capture_valid = true;
     let reason = loop {
-        match (out.drain(&mut remaining), err.drain(&mut remaining)) {
-            (Err(_), _) | (_, Err(_)) => {
-                capture_valid = false;
-                break NativeStopReason::OutputReadFailed;
-            }
-            (Ok(true), _) | (_, Ok(true)) => {
-                capture_valid = false;
-                break NativeStopReason::OutputLimit;
-            }
-            _ => {}
+        if let Some(reason) = poll_output(&mut out, &mut err, &mut remaining) {
+            capture_valid = false;
+            break reason;
         }
         if cancellation.load(Ordering::SeqCst) {
             break NativeStopReason::Cancelled;
@@ -441,22 +466,12 @@ fn run_with_clock(
     let drain_until = Instant::now() + DRAIN;
     let mut reason = reason;
     while !(out.eof && err.eof) && Instant::now() < drain_until {
-        match (out.drain(&mut remaining), err.drain(&mut remaining)) {
-            (Err(_), _) | (_, Err(_)) => {
-                capture_valid = false;
-                if reason == NativeStopReason::Exited {
-                    reason = NativeStopReason::OutputReadFailed;
-                }
-                break;
+        if let Some(observed) = poll_output(&mut out, &mut err, &mut remaining) {
+            capture_valid = false;
+            if reason == NativeStopReason::Exited {
+                reason = observed;
             }
-            (Ok(true), _) | (_, Ok(true)) => {
-                capture_valid = false;
-                if reason == NativeStopReason::Exited {
-                    reason = NativeStopReason::OutputLimit;
-                }
-                break;
-            }
-            _ => {}
+            break;
         }
         if !(out.eof && err.eof) {
             std::thread::sleep(POLL);
@@ -487,19 +502,26 @@ mod tests {
         with_scope(|root, scope, guard| {
             let spec = descendants(root, false);
             let watchdog = Instant::now();
-            let output = run_with_clock(scope, guard, &spec, &AtomicBool::new(false), |_| {
-                assert!(
-                    watchdog.elapsed() < Duration::from_secs(5),
-                    "fake-native positive did not become ready"
-                );
-                if root.join("parent-ready").exists()
-                    && std::fs::metadata(root.join("heartbeat")).is_ok_and(|m| m.len() > 0)
-                {
-                    spec.timeout
-                } else {
-                    Duration::ZERO
-                }
-            })
+            let output = run_with_clock(
+                scope,
+                guard,
+                &spec,
+                &AtomicBool::new(false),
+                |_| {
+                    assert!(
+                        watchdog.elapsed() < Duration::from_secs(5),
+                        "fake-native positive did not become ready"
+                    );
+                    if root.join("parent-ready").exists()
+                        && std::fs::metadata(root.join("heartbeat")).is_ok_and(|m| m.len() > 0)
+                    {
+                        spec.timeout
+                    } else {
+                        Duration::ZERO
+                    }
+                },
+                || Ok(()),
+            )
             .unwrap();
             assert_eq!(output.reason, NativeStopReason::TimedOut);
             assert!(output.stdout.ends_with(b"spawned\n"));
@@ -514,6 +536,245 @@ mod tests {
                 Err(rustix::io::Errno::CHILD)
             ));
             assert!(output.direct_child_reaped);
+        });
+    }
+    fn leader_reaped(root: &Path) {
+        let pid = std::fs::read_to_string(root.join("leader-pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(matches!(
+            waitid(
+                WaitId::Pid(Pid::from_raw(pid).unwrap()),
+                WaitIdOptions::EXITED | WaitIdOptions::NOHANG | WaitIdOptions::NOWAIT
+            ),
+            Err(rustix::io::Errno::CHILD)
+        ));
+    }
+    #[test]
+    fn overflow_after_descendant_readiness_stops_the_group_and_reaps_the_leader() {
+        with_scope(|root, scope, guard| {
+            let mut spec = descendants(root, false);
+            let launcher = root.join("native-fixture");
+            let original = std::fs::read_to_string(&launcher).unwrap();
+            assert_eq!(original.matches("\nwait\n").count(), 1);
+            std::fs::write(
+                &launcher,
+                original.replace(
+                    "\nwait\n",
+                    r#"
+while [ ! -f "$OVERFLOW_TRIGGER" ]; do /bin/sleep 0.01; done
+while :; do printf 'overflow-output'; done
+"#,
+                ),
+            )
+            .unwrap();
+            spec.executable = NativeExecutable::capture(&launcher).unwrap();
+            spec.environment.insert(
+                "OVERFLOW_TRIGGER".into(),
+                root.join("overflow").into_os_string(),
+            );
+            spec.output_limit = 128;
+            let watchdog = Instant::now();
+            let output = run_with_clock(
+                scope,
+                guard,
+                &spec,
+                &AtomicBool::new(false),
+                |_| {
+                    assert!(
+                        watchdog.elapsed() < Duration::from_secs(5),
+                        "overflow positive control did not complete"
+                    );
+                    if root.join("parent-ready").exists()
+                        && std::fs::metadata(root.join("heartbeat")).is_ok_and(|m| m.len() > 0)
+                    {
+                        std::fs::write(root.join("overflow"), b"go").unwrap();
+                    }
+                    Duration::ZERO
+                },
+                || Ok(()),
+            )
+            .unwrap();
+            assert_eq!(output.reason, NativeStopReason::OutputLimit);
+            assert!(output.stdout.len() + output.stderr.len() <= 128);
+            assert!(!output.output_complete);
+            stopped_heartbeat(root);
+            leader_reaped(root);
+        });
+    }
+    #[test]
+    fn signal_result_group_observation_and_signal_before_reap_are_independent() {
+        use std::cell::RefCell;
+        for signal_succeeds in [false, true] {
+            for group_absent in [false, true] {
+                with_scope(|root, _, _| {
+                    let spec = crate::native_delivery::test_support::process_fixture::script(
+                        root,
+                        if signal_succeeds {
+                            "while :; do :; done"
+                        } else {
+                            "exit 0"
+                        },
+                    );
+                    let child = Command::new(&spec.executable.selected)
+                        .env_clear()
+                        .envs(&spec.environment)
+                        .current_dir(root)
+                        .stdin(Stdio::null())
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .process_group(0)
+                        .spawn()
+                        .unwrap();
+                    let mut child = GroupChild {
+                        pid: Pid::from_child(&child),
+                        child,
+                        reaped: false,
+                    };
+                    if !signal_succeeds {
+                        let watchdog = Instant::now();
+                        while !child.exited().unwrap() {
+                            assert!(watchdog.elapsed() < Duration::from_secs(5));
+                            std::thread::sleep(POLL);
+                        }
+                    }
+                    let events = RefCell::new(Vec::new());
+                    let (_, group, sent) = child
+                        .finish_with(
+                            |pid| {
+                                assert!(
+                                    events.borrow().is_empty(),
+                                    "signal occurred after reap/probe"
+                                );
+                                assert!(
+                                    !matches!(
+                                        waitid(
+                                            WaitId::Pid(pid),
+                                            WaitIdOptions::EXITED
+                                                | WaitIdOptions::NOHANG
+                                                | WaitIdOptions::NOWAIT
+                                        ),
+                                        Err(rustix::io::Errno::CHILD)
+                                    ),
+                                    "leader was already reaped before signal"
+                                );
+                                events.borrow_mut().push("signal");
+                                if signal_succeeds {
+                                    kill_process_group(pid, Signal::KILL)
+                                } else {
+                                    Err(rustix::io::Errno::PERM)
+                                }
+                            },
+                            |child| {
+                                assert_eq!(*events.borrow(), ["signal"]);
+                                let status = child.wait();
+                                events.borrow_mut().push("reap");
+                                status
+                            },
+                            |_| {
+                                assert!(events.borrow().starts_with(&["signal", "reap"]));
+                                events.borrow_mut().push("probe");
+                                if group_absent {
+                                    Err(rustix::io::Errno::SRCH)
+                                } else {
+                                    Ok(())
+                                }
+                            },
+                        )
+                        .unwrap();
+                    assert_eq!(sent, signal_succeeds);
+                    assert_eq!(
+                        group,
+                        if group_absent {
+                            NativeGroupState::Empty
+                        } else {
+                            NativeGroupState::Unresolved
+                        }
+                    );
+                    assert_eq!(&events.borrow()[..3], &["signal", "reap", "probe"]);
+                    assert!(events.borrow()[3..].iter().all(|event| *event == "probe"));
+                });
+            }
+        }
+    }
+    #[test]
+    fn output_read_failure_is_explicit_on_either_stream() {
+        struct Fault;
+        impl Read for Fault {
+            fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("private-read-error"))
+            }
+        }
+        let mut fault = Pipe {
+            reader: Fault,
+            bytes: vec![],
+            eof: false,
+        };
+        let mut empty = Pipe {
+            reader: &b""[..],
+            bytes: vec![],
+            eof: false,
+        };
+        assert_eq!(
+            poll_output(&mut fault, &mut empty, &mut 100),
+            Some(NativeStopReason::OutputReadFailed)
+        );
+        assert_eq!(
+            poll_output(&mut empty, &mut fault, &mut 100),
+            Some(NativeStopReason::OutputReadFailed)
+        );
+        let error = fault.drain(&mut 100).unwrap_err();
+        assert_eq!(
+            error,
+            NativeProcessError::ProcessControl("output read", None)
+        );
+        assert!(!format!("{error:?}").contains("private-read-error"));
+    }
+    #[test]
+    fn launch_namespace_replacement_keeps_effects_on_the_pinned_directory() {
+        use crate::native_delivery::test_support::process_fixture::script;
+        with_scope(|root, scope, guard| {
+            let launcher_root = tempfile::tempdir().unwrap();
+            let spec = script(launcher_root.path(), "printf pinned > marker; pwd -P");
+            let moved = root.with_file_name("moved");
+            let attempt = run_with_clock(
+                scope,
+                guard,
+                &spec,
+                &AtomicBool::new(false),
+                |start| start.elapsed(),
+                || {
+                    std::fs::rename(root, &moved).unwrap();
+                    std::fs::create_dir(root).unwrap();
+                    std::fs::write(root.join("manual"), b"replacement-sentinel").unwrap();
+                    Ok(())
+                },
+            );
+            let original_marker = std::fs::read(moved.join("marker"));
+            let replacement_marker = root.join("marker").exists();
+            let manual = std::fs::read(root.join("manual"));
+            std::fs::remove_dir_all(root).unwrap();
+            std::fs::rename(&moved, root).unwrap();
+            let output = attempt.unwrap();
+            assert_eq!(original_marker.unwrap(), b"pinned");
+            assert!(!replacement_marker);
+            assert_eq!(manual.unwrap(), b"replacement-sentinel");
+            assert!(!output.scope_unchanged);
+            assert!(output.executable_unchanged);
+            assert_eq!(
+                output.stdout,
+                format!(
+                    "{}\n",
+                    root.parent()
+                        .unwrap()
+                        .canonicalize()
+                        .unwrap()
+                        .join("moved")
+                        .display()
+                )
+                .as_bytes()
+            );
         });
     }
 }

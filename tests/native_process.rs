@@ -17,29 +17,30 @@ fn exact_arguments_environment_cwd_closed_stdin_and_nonzero_exit_are_preserved()
     with_scope(|root, scope, guard| {
         let mut spec = script(
             root,
-            r#"printf '%s\n' "$HOME" "$MARKER" "$PATH" "$@"
+            r#"printf 'stdout-canary\n'
+printf '%s\n' "$HOME" "$MARKER" "$PATH" "$@"
 if read line; then printf 'unexpected-stdin'; else printf 'stdin-closed\n'; fi
 pwd -P
-printf 'private-diagnostic' >&2
+printf 'stderr-canary' >&2
 exit 7"#,
         );
         spec.environment
-            .insert("MARKER".into(), "owned-value".into());
+            .insert("MARKER".into(), "environment-canary".into());
         // sh can supply a default PATH; an inherited provider/user value must
         // still be replaced by this explicit caller value.
         spec.environment
             .insert("PATH".into(), "/fixture-only-path".into());
-        spec.arguments = ["value with spaces", "", "; touch must-not-exist"]
+        spec.arguments = ["argument-canary with spaces", "", "; touch must-not-exist"]
             .map(OsString::from)
             .into();
         let output = run_native_process(scope, guard, &spec, &AtomicBool::new(false)).unwrap();
         assert_eq!(output.reason, NativeStopReason::Exited);
         assert_eq!(output.exit_code, Some(7));
-        assert_eq!(output.stderr, b"private-diagnostic");
+        assert_eq!(output.stderr, b"stderr-canary");
         assert_eq!(
             String::from_utf8(output.stdout.clone()).unwrap(),
             format!(
-                "{}\nowned-value\n/fixture-only-path\nvalue with spaces\n\n; touch must-not-exist\nstdin-closed\n{}\n",
+                "stdout-canary\n{}\nenvironment-canary\n/fixture-only-path\nargument-canary with spaces\n\n; touch must-not-exist\nstdin-closed\n{}\n",
                 root.display(),
                 root.canonicalize().unwrap().display()
             )
@@ -47,8 +48,17 @@ exit 7"#,
         assert!(!root.join("must-not-exist").exists());
         assert_eq!(output.group, NativeGroupState::Empty);
         assert!(output.output_complete && output.scope_unchanged && output.executable_unchanged);
-        assert!(!format!("{output:?}").contains("private-diagnostic"));
-        assert!(!format!("{spec:?}").contains("owned-value"));
+        assert_eq!(
+            format!("{output:?}"),
+            format!(
+                "NativeProcessOutput {{ reason: Exited, exit_code: Some(7), stdout_bytes: {}, stderr_bytes: 13, group: Empty, output_complete: true, scope_unchanged: true, executable_unchanged: true, .. }}",
+                output.stdout.len()
+            )
+        );
+        assert_eq!(
+            format!("{spec:?}"),
+            "NativeCommandSpec { argument_count: 3, environment_count: 4, timeout: 2s, output_limit: 4096, .. }"
+        );
     });
 }
 #[test]
@@ -206,7 +216,7 @@ fn cancellation_before_spawn_is_typed_and_after_spawn_stops_descendants() {
 }
 
 #[test]
-fn capture_rejects_special_files_before_opening_them() {
+fn capture_rejects_special_files_without_blocking_on_open() {
     with_scope(|root, _, _| {
         let fifo = root.join("fifo-launcher");
         assert!(
@@ -308,5 +318,50 @@ fn exact_output_boundary_is_complete_and_one_extra_byte_is_truncated() {
         assert_eq!(output.reason, NativeStopReason::OutputLimit);
         assert_eq!(output.stdout.len() + output.stderr.len(), 16);
         assert!(!output.output_complete);
+    });
+}
+
+#[test]
+fn launcher_contract_rejects_paths_permissions_and_oversize_files() {
+    use std::os::unix::fs::PermissionsExt;
+    with_scope(|root, _, _| {
+        let _ = script(root, "exit 0");
+        assert!(matches!(
+            NativeExecutable::capture(std::path::Path::new("./native-fixture")),
+            Err(NativeProcessError::InvalidInvocation)
+        ));
+        let parent_path = root.join("..").join("scope").join("native-fixture");
+        assert!(matches!(
+            NativeExecutable::capture(&parent_path),
+            Err(NativeProcessError::InvalidInvocation)
+        ));
+        let launcher = root.join("native-fixture");
+        for mode in [0o600, 0o4700, 0o2700] {
+            std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(mode)).unwrap();
+            assert_eq!(
+                std::fs::metadata(&launcher).unwrap().permissions().mode() & 0o7777,
+                mode
+            );
+            assert!(
+                matches!(
+                    NativeExecutable::capture(&launcher),
+                    Err(NativeProcessError::Unavailable)
+                ),
+                "accepted mode {mode:o}"
+            );
+        }
+        std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
+        // A sparse file pins the public 1 GiB admission limit without writing
+        // a gigabyte or depending on the implementation's private constant.
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&launcher)
+            .unwrap()
+            .set_len(1_073_741_825)
+            .unwrap();
+        assert!(matches!(
+            NativeExecutable::capture(&launcher),
+            Err(NativeProcessError::Unavailable)
+        ));
     });
 }

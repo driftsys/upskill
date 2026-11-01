@@ -17,6 +17,15 @@ pub fn with_scope(run: impl FnOnce(&std::path::Path, &QualifiedScope, &ScopeWrit
     };
     let scope = QualifiedScope::open(&root).unwrap();
     let guard = scope.try_lock_writer().unwrap();
+    struct StopDescendants<'a>(&'a std::path::Path);
+    impl Drop for StopDescendants<'_> {
+        fn drop(&mut self) {
+            let _ = std::fs::write(self.0.join("stop-child"), b"stop");
+        }
+    }
+    // This runs only after assertions (including on failure), so cooperative
+    // fixture cleanup cannot masquerade as successful process-group cleanup.
+    let _stop = StopDescendants(&directory);
     run(&directory, &scope, &guard);
 }
 pub fn script(root: &std::path::Path, body: &str) -> NativeCommandSpec {
@@ -43,7 +52,7 @@ pub fn script(root: &std::path::Path, body: &str) -> NativeCommandSpec {
 pub fn descendants(root: &std::path::Path, parent_exit: bool) -> NativeCommandSpec {
     let mut spec = script(
         root,
-        r#"/bin/sh -c 'printf ready > "$READY"; while :; do printf x >> "$HEARTBEAT"; /bin/sleep 0.01; done' &
+        r#"/bin/sh -c 'printf ready > "$READY"; while [ -d "$HOME" ] && [ ! -f "$STOP_FILE" ]; do printf x >> "$HEARTBEAT"; /bin/sleep 0.01; done' &
 printf '%s' "$!" > "$CHILD_PID"
 printf 'spawned\n'
 printf ready > "$PARENT_READY"
@@ -58,6 +67,7 @@ wait"#,
         ("PARENT_READY", "parent-ready"),
         ("HEARTBEAT", "heartbeat"),
         ("CHILD_PID", "child-pid"),
+        ("STOP_FILE", "stop-child"),
     ] {
         spec.environment
             .insert(name.into(), root.join(file).into_os_string());

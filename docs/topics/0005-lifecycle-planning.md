@@ -1520,3 +1520,26 @@ environment values must not be journaled. An exit code, a stopped group or an
 intact export is not a native binding/retention receipt. Real adapters still
 require durable Pending-before-invocation ordering, approved non-secret capture,
 independent effect/source observations and separately qualified recovery.
+
+## Claude inventory metadata prerequisite
+
+`native_delivery::claude::ClaudePluginInventory` decodes the retained Claude
+2.1.308 plugin-list wire shape without running a command. It bounds input,
+rejects malformed UTF-8/JSON and decoded duplicate keys, requires the known
+metadata fields and preserves user, project and other reported scope labels.
+Unknown fields and raw parse errors are discarded; Debug exposes only the entry
+count, and the inventory has no serde representation.
+
+Exact lookup distinguishes plugin/catalog identity, user versus project scope,
+and the reported project path. Duplicate matches and matching entries in an
+unsupported/ambiguous scope reject. A false `projectEnabled` value stays
+separate from `enabled`; neither is expanded into an effective activation claim.
+Sanitized receipt path placeholders remain reported metadata and cannot identify
+a real absolute project. Path alias resolution is not performed here.
+
+These records establish no ownership, observer freshness, native binding,
+resource retention or profile qualification. No matching row means only that the
+supplied inventory has no match. Concrete adapters must still bind a successful
+complete transport observation to its qualified runtime/context, validate the
+selected source and independently establish effective behavior. Client mutation
+methods, production admission and CLI dispatch remain pending.
