@@ -27,6 +27,7 @@ pub mod lockfile;
 pub mod mcp;
 pub mod model;
 pub mod native_config;
+pub mod native_delivery;
 pub mod operations;
 pub mod ownership;
 pub mod parse;

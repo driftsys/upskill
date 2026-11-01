@@ -11,25 +11,61 @@ pub(super) struct PlannedSkillFiles {
     pub staging: Vec<PlannedFile>,
     pub selectors: Vec<PlannedFile>,
 }
-fn value(file: &crate::compile::item::CompiledItemFile) -> FileValue {
-    FileValue {
-        bytes: file.bytes.clone(),
-        mode: file.mode,
-    }
+#[derive(Clone, Copy)]
+pub(super) enum PermissionProfile {
+    Captured,
+    NativePrivateV1,
 }
+
 fn desired(
     scope: &InstallationRoot,
     file: &crate::compile::item::CompiledItemFile,
-    surface: crate::target::TargetSurface,
-) -> DesiredFile {
-    DesiredFile {
+    revision: &PackageRevision,
+    profile: PermissionProfile,
+) -> Result<DesiredFile> {
+    let mode = match profile {
+        PermissionProfile::Captured => file.mode,
+        PermissionProfile::NativePrivateV1 => {
+            use crate::files::permissions::{
+                DestinationMode, PermissionSource, ResourceExecutionPolicy, select_file_mode,
+            };
+            let prefix = format!(
+                "{}/skills/{}/",
+                revision.package.revision_root, revision.selected.installed_name
+            );
+            let resource = file.path.strip_prefix(&prefix).and_then(|relative| {
+                revision
+                    .selected
+                    .resources
+                    .binary_search_by(|resource| resource.path.as_str().cmp(relative))
+                    .ok()
+                    .map(|index| &revision.selected.resources[index])
+            });
+            let source = resource.map_or(PermissionSource::Generated, |resource| {
+                PermissionSource::Resource {
+                    captured_mode: resource.mode,
+                }
+            });
+            // Immutable exports have one fixed creation policy. Prior exports
+            // must match that same policy; observations are never rewritten.
+            Some(select_file_mode(
+                DestinationMode::Absent,
+                source,
+                ResourceExecutionPolicy::OwnerExecutable,
+            )?)
+        }
+    };
+    Ok(DesiredFile {
         location: FileLocation {
             root: scope.clone(),
             path: file.path.clone(),
         },
-        value: value(file),
-        consumers: vec![surface],
-    }
+        value: FileValue {
+            bytes: file.bytes.clone(),
+            mode,
+        },
+        consumers: vec![revision.selected.surface],
+    })
 }
 fn logical_owner(graph: &[Installation], revision: &PackageRevision) -> ArtifactOwner {
     graph
@@ -68,6 +104,7 @@ pub(super) fn plan(
     input: &SkillDeliveryInput<'_>,
     checked: &validation::Validated<'_>,
     revisions: &[PackageRevision],
+    profile: PermissionProfile,
 ) -> Result<PlannedSkillFiles> {
     let mut prior = input.current.graph.artifacts.clone();
     let mut selectors = BTreeSet::new();
@@ -75,7 +112,7 @@ pub(super) fn plan(
         let owner = logical_owner(&input.current.graph.installations, revision);
         for file in &revision.package.revision_files {
             prior.push(owned(
-                &desired(input.scope, file, revision.selected.surface),
+                &desired(input.scope, file, revision, profile)?,
                 &owner,
             ));
         }
@@ -94,7 +131,7 @@ pub(super) fn plan(
             if let Some(file) = &revision.package.catalog_file {
                 selectors.insert(file.path.clone());
                 prior.push(owned(
-                    &desired(input.scope, file, revision.selected.surface),
+                    &desired(input.scope, file, revision, profile)?,
                     &logical_owner(&input.current.graph.installations, revision),
                 ));
             }
@@ -106,13 +143,9 @@ pub(super) fn plan(
         let row = sets
             .entry(owner.installation_id.clone())
             .or_insert_with(|| (owner, Vec::new()));
-        row.1.extend(
-            revision
-                .package
-                .revision_files
-                .iter()
-                .map(|file| desired(input.scope, file, revision.selected.surface)),
-        );
+        for file in &revision.package.revision_files {
+            row.1.push(desired(input.scope, file, revision, profile)?);
+        }
     }
     for candidate in checked.candidates.values() {
         let owner = logical_owner(&checked.graph.installations, candidate);
@@ -121,8 +154,7 @@ pub(super) fn plan(
             .or_insert_with(|| (owner, Vec::new()));
         if let Some(file) = &candidate.package.catalog_file {
             selectors.insert(file.path.clone());
-            row.1
-                .push(desired(input.scope, file, candidate.selected.surface));
+            row.1.push(desired(input.scope, file, candidate, profile)?);
         }
     }
     let changes: Vec<_> = sets

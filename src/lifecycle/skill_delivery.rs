@@ -84,6 +84,17 @@ fn target(revision: &PackageRevision) -> SkillTarget {
 
 /// Return a complete pure preview, never a completed native state or write authority.
 pub fn plan_skill_delivery(input: &SkillDeliveryInput<'_>) -> Result<SkillDeliveryPlan> {
+    plan_with_profile(input, files::PermissionProfile::Captured)
+}
+
+pub(crate) fn plan_native_files(input: &SkillDeliveryInput<'_>) -> Result<SkillDeliveryPlan> {
+    plan_with_profile(input, files::PermissionProfile::NativePrivateV1)
+}
+
+fn plan_with_profile(
+    input: &SkillDeliveryInput<'_>,
+    profile: files::PermissionProfile,
+) -> Result<SkillDeliveryPlan> {
     let checked = validation::validate(input)?;
     let mut revisions: BTreeMap<_, _> = input
         .current
@@ -139,7 +150,7 @@ pub fn plan_skill_delivery(input: &SkillDeliveryInput<'_>) -> Result<SkillDelive
             retention: observation.retention.clone(),
         });
     }
-    let file_plan = files::plan(input, &checked, &revisions)?;
+    let file_plan = files::plan(input, &checked, &revisions, profile)?;
     Ok(SkillDeliveryPlan {
         graph: checked.graph,
         intents: input.intents.to_vec(),

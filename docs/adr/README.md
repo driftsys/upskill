@@ -103,3 +103,7 @@ limits.
 
 [0043 — Parse native configuration with preserved spans](0043-parse-native-config-with-preserved-spans.md)
 records the reviewed parser dependency admission and byte-preservation boundary.
+
+[0044 — Coordinate native delivery with one state and operation intent](0044-coordinate-native-delivery-with-one-state-and-operation-intent.md)
+records the reviewed inactive coordination contract, including applied modes and
+multi-root recovery admission.

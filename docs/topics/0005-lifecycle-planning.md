@@ -1250,3 +1250,23 @@ parse-only dependency and compatibility evidence are recorded in
 [AD-0043](https://github.com/driftsys/upskill/blob/main/docs/adr/0043-parse-native-config-with-preserved-spans.md).
 Native adapters, durable integrated state and client qualification remain later
 work.
+
+## Inactive native skill-file permissions
+
+`native_delivery::plan_native_skill_files` reuses skill graph/receipt planning
+with the fixed `native-skill-files-v1` permission policy. Generated exports use
+`0600`. Resources require known source mode evidence and use `0700` for captured
+owner execution, otherwise `0600`. Alias paths retain the same classification.
+Captured selections, resource modes, package bytes and hash identities remain
+unchanged; returned file ownership records the selected destination modes.
+
+The planner consumes actual destination observations. Existing native exports
+must match the fixed private policy; mode drift rejects even on a no-op. It does
+not rewrite observations to match source modes or adopt identical manual files.
+The earlier `plan_skill_delivery` captured-only view remains unchanged. Both
+entrypoints retain the native cache/session-clearance guard before refresh.
+
+This is a pure Stage 5 prerequisite. It supplies no state codec, journal, native
+adapter, file effect or completed transaction. The remaining coordination
+contract is specified in
+[AD-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-coordinate-native-delivery-with-one-state-and-operation-intent.md).
