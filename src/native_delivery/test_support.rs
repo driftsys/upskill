@@ -3,3 +3,6 @@
 pub(crate) mod fake;
 #[path = "../../tests/common/native_delivery.rs"]
 pub(crate) mod fixture;
+
+#[path = "../../tests/common/native_process.rs"]
+pub(crate) mod process_fixture;

@@ -397,3 +397,29 @@ locks without duplicate native calls. Injected sync failures exercise pending
 call intent, new/existing private blobs and terminal marker retirement. These
 are offline protocol controls, not native client qualification or a power-loss
 claim.
+
+### Bounded native subprocess prerequisite
+
+The inactive adapter infrastructure uses a separate synchronous subprocess
+runner, preserving the legacy plugin helper. Enable `process` alongside `fs` on
+the existing pinned `rustix` dependency for native process-group signalling,
+non-reaping child observation and descriptor-based CWD selection. No dependency,
+async runtime or shell command interpreter is added.
+
+A command uses an absolute captured launcher, explicit argument/environment
+vectors, closed stdin and a matching qualified CWD writer guard. Bound raw
+output in memory and redact its debug presentation; do not serialize or persist
+raw output, arguments or environment in a journal. Recheck scope and launcher
+after execution. Launcher capture does not qualify interpreters, delegated
+runtimes or the namespace between validation and exec.
+
+Create an owned process group and retain its leader until cleanup signalling is
+finished. Never signal that group after reaping its leader. Deadline,
+cancellation, output overflow and normal leader exit all terminate remaining
+owned group members, then reap the direct child. Report unresolved group
+bookkeeping explicitly. Group emptiness is not universal native quiescence: an
+escaped process or a lost parent requires separately qualified supervision and
+observation. Kernel operations and final reaping are not hard-real-time bounded.
+This runner does not classify native effects or admit a profile. The durable
+Pending checkpoint must precede any future adapter invocation, and uncertain
+native results still require independent observation before replay or inverse.

@@ -28,6 +28,9 @@ pub mod adapter;
 pub mod admission;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod process;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub use journal::coordinator;
 
 #[cfg(all(test, any(target_os = "linux", target_os = "macos")))]

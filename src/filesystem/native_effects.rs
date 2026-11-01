@@ -79,3 +79,12 @@ pub(crate) fn sync(
     );
     guard.verify_binding()
 }
+
+/// Keep native subprocess CWD on the descriptor selected by the matching guard.
+pub(crate) fn command_directory(
+    scope: &QualifiedScope,
+    guard: &ScopeWriterGuard<'_>,
+) -> Result<std::fs::File> {
+    guard.require_scope(scope)?;
+    scope.reopen_directory()
+}

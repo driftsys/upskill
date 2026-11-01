@@ -1488,3 +1488,35 @@ contracts, preservation controls and resource-retention evidence. This wrapper
 alone does not validate those facts. Concrete client adapters and their
 qualification remain pending, and the production CLI continues to use its
 existing dispatch.
+
+## Inactive native subprocess runner
+
+`native_delivery::process` provides Linux/macOS subprocess mechanics for future
+adapters. It does not implement a client adapter, qualify a route or affect
+legacy plugin commands. A call requires its CWD's matching qualified writer
+guard, a captured absolute launcher, explicit arguments/environment, a finite
+poll deadline and a bounded combined output budget. The child receives closed
+stdin and a descriptor-selected CWD. No parent environment values inherit.
+
+Launcher capture opens nonblocking without following a new final symlink, checks
+an ordinary executable descriptor and bounds hashing. Revalidation rejects
+changed launcher bytes/identity before spawn; post-execution scope and launcher
+changes remain explicit result fields. Capture does not pin every
+interpreter/delegated runtime or eliminate the final validation-to-exec race.
+
+The runner retains an unreaped leader while it signals the owned group, reaps
+that child, then independently probes group emptiness. Timeout, cancellation,
+output overflow and normal leader exit all trigger group cleanup. It never
+signals that group after reaping its leader. macOS may deny a signal to a
+zombie-only group; a subsequent empty-group observation remains separate from
+the recorded signal result. Surviving/orphaned group bookkeeping is unresolved,
+not assumed absent. Group emptiness covers only that group and proves neither
+absence of escaped processes nor quiescence after parent death. Kernel calls and
+final reaping have no hard-real-time guarantee.
+
+Output stays bounded in memory. Command specs and results have redacted debug
+representations and no serde representation; raw stdout/stderr and argument or
+environment values must not be journaled. An exit code, a stopped group or an
+intact export is not a native binding/retention receipt. Real adapters still
+require durable Pending-before-invocation ordering, approved non-secret capture,
+independent effect/source observations and separately qualified recovery.
