@@ -96,3 +96,7 @@ records its separate digest encoding.
 
 - [AD-0041 — Separate client representations as the design baseline](0041-separate-client-representations-as-design-baseline.md)
   — Accepted organizing baseline; native qualification remains gated.
+
+[0042 — Keep native skill planning outside current codecs](0042-keep-native-skill-planning-outside-current-codecs.md)
+records the reviewed inactive planning boundary and its persistence admission
+limits.

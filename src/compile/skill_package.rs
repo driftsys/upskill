@@ -154,7 +154,7 @@ fn profile(surface: TargetSurface) -> Result<PackageProfile> {
     })
 }
 
-fn scope_identity(root: &InstallationRoot) -> Result<(&'static str, &str)> {
+pub(crate) fn scope_identity(root: &InstallationRoot) -> Result<(&'static str, &str)> {
     let path = root
         .path
         .to_str()

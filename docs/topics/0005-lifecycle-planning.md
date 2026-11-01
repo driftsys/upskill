@@ -1153,3 +1153,57 @@ This is library-only G6-03 reporting support. Production commands still use
 schema 1; production schema-2 migration, all-kind compatibility, native client
 qualification and activation remain separate gates. The roadmap remains Gate 6,
 then owned-skill lifecycle support, then automatic maintenance.
+
+## Inactive skill ownership and native receipt planning
+
+`lifecycle::skill_delivery::plan_skill_delivery` is a separate pure library
+boundary. It consumes a `SkillDeliveryState` in-memory view, graph edits,
+complete desired selection intent, captured package candidates, file
+observations and native observations. It does not add a serializer, migration,
+writer, command or native activation route. Existing schema-1 and schema-2
+codecs remain unchanged; production state compatibility remains an admission
+dependency.
+
+The view holds one existing `CombinedState` logical installation/reference
+graph, immutable revision captures and latest native receipts. Skill package
+files are represented through those captures, not also as graph artifacts.
+Non-skill installations cannot be changed through this planner, and unrelated
+owned artifacts and legacy state remain untouched. Revision capture validation
+checks source evidence, target/owner/root bindings and complete recompiled
+package equality. Copied absolute-root state rejects. An explicit clone starts
+with a fresh local view and new packages for that checkout, carrying no native
+receipt or ownership authority across machines.
+
+Direct and bundle reachability uses the existing reconciler. Complete intent
+must explicitly select a body origin or unavailability for every surviving
+skill/target; selected intent requires exactly one matching candidate. No
+fallback is compiled after replacement removal. Shared references keep one
+installation and one native binding per intended target. Historical captures
+prevent an ID being rebound to another source, kind, source name or alias after
+detachment.
+
+Native receipts and observations bind installation, client, scope, version,
+platform and operation/observation identity. Confirmed receipt poststate must
+match the observation; unowned native presence cannot be adopted. Every
+non-confirmed receipt, including rejection, and every unknown observation
+returns a typed recovery-required error before a new plan. These captured claims
+are not authenticated observations or runtime qualification. Refresh, detach and
+reinstallation over retained revisions require supplied cache-preservation or
+session-clearance evidence. Retaining export files alone is insufficient.
+
+The result is a preview: reconciled graph, explicit desired intent, all retained
+and new revision captures, proposed file ownership, separate immutable staging
+and selector-file changes, and native transition requests. It emits no completed
+state or successful receipt. Whole-file planning rejects missing/edited owned
+files and identical unowned files, including for no-ops. All revisions remain
+retained; native detachment never authorizes resource garbage collection.
+Detached file ownership has no current source revision, while immutable captures
+retain their exact historical source revisions. The result cannot be serialized
+by simply combining it with the current schema-2 graph codec.
+
+The later coordinator must stage immutable files before changing selectors,
+coordinate native effects and observed outcomes, and commit ownership only
+through a separately admitted integrated state representation. This boundary
+neither adds a second authoritative installation lock nor qualifies that future
+persistence format. See
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-keep-native-skill-planning-outside-current-codecs.md).
