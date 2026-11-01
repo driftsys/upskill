@@ -1,4 +1,4 @@
-//! Durable intent and effect recipes. No application/native effects or completed state.
+//! Durable native intent, coordination and recovery; production CLI admission is separate.
 use super::roots::NativeRootLocks;
 use super::state::NativeStateContext;
 use super::store::{NativeEvidenceStore, NativeStateStore};
@@ -6,6 +6,7 @@ use crate::ownership::InstallationRoot;
 use anyhow::{Context, Result, ensure};
 mod checkpoints;
 mod codec;
+pub mod coordinator;
 mod execution;
 mod model;
 mod planning;
@@ -35,22 +36,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
     }
 
     pub fn prepare(&self, capture: &NativeOperationCapture) -> Result<PreparedNativeOperation> {
-        // Scan the entire set before creating marker storage in any new root.
-        // A secondary marker blocks even when its private journal is not held.
-        for binding in self.roots.bindings() {
-            if let Some(store) = self.marker_store(&binding.root, false)? {
-                if let Some(bytes) = store.read_record("pending.json")? {
-                    let marker: PendingMarker = json(&bytes)?;
-                    validate_marker(&marker, binding, store.namespace())?;
-                    return Err(NativeRecoveryRequired {
-                        operation_id: marker.operation_id,
-                        private_root: marker.private_root,
-                        journal_name: marker.journal_name,
-                    }
-                    .into());
-                }
-            }
-        }
+        self.require_no_pending()?;
         let snapshot = self.state.snapshot()?;
         let prior_state = snapshot.observations()[0].value.clone();
         let prior = self.prior(&prior_state)?;
@@ -92,6 +78,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
             status: NativeJournalStatus::Prepared,
             execution: None,
             checkpoints: vec![],
+            runtime: None,
         };
         self.state
             .evidence()
@@ -145,8 +132,18 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
                 && journal.operation_id == id
                 && match (&journal.status, &journal.execution) {
                     (NativeJournalStatus::Prepared, None) =>
-                        journal.generation == 0 && journal.checkpoints.is_empty(),
-                    (NativeJournalStatus::Executing, Some(_)) => journal.generation >= 1,
+                        journal.generation == 0
+                            && journal.checkpoints.is_empty()
+                            && journal.runtime.is_none(),
+                    (
+                        NativeJournalStatus::Executing
+                        | NativeJournalStatus::Retiring
+                        | NativeJournalStatus::Complete
+                        | NativeJournalStatus::Restoring
+                        | NativeJournalStatus::RetiringRestore
+                        | NativeJournalStatus::Restored,
+                        Some(_),
+                    ) => journal.generation >= 1,
                     _ => false,
                 },
             "unsupported native journal"
@@ -186,6 +183,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         if let Some(execution) = &journal.execution {
             execution::validate(&intent, execution, &prior)?;
             checkpoints::validate(&journal, execution)?;
+            coordinator::validate_runtime(self, &intent, &journal)?;
         }
         let mut markers_complete = true;
         for marker in &intent.marker_namespaces {
@@ -216,6 +214,26 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
         })
     }
 
+    pub(crate) fn require_no_pending(&self) -> Result<()> {
+        // Scan the entire set before creating marker storage in any new root.
+        // A secondary marker blocks even when its private journal is not held.
+        for binding in self.roots.bindings() {
+            if let Some(store) = self.marker_store(&binding.root, false)? {
+                if let Some(bytes) = store.read_record("pending.json")? {
+                    let marker: PendingMarker = json(&bytes)?;
+                    validate_marker(&marker, binding, store.namespace())?;
+                    return Err(NativeRecoveryRequired {
+                        operation_id: marker.operation_id,
+                        private_root: marker.private_root,
+                        journal_name: marker.journal_name,
+                    }
+                    .into());
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn marker_store(
         &self,
         root: &InstallationRoot,
@@ -228,7 +246,7 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
 #[cfg(test)]
 type Hook = Box<dyn FnMut(&'static str, usize, &str) -> Result<()>>;
 #[cfg(test)]
-thread_local! { static TEST_HOOK: std::cell::RefCell<Option<Hook>> = std::cell::RefCell::new(None); }
+thread_local! { pub(crate) static TEST_HOOK: std::cell::RefCell<Option<Hook>> = std::cell::RefCell::new(None); }
 fn checkpoint(label: &'static str, index: usize, id: &str) -> Result<()> {
     #[cfg(test)]
     {

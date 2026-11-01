@@ -564,3 +564,37 @@ fn splice(source: &str, mut edits: Vec<(Range<usize>, String)>) -> String {
     }
     result
 }
+
+/// Plan all owned edits to one captured document as one physical file effect.
+/// Each identity occurs once. Sequential previews stay in memory, retain the
+/// original rollback baseline and expose no partial result after any rejection.
+pub fn plan_config_contributions(
+    config: &CapturedConfig,
+    changes: &[ConfigContribution],
+) -> Result<ConfigPatch> {
+    ensure!(
+        !changes.is_empty(),
+        "configuration document requires at least one contribution"
+    );
+    let mut identities = std::collections::BTreeSet::new();
+    for change in changes {
+        ensure!(
+            identities.insert(&change.id),
+            "duplicate configuration contribution identity"
+        );
+    }
+    let mut current = config.clone();
+    for change in changes {
+        let patch = plan_config_patch(&current, change)?;
+        current.target.file.value = patch.file.after;
+        current.ownership = patch.ownership_after;
+    }
+    Ok(ConfigPatch {
+        file: PlannedFile {
+            location: config.target.file.location.clone(),
+            before: config.target.file.value.clone(),
+            after: current.target.file.value,
+        },
+        ownership_after: current.ownership,
+    })
+}

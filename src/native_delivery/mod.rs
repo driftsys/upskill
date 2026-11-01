@@ -24,3 +24,9 @@ pub mod store;
 pub mod journal;
 
 pub mod adapter;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub use journal::coordinator;
+
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+pub(crate) mod test_support;

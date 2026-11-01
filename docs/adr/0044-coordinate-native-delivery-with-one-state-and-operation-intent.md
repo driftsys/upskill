@@ -29,14 +29,22 @@ ownership is represented once, outside the logical graph, including captures
 whose logical owner has detached. Unrelated graph artifacts and legacy data
 remain unchanged. Do not create a separate authoritative skills lock.
 
-Raw native prestate and configuration snapshots, including rollback baselines,
-can contain unrelated manual settings. Never embed these bytes in the project
-lockfile. Its schema-4 envelope stores content-addressed, typed references to
-private evidence under a qualified user root. The evidence store has a local
-namespace identity; parsing requires the expected namespace and root context, so
-copied machine receipts do not become authority in another store. Evidence
-contains no independently authoritative installation graph. The lockfile remains
-the only selector of the current graph and current evidence references.
+Captured non-secret native facts and configuration snapshots, including rollback
+baselines, can contain unrelated non-secret manual settings. Never embed these
+bytes in the project lockfile. Its schema-4 envelope stores content-addressed,
+typed references to private evidence under a qualified user root. The evidence
+store has a local namespace identity; parsing requires the expected namespace
+and root context, so copied machine receipts do not become authority in another
+store. Evidence does not authorize credential capture. Under approved
+[D6](../wip/specs/2026-10-25-customization-preservation-contract.md#capture-and-credential-boundary),
+real producers must establish an approved non-secret boundary before returning
+closed capture inputs. Credential-bearing shared whole-file payloads remain
+unsupported pending a separate approved storage/capture contract; private modes
+and redaction do not provide that approval or exact restoration. The generic
+store validates supplied structures and references, not whether arbitrary bytes
+are secret. No current real profile is admitted here. Evidence contains no
+independently authoritative installation graph. The lockfile remains the only
+selector of the current graph and current evidence references.
 
 The pure codec returns lockfile JSON plus the required immutable private blobs;
 it writes neither. Parsing requires every referenced blob, checks kind, length
@@ -261,10 +269,11 @@ application effects. Marker coverage is metadata visibility, not a future effect
 lease or native completion. Fresh processes exercise interruption after intent
 and after every marker, including shared-root exclusion after process exit.
 
-The store does not stage application files, invoke a client, publish installed
-state or retire markers/evidence. The effect recipe/checkpoint metadata below is
-implemented; effect execution, inverse execution and the observation/recovery
-coordinator remain unimplemented. Stage 5 is open.
+The preparation and checkpoint APIs remain metadata-only. The inactive
+coordinator described below now connects qualified file/native execution,
+observation-first recovery, state publication and marker retirement. Stage 5
+still requires complete verification and independent review; no production
+profile or CLI route is admitted.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are
@@ -311,8 +320,80 @@ recorded after a later acknowledgement.
 
 Effect relation is deliberately separate from effective native binding. An
 installed but unexposed package can have an acknowledged native step while its
-binding remains absent. The later coordinator must independently verify the
-final intended bindings and all files before authoritative state publication.
-The current APIs neither run commands nor apply files, publish completed state,
-restore an operation or retire markers. Fresh-process tests retain recipe
-metadata after process exit; they make no power-loss or native recovery claim.
+binding remains absent. The coordinator independently verifies the final
+intended bindings and all files before authoritative state publication. These
+metadata methods themselves neither run commands nor apply files, publish
+completed state, restore an operation or retire markers. Fresh-process tests
+retain recipe metadata after process exit; they make no power-loss or native
+recovery claim.
+
+### Execution, recovery and terminal state
+
+`NativeDeliveryCoordinator::apply` accepts the held-root operation store,
+adapter and complete desired capture. It scans pending markers first, checks
+profile availability/attribution before native capture, replaces supplied native
+observations with fresh captures and rejects profile drift through preparation.
+This profile preflight is not production admission. A nonblocking operation gate
+also excludes concurrent/reentrant coordinators sharing the same held lock set;
+inspection remains read-only. It validates closed plans and stages immutable
+files through the qualified descriptor backend. Command exposures follow the
+recorded before/after order. File-only profiles issue no command; their
+independent effect probe follows exposure. Unstarted command steps cannot adopt
+an external binding.
+
+Every native invocation records its direction, independently observed
+precondition and fresh cache/session evidence in a durable call-intent record
+before invocation. Outcomes and error details remain separate from step
+acknowledgement. Unknown, rejected or exceptional outcomes return
+`RecoveryRequired`; a confirmed exit still needs independent observation. An
+unknown or foreign effective binding blocks later exposure and acknowledgement.
+Cache/session evidence is renewed before exposure, native mutation and final
+state. Profiles, physical roots, all file preconditions and configuration layers
+are revalidated at the activation boundaries.
+
+`recover` observes first. `ObserveOnly` cannot advance files or repeat commands
+while a native effect is still Before. An independently observed After can
+finish its recorded sequence without replay. Native Before/After observations
+must establish stable owned state; a potentially still-running original command
+remains Unknown until its qualified profile proves quiescence. Observed Before
+requires explicit `Forward` or `Restore`; neither authorizes mutation on
+divergence, profile drift or unknown retention. Explicit recovery can finish
+partial marker-file publication only in the original held namespaces.
+Missing/replaced marker directories remain unresolved.
+
+Restore records a separate inverse checkpoint history and reverses exposure and
+native steps in reverse recipe order. It observes the prior effective bindings,
+retains all immutable staged files and preserves previous confirmed receipts.
+Newly retained unbound exports enter the separate staging ownership table;
+restoring never fabricates native activation or detachment receipts. Refused or
+uncertain inverse calls remain pending and require observation or another
+explicit disposition. File-only restore changes owned exposure files, issues no
+native inverse command and confirms binding only after exposure restoration.
+
+A concrete state action, with private evidence already synced, precedes the
+state write. Current files, final bindings and decoded state must agree before a
+durable terminal/retiring record permits exact own-marker removal. Invalid
+runtime checkpoints reject before replacing recovery evidence. Interrupted state
+publication or retirement resumes without native replay. `Complete` and
+`Restored` distinguish the requested forward and inverse outcomes; both require
+observed files/bindings, durable state and retired markers. Old operation and
+resource evidence remain retained. No resource garbage collection is admitted.
+
+Configuration batches plan unique contribution identities in memory and publish
+one physical patch per document with a complete entry-owner map and original
+rollback baseline. `additional_contributions` is omitted for empty batches, so
+previous schema-2 single-contribution intents remain readable; older readers
+reject a new batch field. Duplicate documents still reject as overlapping file
+effects. Omitted unchanged owned documents receive no-op captures, so omission
+cannot bypass owned selector or layer drift. A caller can supply a fresh capture
+to preserve unrelated manual edits; credential-bearing capture remains subject
+to D6.
+
+Fake-adapter tests cover both exposure orders, multiple client targets, cache
+invalidation despite retained exports, manual drift, uncertain/refused forward
+and inverse effects, state publication and retirement. Fresh executable
+processes exit at observed forward/inverse boundaries and resume under fresh
+locks without duplicate native calls. Injected sync failures exercise pending
+call intent, new/existing private blobs and terminal marker retirement. These
+are offline protocol controls, not native client qualification or a power-loss
+claim.

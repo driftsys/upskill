@@ -202,10 +202,14 @@ pub(in crate::filesystem) fn sync_post(
     sync_recovery(&dir, "directory")?;
     snapshot.verify_unchanged()
 }
-pub(super) fn apply(scope: &QualifiedScope, action: &PlannedFile, index: usize) -> Result<()> {
+pub(in crate::filesystem) fn apply(
+    scope: &QualifiedScope,
+    action: &PlannedFile,
+    index: usize,
+) -> Result<()> {
     apply_named(scope, action, &nonce()?, index)
 }
-pub(super) fn apply_create_only(
+pub(in crate::filesystem) fn apply_create_only(
     scope: &QualifiedScope,
     action: &PlannedFile,
     index: usize,

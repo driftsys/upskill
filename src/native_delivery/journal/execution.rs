@@ -161,7 +161,14 @@ pub(super) fn validate(
         effects.len() == intent.plan.native_changes.len(),
         "native effect coverage differs"
     );
-    for (effect, change) in effects.iter().zip(&intent.plan.native_changes) {
+    let mut ordered_effects = Vec::new();
+    for change in &intent.plan.native_changes {
+        let matching = effects
+            .iter()
+            .filter(|effect| effect.request.change.key == change.key)
+            .collect::<Vec<_>>();
+        ensure!(matching.len() == 1, "native effect target coverage differs");
+        let effect = matching[0];
         let profile = &execution
             .profiles
             .iter()
@@ -174,9 +181,10 @@ pub(super) fn validate(
                 && effect.request.profile == *profile,
             "native effect differs from immutable intent/profile"
         );
+        ordered_effects.push(effect.clone());
     }
     ensure!(
-        *execution == recipe(intent, execution.profiles.clone(), effects, prior)?,
+        *execution == recipe(intent, execution.profiles.clone(), ordered_effects, prior)?,
         "native execution recipe differs from intent"
     );
     Ok(())
@@ -249,11 +257,21 @@ fn recipe(
         .map(NativeExecutionStep::Stage)
         .collect::<Vec<_>>();
     steps.extend(before);
+    let (commands, file_only): (Vec<_>, Vec<_>) = effects
+        .into_iter()
+        .partition(|effect| effect.request.profile.action == NativeActionKind::Command);
     steps.extend(
-        effects
+        commands
             .into_iter()
             .map(|effect| NativeExecutionStep::Native(Box::new(effect))),
     );
     steps.extend(after);
+    // File-only profiles have no command to order before exposure. Their
+    // independent binding/effect probe must follow all exposing file effects.
+    steps.extend(
+        file_only
+            .into_iter()
+            .map(|effect| NativeExecutionStep::Native(Box::new(effect))),
+    );
     Ok(NativeExecutionPlan { profiles, steps })
 }

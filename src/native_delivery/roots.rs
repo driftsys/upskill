@@ -26,6 +26,8 @@ pub struct NativeRootLocks<'a> {
     bindings: Vec<NativeRootBinding>,
     scopes: Vec<&'a QualifiedScope>,
     guards: Vec<ScopeWriterGuard<'a>>,
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    operation: std::sync::Mutex<()>,
 }
 impl NativeRootLocks<'_> {
     /// Return captured bindings in ascending `(device, inode)` order.
@@ -46,6 +48,23 @@ impl NativeRootLocks<'_> {
             .position(|binding| binding.root == *root)
             .ok_or_else(|| anyhow::anyhow!("native state root is not in the held lock set"))?;
         Ok((self.scopes[index], &self.guards[index]))
+    }
+
+    /// Exclude concurrent/reentrant coordinators borrowing this same held set.
+    /// Filesystem locks exclude independent acquisitions, not shared references.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(crate) fn try_operation(&self) -> Result<std::sync::MutexGuard<'_, ()>> {
+        let guard = match self.operation.try_lock() {
+            Ok(guard) => guard,
+            Err(std::sync::TryLockError::WouldBlock) => {
+                anyhow::bail!("native coordinator is already active under this root-lock set")
+            }
+            Err(std::sync::TryLockError::Poisoned(_)) => anyhow::bail!(
+                "native coordinator gate was poisoned; reacquire roots before recovery"
+            ),
+        };
+        self.verify_bindings()?;
+        Ok(guard)
     }
 
     /// Revalidate every selected path and pinned directory while holding locks.
@@ -106,6 +125,8 @@ fn lock_native_roots_with<'a>(
         bindings,
         scopes,
         guards,
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        operation: std::sync::Mutex::new(()),
     };
     locks.verify_bindings()?;
     Ok(locks)

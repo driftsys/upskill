@@ -234,13 +234,14 @@ fn observed_after(step: &NativeExecutionStep, observation: &NativeStepObservatio
             NativeExecutionStep::Stage(file) | NativeExecutionStep::Exposure(file),
             NativeStepObservation::File(actual),
         ) => actual.location == file.location && actual.value == file.after,
-        (NativeExecutionStep::Native(_), NativeStepObservation::Native(observation)) => {
+        (NativeExecutionStep::Native(effect), NativeStepObservation::Native(observation)) => {
             observation.effect == NativeEffectRelation::After
+                && known_binding(effect, &observation.binding)
         }
         _ => false,
     }
 }
-fn validate_native(
+pub(super) fn validate_native(
     effect: &PlannedNativeEffect,
     observation: &NativeEffectObservation,
 ) -> Result<()> {
@@ -258,4 +259,19 @@ fn validate_native(
         "native observation attribution differs from recorded effect"
     );
     Ok(())
+}
+
+pub(super) fn known_binding(
+    effect: &PlannedNativeEffect,
+    binding: &crate::lifecycle::native_receipt::NativeSkillObservation,
+) -> bool {
+    use crate::lifecycle::native_receipt::NativeObservationState;
+    match &binding.state {
+        NativeObservationState::Absent => true,
+        NativeObservationState::Present(selection) => {
+            effect.request.change.before.as_ref() == Some(selection)
+                || effect.request.change.after.as_ref() == Some(selection)
+        }
+        NativeObservationState::Unknown => false,
+    }
 }

@@ -7,6 +7,9 @@
 //!
 //! No Node.js. No npm. No async runtime. Single static binary.
 
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+extern crate self as upskill;
+
 pub mod ancillary;
 pub mod bundle;
 pub mod cli;

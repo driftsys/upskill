@@ -83,7 +83,14 @@ pub struct NativeExecutionPlan {
 /// Planning methods must be read-only. Mutation methods must check the recorded
 /// preconditions and touch only the owned delta. Command outcomes never replace
 /// independent effect and effective-binding observations. Real implementations
-/// require separate qualification before production admission.
+/// require separate qualification before production admission. Capture/prestate
+/// and inverse payloads must contain only approved non-secret facts. A shared
+/// credential-bearing document requires a separate approved capture/storage
+/// contract before any producer passes it to durable delivery storage.
+/// A Before/After relation must describe stable, attributable owned state. If
+/// an earlier native command may still be running, observation is Unknown until
+/// the qualified profile establishes quiescence. Errors must also remain
+/// non-secret; raw authentication output is not journal evidence.
 pub trait NativeDeliveryAdapter {
     fn profile(
         &mut self,

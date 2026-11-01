@@ -1783,6 +1783,7 @@ fn durable_native_intent_preserves_real_captures_and_rejects_drift_before_public
             expected: None,
             desired: Some(serde_json::json!(true)),
         },
+        additional_contributions: vec![],
         owners_after: vec![ConfigOwner {
             entry_id: "config-demo".into(),
             target: key(TargetSurface::ClaudeCli),

@@ -1433,6 +1433,37 @@ evidence; even `Confirmed` cannot acknowledge a step. `observe_pending_step`
 uses actual file bytes/mode or an independent, attributed native observation.
 Unknown, diverged and failed native observations stay pending with their history
 retained. An observed native effect does not prove final effective binding.
-These APIs apply no files/commands and publish no completed state. The
-execution/recovery coordinator and terminal marker retirement remain unfinished
-Stage 5 work.
+These metadata APIs apply no files/commands and publish no completed state. The
+separate inactive coordinator now connects effects and recovery as described
+below; Stage 5 verification and native admission remain separate gates.
+
+## Inactive native execution and recovery
+
+`native_delivery::coordinator::NativeDeliveryCoordinator` runs the recorded
+sequence under all held qualified roots. It captures native state freshly,
+stages immutable exports, applies ordered owned exposure/native changes and
+requires independent final bindings before authoritative state publication. Each
+native call has a durable pending record with fresh precondition and
+cache/session evidence. Command outcomes never replace observation.
+
+`ObserveOnly` does not replay calls or advance files with a native Before-state.
+Explicit `Forward` or `Restore` is required then. Unknown/foreign bindings,
+manual changes, profile drift or unverifiable retention remain
+`RecoveryRequired`. Restore uses owned inverses, preserves prior receipts and
+retains new exports as staging without inventing a binding history. File-only
+profiles use exposure plus independent observation and issue no native command.
+
+State publication has its own durable action and observation checkpoint.
+Terminal/retiring evidence precedes exact own-marker deletion; interrupted
+publication or retirement resumes without native replay. Forward `Complete` and
+inverse `Restored` require observed files/bindings, durable state and retired
+markers. All old resources and operation evidence remain retained.
+
+Several configuration contributions to one document form one physical patch,
+with unique IDs, complete owner associations and one original rollback baseline.
+Omitted prior owned documents receive no-op captures, so no-op cannot bypass
+owned selector/layer drift. All supplied durable capture data must satisfy D6's
+approved non-secret boundary. Private storage is not permission to journal
+credentials or credential-bearing shared documents. Real profiles, their
+capture/writer contracts, qualification and production CLI admission remain
+unadmitted.

@@ -777,3 +777,53 @@ fn removing_a_nested_jsonc_entry_retains_empty_parents_after_manual_edits() {
     );
     assert!(patch.ownership_after.is_none());
 }
+
+#[test]
+fn a_document_batch_has_one_precondition_and_one_exact_manual_rollback() {
+    use upskill::native_config::plan_config_contributions;
+    for (format, original) in [
+        (
+            ConfigFormat::Jsonc,
+            "{\r\n // manual café\r\n \"manual\": [1,2,],\r\n}\r\n",
+        ),
+        (ConfigFormat::Toml, "# manual café\r\nmanual = [1, 2]\r\n"),
+    ] {
+        let config = capture(format, Some(original));
+        let mut first = key(&["plugins", "first"], Some(json!("first-root")));
+        first.id = "first".into();
+        let mut second = key(&["plugins", "second"], Some(json!("second-root")));
+        second.id = "second".into();
+        let changes = [first.clone(), second.clone()];
+        let patch = plan_config_contributions(&config, &changes).unwrap();
+        assert_eq!(patch.file.before, config.target.file.value);
+        assert_eq!(patch.ownership_after.as_ref().unwrap().entries.len(), 2);
+        assert!(
+            String::from_utf8(patch.file.after.as_ref().unwrap().bytes.clone())
+                .unwrap()
+                .contains("first-root")
+        );
+        assert!(
+            String::from_utf8(patch.file.after.as_ref().unwrap().bytes.clone())
+                .unwrap()
+                .contains("second-root")
+        );
+        let mut installed = config.clone();
+        apply_capture(&mut installed, patch);
+        expect_owned(&installed, &mut first);
+        expect_owned(&installed, &mut second);
+        first.desired = None;
+        second.desired = None;
+        let rollback = plan_config_contributions(&installed, &[first, second]).unwrap();
+        assert_eq!(rollback.file.before, installed.target.file.value);
+        assert_eq!(rollback.file.after, config.target.file.value);
+        assert!(rollback.ownership_after.is_none());
+        assert_eq!(bytes(&config), original);
+        assert!(plan_config_contributions(&config, &[]).is_err());
+        assert!(
+            plan_config_contributions(&config, &[changes[0].clone(), changes[0].clone()]).is_err()
+        );
+        let manual = key(&["manual"], Some(json!("overwrite")));
+        assert!(plan_config_contributions(&config, &[changes[0].clone(), manual]).is_err());
+        assert_eq!(bytes(&config), original);
+    }
+}

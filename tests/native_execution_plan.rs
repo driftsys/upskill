@@ -16,6 +16,7 @@ struct PlanningAdapter {
     fail_inverse: bool,
     calls: usize,
     observation: Option<NativeEffectObservation>,
+    during_planning: Option<Box<dyn FnMut() -> Result<()>>>,
 }
 impl NativeDeliveryAdapter for PlanningAdapter {
     fn profile(
@@ -43,6 +44,9 @@ impl NativeDeliveryAdapter for PlanningAdapter {
         anyhow::bail!("not an execution")
     }
     fn plan_inverse(&mut self, request: &NativeEffectRequest) -> Result<Vec<u8>> {
+        if let Some(hook) = &mut self.during_planning {
+            hook()?;
+        }
         if self.fail_inverse {
             anyhow::bail!("inverse unavailable");
         }
@@ -102,6 +106,7 @@ fn recipe_is_durable_ordered_and_does_not_execute_or_claim_completion() {
             fail_inverse: false,
             calls: 0,
             observation: None,
+            during_planning: None,
         };
         assert!(
             store
@@ -260,6 +265,7 @@ fn pending_file_checkpoint_survives_restart_and_requires_actual_bytes_and_mode()
         fail_inverse: false,
         calls: 0,
         observation: None,
+        during_planning: None,
     };
     store
         .prepare_execution(prepared.id(), &mut adapter)
@@ -289,6 +295,7 @@ fn pending_file_checkpoint_survives_restart_and_requires_actual_bytes_and_mode()
     let path = primary.path.join(&file.location.path);
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(&path, b"manual unrelated bytes").unwrap();
+    let manual_mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
     assert!(
         !store
             .observe_pending_step(prepared.id(), 0, &mut adapter)
@@ -319,7 +326,28 @@ fn pending_file_checkpoint_survives_restart_and_requires_actual_bytes_and_mode()
         acknowledged.checkpoints[0].phase,
         NativeStepPhase::ObservedAfter
     );
-    assert_eq!(acknowledged.checkpoints[0].observations.len(), 4);
+    assert_eq!(acknowledged.generation, pending.generation + 4);
+    let observed_file = |value| {
+        NativeStepObservation::File(upskill::files::plan::ObservedFile {
+            location: file.location.clone(),
+            value,
+        })
+    };
+    assert_eq!(
+        acknowledged.checkpoints[0].observations,
+        vec![
+            observed_file(None),
+            observed_file(Some(upskill::files::plan::FileValue {
+                bytes: b"manual unrelated bytes".to_vec(),
+                mode: Some(manual_mode)
+            })),
+            observed_file(Some(upskill::files::plan::FileValue {
+                bytes: desired.bytes.clone(),
+                mode: Some(0o644)
+            })),
+            observed_file(Some(desired.clone())),
+        ]
+    );
     assert!(store.begin_execution_step(prepared.id(), 0).is_err());
     store.begin_execution_step(prepared.id(), 1).unwrap();
     assert_eq!(adapter.calls, 0);
@@ -360,6 +388,7 @@ fn native_attempts_never_acknowledge_effects_and_bad_attribution_cannot_be_adopt
         fail_inverse: false,
         calls: 0,
         observation: None,
+        during_planning: None,
     };
     store
         .prepare_execution(prepared.id(), &mut adapter)
@@ -404,6 +433,7 @@ fn native_attempts_never_acknowledge_effects_and_bad_attribution_cannot_be_adopt
     else {
         unreachable!()
     };
+    let pending_native = store.inspect(prepared.id()).unwrap().journal;
     store
         .record_native_attempt(prepared.id(), index, NativeBindingOutcome::Confirmed, None)
         .unwrap();
@@ -429,17 +459,33 @@ fn native_attempts_never_acknowledge_effects_and_bad_attribution_cannot_be_adopt
         effect: NativeEffectRelation::Before,
         binding,
     };
-    adapter.observation = Some(NativeEffectObservation {
-        operation_id: "f".repeat(32),
-        ..observation.clone()
-    });
     let before = store.inspect(prepared.id()).unwrap().journal;
-    assert!(
-        store
-            .observe_pending_step(prepared.id(), index, &mut adapter)
-            .is_err()
-    );
-    assert_eq!(store.inspect(prepared.id()).unwrap().journal, before);
+    for field in 0..9 {
+        let mut corrupt = NativeEffectObservation {
+            effect: NativeEffectRelation::After,
+            ..observation.clone()
+        };
+        match field {
+            0 => corrupt.operation_id = "f".repeat(32),
+            1 => corrupt.profile_id = "foreign-profile".into(),
+            2 => corrupt.profile_revision += 1,
+            3 => corrupt.binding.key.installation_id = "foreign-installation".into(),
+            4 => corrupt.binding.key.surface = upskill::target::TargetSurface::CopilotCli,
+            5 => corrupt.binding.scope.path.push("foreign"),
+            6 => corrupt.binding.client_version = "foreign-version".into(),
+            7 => corrupt.binding.platform = "foreign-platform".into(),
+            8 => corrupt.binding.observation_id = " ".into(),
+            _ => unreachable!(),
+        }
+        adapter.observation = Some(corrupt);
+        assert!(
+            store
+                .observe_pending_step(prepared.id(), index, &mut adapter)
+                .is_err(),
+            "attribution field {field} was adopted"
+        );
+        assert_eq!(store.inspect(prepared.id()).unwrap().journal, before);
+    }
     adapter.observation = Some(observation.clone());
     adapter.bad_profile = true;
     assert!(
@@ -466,7 +512,7 @@ fn native_attempts_never_acknowledge_effects_and_bad_attribution_cannot_be_adopt
     }
     adapter.observation = Some(NativeEffectObservation {
         effect: NativeEffectRelation::After,
-        ..observation
+        ..observation.clone()
     });
     assert!(
         store
@@ -474,20 +520,111 @@ fn native_attempts_never_acknowledge_effects_and_bad_attribution_cannot_be_adopt
             .unwrap()
     );
     let journal = store.inspect(prepared.id()).unwrap().journal;
+    assert_eq!(journal.generation, pending_native.generation + 7);
     assert_eq!(
-        journal.checkpoints[index]
-            .attempts
-            .iter()
-            .map(|row| row.outcome)
-            .collect::<Vec<_>>(),
+        journal.checkpoints[index].attempts,
         vec![
-            NativeBindingOutcome::Confirmed,
-            NativeBindingOutcome::Unknown
+            NativeAttempt {
+                outcome: NativeBindingOutcome::Confirmed,
+                detail: None
+            },
+            NativeAttempt {
+                outcome: NativeBindingOutcome::Unknown,
+                detail: Some("timeout after effect".into())
+            },
         ]
     );
-    assert_eq!(journal.checkpoints[index].observations.len(), 5);
+    let mut history = vec![NativeStepObservation::Failed("observer unavailable".into())];
+    for relation in [
+        NativeEffectRelation::Before,
+        NativeEffectRelation::Unknown,
+        NativeEffectRelation::Diverged,
+        NativeEffectRelation::After,
+    ] {
+        history.push(NativeStepObservation::Native(Box::new(
+            NativeEffectObservation {
+                effect: relation,
+                ..observation.clone()
+            },
+        )));
+    }
+    assert_eq!(journal.checkpoints[index].observations, history);
     // Effect acknowledgement cannot claim an effective binding or terminal state.
     assert!(!primary.path.join(".upskill-lock.json").exists());
     assert_eq!(journal.status, NativeJournalStatus::Executing);
     assert_eq!(adapter.calls, 0);
+}
+
+#[test]
+fn captured_file_and_state_drift_before_or_during_planning_preserves_the_journal() {
+    for during in [false, true] {
+        for state in [false, true] {
+            let project = tempfile::tempdir().unwrap();
+            let home = tempfile::tempdir().unwrap();
+            let primary = InstallationRoot {
+                scope: OwnershipScope::Project,
+                path: project.path().into(),
+            };
+            let private = InstallationRoot {
+                scope: OwnershipScope::User,
+                path: home.path().into(),
+            };
+            let ps = QualifiedScope::open(&primary).unwrap();
+            let hs = QualifiedScope::open(&private).unwrap();
+            let locks = lock_native_roots(&[
+                NativeRoot {
+                    root: primary.clone(),
+                    scope: &ps,
+                },
+                NativeRoot {
+                    root: private.clone(),
+                    scope: &hs,
+                },
+            ])
+            .unwrap();
+            let store = NativeOperationStore::initialize(&locks, &primary, &private).unwrap();
+            let capture = fixture::capture(store.context());
+            let prepared = store.prepare(&capture).unwrap();
+            let path = if state {
+                primary.path.join(".upskill-lock.json")
+            } else {
+                primary
+                    .path
+                    .join(&capture.file_observations[0].location.path)
+            };
+            let mutate = {
+                let path = path.clone();
+                move || -> Result<()> {
+                    std::fs::create_dir_all(path.parent().unwrap())?;
+                    std::fs::write(&path, b"manual content")?;
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+                    Ok(())
+                }
+            };
+            let mut adapter = PlanningAdapter {
+                exposure: NativeExposureOrder::BeforeNative,
+                bad_profile: false,
+                fail_inverse: false,
+                calls: 0,
+                observation: None,
+                during_planning: None,
+            };
+            if during {
+                adapter.during_planning = Some(Box::new(mutate));
+            } else {
+                mutate().unwrap();
+            }
+            let before = store.inspect(prepared.id()).unwrap().journal;
+            assert!(
+                store
+                    .prepare_execution(prepared.id(), &mut adapter)
+                    .is_err(),
+                "drift accepted: during={during} state={state}"
+            );
+            assert_eq!(store.inspect(prepared.id()).unwrap().journal, before);
+            assert_eq!(std::fs::read(path).unwrap(), b"manual content");
+            assert_eq!(adapter.calls, 0);
+        }
+    }
 }

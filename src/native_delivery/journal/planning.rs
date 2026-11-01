@@ -5,7 +5,7 @@ use crate::lifecycle::skill_delivery::{
     SkillDeliveryInput, SkillDeliveryPlan, SkillDeliveryState, SkillIntentSelection,
 };
 use crate::lifecycle::state::CombinedState;
-use crate::native_config::{ConfigPatch, plan_config_patch};
+use crate::native_config::{ConfigPatch, plan_config_contributions};
 use crate::native_delivery::plan_native_skill_files;
 use crate::native_delivery::state::NativeDeliveryState;
 use crate::ownership::{InstallationRoot, OwnershipScope};
@@ -72,7 +72,10 @@ impl<'locks, 'scope: 'locks> NativeOperationStore<'locks, 'scope> {
                     == old.and_then(|old| old.capture.ownership.as_ref()),
                 "configuration ownership differs from prior state"
             );
-            let patch = plan_config_patch(&config.before, &config.contribution)?;
+            let changes = std::iter::once(config.contribution.clone())
+                .chain(config.additional_contributions.iter().cloned())
+                .collect::<Vec<_>>();
+            let patch = plan_config_contributions(&config.before, &changes)?;
             let entries = patch
                 .ownership_after
                 .as_ref()

@@ -97,3 +97,6 @@ impl crate::filesystem::QualifiedScope {
         anyhow::bail!("qualified file recovery is unsupported on this operating system")
     }
 }
+
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+mod native_sync_tests;

@@ -13,10 +13,14 @@ use serde::{Deserialize, Serialize};
 pub struct NativeConfigurationCapture {
     pub before: CapturedConfig,
     pub contribution: ConfigContribution,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_contributions: Vec<ConfigContribution>,
     pub owners_after: Vec<ConfigOwner>,
 }
 
-/// Owned captured inputs, not filesystem capabilities or native qualification.
+/// Owned non-secret captured inputs, not filesystem capabilities or qualification.
+/// Callers must establish an approved capture boundary before constructing these
+/// inputs. Private storage does not authorize credential-bearing snapshots.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NativeOperationCapture {
@@ -51,6 +55,11 @@ pub struct NativeOperationIntent {
 pub enum NativeJournalStatus {
     Prepared,
     Executing,
+    Retiring,
+    Complete,
+    Restoring,
+    RetiringRestore,
+    Restored,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -64,6 +73,8 @@ pub struct NativeOperationJournal {
     pub execution: Option<crate::native_delivery::adapter::NativeExecutionPlan>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub checkpoints: Vec<crate::native_delivery::adapter::NativeStepCheckpoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime: Option<super::coordinator::NativeRuntime>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
