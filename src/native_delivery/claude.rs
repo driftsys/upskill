@@ -26,6 +26,10 @@ pub enum ClaudeInventoryError {
         "Claude inventory contains multiple matching entries; do not adopt a first-found result"
     )]
     AmbiguousEntry,
+    #[error("Claude marketplace source conflicts with the requested directory")]
+    AmbiguousSource,
+    #[error("Claude installed-plugin registry schema is unsupported")]
+    UnsupportedRegistryVersion,
 }
 
 /// Only allowlisted metadata is retained. Unknown values and raw parse errors
@@ -82,19 +86,21 @@ fn absolute_project(path: &Path) -> bool {
             .components()
             .any(|component| component == Component::ParentDir)
 }
+fn parse_capture(version: &str, bytes: &[u8]) -> Result<serde_json::Value, ClaudeInventoryError> {
+    if version != "2.1.308" {
+        return Err(ClaudeInventoryError::UnsupportedVersion);
+    }
+    if bytes.len() > 1024 * 1024 {
+        return Err(ClaudeInventoryError::TooLarge);
+    }
+    let source = std::str::from_utf8(bytes).map_err(|_| ClaudeInventoryError::Malformed)?;
+    crate::parse::json::parse_unique(source).map_err(|_| ClaudeInventoryError::Malformed)
+}
 impl ClaudePluginInventory {
     /// Decode the captured CLI list shape, rejecting decoded duplicate keys even
     /// in ignored fields. This pins syntax, not support for the executable pin.
     pub fn parse(version: &str, bytes: &[u8]) -> Result<Self, ClaudeInventoryError> {
-        if version != "2.1.308" {
-            return Err(ClaudeInventoryError::UnsupportedVersion);
-        }
-        if bytes.len() > 1024 * 1024 {
-            return Err(ClaudeInventoryError::TooLarge);
-        }
-        let source = std::str::from_utf8(bytes).map_err(|_| ClaudeInventoryError::Malformed)?;
-        let value = crate::parse::json::parse_unique(source)
-            .map_err(|_| ClaudeInventoryError::Malformed)?;
+        let value = parse_capture(version, bytes)?;
         let entries: Vec<ClaudePluginEntry> =
             serde_json::from_value(value).map_err(|_| ClaudeInventoryError::Malformed)?;
         for entry in &entries {
@@ -166,4 +172,10 @@ pub use observe::{ClaudeInventoryCapture, ClaudeInventoryReadError, read_plugin_
 mod commands;
 pub use commands::{
     ClaudeCommandError, ClaudePluginAction, ClaudePluginCommand, plan_plugin_command,
+};
+
+mod registry;
+pub use registry::{
+    ClaudeInstalledEntry, ClaudeInstalledRegistry, ClaudeKnownMarketplaces, ClaudeMarketplaceEntry,
+    ClaudeMarketplaceInventory,
 };

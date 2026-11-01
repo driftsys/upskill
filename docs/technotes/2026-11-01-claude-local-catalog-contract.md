@@ -87,12 +87,20 @@ This result does not approve a serializer, inverse or preservation workaround.
 
 ## Handoff and limits
 
-The name/version and local-directory registry samples can inform offline
-capture/decoder fixtures for this exact pin. They do not resolve Copilot's
-documented name limit, another client's packaging acceptance or different Claude
-versions. Exact preservation remains a blocker for this candidate native command
-sequence; resolving it requires a separately reviewed owned configuration
-contract and passing preservation controls, not manual repair of these results.
+The name/version and local-directory registry samples now have offline decoder
+fixtures for this exact pin. The decoder keeps CLI marketplace lists,
+known-marketplace registry records and installed-plugin schema 2 as distinct
+metadata views. Directory lookup requires an exact unique name and both matching
+directory claims; installed-plugin lookup requires an exact selector and scope.
+Unknown fields are discarded after recursive duplicate-key validation. Parsed
+empty maps and arrays do not encode original file absence, bytes or modes, and
+these views cannot serve as ownership, effective binding or restoration
+receipts. No registry writer or additional native query is introduced. They do
+not resolve Copilot's documented name limit, another client's packaging
+acceptance or different Claude versions. Exact preservation remains a blocker
+for this candidate native command sequence; resolving it requires a separately
+reviewed owned configuration contract and passing preservation controls, not
+manual repair of these results.
 
 The probe supplied no qualified independent native-worker quiescence witness.
 Even with complete transport and empty final inventories, stable cleanup and

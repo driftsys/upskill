@@ -226,9 +226,12 @@ Codex candidate planners now cover their captured user-context command families;
 both reject project operations, and Codex local-package refresh rejects instead
 of using Git upgrade or remove/re-add. These pieces do not yet implement the
 complete adapter trait. OpenCode has a candidate batch planner for owned
-absolute sources that preserves existing legacy configuration form. Native
-local-catalog capture, effects/inverses, effective observations, other client
-adapters and runtime qualification remain open. The
+absolute sources that preserves existing legacy configuration form. Pure Claude
+metadata decoders now distinguish marketplace list output, known-marketplace
+records and installed-plugin registry schema 2. Exact name, directory and scope
+lookups reject ambiguity; parsed emptiness is separate from file absence.
+Integrated native local-catalog capture, effects/inverses, effective
+observations, other client adapters and runtime qualification remain open. The
 [Claude contract probe](2026-11-01-claude-local-catalog-contract-probe.md) ran
 once after explicit approval, with no model spending. Its
 [bounded observations](../../technotes/2026-11-01-claude-local-catalog-contract.md)
