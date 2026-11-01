@@ -165,17 +165,17 @@ prestate, desired value), `CapturedConfig` (bytes and file identity), and
 `plan_config_patch(config: &CapturedConfig, contribution: &ConfigContribution) -> Result<ConfigPatch>`.
 Planning is pure; application uses qualified file preconditions.
 
-- [ ] Add failing tests for JSONC/TOML comments and unrelated byte preservation,
+- [x] Add failing tests for JSONC/TOML comments and unrelated byte preservation,
       duplicate keys, conflicting selectors, root-vs-overlay precedence, tracked
       OpenCode overlay rejection, external XDG root rejection and concurrent
       edits.
-- [ ] Run `cargo test --test native_config_contributions`; confirm failures.
-- [ ] Implement parsed-span edits and explicit ownership checks. Capture all
+- [x] Run `cargo test --test native_config_contributions`; confirm failures.
+- [x] Implement parsed-span edits and explicit ownership checks. Capture all
       effective native config layers before calculating a contribution.
-- [ ] Rerun tests; if a dependency is admitted, run `just msrv-check` and
+- [x] Rerun tests; if a dependency is admitted, run `just msrv-check` and
       compare release binary size against the pre-dependency baseline, recording
       both.
-- [ ] Commit `feat: preserve native configuration contributions`.
+- [x] Commit `feat: preserve native configuration contributions`.
 
 ## Stage 5: Durable native coordination
 

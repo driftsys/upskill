@@ -1207,3 +1207,46 @@ through a separately admitted integrated state representation. This boundary
 neither adds a second authoritative installation lock nor qualifies that future
 persistence format. See
 [AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-keep-native-skill-planning-outside-current-codecs.md).
+
+## Inactive native configuration contribution planning
+
+`native_config::plan_config_patch` plans one explicitly owned contribution to a
+captured JSONC or TOML document. Inputs bind the target file, installation root,
+client surface, effective lower/higher layers and current per-selector
+ownership. The returned `ConfigPatch` contains exact before/after file values
+and updated in-memory ownership evidence. It performs no I/O and adds no command
+or codec. New files select private mode `0600`; edits preserve captured existing
+modes. Applying a patch still requires qualified file identity and complete
+preconditions. Captured layer completeness and provenance are caller evidence,
+not observations made by this pure function.
+
+A selector identifies a key path or one semantic array entry. The first edit
+cannot adopt an existing manual entry, even when its value is identical. Later
+edits require the exact ownership witness and compare both semantic value and
+raw-token digest. Conflicting selectors reject; distinct owned entries may share
+one array. All documents are fully parsed, decoded duplicate keys reject, and
+planned results are reparsed. Changes splice selected spans without reformatting
+unrelated configuration or comments. A no-op still validates captured ownership.
+
+After the last managed entry is removed, an unchanged complete document can
+return to its exact original bytes or initial absence. Unrelated manual changes
+invalidate that rollback shortcut. Removal then preserves remaining manual bytes
+and comments, including empty parent containers. Owned-token edits or missing
+entries reject. Ownership and rollback records are captured claims and confer no
+native or filesystem authority.
+
+Scalar selectors present in any inherited layer reject conservatively. Array
+sources cannot duplicate inherited entries, and higher array selectors reject
+until concrete adapter merge semantics are qualified. A project OpenCode target
+must be an ignored, untracked `.opencode/opencode.json` or `.jsonc` overlay.
+External write roots, including an external XDG root, reject at this single-root
+boundary. Read-only inherited layers may be outside the selected root.
+
+The TOML parser accepts legal unrelated dates, multiline strings, dotted keys
+and arrays of tables. Editing is limited to scalar, array and inline-table value
+tokens; whole tables and implicit inline selectors without token spans are not
+editable. JSONC support does not change existing strict JSON handling. The
+parse-only dependency and compatibility evidence are recorded in
+[AD-0043](https://github.com/driftsys/upskill/blob/main/docs/adr/0043-parse-native-config-with-preserved-spans.md).
+Native adapters, durable integrated state and client qualification remain later
+work.

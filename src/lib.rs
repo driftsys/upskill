@@ -26,6 +26,7 @@ pub mod lint;
 pub mod lockfile;
 pub mod mcp;
 pub mod model;
+pub mod native_config;
 pub mod operations;
 pub mod ownership;
 pub mod parse;

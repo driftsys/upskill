@@ -100,3 +100,6 @@ records its separate digest encoding.
 [0042 — Keep native skill planning outside current codecs](0042-keep-native-skill-planning-outside-current-codecs.md)
 records the reviewed inactive planning boundary and its persistence admission
 limits.
+
+[0043 — Parse native configuration with preserved spans](0043-parse-native-config-with-preserved-spans.md)
+records the reviewed parser dependency admission and byte-preservation boundary.
