@@ -28,13 +28,15 @@ fn all_four_unqualified_routes_reject_before_capture() {
                 installation_id: "fixture".into(),
                 surface,
             };
-            // If admission calls capture first, this returns a different error.
+            // Every rejected operation may only request read-only profile metadata.
             let mut native = fake::Fake {
                 fail_capture: true,
                 backing: Some(home.path().join("binding.json")),
                 ..Default::default()
             };
             let profile = native.profile(&target, &root).unwrap();
+            let calls = native.method_calls.clone();
+            calls.lock().unwrap().clear();
             let request = NativeEffectRequest {
                 operation_id: "fixture-operation".into(),
                 profile,
@@ -55,22 +57,23 @@ fn all_four_unqualified_routes_reject_before_capture() {
                 inverse_payload: b"null".to_vec(),
             };
             let mut adapter = QualifiedNativeAdapter::production(native);
-            let errors = [
-                adapter.profile(&target, &root).unwrap_err(),
-                adapter.capture(&target, &root).unwrap_err(),
-                adapter.plan_inverse(&effect.request).unwrap_err(),
-                adapter.apply(&effect).unwrap_err(),
-                adapter.observe(&effect).unwrap_err(),
-                adapter.inverse(&effect).unwrap_err(),
-            ];
-            for error in errors {
-                assert!(
-                    error.downcast_ref::<NativeAdmissionError>().is_some(),
-                    "{error:#}"
+            let check = |error: anyhow::Error| {
+                let error = error.downcast_ref::<NativeAdmissionError>().unwrap();
+                assert_eq!(error.surface, surface.name());
+                assert_eq!(error.version, "fixture-1");
+                assert_eq!(error.platform, "fixture-os");
+                assert_eq!(
+                    error.reason,
+                    "no admitted exact profile; retain the existing delivery route"
                 );
-                assert!(error.to_string().contains(surface.name()));
-                assert!(error.to_string().contains("qualification"));
-            }
+                assert_eq!(std::mem::take(&mut *calls.lock().unwrap()), vec!["profile"]);
+            };
+            check(adapter.profile(&target, &root).unwrap_err());
+            check(adapter.capture(&target, &root).unwrap_err());
+            check(adapter.plan_inverse(&effect.request).unwrap_err());
+            check(adapter.apply(&effect).unwrap_err());
+            check(adapter.observe(&effect).unwrap_err());
+            check(adapter.inverse(&effect).unwrap_err());
             assert_eq!(std::fs::read_dir(home.path()).unwrap().count(), 0);
         }
     }

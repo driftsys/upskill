@@ -217,6 +217,12 @@ registry keyed by target surface, native version, scope and platform. A rejected
 or missing qualification produces an actionable typed capability error before
 any effects. Preserve existing schema-1 dispatch.
 
+Read-only command inspection is retained in the
+[2026-11-01 command-contract note](../../technotes/2026-11-01-native-adapter-command-contracts.md).
+It pins help for the installed releases, including changed Copilot/Codex
+versions, without qualifying a route. Concrete adapters and the acceptance and
+qualification cells below remain open.
+
 - [ ] Add failing fake-native CLI tests for all four routes, including native
       command availability, project admission without transient user activation,
       nested-CWD absolute OpenCode sources, version/name acceptance, cache

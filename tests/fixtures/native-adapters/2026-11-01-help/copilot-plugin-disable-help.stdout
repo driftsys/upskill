@@ -1,0 +1,26 @@
+Usage: copilot plugin disable <name>
+
+Disable an installed plugin by name.
+
+Accepts a bare `name`, a marketplace-qualified `name@marketplace`,
+or a direct-install source id. The change is persisted to your
+configuration and applies to future sessions.
+
+Arguments:
+  <name>
+          Plugin name, name@marketplace, or direct-install source id
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+  # Disable a marketplace plugin
+  $ copilot plugin disable arch@awesome-copilot
+
+  # Disable a plugin by bare name
+  $ copilot plugin disable my-plugin
+
+Learn More:
+  Use `copilot <command> --help` for more information about a command.
+  Read the documentation at https://docs.github.com/copilot/how-tos/copilot-cli

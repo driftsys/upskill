@@ -5,6 +5,8 @@ use upskill::lifecycle::native_receipt::*;
 use upskill::native_delivery::adapter::*;
 use upskill::ownership::InstallationRoot;
 pub struct Fake {
+    pub method_calls: std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>,
+    pub returned_profile: Option<NativeDeliveryProfile>,
     pub selected: Option<NativeSkillSelection>,
     pub calls: usize,
     pub timeout: bool,
@@ -29,6 +31,8 @@ pub struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            method_calls: Default::default(),
+            returned_profile: None,
             selected: None,
             calls: 0,
             timeout: false,
@@ -99,6 +103,10 @@ impl NativeDeliveryAdapter for Fake {
         target: &SkillTarget,
         scope: &InstallationRoot,
     ) -> Result<NativeDeliveryProfile> {
+        self.method_calls.lock().unwrap().push("profile");
+        if let Some(profile) = &self.returned_profile {
+            return Ok(profile.clone());
+        }
         if self.fail_profile {
             anyhow::bail!("fixture unsupported native profile");
         }
@@ -118,6 +126,7 @@ impl NativeDeliveryAdapter for Fake {
         target: &SkillTarget,
         scope: &InstallationRoot,
     ) -> Result<NativeSkillObservation> {
+        self.method_calls.lock().unwrap().push("capture");
         if self.fail_capture {
             anyhow::bail!("fixture native observer unavailable");
         }
@@ -153,9 +162,11 @@ impl NativeDeliveryAdapter for Fake {
         })
     }
     fn plan_inverse(&mut self, request: &NativeEffectRequest) -> Result<Vec<u8>> {
+        self.method_calls.lock().unwrap().push("plan_inverse");
         Ok(serde_json::to_vec(&request.change.before)?)
     }
     fn apply(&mut self, effect: &PlannedNativeEffect) -> Result<NativeBindingOutcome> {
+        self.method_calls.lock().unwrap().push("apply");
         if let Some((path, selected)) = &self.exposure_probe {
             let exposed = std::fs::read(path)
                 .ok()
@@ -193,6 +204,7 @@ impl NativeDeliveryAdapter for Fake {
         })
     }
     fn observe(&mut self, effect: &PlannedNativeEffect) -> Result<NativeEffectObservation> {
+        self.method_calls.lock().unwrap().push("observe");
         let binding = self.capture(&effect.request.change.key, &effect.request.change.scope)?;
         let selected = self.native_selection();
         let relation = if selected == effect.request.change.after {
@@ -211,6 +223,7 @@ impl NativeDeliveryAdapter for Fake {
         })
     }
     fn inverse(&mut self, effect: &PlannedNativeEffect) -> Result<NativeBindingOutcome> {
+        self.method_calls.lock().unwrap().push("inverse");
         anyhow::ensure!(
             self.native_selection() == effect.request.change.after,
             "fake native inverse precondition changed"

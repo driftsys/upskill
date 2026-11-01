@@ -1,0 +1,24 @@
+Usage: copilot plugin marketplace list [OPTIONS]
+
+List registered marketplaces.
+
+Shows all marketplaces currently registered, including the default marketplaces
+included with GitHub Copilot.
+
+Options:
+      --json
+          Output as JSON
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+  # List all registered marketplaces
+  $ copilot plugin marketplace list
+
+  # Machine-readable output
+  $ copilot plugin marketplace list --json
+
+Learn More:
+  Use `copilot <command> --help` for more information about a command.
+  Read the documentation at https://docs.github.com/copilot/how-tos/copilot-cli

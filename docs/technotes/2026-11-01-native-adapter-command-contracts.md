@@ -1,0 +1,153 @@
+# Native adapter command contracts
+
+Status: command-syntax evidence, 2026-11-01. Concrete adapters, their native
+observers and all production profile admissions remain incomplete. This note
+records the next implementation constraints for Stage 6 of the
+[approved delivery plan](../wip/plans/2026-10-31-four-client-skills-resources-delivery.md).
+It does not qualify a route or authorize a native experiment.
+
+## Captured boundary
+
+The
+[receipt set](../../tests/fixtures/native-adapters/2026-11-01-help/receipts.json)
+retains 37 version/subcommand-help outputs on Darwin arm64. Each command exited
+zero before its 20-second limit. Native commands received a disposable working
+directory without project content, an unauthenticated temporary home, separate
+client/XDG roots, closed stdin and a minimal environment inheriting only `PATH`.
+Copilot commands included `--no-auto-update`. No config/inventory, registration,
+trust, cache, server or model command ran. The temporary homes were removed
+after capture.
+
+Resolved launcher SHA-256 values were unchanged within each capture batch. A
+launcher hash is not the identity of every delegated runtime; this is especially
+relevant to Copilot's JavaScript loader. These receipts do not establish profile
+authenticity, effective settings, provider availability or preservation of an
+authenticated native profile. Codex emitted a warning that helper aliases could
+not be created under the disposable temporary home. Its help/version commands
+still exited zero. Stderr hashes and lengths are retained; raw stderr containing
+temporary paths remains outside the repository.
+
+Observed versions are Claude **2.1.308**, Copilot **1.0.105**, Codex **0.166.0**
+and OpenCode **2.1.4**. Copilot/Codex differ from the earlier qualification
+pins; results from those earlier profiles cannot be transferred to these
+releases.
+
+## Claude: explicit scope exists, preservation remains unresolved
+
+The captured
+[marketplace-add help](../../tests/fixtures/native-adapters/2026-11-01-help/claude-plugin-marketplace-add-help.stdout)
+and
+[install help](../../tests/fixtures/native-adapters/2026-11-01-help/claude-plugin-install-help.stdout)
+expose project/user scope and JSON output. A future adapter can express the
+approved scope directly, rather than relying on the native user default.
+Uninstall, update, enable and disable also expose scope selection. Update help
+states that applying the updated plugin requires a restart.
+
+Implementation must still distinguish marketplace registration, installed cache,
+enabled scope and effective source selection. A JSON command result cannot
+replace those independent observations. Use only owned plugin/marketplace
+selectors; no broad disable, prune or trust command belongs in an inverse.
+Capture native cache paths separately from the immutable managed export paths.
+
+The retained [Q11b result](gate6-project-registration-isolation.md) and its
+preservation failures remain constraints. The
+[Copilot-local exclusion proposal](copilot-project-plugin-overlay-profile.md)
+remains a separate, unqualified configured profile. Scope syntax does not repair
+unintended-reader activation, lexical rewrites or unknown old-resource
+retention.
+
+## Copilot: no project install switch was observed
+
+The captured
+[install help](../../tests/fixtures/native-adapters/2026-11-01-help/copilot-plugin-install-help.stdout)
+accepts a marketplace selector or repository source. Its options expose neither
+project scope nor installation in a disabled state. The captured enable/disable
+commands also provide no project-scope switch. This is a bounded observation of
+1.0.105 help, not proof that every configured project route is impossible.
+
+The adapter must not invent a scope flag or use user installation followed by
+disable to satisfy project admission. A configured repository route requires its
+own qualified capture, writer and effective-observer contract. Separately
+resolve the approved full-digest name acceptance question against the exact
+native pin; this command capture performs no manifest/name validation and
+changes no generated name. The earlier
+[component packet](gate6-copilot-plugin-components.md) does not qualify these
+missing controls.
+
+## Codex: marketplace management is distinct from project activation
+
+The captured
+[add help](../../tests/fixtures/native-adapters/2026-11-01-help/codex-plugin-add-help.stdout)
+accepts a plugin/marketplace selector and supports JSON output. It exposes no
+project-scope or install-disabled option. The inherited `--enable`/`--disable`
+options control features; they are not plugin-scope switches. Marketplace add,
+list, upgrade and remove are available command families in this capture.
+
+The [official CLI reference](https://learn.chatgpt.com/docs/cli/reference) and
+[packaging guide](https://developers.openai.com/plugins/build/plugins), fetched
+on 2026-11-01, describe marketplace configuration separately from plugin
+activation. Exact local help remains the syntax evidence for this installed pin.
+A future adapter must establish a project-only admission sequence without a
+transient user binding. Do not import the old remove/re-add sequence as a safe
+project contract: [Q8](gate6-codex-skill-updates.md) observed visibility but did
+not prove that intermediate scopes stayed inactive.
+
+Native removal can invalidate cache-backed resources. Require observed native
+retention or session clearance before refresh/removal, even while all managed
+exports remain present. Preserve D4's exact configuration restoration boundary;
+no notice/trust-table repair follows from permission to manage a plugin.
+
+## OpenCode: file exposure needs an independently qualified observer
+
+The captured
+[debug help](../../tests/fixtures/native-adapters/2026-11-01-help/opencode-debug-help.stdout)
+provides agents, configuration-source, heap and global-path commands. It exposes
+no skill-catalog debug command. The
+[configuration help](../../tests/fixtures/native-adapters/2026-11-01-help/opencode-debug-config-help.stdout)
+describes source listing, not a proof of effective source selection. The
+[API help](../../tests/fixtures/native-adapters/2026-11-01-help/opencode-api-help.stdout)
+allows operation IDs or HTTP method/path requests, but this capture establishes
+neither an inventory endpoint/schema nor its freshness or isolation semantics.
+No server or API request was started.
+
+Implement the approved absolute selected-revision skill source as an owned
+configuration exposure, with file-only action ordering in the existing
+coordinator. Do not invent `debug skill`, introduce a runtime JavaScript plugin
+or treat configuration-source presence as activation. Before admitting its
+observer, establish effective overlay loading, layer precedence, unique source
+identity, nested-CWD behavior and resource reads. The retained
+[failed native positive](gate6-opencode-explicit-paths-retry.md) remains failed;
+a catalog or help capture cannot replace it.
+
+## Next implementation and qualification sequence
+
+1. Implement concrete adapters against these pinned command families and the
+   existing adapter trait. Keep the production registry empty until every
+   required cell is qualified. No production CLI route follows from this note.
+2. Pin resolved executable/runtime identity and exact invocation/environment,
+   effective roots/settings/trust, competing readers and package identities.
+   Missing executables, changed versions or unsupported command contracts must
+   reject before capture/effects with actionable typed errors.
+3. Bind non-secret capture, owned inverse and independent observation to the
+   operation/profile/target/scope. Credential-bearing whole-document snapshots
+   remain outside the approved D6 storage contract, including private journals.
+4. Add fake-native executable acceptance tests for missing commands, malformed
+   inventory, refusals, cache changes, duplicate readers, nested CWD and partial
+   lifecycle effects. Independently log commands and verify preservation at each
+   coordinator boundary. Keep legacy commands unchanged.
+5. Prove owned native children are quiescent after timeout and parent death
+   before an observer returns stable Before/After. Unknown liveness keeps the
+   operation pending; killing only the direct child does not prove quiescence.
+6. Prepare an exact profile's bounded campaign: calibrated positive and cleanup,
+   selector-free baseline, owner registration, fresh owner and unintended-reader
+   controls, unrelated-project control, update/resource-retention controls,
+   native removal, fresh post-removal absence and final preservation witness.
+   Pin fresh process/session identities and receipt order for every observation.
+7. Before executing that campaign, verify the live account, allowed model,
+   allowance/reset and finite cost/call cap with explicit reserve thresholds.
+   Stop on a failed positive, drift, ambiguous attribution, unknown retention or
+   reserve threshold. No paid call is scheduled or authorized by this note.
+
+The help capture closes only the syntax-inspection prerequisite. It leaves
+configuration/writer admission, native quiescence, runtime qualification and
+four-client release admission open.

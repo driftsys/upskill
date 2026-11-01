@@ -1,0 +1,31 @@
+Usage: copilot plugin update [OPTIONS] [name]
+
+Update a plugin to the latest version, or update all installed plugins.
+
+Fetches and installs the latest version of previously installed plugins.
+
+Arguments:
+  [name]
+          Plugin name (plugin-name@marketplace-name); omit when using
+          --all
+
+Options:
+      --all
+          Update all installed plugins
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+  # Update a marketplace plugin
+  $ copilot plugin update arch@awesome-copilot
+
+  # Update a directly installed plugin
+  $ copilot plugin update my-plugin
+
+  # Update all installed plugins
+  $ copilot plugin update --all
+
+Learn More:
+  Use `copilot <command> --help` for more information about a command.
+  Read the documentation at https://docs.github.com/copilot/how-tos/copilot-cli

@@ -1,0 +1,27 @@
+Usage: copilot plugin marketplace add <source>
+
+Add a marketplace.
+
+Registers a new marketplace source so its plugins can be discovered and
+installed.
+
+Arguments:
+  <source>
+          Marketplace source (owner/repo for GitHub, URL, or local
+          path)
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+  # Add a marketplace from a GitHub repository
+  $ copilot plugin marketplace add github/copilot-plugins
+
+  # Add a marketplace from a URL
+  $ copilot plugin marketplace add https://example.com/marketplace.git
+  $ copilot plugin marketplace add ssh://git@example.com/marketplace.git
+
+Learn More:
+  Use `copilot <command> --help` for more information about a command.
+  Read the documentation at https://docs.github.com/copilot/how-tos/copilot-cli

@@ -1,0 +1,28 @@
+Usage: copilot plugin list [OPTIONS]
+
+List installed plugins.
+
+Shows all plugins currently installed, their versions, and status.
+Plugins mounted via the global --plugin-dir option are also listed,
+under a separate "External Plugins (via --plugin-dir)" section.
+
+Options:
+      --json
+          Output as JSON
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+  # List all installed plugins
+  $ copilot plugin list
+
+  # Also include plugins loaded via the global --plugin-dir option
+  $ copilot --plugin-dir ./my-plugin plugin list
+
+  # Machine-readable output
+  $ copilot plugin list --json
+
+Learn More:
+  Use `copilot <command> --help` for more information about a command.
+  Read the documentation at https://docs.github.com/copilot/how-tos/copilot-cli

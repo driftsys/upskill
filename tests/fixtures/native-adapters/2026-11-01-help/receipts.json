@@ -1,0 +1,693 @@
+{
+  "captured_at_utc": "2026-11-01T17:14:30Z",
+  "platform": "darwin-arm64",
+  "qualification": "none",
+  "environment": "isolated unauthenticated HOME and per-client/XDG roots; only PATH inherited; no configuration/inventory/model command",
+  "launcher_identity_limit": "resolved launcher hashes only; delegated runtime and effective environment are not qualified",
+  "receipts": [
+    {
+      "client": "claude",
+      "label": "version",
+      "arguments": [
+        "--version"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.05,
+      "stdout_sha256": "b354fe63f3ea7b46441790aa41c704340be3e4722cd759d1b77da284764c82ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-version.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "version",
+      "arguments": [
+        "--no-auto-update",
+        "--version"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 2.334,
+      "stdout_sha256": "3696964b10cc5113d5195f7f61fa27935bbe62aa38adf429797c29613116c247",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-version.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "codex",
+      "label": "version",
+      "arguments": [
+        "--version"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.018,
+      "stdout_sha256": "728b255fa6d47ac8019747aaf2876baaafacdb93dfba1e4697257224bbc75a5c",
+      "stderr_sha256": "852d89a14d4674c832d6f36afb6567b739e5ea6cf8ddb9bedc4c3d53dee61257",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-version.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "opencode",
+      "label": "version",
+      "arguments": [
+        "--version"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.035,
+      "stdout_sha256": "a2228d75cd5db6de7be03154e04fb86c3ea379a91a9b8f0bd338cbd76c65b099",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "d8a65dd253dbea759ae0dd829792ff219b40178c7decffea822430a4d1ccadb3",
+      "stdout_file": "opencode-version.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-help",
+      "arguments": [
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.088,
+      "stdout_sha256": "afc319633b0e4fbbafbb4160e4b120bd459e2073bd30f4f6182d4a1faaf7172a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.289,
+      "stdout_sha256": "4922a4b7f40d06553271a113b3a51ee080e706176e3955dada27a7fe4a7b5c20",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "codex",
+      "label": "plugin-help",
+      "arguments": [
+        "plugin",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.008,
+      "stdout_sha256": "a517a3a2d1801d812751d98c8bc4d27de6bb5367aafc67495e0cde3a99680124",
+      "stderr_sha256": "fead770fd25f3357701abfdc924ae266a7fd19227e9b4b40b9b9428810ec10eb",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "opencode",
+      "label": "debug-help",
+      "arguments": [
+        "debug",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.177,
+      "stdout_sha256": "6df546f3753078c5ded6befb44bdb750ccc5f8a09d1466b49f98dbf863fbb38f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "d8a65dd253dbea759ae0dd829792ff219b40178c7decffea822430a4d1ccadb3",
+      "stdout_file": "opencode-debug-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-install-help",
+      "arguments": [
+        "plugin",
+        "install",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.074,
+      "stdout_sha256": "24f41c8867219fd40368f92461b228d206c923bf192f681ade0d2c76ceec34a9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-install-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-uninstall-help",
+      "arguments": [
+        "plugin",
+        "uninstall",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "e24575bf4436b9661d1d4a3102149788c3425a71aa9a6d341cc04b57bf0d4a98",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-uninstall-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-update-help",
+      "arguments": [
+        "plugin",
+        "update",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "b5b32d1fabce040b27d227f5278743a66408aacc527e13c63e031e4443ef5807",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-update-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-list-help",
+      "arguments": [
+        "plugin",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "f4d9fe30236fc2cf1bffd94961f3eaad4b6714404b71f8613062e7204a63c97d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-details-help",
+      "arguments": [
+        "plugin",
+        "details",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "02ef83518bb73025447ac48bfd8f6007549f08e0f09c3fdd86ff4c5a0cca1881",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-details-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-enable-help",
+      "arguments": [
+        "plugin",
+        "enable",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "00ef9518e85903fb053715ca0bb830b03b510f30ed444165db9be99ee4d7ca20",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-enable-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-disable-help",
+      "arguments": [
+        "plugin",
+        "disable",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.054,
+      "stdout_sha256": "a815e8a22b5af4727bfcb8e2241720694ffddd4e79c51943f7647464493306c8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-disable-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-marketplace-add-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "add",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.057,
+      "stdout_sha256": "c10f518febfd0e47b0d3c2b2219524611ad5229f076ff34008ad2762f85d49ff",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-marketplace-add-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-marketplace-remove-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "remove",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.056,
+      "stdout_sha256": "ab3ecfcbeda0191659268a4ef81748e6f3bfe610f54099814758da1f5dc73aac",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-marketplace-remove-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-marketplace-list-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.051,
+      "stdout_sha256": "6bdf446019111c87a1ad78dbc43ad16adaeb2fdb4bbac0e644ecd042c1af0f97",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-marketplace-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "claude",
+      "label": "plugin-marketplace-update-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "update",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.052,
+      "stdout_sha256": "3f4ae00fbbcaa96b5c18610f65496e62291062b6faf1fe2fc208a18f4188d9c4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "stdout_file": "claude-plugin-marketplace-update-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-install-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "install",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.135,
+      "stdout_sha256": "757cee1e97fc261bfb1db90e932da6504cee03fa5594f8ccefbde082c3327491",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-install-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-uninstall-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "uninstall",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.109,
+      "stdout_sha256": "5ede1f4d3382d6d203a39f78ca9e19a3c2f1fcdee94295667468e0f62a72eab6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-uninstall-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-update-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "update",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.085,
+      "stdout_sha256": "56f3fd593f28db5a0dad8150c861aedc9078e277da82c8cc441e9b6222468820",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-update-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-list-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.083,
+      "stdout_sha256": "9151bf5cd1c1edaf96d567c3e54ba3fade86c6f26c8f9584e48ef12d4534897b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-enable-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "enable",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.083,
+      "stdout_sha256": "70428e400db721701e3e03fa999549ad54c248e209d326aa3508964df0262db3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-enable-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-disable-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "disable",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.082,
+      "stdout_sha256": "891c16855f9a97bba9c133420fa5671339883226e914c005f7c20a70d1b5f7b6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-disable-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-marketplace-add-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "add",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.082,
+      "stdout_sha256": "878b0261ff916716f72133db5718003a0edb51e0093ea1e597b7e0abc128225a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-marketplace-add-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-marketplace-remove-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "remove",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.083,
+      "stdout_sha256": "1836a4ace8876391790845f02e50c0124fbd2020ad1dc3ec09147b325b768261",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-marketplace-remove-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "copilot",
+      "label": "plugin-marketplace-list-help",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.08,
+      "stdout_sha256": "a626b7ce521c5befd2fb4041805201760d5c66afaf61c3a4203ace512c88a5c6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "stdout_file": "copilot-plugin-marketplace-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "codex",
+      "label": "plugin-add-help",
+      "arguments": [
+        "plugin",
+        "add",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.007,
+      "stdout_sha256": "7a8058c501cb88472e9a76c936b36cbc878bc1fe8d91fb889a627de35a13a9f6",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-add-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-remove-help",
+      "arguments": [
+        "plugin",
+        "remove",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.007,
+      "stdout_sha256": "e5f987001cebb1530f2971ffd0b4eaf48fb3f930bb58ac8daae663fd51457af3",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-remove-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-list-help",
+      "arguments": [
+        "plugin",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.007,
+      "stdout_sha256": "8713d975a75091c7be8852215e5ac39b4c61764080d0540d7e81e850ca623afa",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-marketplace-add-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "add",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.008,
+      "stdout_sha256": "9f8cea727d96250c8d80f3cef0b3e067e0b6f7fccebb1aee0720f543a1bbb64f",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-marketplace-add-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-marketplace-remove-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "remove",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.007,
+      "stdout_sha256": "5d80ff0b74a098622762d32e3fe3ee376cf34454cd1e520e484b9a574886359f",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-marketplace-remove-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-marketplace-list-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "list",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.008,
+      "stdout_sha256": "62cbb2b946caf4fea4eeb9943670031afc691a6feed33904f7d48e2d70c09b17",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-marketplace-list-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "codex",
+      "label": "plugin-marketplace-upgrade-help",
+      "arguments": [
+        "plugin",
+        "marketplace",
+        "upgrade",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.007,
+      "stdout_sha256": "fac93121fe4b8d921b93e54b8da8c82831e8c0947945fc3a3ed8dfc1e7ed92c7",
+      "stderr_sha256": "92ee97e16c598f40a9fc81b0fbafebf77e41419064a603654fe9d0f78c644314",
+      "launcher_sha256": "39acf979729dd290f9a24ee38b2914e036c91b65952872e28ae2a6b88a7db7c1",
+      "stdout_file": "codex-plugin-marketplace-upgrade-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 243,
+      "stderr_classification": "temporary_codex_home_helper_alias_refusal"
+    },
+    {
+      "client": "opencode",
+      "label": "debug-config-help",
+      "arguments": [
+        "debug",
+        "config",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.236,
+      "stdout_sha256": "14a83d99025e6f7dcb7490a98d33e0c65653f701b87ac190f410ba6d1053792a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "d8a65dd253dbea759ae0dd829792ff219b40178c7decffea822430a4d1ccadb3",
+      "stdout_file": "opencode-debug-config-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    },
+    {
+      "client": "opencode",
+      "label": "api-help",
+      "arguments": [
+        "api",
+        "--help"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 0.048,
+      "stdout_sha256": "70d0c1990db00c8da64d311989d5093736ffea4c8732ac338e376e4665bbce7c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "launcher_sha256": "d8a65dd253dbea759ae0dd829792ff219b40178c7decffea822430a4d1ccadb3",
+      "stdout_file": "opencode-api-help.stdout",
+      "stderr_retained": false,
+      "stderr_bytes": 0
+    }
+  ]
+}
