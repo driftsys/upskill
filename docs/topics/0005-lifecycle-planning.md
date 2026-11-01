@@ -1364,8 +1364,9 @@ its exact recorded root set. The pure codec's expected-context check remains
 exact.
 
 The public state APIs publish no authoritative graph or operation journal and
-retire no evidence. Durable intent and markers are described below; effect
-coordination, recovery and native admission remain later Stage 5 work.
+retire no evidence. Durable intent and markers are described below. The inactive
+native coordinator described later performs effect coordination and recovery;
+production native admission remains pending.
 
 ## Inactive durable native preparation
 
@@ -1388,10 +1389,11 @@ bindings, intent hashes and replayed plans; it reports partial marker coverage
 without applying, retrying or deleting anything.
 
 Preparation is not native completion. Native observations remain supplied
-claims, and marker coverage grants no future effect authority. Profile
-admission, effect execution, inverse execution, observation-first recovery,
-state publication and terminal marker retirement remain later Stage 5 work. No
-production CLI route or prior-schema migration is admitted here.
+claims, and marker coverage grants no future effect authority. The inactive
+native coordinator described later supplies effect and inverse execution,
+observation-first recovery, state publication and terminal marker retirement.
+Profile admission and complete delivery review remain pending. No production CLI
+route or prior-schema migration is admitted here.
 
 ## Retained staging without a native binding
 
@@ -1467,3 +1469,22 @@ approved non-secret boundary. Private storage is not permission to journal
 credentials or credential-bearing shared documents. Real profiles, their
 capture/writer contracts, qualification and production CLI admission remain
 unadmitted.
+
+## Closed native profile admission
+
+`native_delivery::admission::QualifiedNativeAdapter` wraps the existing adapter
+trait with an exact-profile admission check. The production registry is empty;
+all four CLI surfaces reject with a typed `NativeAdmissionError` before native
+capture, inverse planning, execution or observation. A profile lookup remains
+read-only. Every method rechecks admission, and effect methods require the
+recorded profile to match the current profile.
+
+Matching includes surface, client version, installation scope and root,
+platform, profile ID/revision, exposure order and action kind. There is no
+nearest-version, user-scope or alternate-surface fallback. The private registry
+cannot be populated from caller-supplied claims. Future entries still require
+reviewed qualification, resolved executable and invocation/environment
+contracts, preservation controls and resource-retention evidence. This wrapper
+alone does not validate those facts. Concrete client adapters and their
+qualification remain pending, and the production CLI continues to use its
+existing dispatch.

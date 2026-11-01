@@ -157,9 +157,12 @@ impl NativeDeliveryAdapter for Fake {
     }
     fn apply(&mut self, effect: &PlannedNativeEffect) -> Result<NativeBindingOutcome> {
         if let Some((path, selected)) = &self.exposure_probe {
-            let exposed = std::fs::read_to_string(path)
+            let exposed = std::fs::read(path)
                 .ok()
-                .is_some_and(|text| text.contains(selected));
+                .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+                .is_some_and(|value| {
+                    value["plugins"]["fixture"] == selected.as_str() && value["enabled"] == true
+                });
             anyhow::ensure!(
                 exposed == (effect.request.profile.exposure == NativeExposureOrder::BeforeNative),
                 "fake native command observed the wrong configuration exposure order"

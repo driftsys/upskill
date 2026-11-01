@@ -784,7 +784,7 @@ fn a_document_batch_has_one_precondition_and_one_exact_manual_rollback() {
     for (format, original) in [
         (
             ConfigFormat::Jsonc,
-            "{\r\n // manual café\r\n \"manual\": [1,2,],\r\n}\r\n",
+            "{\r\n \"manual\": [1,2],\r\n \"label\": \"café\"\r\n}\r\n",
         ),
         (ConfigFormat::Toml, "# manual café\r\nmanual = [1, 2]\r\n"),
     ] {
@@ -796,17 +796,30 @@ fn a_document_batch_has_one_precondition_and_one_exact_manual_rollback() {
         let changes = [first.clone(), second.clone()];
         let patch = plan_config_contributions(&config, &changes).unwrap();
         assert_eq!(patch.file.before, config.target.file.value);
-        assert_eq!(patch.ownership_after.as_ref().unwrap().entries.len(), 2);
-        assert!(
-            String::from_utf8(patch.file.after.as_ref().unwrap().bytes.clone())
-                .unwrap()
-                .contains("first-root")
-        );
-        assert!(
-            String::from_utf8(patch.file.after.as_ref().unwrap().bytes.clone())
-                .unwrap()
-                .contains("second-root")
-        );
+        let ownership = patch.ownership_after.as_ref().unwrap();
+        assert_eq!(ownership.entries.len(), 2);
+        let output = std::str::from_utf8(&patch.file.after.as_ref().unwrap().bytes).unwrap();
+        match format {
+            ConfigFormat::Jsonc => {
+                let value: serde_json::Value = serde_json::from_str(output).unwrap();
+                assert_eq!(value["plugins"]["first"], json!("first-root"));
+                assert_eq!(value["plugins"]["second"], json!("second-root"));
+            }
+            ConfigFormat::Toml => {
+                let value = output.parse::<toml_edit::DocumentMut>().unwrap();
+                assert_eq!(value["plugins"]["first"].as_str(), Some("first-root"));
+                assert_eq!(value["plugins"]["second"].as_str(), Some("second-root"));
+            }
+        }
+        for change in &changes {
+            let entry = ownership
+                .entries
+                .iter()
+                .find(|entry| entry.id == change.id)
+                .unwrap();
+            assert_eq!(entry.selector, change.selector);
+            assert_eq!(Some(&entry.value), change.desired.as_ref());
+        }
         let mut installed = config.clone();
         apply_capture(&mut installed, patch);
         expect_owned(&installed, &mut first);

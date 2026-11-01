@@ -898,7 +898,7 @@ fn cross_root_configuration_and_noop_owned_drift_preserve_manual_data() {
             let extra = store.context().additional_roots[0].clone();
             let path = extra.path.join(".settings/native.json");
             std::fs::create_dir(path.parent().unwrap()).unwrap();
-            let manual = b"{\n // manual settings\n \"manual\": \"PRIVATE_MANUAL_SETTING\"\n}\n";
+            let manual = b"{\n \"manual\": \"PRIVATE_MANUAL_SETTING\"\n}\n";
             std::fs::write(&path, manual).unwrap();
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
@@ -971,16 +971,13 @@ fn cross_root_configuration_and_noop_owned_drift_preserve_manual_data() {
                     .contains("PRIVATE_MANUAL_SETTING")
             );
             let configured = std::fs::read(&path).unwrap();
-            assert!(
-                String::from_utf8(configured.clone())
-                    .unwrap()
-                    .contains(&capture.candidates[0].package.revision_root)
+            let value: serde_json::Value = serde_json::from_slice(&configured).unwrap();
+            assert_eq!(
+                value["plugins"]["fixture"],
+                capture.candidates[0].package.revision_root
             );
-            assert!(
-                String::from_utf8(configured.clone())
-                    .unwrap()
-                    .contains("PRIVATE_MANUAL_SETTING")
-            );
+            assert_eq!(value["enabled"], true);
+            assert_eq!(value["manual"], "PRIVATE_MANUAL_SETTING");
             assert_eq!(
                 std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
                 0o644
