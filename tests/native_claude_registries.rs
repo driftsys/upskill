@@ -275,7 +275,10 @@ fn installed_registry_preserves_empty_keys_and_scoped_conflicts() {
     for version in [json!(1), json!(3), json!("2"), json!(null), json!(2.0)] {
         let mut value = installed();
         value["version"] = version;
-        assert!(ClaudeInstalledRegistry::parse(PIN, &bytes(&value)).is_err());
+        assert_eq!(
+            ClaudeInstalledRegistry::parse(PIN, &bytes(&value)).unwrap_err(),
+            ClaudeInventoryError::UnsupportedRegistryVersion
+        );
     }
 }
 
@@ -399,7 +402,7 @@ fn debug_redacts_allowlisted_fields_as_well_as_ignored_fields() {
     let row = json!({"name":"private-name-canary","source":"directory","path":"/private-path-canary","installLocation":"/private-path-canary"});
     let list = ClaudeMarketplaceInventory::parse(PIN, &bytes(&json!([row]))).unwrap();
     let map = ClaudeKnownMarketplaces::parse(PIN,&bytes(&json!({"private-name-canary":{"source":{"source":"directory","path":"/private-path-canary"},"installLocation":"/private-path-canary"}}))).unwrap();
-    let registry = ClaudeInstalledRegistry::parse(PIN,&bytes(&json!({"version":2,"plugins":{"private-name-canary":[{"scope":"user","version":"private-version-canary","installPath":"/private-path-canary"}]}}))).unwrap();
+    let registry = ClaudeInstalledRegistry::parse(PIN,&bytes(&json!({"version":2,"plugins":{"private-name-canary":[{"scope":"project","projectPath":"/private-project-canary","version":"private-version-canary","installPath":"/private-path-canary"}]}}))).unwrap();
     let rendered = format!(
         "{list:?} {:?} {map:?} {:?} {registry:?} {:?}",
         list.entries()[0],
@@ -410,7 +413,110 @@ fn debug_redacts_allowlisted_fields_as_well_as_ignored_fields() {
         "private-name-canary",
         "private-version-canary",
         "private-path-canary",
+        "private-project-canary",
     ] {
         assert!(!rendered.contains(canary));
     }
+}
+
+// Catches reconstructing a selector with the marketplace in the plugin role,
+// or treating either side of plugin@marketplace as sufficient for a match.
+#[test]
+fn installed_lookup_keeps_plugin_and_marketplace_roles_distinct() {
+    let value = json!({"version":2,"plugins":{
+        "alpha@catalog":[{"scope":"user","version":"alpha-main","installPath":"/cache/alpha-main"}],
+        "beta@catalog":[{"scope":"user","version":"beta-main","installPath":"/cache/beta-main"}],
+        "alpha@other":[{"scope":"user","version":"alpha-other","installPath":"/cache/alpha-other"}],
+        "catalog@catalog":[{"scope":"user","version":"catalog-trap","installPath":"/cache/catalog-trap"}]
+    }});
+    let registry = ClaudeInstalledRegistry::parse(PIN, &bytes(&value)).unwrap();
+    for (selector, version, path) in [
+        ("alpha@catalog", "alpha-main", "/cache/alpha-main"),
+        ("beta@catalog", "beta-main", "/cache/beta-main"),
+        ("alpha@other", "alpha-other", "/cache/alpha-other"),
+        ("catalog@catalog", "catalog-trap", "/cache/catalog-trap"),
+    ] {
+        let row = registry
+            .find(selector, ClaudeLookupScope::User)
+            .unwrap()
+            .unwrap();
+        assert_eq!(row.version, version);
+        assert_eq!(row.install_path, Path::new(path));
+    }
+    for absent in ["beta@other", "catalog@alpha", "alpha", "alpha@cat"] {
+        assert!(
+            registry
+                .find(absent, ClaudeLookupScope::User)
+                .unwrap()
+                .is_none(),
+            "{absent}"
+        );
+    }
+}
+
+// Catches ancestor matching in place of exact project-path equality.
+#[test]
+fn installed_lookup_distinguishes_parent_nested_and_unregistered_projects() {
+    let value = json!({"version":2,"plugins":{"alpha@catalog":[
+        {"scope":"project","projectPath":"/fixture/project","version":"parent-version","installPath":"/cache/parent"},
+        {"scope":"project","projectPath":"/fixture/project/nested","version":"nested-version","installPath":"/cache/nested"}
+    ]}});
+    let registry = ClaudeInstalledRegistry::parse(PIN, &bytes(&value)).unwrap();
+    for (project, version, path) in [
+        ("/fixture/project", "parent-version", "/cache/parent"),
+        ("/fixture/project/nested", "nested-version", "/cache/nested"),
+    ] {
+        let row = registry
+            .find(
+                "alpha@catalog",
+                ClaudeLookupScope::Project(Path::new(project)),
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(row.version, version);
+        assert_eq!(row.install_path, Path::new(path));
+    }
+    for absent in [
+        "/fixture/project/nested/deeper",
+        "/fixture",
+        "/fixture/project-sibling",
+    ] {
+        assert!(
+            registry
+                .find(
+                    "alpha@catalog",
+                    ClaudeLookupScope::Project(Path::new(absent))
+                )
+                .unwrap()
+                .is_none(),
+            "{absent}"
+        );
+    }
+}
+
+// Catches a duplicate guard that rejects only project rows or adopts the last
+// matching user row. Other scopes under that selector remain independent.
+#[test]
+fn installed_lookup_rejects_duplicate_user_rows_without_affecting_project_lookup() {
+    let value = json!({"version":2,"plugins":{"alpha@catalog":[
+        {"scope":"user","version":"first-user","installPath":"/cache/first-user"},
+        {"scope":"project","projectPath":"/fixture/project","version":"project-version","installPath":"/cache/project"},
+        {"scope":"user","version":"second-user","installPath":"/cache/second-user"}
+    ]}});
+    let registry = ClaudeInstalledRegistry::parse(PIN, &bytes(&value)).unwrap();
+    assert_eq!(
+        registry
+            .find("alpha@catalog", ClaudeLookupScope::User)
+            .unwrap_err(),
+        ClaudeInventoryError::AmbiguousEntry
+    );
+    let project = registry
+        .find(
+            "alpha@catalog",
+            ClaudeLookupScope::Project(Path::new("/fixture/project")),
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(project.version, "project-version");
+    assert_eq!(project.install_path, Path::new("/cache/project"));
 }
