@@ -1447,6 +1447,24 @@ fn receipt_selections_must_match_captures_and_detached_captures_need_detachment_
         ))
         .is_err()
     );
+    // A confirmed no-op proves absence, not detachment of these captures.
+    let mut no_detachment = detached.clone();
+    no_detachment.receipts[0].before = None;
+    no_detachment.receipts[0].after = None;
+    let absent_files = file_observations(&no_detachment, &[]);
+    let error = plan_skill_delivery(&plan(
+        &no_detachment,
+        &GraphChanges::default(),
+        &[],
+        &[],
+        &[native(&no_detachment)],
+        &absent_files,
+    ))
+    .unwrap_err();
+    assert!(
+        format!("{error:#}").contains("detached capture"),
+        "{error:#}"
+    );
     detached.receipts.clear();
     assert!(
         plan_skill_delivery(&plan(

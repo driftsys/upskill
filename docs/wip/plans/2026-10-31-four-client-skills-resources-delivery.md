@@ -122,7 +122,7 @@ relative files, stable catalog contribution and native identity. No I/O occurs.
 
 **Local status:** Implemented in `2de2226`, with QUICK coverage findings
 addressed by exact staging/selector assertions, independent native projections,
-and isolated receipt/origin/ownership tests. All 24 acceptance cases pass and 14
+and isolated receipt/origin/ownership tests. All 24 acceptance cases pass and 15
 deliberate regressions are caught. `just verify` passes. AD-0042 records the
 reviewed in-memory boundary; no serializer, public migration or native admission
 is selected. GitHub tracking/publication remains unavailable.
