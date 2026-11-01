@@ -7,8 +7,10 @@ Study branch: `docs/native-adapter-study`; source commit:
 `6fe2e2307ee91ca83c3958748cc11a12003be1d3`. The isolated worktree is
 `.claude/worktrees/native-adapter-study`. This report is the only study output.
 Bootstrap was attempted by the main lane and failed on GitHub DNS resolution,
-including an escalated attempt. It was not repeated here. No executable probes,
-provider calls, profile changes, Rust checks, commits or PR operations ran here.
+including an escalated attempt. It was not repeated by the study worker. During
+the original study, no native executable probes, provider calls, profile
+changes, Rust checks, commits or PR operations ran. Later commits are recorded
+below.
 
 ## Authority and evidence
 
@@ -67,14 +69,18 @@ nonzero exit after partial effects cannot establish rejection without those
 observations. `Unknown` covers timeout, malformed/incomplete inventory,
 unavailable observer and ambiguous partial effects.
 
-After timeout, observe independently with the same operation/profile/target and
-exact selection. An `After` observation can acknowledge that effect; final
-bindings and files still need confirmation before state publication. `Before`
-requires the coordinator's explicit recovery disposition and renewed
-preconditions. Divergence or unknown retention stays `RecoveryRequired`, with
-files, ownership and journal retained. Neither success exit nor file rollback
-permits blind retry, inverse or completion. Failed inverse likewise preserves
-evidence and manual bytes.
+After timeout, first establish native-worker quiescence under the qualified
+profile. Reaping the direct child or finding its process group empty does not
+prove that escaped workers have stopped. Without that witness, retain `Unknown`
+and do not invoke inventory or cleanup commands. Once quiescence is established,
+observe independently with the same operation/profile/target and exact
+selection. An `After` observation can acknowledge that effect; final bindings
+and files still need confirmation before state publication. `Before` requires
+the coordinator's explicit recovery disposition and renewed preconditions.
+Divergence or unknown retention stays `RecoveryRequired`, with files, ownership
+and journal retained. Neither success exit nor file rollback permits blind
+retry, inverse or completion. Failed inverse likewise preserves evidence and
+manual bytes.
 
 ## Claude Code
 
@@ -275,8 +281,9 @@ assert unchanged manual bytes/modes/presence and retained evidence at each stop.
    changed modes and native rewrites stop without adopting or overwriting them.
    Check D2/D3 residue separately from exact restoration and D4's no allowance.
 5. Interrupt before invocation, after effect, before observation persistence and
-   after acknowledgement. Timeout-after-effect observes `After` and avoids
-   replay; observed `Before` waits for recovery disposition; malformed,
+   after acknowledgement. Timeout-after-effect requires proven native-worker
+   quiescence before observing `After` and avoids replay; unknown liveness stays
+   unresolved. Observed `Before` waits for recovery disposition; malformed,
    divergent or unavailable observation remains Pending. Wrong operation,
    profile revision, scope or selection cannot acknowledge a step.
 6. Failed inverse and partially completed remove/re-add retain journal, files
@@ -344,3 +351,27 @@ full-name/hash-version acceptance, scope/platform-specific qualification and
 native live/resumable retention or clearance. Each missing witness blocks only
 its profile; current docs and workarounds cannot replace it. No Stage 6
 admission or PASS follows from completion of this study.
+
+## Main-lane reconciliation on 2026-11-01
+
+The report was integrated into `feat/native-delivery` as `77c1d9b`, following
+implementation head `997ffce`. This is a later integration snapshot, not an
+extension of the original study's runtime evidence. Stage 5 coordination is
+implemented in `cf2f877`; its review and release boundaries remain those in the
+delivery plan. Stage 6 already includes the closed admission registry, bounded
+process runner, Claude metadata decoding/reading and command planning,
+Copilot/Codex user command planning, and OpenCode source planning. These are
+partial infrastructure, not complete adapters or qualified profiles. The
+existing trait retains the study's operation seams and now explicitly requires
+non-secret payloads and native-worker quiescence before stable observations.
+
+The main lane has unrelated uncommitted test changes. Preserve their ownership
+and finish their verification/review there rather than starting a second
+implementation of those pieces. The next evidence-gathering task is the existing
+[Claude local-catalog contract probe](../plans/2026-11-01-claude-local-catalog-contract-probe.md),
+which tests the generated full name/version, native local-catalog record shape,
+project scope and exact preservation. It remains prepared pending explicit
+native-execution approval; this integration does not execute it or authorize
+provider spending. Its bounded result can inform subsequent capture/inverse
+fixtures and effect-observation work, while runtime isolation, retention,
+complete adapter acceptance and production admission remain separate gates.
