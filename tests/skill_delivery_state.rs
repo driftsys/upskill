@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use upskill::compile::skill_package::{SkillPackageRequest, compile_skill_package};
 use upskill::compile::skill_selection::{SkillBodyOrigin, SkillSelectionRequest, select_skill};
-use upskill::files::plan::{FileLocation, FileValue, ObservedFile};
+use upskill::files::plan::{FileLocation, FileValue, ObservedFile, PlannedFile};
 use upskill::lifecycle::native_receipt::{
     NativeBindingOutcome, NativeBindingReceipt, NativeObservationState, NativeReceiptError,
     NativeResourceRetention, NativeSkillObservation, NativeSkillSelection, SkillTarget,
@@ -145,6 +145,70 @@ fn recompile(revision: &mut PackageRevision) {
     })
     .unwrap();
 }
+// Captured native values are encoded independently from the producer projection.
+fn observed_selection(
+    package: &upskill::compile::skill_package::SkillPackage,
+) -> NativeSkillSelection {
+    NativeSkillSelection {
+        native_name: package.native_name.clone(),
+        payload_sha256: package.payload_sha256.clone(),
+        package_sha256: package.package_sha256.clone(),
+        revision_root: package.revision_root.clone(),
+        binding: package.binding.clone(),
+    }
+}
+fn assert_exact_file_plan(
+    result: &upskill::lifecycle::skill_delivery::SkillDeliveryPlan,
+    scope: &InstallationRoot,
+    observations: &[ObservedFile],
+    revisions: &[&PackageRevision],
+    selectors: &[(&upskill::compile::item::CompiledItemFile, bool)],
+) {
+    let before: BTreeMap<_, _> = observations
+        .iter()
+        .map(|row| (row.location.path.clone(), row.value.clone()))
+        .collect();
+    let mut staging = BTreeMap::new();
+    for revision in revisions {
+        for file in &revision.package.revision_files {
+            staging.insert(
+                file.path.clone(),
+                PlannedFile {
+                    location: FileLocation {
+                        root: scope.clone(),
+                        path: file.path.clone(),
+                    },
+                    before: before[&file.path].clone(),
+                    after: Some(FileValue {
+                        bytes: file.bytes.clone(),
+                        mode: file.mode,
+                    }),
+                },
+            );
+        }
+    }
+    let mut actual = result.stage_files.clone();
+    actual.sort_by(|left, right| left.location.path.cmp(&right.location.path));
+    assert_eq!(actual, staging.into_values().collect::<Vec<_>>());
+    let mut expected: Vec<_> = selectors
+        .iter()
+        .map(|(file, keep)| PlannedFile {
+            location: FileLocation {
+                root: scope.clone(),
+                path: file.path.clone(),
+            },
+            before: before[&file.path].clone(),
+            after: keep.then(|| FileValue {
+                bytes: file.bytes.clone(),
+                mode: file.mode,
+            }),
+        })
+        .collect();
+    expected.sort_by(|left, right| left.location.path.cmp(&right.location.path));
+    let mut actual = result.selector_files.clone();
+    actual.sort_by(|left, right| left.location.path.cmp(&right.location.path));
+    assert_eq!(actual, expected);
+}
 fn installed(revision: &PackageRevision) -> SkillDeliveryState {
     let mut state = empty(&revision.installation.root);
     state
@@ -163,7 +227,7 @@ fn installed(revision: &PackageRevision) -> SkillDeliveryState {
         platform: "fixture-os".into(),
         operation_id: "install-1".into(),
         before: None,
-        after: Some(NativeSkillSelection::from_package(&revision.package)),
+        after: Some(observed_selection(&revision.package)),
         captured_prestate: b"absent".to_vec(),
         outcome: NativeBindingOutcome::Confirmed,
     });
@@ -294,6 +358,29 @@ fn fresh_install_requires_absence_and_stages_a_single_selected_revision() {
         &files,
     ))
     .unwrap();
+    assert_exact_file_plan(
+        &result,
+        &scope,
+        &files,
+        &[&rev],
+        &[(rev.package.catalog_file.as_ref().unwrap(), true)],
+    );
+    assert_eq!(
+        result.native_changes[0].after,
+        Some(observed_selection(&rev.package))
+    );
+    assert_eq!(
+        result.native_changes[0].captured_prestate,
+        b"captured-native-state"
+    );
+    assert_eq!(result.native_changes[0].observation_id, "observation-1");
+    assert_eq!(result.native_changes[0].client_version, "fixture-1");
+    assert_eq!(result.native_changes[0].platform, "fixture-os");
+    assert_eq!(result.native_changes[0].scope, scope);
+    assert_eq!(
+        result.native_changes[0].retention,
+        NativeResourceRetention::Unknown
+    );
     assert_eq!(result.graph.installations, [rev.installation]);
     assert_eq!(result.revisions.len(), 1);
     assert_eq!(result.native_changes.len(), 1);
@@ -338,6 +425,19 @@ fn update_retains_old_revision_and_separates_selector_from_inactive_staging() {
         &files,
     ))
     .unwrap();
+    assert_exact_file_plan(
+        &result,
+        &scope,
+        &files,
+        &[&old, &new],
+        &[(new.package.catalog_file.as_ref().unwrap(), true)],
+    );
+    assert_eq!(
+        result.native_changes[0].retention,
+        NativeResourceRetention::SessionsCleared {
+            evidence_id: "clearance-1".into()
+        }
+    );
     assert_eq!(result.revisions.len(), 2);
     assert!(result.revisions.contains(&old));
     assert!(result.revisions.contains(&new));
@@ -462,6 +562,13 @@ fn final_reference_removal_detaches_without_deleting_session_resources() {
     let result =
         plan_skill_delivery(&plan(&state, &changes, &[], &[], &[native(&state)], &files)).unwrap();
     assert!(result.graph.installations.is_empty());
+    assert_exact_file_plan(
+        &result,
+        &scope,
+        &files,
+        &[&rev],
+        &[(rev.package.catalog_file.as_ref().unwrap(), false)],
+    );
     assert_eq!(result.revisions, [rev]);
     assert_eq!(result.native_changes.len(), 1);
     assert!(result.native_changes[0].after.is_none());
@@ -1118,6 +1225,23 @@ fn one_logical_installation_can_stage_all_clients_and_detach_one_independently()
         result.graph.installations.as_slice(),
         std::slice::from_ref(&installation)
     );
+    let selector_expectations: Vec<_> = revisions
+        .iter()
+        .filter_map(|revision| {
+            revision
+                .package
+                .catalog_file
+                .as_ref()
+                .map(|file| (file, true))
+        })
+        .collect();
+    assert_exact_file_plan(
+        &result,
+        &scope,
+        &file_observations(&fresh, &revisions),
+        &revisions.iter().collect::<Vec<_>>(),
+        &selector_expectations,
+    );
     assert_eq!(result.revisions.len(), 4);
     assert_eq!(result.native_changes.len(), 4);
     assert_eq!(result.selector_files.len(), 3);
@@ -1144,7 +1268,7 @@ fn one_logical_installation_can_stage_all_clients_and_detach_one_independently()
             platform: "fixture-os".into(),
             operation_id: "install-all".into(),
             before: None,
-            after: Some(NativeSkillSelection::from_package(&revision.package)),
+            after: Some(observed_selection(&revision.package)),
             captured_prestate: vec![],
             outcome: NativeBindingOutcome::Confirmed,
         })
@@ -1201,4 +1325,280 @@ fn one_logical_installation_can_stage_all_clients_and_detach_one_independently()
         1
     );
     assert!(result.stage_files.iter().all(|file| file.after.is_some()));
+}
+
+#[test]
+fn different_present_native_selection_rejects_each_identity_and_binding_mismatch() {
+    let scope = root("/checkout");
+    let rev = revision(&scope, "Body", None);
+    let state = installed(&rev);
+    let files = file_observations(&state, std::slice::from_ref(&rev));
+    for field in ["name", "payload", "package", "revision", "binding"] {
+        let mut observed = native(&state);
+        let NativeObservationState::Present(selection) = &mut observed.state else {
+            panic!("fixture must be present")
+        };
+        match field {
+            "name" => selection.native_name = "foreign".into(),
+            "payload" => selection.payload_sha256 = "a".repeat(64),
+            "package" => selection.package_sha256 = "b".repeat(64),
+            "revision" => selection.revision_root = "elsewhere".into(),
+            _ => {
+                selection.binding =
+                    upskill::compile::skill_package::SkillPackageBinding::LocalMarketplace {
+                        directory: "/foreign".into(),
+                    }
+            }
+        }
+        assert!(
+            plan_skill_delivery(&plan(
+                &state,
+                &GraphChanges::default(),
+                &[intent()],
+                std::slice::from_ref(&rev),
+                &[observed],
+                &files
+            ))
+            .is_err(),
+            "{field}"
+        );
+    }
+}
+
+#[test]
+fn explicit_origin_must_match_a_valid_candidate_instead_of_falling_back() {
+    let scope = root("/checkout");
+    let rev = revision(&scope, "Canonical", None);
+    let state = empty(&scope);
+    let files = file_observations(&state, std::slice::from_ref(&rev));
+    let changes = add(&rev);
+    assert!(
+        plan_skill_delivery(&plan(
+            &state,
+            &changes,
+            &[intent()],
+            std::slice::from_ref(&rev),
+            &[native(&state)],
+            &files
+        ))
+        .is_ok()
+    );
+    let wrong = SkillDeliveryIntent {
+        key: key(),
+        selection: SkillIntentSelection::Selected {
+            body_origin: SkillBodyOrigin::Override {
+                path: "SKILL.claude.md".into(),
+            },
+        },
+    };
+    assert!(
+        plan_skill_delivery(&plan(
+            &state,
+            &changes,
+            &[wrong],
+            std::slice::from_ref(&rev),
+            &[native(&state)],
+            &files
+        ))
+        .is_err()
+    );
+}
+
+#[test]
+fn receipt_selections_must_match_captures_and_detached_captures_need_detachment_receipts() {
+    let scope = root("/checkout");
+    let rev = revision(&scope, "Body", None);
+    let state = installed(&rev);
+    let files = file_observations(&state, std::slice::from_ref(&rev));
+    for slot in ["before", "after"] {
+        let mut changed = state.clone();
+        let mut foreign = observed_selection(&rev.package);
+        foreign.package_sha256 = "a".repeat(64);
+        if slot == "before" {
+            changed.receipts[0].before = Some(foreign);
+        } else {
+            changed.receipts[0].after = Some(foreign);
+        }
+        let observations = vec![native(&changed)];
+        assert!(
+            plan_skill_delivery(&plan(
+                &changed,
+                &GraphChanges::default(),
+                &[intent()],
+                std::slice::from_ref(&rev),
+                &observations,
+                &files
+            ))
+            .is_err(),
+            "{slot}"
+        );
+    }
+    let mut detached = state.clone();
+    detached.graph = empty_graph();
+    let files = file_observations(&detached, &[]);
+    assert!(
+        plan_skill_delivery(&plan(
+            &detached,
+            &GraphChanges::default(),
+            &[],
+            &[],
+            &[native(&detached)],
+            &files
+        ))
+        .is_err()
+    );
+    detached.receipts.clear();
+    assert!(
+        plan_skill_delivery(&plan(
+            &detached,
+            &GraphChanges::default(),
+            &[],
+            &[],
+            &[native(&detached)],
+            &files
+        ))
+        .is_err()
+    );
+}
+
+#[test]
+fn graph_skill_artifacts_cannot_duplicate_revision_ownership() {
+    use sha2::{Digest, Sha256};
+    use upskill::lifecycle::state::OwnerConsumers;
+    use upskill::ownership::{ArtifactContent, OwnedArtifact};
+    let scope = root("/checkout");
+    let rev = revision(&scope, "Body", None);
+    let mut state = installed(&rev);
+    let file = rev
+        .package
+        .revision_files
+        .iter()
+        .find(|file| file.path.ends_with("/SKILL.md"))
+        .unwrap();
+    let direct_path = ".claude/skills/demo/SKILL.md".to_string();
+    state.graph.artifacts.push(OwnedArtifact {
+        root: scope.clone(),
+        path: direct_path.clone(),
+        content: ArtifactContent::File {
+            content_sha256: Sha256::digest(&file.bytes)
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+            mode: file.mode,
+        },
+        owners: vec![rev.installation.owner.clone()],
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    state.graph.owner_consumers.push(OwnerConsumers {
+        root: scope,
+        path: direct_path.clone(),
+        contribution_id: None,
+        installation_id: "demo-install".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    upskill::lifecycle::state::validate_state(&state.graph).unwrap();
+    let mut observations = file_observations(&state, std::slice::from_ref(&rev));
+    observations.push(ObservedFile {
+        location: FileLocation {
+            root: state.scope.clone(),
+            path: direct_path,
+        },
+        value: Some(FileValue {
+            bytes: file.bytes.clone(),
+            mode: file.mode,
+        }),
+    });
+    let error = plan_skill_delivery(&plan(
+        &state,
+        &GraphChanges::default(),
+        &[intent()],
+        std::slice::from_ref(&rev),
+        &[native(&state)],
+        &observations,
+    ))
+    .unwrap_err();
+    assert!(
+        format!("{error:#}").contains("second ownership"),
+        "{error:#}"
+    );
+}
+
+#[test]
+fn unrelated_owned_rule_artifacts_and_legacy_survive_and_cannot_be_retired_here() {
+    use sha2::{Digest, Sha256};
+    use upskill::lifecycle::state::OwnerConsumers;
+    use upskill::ownership::{ArtifactContent, OwnedArtifact};
+    let scope = root("/checkout");
+    let rev = revision(&scope, "Body", None);
+    let mut state = installed(&rev);
+    let mut rule = rev.installation.clone();
+    rule.owner.installation_id = "rule-install".into();
+    rule.owner.kind = ItemKind::Rule;
+    rule.owner.source_name = "rule".into();
+    rule.owner.installed_name = "rule".into();
+    state.graph.installations.push(rule.clone());
+    let reference = Reference::DirectInstallation {
+        installation_id: "rule-install".into(),
+    };
+    state.graph.references.push(reference.clone());
+    let artifact = OwnedArtifact {
+        root: scope.clone(),
+        path: ".claude/rules/manual-safe.md".into(),
+        content: ArtifactContent::File {
+            content_sha256: Sha256::digest(b"Rule\n")
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+            mode: Some(0o644),
+        },
+        owners: vec![rule.owner.clone()],
+        consumers: vec![TargetSurface::ClaudeCli],
+    };
+    state.graph.artifacts.push(artifact.clone());
+    state.graph.owner_consumers.push(OwnerConsumers {
+        root: scope,
+        path: artifact.path.clone(),
+        contribution_id: None,
+        installation_id: "rule-install".into(),
+        consumers: vec![TargetSurface::ClaudeCli],
+    });
+    state.graph.legacy = Some(
+        serde_json::from_str(r#"{"schema":1,"items":[],"bundles":[],"plugins":[],"mcps":[]}"#)
+            .unwrap(),
+    );
+    let before = state.clone();
+    let files = file_observations(&state, std::slice::from_ref(&rev));
+    let result = plan_skill_delivery(&plan(
+        &state,
+        &GraphChanges::default(),
+        &[intent()],
+        std::slice::from_ref(&rev),
+        &[native(&state)],
+        &files,
+    ))
+    .unwrap();
+    assert!(result.file_ownership.contains(&artifact));
+    assert!(result.graph.installations.contains(&rule));
+    assert_eq!(state, before);
+    assert!(
+        result
+            .stage_files
+            .iter()
+            .chain(&result.selector_files)
+            .all(|file| file.location.path != artifact.path)
+    );
+    let remove = GraphChanges {
+        remove_references: vec![reference],
+        ..Default::default()
+    };
+    let error = plan_skill_delivery(&plan(
+        &state,
+        &remove,
+        &[intent()],
+        std::slice::from_ref(&rev),
+        &[native(&state)],
+        &files,
+    ))
+    .unwrap_err();
+    assert!(format!("{error:#}").contains("non-skill"), "{error:#}");
 }

@@ -120,6 +120,13 @@ relative files, stable catalog contribution and native identity. No I/O occurs.
 
 ## Stage 3: Portable intent and native receipt contracts
 
+**Local status:** Implemented in `2de2226`, with QUICK coverage findings
+addressed by exact staging/selector assertions, independent native projections,
+and isolated receipt/origin/ownership tests. All 24 acceptance cases pass and 14
+deliberate regressions are caught. `just verify` passes. AD-0042 records the
+reviewed in-memory boundary; no serializer, public migration or native admission
+is selected. GitHub tracking/publication remains unavailable.
+
 **Files:** Create `src/lifecycle/skill_delivery.rs`,
 `src/lifecycle/native_receipt.rs`, `tests/skill_delivery_state.rs`; modify
 `src/lifecycle/mod.rs`. Reconcile with the existing state-compatibility work
@@ -134,16 +141,16 @@ The input contains current intent, receipts, package candidates, reference graph
 and captured native observations. The plan separates files, bindings and
 retained revisions; it does not execute them.
 
-- [ ] Add failing tests for diamond bundles, direct-plus-bundle ownership,
+- [x] Add failing tests for diamond bundles, direct-plus-bundle ownership,
       conflicting revision/alias selection, override removal without fallback,
       missing/edited bytes, copied absolute-root state rejection and explicit
       clone materialization using the new checkout's scope.
-- [ ] Run `cargo test --test skill_delivery_state`; confirm intended failures.
-- [ ] Specify persistence compatibility in a reviewed record, then implement the
+- [x] Run `cargo test --test skill_delivery_state`; confirm intended failures.
+- [x] Specify persistence compatibility in a reviewed record, then implement the
       pure records and planner without a second authoritative installation lock.
-- [ ] Rerun state tests and `cargo test --test lifecycle_references`; require
+- [x] Rerun state tests and `cargo test --test lifecycle_references`; require
       reference reachability and existing state round trips to remain unchanged.
-- [ ] Commit `feat: plan skill delivery intent and native receipts`.
+- [x] Commit `feat: plan skill delivery intent and native receipts`.
 
 ## Stage 4: Owned configuration contributions
 
