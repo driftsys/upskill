@@ -47,7 +47,8 @@ pub enum FileInstallationChange {
         installation_id: String,
     },
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PlannedFile {
     pub location: FileLocation,
     pub before: Option<FileValue>,

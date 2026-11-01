@@ -190,10 +190,45 @@ and never applies the state action. Principal/additional roots supplied directly
 to the lower evidence API remain claims; the integrated wrapper binds them to
 the held root set.
 
-These APIs do not publish lockfile JSON, operation intent or pending markers.
-Interrupted blob-publication tests establish process restart behavior, not
-power-loss durability or native recovery. The multi-root operation store and
-durable coordinator remain unimplemented. Stage 5 is open.
+The state APIs do not publish the authoritative lockfile. Interrupted
+blob-publication tests establish process restart behavior, not power-loss
+durability or native recovery.
+
+`NativeOperationStore::prepare` now writes a typed YAML intent and an initial
+JSON journal into the qualified private evidence directory. The intent retains
+exact prior state, captured graph edits, selected revisions, native
+observations, configuration snapshots/associations and the replayable
+skill/configuration plans. YAML preserves supported non-string source metadata
+keys. Strict typed round trips and replay reject a different preview even when
+its stored hashes are internally consistent. The intent digest uses
+`b"upskill:native-intent:v1\0"`, a big-endian u64 byte length and the exact YAML
+bytes. The initial journal has generation zero and status `Prepared`.
+
+Each held root receives `.upskill/native-pending/pending.json` after intent and
+journal synchronization. This separately owned directory uses `0700`, its files
+use `0600`, and its ignore file excludes all entries. Its owner record requires
+purpose `native-pending-v1`; it cannot adopt an evidence directory. Marker
+namespaces use `b"upskill:native-marker-namespace:v1\0"`, then a big-endian u64
+owner-byte length and exact owner bytes. Existing evidence owner bytes and
+namespace framing remain unchanged. Markers contain only the operation ID,
+physical/logical root binding, marker namespace, private journal locator,
+private namespace and intent digest. They contain no captured native/config
+snapshot bytes.
+
+Preparation scans all held roots for pending markers before creating marker
+storage elsewhere, recaptures file observations under the locks and verifies
+captured files and root bindings before returning. A new operation sharing only
+a marked secondary root requires recovery, without opening that prior journal
+through an unheld root. `inspect` requires exactly the recorded roots, validates
+intent/journal bindings and reports missing markers without retry, cleanup or
+application effects. Marker coverage is metadata visibility, not a future effect
+lease or native completion. Fresh processes exercise interruption after intent
+and after every marker, including shared-root exclusion after process exit.
+
+The store does not stage application files, invoke a client, publish installed
+state or retire markers/evidence. Native effect profiles, ordered effect
+checkpoints, inverse execution and the observation/recovery coordinator remain
+unimplemented. Stage 5 is open.
 
 Implement the permission projection first, then the validated state codec,
 qualified multi-root store and coordinator, then native adapters. These are

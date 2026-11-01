@@ -1358,3 +1358,29 @@ captured-file changes during preparation reject.
 No API here publishes the authoritative graph, journals operations, creates
 pending markers or retires evidence. Durable multi-root intent, crash exclusion,
 coordinator recovery and native admission remain later Stage 5 work.
+
+## Inactive durable native preparation
+
+`NativeOperationStore::prepare` captures exact prior state and owned request
+inputs in a private typed YAML intent. It records the replayed
+skill/configuration plans and a generation-zero `Prepared` journal under
+`.upskill/native-evidence`. Both records are synchronized before publishing
+`.upskill/native-pending/pending.json` in every held root. Marker directories
+are owned, private and ignored; their purpose and namespace are separate from
+the private evidence directory. The marker contains root/operation bindings and
+a private journal locator, with no native prestate or manual configuration
+bytes.
+
+The operation store rejects an existing marker before creating marker storage in
+another root. A new operation sharing only one marked secondary root requires
+recovery even after the previous process exits. Captured file observations are
+checked against qualified observations, and reserved storage/overlapping targets
+reject. Inspection validates strict intent/journal formats, namespace/root
+bindings, intent hashes and replayed plans; it reports partial marker coverage
+without applying, retrying or deleting anything.
+
+Preparation is not native completion. Native observations remain supplied
+claims, and marker coverage grants no future effect authority. Profile
+admission, effect checkpoints, inverse execution, observation-first recovery,
+state publication and terminal marker retirement remain later Stage 5 work. No
+production CLI route or prior-schema migration is admitted here.

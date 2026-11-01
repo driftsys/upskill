@@ -229,6 +229,22 @@ pub(in crate::filesystem) fn apply_create_only_bound(
     );
     apply_named_with_policy(scope, action, &nonce()?, index, true, Some(parent_identity))
 }
+/// Apply an exact record precondition beneath its already-pinned parent.
+pub(in crate::filesystem) fn apply_bound(
+    scope: &QualifiedScope,
+    action: &PlannedFile,
+    index: usize,
+    parent_identity: (u64, u64),
+) -> Result<()> {
+    apply_named_with_policy(
+        scope,
+        action,
+        &nonce()?,
+        index,
+        false,
+        Some(parent_identity),
+    )
+}
 fn apply_named(
     scope: &QualifiedScope,
     action: &PlannedFile,

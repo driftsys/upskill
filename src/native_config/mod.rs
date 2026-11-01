@@ -69,14 +69,16 @@ pub struct CapturedConfig {
     pub higher_layers: Vec<ConfigLayer>,
     pub ownership: Option<ConfigOwnership>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigContribution {
     pub id: String,
     pub selector: ConfigSelector,
     pub expected: Option<OwnedConfigEntry>,
     pub desired: Option<Value>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 /// Apply the file precondition and resulting ownership together through the
 /// separately admitted coordinator; this preview is not an execution receipt.
 pub struct ConfigPatch {

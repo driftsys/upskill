@@ -60,21 +60,24 @@ pub struct NativeBindingReceipt {
     pub outcome: NativeBindingOutcome,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum NativeObservationState {
     Absent,
     Present(NativeSkillSelection),
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum NativeResourceRetention {
     Unknown,
     SessionsCleared { evidence_id: String },
     CachePreserved { evidence_id: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NativeSkillObservation {
     pub key: SkillTarget,
     pub scope: InstallationRoot,
@@ -86,7 +89,8 @@ pub struct NativeSkillObservation {
     pub retention: NativeResourceRetention,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NativeSkillChange {
     pub key: SkillTarget,
     pub scope: InstallationRoot,

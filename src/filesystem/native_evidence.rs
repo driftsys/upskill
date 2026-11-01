@@ -20,6 +20,38 @@ const DIRECTORY: &str = "native-evidence";
 const PREFIX: &str = ".upskill/native-evidence";
 const IGNORE: &[u8] = b"*\n";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Area {
+    Evidence,
+    Pending,
+}
+impl Area {
+    fn directory(self) -> &'static str {
+        match self {
+            Self::Evidence => DIRECTORY,
+            Self::Pending => "native-pending",
+        }
+    }
+    fn prefix(self) -> &'static str {
+        match self {
+            Self::Evidence => PREFIX,
+            Self::Pending => ".upskill/native-pending",
+        }
+    }
+    fn purpose(self) -> Option<String> {
+        match self {
+            Self::Evidence => None,
+            Self::Pending => Some("native-pending-v1".into()),
+        }
+    }
+    fn domain(self) -> &'static [u8] {
+        match self {
+            Self::Evidence => b"upskill:native-evidence-namespace:v1\0",
+            Self::Pending => b"upskill:native-marker-namespace:v1\0",
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Owner {
@@ -27,6 +59,8 @@ struct Owner {
     root: ScopeBinding,
     directory: (u64, u64),
     nonce: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    purpose: Option<String>,
 }
 
 /// Private immutable native evidence beneath an explicitly selected user root.
@@ -42,6 +76,7 @@ pub struct NativeEvidenceStore<'a> {
     owner: Owner,
     owner_bytes: Vec<u8>,
     namespace: String,
+    area: Area,
 }
 impl<'a> NativeEvidenceStore<'a> {
     /// Create a private store or open the same owned store. Partial/unowned
@@ -51,7 +86,8 @@ impl<'a> NativeEvidenceStore<'a> {
         scope: &'a QualifiedScope,
         guard: &'a ScopeWriterGuard<'a>,
     ) -> Result<Self> {
-        Self::open_inner(root, scope, guard, true)?.context("private evidence directory missing")
+        Self::open_inner(root, scope, guard, true, Area::Evidence)?
+            .context("private evidence directory missing")
     }
 
     /// Open an existing store without creating directories or files.
@@ -60,7 +96,16 @@ impl<'a> NativeEvidenceStore<'a> {
         scope: &'a QualifiedScope,
         guard: &'a ScopeWriterGuard<'a>,
     ) -> Result<Option<Self>> {
-        Self::open_inner(root, scope, guard, false)
+        Self::open_inner(root, scope, guard, false, Area::Evidence)
+    }
+
+    pub(crate) fn open_marker(
+        root: &InstallationRoot,
+        scope: &'a QualifiedScope,
+        guard: &'a ScopeWriterGuard<'a>,
+        create: bool,
+    ) -> Result<Option<Self>> {
+        Self::open_inner(root, scope, guard, create, Area::Pending)
     }
 
     fn open_inner(
@@ -68,15 +113,16 @@ impl<'a> NativeEvidenceStore<'a> {
         scope: &'a QualifiedScope,
         guard: &'a ScopeWriterGuard<'a>,
         create: bool,
+        area: Area,
     ) -> Result<Option<Self>> {
         guard.require_scope(scope)?;
         crate::compile::skill_package::scope_identity(root)?;
         ensure!(
-            root.scope == OwnershipScope::User
+            (area == Area::Pending || root.scope == OwnershipScope::User)
                 && root.path.as_os_str() == scope.binding()?.selected.as_os_str(),
             "private evidence requires its exact qualified user root"
         );
-        require_untracked(root, &scope.binding()?.resolved)?;
+        require_untracked(root, &scope.binding()?.resolved, area)?;
         let base = scope.reopen_directory()?;
         qualify_directory(&base, &base, false)?;
         if create {
@@ -87,8 +133,8 @@ impl<'a> NativeEvidenceStore<'a> {
             None => return Ok(None),
         };
         qualify_directory(&base, &parent, false)?;
-        let created = create && make_directory(&parent, DIRECTORY)?;
-        let Some(directory) = optional_directory(&parent, DIRECTORY)? else {
+        let created = create && make_directory(&parent, area.directory())?;
+        let Some(directory) = optional_directory(&parent, area.directory())? else {
             return Ok(None);
         };
         if created {
@@ -102,13 +148,14 @@ impl<'a> NativeEvidenceStore<'a> {
                 root: scope.binding()?,
                 directory: backend::identity(&directory)?,
                 nonce: backend::nonce()?,
+                purpose: area.purpose(),
             };
             let bytes = serde_json::to_vec(&owner)?;
-            create_file(scope, root, "owner.json", &bytes, owner.directory)?;
-            create_file(scope, root, ".gitignore", IGNORE, owner.directory)?;
+            create_file(scope, root, area, "owner.json", &bytes, owner.directory)?;
+            create_file(scope, root, area, ".gitignore", IGNORE, owner.directory)?;
             (owner, bytes)
         } else {
-            let bytes = read_file(scope, root, "owner.json")?
+            let bytes = read_file(scope, root, area, "owner.json")?
                 .context("unowned private evidence directory requires reconciliation")?
                 .bytes;
             let value = crate::parse::json::parse_unique(std::str::from_utf8(&bytes)?)?;
@@ -116,6 +163,7 @@ impl<'a> NativeEvidenceStore<'a> {
         };
         ensure!(
             owner.schema == 1
+                && owner.purpose == area.purpose()
                 && owner.root == scope.binding()?
                 && owner.directory == backend::identity(&directory)?
                 && owner.nonce.len() == 32
@@ -126,7 +174,7 @@ impl<'a> NativeEvidenceStore<'a> {
             "private evidence ownership binding differs"
         );
         let mut hash = Sha256::new();
-        hash.update(b"upskill:native-evidence-namespace:v1\0");
+        hash.update(area.domain());
         hash.update((owner_bytes.len() as u64).to_be_bytes());
         hash.update(&owner_bytes);
         let namespace = hash.finalize().iter().map(|b| format!("{b:02x}")).collect();
@@ -139,6 +187,7 @@ impl<'a> NativeEvidenceStore<'a> {
             owner,
             owner_bytes,
             namespace,
+            area,
         };
         store.verify()?;
         Ok(Some(store))
@@ -152,11 +201,15 @@ impl<'a> NativeEvidenceStore<'a> {
     /// Publish and sync an immutable blob. Equal existing content is verified
     /// and synced; drift is preserved and rejects rather than being overwritten.
     pub fn put(&self, blob: &EvidenceBlob) -> Result<()> {
+        ensure!(
+            self.area == Area::Evidence,
+            "marker storage cannot publish native evidence"
+        );
         validate_blob(blob)?;
         self.verify()?;
         let name = name(&blob.reference);
-        let location = location(&self.root, &name);
-        let before = read_file(self.scope, &self.root, &name)?;
+        let location = location(&self.root, self.area, &name);
+        let before = read_file(self.scope, &self.root, self.area, &name)?;
         let after = FileValue {
             bytes: blob.bytes.clone(),
             mode: Some(0o600),
@@ -187,9 +240,13 @@ impl<'a> NativeEvidenceStore<'a> {
     /// Read one exact typed reference, rejecting unsafe metadata or corruption.
     /// Malformed digests reject before filesystem path selection.
     pub fn read(&self, reference: &EvidenceReference) -> Result<Option<EvidenceBlob>> {
+        ensure!(
+            self.area == Area::Evidence,
+            "marker storage cannot read native evidence"
+        );
         validate_reference(reference)?;
         self.verify()?;
-        let value = read_file(self.scope, &self.root, &name(reference))?;
+        let value = read_file(self.scope, &self.root, self.area, &name(reference))?;
         self.verify()?;
         let Some(value) = value else {
             return Ok(None);
@@ -238,7 +295,80 @@ impl<'a> NativeEvidenceStore<'a> {
         Ok(state)
     }
 
+    pub(crate) fn new_operation_id(&self) -> Result<String> {
+        self.verify()?;
+        backend::nonce()
+    }
+
+    pub(crate) fn read_record(&self, name: &str) -> Result<Option<Vec<u8>>> {
+        self.validate_record_name(name)?;
+        self.verify()?;
+        let bytes = read_file(self.scope, &self.root, self.area, name)?.map(|value| value.bytes);
+        self.verify()?;
+        Ok(bytes)
+    }
+
+    pub(crate) fn write_record(
+        &self,
+        name: &str,
+        before: Option<&[u8]>,
+        after: Option<&[u8]>,
+    ) -> Result<()> {
+        self.validate_record_name(name)?;
+        self.verify()?;
+        ensure!(
+            self.read_record(name)?.as_deref() == before,
+            "native operation record changed"
+        );
+        let value = |bytes: &[u8]| FileValue {
+            bytes: bytes.to_vec(),
+            mode: Some(0o600),
+        };
+        let action = PlannedFile {
+            location: location(&self.root, self.area, name),
+            before: before.map(value),
+            after: after.map(value),
+        };
+        if before.is_none() && after.is_some() {
+            backend::apply_create_only_bound(self.scope, &action, 0, self.owner.directory)?;
+        } else {
+            backend::apply_bound(self.scope, &action, 0, self.owner.directory)?;
+        }
+        backend::sync_post(self.scope, &action.location, &action.after)?;
+        self.verify()?;
+        ensure!(
+            self.read_record(name)?.as_deref() == after,
+            "native operation record publication changed"
+        );
+        Ok(())
+    }
+
+    fn validate_record_name(&self, name: &str) -> Result<()> {
+        let valid = if self.area == Area::Pending {
+            name == "pending.json"
+        } else {
+            [("intent-", ".yaml"), ("journal-", ".json")]
+                .iter()
+                .any(|(prefix, suffix)| {
+                    name.strip_prefix(prefix)
+                        .and_then(|value| value.strip_suffix(suffix))
+                        .is_some_and(|id| {
+                            id.len() == 32
+                                && id
+                                    .bytes()
+                                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                        })
+                })
+        };
+        ensure!(valid, "invalid native operation record name");
+        Ok(())
+    }
+
     fn require_context(&self, expected: &NativeStateContext) -> Result<()> {
+        ensure!(
+            self.area == Area::Evidence,
+            "marker storage cannot load installation state"
+        );
         ensure!(
             expected.private_root == self.root && expected.namespace == self.namespace,
             "native state context does not match the qualified private store"
@@ -258,9 +388,9 @@ impl<'a> NativeEvidenceStore<'a> {
         self.mount
             .require_same(&Mount::of(&self.directory, Mount::queries())?)?;
         let parent = backend::directory(&base, ".upskill")?;
-        let directory = backend::directory(&parent, DIRECTORY)?;
+        let directory = backend::directory(&parent, self.area.directory())?;
         backend::spelling(&base, ".upskill")?;
-        backend::spelling(&parent, DIRECTORY)?;
+        backend::spelling(&parent, self.area.directory())?;
         qualify_directory(&base, &base, false)?;
         qualify_directory(&base, &parent, false)?;
         qualify_directory(&base, &directory, true)?;
@@ -270,15 +400,16 @@ impl<'a> NativeEvidenceStore<'a> {
             "private evidence directory binding changed"
         );
         ensure!(
-            read_file(self.scope, &self.root, "owner.json")?
+            read_file(self.scope, &self.root, self.area, "owner.json")?
                 .is_some_and(|v| v.bytes == self.owner_bytes),
             "private evidence owner changed"
         );
         ensure!(
-            read_file(self.scope, &self.root, ".gitignore")?.is_some_and(|v| v.bytes == IGNORE),
+            read_file(self.scope, &self.root, self.area, ".gitignore")?
+                .is_some_and(|v| v.bytes == IGNORE),
             "private evidence ignore file changed"
         );
-        require_untracked(&self.root, &self.owner.root.resolved)?;
+        require_untracked(&self.root, &self.owner.root.resolved, self.area)?;
         self.guard.verify_binding()
     }
 }
@@ -290,18 +421,19 @@ fn name(reference: &EvidenceReference) -> String {
     };
     format!("{kind}-{}", reference.digest)
 }
-fn location(root: &InstallationRoot, name: &str) -> FileLocation {
+fn location(root: &InstallationRoot, area: Area, name: &str) -> FileLocation {
     FileLocation {
         root: root.clone(),
-        path: format!("{PREFIX}/{name}"),
+        path: format!("{}/{name}", area.prefix()),
     }
 }
 fn read_file(
     scope: &QualifiedScope,
     root: &InstallationRoot,
+    area: Area,
     name: &str,
 ) -> Result<Option<FileValue>> {
-    let location = location(root, name);
+    let location = location(root, area, name);
     backend::qualify_metadata(scope, &location)?;
     let snapshot = scope.observe_destinations(&[location])?;
     let value = snapshot.observations()[0].value.clone();
@@ -315,6 +447,7 @@ fn read_file(
 fn create_file(
     scope: &QualifiedScope,
     root: &InstallationRoot,
+    area: Area,
     name: &str,
     bytes: &[u8],
     parent_identity: (u64, u64),
@@ -322,7 +455,7 @@ fn create_file(
     backend::apply_create_only_bound(
         scope,
         &PlannedFile {
-            location: location(root, name),
+            location: location(root, area, name),
             before: None,
             after: Some(FileValue {
                 bytes: bytes.to_vec(),
@@ -369,7 +502,11 @@ fn qualify_directory(root: &File, directory: &File, private: bool) -> Result<()>
     );
     Ok(())
 }
-fn require_untracked(root: &InstallationRoot, resolved: &std::path::Path) -> Result<()> {
+fn require_untracked(
+    root: &InstallationRoot,
+    resolved: &std::path::Path,
+    area: Area,
+) -> Result<()> {
     // A user root may itself belong to a dotfiles repository. The private ignore
     // file prevents normal staging; reject force-tracked evidence as well.
     let mut repository = false;
@@ -393,7 +530,7 @@ fn require_untracked(root: &InstallationRoot, resolved: &std::path::Path) -> Res
         "ls-files",
         "-z",
         "--",
-        PREFIX,
+        area.prefix(),
     ]);
     for (key, _) in
         std::env::vars_os().filter(|(key, _)| key.as_encoded_bytes().starts_with(b"GIT_"))
@@ -414,6 +551,64 @@ fn require_untracked(root: &InstallationRoot, resolved: &std::path::Path) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn marker_storage_binds_purpose_rejects_evidence_and_applies_exact_record_preconditions() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = InstallationRoot {
+            scope: OwnershipScope::Project,
+            path: tmp.path().into(),
+        };
+        let scope = QualifiedScope::open(&root).unwrap();
+        let guard = scope.try_lock_writer().unwrap();
+        let marker = NativeEvidenceStore::open_marker(&root, &scope, &guard, true)
+            .unwrap()
+            .unwrap();
+        let blob = super::process_tests::blob();
+        assert!(marker.put(&blob).is_err());
+        assert!(marker.read(&blob.reference).is_err());
+        assert!(marker.read_record("../native-evidence/owner.json").is_err());
+        marker
+            .write_record("pending.json", None, Some(b"first"))
+            .unwrap();
+        assert!(
+            marker
+                .write_record("pending.json", Some(b"wrong"), Some(b"changed"))
+                .is_err()
+        );
+        assert_eq!(
+            marker.read_record("pending.json").unwrap(),
+            Some(b"first".to_vec())
+        );
+        marker
+            .write_record("pending.json", Some(b"first"), Some(b"second"))
+            .unwrap();
+        assert_eq!(
+            marker.read_record("pending.json").unwrap(),
+            Some(b"second".to_vec())
+        );
+        marker
+            .write_record("pending.json", Some(b"second"), None)
+            .unwrap();
+        assert_eq!(marker.read_record("pending.json").unwrap(), None);
+        let user = InstallationRoot {
+            scope: OwnershipScope::User,
+            path: root.path.clone(),
+        };
+        let evidence = NativeEvidenceStore::initialize(&user, &scope, &guard).unwrap();
+        std::fs::rename(
+            tmp.path().join(".upskill/native-pending"),
+            tmp.path().join("retained-marker"),
+        )
+        .unwrap();
+        std::fs::rename(
+            tmp.path().join(".upskill/native-evidence"),
+            tmp.path().join(".upskill/native-pending"),
+        )
+        .unwrap();
+        assert!(NativeEvidenceStore::open_marker(&root, &scope, &guard, false).is_err());
+        assert!(evidence.read(&blob.reference).is_err());
+    }
+
     #[test]
     fn store_rejects_changed_mount_binding_before_read_or_publication() {
         let tmp = tempfile::tempdir().unwrap();
@@ -446,7 +641,7 @@ mod tests {
         let store = NativeEvidenceStore::initialize(&root, &scope, &guard).unwrap();
         let wrong = backend::identity(&scope.reopen_directory().unwrap()).unwrap();
         let action = PlannedFile {
-            location: location(&root, "payload"),
+            location: location(&root, Area::Evidence, "payload"),
             before: None,
             after: Some(FileValue {
                 bytes: b"private".to_vec(),

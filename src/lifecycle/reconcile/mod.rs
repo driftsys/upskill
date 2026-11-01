@@ -6,7 +6,8 @@ use crate::files::plan::validate_binding;
 use anyhow::{Context, Result, ensure};
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GraphChanges {
     pub installations: Vec<Installation>,
     pub bundles: Vec<BundleNode>,
@@ -14,7 +15,8 @@ pub struct GraphChanges {
     pub remove_references: Vec<Reference>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ReconciledGraph {
     pub installations: Vec<Installation>,
     pub bundles: Vec<BundleNode>,

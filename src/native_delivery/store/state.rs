@@ -131,13 +131,17 @@ impl<'locks, 'scope: 'locks> NativeStateStore<'locks, 'scope> {
         })
     }
 
+    pub(crate) fn evidence(&self) -> &NativeEvidenceStore<'locks> {
+        &self.evidence
+    }
+
     fn location(&self) -> FileLocation {
         FileLocation {
             root: self.context.scope.clone(),
             path: ".upskill-lock.json".into(),
         }
     }
-    fn snapshot(&self) -> Result<DestinationSnapshot<'_>> {
+    pub(crate) fn snapshot(&self) -> Result<DestinationSnapshot<'_>> {
         let (scope, _) = self.roots.scope_and_guard(&self.context.scope)?;
         scope.observe_destinations(&[self.location()])
     }

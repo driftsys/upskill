@@ -1579,6 +1579,23 @@ fn multi_root_state_store_loads_only_authoritative_lockfile_and_prepares_without
     let noop = store.prepare_state_file(&state).unwrap();
     assert_eq!(noop.before, noop.after);
     assert_eq!(noop.after.unwrap().mode, Some(0o640));
+    let mut changed = state.clone();
+    changed.skills.receipts[0].operation_id = "changed-observation".into();
+    changed.skills.receipts[0].captured_prestate = b"changed-private-prestate".to_vec();
+    let changed_action = store.prepare_state_file(&changed).unwrap();
+    assert_eq!(changed_action.before.as_ref().unwrap().bytes, *json);
+    assert_eq!(changed_action.before.as_ref().unwrap().mode, Some(0o640));
+    assert_ne!(changed_action.after.as_ref().unwrap().bytes, *json);
+    let desired: serde_json::Value =
+        serde_json::from_slice(&changed_action.after.as_ref().unwrap().bytes).unwrap();
+    assert_eq!(
+        desired["receipts"][0]["operation_id"],
+        "changed-observation"
+    );
+    assert_eq!(
+        fs::read(project.path().join(".upskill-lock.json")).unwrap(),
+        *json
+    );
     drop(store);
     let reopened = NativeStateStore::open(&locks, &primary, &private)
         .unwrap()
@@ -1660,4 +1677,164 @@ fn multi_root_state_store_rejects_legacy_state_wrong_context_and_unlocked_roots(
     fs::create_dir(&primary.path).unwrap();
     assert!(store.load().is_err());
     assert!(store.prepare_state_file(&state).is_err());
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn durable_native_intent_preserves_real_captures_and_rejects_drift_before_publication() {
+    use upskill::filesystem::QualifiedScope;
+    use upskill::native_config::{
+        CapturedConfig, ConfigContribution, ConfigFormat, ConfigLayer, ConfigSelector,
+    };
+    use upskill::native_delivery::journal::{
+        NativeConfigurationCapture, NativeOperationCapture, NativeOperationStore,
+    };
+    use upskill::native_delivery::roots::{NativeRoot, lock_native_roots};
+    let project = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let primary = InstallationRoot {
+        scope: OwnershipScope::Project,
+        path: project.path().into(),
+    };
+    let private = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let ps = QualifiedScope::open(&primary).unwrap();
+    let hs = QualifiedScope::open(&private).unwrap();
+    let locks = lock_native_roots(&[
+        NativeRoot {
+            root: primary.clone(),
+            scope: &ps,
+        },
+        NativeRoot {
+            root: private.clone(),
+            scope: &hs,
+        },
+    ])
+    .unwrap();
+    let store = NativeOperationStore::initialize(&locks, &primary, &private).unwrap();
+    let mut revision = revision_with_frontmatter(
+        TargetSurface::ClaudeCli,
+        "Body with é.\r\n",
+        Some("alternate"),
+        "metadata:\n  nested:\n    1: value\n",
+    );
+    revision.installation.root = primary.clone();
+    revision.package = compile_skill_package(&SkillPackageRequest {
+        selected: &revision.selected,
+        surface: revision.selected.surface,
+        scope: &primary,
+        owner: &revision.installation.owner,
+    })
+    .unwrap();
+    let file_observations = revision
+        .package
+        .revision_files
+        .iter()
+        .chain(revision.package.catalog_file.iter())
+        .map(|file| ObservedFile {
+            location: FileLocation {
+                root: primary.clone(),
+                path: file.path.clone(),
+            },
+            value: None,
+        })
+        .collect();
+    let mut native = observation(
+        TargetSurface::ClaudeCli,
+        None,
+        NativeResourceRetention::Unknown,
+    );
+    native.scope = primary.clone();
+    native.captured_prestate = b"PRIVATE_NATIVE_OPERATION".to_vec();
+    fs::create_dir(home.path().join(".claude")).unwrap();
+    let config_path = home.path().join(".claude/settings.json");
+    let config_bytes = b"{\"manual\":\"PRIVATE_OPERATION_CONFIG\"}";
+    fs::write(&config_path, config_bytes).unwrap();
+    fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600)).unwrap();
+    let config = NativeConfigurationCapture {
+        before: CapturedConfig {
+            surface: TargetSurface::ClaudeCli,
+            scope: private.clone(),
+            target: ConfigLayer {
+                format: ConfigFormat::Jsonc,
+                file: ObservedFile {
+                    location: FileLocation {
+                        root: private.clone(),
+                        path: ".claude/settings.json".into(),
+                    },
+                    value: Some(FileValue {
+                        bytes: config_bytes.to_vec(),
+                        mode: Some(0o600),
+                    }),
+                },
+                tracked: false,
+                ignored: false,
+            },
+            lower_layers: vec![],
+            higher_layers: vec![],
+            ownership: None,
+        },
+        contribution: ConfigContribution {
+            id: "config-demo".into(),
+            selector: ConfigSelector::Key(vec!["managed".into()]),
+            expected: None,
+            desired: Some(serde_json::json!(true)),
+        },
+        owners_after: vec![ConfigOwner {
+            entry_id: "config-demo".into(),
+            target: key(TargetSurface::ClaudeCli),
+        }],
+    };
+    let capture = NativeOperationCapture {
+        graph_changes: GraphChanges {
+            installations: vec![revision.installation.clone()],
+            add_references: vec![Reference::DirectInstallation {
+                installation_id: "demo-install".into(),
+            }],
+            ..Default::default()
+        },
+        intents: vec![intent(TargetSurface::ClaudeCli)],
+        candidates: vec![revision.clone()],
+        native_observations: vec![native],
+        file_observations,
+        configurations: vec![config],
+    };
+    let manual_path = project
+        .path()
+        .join(&revision.package.revision_files[0].path);
+    fs::create_dir_all(manual_path.parent().unwrap()).unwrap();
+    fs::write(&manual_path, b"manual").unwrap();
+    assert!(store.prepare(&capture).is_err());
+    assert_eq!(fs::read(&manual_path).unwrap(), b"manual");
+    assert!(
+        !fs::read_dir(home.path().join(".upskill/native-evidence"))
+            .unwrap()
+            .any(|entry| entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with("intent-"))
+    );
+    fs::remove_file(&manual_path).unwrap();
+    let operation = store.prepare(&capture).unwrap();
+    let inspection = store.inspect(operation.id()).unwrap();
+    assert_eq!(inspection.intent.capture, capture);
+    assert_eq!(inspection.intent.plan.native_changes.len(), 1);
+    assert!(!inspection.intent.plan.stage_files.is_empty());
+    assert_eq!(inspection.intent.configuration_patches.len(), 1);
+    for action in inspection
+        .intent
+        .plan
+        .stage_files
+        .iter()
+        .chain(&inspection.intent.plan.selector_files)
+    {
+        assert!(!primary.path.join(&action.location.path).exists());
+    }
+    assert_eq!(fs::read(config_path).unwrap(), config_bytes);
+    assert!(!project.path().join(".upskill-lock.json").exists());
+    let marker = fs::read(project.path().join(".upskill/native-pending/pending.json")).unwrap();
+    assert!(!String::from_utf8(marker).unwrap().contains("PRIVATE_"));
 }

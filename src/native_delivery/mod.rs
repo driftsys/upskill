@@ -19,3 +19,6 @@ pub mod state;
 pub mod roots;
 
 pub mod store;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod journal;
