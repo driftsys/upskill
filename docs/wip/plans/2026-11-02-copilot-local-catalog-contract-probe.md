@@ -1,10 +1,10 @@
 # Copilot local catalog contract probe
 
-Status: input prepared offline, 2026-11-02. The prepared packet remains unused.
-Separate read-only version and inventory diagnostics are recorded below. The
-bounded non-secret collector is implemented locally; broader verification and
-review remain open. Execution requires explicit approval for the concrete run.
-This is a contract probe, not activation qualification or production admission.
+Status: collector implemented, reviewed and locally verified, 2026-11-02. The
+prepared packet remains unused. Separate read-only version and inventory
+diagnostics are recorded below. Execution requires explicit approval for the
+concrete run. This is a contract probe, not activation qualification or
+production admission.
 
 The
 [approved design](../specs/2026-10-31-four-client-skills-resources-design.md)
@@ -203,7 +203,7 @@ execution envelope below; it does not authorize a native mutation run.
       exclusion of new native configuration. Private publication fault tests
       must retain partial evidence and reject reopening. This initial store
       publishes no command Pending or effect receipt and runs no native client.
-- [ ] Exercise chronological pending/completed receipts and fail-stop execution
+- [x] Exercise chronological pending/completed receipts and fail-stop execution
       through the existing bounded runner with fake executables. Test unknown
       schemas, changed bindings, stderr, nonzero exit, timeout, cancellation and
       incomplete output. Prove no subsequent command or cleanup runs after
@@ -250,7 +250,10 @@ The approved nine fixture snapshots remain the only stored file contents.
 client code, including exact argv, qualified CWD, closed environment, digest
 chronology, timeout/cancellation, conflicting inventory, input/code/storage/root
 drift and native configuration secret canaries. These local controls do not
-establish the real client's behavior or authorize its execution.
+establish the real client's behavior or authorize its execution. Collector and
+review fixes at `5e2d9c2` passed full `just verify`, all-target Clippy and Rust
+1.85 checks. The retained packet separately passed the executable's read-only
+check without creating evidence, Git state or Copilot configuration.
 
 ## Collector required before approval
 
@@ -302,4 +305,4 @@ native-created-file presence/mode residue. No result qualifies project scope,
 manual authenticated configuration, cross-client isolation, skill/resource
 activation, refresh, live/resumable retention, native-worker quiescence or the
 complete adapter. Claude's retained preservation failure and every production
-admission gate remain unchanged. No execution approval has been requested yet.
+admission gate remain unchanged. Execution approval remains pending.
