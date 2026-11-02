@@ -349,13 +349,14 @@ A fresh private diagnostic root is prepared at
 `/private/tmp/upskill-copilot-source-check-3dtx0p4k/`. Its `source-check.rs` and
 executable reuse the bounded runner and strict observed plugin-inventory
 validator. Self-tests cover the five lexical categories, unknown fields, decoded
-duplicate rejection and secret canaries. Four fake-client cases cover exact
-argv, version mismatch, stderr, malformed inventory and credential environment
-exclusion. No real native command has run from this root. `ready.json` binds
-source, executable, runner and reviewed code-metadata digests. The
-`execute.py --check` entrypoint passed without invoking a native executable. Its
-explicit `--execute` mode exclusively creates a consumed-run marker before the
-two queries; it is not authorized by preparing or checking the root.
+duplicate rejection and secret canaries. Five fake-client cases cover exact
+argv, version mismatch, stderr, malformed inventory, credential environment
+exclusion and cancellation after a positive readiness control. No real native
+command has run from this root. `ready.json` binds source, executable, runner
+and reviewed code-metadata digests. The `execute.py --check` entrypoint passed
+without invoking a native executable. Its explicit `--execute` mode exclusively
+creates a consumed-run marker before the two queries; it is not authorized by
+preparing or checking the root.
 
 The proposed envelope contains only two commands, once and in order:
 `["--no-auto-update", "--version"]`, then
