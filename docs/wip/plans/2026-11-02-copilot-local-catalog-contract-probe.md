@@ -156,10 +156,29 @@ execution envelope below; it does not authorize a native mutation run.
       nor compares fixture selectors; it cannot prove ownership, source binding,
       absence or effective scope.
 - [ ] Add the bounded collector's input validation and once-only evidence
-      orchestration. Before any native call, bind plan/preparation digests,
-      exact fixed argv, known fixture bytes/modes, root identities and
-      executable dependencies. Test changed bytes, symlinks, modes, roots and
-      existing evidence against fake executables; none may invoke a client.
+      orchestration. The read-only preflight lives in
+      `src/native_delivery/copilot/probe/preflight.rs`, with separate contract
+      validation and descriptor-relative file helpers. Its public
+      `CopilotProbePreflight::capture(&CopilotProbeRequest)` accepts the packet
+      root and separately reviewed plan/preparation SHA-256 values;
+      `verify_unchanged()` rechecks retained files, directories and code assets.
+      `tests/native_copilot_preflight.rs` uses the real offline fixture
+      generator and positively controlled fake executable assets. Cover rehashed
+      plan drift, unknown manifest paths, links, hard links, unsafe modes,
+      existing evidence/native state and later root/file/code replacement.
+      Preflight performs no commands or writes and is not once-only execution
+      evidence. Rebuild expected packages from fixed non-secret source with the
+      existing compiler: native names and payload hashes include the scope root.
+      Do not substitute another root's literal hashes. Read only fixed fixture
+      paths; bound plan reads to 16 KiB and preparation reads to 64 KiB. Require
+      private directories, ordinary single-link `0600` fixture files and pinned
+      code identities. Preservation rechecks sample known inputs and bindings
+      while ignoring new native configuration content; they do not freeze
+      namespaces or qualify ACLs or effective native roots. Before any native
+      call, bind plan/preparation digests, exact fixed argv, known fixture
+      bytes/modes, root identities and executable dependencies. Test changed
+      bytes, symlinks, modes, roots and existing evidence against fake
+      executables; none may invoke a client.
 - [ ] Exercise chronological pending/completed receipts and fail-stop execution
       through the existing bounded runner with fake executables. Test unknown
       schemas, changed bindings, stderr, nonzero exit, timeout, cancellation and

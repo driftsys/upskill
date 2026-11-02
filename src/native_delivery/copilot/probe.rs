@@ -73,3 +73,8 @@ pub fn summarize_inventory(
         entries: rows.len(),
     })
 }
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod preflight;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub use preflight::{CopilotPreflightError, CopilotProbePreflight, CopilotProbeRequest};
