@@ -140,8 +140,12 @@ impl Fixture {
         let path = self.root.join("plan.json");
         let mut value: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         edit(&mut value);
-        private(&path, &serde_json::to_vec_pretty(&value).unwrap(), 0o600);
-        self.request.plan_sha256 = digest(&fs::read(path).unwrap());
+        self.save_plan(&serde_json::to_vec_pretty(&value).unwrap());
+    }
+    fn save_plan(&mut self, bytes: &[u8]) {
+        let path = self.root.join("plan.json");
+        private(&path, bytes, 0o600);
+        self.request.plan_sha256 = digest(bytes);
         let new_hash = self.request.plan_sha256.clone();
         let new_bytes = fs::metadata(self.root.join("plan.json")).unwrap().len();
         self.edit_preparation(|receipt| {
@@ -418,12 +422,141 @@ fn preflight_binds_each_command_in_the_full_sequence() {
         (4, 3, "wrong@selector"),
         (7, 3, "wrong@selector"),
         (8, 4, "wrong-marketplace"),
+        (1, 2, "update"),
+        (2, 3, "add"),
+        (5, 2, "update"),
+        (6, 3, "add"),
+        (9, 2, "update"),
+        (10, 3, "add"),
     ] {
         let mut fixture = Fixture::new();
         fixture.edit_plan(|plan| {
             plan["commands"][index][argument] = json!(replacement);
         });
         assert!(fixture.capture().is_err(), "accepted command {index}");
+        fixture.no_calls();
+    }
+}
+
+fn asset_paths(fixture: &Fixture) -> [PathBuf; 3] {
+    [
+        fixture.parent.join("assets/npm-loader.js"),
+        fixture.parent.join("assets/node"),
+        fixture.parent.join("assets/platform/copilot"),
+    ]
+}
+
+#[test]
+fn preflight_binds_actual_modes_and_content_of_every_asset() {
+    for asset in 0..3 {
+        for mode in [0o600, 0o755] {
+            let fixture = Fixture::new();
+            fs::set_permissions(
+                &asset_paths(&fixture)[asset],
+                fs::Permissions::from_mode(mode),
+            )
+            .unwrap();
+            assert!(
+                fixture.capture().is_err(),
+                "accepted asset {asset} mode {mode:o}"
+            );
+            fixture.no_calls();
+        }
+        let fixture = Fixture::new();
+        private(&asset_paths(&fixture)[asset], b"changed code", 0o700);
+        assert!(fixture.capture().is_err(), "accepted changed asset {asset}");
+        fixture.no_calls();
+    }
+}
+
+#[test]
+fn preservation_recheck_rejects_identical_replacements_of_every_asset_and_fixture() {
+    for asset in 0..3 {
+        for replace in [false, true] {
+            let fixture = Fixture::new();
+            let preflight = fixture.capture().unwrap();
+            let path = asset_paths(&fixture)[asset].clone();
+            if replace {
+                let retained = fixture.parent.join("retained-code");
+                fs::rename(&path, &retained).unwrap();
+                fs::copy(&retained, &path).unwrap();
+                assert_eq!(fs::read(&path).unwrap(), fs::read(&retained).unwrap());
+            } else {
+                private(&path, b"changed code", 0o700);
+            }
+            assert!(
+                preflight.verify_unchanged().is_err(),
+                "accepted asset {asset} replace {replace}"
+            );
+            fixture.no_calls();
+        }
+    }
+    let fixture = Fixture::new();
+    let preflight = fixture.capture().unwrap();
+    let path = fixture.root.join("source/resources/probe.txt");
+    let retained = fixture.parent.join("retained-fixture");
+    fs::rename(&path, &retained).unwrap();
+    fs::copy(&retained, &path).unwrap();
+    assert_eq!(fs::read(&path).unwrap(), fs::read(&retained).unwrap());
+    assert!(preflight.verify_unchanged().is_err());
+    fixture.no_calls();
+}
+
+#[test]
+fn preflight_enforces_plan_and_preparation_read_boundaries() {
+    for (kind, limit) in [("plan", 16384), ("preparation", 65536)] {
+        for extra in [0, 1] {
+            let mut fixture = Fixture::new();
+            let path = if kind == "plan" {
+                fixture.root.join("plan.json")
+            } else {
+                fixture.parent.join("preparation.json")
+            };
+            let mut bytes = fs::read(&path).unwrap();
+            assert!(bytes.len() < limit);
+            bytes.resize(limit + extra, b' ');
+            if kind == "plan" {
+                fixture.save_plan(&bytes);
+            } else {
+                private(&path, &bytes, 0o600);
+                fixture.request.preparation_sha256 = digest(&bytes);
+            }
+            let result = fixture.capture();
+            assert_eq!(
+                result.is_ok(),
+                extra == 0,
+                "{kind} boundary extra {extra}: {result:?}"
+            );
+            fixture.no_calls();
+        }
+    }
+}
+
+#[test]
+fn preflight_rejects_each_preparation_policy_mismatch_and_inventory_reordering() {
+    for field in [
+        "status",
+        "machine",
+        "wrapper_package_version",
+        "plan_sha256",
+        "version_mismatch_policy",
+    ] {
+        let mut fixture = Fixture::new();
+        fixture.edit_preparation(|receipt| {
+            receipt[field] = json!("different-reviewed-value");
+        });
+        assert!(fixture.capture().is_err(), "accepted {field}");
+        fixture.no_calls();
+    }
+    for (first, second) in [(1, 2), (5, 6), (9, 10)] {
+        let mut fixture = Fixture::new();
+        fixture.edit_plan(|plan| {
+            plan["commands"].as_array_mut().unwrap().swap(first, second);
+        });
+        assert!(
+            fixture.capture().is_err(),
+            "accepted swapped inventories {first}/{second}"
+        );
         fixture.no_calls();
     }
 }
