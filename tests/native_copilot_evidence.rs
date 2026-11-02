@@ -259,3 +259,35 @@ fn evidence_holds_all_selected_root_guards_until_drop() {
     }
     fixture.no_native_calls();
 }
+
+#[test]
+fn every_published_snapshot_rejects_content_and_identical_replacement_drift() {
+    for index in 0..9 {
+        for replace in [false, true] {
+            let fixture = Fixture::new();
+            let preflight = fixture.capture().unwrap();
+            let mut evidence = preflight.begin_evidence().unwrap();
+            let area = fixture.root.join("evidence");
+            let header: Value =
+                serde_json::from_slice(&fs::read(area.join("header.json")).unwrap()).unwrap();
+            let path = area.join(header["fixtures"][index]["snapshot"].as_str().unwrap());
+            if replace {
+                let retained = fixture.parent.join("retained-snapshot");
+                fs::rename(&path, &retained).unwrap();
+                fs::copy(&retained, &path).unwrap();
+                assert_eq!(fs::read(&path).unwrap(), fs::read(&retained).unwrap());
+            } else {
+                private(&path, b"changed snapshot", 0o600);
+            }
+            assert!(
+                evidence.verify_unchanged().is_err(),
+                "accepted snapshot {index}, replacement {replace}"
+            );
+            assert_eq!(
+                evidence.verify_unchanged(),
+                Err(CopilotEvidenceError::Stopped)
+            );
+            fixture.no_native_calls();
+        }
+    }
+}

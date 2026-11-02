@@ -26,6 +26,7 @@ printf '%s\n' "$HOME" >> "$HOMES"
 /bin/pwd -P >> "$CWDS"
 case "$query" in
   version)
+    if [ -n "$VERSION_DELAY" ]; then /bin/sleep "$VERSION_DELAY"; fi
     printf '%s\n' "$VERSION"
     case "$VERSION_MODE" in
       refuse) printf 'private-version-stderr' >&2; exit 17;;
@@ -281,44 +282,58 @@ fn finite_output_obeys_caller_limits_at_both_query_boundaries() {
 fn cancellation_during_listing_returns_before_the_command_deadline() {
     use std::sync::atomic::Ordering;
     use std::time::{Duration, Instant};
-    with_scope(|root, scope, guard| {
-        let mut spec = fake(root);
-        spec.timeout = Duration::from_secs(20);
-        spec.environment.insert("MODE".into(), "cancel".into());
-        let ready = root.join("listing-ready");
-        spec.environment
-            .insert("READY".into(), ready.clone().into_os_string());
-        let cancellation = AtomicBool::new(false);
-        let started = Instant::now();
-        std::thread::scope(|threads| {
-            let watcher = threads.spawn(|| {
-                let deadline = Instant::now() + Duration::from_secs(5);
-                while !ready.exists() && Instant::now() < deadline {
-                    std::thread::sleep(Duration::from_millis(5));
-                }
-                let observed = ready.exists();
-                cancellation.store(true, Ordering::SeqCst);
-                observed
+    for version_delay in [0, 6] {
+        with_scope(|root, scope, guard| {
+            let mut spec = fake(root);
+            spec.timeout = Duration::from_secs(20);
+            spec.environment.insert("MODE".into(), "cancel".into());
+            if version_delay > 0 {
+                spec.environment
+                    .insert("VERSION_DELAY".into(), version_delay.to_string().into());
+            }
+            let ready = root.join("listing-ready");
+            spec.environment
+                .insert("READY".into(), ready.clone().into_os_string());
+            let cancellation = AtomicBool::new(false);
+            let finished = AtomicBool::new(false);
+            // Allow both bounded commands to reach the positive control. Measure
+            // cancellation latency from that control, independently of startup.
+            let readiness_limit = spec.timeout * 2 + Duration::from_secs(5);
+            std::thread::scope(|threads| {
+                let watcher = threads.spawn(|| {
+                    let deadline = Instant::now() + readiness_limit;
+                    while !ready.exists()
+                        && !finished.load(Ordering::SeqCst)
+                        && Instant::now() < deadline
+                    {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    let cancelled_at = ready.exists().then(Instant::now);
+                    cancellation.store(true, Ordering::SeqCst);
+                    cancelled_at
+                });
+                let result = read_marketplace_inventory(scope, guard, &spec, &cancellation);
+                finished.store(true, Ordering::SeqCst);
+                let cancelled_at = watcher.join().unwrap().unwrap_or_else(|| {
+                    panic!(
+                        "listing never reached its positive control (version delay {version_delay})"
+                    )
+                });
+                assert!(matches!(
+                    result,
+                    Err(ClaudeInventoryReadError::UnresolvedTransport)
+                ));
+                assert!(
+                    cancelled_at.elapsed() < Duration::from_secs(10),
+                    "cancellation waited for the longer command deadline"
+                );
             });
-            let result = read_marketplace_inventory(scope, guard, &spec, &cancellation);
-            assert!(
-                watcher.join().unwrap(),
-                "listing never reached its positive control"
-            );
-            assert!(matches!(
-                result,
-                Err(ClaudeInventoryReadError::UnresolvedTransport)
-            ));
-            assert!(
-                started.elapsed() < Duration::from_secs(10),
-                "cancellation waited for the longer command deadline"
+            assert_eq!(
+                std::fs::read(root.join("calls")).unwrap(),
+                b"--version\nplugin marketplace list --json\n"
             );
         });
-        assert_eq!(
-            std::fs::read(root.join("calls")).unwrap(),
-            b"--version\nplugin marketplace list --json\n"
-        );
-    });
+    }
 }
 
 // Catches persisting captured metadata or diagnostics beside the query. This
