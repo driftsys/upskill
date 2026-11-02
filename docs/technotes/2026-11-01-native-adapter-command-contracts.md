@@ -151,6 +151,28 @@ fake controls verified exact argv, version mismatch, stderr and
 decoded-duplicate stops, closed-environment handling and omission of secret
 canaries. These observations leave the production admission registry unchanged.
 
+### Static protocol schema export on 2026-11-02
+
+A separate bounded metadata check on the same 0.166.0 executable ran exact
+version and schema-help queries, then
+`app-server generate-json-schema --out <private-project>/schema --experimental`.
+All three commands exited zero with complete transport, zero stderr and
+unchanged captured code. The help confirmed the export options before
+generation. No server session, plugin registration or model request ran. Source,
+fake-client controls, sanitized receipt and the static artifact manifest are
+retained under `/private/tmp/upskill-codex-schema-aacmja_7/`.
+
+The version-specific export described by the
+[App Server documentation](https://learn.chatgpt.com/docs/app-server), fetched
+on 2026-11-02, produced a `PluginListResponse` requiring `marketplaces`, with
+optional `featuredPluginIds` and `marketplaceLoadErrors`. Its nested
+`PluginSummary` is an App Server type. The observed CLI response instead has
+`installed` and `available` arrays, also documented by the
+[CLI reference](https://learn.chatgpt.com/docs/cli/reference). These are
+separate wire contracts. The export does not establish the CLI's nonempty entry
+format or authorize replacing the approved CLI delivery route with App Server
+RPC.
+
 ## OpenCode: file exposure needs an independently qualified observer
 
 The captured
