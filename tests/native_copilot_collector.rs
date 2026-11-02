@@ -61,6 +61,7 @@ printf '%s' "$((n+1))" > "$control/count"
 printf '%s\n' "$HOME" "$COPILOT_HOME" "$COPILOT_CACHE_HOME" "$GIT_CONFIG_GLOBAL" "$GIT_CONFIG_SYSTEM" > "$control/env-$n"
 if [ -n "$GITHUB_TOKEN$GH_TOKEN$NODE_OPTIONS$COPILOT_MODEL$GIT_CONFIG_PARAMETERS" ]; then printf 'inherited environment' >&2; exit 94; fi
 mode=$(/bin/cat "$control/mode")
+if [ "$mode" = closed-env ]; then /usr/bin/env > "$control/all-env-$n"; fi
 if [ "$n" -eq 0 ]; then
   if [ "$mode" = version ]; then printf 'unsupported'; else /bin/cat "$control/version"; fi
   exit 0
@@ -127,6 +128,10 @@ fn collector_orders_all_commands_after_durable_pending_and_preserves_exact_argv(
     assert!(fixture.root.join("project/.git").is_dir());
     let plan = json_file(fixture.root.join("plan.json"));
     let area = fixture.root.join("evidence");
+    let header = json_file(area.join("header.json"));
+    assert_eq!(header["maximum_native_commands"], 12);
+    assert_eq!(header["maximum_client_commands"], 11);
+    assert_eq!(header["maximum_setup_commands"], 1);
     let mut previous = digest(&fs::read(area.join("header.json")).unwrap());
     for sequence in 0..12 {
         let pending_path = area.join(format!("step-{sequence:02}.pending.json"));
@@ -174,6 +179,37 @@ fn collector_orders_all_commands_after_durable_pending_and_preserves_exact_argv(
         assert_eq!(result["accepted"], true);
         assert_eq!(result["qualified"], false);
     }
+    let setup = json_file(area.join("step-00.pending.json"));
+    assert_eq!(
+        setup["arguments"],
+        json!([
+            "-c",
+            "init.defaultBranch=main",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "init.templateDir=",
+            "init",
+            "--quiet",
+            "--template=",
+            "."
+        ])
+    );
+    for (sequence, path) in [
+        (0, std::path::PathBuf::from("/usr/bin/git")),
+        (1, fixture.parent.join("assets/copilot")),
+    ] {
+        use std::os::unix::fs::PermissionsExt;
+        let pending = json_file(area.join(format!("step-{sequence:02}.pending.json")));
+        let bytes = fs::read(&path).unwrap();
+        assert_eq!(
+            pending["executable"],
+            json!({"selected":path,"resolved":path.canonicalize().unwrap(),
+            "sha256":digest(&bytes),"bytes":bytes.len(),"mode":fs::metadata(&path).unwrap().permissions().mode() & 0o7777})
+        );
+    }
+    assert!(!fixture.root.join("project/.git/hooks").exists());
+    assert!(!fixture.root.join("project/.git/info/exclude").exists());
     assert_eq!(fs::read_dir(&area).unwrap().count(), 34);
     evidence.verify_unchanged().unwrap();
     assert!(evidence.collect(&AtomicBool::new(false)).is_err());
@@ -291,7 +327,7 @@ fn cancelled_collection_never_invokes_setup_or_client() {
 fn maintainer_example_check_is_read_only_and_execution_uses_closed_environment() {
     use std::process::{Command, Stdio};
     let program = executable::collector_example();
-    let fixture = prepared("success");
+    let fixture = prepared("closed-env");
     let command = |mode: Option<&str>| {
         let mut command = Command::new(program);
         command
@@ -354,16 +390,84 @@ fn maintainer_example_check_is_read_only_and_execution_uses_closed_environment()
             )
         );
     }
+    use std::collections::BTreeMap;
+    let home = fixture.root.join("home");
+    let mut expected = BTreeMap::new();
+    for (key, suffix) in [
+        ("HOME", ""),
+        ("USERPROFILE", ""),
+        ("COPILOT_HOME", ".copilot"),
+        ("COPILOT_CACHE_HOME", "cache/copilot"),
+        ("XDG_CONFIG_HOME", "config"),
+        ("XDG_CACHE_HOME", "cache"),
+        ("XDG_DATA_HOME", "data"),
+        ("XDG_STATE_HOME", "state"),
+        ("TMPDIR", "tmp"),
+    ] {
+        expected.insert(
+            key.to_owned(),
+            (if suffix.is_empty() {
+                home.clone()
+            } else {
+                home.join(suffix)
+            })
+            .display()
+            .to_string(),
+        );
+    }
+    for (key, value) in [
+        ("LC_ALL", "C"),
+        ("GIT_CONFIG_NOSYSTEM", "1"),
+        ("GIT_CONFIG_GLOBAL", "/dev/null"),
+        ("GIT_CONFIG_SYSTEM", "/dev/null"),
+        ("GIT_ATTR_NOSYSTEM", "1"),
+    ] {
+        expected.insert(key.to_owned(), value.to_owned());
+    }
+    expected.insert(
+        "PATH".into(),
+        format!(
+            "{}:/usr/bin:/bin:/usr/sbin:/sbin",
+            fixture.parent.join("assets").display()
+        ),
+    );
+    for index in 0..11 {
+        // Only this example test dumps the full environment: its parent has
+        // already been cleared and contains deliberately supplied test values.
+        let text =
+            fs::read_to_string(fixture.parent.join(format!("control/all-env-{index}"))).unwrap();
+        let mut actual = BTreeMap::new();
+        for line in text.lines() {
+            let (key, value) = line.split_once('=').unwrap();
+            assert!(actual.insert(key.to_owned(), value.to_owned()).is_none());
+        }
+        assert_eq!(
+            actual.remove("PWD"),
+            Some(fixture.root.join("project").display().to_string())
+        );
+        // /bin/sh can add these variables after exec; they are not runner input.
+        if let Some(value) = actual.remove("SHLVL") {
+            assert_eq!(value, "1");
+        }
+        if let Some(value) = actual.remove("_") {
+            assert_eq!(value, "/usr/bin/env");
+        }
+        assert_eq!(actual, expected, "command {index}");
+    }
     assert_no_secret(&fixture.root.join("evidence"));
 }
 
 #[test]
 fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
-    for (mode, calls) in [
-        ("baseline", 2),
-        ("version", 6),
-        ("duplicate", 6),
-        ("source", 7),
+    for (mode, calls, reason) in [
+        ("baseline", 2, "fixture_conflict"),
+        ("version", 6, "fixture_conflict"),
+        ("duplicate", 6, "fixture_conflict"),
+        ("source", 7, "outside_packet_source"),
+        ("inside-source", 6, "fixture_conflict"),
+        ("enabled", 6, "fixture_conflict"),
+        ("marketplace", 6, "fixture_conflict"),
+        ("name", 6, "fixture_conflict"),
     ] {
         let fixture = prepared("success");
         let control = fixture.parent.join("control");
@@ -383,6 +487,12 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
                     value.as_array_mut().unwrap().push(row);
                 }
                 "source" => value[0]["source"] = json!("/outside-packet"),
+                "inside-source" => {
+                    value[0]["source"] = json!(fixture.root.join("unapproved-source"))
+                }
+                "enabled" => value[0]["enabled"] = json!(false),
+                "marketplace" => value[0]["marketplace"] = json!("wrong-marketplace"),
+                "name" => value[0]["name"] = json!("wrong-plugin"),
                 _ => unreachable!(),
             }
             private(&path, &serde_json::to_vec(&value).unwrap(), 0o600);
@@ -393,9 +503,49 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
             serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
         assert_eq!(summary["complete"], false, "{mode}");
         assert_eq!(summary["client_commands"], calls, "{mode}");
+        assert_eq!(summary["stop"], reason, "{mode}");
+        assert_eq!(
+            json_file(
+                fixture
+                    .root
+                    .join(format!("evidence/step-{calls:02}.result.json"))
+            )["reason"],
+            reason,
+            "{mode}"
+        );
         assert!(!control.join(format!("call-{calls}")).exists());
     }
 }
+
+#[test]
+fn unrelated_sources_with_ambiguous_or_escaping_paths_stop_at_baseline() {
+    for mode in ["relative", "parent", "absolute-parent", "prefix", "remote"] {
+        let fixture = prepared("success");
+        let source = match mode {
+            "relative" => "unknown-origin".to_owned(),
+            "parent" => "../../outside".to_owned(),
+            "absolute-parent" => format!("{}/../outside", fixture.root.display()),
+            "prefix" => format!("{}-outside/source", fixture.root.display()),
+            "remote" => "https://example.invalid/secret-canary".to_owned(),
+            _ => unreachable!(),
+        };
+        let row = json!([{"name":"unrelated","marketplace":"unrelated","version":"0","enabled":true,"source":source}]);
+        private(
+            &fixture.parent.join("control/empty"),
+            &serde_json::to_vec(&row).unwrap(),
+            0o600,
+        );
+        let preflight = fixture.capture().unwrap();
+        let mut evidence = preflight.begin_evidence().unwrap();
+        let summary =
+            serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+        assert_eq!(summary["stop"], "outside_packet_source", "{mode}");
+        assert_eq!(summary["client_commands"], 2, "{mode}");
+        assert!(!fixture.parent.join("control/call-2").exists());
+        assert_no_secret(&fixture.root.join("evidence"));
+    }
+}
+
 #[test]
 fn terminal_record_or_root_drift_leaves_pending_and_never_replays() {
     for mode in ["evidence-drift", "result-collision", "root-drift"] {
@@ -434,5 +584,26 @@ fn native_configuration_content_never_enters_evidence() {
         .unwrap();
     assert_eq!(row["metadata"]["type"], "regular");
     assert_eq!(row["metadata"].as_object().unwrap().len(), 2);
+    let rows = terminal["native_files"].as_array().unwrap();
+    assert_eq!(rows.len(), 4);
+    for path in [
+        "home/.copilot",
+        "home/.copilot/config.json",
+        "home/cache/copilot",
+        "project/.git/config",
+    ] {
+        use std::os::unix::fs::PermissionsExt;
+        let matching = rows
+            .iter()
+            .filter(|row| row["path"] == path)
+            .collect::<Vec<_>>();
+        assert_eq!(matching.len(), 1, "{path}");
+        let meta = fs::symlink_metadata(fixture.root.join(path)).unwrap();
+        assert_eq!(
+            matching[0]["metadata"],
+            json!({"type":if meta.is_dir() {"directory"}else{"regular"},"mode":meta.permissions().mode() & 0o7777})
+        );
+    }
+
     assert_no_secret(&fixture.root.join("evidence"));
 }

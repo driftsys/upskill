@@ -231,7 +231,14 @@ retained without reopening, replay or cleanup. Output stays in bounded memory;
 version must match the complete retained bytes, lists must match the observed
 strict schema and expected fixture claims, and mutation output must be empty.
 Unexpected diagnostics, conflicting claims or outside-packet sources stop the
-sequence. Successful transport and fixture counts remain diagnostic facts.
+sequence. Source strings must be absolute paths under the packet and contain no
+parent-directory components; relative or otherwise ambiguous origins stop before
+mutations. This lexical check does not resolve arbitrary native paths or prove
+filesystem source binding. Plugin identity must match the exact expected name or
+selector as well as its marketplace, version and enabled state. Successful
+transport and fixture counts remain diagnostic facts. The initial evidence
+header records twelve external commands in total: eleven client commands and one
+setup command.
 
 Native file observations cover only `home/.copilot`,
 `home/.copilot/config.json`, `home/cache/copilot` and `project/.git/config`.

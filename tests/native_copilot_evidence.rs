@@ -44,7 +44,9 @@ fn initial_evidence_publishes_only_known_private_snapshots_and_bindings() {
         header["preparation_sha256"],
         fixture.request.preparation_sha256
     );
-    assert_eq!(header["maximum_native_commands"], 11);
+    assert_eq!(header["maximum_native_commands"], 12);
+    assert_eq!(header["maximum_client_commands"], 11);
+    assert_eq!(header["maximum_setup_commands"], 1);
     assert_eq!(header["model_calls"], 0);
     assert_eq!(header["maximum_authorized_spending"], 0);
     assert_eq!(header["qualified"], false);

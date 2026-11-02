@@ -2,7 +2,7 @@
 use crate::native_delivery::copilot::probe::{CopilotInventoryKind, summarize_inventory};
 use crate::native_delivery::process::{NativeGroupState, NativeProcessOutput, NativeStopReason};
 use serde_json::{Value, json};
-use std::path::Path;
+use std::path::{Component, Path};
 
 pub(super) fn transport(output: &NativeProcessOutput) -> bool {
     output.reason == NativeStopReason::Exited
@@ -78,7 +78,13 @@ pub(super) fn inspect(
     for row in rows.as_array().ok_or("inventory")? {
         let source = row["source"].as_str().ok_or("inventory")?;
         let source_path = Path::new(source);
-        if source.contains("://") || (source_path.is_absolute() && !source_path.starts_with(root)) {
+        if source.contains("://")
+            || !source_path.is_absolute()
+            || source_path
+                .components()
+                .any(|part| matches!(part, Component::ParentDir))
+            || !source_path.starts_with(root)
+        {
             return Err("outside_packet_source");
         }
         let named = row["name"] == name
@@ -89,7 +95,8 @@ pub(super) fn inspect(
         }
         matches += 1;
         if kind == CopilotInventoryKind::Plugins
-            && (row["marketplace"] != name
+            && ((row["name"] != name && row["name"] != selector)
+                || row["marketplace"] != name
                 || row["version"] != plan["version"]
                 || row["enabled"] != true)
         {
