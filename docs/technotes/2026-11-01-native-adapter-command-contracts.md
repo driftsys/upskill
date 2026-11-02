@@ -122,6 +122,35 @@ retention or session clearance before refresh/removal, even while all managed
 exports remain present. Preserve D4's exact configuration restoration boundary;
 no notice/trust-table repair follows from permission to manage a plugin.
 
+### Separate read-only inventory structure on 2026-11-02
+
+Two diagnostics used fresh private HOME, CODEX_HOME, XDG and temporary roots
+with qualified project directories. Together they ran five commands: two exact
+version queries, two `plugin list --json` queries and one
+`plugin marketplace list --json` query. All exited zero with complete bounded
+transport, zero stderr and unchanged captured selected code; version bytes
+matched the retained 0.166.0 capture. Each command had a twenty-second deadline;
+list output was capped at 1 MiB. No registration, installation, removal or model
+request ran.
+
+The marketplace response was an object containing an empty `marketplaces` array,
+with no unknown top-level fields. The first plugin projection discarded two
+unrecognized field names. A separately capped follow-up projected the fixed
+`installed` and `available` labels: both were empty arrays, with no unknown
+top-level fields. All scalar values were discarded, and raw native output stayed
+in memory. No native configuration snapshots were retained. These empty shapes
+do not establish the nonempty entry contract, effective roots, source binding,
+project admission, activation or retention.
+
+Sanitized receipts are retained at
+`/private/tmp/upskill-codex-inventory-maumd_vm/summary.json` and
+`/private/tmp/upskill-codex-inventory-fields-16qq39jo/summary.json`. Each
+retains driver source/binary and parser digests; the corresponding source,
+executable and fake-client controls remain beside it. Before each diagnostic,
+fake controls verified exact argv, version mismatch, stderr and
+decoded-duplicate stops, closed-environment handling and omission of secret
+canaries. These observations leave the production admission registry unchanged.
+
 ## OpenCode: file exposure needs an independently qualified observer
 
 The captured
