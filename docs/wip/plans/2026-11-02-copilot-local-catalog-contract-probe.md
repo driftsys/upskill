@@ -1,10 +1,10 @@
 # Copilot local catalog contract probe
 
-Status: collector implemented, reviewed and locally verified, 2026-11-02. The
-prepared packet remains unused. Separate read-only version and inventory
-diagnostics are recorded below. Execution requires explicit approval for the
-concrete run. This is a contract probe, not activation qualification or
-production admission.
+Status: one contract attempt stopped at the baseline plugin inventory on
+2026-11-02. The version matched 1.0.105; a source string failed the packet-only
+precondition. No registration, installation or removal was attempted. The used
+packet and diagnostic evidence are retained. This is not activation
+qualification or production admission.
 
 The
 [approved design](../specs/2026-10-31-four-client-skills-resources-design.md)
@@ -26,11 +26,14 @@ receipt: `/private/tmp/upskill-copilot-contract-bgww20dj/preparation.json`, one
 directory above the packet. It records generated-file digests/modes, OS/CPU and
 static launcher/dependency identities. These temporary inputs are retained.
 
-The packet contains nine files: captured source and resource; generated plugin,
-catalog, skill and resource; a known non-secret project settings sentinel; a
-manual home sentinel; and the plan. All files are mode `0600`, directories
-`0700`. Copilot state under `home/.copilot` remains absent. The disposable home
-already contains managed exports and the manual sentinel; it is not empty.
+At preparation, the packet contained nine approved fixture files: captured
+source and resource; generated plugin, catalog, skill and resource; a known
+non-secret project settings sentinel; a manual home sentinel; and the plan. All
+files are mode `0600`, directories `0700`. Copilot state under `home/.copilot`
+was absent at preparation. The stopped run subsequently prepared its environment
+and invoked the version and plugin-list commands. The disposable home contains
+managed exports and the manual sentinel; it was not empty before execution.
+Native-created content is not included in the nine approved snapshots.
 
 The generated plugin and marketplace share the full 72-character native name:
 `upskill-924fc392d4b1c98352a84aacc1cc7605c2f6edd6603dce6a80e328a75f49786d`. The
@@ -46,7 +49,7 @@ The selected launcher is `/opt/homebrew/bin/copilot`, resolving to
 wrapper/platform package metadata says `1.0.4`; it does not establish the
 previously captured runtime `1.0.105`. Revalidate the selected/resolved
 launcher, Node and platform-entrypoint identities from `preparation.json`. The
-first native command must match the complete retained
+first Copilot command must match the complete retained
 [version output](../../../tests/fixtures/native-adapters/2026-11-01-help/copilot-version.stdout).
 A mismatch stops before inventories or mutations: no update, alternate binary,
 version substitution or fallback route.
@@ -85,7 +88,8 @@ records three commands: the exact version query, `plugin list --json` and
 three exited zero with complete bounded transport, zero stderr bytes and
 unchanged captured launcher, Node and platform identities. The version output
 matched the retained 1.0.105 pin. No registration, installation, removal or
-model request ran; the prepared eleven-command packet remains unused.
+model request ran; the prepared eleven-command packet was still unused at that
+point.
 
 The plugin list returned an array containing one object with string fields
 `name`, `marketplace`, `source`, `version`, and a boolean `enabled` field. The
@@ -219,9 +223,9 @@ syntax is
 PREPARATION_SHA256`.
 The default and `--check` modes only validate captured inputs: they do not
 create evidence, initialize Git or invoke Copilot. Explicit `--execute`
-publishes initial evidence and attempts the bounded sequence once. Do not use it
-on the retained real packet before execution approval. This adds no ordinary
-upskill command or admitted production profile.
+publishes initial evidence and attempts the bounded sequence once. The retained
+real packet has now been consumed by one stopped attempt; do not reopen or
+replay it. This adds no ordinary upskill command or admitted production profile.
 
 Collection publishes and syncs `step-NN.pending.json` before each external
 command, then exclusively writes its sanitized terminal result. Pending binds
@@ -252,8 +256,9 @@ chronology, timeout/cancellation, conflicting inventory, input/code/storage/root
 drift and native configuration secret canaries. These local controls do not
 establish the real client's behavior or authorize its execution. Collector and
 review fixes at `5e2d9c2` passed full `just verify`, all-target Clippy and Rust
-1.85 checks. The retained packet separately passed the executable's read-only
-check without creating evidence, Git state or Copilot configuration.
+1.85 checks. Before execution, the retained packet separately passed the
+executable's read-only check without creating evidence, Git state or Copilot
+configuration.
 
 ## Collector required before approval
 
@@ -305,4 +310,71 @@ native-created-file presence/mode residue. No result qualifies project scope,
 manual authenticated configuration, cross-client isolation, skill/resource
 activation, refresh, live/resumable retention, native-worker quiescence or the
 complete adapter. Claude's retained preservation failure and every production
-admission gate remain unchanged. Execution approval remains pending.
+admission gate remain unchanged. The stopped attempt authorizes no further
+native observation or retry.
+
+## Stopped contract attempt on 2026-11-02
+
+The collector ran one offline Git setup and two Copilot commands: exact version,
+then the baseline `plugin list --json`. All three exited zero with complete
+bounded transport and zero stderr; executable, root and known-input checks
+passed. Version output matched the retained 1.0.105 bytes. The plugin response
+was 132 bytes. The collector rejected a source string under its packet-only
+policy and recorded `outside_packet_source`. That reason includes relative and
+otherwise ambiguous sources; it does not establish an actual outside-profile
+read or the entry's origin. Neither the source value nor its lexical category
+was retained.
+
+The handle stopped permanently. The marketplace baseline and every registration,
+installation, removal and final-inventory command are NOT RUN. Full-name and
+hash-version acceptance therefore remain unmeasured. There were zero model
+requests and zero registration/install attempts. Direct-child reaping and an
+empty process group were observed; native-worker quiescence remains unqualified.
+No cleanup, repair or retry ran.
+
+The packet's `evidence/` contains sixteen private files: the initial header and
+nine approved snapshots, then three Pending/result pairs with verified digest
+chronology. Post-run verification found all nine fixture bytes and modes
+unchanged. This samples those known non-secret inputs, not ordinary
+authenticated configuration or unknown native-created files. The separate run
+receipt and verification are retained under
+`/private/tmp/upskill-copilot-contract-run-ngjdd493/`. The packet remains
+intact.
+
+## Proposed separate source classification check
+
+Status: prepared and tested with fake clients; not executed on Copilot.
+
+A fresh private diagnostic root is prepared at
+`/private/tmp/upskill-copilot-source-check-3dtx0p4k/`. Its `source-check.rs` and
+executable reuse the bounded runner and strict observed plugin-inventory
+validator. Self-tests cover the five lexical categories, unknown fields, decoded
+duplicate rejection and secret canaries. Four fake-client cases cover exact
+argv, version mismatch, stderr, malformed inventory and credential environment
+exclusion. No real native command has run from this root. `ready.json` binds
+source, executable, runner and reviewed code-metadata digests. The
+`execute.py --check` entrypoint passed without invoking a native executable. Its
+explicit `--execute` mode exclusively creates a consumed-run marker before the
+two queries; it is not authorized by preparing or checking the root.
+
+The proposed envelope contains only two commands, once and in order:
+`["--no-auto-update", "--version"]`, then
+`["--no-auto-update", "plugin", "list", "--json"]`. Each has a twenty-second
+limit; version output is capped at 512 bytes and inventory at 1 MiB. Use closed
+stdin, explicit private HOME/Copilot/cache/XDG/temp roots, the captured Node
+PATH and the original reviewed launcher, Node and platform code pins. Zero model
+requests and zero spending are authorized. There is no registration,
+installation, removal, cleanup, fallback or packet replay.
+
+The projection retains only entry counts and counts of URI, parent-component,
+relative, absolute lexically inside and absolute lexically outside sources. It
+also counts exact comparisons with the fixed literals `builtin` and `built-in`;
+those comparisons do not establish trusted builtin origin. Unknown names,
+marketplaces, versions, source strings and paths remain discarded. The
+projection opens no source paths and snapshots no native configuration.
+
+Executing this proposal requires a new research decision: it would permit one
+additional non-stable read-only observation after the original run's stop. It
+does not resume that run or supply a quiescence witness. Lifecycle/effect
+observations, cleanup, qualification and production admission retain all their
+existing requirements. The original packet-only guard remains unchanged.

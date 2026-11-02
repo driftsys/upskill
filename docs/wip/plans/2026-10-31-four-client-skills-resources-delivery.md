@@ -246,8 +246,12 @@ now prepared from the actual compiler in a disposable user root. Its
 eleven-command, zero-model proposal retains full names. The local collector adds
 one separately bounded offline Git setup and immutable command chronology. Its
 review fixes passed full local verification at `5e2d9c2`; the retained packet
-also passed read-only preflight. Explicit execution approval is still required.
-No Copilot native command has run from that packet.
+also passed read-only preflight. One contract attempt subsequently ran Git
+setup, version and baseline plugin-list commands, then stopped on the
+packet-only source precondition. No registration or installation was attempted;
+name acceptance and the complete native contract remain unmeasured. The used
+packet is retained; a separate source-classification proposal needs a new
+research decision.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
