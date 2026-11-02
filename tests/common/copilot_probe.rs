@@ -1,7 +1,7 @@
 //! Preflight uses the real offline compiler fixture and only fake native assets.
 #![allow(dead_code)]
 #[path = "native_fixture_executable.rs"]
-mod fixture_executable;
+pub(super) mod fixture_executable;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::fs;

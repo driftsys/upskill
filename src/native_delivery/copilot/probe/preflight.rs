@@ -172,4 +172,4 @@ impl CopilotProbePreflight {
 }
 
 mod evidence;
-pub use evidence::{CopilotEvidenceError, CopilotProbeEvidence};
+pub use evidence::{CopilotCollectionSummary, CopilotEvidenceError, CopilotProbeEvidence};

@@ -70,29 +70,48 @@ fn publish_with_io(
     let mut captures = BTreeMap::new();
     for (index, (name, bytes)) in payload.iter().enumerate() {
         checkpoint(index + 1)?;
-        let mut file = File::from(
-            openat(
-                &directory,
-                name.as_str(),
-                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-                Mode::RUSR | Mode::WUSR,
-            )
-            .map_err(|_| Error::PublicationUncertain)?,
-        );
-        io.write(&mut file, bytes)
-            .map_err(|_| Error::PublicationUncertain)?;
-        io.sync(&file).map_err(|_| Error::PublicationUncertain)?;
-        io.sync(&directory)
-            .map_err(|_| Error::PublicationUncertain)?;
-        let capture =
-            files::Capture::read(&directory, name, &files::digest(bytes), bytes.len() as u64)
-                .map_err(|_| Error::PublicationUncertain)?;
+        let capture = write_new_with_io(&directory, name, bytes, io)?;
         captures.insert(name.clone(), capture);
     }
     io.sync(&directory)
         .map_err(|_| Error::PublicationUncertain)?;
     io.sync(root).map_err(|_| Error::PublicationUncertain)?;
     Ok((directory, captures))
+}
+
+/// Append one producer-controlled immutable record; no replacement or repair.
+pub(super) fn write_new(
+    directory: &File,
+    name: &str,
+    bytes: &[u8],
+) -> Result<files::Capture, Error> {
+    write_new_with_io(directory, name, bytes, &mut StdIo)
+}
+fn write_new_with_io(
+    directory: &File,
+    name: &str,
+    bytes: &[u8],
+    io: &mut impl PublicationIo,
+) -> Result<files::Capture, Error> {
+    if name.is_empty() || name.contains('/') || name == "." || name == ".." {
+        return Err(Error::Preconditions);
+    }
+    let mut file = File::from(
+        openat(
+            directory,
+            name,
+            OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::RUSR | Mode::WUSR,
+        )
+        .map_err(|_| Error::PublicationUncertain)?,
+    );
+    io.write(&mut file, bytes)
+        .map_err(|_| Error::PublicationUncertain)?;
+    io.sync(&file).map_err(|_| Error::PublicationUncertain)?;
+    io.sync(directory)
+        .map_err(|_| Error::PublicationUncertain)?;
+    files::Capture::read(directory, name, &files::digest(bytes), bytes.len() as u64)
+        .map_err(|_| Error::PublicationUncertain)
 }
 
 #[cfg(test)]

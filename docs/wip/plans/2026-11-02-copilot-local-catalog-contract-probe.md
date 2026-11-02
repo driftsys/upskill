@@ -1,10 +1,10 @@
 # Copilot local catalog contract probe
 
 Status: input prepared offline, 2026-11-02. The prepared packet remains unused.
-Separate read-only version and inventory diagnostics are recorded below.
-Executing the proposed sequence remains blocked on preparing the bounded
-non-secret collector and obtaining explicit approval for the concrete run. This
-is a contract probe, not activation qualification or production admission.
+Separate read-only version and inventory diagnostics are recorded below. The
+bounded non-secret collector is implemented locally; broader verification and
+review remain open. Execution requires explicit approval for the concrete run.
+This is a contract probe, not activation qualification or production admission.
 
 The
 [approved design](../specs/2026-10-31-four-client-skills-resources-design.md)
@@ -108,11 +108,12 @@ complete inventory contract, isolation proof or admission evidence.
 
 ## Proposed execution envelope
 
-Run only the eleven argument arrays in `plan.json`, once and in order. Every
-array starts with `--no-auto-update`; arguments are passed separately without
-shell evaluation. Maximum twenty seconds and 1 MiB combined output per command,
-zero model/provider requests and zero authorized spending. No skill invocation,
-chat, prompt, native update, trust override, force removal or broad cleanup is
+Run one separately bounded offline Git setup, then only the eleven client
+argument arrays in `plan.json`, once and in order. Every client array starts
+with `--no-auto-update`; arguments are passed separately without shell
+evaluation. Maximum twenty seconds and 1 MiB combined output per command, zero
+model/provider requests and zero authorized spending. No skill invocation, chat,
+prompt, native update, trust override, force removal or broad cleanup is
 included.
 
 The sequence is: exact version; plugin and marketplace baseline JSON lists;
@@ -129,7 +130,16 @@ COPILOT_CACHE_HOME to `home/cache/copilot`, all XDG roots and TMPDIR below that
 home, a fixed system PATH including the pinned Node and a fixed locale. Inherit
 no credentials, client options, Node options or Git environment. Initialize the
 fixture project offline with global/system Git configuration, templates and
-hooks disabled. No normal profile is an input or requested write target.
+hooks disabled. The setup executable is exactly `/usr/bin/git`, captured before
+execution with its resolved path, code digest, length and mode in Pending. Its
+exact argv is
+`["-c", "init.defaultBranch=main", "-c",
+"core.hooksPath=/dev/null", "-c", "init.templateDir=", "init", "--quiet",
+"--template=", "."]`.
+It has the same twenty-second and 1 MiB bounds. The execution envelope therefore
+permits at most **one setup command and eleven client commands**, with no
+fallback. This separate setup does not change the retained plan or its
+client-command cap. No normal profile is an input or requested write target.
 
 Current
 [GitHub configuration documentation](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference),
@@ -199,6 +209,41 @@ execution envelope below; it does not authorize a native mutation run.
       incomplete output. Prove no subsequent command or cleanup runs after
       failure. Review the complete collector before requesting approval for the
       concrete eleven-command native sequence.
+
+## Maintainer collector
+
+The research executable is
+[`copilot_contract_probe`](../../../examples/copilot_contract_probe.rs). Its
+syntax is
+`copilot_contract_probe [--check|--execute] ROOT PLAN_SHA256
+PREPARATION_SHA256`.
+The default and `--check` modes only validate captured inputs: they do not
+create evidence, initialize Git or invoke Copilot. Explicit `--execute`
+publishes initial evidence and attempts the bounded sequence once. Do not use it
+on the retained real packet before execution approval. This adds no ordinary
+upskill command or admitted production profile.
+
+Collection publishes and syncs `step-NN.pending.json` before each external
+command, then exclusively writes its sanitized terminal result. Pending binds
+the previous result digest (or initial header); each result binds its Pending.
+Any uncertainty stops the handle permanently. Existing or partial records are
+retained without reopening, replay or cleanup. Output stays in bounded memory;
+version must match the complete retained bytes, lists must match the observed
+strict schema and expected fixture claims, and mutation output must be empty.
+Unexpected diagnostics, conflicting claims or outside-packet sources stop the
+sequence. Successful transport and fixture counts remain diagnostic facts.
+
+Native file observations cover only `home/.copilot`,
+`home/.copilot/config.json`, `home/cache/copilot` and `project/.git/config`.
+Descriptor-relative, non-following metadata reads record presence, type and
+mode. No native file contents, content hashes or dynamic paths enter evidence.
+The approved nine fixture snapshots remain the only stored file contents.
+
+`tests/native_copilot_collector.rs` exercises the real bounded runner with fake
+client code, including exact argv, qualified CWD, closed environment, digest
+chronology, timeout/cancellation, conflicting inventory, input/code/storage/root
+drift and native configuration secret canaries. These local controls do not
+establish the real client's behavior or authorize its execution.
 
 ## Collector required before approval
 

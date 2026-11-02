@@ -78,6 +78,6 @@ pub fn summarize_inventory(
 mod preflight;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub use preflight::{
-    CopilotEvidenceError, CopilotPreflightError, CopilotProbeEvidence, CopilotProbePreflight,
-    CopilotProbeRequest,
+    CopilotCollectionSummary, CopilotEvidenceError, CopilotPreflightError, CopilotProbeEvidence,
+    CopilotProbePreflight, CopilotProbeRequest,
 };

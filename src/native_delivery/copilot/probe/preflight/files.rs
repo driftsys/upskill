@@ -220,6 +220,19 @@ impl Asset {
         let stamp = Self::read(&pin)?;
         Ok(Self { pin, stamp })
     }
+    pub(super) fn selected_path(&self) -> &Path {
+        &self.pin.selected
+    }
+    pub(super) fn executable(
+        &self,
+    ) -> Result<crate::native_delivery::process::NativeExecutable, Error> {
+        self.verify()?;
+        let executable =
+            crate::native_delivery::process::NativeExecutable::capture(&self.pin.selected)
+                .map_err(|_| Error::Changed)?;
+        self.verify()?;
+        Ok(executable)
+    }
     fn read(pin: &CodePin) -> Result<Stamp, Error> {
         if pin.selected.canonicalize().ok().as_ref() != Some(&pin.resolved) {
             return Err(Error::Changed);

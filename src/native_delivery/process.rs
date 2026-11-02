@@ -142,6 +142,17 @@ impl NativeExecutable {
             digest: digest.finalize().into(),
         })
     }
+    /// Non-secret code identity for private diagnostic provenance only.
+    /// This is not an executable, dependency or environment qualification.
+    pub(crate) fn code_identity(&self) -> serde_json::Value {
+        let sha256: String = self
+            .digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        serde_json::json!({"selected":self.selected,"resolved":self.resolved,
+            "sha256":sha256,"bytes":self.identity.length,"mode":self.identity.mode & 0o7777})
+    }
     fn unchanged(&self) -> bool {
         Self::capture(&self.selected).is_ok_and(|now| {
             now.resolved == self.resolved

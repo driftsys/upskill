@@ -1,4 +1,4 @@
-//! Private initial diagnostic publication; no command or native effect receipts.
+//! Private diagnostic publication and collection; no native effect receipts.
 use super::{CopilotProbePreflight, allowed, files};
 use crate::filesystem::native_effects;
 use crate::native_delivery::roots::{NativeRoot, NativeRootLocks, lock_native_roots};
@@ -24,10 +24,12 @@ pub enum CopilotEvidenceError {
     Stopped,
 }
 
-/// Exclusive initial diagnostic evidence under a borrowed captured packet.
-/// Drop releases advisory root locks and retains every published file. This
-/// supplies no command Pending, effect/retention receipt, admission or worker
-/// quiescence proof. File sync requests do not qualify a filesystem profile.
+/// Exclusive diagnostic evidence under a borrowed captured packet.
+/// Initial publication invokes no executable. Explicit collection appends command
+/// Pending and terminal diagnostic records. Drop releases advisory root locks
+/// and retains every published file. Neither operation supplies effect/retention
+/// receipts, admission or worker quiescence proof. File sync requests do not
+/// qualify a filesystem profile.
 pub struct CopilotProbeEvidence<'a> {
     preflight: &'a CopilotProbePreflight,
     locks: NativeRootLocks<'a>,
@@ -36,6 +38,7 @@ pub struct CopilotProbeEvidence<'a> {
     identity: files::Directory,
     captures: BTreeMap<String, files::Capture>,
     stopped: bool,
+    collection_started: bool,
 }
 impl fmt::Debug for CopilotProbeEvidence<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -114,6 +117,7 @@ impl CopilotProbePreflight {
             identity,
             captures,
             stopped: false,
+            collection_started: false,
         };
         result.verify_unchanged()?;
         Ok(result)
@@ -135,11 +139,14 @@ impl CopilotProbeEvidence<'_> {
         result
     }
     fn verify_inner(&self) -> Result<(), CopilotEvidenceError> {
-        use CopilotEvidenceError as Error;
-        self.locks.verify_bindings().map_err(|_| Error::Changed)?;
         self.preflight
             .verify_unchanged()
-            .map_err(|_| Error::Changed)?;
+            .map_err(|_| CopilotEvidenceError::Changed)?;
+        self.verify_store()
+    }
+    fn verify_store(&self) -> Result<(), CopilotEvidenceError> {
+        use CopilotEvidenceError as Error;
+        self.locks.verify_bindings().map_err(|_| Error::Changed)?;
         let (scope, guard) = self
             .locks
             .scope_and_guard(&self.root)
@@ -178,3 +185,6 @@ impl CopilotProbeEvidence<'_> {
         Ok(())
     }
 }
+
+mod collector;
+pub use collector::CopilotCollectionSummary;

@@ -243,9 +243,10 @@ settings preservation failed. It qualifies no native profile or stable cleanup;
 repeat execution requires separate authorization. A separate
 [Copilot contract input](2026-11-02-copilot-local-catalog-contract-probe.md) is
 now prepared from the actual compiler in a disposable user root. Its
-eleven-command, zero-model proposal retains full names; the bounded non-secret
-collector and explicit execution approval remain prerequisites. No Copilot
-native command has run from that packet.
+eleven-command, zero-model proposal retains full names. The local collector adds
+one separately bounded offline Git setup and immutable command chronology; its
+broader verification and review remain open. Explicit execution approval is
+still required. No Copilot native command has run from that packet.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
