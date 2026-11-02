@@ -1,10 +1,10 @@
 # Copilot local catalog contract probe
 
 Status: input prepared offline, 2026-11-02. The prepared packet remains unused.
-A separate read-only version diagnostic is recorded below. Executing the
-proposed sequence remains blocked on preparing the bounded non-secret collector
-and obtaining explicit approval for the concrete run. This is a contract probe,
-not activation qualification or production admission.
+Separate read-only version and inventory diagnostics are recorded below.
+Executing the proposed sequence remains blocked on preparing the bounded
+non-secret collector and obtaining explicit approval for the concrete run. This
+is a contract probe, not activation qualification or production admission.
 
 The
 [approved design](../specs/2026-10-31-four-client-skills-resources-design.md)
@@ -75,6 +75,36 @@ This is version discovery under the existing read-only inspection scope, not
 approval for the eleven-command sequence or qualification of effective roots,
 worker quiescence, credentials, model availability or billing. Design approval's
 activation/admission/waiver restrictions remain unchanged.
+
+## Separate read-only inventory structure observation
+
+A second, separate diagnostic completed on 2026-11-02 under
+`/private/tmp/upskill-copilot-inventory-dr6bva6w/`. Its private `summary.json`
+records three commands: the exact version query, `plugin list --json` and
+`plugin marketplace list --json`, each prefixed with `--no-auto-update`. All
+three exited zero with complete bounded transport, zero stderr bytes and
+unchanged captured launcher, Node and platform identities. The version output
+matched the retained 1.0.105 pin. No registration, installation, removal or
+model request ran; the prepared eleven-command packet remains unused.
+
+The plugin list returned an array containing one object with string fields
+`name`, `marketplace`, `source`, `version`, and a boolean `enabled` field. The
+marketplace list returned an array containing one object with string fields
+`name`, `source`, and a boolean `isDefault` field. Neither sampled object had
+unknown keys. Their output lengths were 132 and 113 bytes respectively. All
+scalar values were discarded; this evidence cannot identify either entry or
+establish its origin, ownership, source binding or effective configuration root.
+In particular, a fresh diagnostic home did not produce empty inventories.
+
+The helper used the existing bounded subprocess runner, qualified disposable
+CWD, closed stdin and explicit isolated HOME/config/cache/XDG/temp settings.
+Each command had a twenty-second deadline; list output was capped at 1 MiB. Its
+projection self-test passed before native calls, including decoded duplicate key
+rejection and omission of secret canaries, unknown field names and scalar
+values. Raw native output stayed in memory. No native configuration snapshots
+were retained. The receipt retains source, executable and parser digests; source
+and executable remain beside it. This is observed wire structure only, not a
+complete inventory contract, isolation proof or admission evidence.
 
 ## Proposed execution envelope
 
