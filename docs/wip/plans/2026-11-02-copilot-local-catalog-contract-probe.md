@@ -1,7 +1,8 @@
 # Copilot local catalog contract probe
 
-Status: input prepared offline, 2026-11-02. No native command has run. Execution
-remains blocked on preparing the bounded non-secret collector described below
+Status: input prepared offline, 2026-11-02. The prepared packet remains unused.
+A separate read-only version diagnostic is recorded below. Executing the
+proposed sequence remains blocked on preparing the bounded non-secret collector
 and obtaining explicit approval for the concrete run. This is a contract probe,
 not activation qualification or production admission.
 
@@ -49,6 +50,31 @@ first native command must match the complete retained
 [version output](../../../tests/fixtures/native-adapters/2026-11-01-help/copilot-version.stdout).
 A mismatch stops before inventories or mutations: no update, alternate binary,
 version substitution or fallback route.
+
+## Separate read-only version observation
+
+One ordinary read-only version query ran on 2026-11-02, outside the prepared
+packet, from `/private/tmp/upskill-copilot-version-u_3_6t7_/project` with its
+own fresh HOME, Copilot config/cache and XDG/temp roots. It used the bounded
+runner, closed stdin, an explicit minimal environment, a twenty-second deadline
+and a 512-byte combined-output cap. The only argv was
+`["--no-auto-update", "--version"]`. No inventory, registration, installation,
+removal or model request ran.
+
+The receipt `/private/tmp/upskill-copilot-version-u_3_6t7_/summary.json` records
+exit code zero, complete bounded transport, 71 stdout bytes, zero stderr bytes
+and an exact match to the retained version output: runtime **1.0.105**. Captured
+launcher, Node and platform-entrypoint identities matched before and after. The
+wrapper's static `1.0.4` metadata therefore does not identify the reported CLI
+version. Raw native output was processed in bounded memory, without persistent
+dumps or native configuration snapshots. The summary retains sanitized facts and
+driver source/binary digests; the source and diagnostic inputs remain in that
+root.
+
+This is version discovery under the existing read-only inspection scope, not
+approval for the eleven-command sequence or qualification of effective roots,
+worker quiescence, credentials, model availability or billing. Design approval's
+activation/admission/waiver restrictions remain unchanged.
 
 ## Proposed execution envelope
 
