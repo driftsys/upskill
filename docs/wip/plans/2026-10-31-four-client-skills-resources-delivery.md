@@ -240,7 +240,12 @@ once after explicit approval, with no model spending. Its
 [bounded observations](../../technotes/2026-11-01-claude-local-catalog-contract.md)
 show full-name/version acceptance and project registry metadata, but exact
 settings preservation failed. It qualifies no native profile or stable cleanup;
-repeat execution requires separate authorization.
+repeat execution requires separate authorization. A separate
+[Copilot contract input](2026-11-02-copilot-local-catalog-contract-probe.md) is
+now prepared from the actual compiler in a disposable user root. Its
+eleven-command, zero-model proposal retains full names; the bounded non-secret
+collector and explicit execution approval remain prerequisites. No Copilot
+native command has run from that packet.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
