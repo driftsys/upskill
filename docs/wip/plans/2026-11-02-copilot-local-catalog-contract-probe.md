@@ -140,6 +140,33 @@ roots, system policy, keychain access and delegated runtime remain unqualified;
 an outside-packet source or unexpected authentication/trust requirement stops
 the sequence without a workaround.
 
+## Collector implementation sequence
+
+Execute inline under the existing Stage 6 plan. This sequence implements the
+execution envelope below; it does not authorize a native mutation run.
+
+- [x] Add `src/native_delivery/copilot/probe.rs` with
+      `summarize_inventory(version, kind, bytes)` returning a serializable count
+      summary or a static typed error. Pin 1.0.105, the 1 MiB bound, decoded
+      unique keys and the observed exact row field types. Reject unknown or
+      missing fields; discard all scalar values. Acceptance:
+      `tests/native_copilot_probe.rs` covers both lists, later malformed rows,
+      version drift, decoded duplicates, unexpected diagnostics, scalar canaries
+      and the exact byte boundary. This pure component neither invokes a client
+      nor compares fixture selectors; it cannot prove ownership, source binding,
+      absence or effective scope.
+- [ ] Add the bounded collector's input validation and once-only evidence
+      orchestration. Before any native call, bind plan/preparation digests,
+      exact fixed argv, known fixture bytes/modes, root identities and
+      executable dependencies. Test changed bytes, symlinks, modes, roots and
+      existing evidence against fake executables; none may invoke a client.
+- [ ] Exercise chronological pending/completed receipts and fail-stop execution
+      through the existing bounded runner with fake executables. Test unknown
+      schemas, changed bindings, stderr, nonzero exit, timeout, cancellation and
+      incomplete output. Prove no subsequent command or cleanup runs after
+      failure. Review the complete collector before requesting approval for the
+      concrete eleven-command native sequence.
+
 ## Collector required before approval
 
 Prepare and review a runner using the existing bounded subprocess API. It must

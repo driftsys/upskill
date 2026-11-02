@@ -58,3 +58,5 @@ pub fn plan_plugin_command(
     }
     Ok(CopilotPluginCommand { arguments })
 }
+
+pub mod probe;
