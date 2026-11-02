@@ -75,8 +75,18 @@ pub(super) fn inspect(
     let revision = Path::new(plan["home"].as_str().ok_or("input")?)
         .join(plan["revision_root"].as_str().ok_or("input")?);
     let mut matches = 0;
+    let mut unrelated_builtin_label_entries = 0;
     for row in rows.as_array().ok_or("inventory")? {
         let source = row["source"].as_str().ok_or("inventory")?;
+        let named = row["name"] == name
+            || row["name"] == selector
+            || (kind == CopilotInventoryKind::Plugins && row["marketplace"] == name);
+        // The pinned client uses this non-filesystem marker for builtin metadata.
+        // It grants no origin or binding proof and never exempts an owned reference.
+        if !named && source == "builtin" {
+            unrelated_builtin_label_entries += 1;
+            continue;
+        }
         let source_path = Path::new(source);
         if source.contains("://")
             || !source_path.is_absolute()
@@ -87,13 +97,13 @@ pub(super) fn inspect(
         {
             return Err("outside_packet_source");
         }
-        let named = row["name"] == name
-            || row["name"] == selector
-            || (kind == CopilotInventoryKind::Plugins && row["marketplace"] == name);
         if !named {
             continue;
         }
         matches += 1;
+        if kind == CopilotInventoryKind::Marketplaces && row["name"] != name {
+            return Err("fixture_conflict");
+        }
         if kind == CopilotInventoryKind::Plugins
             && ((row["name"] != name && row["name"] != selector)
                 || row["marketplace"] != name
@@ -113,7 +123,8 @@ pub(super) fn inspect(
     if matches != expected {
         return Err("fixture_conflict");
     }
-    Ok(json!({"inventory":summary,"fixture_named_entries":matches}))
+    Ok(json!({"inventory":summary,"fixture_named_entries":matches,
+        "unrelated_builtin_label_entries":unrelated_builtin_label_entries}))
 }
 
 #[cfg(test)]

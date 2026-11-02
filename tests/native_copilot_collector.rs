@@ -89,7 +89,8 @@ if [ "$n" -eq 3 ]; then
   esac
 fi
 case "$n" in
-  1|2|9|10) /bin/cat "$control/empty";;
+  1|9) if [ -f "$control/baseline-plugins" ]; then /bin/cat "$control/baseline-plugins"; else /bin/cat "$control/empty"; fi;;
+  2|10) if [ -f "$control/baseline-markets" ]; then /bin/cat "$control/baseline-markets"; else /bin/cat "$control/empty"; fi;;
   5) /bin/cat "$control/plugins";;
   6) /bin/cat "$control/markets";;
 esac
@@ -132,6 +133,10 @@ fn collector_orders_all_commands_after_durable_pending_and_preserves_exact_argv(
     assert_eq!(header["maximum_native_commands"], 12);
     assert_eq!(header["maximum_client_commands"], 11);
     assert_eq!(header["maximum_setup_commands"], 1);
+    assert_eq!(
+        header["inventory_source_policy"],
+        json!({"filesystem_paths":"packet_only","unrelated_builtin_label":"count_only","owned_builtin_label":"reject"})
+    );
     let mut previous = digest(&fs::read(area.join("header.json")).unwrap());
     for sequence in 0..12 {
         let pending_path = area.join(format!("step-{sequence:02}.pending.json"));
@@ -464,6 +469,7 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
         ("version", 6, "fixture_conflict"),
         ("duplicate", 6, "fixture_conflict"),
         ("source", 7, "outside_packet_source"),
+        ("marketplace-selector", 7, "fixture_conflict"),
         ("inside-source", 6, "fixture_conflict"),
         ("enabled", 6, "fixture_conflict"),
         ("marketplace", 6, "fixture_conflict"),
@@ -474,7 +480,7 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
         if mode == "baseline" {
             fs::copy(control.join("plugins"), control.join("empty")).unwrap();
         } else {
-            let path = control.join(if mode == "source" {
+            let path = control.join(if matches!(mode, "source" | "marketplace-selector") {
                 "markets"
             } else {
                 "plugins"
@@ -487,6 +493,10 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
                     value.as_array_mut().unwrap().push(row);
                 }
                 "source" => value[0]["source"] = json!("/outside-packet"),
+                "marketplace-selector" => {
+                    let name = value[0]["name"].as_str().unwrap();
+                    value[0]["name"] = json!(format!("{name}@{name}"));
+                }
                 "inside-source" => {
                     value[0]["source"] = json!(fixture.root.join("unapproved-source"))
                 }
@@ -519,10 +529,24 @@ fn conflicting_or_outside_fixture_claims_stop_before_any_cleanup() {
 
 #[test]
 fn unrelated_sources_with_ambiguous_or_escaping_paths_stop_at_baseline() {
-    for mode in ["relative", "parent", "absolute-parent", "prefix", "remote"] {
+    for mode in [
+        "relative",
+        "parent",
+        "absolute-parent",
+        "prefix",
+        "remote",
+        "builtin-relative",
+        "builtin-uri",
+        "builtin-case",
+        "builtin-hyphen",
+    ] {
         let fixture = prepared("success");
         let source = match mode {
             "relative" => "unknown-origin".to_owned(),
+            "builtin-relative" => "./builtin".to_owned(),
+            "builtin-uri" => "builtin://secret-canary".to_owned(),
+            "builtin-case" => "BUILTIN".to_owned(),
+            "builtin-hyphen" => "built-in".to_owned(),
             "parent" => "../../outside".to_owned(),
             "absolute-parent" => format!("{}/../outside", fixture.root.display()),
             "prefix" => format!("{}-outside/source", fixture.root.display()),
@@ -606,4 +630,109 @@ fn native_configuration_content_never_enters_evidence() {
     }
 
     assert_no_secret(&fixture.root.join("evidence"));
+}
+
+#[test]
+fn unrelated_builtin_labels_are_counted_without_relaxing_owned_source_checks() {
+    let fixture = prepared("success");
+    let control = fixture.parent.join("control");
+    let plugin = json!({"name":"private-native-name","marketplace":"private-native-marketplace","source":"builtin","version":"secret-canary","enabled":true});
+    let market = json!({"name":"private-native-marketplace","source":"builtin","isDefault":true});
+    for (file, row, installed) in [
+        ("baseline-plugins", plugin.clone(), false),
+        ("baseline-markets", market.clone(), false),
+        ("plugins", plugin, true),
+        ("markets", market, true),
+    ] {
+        let mut rows = if installed {
+            json_file(control.join(file)).as_array().unwrap().clone()
+        } else {
+            Vec::new()
+        };
+        rows.insert(0, row);
+        private(
+            &control.join(file),
+            &serde_json::to_vec(&rows).unwrap(),
+            0o600,
+        );
+    }
+    let preflight = fixture.capture().unwrap();
+    let mut evidence = preflight.begin_evidence().unwrap();
+    let summary = serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+    assert_eq!(summary["complete"], true);
+    assert_eq!(summary["client_commands"], 11);
+    for sequence in [2, 3, 6, 7, 10, 11] {
+        let result = json_file(
+            fixture
+                .root
+                .join(format!("evidence/step-{sequence:02}.result.json")),
+        );
+        assert_eq!(result["observation"]["unrelated_builtin_label_entries"], 1);
+        assert_eq!(
+            result["observation"]["fixture_named_entries"],
+            usize::from(matches!(sequence, 6 | 7))
+        );
+        assert_eq!(result["qualified"], false);
+    }
+    assert_no_secret(&fixture.root.join("evidence"));
+    for entry in fs::read_dir(fixture.root.join("evidence")).unwrap() {
+        let bytes = fs::read(entry.unwrap().path()).unwrap();
+        for secret in ["private-native-name", "private-native-marketplace"] {
+            assert!(!String::from_utf8_lossy(&bytes).contains(secret));
+        }
+    }
+}
+
+#[test]
+fn builtin_label_cannot_hide_any_owned_namespace_reference() {
+    for reference in [
+        "plugin-name",
+        "plugin-selector",
+        "plugin-marketplace",
+        "marketplace-name",
+    ] {
+        let fixture = prepared("success");
+        let plan = json_file(fixture.root.join("plan.json"));
+        let name = plan["native_name"].as_str().unwrap();
+        let (file, row, calls) = if reference == "marketplace-name" {
+            (
+                "baseline-markets",
+                json!({"name":name,"source":"builtin","isDefault":true}),
+                3,
+            )
+        } else {
+            let row_name = match reference {
+                "plugin-name" => name.to_owned(),
+                "plugin-selector" => format!("{name}@{name}"),
+                _ => "unrelated".to_owned(),
+            };
+            let marketplace = if reference == "plugin-marketplace" {
+                name
+            } else {
+                "unrelated"
+            };
+            (
+                "baseline-plugins",
+                json!({"name":row_name,"marketplace":marketplace,"source":"builtin","version":plan["version"],"enabled":true}),
+                2,
+            )
+        };
+        private(
+            &fixture.parent.join("control").join(file),
+            &serde_json::to_vec(&json!([row])).unwrap(),
+            0o600,
+        );
+        let preflight = fixture.capture().unwrap();
+        let mut evidence = preflight.begin_evidence().unwrap();
+        let summary =
+            serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+        assert_eq!(summary["stop"], "outside_packet_source", "{reference}");
+        assert_eq!(summary["client_commands"], calls, "{reference}");
+        assert!(
+            !fixture
+                .parent
+                .join(format!("control/call-{calls}"))
+                .exists()
+        );
+    }
 }

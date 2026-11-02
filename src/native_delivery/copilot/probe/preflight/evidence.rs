@@ -104,7 +104,9 @@ impl CopilotProbePreflight {
         let header = json!({"schema":1,"status":"prepared; no native command pending",
             "plan_sha256":self.request.plan_sha256,"preparation_sha256":self.request.preparation_sha256,
             "maximum_native_commands":12,"maximum_client_commands":11,"maximum_setup_commands":1,"model_calls":0,"maximum_authorized_spending":0,
-            "qualified":false,"roots":locks.bindings(),"fixtures":rows});
+            "qualified":false,"inventory_source_policy":{"filesystem_paths":"packet_only",
+                "unrelated_builtin_label":"count_only","owned_builtin_label":"reject"},
+            "roots":locks.bindings(),"fixtures":rows});
         let header = serde_json::to_vec_pretty(&header).map_err(|_| Error::Preconditions)?;
         payload.insert(0, ("header.json".into(), header));
         let (directory, captures) = publication::publish(&base, &payload, |_| Ok(()))?;

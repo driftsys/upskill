@@ -341,9 +341,9 @@ receipt and verification are retained under
 `/private/tmp/upskill-copilot-contract-run-ngjdd493/`. The packet remains
 intact.
 
-## Proposed separate source classification check
+## Separate source classification check
 
-Status: prepared and tested with fake clients; not executed on Copilot.
+Status: executed once after user approval on 2026-11-02; no model requests.
 
 A fresh private diagnostic root is prepared at
 `/private/tmp/upskill-copilot-source-check-3dtx0p4k/`. Its `source-check.rs` and
@@ -374,8 +374,48 @@ those comparisons do not establish trusted builtin origin. Unknown names,
 marketplaces, versions, source strings and paths remain discarded. The
 projection opens no source paths and snapshots no native configuration.
 
-Executing this proposal requires a new research decision: it would permit one
-additional non-stable read-only observation after the original run's stop. It
-does not resume that run or supply a quiescence witness. Lifecycle/effect
-observations, cleanup, qualification and production admission retain all their
-existing requirements. The original packet-only guard remains unchanged.
+The user approved this separate research envelope. It permitted one additional
+non-stable read-only observation after the original run's stop. It did not
+resume that run or supply a quiescence witness. Lifecycle/effect observations,
+cleanup, qualification and production admission retain all their existing
+requirements. The source check itself changed no collector guard.
+
+### Observed result and candidate handling
+
+Both queries exited zero with complete transport, zero stderr and unchanged
+captured code identities. The version matched 1.0.105. The plugin inventory
+contained one entry: its source was relative and matched one of the fixed
+`builtin`/`built-in` literals. URI, parent-component and both absolute-source
+counts were zero. The projector opened no source paths and retained no native
+scalar values. This is a time-sampled classification, not trusted-origin,
+effective-root, worker-quiescence or qualification evidence. The immutable
+sanitized result is `summary.json` in the diagnostic root.
+
+Static inspection of that runtime's `cli-main.js` found explicit handling of
+`source === "builtin"` separately from non-builtin plugin records. Its listing
+logic groups those labels apart from user-installed records. File identity and
+digest provenance are retained in `runtime-code-inspection.json` beside the
+source-check receipt; no native configuration was read. This explains a concrete
+route to the earlier packet-path rejection without proving the identity or
+origin of that earlier entry.
+
+The candidate diagnostic revision passed its focused offline checks. It counts
+the exact `builtin` label only on unrelated inventory rows, with no origin or
+binding claim. Every owned name, plugin selector or marketplace reference still
+requires the exact expected identity and private source path. Unknown relative
+labels, URI sources, parent components and outside absolute paths still stop.
+The hyphenated `built-in` spelling remains unsupported by this candidate; the
+static code inspection establishes only `builtin` handling. Initial evidence
+declares this interpretation policy and terminal observations count the
+unrelated labels. No original packet replay or new native mutation is authorized
+by this code change; any future contract trial requires a fresh reviewed packet
+and execution decision. Production admission and Q11 remain unchanged.
+
+The focused checks cover 38 collector, evidence, preflight and inventory
+acceptance tests plus five probe unit tests. All-target Clippy, Rust 1.85
+compatibility, lint and documentation checks passed. A deliberate mutation
+removing the owned-reference exclusion compiled and failed the owned-reference
+acceptance assertion; the source was then restored byte for byte. An additional
+regression case requires the exact marketplace name rather than accepting its
+plugin selector spelling. Full repository verification and independent review
+remain pending for this revision. These are fake-client checks only.
