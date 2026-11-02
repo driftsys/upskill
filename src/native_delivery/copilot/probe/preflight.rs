@@ -25,8 +25,9 @@ pub enum CopilotPreflightError {
     Changed,
 }
 /// Private known non-secret fixture capture; deliberately not serializable.
-/// This creates no commands, effects, evidence directory or snapshots of
-/// native-generated configuration.
+/// Capture and revalidation perform no commands or writes. The explicit
+/// `begin_evidence` method publishes initial diagnostic files separately;
+/// native-generated configuration is never snapshotted.
 /// Mode/binding checks do not qualify ACLs, cache roots or native isolation.
 pub struct CopilotProbePreflight {
     request: CopilotProbeRequest,
@@ -50,11 +51,11 @@ fn scope(path: &Path, kind: OwnershipScope) -> Result<QualifiedScope, CopilotPre
     })
     .map_err(|_| CopilotPreflightError::UnsafeFilesystem)
 }
-fn allowed(files: &BTreeMap<String, contract::FilePin>) -> BTreeMap<String, bool> {
+fn allowed<'a>(paths: impl Iterator<Item = &'a str>) -> BTreeMap<String, bool> {
     let mut allowed = BTreeMap::from([("outside".into(), true)]);
-    for name in files.keys() {
-        allowed.insert(name.clone(), false);
-        let mut prefix = name.as_str();
+    for name in paths {
+        allowed.insert(name.to_owned(), false);
+        let mut prefix = name;
         while let Some((parent, _)) = prefix.rsplit_once('/') {
             allowed.insert(parent.into(), true);
             prefix = parent;
@@ -95,7 +96,7 @@ impl CopilotProbePreflight {
         )?;
         let plan = files::Capture::read(&root_file, "plan.json", &request.plan_sha256, 16384)?;
         let contract = contract::Contract::parse(request, &plan.bytes, &preparation.bytes)?;
-        let allowed = allowed(&contract.files);
+        let allowed = allowed(contract.files.keys().map(String::as_str));
         let directories = files::tree(&root_file, &allowed)?;
         let mut fixtures = BTreeMap::new();
         for (path, pin) in &contract.files {
@@ -169,3 +170,6 @@ impl CopilotProbePreflight {
         Ok(())
     }
 }
+
+mod evidence;
+pub use evidence::{CopilotEvidenceError, CopilotProbeEvidence};

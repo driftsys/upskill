@@ -155,7 +155,7 @@ execution envelope below; it does not authorize a native mutation run.
       and the exact byte boundary. This pure component neither invokes a client
       nor compares fixture selectors; it cannot prove ownership, source binding,
       absence or effective scope.
-- [ ] Add the bounded collector's input validation and once-only evidence
+- [x] Add the bounded collector's input validation and once-only evidence
       orchestration. The read-only preflight lives in
       `src/native_delivery/copilot/probe/preflight.rs`, with separate contract
       validation and descriptor-relative file helpers. Its public
@@ -178,7 +178,20 @@ execution envelope below; it does not authorize a native mutation run.
       call, bind plan/preparation digests, exact fixed argv, known fixture
       bytes/modes, root identities and executable dependencies. Test changed
       bytes, symlinks, modes, roots and existing evidence against fake
-      executables; none may invoke a client.
+      executables; none may invoke a client. Initial evidence publication lives
+      in `src/native_delivery/copilot/probe/preflight/evidence.rs`:
+      `CopilotProbePreflight::begin_evidence()` returns a borrowed
+      `CopilotProbeEvidence` holding live root locks. Revalidate unused inputs,
+      exclusively create `evidence/`, sync its parent, then exclusively write
+      and sync a non-secret `header.json` and nine fixture snapshots at `0600`.
+      Retain existing and partial evidence without replay or cleanup. Evidence
+      verification must detect root, directory, file identity/content/mode and
+      unexpected-entry drift; any error permanently stops that handle.
+      `tests/native_copilot_evidence.rs` covers publication, two captured
+      candidates, drop retention, initial drift, later evidence/input drift and
+      exclusion of new native configuration. Private publication fault tests
+      must retain partial evidence and reject reopening. This initial store
+      publishes no command Pending or effect receipt and runs no native client.
 - [ ] Exercise chronological pending/completed receipts and fail-stop execution
       through the existing bounded runner with fake executables. Test unknown
       schemas, changed bindings, stderr, nonzero exit, timeout, cancellation and
