@@ -68,8 +68,8 @@ launcher, Node and platform-entrypoint identities matched before and after. The
 wrapper's static `1.0.4` metadata therefore does not identify the reported CLI
 version. Raw native output was processed in bounded memory, without persistent
 dumps or native configuration snapshots. The summary retains sanitized facts and
-driver source/binary digests; the source and diagnostic inputs remain in that
-root.
+driver source/binary digests. The driver source and executable remain beside the
+receipt; expected version bytes came from the linked retained capture.
 
 This is version discovery under the existing read-only inspection scope, not
 approval for the eleven-command sequence or qualification of effective roots,
