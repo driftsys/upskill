@@ -20,9 +20,10 @@ candidate user-command planner. Preparation invokes no native client.
 
 Prepared plan:
 `/private/tmp/upskill-copilot-contract-bgww20dj/packet/plan.json`. SHA-256:
-`98586264ca21389533f9db3b2f0d6135587bfeb9ec34038c2962f7fc2610fe8f`. The sibling
-`preparation.json` records generated-file digests/modes, OS/CPU and static
-launcher/dependency identities. These temporary inputs are retained.
+`98586264ca21389533f9db3b2f0d6135587bfeb9ec34038c2962f7fc2610fe8f`. Preparation
+receipt: `/private/tmp/upskill-copilot-contract-bgww20dj/preparation.json`, one
+directory above the packet. It records generated-file digests/modes, OS/CPU and
+static launcher/dependency identities. These temporary inputs are retained.
 
 The packet contains nine files: captured source and resource; generated plugin,
 catalog, skill and resource; a known non-secret project settings sentinel; a

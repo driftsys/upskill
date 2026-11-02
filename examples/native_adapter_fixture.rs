@@ -369,6 +369,10 @@ mod tests {
         assert_eq!(plan["maximum_native_commands"], 12);
         assert_eq!(plan["timeout_seconds_per_command"], 20);
         assert_eq!(plan["client_version"], "2.1.308");
+        assert_eq!(plan["scope"], "project");
+        assert_eq!(plan["scope_root"], json!(root.join("project")));
+        assert_eq!(plan["output_limit_bytes"], 1048576);
+        assert_eq!(plan["maximum_authorized_spending"], 0);
         let name = plan["native_name"].as_str().unwrap();
         assert_eq!(name.len(), 72);
         assert!(name.starts_with("upskill-"));
@@ -665,6 +669,7 @@ mod tests {
             "preparation must not bootstrap native state"
         );
         assert!(!home.join(".claude").exists());
+        assert_eq!(std::fs::read(root.join("project/.claude/settings.json")).unwrap(),b"{\n  \"companyAnnouncements\": [\n    \"contract-preservation-sentinel\"\n  ],\n  \"enabledPlugins\": {},\n  \"extraKnownMarketplaces\": {}\n}\n");
         assert!(!home.join(".upskill/exports/claude").exists());
         let before: Vec<_> = files(&root)
             .into_iter()
