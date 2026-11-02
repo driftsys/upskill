@@ -24,6 +24,7 @@ fn collector_retains_counts_without_native_scalar_values() {
         let summary = summarize_inventory("1.0.105", kind, bytes).unwrap();
         assert_eq!(serde_json::to_string(&summary).unwrap(), expected);
         assert!(!format!("{summary:?}").contains("secret"));
+        assert_eq!(summary.entries(), 1);
         let empty = summarize_inventory("1.0.105", kind, b"[]").unwrap();
         assert_eq!(empty.entries(), 0);
     }
@@ -116,8 +117,19 @@ fn collector_requires_each_field_type_and_does_not_sample_rows() {
             for replacement in [
                 Some(serde_json::Value::Null),
                 Some(serde_json::json!(42)),
+                Some(serde_json::json!([])),
+                Some(serde_json::json!({})),
+                Some(serde_json::json!("wrong-field-type")),
+                Some(serde_json::json!(true)),
+                Some(serde_json::json!(false)),
                 None,
             ] {
+                if replacement.as_ref().is_some_and(|value| {
+                    (original[0][*key].is_string() && value.is_string())
+                        || (original[0][*key].is_boolean() && value.is_boolean())
+                }) {
+                    continue;
+                }
                 let mut changed = original.clone();
                 let fields = changed[0].as_object_mut().unwrap();
                 if let Some(value) = replacement {
@@ -139,5 +151,21 @@ fn collector_requires_each_field_type_and_does_not_sample_rows() {
             summarize_inventory("1.0.105", kind, &serde_json::to_vec(&rows).unwrap()),
             Err(CopilotProbeError::UnsupportedShape)
         );
+    }
+}
+
+#[test]
+fn collector_counts_both_boolean_values_and_all_entries() {
+    for (kind, bytes, expected) in [
+        (CopilotInventoryKind::Plugins,
+         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":true},{"name":"e","marketplace":"f","source":"g","version":"h","enabled":false}]"#.as_slice(),
+         r#"{"kind":"plugins","entries":2}"#),
+        (CopilotInventoryKind::Marketplaces,
+         br#"[{"name":"a","source":"b","isDefault":true},{"name":"c","source":"d","isDefault":false}]"#.as_slice(),
+         r#"{"kind":"marketplaces","entries":2}"#),
+    ] {
+        let summary = summarize_inventory("1.0.105", kind, bytes).unwrap();
+        assert_eq!(summary.entries(), 2);
+        assert_eq!(serde_json::to_string(&summary).unwrap(), expected);
     }
 }
