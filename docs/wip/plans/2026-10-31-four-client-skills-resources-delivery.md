@@ -320,6 +320,16 @@ receipt and records the failed byte-preservation control. These private input
 copies are preparation for the regression tests, not an adapter fix or a passing
 preservation claim. The original evidence remains unchanged.
 
+The earlier study worktree already contained the
+[offline preservation regressions](../../technotes/2026-11-03-claude-settings-preservation-regressions.md).
+Those tests are now integrated here without modifying that worktree. Three
+focused cases passed, and both completion-guard and forward-serializer mutation
+controls were reproduced. Exact application-side preservation and refusal are
+covered; the recorded native serializer still fails the D2/D6 contract. A
+supported native mechanism or separately reviewed owned configuration contract
+is still required before completing Claude delivery. No native rerun or
+whole-file repair is authorized by these offline checks.
+
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved
 qualification profiles. Preserve failed/unrun gates explicitly and keep the

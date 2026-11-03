@@ -87,6 +87,12 @@ This result does not approve a serializer, inverse or preservation workaround.
 
 ## Handoff and limits
 
+The
+[offline preservation regressions](2026-11-03-claude-settings-preservation-regressions.md)
+pin the captured lexical rewrite, exact span-planner restoration and durable
+coordinator refusal after byte-only or mode-only settings drift. They preserve
+the native failure as a blocker; they add no automatic settings repair.
+
 The name/version and local-directory registry samples now have offline decoder
 fixtures for this exact pin. The decoder keeps CLI marketplace lists,
 known-marketplace registry records and installed-plugin schema 2 as distinct
