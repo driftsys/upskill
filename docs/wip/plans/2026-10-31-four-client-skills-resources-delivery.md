@@ -330,6 +330,13 @@ supported native mechanism or separately reviewed owned configuration contract
 is still required before completing Claude delivery. No native rerun or
 whole-file repair is authorized by these offline checks.
 
+Full `just verify` passed at `e4c793d`, including all three new regression
+tests. Quick review left two minor test/evidence follow-ups, with local debt
+drafts pending hosted filing. The next independent native evidence candidate is
+the
+[prepared Copilot retry](2026-11-02-copilot-local-catalog-contract-probe.md#fresh-contract-retry-prepared-on-2026-11-03),
+whose read-only preflight passed. Its execution decision remains separate.
+
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved
 qualification profiles. Preserve failed/unrun gates explicitly and keep the

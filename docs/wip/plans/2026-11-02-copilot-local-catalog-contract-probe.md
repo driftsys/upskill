@@ -443,3 +443,41 @@ accepted unrelated filesystem source values, and assert the complete mixed
 inventory totals in the collector receipts. These are unimplemented follow-ups,
 not demonstrated runtime failures or qualification evidence. Hosted debt filing
 remains pending because the command runner receives GitHub HTTP 401.
+
+## Fresh contract retry prepared on 2026-11-03
+
+Status: prepared, rebuilt and read-only preflight passed; no native command
+executed and no execution approval assumed.
+
+The unused packet is `/private/tmp/upskill-copilot-contract-v2-be_l1eav/packet`.
+The actual fixture compiler generated the new root-bound full 72-character name
+and payload; no original packet name or hash was substituted. The plan SHA-256
+is `f376208e6a03e82dabd097e50fdb160f8bfd1ca46c3d8b0b8f83d08f864b31d6`. The
+preparation receipt SHA-256 is
+`7e7fa4397364276f1fe6936347538f83c91a8df74a30f17507616c78ac58107e`. The plan and
+preparation are retained as `packet/plan.json` and `preparation.json` under that
+private root.
+
+The maintainer diagnostic was rebuilt at `e4c793d`, whose full `just verify`
+passed. Its driver SHA-256 is
+`f480d3b99fcdda7918a1b0466412a4326e555c848edb8d2e3dd5cada2d25f6db`. The
+`retry-preflight.json` receipt records all nine fixture files accepted,
+unchanged captured launcher/Node/platform inputs and no existing native state or
+evidence. This capture invokes no native client and qualifies no effective root.
+`proposed-retry.json` records the proposed bounds beside it.
+
+The proposed envelope is one fixed offline Git setup and at most eleven fixed
+Copilot commands, once and in order, each bounded to twenty seconds and 1 MiB
+combined output. It requests zero models and authorizes zero spending. It uses
+the same version, inventories, local registration/install, detach and final
+inventory sequence specified above, under this new disposable packet. The
+candidate counts exact `builtin` labels only on unrelated inventory rows; these
+are metadata counts, never trusted-origin or binding evidence. Owned names,
+selectors and marketplace references still require exact identity and private
+source paths. Every other non-packet or ambiguous source stops.
+
+Execution requires a fresh explicit decision for this packet and interpretation
+policy. Revalidate the input, code and root pins before starting, and retain the
+first Pending/result sequence without replay, fallback or broad cleanup. The
+original stopped packet stays untouched. This is a bounded contract experiment;
+it does not waive preservation, quiescence, isolation or production admission.

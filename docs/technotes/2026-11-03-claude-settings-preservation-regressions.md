@@ -93,5 +93,15 @@ source files were restored byte for byte. The bounded offline receipts are
 `/private/tmp/claude-preservation-integration-mutations.json` and the
 corresponding `claude-preservation-integration-mutation-*.log` files. Focused
 test output is retained in
-`/private/tmp/claude-preservation-integration-focused.log`. Full repository
-verification and independent review remain pending at this stage.
+`/private/tmp/claude-preservation-integration-focused.log`.
+
+Full `just verify` passed at `e4c793d5a3645fb8be00f5d48416060ac9e6d934`. The
+terminal receipt is
+`/private/tmp/claude-preservation-integration-full-verify-result.json`; its
+complete log is the adjacent `claude-preservation-integration-full-verify.log`.
+Quick review left two minor follow-ups: explicitly assert protected receipt
+path/presence fields, and retain evidence for the earlier passing mutation
+control or narrow that historical statement. Local debt drafts are retained at
+`/private/tmp/claude-preservation-review-debt-drafts.json`; hosted filing
+remains pending GitHub authentication. These checks do not resolve the native
+blocker.
