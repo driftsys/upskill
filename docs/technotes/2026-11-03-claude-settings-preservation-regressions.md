@@ -19,6 +19,12 @@ this note were integrated into `feat/native-delivery` after `9cb8ab9` and are
 independently reverified against that branch. No previous full-suite result is
 assumed.
 
+The original work was subsequently committed as
+`e796e35350614abd940d0aa64e18c1a92879a55c` on
+`fix/claude-settings-preservation`. Its cherry-pick into `native-delivery`
+preserves the newer integration verification records below. The test source is
+byte-identical to that commit; the original worktree remains untouched.
+
 ## Required behavior
 
 - The captured before/after documents have equal JSON values but different
