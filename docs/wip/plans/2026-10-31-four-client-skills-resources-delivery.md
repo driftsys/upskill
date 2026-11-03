@@ -253,9 +253,10 @@ name acceptance and the complete native contract remain unmeasured. The used
 packet is retained. The separately approved two-query source classification
 completed once without model requests. The candidate collector now counts exact
 `builtin` labels only on unrelated inventory rows; this does not prove their
-origin or qualify the route. Review coverage fixes and a retry of full local
-verification follow the disk-exhaustion failure. Any new native contract trial
-requires a fresh packet and execution decision.
+origin or qualify the route. Review coverage fixes are committed in `2f25137`;
+full `just verify` passed there after disk capacity was restored. Two additional
+test-strengthening advisories remain in the Copilot probe plan. Any new native
+contract trial requires a fresh packet and execution decision.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
@@ -310,6 +311,14 @@ Claude adapter. Preserve the observed lexical rewrite as a failing control; do
 not repair or normalize the original probe evidence. Isolation, live/resumable
 session retention and stable cleanup remain unqualified. This priority does not
 authorize another native probe, paid request or production admission.
+
+Offline input copies derived from the tracked sanitized receipt are prepared at
+`/private/tmp/upskill-claude-preservation-fixtures-oxpvjsg2/`. Their baseline
+and observed-final hashes match the retained probe samples: the parsed JSON
+values are equal, while exact bytes differ. `provenance.json` binds the source
+receipt and records the failed byte-preservation control. These private input
+copies are preparation for the regression tests, not an adapter fix or a passing
+preservation claim. The original evidence remains unchanged.
 
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved

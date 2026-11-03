@@ -419,8 +419,8 @@ compatibility, lint and documentation checks passed. A deliberate mutation
 removing the owned-reference exclusion compiled and failed the owned-reference
 acceptance assertion; the source was then restored byte for byte. An additional
 regression case requires the exact marketplace name rather than accepting its
-plugin selector spelling. Full repository verification and independent review
-remain pending for this revision. These are fake-client checks only.
+plugin selector spelling. Full repository verification was retried after the
+review follow-up below. These are fake-client checks only.
 
 On 2026-11-03 the review follow-up extended ambiguous-source refusals to both
 inventory kinds, added builtin-labelled marketplace selector rejection, and
@@ -431,5 +431,15 @@ mutations compiled and failed their acceptance assertions: admitting marketplace
 entries as one. Production source was restored byte for byte after each
 experiment. The two stale preservation/execution statements were corrected. The
 previous full verification failed in two recovery tests with disk exhaustion;
-that is not a passing result. A full retry is pending after disk capacity was
-restored. No real native command was run by this review follow-up.
+that is not a passing result. After disk capacity was restored, full
+`just verify` passed at `2f25137f2ff9eb487a093c222c168a0552b7c98c`. The receipt
+is `/private/tmp/copilot-builtin-review-fixes-full-verify-result.json` and its
+complete log is the adjacent `copilot-builtin-review-fixes-full-verify.log`. No
+real native command was run by this review follow-up.
+
+The required quick review of that follow-up found no documentation mismatch. Two
+test-strengthening advisories remain: add a distinct persistence canary for
+accepted unrelated filesystem source values, and assert the complete mixed
+inventory totals in the collector receipts. These are unimplemented follow-ups,
+not demonstrated runtime failures or qualification evidence. Hosted debt filing
+remains pending because the command runner receives GitHub HTTP 401.
