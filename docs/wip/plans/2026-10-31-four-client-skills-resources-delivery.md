@@ -344,6 +344,13 @@ investigates owned span predeclaration followed by native commands that leave
 already-declared settings unchanged. Both project and user profiles remain
 required. This hypothesis authorizes no new native execution or spending.
 
+On 2026-11-04 an eight-case offline predeclaration matrix passed for both
+scopes, present/absent settings and available/unknown binding observations. A
+compiled exposure-order mutation was caught, then production source restored
+exactly. Four focused tests and targeted Clippy pass. Shared-reference,
+concurrent-edit and refresh/detach controls remain open, as does actual native
+no-op behavior. No native probe or adapter completion is implied.
+
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved
 qualification profiles. Preserve failed/unrun gates explicitly and keep the

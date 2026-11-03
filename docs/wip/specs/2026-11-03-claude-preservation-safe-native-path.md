@@ -120,3 +120,25 @@ settings. Such a primitive is a requirement to establish, not an available flag.
 Any changed native version or distinct configuration surface needs its own
 reviewed profile. Changing scope, weakening exact preservation, temporary
 user-wide activation and direct registry repair do not resolve this design.
+
+## Offline feasibility checkpoint, 2026-11-04
+
+The coordinator acceptance test now exercises eight combinations: project/user
+scope, initially present/absent settings, and available/unknown after-state
+binding observations. The fake checks the exact planned declaration bytes and
+mode before its effect. Known after-state permits completion; an unknown binding
+retains recovery state and prevents authoritative lockfile publication. This
+uses the real coordinator and supplied fake metadata, not a native executable.
+
+A compiled mutation that moved `BeforeNative` configuration exposure after the
+effect failed the exact-declaration assertion. Production source was restored
+byte for byte. The complete focused file passed four tests, and targeted Clippy
+passed with warnings denied. Evidence is retained in
+`/private/tmp/claude-predeclaration-restored-tests.log`,
+`/private/tmp/claude-predeclaration-clippy.log`, and
+`/private/tmp/claude-predeclaration-order-mutation.json`.
+
+This establishes only the proposed ordering and completion boundary under the
+fake's no-rewrite behavior. Shared-reference transitions, concurrent edits,
+refresh/final-detach cases and actual native no-op behavior still need their
+controls. The adapter and production profile remain incomplete.

@@ -22,8 +22,9 @@ assumed.
 The original work was subsequently committed as
 `e796e35350614abd940d0aa64e18c1a92879a55c` on
 `fix/claude-settings-preservation`. Its cherry-pick into `native-delivery`
-preserves the newer integration verification records below. The test source is
-byte-identical to that commit; the original worktree remains untouched.
+preserves the newer integration verification records below. At cherry-pick, the
+integrated test source was byte-identical to that commit; the original worktree
+remains untouched.
 
 ## Required behavior
 
@@ -86,12 +87,10 @@ original production source was restored byte-for-byte before the normal suites
 were rerun. This establishes that the test protects a completion boundary,
 rather than only checking a failure label.
 
-A fresh review found that final baseline restoration alone could conceal an
-intermediate rewrite by the span planner. A second temporary mutation forced
-forward reserialization: the original round-trip assertion still passed. The
-added exact forward bytes/mode assertion then failed on that same mutation. The
-planner source was restored before final verification. No production source
-change remains from either mutation experiment.
+The forward-reserialization mutation failed the exact forward bytes/mode
+assertion. This checks intermediate preservation independently of final baseline
+restoration. The planner source was restored before final verification. No
+production source change remains from either mutation experiment.
 
 Integration repeated both mutation controls against the current production
 source. Each mutant compiled and failed its intended acceptance assertion; both
@@ -111,3 +110,18 @@ control or narrow that historical statement. Local debt drafts are retained at
 `/private/tmp/claude-preservation-review-debt-drafts.json`; hosted filing
 remains pending GitHub authentication. These checks do not resolve the native
 blocker.
+
+## Offline follow-up, 2026-11-04
+
+Receipt validation now asserts the protected settings path and both recorded
+presence flags. The unsupported historical passing-mutation statement was
+removed; the retained integration artifacts establish the strengthened
+assertion's failure. These address the two local minor review follow-ups; hosted
+tracking remains pending authentication.
+
+The
+[candidate native-path design](../wip/specs/2026-11-03-claude-preservation-safe-native-path.md#offline-feasibility-checkpoint-2026-11-04)
+now has an eight-case offline predeclaration matrix. All four focused tests and
+targeted Clippy passed. It demonstrates coordinator behavior conditional on a
+native client that leaves the already-declared settings exact. No real native
+command ran. This does not resolve the recorded 2.1.308 serializer failure.
