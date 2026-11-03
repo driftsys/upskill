@@ -250,8 +250,12 @@ also passed read-only preflight. One contract attempt subsequently ran Git
 setup, version and baseline plugin-list commands, then stopped on the
 packet-only source precondition. No registration or installation was attempted;
 name acceptance and the complete native contract remain unmeasured. The used
-packet is retained; a separate source-classification proposal needs a new
-research decision.
+packet is retained. The separately approved two-query source classification
+completed once without model requests. The candidate collector now counts exact
+`builtin` labels only on unrelated inventory rows; this does not prove their
+origin or qualify the route. Review coverage fixes and a retry of full local
+verification follow the disk-exhaustion failure. Any new native contract trial
+requires a fresh packet and execution decision.
 
 **Files:** Create `src/native_delivery/claude.rs`, `copilot.rs`, `codex.rs` and
 `opencode.rs`; add adapter contract fixtures and `tests/cli_owned_skills.rs`;
@@ -293,6 +297,19 @@ qualification cells below remain open.
       the production gate closed and record remaining qualification work.
 
 ## Handoff
+
+### Priority confirmed on 2026-11-03
+
+The operator handoff confirms that the four-client study and approved Claude
+probe are committed locally, documentation checks passed, and nothing was
+pushed. Claude installation succeeded, while exact settings preservation failed.
+After the current offline Copilot review fixes and verification, the next
+implementation task is to derive offline regression fixtures from the retained
+Claude probe receipts and fix exact settings preservation before completing the
+Claude adapter. Preserve the observed lexical rewrite as a failing control; do
+not repair or normalize the original probe evidence. Isolation, live/resumable
+session retention and stable cleanup remain unqualified. This priority does not
+authorize another native probe, paid request or production admission.
 
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved

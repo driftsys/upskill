@@ -235,14 +235,16 @@ retained without reopening, replay or cleanup. Output stays in bounded memory;
 version must match the complete retained bytes, lists must match the observed
 strict schema and expected fixture claims, and mutation output must be empty.
 Unexpected diagnostics, conflicting claims or outside-packet sources stop the
-sequence. Source strings must be absolute paths under the packet and contain no
-parent-directory components; relative or otherwise ambiguous origins stop before
-mutations. This lexical check does not resolve arbitrary native paths or prove
-filesystem source binding. Plugin identity must match the exact expected name or
-selector as well as its marketplace, version and enabled state. Successful
-transport and fixture counts remain diagnostic facts. The initial evidence
-header records twelve external commands in total: eleven client commands and one
-setup command.
+sequence. Filesystem source strings must be absolute paths under the packet and
+contain no parent-directory components. The candidate revision counts the exact
+`builtin` label on unrelated inventory rows without interpreting it as a
+filesystem path or trusted origin. Owned namespace references never receive this
+exemption. All other relative or ambiguous sources stop before mutations. This
+lexical check does not resolve arbitrary native paths or prove filesystem source
+binding. Plugin identity must match the exact expected name or selector as well
+as its marketplace, version and enabled state. Successful transport and fixture
+counts remain diagnostic facts. The initial evidence header records twelve
+external commands in total: eleven client commands and one setup command.
 
 Native file observations cover only `home/.copilot`,
 `home/.copilot/config.json`, `home/cache/copilot` and `project/.git/config`.
@@ -345,18 +347,18 @@ intact.
 
 Status: executed once after user approval on 2026-11-02; no model requests.
 
-A fresh private diagnostic root is prepared at
+The private diagnostic root is retained at
 `/private/tmp/upskill-copilot-source-check-3dtx0p4k/`. Its `source-check.rs` and
 executable reuse the bounded runner and strict observed plugin-inventory
 validator. Self-tests cover the five lexical categories, unknown fields, decoded
 duplicate rejection and secret canaries. Five fake-client cases cover exact
 argv, version mismatch, stderr, malformed inventory, credential environment
-exclusion and cancellation after a positive readiness control. No real native
-command has run from this root. `ready.json` binds source, executable, runner
-and reviewed code-metadata digests. The `execute.py --check` entrypoint passed
-without invoking a native executable. Its explicit `--execute` mode exclusively
-creates a consumed-run marker before the two queries; it is not authorized by
-preparing or checking the root.
+exclusion and cancellation after a positive readiness control. The approved
+two-query run consumed this root once; it must not be replayed. `ready.json`
+binds source, executable, runner and reviewed code-metadata digests. The
+`execute.py --check` entrypoint passed without invoking a native executable. Its
+explicit `--execute` mode exclusively creates a consumed-run marker before the
+two queries; it is not authorized by preparing or checking the root.
 
 The proposed envelope contains only two commands, once and in order:
 `["--no-auto-update", "--version"]`, then
@@ -419,3 +421,15 @@ acceptance assertion; the source was then restored byte for byte. An additional
 regression case requires the exact marketplace name rather than accepting its
 plugin selector spelling. Full repository verification and independent review
 remain pending for this revision. These are fake-client checks only.
+
+On 2026-11-03 the review follow-up extended ambiguous-source refusals to both
+inventory kinds, added builtin-labelled marketplace selector rejection, and
+asserted zero and multiple builtin entries mixed with unrelated packet-local
+filesystem sources. All eleven collector tests passed. Three deliberate
+mutations compiled and failed their acceptance assertions: admitting marketplace
+`built-in`, exempting marketplace selector references, and counting multiple
+entries as one. Production source was restored byte for byte after each
+experiment. The two stale preservation/execution statements were corrected. The
+previous full verification failed in two recovery tests with disk exhaustion;
+that is not a passing result. A full retry is pending after disk capacity was
+restored. No real native command was run by this review follow-up.
