@@ -337,6 +337,13 @@ the
 [prepared Copilot retry](2026-11-02-copilot-local-catalog-contract-probe.md#fresh-contract-retry-prepared-on-2026-11-03),
 whose read-only preflight passed. Its execution decision remains separate.
 
+The original preservation commit `e796e35` was cherry-picked as `3b410ad`,
+preserving the identical integrated tests and newer verification records. The
+[offline preservation-safe path design](../specs/2026-11-03-claude-preservation-safe-native-path.md)
+investigates owned span predeclaration followed by native commands that leave
+already-declared settings unchanged. Both project and user profiles remain
+required. This hypothesis authorizes no new native execution or spending.
+
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved
 qualification profiles. Preserve failed/unrun gates explicitly and keep the

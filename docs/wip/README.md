@@ -12,6 +12,11 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Claude native delivery with exact settings preservation](specs/2026-11-03-claude-preservation-safe-native-path.md)
+  : offline predeclaration hypothesis after the retained 2.1.308 rewrite. Native
+  commands must preserve already-declared owned settings exactly; no experiment
+  or production profile is authorized.
+
 - [Four-client skills and resources delivery](specs/2026-10-31-four-client-skills-resources-design.md)
   and its
   [staged plan](plans/2026-10-31-four-client-skills-resources-delivery.md) :
