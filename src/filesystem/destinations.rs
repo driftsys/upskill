@@ -95,7 +95,11 @@ impl DestinationSnapshot<'_> {
             self.evidence.verify(self.scope, &self.observations)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        anyhow::bail!("qualified destination observation is unsupported on this operating system")
+        {
+            anyhow::bail!(
+                "qualified destination observation is unsupported on this operating system"
+            )
+        }
     }
 }
 
@@ -138,5 +142,3 @@ mod tests {
         drop(scope.try_lock_writer().unwrap());
     }
 }
-
-// Temporary same-bundle extraction control; removed before delivery.

@@ -51,11 +51,11 @@ docs/technotes/codeql-rust-extraction.md and its linked evidence directory.
 
 - [x] If the hypothesis holds, wrap only the affected conditional macro
       statements in blocks without changing conditions, messages or operands.
-- [ ] Record the root cause, exact tool/query versions, seven warning sites,
+- [x] Record the root cause, exact tool/query versions, seven warning sites,
       before/after metrics, coverage limits and independent controls.
 - [x] Run just fmt, just verify and appropriate MSRV checks.
-- [ ] Obtain independent review, address findings, and create a task PR.
-- [ ] Inspect the PR CodeQL job and its exact-head SARIF ingestion; require zero
+- [x] Obtain independent review, address findings, and create a task PR.
+- [x] Inspect the PR CodeQL job and its exact-head SARIF ingestion; require zero
       errored files without reducing the source inventory before claiming the
       coverage metric fixed.
 - [ ] Reconcile this plan into durable evidence before final delivery.

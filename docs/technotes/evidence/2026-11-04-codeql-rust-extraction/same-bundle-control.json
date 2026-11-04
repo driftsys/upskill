@@ -1,0 +1,79 @@
+{
+  "commit": "eacff60ad566f3a3cea38a6464dd8b2f00f63de1",
+  "run_id": 41914065659,
+  "job_id": 126868956541,
+  "analysis_id": 2098431849,
+  "codeql_version": "2.27.4",
+  "query_packs": [
+    {
+      "name": "codeql-action/pr-diff-range",
+      "version": "0.0.0"
+    },
+    {
+      "name": "codeql/rust-queries",
+      "version": "0.1.46+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    },
+    {
+      "name": "codeql/rust-all",
+      "version": "0.2.25+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    },
+    {
+      "name": "codeql/threat-models",
+      "version": "1.1.1+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    }
+  ],
+  "sarif_rules": 26,
+  "security_results": 0,
+  "tracked_rust_file_inventory": 193,
+  "rust_files_extracted_with_errors": 5,
+  "rust_files_extracted_without_error": 188,
+  "macro_warnings": [
+    {
+      "path": "src/filesystem/destinations.rs",
+      "line": 98,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/scope.rs",
+      "line": 73,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/scope.rs",
+      "line": 89,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/sources.rs",
+      "line": 51,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/sources.rs",
+      "line": 84,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "tests/filesystem_destinations.rs",
+      "line": 765,
+      "column": 21,
+      "message": "macro expansion failed for '$crate::format_args'"
+    },
+    {
+      "path": "tests/source_manifests.rs",
+      "line": 137,
+      "column": 5,
+      "message": "macro expansion failed for '$crate::panic::panic_2021'"
+    }
+  ],
+  "warning_identities_equal_baseline": true,
+  "tool_and_query_packs_equal_candidate": true,
+  "sarif_processing_complete": true,
+  "job_log_sha256": "c21eca5754fd4ac3ed526a0756969702b0a062b851354486009a60c3e9dbcc97",
+  "rest_sarif_sha256": "27afca3c849c2a62cd907f21ae976c02884a050ec797e318321856fb7e026f94"
+}

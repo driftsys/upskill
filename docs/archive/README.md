@@ -923,3 +923,22 @@ separate work. Archival completes only this bounded implementation pair.
 The other 17 specs, 19 plans and `docs/wip/README.md` retain their exact paths
 and bytes. Their existing sequencing disposition is recorded in the WIP
 inventory; this archive does not resolve broader M1 or updater work.
+
+## Rust CodeQL extraction coverage
+
+Source path: `docs/wip/plans/2026-11-04-codeql-extraction-coverage.md`. The raw
+[plan](plans/2026-11-04-codeql-extraction-coverage.md) retains its exact bytes
+and historical checkboxes. Requirements remain in
+[issue #344](https://github.com/driftsys/upskill/issues/344); there is no
+separate WIP spec. The durable successor is the
+[extraction note and linked receipts](../technotes/codeql-rust-extraction.md).
+
+Implementation and plan reconciliation are complete. Candidate `f6fdb61` passed
+full local verification, Rust 1.85 checking and Linux/macOS/Windows CI. Matched
+CodeQL 2.27.4 runs report 193 clean / zero errored files for that candidate and
+188 clean / five errored files with the original source, retaining all 193 Rust
+paths. The seven conditional blocks preserve runtime behavior. Delivery requires
+the restoration and record commit plus exact final-head hosted checks, tracked
+in [PR #462](https://github.com/driftsys/upskill/pull/462). This archive records
+the experiment and does not assert a merge. Only the named plan is archived. All
+other WIP retains its original paths, bytes and existing disposition.

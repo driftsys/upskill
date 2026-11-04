@@ -65,26 +65,61 @@ different sysroot, change dependencies or change GitHub security settings.
 
 ## Verification
 
-The acceptance check first failed against the captured baseline because the
-extracted-with-errors metric was five rather than zero. The clean baseline
-`cargo test --locked` suite passed. The changed source passes the four focused
-integration targets `filesystem_destinations`, `filesystem_scope_lock`,
-`filesystem_sources` and `source_manifests` (78 parent-process tests, plus
-subprocess controls).
+[Local verification receipts](evidence/2026-11-04-codeql-rust-extraction/local-verification.json)
+retain the failed baseline acceptance check, commands, observed exit codes,
+source revisions, platform, log hashes and result summaries. The baseline Rust
+suite, the four focused integration targets (78 parent-process tests plus
+subprocess controls), `just fmt`, full `just verify` and Rust 1.85 MSRV checks
+passed. The
+[independent candidate review](evidence/2026-11-04-codeql-rust-extraction/candidate-review.md)
+found no issues; full PR review pass 1 also kept no findings.
 
-`just fmt`, full `just verify` and the Rust 1.85 all-target MSRV check passed.
-Independent candidate review found no issues and verified the exact block-only
-edits, inventory and baseline evidence.
+| Case                     | Commit    | CodeQL | Errored files | Clean files | Macro warnings |
+| ------------------------ | --------- | ------ | ------------- | ----------- | -------------- |
+| Historical main baseline | `1a291a7` | 2.27.3 | 5             | 188         | 7              |
+| Wrapped candidate        | `f6fdb61` | 2.27.4 | 0             | 193         | 0              |
+| Original-source control  | `eacff60` | 2.27.4 | 5             | 188         | 7              |
 
-Hosted after-change extraction, exact analyzed commit and SARIF ingestion are
-pending. Until those receipts are recorded here, the source change is a
-candidate workaround, not a verified coverage fix.
+The
+[candidate receipt](evidence/2026-11-04-codeql-rust-extraction/candidate.json)
+binds
+[Rust job 126864425559](https://github.com/driftsys/upskill/actions/runs/41912780563/job/126864425559)
+and ingested analysis 2098365348 to exact commit
+`f6fdb611b8ba04b1354f1558073309dfe483fe05`. It records zero macro-expansion
+warnings and 193 files extracted without error. Linux, macOS and Windows tests,
+quality, documentation and MSRV checks passed at that candidate commit.
+
+GitHub selected CodeQL 2.27.4 and updated query packs for the candidate, so the
+historical comparison alone cannot isolate the source change. The
+[same-bundle control](evidence/2026-11-04-codeql-rust-extraction/same-bundle-control.json)
+restored the original five Rust file blobs in a temporary commit. Its
+[Rust job 126868956541](https://github.com/driftsys/upskill/actions/runs/41914065659/job/126868956541)
+and analysis 2098431849 reproduce all seven exact warning paths, lines, columns
+and messages with the same CodeQL 2.27.4/query-pack versions as the wrapped
+candidate. This control rejects the tool update alone as the cause of the clean
+result. All 193 tracked Rust paths remain unchanged. Both runs ingest SARIF
+successfully with zero security findings despite different extraction quality.
+
+Default setup does not emit its separate file-coverage baseline on PR runs. The
+PR evidence therefore uses the extraction metrics and unchanged tracked
+inventory; it does not claim a PR file-coverage baseline was emitted. No local
+minimal-extractor run was performed. GitHub refused both attempts to rerun the
+historical default-setup job; the temporary source control supplied the matched
+comparison instead. A later comment-only control marker was unnecessary and is
+removed with the original-source control before delivery.
+
+The implementation and
+[plan reconciliation](../archive/plans/2026-11-04-codeql-extraction-coverage.md)
+are complete. The five restored Rust file blobs match the verified `f6fdb61`
+candidate exactly. The final delivery commit and its exact-head hosted checks
+are tracked in [PR #462](https://github.com/driftsys/upskill/pull/462). This
+note records the controlled extraction experiment and does not assert a merge.
 
 ## Limits
 
-A clean Linux extraction metric would show that the tracked Rust inventory was
-processed without the reported diagnostics on that runner. It would not
-establish analysis of all macOS or Windows-only branches, complete semantic
-modeling, absence of vulnerabilities, or any native delivery qualification.
-Default setup remains responsible for future tool updates; a later extractor or
-toolchain change requires a fresh check of metrics and diagnostics.
+The clean Linux extraction metric shows that the tracked Rust inventory was
+processed without the reported diagnostics on that runner. It does not establish
+analysis of all macOS or Windows-only branches, complete semantic modeling,
+absence of vulnerabilities, or any native delivery qualification. Default setup
+remains responsible for future tool updates; a later extractor or toolchain
+change requires a fresh check of metrics and diagnostics.
