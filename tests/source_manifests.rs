@@ -134,9 +134,7 @@ fn complete_source_matches_literal_vector_across_roots_and_orders() {
     #[cfg(unix)]
     assert!(captured.files.iter().all(|file| file.mode == Some(0o640)));
     #[cfg(not(unix))]
-    {
-        assert!(captured.files.iter().all(|file| file.mode.is_none()));
-    }
+    assert!(captured.files.iter().all(|file| file.mode.is_none()));
     let expected_digest = if cfg!(unix) {
         "d277aa179cdcdfc083aab28ccace1714cdf239315f9bdf6767764f4c9e27ded1"
     } else {

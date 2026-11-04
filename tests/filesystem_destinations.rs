@@ -759,13 +759,11 @@ mod qualified {
             }
             Err(error) => {
                 #[cfg(target_os = "macos")]
-                {
-                    assert_eq!(
-                        error.raw_os_error(),
-                        Some(92),
-                        "unexpected native-root fixture refusal"
-                    );
-                }
+                assert_eq!(
+                    error.raw_os_error(),
+                    Some(92),
+                    "unexpected native-root fixture refusal"
+                );
                 #[cfg(target_os = "linux")]
                 panic!("unexpected native-root fixture refusal: {error}");
             }
