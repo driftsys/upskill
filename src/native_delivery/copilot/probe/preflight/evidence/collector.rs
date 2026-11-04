@@ -188,28 +188,32 @@ impl CopilotProbeEvidence<'_> {
                     let observation = if inputs_unchanged {
                         observe::inspect(index, &output, &plan)
                     } else {
-                        Err("input_changed")
+                        Err("input_changed".into())
                     };
                     (facts, observation)
                 }
                 Err(_) => (
                     json!({"invocation_returned_output":false}),
-                    Err("invocation"),
+                    Err("invocation".into()),
                 ),
             };
             let (observation, native_files) = match observation {
                 Ok(observation) => match metadata::sample(self) {
                     Ok(files) => (Ok(observation), Some(files)),
-                    Err(reason) => (Err(reason), None),
+                    Err(reason) => (Err(observe::Rejection::from(reason)), None),
                 },
                 Err(reason) => (Err(reason), None),
             };
             let accepted = observation.is_ok();
-            let reason = observation.as_ref().err().copied();
+            let reason = observation.as_ref().err().map(|error| error.reason);
+            let source_rejection_category = observation
+                .as_ref()
+                .err()
+                .and_then(|error| error.source_category);
             let result = json!({"schema":1,"sequence":sequence,"client_index":index,
                 "pending_sha256":pending_sha,"accepted":accepted,"qualified":false,"reason":reason,
                 "inputs_unchanged":inputs_unchanged,"transport":facts,"observation":observation.ok(),
-                "model_requests":0,"native_files":native_files});
+                "model_requests":0,"native_files":native_files,"source_rejection_category":source_rejection_category});
             previous = self.record(&format!("step-{sequence:02}.result.json"), &result)?;
             if !accepted {
                 summary.stop = reason;

@@ -4,6 +4,42 @@ use crate::native_delivery::process::{NativeGroupState, NativeProcessOutput, Nat
 use serde_json::{Value, json};
 use std::path::{Component, Path};
 
+/// Only fixed diagnostic labels may leave the in-memory validator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Rejection {
+    pub reason: &'static str,
+    pub source_category: Option<&'static str>,
+}
+impl From<&'static str> for Rejection {
+    fn from(reason: &'static str) -> Self {
+        Self {
+            reason,
+            source_category: None,
+        }
+    }
+}
+
+fn source_category(source: &str) -> &'static str {
+    if source.starts_with("GitHub: ") {
+        "display_github"
+    } else if source.starts_with("Local: ") {
+        "display_local"
+    } else if source.starts_with("URL: ") {
+        "display_url"
+    } else if source.contains("://") {
+        "uri"
+    } else if Path::new(source)
+        .components()
+        .any(|part| matches!(part, Component::ParentDir))
+    {
+        "parent_component"
+    } else if Path::new(source).is_absolute() {
+        "outside_absolute"
+    } else {
+        "relative"
+    }
+}
+
 pub(super) fn transport(output: &NativeProcessOutput) -> bool {
     output.reason == NativeStopReason::Exited
         && output.exit_code == Some(0)
@@ -30,18 +66,18 @@ pub(super) fn inspect(
     index: Option<usize>,
     output: &NativeProcessOutput,
     plan: &Value,
-) -> Result<Value, &'static str> {
+) -> Result<Value, Rejection> {
     if !transport(output) {
-        return Err("transport");
+        return Err("transport".into());
     }
     if !output.stderr.is_empty() {
-        return Err("stderr");
+        return Err("stderr".into());
     }
     let Some(index) = index else {
         return if output.stdout.is_empty() {
             Ok(json!({"setup_complete":true}))
         } else {
-            Err("unexpected_output")
+            Err("unexpected_output".into())
         };
     };
     if index == 0 {
@@ -50,7 +86,7 @@ pub(super) fn inspect(
         {
             Ok(json!({"version_matches":true}))
         } else {
-            Err("version")
+            Err("version".into())
         };
     }
     let kind = match index {
@@ -62,7 +98,7 @@ pub(super) fn inspect(
         return if output.stdout.is_empty() {
             Ok(json!({"unstructured_output_empty":true}))
         } else {
-            Err("unexpected_output")
+            Err("unexpected_output".into())
         };
     };
     let summary = summarize_inventory("1.0.105", kind, &output.stdout).map_err(|_| "inventory")?;
@@ -95,14 +131,17 @@ pub(super) fn inspect(
                 .any(|part| matches!(part, Component::ParentDir))
             || !source_path.starts_with(root)
         {
-            return Err("outside_packet_source");
+            return Err(Rejection {
+                reason: "outside_packet_source",
+                source_category: Some(source_category(source)),
+            });
         }
         if !named {
             continue;
         }
         matches += 1;
         if kind == CopilotInventoryKind::Marketplaces && row["name"] != name {
-            return Err("fixture_conflict");
+            return Err("fixture_conflict".into());
         }
         if kind == CopilotInventoryKind::Plugins
             && ((row["name"] != name && row["name"] != selector)
@@ -110,18 +149,18 @@ pub(super) fn inspect(
                 || row["version"] != plan["version"]
                 || row["enabled"] != true)
         {
-            return Err("fixture_conflict");
+            return Err("fixture_conflict".into());
         }
         if source_path != Path::new(catalog)
             && source_path != revision
             && source_path != revision.join("skills/contract-probe")
         {
-            return Err("fixture_conflict");
+            return Err("fixture_conflict".into());
         }
     }
     let expected = usize::from(matches!(index, 5 | 6));
     if matches != expected {
-        return Err("fixture_conflict");
+        return Err("fixture_conflict".into());
     }
     Ok(json!({"inventory":summary,"fixture_named_entries":matches,
         "unrelated_builtin_label_entries":unrelated_builtin_label_entries}))
@@ -167,7 +206,7 @@ mod tests {
             }
             assert_eq!(
                 inspect(None, &output, &Value::Null),
-                Err("transport"),
+                Err("transport".into()),
                 "case {case}"
             );
         }

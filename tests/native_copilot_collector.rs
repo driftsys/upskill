@@ -777,3 +777,38 @@ fn builtin_label_cannot_hide_any_owned_namespace_reference() {
         );
     }
 }
+
+#[test]
+fn rejected_marketplace_sources_retain_only_a_fixed_category() {
+    for (source, category) in [
+        ("GitHub: secret-canary/private", "display_github"),
+        ("Local: /secret-canary", "display_local"),
+        ("URL: https://secret-canary.invalid", "display_url"),
+        ("https://secret-canary.invalid", "uri"),
+        ("../secret-canary", "parent_component"),
+        ("unknown-secret-canary", "relative"),
+        ("/secret-canary", "outside_absolute"),
+    ] {
+        let fixture = prepared("success");
+        private(
+            &fixture.parent.join("control/baseline-markets"),
+            &serde_json::to_vec(&json!([{
+                "name":"secret-canary", "source":source, "isDefault":true
+            }]))
+            .unwrap(),
+            0o600,
+        );
+        let preflight = fixture.capture().unwrap();
+        let mut evidence = preflight.begin_evidence().unwrap();
+        let summary =
+            serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+        assert_eq!(summary["stop"], "outside_packet_source");
+        assert_eq!(summary["client_commands"], 3);
+        let terminal = json_file(fixture.root.join("evidence/step-03.result.json"));
+        assert_eq!(terminal["accepted"], false);
+        assert_eq!(terminal["observation"], Value::Null);
+        assert_eq!(terminal["source_rejection_category"], category);
+        assert!(!fixture.parent.join("control/call-3").exists());
+        assert_no_secret(&fixture.root.join("evidence"));
+    }
+}

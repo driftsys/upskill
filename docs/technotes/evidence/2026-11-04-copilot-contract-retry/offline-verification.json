@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-04",
+  "base_head": "9c5f2e4",
+  "rust_test_groups": 117,
+  "rust_tests_passed": 1751,
+  "rust_tests_failed": 0,
+  "acceptance_red": "missing display_github category",
+  "acceptance_green_cases": 7,
+  "just_verify_exit": 1,
+  "just_verify_stop": "Markdown formatting in newly added local review note; Rust suite and Clippy passed first",
+  "formatting_fixed": true,
+  "subsequent_lint_exit": 0,
+  "subsequent_docs_check_exit": 0,
+  "subsequent_assemble_exit": 0,
+  "independent_review": "No functional or privacy defect; minor receipt-field documentation wording corrected",
+  "source_sha256": {
+    "src/native_delivery/copilot/probe/preflight/evidence/collector.rs": "6c6f78b4d9e7b83aac78478029dd19f221c514ed337acce2e353bbe14a0e6d14",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "ee92a582192565eb3f51c2d8871731bf4afd594ee1a19a64cb22f2b214d582fc",
+    "tests/native_copilot_collector.rs": "8f963232d679234d4754162f8e71d9553ef2304526c62ce1f6bb91252c7374b5"
+  },
+  "real_native_commands": 0,
+  "qualification": false,
+  "production_admission": false
+}

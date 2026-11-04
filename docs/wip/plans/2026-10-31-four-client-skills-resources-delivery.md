@@ -379,3 +379,14 @@ production registry closed until the complete route qualifies. Final independent
 review, gardening, hosted checks and delivery are still required. This plan
 chooses no release date and does not convert retained failures into support
 claims.
+
+## Copilot retry checkpoint, 2026-11-04
+
+After explicit approval, the prepared retry ran one offline Git setup and three
+Copilot commands. Version and plugin inventory passed; the baseline marketplace
+inventory stopped with `outside_packet_source`. No registration or installation
+was attempted. The packet is consumed; no retry or cleanup ran. All nine known
+fixture bytes/modes and the four Pending/result digest links were verified. The
+[retry result](2026-11-02-copilot-local-catalog-contract-probe.md#approved-retry-result-2026-11-04)
+retains the sanitized evidence and limits. Stage 6 and production admission
+remain open and closed respectively.

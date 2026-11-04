@@ -1,0 +1,9 @@
+{
+  "path": "/opt/homebrew/lib/node_modules/@github/copilot/app.js",
+  "bytes": 16585713,
+  "sha256": "6d4e96b8c44546c2542e89b92e4b02b9ccba60067152f2c44a17655b0bdf966e",
+  "method_offset": 16228483,
+  "method": "async listMarketplaces(){let e=await this.loadConfigForRead(),n=this.getMarketplaces(e),r=[];for(let[o,{source:s}]of Object.entries(n)){let a=typeof s==\"string\"?`GitHub: ${s}`:s.source===\"github\"?`GitHub: ${s.repo}`:s.source===\"local\"?`Local: ${s.path}`:`URL: ${s.url||\"unknown\"}`;r.push({name:o,source:a,isDefault:Tmt(o)})}return r}",
+  "provenance_limit": "Installed JavaScript copy only; no retained binding to the executed 1.0.105 runtime.",
+  "native_commands": 0
+}

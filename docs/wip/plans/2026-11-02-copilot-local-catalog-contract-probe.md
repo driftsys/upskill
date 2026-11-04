@@ -446,8 +446,9 @@ remains pending because the command runner receives GitHub HTTP 401.
 
 ## Fresh contract retry prepared on 2026-11-03
 
-Status: prepared, rebuilt and read-only preflight passed; no native command
-executed and no execution approval assumed.
+Status: executed once after explicit user approval on 2026-11-04. Stopped at the
+baseline marketplace inventory before registration or installation; see the
+result below. The packet is consumed and must not be replayed.
 
 The unused packet is `/private/tmp/upskill-copilot-contract-v2-be_l1eav/packet`.
 The actual fixture compiler generated the new root-bound full 72-character name
@@ -481,3 +482,70 @@ policy. Revalidate the input, code and root pins before starting, and retain the
 first Pending/result sequence without replay, fallback or broad cleanup. The
 original stopped packet stays untouched. This is a bounded contract experiment;
 it does not waive preservation, quiescence, isolation or production admission.
+
+## Approved retry result, 2026-11-04
+
+The user explicitly approved the prepared packet and its one-setup/eleven-client
+command envelope. The rebuilt driver matched the fresh read-only receipt
+(`/private/tmp/upskill-gh-resume-preflight.json`) and source head `9c5f2e4`;
+production source and example inputs were unchanged. The once-only collector ran
+one offline Git setup and three Copilot commands: version, baseline plugin list
+and baseline marketplace list. All four exited zero with complete bounded
+transport, zero stderr and unchanged code/root/input observations.
+
+The version matched 1.0.105. The plugin inventory passed with one unrelated
+exact `builtin` label and no fixture-named entry. The marketplace response was
+113 bytes and failed the packet-source policy with `outside_packet_source`. Its
+scalar source value was not retained; this reason does not distinguish an
+outside absolute path from a relative or otherwise ambiguous source and does not
+prove an outside-profile read. No marketplace origin claim follows.
+
+The collector stopped permanently before registration, installation, removal or
+final inventories. No retry, fallback, cleanup, model request or spending ran.
+The wrapper exited zero because it successfully reported an incomplete
+experiment; its summary explicitly has `complete: false` and `qualified: false`.
+Direct children were reaped and process groups observed empty, but native-worker
+quiescence remains unqualified.
+
+Read-only verification checked all four Pending/result digest links and all nine
+known fixture files against their exact retained bytes and modes. The sanitized
+[summary](../../technotes/evidence/2026-11-04-copilot-contract-retry/summary.json)
+retains the result projections and terminal digest. Private inputs, snapshots,
+Pending/result receipts, approval and execution wrapper result remain under
+`/private/tmp/upskill-copilot-contract-v2-be_l1eav/`. The original stopped
+packet is unchanged. Full-name acceptance, installation and every native
+qualification/admission gate remain unresolved. Further native diagnostics need
+a separate bounded decision; this failed run supplies no replay authority.
+
+## Offline rejection diagnostics, 2026-11-04
+
+The installed JavaScript copy at
+`/opt/homebrew/lib/node_modules/@github/copilot/app.js` formats marketplace
+source values with `GitHub:`, `Local:` or `URL:` prefixes. The
+[static inspection receipt](../../technotes/evidence/2026-11-04-copilot-contract-retry/static-source-inspection.json)
+records its digest and exact method. This copy is not proven to be the runtime
+used by the trial: the private packet and prior inspection paths under
+`/private/tmp` were no longer present when this follow-up began. Their absence
+is not cleanup evidence. The tracked sanitized retry summary remains available.
+
+The collector now retains `source_rejection_category` on a source rejection. The
+fixed lexical labels are `display_github`, `display_local`, `display_url`,
+`uri`, `parent_component`, `outside_absolute` and `relative`, checked in that
+order. They describe string shape only, without retaining any suffix, path, name
+or other native value. All other failures emit a null category. The stop reason
+remains `outside_packet_source`; the collection still stops immediately and the
+failed observation stays null. No prefix is stripped, path opened or source
+admitted through this diagnostic.
+
+The first new fake-client acceptance run failed because the category was absent.
+After implementation it passed all seven marketplace-source cases, including
+exact stop order and evidence scans for private canaries. No native command ran
+and the old rejected marketplace value cannot be reconstructed. A future fresh
+diagnostic still needs its own bounded execution decision.
+
+Independent scoped review found no functional or privacy defect. All 1,751 Rust
+tests passed. The full verification command then stopped on formatting in the
+new local review note; after formatting that note, lint, documentation checks
+and the build each passed. The
+[offline verification receipt](../../technotes/evidence/2026-11-04-copilot-contract-retry/offline-verification.json)
+records the distinct command outcomes and source digests.

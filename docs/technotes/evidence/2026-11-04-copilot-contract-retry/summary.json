@@ -1,0 +1,218 @@
+{
+  "date": "2026-11-04",
+  "packet": "/private/tmp/upskill-copilot-contract-v2-be_l1eav/packet",
+  "source_head": "9c5f2e48b7c36ef54c5179b015bed7d5d1481132",
+  "complete": false,
+  "qualified": false,
+  "setup_commands": 1,
+  "client_commands": 3,
+  "model_requests": 0,
+  "stop": "outside_packet_source",
+  "stopped_at": "baseline marketplace list",
+  "version_matches": true,
+  "plugin_entries": 1,
+  "unrelated_builtin_plugin_entries": 1,
+  "fixture_files_unchanged": 9,
+  "chronology_verified": true,
+  "terminal_result_sha256": "5781a6afef8e453fd42d43f4685c1c5a64e8eed23c52d614bf56c44c9afc9665",
+  "registration_attempted": false,
+  "installation_attempted": false,
+  "native_worker_quiescence": "unqualified",
+  "results": [
+    {
+      "accepted": true,
+      "client_index": null,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "setup_complete": true
+      },
+      "pending_sha256": "d5dd3b327255463cc43b3ef5aa567f1af20e76544ef00696d5219cc6eb85ca41",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 0,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 0
+      }
+    },
+    {
+      "accepted": true,
+      "client_index": 0,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "version_matches": true
+      },
+      "pending_sha256": "8a8ef763a0b0466c2897614430397c1ae9a65dd04681a4f535ccba89502252ea",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 1,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 71
+      }
+    },
+    {
+      "accepted": true,
+      "client_index": 1,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "fixture_named_entries": 0,
+        "inventory": {
+          "entries": 1,
+          "kind": "plugins"
+        },
+        "unrelated_builtin_label_entries": 1
+      },
+      "pending_sha256": "05c7d4e579ba46d8f5dadef2121dfd9296e0f8356af1bf57c8d541e1c71b61c9",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 2,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 132
+      }
+    },
+    {
+      "accepted": false,
+      "client_index": 2,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": null,
+      "observation": null,
+      "pending_sha256": "7129e5962d8fad0c3568ba7a05710ca780aae5271e3f07c68a7c01bce0f88d8e",
+      "qualified": false,
+      "reason": "outside_packet_source",
+      "schema": 1,
+      "sequence": 3,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 113
+      }
+    }
+  ]
+}
