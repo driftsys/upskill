@@ -138,3 +138,5 @@ mod tests {
         drop(scope.try_lock_writer().unwrap());
     }
 }
+
+// Temporary same-bundle extraction control; removed before delivery.
