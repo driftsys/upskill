@@ -1,0 +1,40 @@
+{
+  "commit": "f6fdb611b8ba04b1354f1558073309dfe483fe05",
+  "run_id": 41912780563,
+  "job_id": 126864425559,
+  "analysis_id": 2098365348,
+  "ref": "refs/pull/462/head",
+  "codeql_version": "2.27.4",
+  "query_packs": [
+    {
+      "name": "codeql-action/pr-diff-range",
+      "version": "0.0.0"
+    },
+    {
+      "name": "codeql/rust-queries",
+      "version": "0.1.46+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    },
+    {
+      "name": "codeql/rust-all",
+      "version": "0.2.25+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    },
+    {
+      "name": "codeql/threat-models",
+      "version": "1.1.1+1be292a1e54696ca543b4ad0f9b4537b9687caa7"
+    }
+  ],
+  "sarif_rules": 26,
+  "security_results": 0,
+  "tracked_rust_file_inventory": 193,
+  "rust_files_extracted_with_errors": 0,
+  "rust_files_extracted_without_error": 193,
+  "macro_warnings": [],
+  "sarif_processing_complete": true,
+  "pull_request_file_coverage_information_enabled": false,
+  "job_log_sha256": "f51a0e6a0e1fc145706ee2bcc5d4285dc08940ca23a6c271273ab98cd05beea4",
+  "rest_sarif_sha256": "cc4c45fc361480e20150efdac50d75d8454ca74c8c8298f6d170af01a30e4049",
+  "limitations": [
+    "Tool/query versions differ from the 2026-11-02 baseline; that comparison alone does not establish the wrappers as the sole cause.",
+    "Default setup disables the separate file-coverage baseline on pull-request runs; extraction metrics still report 193 clean files."
+  ]
+}

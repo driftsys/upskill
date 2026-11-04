@@ -48,7 +48,9 @@ impl QualifiedScope {
             self.observe_source_tree_with(|| Ok(()))
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        anyhow::bail!("qualified source observation is unsupported on this operating system")
+        {
+            anyhow::bail!("qualified source observation is unsupported on this operating system")
+        }
     }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn observe_source_tree_with(
@@ -81,7 +83,9 @@ impl SourceSnapshot<'_> {
             self.evidence.verify(self.scope)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        anyhow::bail!("qualified source observation is unsupported on this operating system")
+        {
+            anyhow::bail!("qualified source observation is unsupported on this operating system")
+        }
     }
 }
 

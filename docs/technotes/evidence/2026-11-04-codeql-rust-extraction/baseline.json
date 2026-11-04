@@ -1,0 +1,72 @@
+{
+  "commit": "1a291a7de62481b14360ddcc09cf19cc93ccbdc2",
+  "run_id": 41419948210,
+  "job_id": 125192822607,
+  "analysis_id": 2075675383,
+  "codeql_version": "2.27.3",
+  "query_packs": [
+    {
+      "name": "codeql/rust-queries",
+      "version": "0.1.45+a1575b98a8cc19bcfa7bb6cb41be688cb3dae65c"
+    },
+    {
+      "name": "codeql/rust-all",
+      "version": "0.2.24+a1575b98a8cc19bcfa7bb6cb41be688cb3dae65c"
+    },
+    {
+      "name": "codeql/threat-models",
+      "version": "1.1.0+a1575b98a8cc19bcfa7bb6cb41be688cb3dae65c"
+    }
+  ],
+  "sarif_rules": 26,
+  "security_results": 0,
+  "rust_files_scanned": 193,
+  "rust_files_extracted_with_errors": 5,
+  "rust_files_extracted_without_error": 188,
+  "macro_warnings": [
+    {
+      "path": "src/filesystem/destinations.rs",
+      "line": 98,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/scope.rs",
+      "line": 73,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/scope.rs",
+      "line": 89,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/sources.rs",
+      "line": 51,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "src/filesystem/sources.rs",
+      "line": 84,
+      "column": 23,
+      "message": "macro expansion failed for '$crate::__anyhow'"
+    },
+    {
+      "path": "tests/filesystem_destinations.rs",
+      "line": 765,
+      "column": 21,
+      "message": "macro expansion failed for '$crate::format_args'"
+    },
+    {
+      "path": "tests/source_manifests.rs",
+      "line": 137,
+      "column": 5,
+      "message": "macro expansion failed for '$crate::panic::panic_2021'"
+    }
+  ],
+  "job_log_sha256": "ff10f1bfc73dbb3051bc24f61ab495d86232fa37aad6c0f962187bea3931ae7e",
+  "rest_sarif_sha256": "a000dddca610d6bfa34782bfd388699546873f1fb9ad9fcab720d056efdf032a"
+}

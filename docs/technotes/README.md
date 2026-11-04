@@ -97,6 +97,11 @@ snapshot; a stable name does not imply that external research remains current.
 - [Documentation lifecycle comparison](agent-customization/documentation-refactor.md):
   historical audit and migration rationale.
 
+## Static analysis
+
+- [Rust CodeQL extraction coverage](codeql-rust-extraction.md): exact extraction
+  diagnostics, conditional macro workaround and hosted verification boundaries.
+
 ## Filesystem qualification
 
 - [Filesystem qualification validation](filesystem-validation.md): historical

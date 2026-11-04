@@ -1,0 +1,10 @@
+{
+  "state": "configured",
+  "languages": ["actions", "python", "rust"],
+  "query_suite": "default",
+  "threat_model": "remote",
+  "updated_at": "2026-10-11T20:05:15Z",
+  "schedule": "weekly",
+  "runner_type": "standard",
+  "runner_label": ""
+}
