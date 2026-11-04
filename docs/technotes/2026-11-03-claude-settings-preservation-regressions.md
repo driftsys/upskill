@@ -125,3 +125,39 @@ now has an eight-case offline predeclaration matrix. All four focused tests and
 targeted Clippy passed. It demonstrates coordinator behavior conditional on a
 native client that leaves the already-declared settings exact. No real native
 command ran. This does not resolve the recorded 2.1.308 serializer failure.
+
+The next offline extension covers surviving direct/bundle references to one
+installation, refresh and final detach for both scopes and initial file-presence
+states. It also covers semantic-preserving edits before initial installation and
+before a no-op whose configuration capture is supplied implicitly by the
+coordinator. Exact settings bytes, mode and absence are asserted independently
+of native success metadata. The no-rewrite fake performs no settings write. The
+[lifecycle control contract](../wip/specs/2026-11-03-claude-preservation-safe-native-path.md#offline-lifecycle-controls-2026-11-04)
+records the limits; distinct targets sharing configuration entries and actual
+native behavior are not established by this extension.
+
+All six focused tests pass, including four lifecycle combinations and four
+stale-capture combinations, and targeted Clippy passes with warnings denied. Two
+targeted source mutations were caught at runtime: omitting implicit prior
+configuration capture wrongly permitted completion after an edit; skipping only
+settings-file deletion prevented final detach from completing. A broader
+file-deletion mutation was also caught. These ran in a separate source snapshot;
+the working tree's production source was untouched, and the snapshot source was
+restored after each mutation. Receipts and logs are retained at
+`/private/tmp/upskill-claude-resume-mutations.json`,
+`/private/tmp/upskill-resume-claude-controls.log` and
+`/private/tmp/upskill-claude-resume-clippy.log`.
+
+Independent scoped review found no critical or important issue. One minor
+assertion follow-up is deferred: compare the final state's exact old/new
+revision metadata inventory, in addition to checking both revisions' files. The
+local debt draft is retained with this plan's private SDD artifacts; hosted
+filing remains blocked by GitHub connectivity. The full Stage 6 implementation
+and qualification are outside this review.
+
+Full `just verify` passed for this extension, including Rust tests, the Python
+test suites, lint, documentation checks and the build. The complete log is
+`/private/tmp/upskill-claude-resume-full-verify.log`; the terminal result and
+source hashes are retained in
+`/private/tmp/upskill-claude-resume-verification.json`. This remains offline
+verification; it supplies no native qualification or production admission.

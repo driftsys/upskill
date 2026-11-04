@@ -351,6 +351,27 @@ exactly. Four focused tests and targeted Clippy pass. Shared-reference,
 concurrent-edit and refresh/detach controls remain open, as does actual native
 no-op behavior. No native probe or adapter completion is implied.
 
+The resumed offline extension adds direct/bundle-reference, refresh/final-detach
+and stale semantic-preserving reformat controls. It requires exact baseline file
+presence at final native detach and preserves retained immutable revisions. The
+installed no-op case omits an explicit configuration capture so the implicit
+prior-configuration guard must detect the edit. All six focused tests and
+targeted Clippy pass; targeted implicit-capture and settings-deletion mutants
+were caught. Verification and scoped review results are recorded with the
+preservation regressions; this does not authorize another native trial or
+qualify any production profile.
+
+Read-only Copilot retry readiness was refreshed on 2026-11-04. The recorded
+driver hash had changed, so the first check stopped without running it. The
+production source was byte-unchanged from `e4c793d`; after rebuilding the
+maintainer diagnostic, its read-only preflight accepted all nine fixture files.
+The plan/preparation digests still match and the packet remains unused, with no
+native commands or model requests. The refreshed driver digest and receipt are
+retained in
+`/private/tmp/upskill-copilot-retry-resume-refreshed-preflight.json`. The
+original receipt remains unchanged. A fresh execution decision is still
+required.
+
 Continue Stage 6 from the implemented inactive infrastructure. Complete the
 client adapters and fake-native lifecycle acceptance, then execute only approved
 qualification profiles. Preserve failed/unrun gates explicitly and keep the

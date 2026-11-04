@@ -139,6 +139,37 @@ passed with warnings denied. Evidence is retained in
 `/private/tmp/claude-predeclaration-order-mutation.json`.
 
 This establishes only the proposed ordering and completion boundary under the
-fake's no-rewrite behavior. Shared-reference transitions, concurrent edits,
-refresh/final-detach cases and actual native no-op behavior still need their
-controls. The adapter and production profile remain incomplete.
+fake's no-rewrite behavior. The additional lifecycle controls below extend this
+offline boundary. Actual native no-op behavior remains unestablished; the
+adapter and production profile remain incomplete.
+
+## Offline lifecycle controls, 2026-11-04
+
+Additional coordinator acceptance cases exercise project and user scope with
+initially present and absent settings. One installation has both a direct
+reference and a bundle reference. Removing the direct reference must preserve
+both owned declarations and the native selection without another native effect.
+A payload refresh must preserve the exact settings document. Removing the final
+bundle reference must expose the exact original settings value, including file
+absence, before the native detach effect. The resulting state must relinquish
+configuration ownership while retaining both immutable resource revisions.
+
+Separate stale-capture controls reformat settings without changing JSON values
+before the first operation and before an installed no-op. The latter omits an
+explicit configuration capture to exercise the coordinator's implicit prior
+configuration precondition. Both cases must preserve the edited bytes and mode,
+leave the authoritative lockfile unchanged and perform no further native effect.
+
+The supplied no-rewrite fake now leaves the settings file untouched, including
+when it is absent. It observes exact declarations at the native boundary; it
+does not simulate successful preservation by rewriting the expected document.
+These are offline transaction controls, not native serializer,
+worker-quiescence, isolation, shared ownership by distinct targets or
+session-retention evidence.
+
+All six focused preservation tests and targeted Clippy passed. Mutations that
+omit implicit configuration capture or skip settings-file deletion failed the
+new acceptance assertions. The
+[regression record](../../technotes/2026-11-03-claude-settings-preservation-regressions.md#offline-follow-up-2026-11-04)
+retains the receipts and the scoped review's deferred revision-metadata
+assertion.

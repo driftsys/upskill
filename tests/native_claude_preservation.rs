@@ -22,7 +22,9 @@ use upskill::native_delivery::adapter::*;
 use upskill::native_delivery::coordinator::{
     NativeDeliveryCoordinator, NativeDeliveryOutcome, RecoveryDisposition,
 };
-use upskill::native_delivery::journal::{NativeConfigurationCapture, NativeOperationStore};
+use upskill::native_delivery::journal::{
+    NativeConfigurationCapture, NativeOperationCapture, NativeOperationStore,
+};
 use upskill::native_delivery::roots::{NativeRoot, lock_native_roots};
 use upskill::native_delivery::state::ConfigOwner;
 use upskill::ownership::{InstallationRoot, OwnershipScope};
@@ -171,7 +173,7 @@ struct RewritingNative {
     reorder: bool,
     change_mode: bool,
     rewritten: Vec<u8>,
-    expected_declaration: Option<FileValue>,
+    expected_declaration: Option<Option<FileValue>>,
 }
 impl NativeDeliveryAdapter for RewritingNative {
     fn profile(
@@ -193,16 +195,16 @@ impl NativeDeliveryAdapter for RewritingNative {
     }
     fn apply(&mut self, effect: &PlannedNativeEffect) -> Result<NativeBindingOutcome> {
         if let Some(expected) = &self.expected_declaration {
-            let actual = FileValue {
-                bytes: std::fs::read(&self.path)?,
-                mode: Some(std::fs::metadata(&self.path)?.permissions().mode() & 0o777),
-            };
+            let actual = observed_settings(&self.path);
             assert_eq!(
                 &actual, expected,
                 "native effect ran before exact owned declaration"
             );
         }
         let result = self.inner.apply(effect)?;
+        if !self.reorder && !self.change_mode {
+            return Ok(result);
+        }
         let before = std::fs::read(&self.path)?;
         self.rewritten = before.clone();
         if self.reorder {
@@ -333,148 +335,417 @@ fn native_settings_rewrite_cannot_commit_or_restore_over_the_diverged_file() {
     }
 }
 
+fn observed_settings(path: &std::path::Path) -> Option<FileValue> {
+    match std::fs::read(path) {
+        Ok(bytes) => Some(FileValue {
+            bytes,
+            mode: Some(std::fs::metadata(path).unwrap().permissions().mode() & 0o777),
+        }),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => panic!("cannot capture fixture settings: {error}"),
+    }
+}
+
+fn with_predeclared_settings(
+    scope_kind: OwnershipScope,
+    initially_present: bool,
+    unknown_after_apply: bool,
+    test: impl FnOnce(
+        &NativeOperationStore<'_, '_>,
+        &upskill::native_delivery::store::NativeStateStore<'_, '_>,
+        &mut RewritingNative,
+        NativeOperationCapture,
+        FileValue,
+    ),
+) {
+    let root = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let primary = InstallationRoot {
+        scope: scope_kind,
+        path: root.path().into(),
+    };
+    let private = InstallationRoot {
+        scope: OwnershipScope::User,
+        path: home.path().into(),
+    };
+    let primary_scope = QualifiedScope::open(&primary).unwrap();
+    let private_scope = QualifiedScope::open(&private).unwrap();
+    let locks = lock_native_roots(&[
+        NativeRoot {
+            root: primary.clone(),
+            scope: &primary_scope,
+        },
+        NativeRoot {
+            root: private.clone(),
+            scope: &private_scope,
+        },
+    ])
+    .unwrap();
+    let store = NativeOperationStore::initialize(&locks, &primary, &private).unwrap();
+    let path = primary.path.join(".claude/settings.json");
+    std::fs::create_dir(path.parent().unwrap()).unwrap();
+    let baseline = receipts()["settings_before"].as_str().unwrap().to_owned();
+    if initially_present {
+        std::fs::write(&path, &baseline).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let mut capture = fixture::capture(store.context());
+    let key = capture.intents[0].key.clone();
+    let name = capture.candidates[0].package.native_name.clone();
+    let selector = format!("{name}@{name}");
+    let catalog = primary.path.join(".upskill/exports/claude/fixture-install");
+    let catalog_json = serde_json::to_string(&catalog).unwrap();
+    let enabled = format!(r#"{{"{selector}":true}}"#);
+    let marketplace =
+        format!(r#"{{"{name}":{{"source":{{"path":{catalog_json},"source":"directory"}}}}}}"#);
+    let expected_bytes = if initially_present {
+        baseline
+            .replace(
+                r#""enabledPlugins": {}"#,
+                &format!(r#""enabledPlugins": {enabled}"#),
+            )
+            .replace(
+                r#""extraKnownMarketplaces": {}"#,
+                &format!(r#""extraKnownMarketplaces": {marketplace}"#),
+            )
+    } else {
+        format!(r#"{{"enabledPlugins":{enabled},"extraKnownMarketplaces":{marketplace}}}"#)
+    }
+    .into_bytes();
+    let expected = FileValue {
+        bytes: expected_bytes,
+        mode: Some(0o600),
+    };
+    let mut config = captured(&primary, baseline.into_bytes());
+    if !initially_present {
+        config.target.file.value = None;
+    }
+    capture.configurations.push(NativeConfigurationCapture {
+        before: config,
+        contribution: ConfigContribution {
+            id: "enable".into(),
+            selector: ConfigSelector::Key(vec!["enabledPlugins".into(), selector]),
+            expected: None,
+            desired: Some(json!(true)),
+        },
+        additional_contributions: vec![ConfigContribution {
+            id: "marketplace".into(),
+            selector: ConfigSelector::Key(vec!["extraKnownMarketplaces".into(), name]),
+            expected: None,
+            desired: Some(json!({"source":{"source":"directory","path":catalog}})),
+        }],
+        owners_after: vec![
+            ConfigOwner {
+                entry_id: "enable".into(),
+                target: key.clone(),
+            },
+            ConfigOwner {
+                entry_id: "marketplace".into(),
+                target: key,
+            },
+        ],
+    });
+    let mut adapter = RewritingNative {
+        inner: fake::Fake {
+            unknown_after_apply,
+            ..Default::default()
+        },
+        path: path.clone(),
+        reorder: false,
+        change_mode: false,
+        rewritten: vec![],
+        expected_declaration: Some(Some(expected.clone())),
+    };
+    let state = upskill::native_delivery::store::NativeStateStore::open(&locks, &primary, &private)
+        .unwrap()
+        .unwrap();
+    test(&store, &state, &mut adapter, capture, expected);
+}
+
 #[test]
 fn predeclared_settings_precede_native_effects_and_need_independent_observation() {
     for scope_kind in [OwnershipScope::Project, OwnershipScope::User] {
         for initially_present in [true, false] {
             for unknown_after_apply in [false, true] {
-                let root = tempfile::tempdir().unwrap();
-                let home = tempfile::tempdir().unwrap();
-                let primary = InstallationRoot {
-                    scope: scope_kind,
-                    path: root.path().into(),
-                };
-                let private = InstallationRoot {
-                    scope: OwnershipScope::User,
-                    path: home.path().into(),
-                };
-                let primary_scope = QualifiedScope::open(&primary).unwrap();
-                let private_scope = QualifiedScope::open(&private).unwrap();
-                let locks = lock_native_roots(&[
-                    NativeRoot {
-                        root: primary.clone(),
-                        scope: &primary_scope,
+                with_predeclared_settings(
+                    scope_kind,
+                    initially_present,
+                    unknown_after_apply,
+                    |store, _, adapter, capture, expected| {
+                        let primary = &store.context().scope;
+                        let outcome =
+                            NativeDeliveryCoordinator::apply(store, adapter, capture).unwrap();
+                        assert_eq!(adapter.inner.calls, 1);
+                        assert_eq!(std::fs::read(&adapter.path).unwrap(), expected.bytes);
+                        assert_eq!(
+                            std::fs::metadata(&adapter.path)
+                                .unwrap()
+                                .permissions()
+                                .mode()
+                                & 0o777,
+                            0o600
+                        );
+                        if unknown_after_apply {
+                            assert!(
+                                matches!(outcome, NativeDeliveryOutcome::RecoveryRequired { .. }),
+                                "{outcome:?}"
+                            );
+                            assert!(!primary.path.join(".upskill-lock.json").exists());
+                            assert!(
+                                primary
+                                    .path
+                                    .join(".upskill/native-pending/pending.json")
+                                    .exists()
+                            );
+                        } else {
+                            assert!(
+                                matches!(outcome, NativeDeliveryOutcome::Complete { .. }),
+                                "{outcome:?}"
+                            );
+                            assert!(primary.path.join(".upskill-lock.json").exists());
+                        }
+                        let calls = adapter.inner.method_calls.lock().unwrap();
+                        let applied = calls.iter().position(|method| *method == "apply").unwrap();
+                        let observed = calls
+                            .iter()
+                            .rposition(|method| *method == "observe")
+                            .unwrap();
+                        assert!(observed > applied);
                     },
-                    NativeRoot {
-                        root: private.clone(),
-                        scope: &private_scope,
-                    },
-                ])
-                .unwrap();
-                let store = NativeOperationStore::initialize(&locks, &primary, &private).unwrap();
-                let path = primary.path.join(".claude/settings.json");
-                std::fs::create_dir(path.parent().unwrap()).unwrap();
-                let baseline = receipts()["settings_before"].as_str().unwrap().to_owned();
-                if initially_present {
-                    std::fs::write(&path, &baseline).unwrap();
-                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
-                        .unwrap();
-                }
-                let mut capture = fixture::capture(store.context());
-                let key = capture.intents[0].key.clone();
-                let name = capture.candidates[0].package.native_name.clone();
-                let selector = format!("{name}@{name}");
-                let catalog = primary.path.join(".upskill/exports/claude/fixture-install");
-                let catalog_json = serde_json::to_string(&catalog).unwrap();
-                let enabled = format!(r#"{{"{selector}":true}}"#);
-                let marketplace = format!(
-                    r#"{{"{name}":{{"source":{{"path":{catalog_json},"source":"directory"}}}}}}"#
                 );
-                let expected_bytes = if initially_present {
-                    baseline
-                        .replace(
-                            r#""enabledPlugins": {}"#,
-                            &format!(r#""enabledPlugins": {enabled}"#),
-                        )
-                        .replace(
-                            r#""extraKnownMarketplaces": {}"#,
-                            &format!(r#""extraKnownMarketplaces": {marketplace}"#),
-                        )
-                } else {
-                    format!(
-                        r#"{{"enabledPlugins":{enabled},"extraKnownMarketplaces":{marketplace}}}"#
-                    )
-                }
-                .into_bytes();
-                let expected = FileValue {
-                    bytes: expected_bytes,
-                    mode: Some(0o600),
-                };
-                let mut config = captured(&primary, baseline.into_bytes());
-                if !initially_present {
-                    config.target.file.value = None;
-                }
-                capture.configurations.push(NativeConfigurationCapture {
-                    before: config,
-                    contribution: ConfigContribution {
-                        id: "enable".into(),
-                        selector: ConfigSelector::Key(vec!["enabledPlugins".into(), selector]),
-                        expected: None,
-                        desired: Some(json!(true)),
-                    },
-                    additional_contributions: vec![ConfigContribution {
-                        id: "marketplace".into(),
-                        selector: ConfigSelector::Key(vec!["extraKnownMarketplaces".into(), name]),
-                        expected: None,
-                        desired: Some(json!({"source":{"source":"directory","path":catalog}})),
-                    }],
-                    owners_after: vec![
-                        ConfigOwner {
-                            entry_id: "enable".into(),
-                            target: key.clone(),
-                        },
-                        ConfigOwner {
-                            entry_id: "marketplace".into(),
-                            target: key,
-                        },
-                    ],
-                });
-                let mut adapter = RewritingNative {
-                    inner: fake::Fake {
-                        unknown_after_apply,
-                        ..Default::default()
-                    },
-                    path: path.clone(),
-                    reorder: false,
-                    change_mode: false,
-                    rewritten: vec![],
-                    expected_declaration: Some(expected.clone()),
-                };
-                let outcome =
-                    NativeDeliveryCoordinator::apply(&store, &mut adapter, capture).unwrap();
-                assert_eq!(adapter.inner.calls, 1);
-                assert_eq!(std::fs::read(&path).unwrap(), expected.bytes);
-                assert_eq!(
-                    std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
-                    0o600
-                );
-                if unknown_after_apply {
+            }
+        }
+    }
+}
+
+fn observe_owned_files(
+    capture: &mut NativeOperationCapture,
+    state: &upskill::native_delivery::state::NativeDeliveryState,
+) {
+    for file in &state.files {
+        let location = FileLocation {
+            root: file.root.clone(),
+            path: file.path.clone(),
+        };
+        let observation = ObservedFile {
+            value: observed_settings(&location.root.path.join(&location.path)),
+            location,
+        };
+        if let Some(existing) = capture
+            .file_observations
+            .iter_mut()
+            .find(|row| row.location == observation.location)
+        {
+            *existing = observation;
+        } else {
+            capture.file_observations.push(observation);
+        }
+    }
+}
+
+#[test]
+fn shared_reference_refresh_and_final_detach_preserve_exact_settings() {
+    use upskill::lifecycle::state::{BundleNode, Reference};
+    for scope in [OwnershipScope::Project, OwnershipScope::User] {
+        for present in [true, false] {
+            with_predeclared_settings(
+                scope,
+                present,
+                false,
+                |store, state, adapter, mut initial, expected| {
+                    let direct = initial.graph_changes.add_references[0].clone();
+                    let bundle = Reference::DirectBundle {
+                        bundle_id: "fixture-bundle".into(),
+                    };
+                    let member = Reference::BundleInstallation {
+                        bundle_id: "fixture-bundle".into(),
+                        installation_id: initial.intents[0].key.installation_id.clone(),
+                    };
+                    initial.graph_changes.bundles.push(BundleNode {
+                        id: "fixture-bundle".into(),
+                        source: "./bundle".into(),
+                        name: "fixture-bundle".into(),
+                        source_revision: None,
+                    });
+                    initial
+                        .graph_changes
+                        .add_references
+                        .extend([bundle.clone(), member.clone()]);
+                    let old = initial.candidates[0].clone();
+                    let surviving_intents = initial.intents.clone();
+                    let result = NativeDeliveryCoordinator::apply(store, adapter, initial).unwrap();
                     assert!(
-                        matches!(outcome, NativeDeliveryOutcome::RecoveryRequired { .. }),
-                        "{outcome:?}"
+                        matches!(result, NativeDeliveryOutcome::Complete { .. }),
+                        "{result:?}"
                     );
-                    assert!(!primary.path.join(".upskill-lock.json").exists());
+
+                    let mut remove_direct = NativeOperationCapture {
+                        intents: surviving_intents,
+                        candidates: vec![old.clone()],
+                        ..Default::default()
+                    };
+                    remove_direct.graph_changes.remove_references.push(direct);
+                    observe_owned_files(&mut remove_direct, &state.load().unwrap().unwrap());
+                    let result =
+                        NativeDeliveryCoordinator::apply(store, adapter, remove_direct).unwrap();
                     assert!(
-                        primary
+                        matches!(result, NativeDeliveryOutcome::Complete { .. }),
+                        "{result:?}"
+                    );
+                    assert_eq!(
+                        adapter.inner.calls, 1,
+                        "a surviving bundle reference was detached"
+                    );
+                    assert_eq!(observed_settings(&adapter.path), Some(expected.clone()));
+                    let shared = state.load().unwrap().unwrap();
+                    assert_eq!(shared.skills.graph.references, vec![bundle.clone(), member]);
+                    assert_eq!(shared.configurations.len(), 1);
+                    assert_eq!(shared.configurations[0].owners.len(), 2);
+
+                    let mut update = fixture::capture_with_body(
+                        store.context(),
+                        TargetSurface::ClaudeCli,
+                        "Updated fixture body.",
+                    );
+                    update.graph_changes.add_references.clear();
+                    observe_owned_files(&mut update, &shared);
+                    let new = update.candidates[0].clone();
+                    let result = NativeDeliveryCoordinator::apply(store, adapter, update).unwrap();
+                    assert!(
+                        matches!(result, NativeDeliveryOutcome::Complete { .. }),
+                        "{result:?}"
+                    );
+                    assert_eq!(adapter.inner.calls, 2);
+                    assert_eq!(
+                        adapter.inner.selected,
+                        Some(
+                            upskill::lifecycle::native_receipt::NativeSkillSelection::from_package(
+                                &new.package
+                            )
+                        )
+                    );
+                    assert_eq!(observed_settings(&adapter.path), Some(expected));
+
+                    let prior = state.load().unwrap().unwrap();
+                    let mut detach = NativeOperationCapture::default();
+                    detach.graph_changes.remove_references.push(bundle);
+                    observe_owned_files(&mut detach, &prior);
+                    for config in &prior.configurations {
+                        let mut changes = config
+                            .capture
+                            .ownership
+                            .as_ref()
+                            .unwrap()
+                            .entries
+                            .iter()
+                            .map(|entry| ConfigContribution {
+                                id: entry.id.clone(),
+                                selector: entry.selector.clone(),
+                                expected: Some(entry.clone()),
+                                desired: None,
+                            });
+                        detach.configurations.push(NativeConfigurationCapture {
+                            before: config.capture.clone(),
+                            contribution: changes.next().unwrap(),
+                            additional_contributions: changes.collect(),
+                            owners_after: vec![],
+                        });
+                    }
+                    let baseline = present.then(|| FileValue {
+                        bytes: receipts()["settings_before"]
+                            .as_str()
+                            .unwrap()
+                            .as_bytes()
+                            .to_vec(),
+                        mode: Some(0o600),
+                    });
+                    adapter.expected_declaration = Some(baseline.clone());
+                    let result = NativeDeliveryCoordinator::apply(store, adapter, detach).unwrap();
+                    assert!(
+                        matches!(result, NativeDeliveryOutcome::Complete { .. }),
+                        "{result:?}"
+                    );
+                    assert_eq!(adapter.inner.calls, 3);
+                    assert_eq!(adapter.inner.selected, None);
+                    assert_eq!(observed_settings(&adapter.path), baseline);
+                    let detached = state.load().unwrap().unwrap();
+                    assert!(detached.skills.graph.installations.is_empty());
+                    assert!(detached.skills.graph.references.is_empty());
+                    assert!(detached.configurations.is_empty());
+                    assert!(detached.intents.is_empty());
+                    for revision in [old, new] {
+                        for file in revision.package.revision_files {
+                            assert_eq!(
+                                observed_settings(&store.context().scope.path.join(file.path)),
+                                Some(FileValue {
+                                    bytes: file.bytes,
+                                    mode: Some(0o600),
+                                })
+                            );
+                        }
+                    }
+                },
+            );
+        }
+    }
+}
+
+#[test]
+fn concurrent_semantic_preserving_reformat_blocks_initial_and_implicit_owned_settings() {
+    for scope in [OwnershipScope::Project, OwnershipScope::User] {
+        for installed in [false, true] {
+            with_predeclared_settings(
+                scope,
+                true,
+                false,
+                |store, state, adapter, mut capture, _| {
+                    if installed {
+                        let result =
+                            NativeDeliveryCoordinator::apply(store, adapter, capture.clone())
+                                .unwrap();
+                        assert!(
+                            matches!(result, NativeDeliveryOutcome::Complete { .. }),
+                            "{result:?}"
+                        );
+                        capture = NativeOperationCapture {
+                            intents: capture.intents,
+                            candidates: capture.candidates,
+                            ..Default::default()
+                        };
+                        observe_owned_files(&mut capture, &state.load().unwrap().unwrap());
+                    }
+                    let lockfile = store.context().scope.path.join(".upskill-lock.json");
+                    let prior_lockfile = observed_settings(&lockfile);
+                    let baseline = observed_settings(&adapter.path).unwrap();
+                    let value: Value = serde_json::from_slice(&baseline.bytes).unwrap();
+                    let edited = serde_json::to_vec(&value).unwrap();
+                    assert_ne!(edited, baseline.bytes);
+                    assert_eq!(serde_json::from_slice::<Value>(&edited).unwrap(), value);
+                    std::fs::write(&adapter.path, &edited).unwrap();
+                    let result = NativeDeliveryCoordinator::apply(store, adapter, capture).unwrap();
+                    assert!(
+                        matches!(result, NativeDeliveryOutcome::RecoveryRequired { .. }),
+                        "{result:?}"
+                    );
+                    assert_eq!(adapter.inner.calls, usize::from(installed));
+                    assert_eq!(
+                        observed_settings(&adapter.path),
+                        Some(FileValue {
+                            bytes: edited,
+                            mode: Some(0o600),
+                        })
+                    );
+                    assert_eq!(observed_settings(&lockfile), prior_lockfile);
+                    assert!(
+                        !store
+                            .context()
+                            .scope
                             .path
                             .join(".upskill/native-pending/pending.json")
                             .exists()
                     );
-                } else {
-                    assert!(
-                        matches!(outcome, NativeDeliveryOutcome::Complete { .. }),
-                        "{outcome:?}"
-                    );
-                    assert!(primary.path.join(".upskill-lock.json").exists());
-                }
-                let calls = adapter.inner.method_calls.lock().unwrap();
-                let applied = calls.iter().position(|method| *method == "apply").unwrap();
-                let observed = calls
-                    .iter()
-                    .rposition(|method| *method == "observe")
-                    .unwrap();
-                assert!(observed > applied);
-            }
+                },
+            );
         }
     }
 }
