@@ -40,6 +40,39 @@ fn source_category(source: &str) -> &'static str {
     }
 }
 
+// These labels describe inventory metadata, never a trusted remote origin.
+fn default_remote_display(source: &str) -> bool {
+    if let Some(repository) = source.strip_prefix("GitHub: ") {
+        let parts: Vec<_> = repository.split('/').collect();
+        return parts.len() == 2
+            && parts.iter().all(|part| {
+                !part.is_empty()
+                    && *part != "."
+                    && *part != ".."
+                    && part
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || b"-_.".contains(&byte))
+            });
+    }
+    let Some(url) = source.strip_prefix("URL: ") else {
+        return false;
+    };
+    let Some(address) = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+    else {
+        return false;
+    };
+    let authority = address.split(['/', '?', '#']).next().unwrap_or_default();
+    !authority.is_empty()
+        && authority != "."
+        && authority != ".."
+        && !authority.contains('@')
+        && !url
+            .chars()
+            .any(|character| character.is_whitespace() || character.is_control())
+}
+
 pub(super) fn transport(output: &NativeProcessOutput) -> bool {
     output.reason == NativeStopReason::Exited
         && output.exit_code == Some(0)
@@ -112,6 +145,7 @@ pub(super) fn inspect(
         .join(plan["revision_root"].as_str().ok_or("input")?);
     let mut matches = 0;
     let mut unrelated_builtin_label_entries = 0;
+    let mut unrelated_default_remote_display_entries = 0;
     for row in rows.as_array().ok_or("inventory")? {
         let source = row["source"].as_str().ok_or("inventory")?;
         let named = row["name"] == name
@@ -123,8 +157,24 @@ pub(super) fn inspect(
             unrelated_builtin_label_entries += 1;
             continue;
         }
-        let source_path = Path::new(source);
-        if source.contains("://")
+        // Marketplace JSON uses display labels, unlike plugin filesystem sources.
+        // Count only unrelated default remote metadata; owned names never use this
+        // exception, and a default flag establishes no origin or binding evidence.
+        if kind == CopilotInventoryKind::Marketplaces
+            && !named
+            && row["isDefault"] == true
+            && default_remote_display(source)
+        {
+            unrelated_default_remote_display_entries += 1;
+            continue;
+        }
+        let local_source = if kind == CopilotInventoryKind::Marketplaces {
+            source.strip_prefix("Local: ").unwrap_or(source)
+        } else {
+            source
+        };
+        let source_path = Path::new(local_source);
+        if local_source.contains("://")
             || !source_path.is_absolute()
             || source_path
                 .components()
@@ -140,7 +190,11 @@ pub(super) fn inspect(
             continue;
         }
         matches += 1;
-        if kind == CopilotInventoryKind::Marketplaces && row["name"] != name {
+        if kind == CopilotInventoryKind::Marketplaces
+            && (row["name"] != name
+                || row["isDefault"] != false
+                || source_path != Path::new(catalog))
+        {
             return Err("fixture_conflict".into());
         }
         if kind == CopilotInventoryKind::Plugins
@@ -163,7 +217,8 @@ pub(super) fn inspect(
         return Err("fixture_conflict".into());
     }
     Ok(json!({"inventory":summary,"fixture_named_entries":matches,
-        "unrelated_builtin_label_entries":unrelated_builtin_label_entries}))
+        "unrelated_builtin_label_entries":unrelated_builtin_label_entries,
+        "unrelated_default_remote_display_entries":unrelated_default_remote_display_entries}))
 }
 
 #[cfg(test)]
@@ -253,11 +308,110 @@ mod tests {
     fn source_category_precedence_describes_only_lexical_shape() {
         for (source, expected) in [
             ("/secret-canary/../outside", "parent_component"),
+            ("https://secret-canary.invalid/../path", "uri"),
             ("GitHub: https://secret-canary.invalid", "display_github"),
             ("Local: https://secret-canary.invalid", "display_local"),
             ("URL: https://secret-canary.invalid/../path", "display_url"),
         ] {
             assert_eq!(source_category(source), expected);
         }
+    }
+    #[test]
+    fn marketplace_display_sources_keep_owned_and_scope_checks() {
+        let plan = json!({"native_name":"owned", "packet_root":"/packet", "catalog":"/packet/catalog", "home":"/packet/home", "revision_root":"revision", "version":"1"});
+        for (name, source, default, expected) in [
+            (
+                "owned",
+                "GitHub: secret-canary/repo",
+                true,
+                "outside_packet_source",
+            ),
+            (
+                "owned@owned",
+                "GitHub: secret-canary/repo",
+                true,
+                "outside_packet_source",
+            ),
+            (
+                "unrelated",
+                "GitHub: secret-canary/repo",
+                false,
+                "outside_packet_source",
+            ),
+            (
+                "unrelated",
+                "URL: https://secret-canary.invalid",
+                false,
+                "outside_packet_source",
+            ),
+            ("unrelated", "GitHub: ", true, "outside_packet_source"),
+            ("unrelated", "URL: ", true, "outside_packet_source"),
+            (
+                "unrelated",
+                "GitHub: ../secret-canary",
+                true,
+                "outside_packet_source",
+            ),
+            (
+                "unrelated",
+                "Local: /outside/catalog",
+                false,
+                "outside_packet_source",
+            ),
+            (
+                "owned",
+                "Local: /packet/catalog/../wrong",
+                false,
+                "outside_packet_source",
+            ),
+            ("owned", "Local: /packet/wrong", false, "fixture_conflict"),
+            (
+                "owned",
+                "Local: /packet/home/revision",
+                false,
+                "fixture_conflict",
+            ),
+            ("owned", "Local: /packet/catalog", true, "fixture_conflict"),
+        ] {
+            let mut output = successful();
+            output.stdout =
+                serde_json::to_vec(&json!([{"name":name,"source":source,"isDefault":default}]))
+                    .unwrap();
+            assert_eq!(
+                inspect(Some(6), &output, &plan).unwrap_err().reason,
+                expected,
+                "{source}"
+            );
+        }
+        let mut valid = successful();
+        valid.stdout = serde_json::to_vec(
+            &json!([{"name":"owned","source":"Local: /packet/catalog","isDefault":false}]),
+        )
+        .unwrap();
+        assert_eq!(
+            inspect(Some(6), &valid, &plan).unwrap()["fixture_named_entries"],
+            1
+        );
+        let mut output = successful();
+        output.stdout = serde_json::to_vec(&json!([{"name":"unrelated","marketplace":"unrelated","source":"Local: /packet/catalog","version":"1","enabled":true}])).unwrap();
+        assert_eq!(
+            inspect(Some(1), &output, &plan).unwrap_err().reason,
+            "outside_packet_source"
+        );
+    }
+
+    #[test]
+    fn default_display_metadata_needs_complete_inventory_validation() {
+        let plan = json!({"native_name":"owned", "packet_root":"/packet", "catalog":"/packet/catalog", "home":"/packet/home", "revision_root":"revision", "version":"1"});
+        let row =
+            json!({"name":"unrelated","source":"GitHub: secret-canary/repo","isDefault":true});
+        let mut output = successful();
+        output.stdout = serde_json::to_vec(&json!([row.clone()])).unwrap();
+        assert_eq!(
+            inspect(Some(2), &output, &plan).unwrap()["unrelated_default_remote_display_entries"],
+            1
+        );
+        output.stdout = serde_json::to_vec(&json!([row, {"unknown":"secret-canary"}])).unwrap();
+        assert_eq!(inspect(Some(2), &output, &plan), Err("inventory".into()));
     }
 }

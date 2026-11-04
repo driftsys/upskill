@@ -1,0 +1,234 @@
+{
+  "date": "2026-11-05",
+  "complete": true,
+  "qualified": false,
+  "packet_root": "/private/tmp/upskill-marketplace-display-fix-fnle98pr/packet",
+  "plan_sha256": "7f44bd6335aead53b7a19dc09c9acd56d2bcc83b69730c8c1bdc5673ec10854c",
+  "preparation_sha256": "97177b64b7da089744b7290810658e200b9ec715f253043bbcb116fc67354d13",
+  "driver_sha256": "db1550d04ba8aa17c8d90057bf4ecfa0cfcacc8e3208a2c728762c878ae84419",
+  "source_sha256": {
+    "src/native_delivery/copilot/probe/preflight/evidence.rs": "13d0ee45c3cbeaaf9f512ec3a70b72a40a4dced543ba8c9018038535f965aaef",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector.rs": "7a0c1c361f22a526dcc4799c852dd12583ddfc0465f7158ad99bf09671e86f3f",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "d2338ce93be9f72032f2ff5c185563ebf84d1ff14f5b066a10b57d38179d57a7",
+    "examples/copilot_contract_probe.rs": "f498c82d52075fe1a43babd3efd57392eeeb9facc78f1d9d67cdecb2c992f3f7",
+    "Cargo.toml": "62a8cd2cc52ff1006a49759f023d09dfda65febc6f4778f099cd4fa6f529c66f",
+    "Cargo.lock": "bb43a5f514ee73282d8c7e0d877b5266d3bb041ad725ab73e280bb3de5444a3f"
+  },
+  "setup_commands": 1,
+  "client_commands": 2,
+  "model_requests": 0,
+  "installation_attempted": false,
+  "registration_attempted": false,
+  "fixture_files_unchanged": 9,
+  "chronology_links_verified": 3,
+  "terminal_result_sha256": "9ff304a48b9f8e6bcd4aef568537445470a0e2d0a4d61a6c58838f60501c5356",
+  "inventory_source_policy": {
+    "filesystem_paths": "packet_only",
+    "marketplace_local_display": "packet_path_checks",
+    "owned_builtin_label": "reject",
+    "owned_marketplace": "exact_catalog_non_default",
+    "unrelated_builtin_label": "count_only",
+    "unrelated_default_remote_display": "count_only"
+  },
+  "observed_unrelated_default_remote_display_entries": 1,
+  "native_worker_quiescence": "unqualified",
+  "results": [
+    {
+      "accepted": true,
+      "client_index": null,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "setup_complete": true
+      },
+      "pending_sha256": "789e95c155311a4ccd01a2f9e964cacfb13bcc2d540d3bd710cc42bc23af9bf2",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 0,
+      "source_rejection_category": null,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 0
+      }
+    },
+    {
+      "accepted": true,
+      "client_index": 0,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "version_matches": true
+      },
+      "pending_sha256": "b823019e5358c6d1e38a095dfcc0f8538e9fe7c5d6c612543b907a61267e1cfb",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 1,
+      "source_rejection_category": null,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 71
+      }
+    },
+    {
+      "accepted": true,
+      "client_index": 2,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "fixture_named_entries": 0,
+        "inventory": {
+          "entries": 1,
+          "kind": "marketplaces"
+        },
+        "unrelated_builtin_label_entries": 0,
+        "unrelated_default_remote_display_entries": 1
+      },
+      "pending_sha256": "bd5bb4af439c0581b4abd482fbacdccbb58870bd4244cb462c0ab13bf4ab5655",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 2,
+      "source_rejection_category": null,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 113
+      }
+    }
+  ],
+  "captured_code_assets": {
+    "launcher": {
+      "selected": "/opt/homebrew/bin/copilot",
+      "resolved": "/opt/homebrew/lib/node_modules/@github/copilot/npm-loader.js",
+      "sha256": "8ba289084c305e25ea9ae09da860c31614c7eb32f6e7ec099aa71f74f2d4f130",
+      "bytes": 852,
+      "mode": "0o755"
+    },
+    "node": {
+      "selected": "/opt/homebrew/bin/node",
+      "resolved": "/opt/homebrew/Cellar/node/26.4.0/bin/node",
+      "sha256": "b4036723a31962118876fec671cb0368cc621f011be38b0f8c4deedbc337209e",
+      "bytes": 68320,
+      "mode": "0o555"
+    },
+    "platform_entrypoint": {
+      "selected": "/opt/homebrew/lib/node_modules/@github/copilot/node_modules/@github/copilot-darwin-arm64/copilot",
+      "resolved": "/opt/homebrew/lib/node_modules/@github/copilot/node_modules/@github/copilot-darwin-arm64/copilot",
+      "sha256": "5fd7d15ff02deb08a58593b1b488015bb52c1686014b80b5509e28263cb3ad70",
+      "bytes": 181873376,
+      "mode": "0o755"
+    }
+  }
+}

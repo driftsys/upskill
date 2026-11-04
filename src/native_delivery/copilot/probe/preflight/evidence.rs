@@ -105,7 +105,9 @@ impl CopilotProbePreflight {
             "plan_sha256":self.request.plan_sha256,"preparation_sha256":self.request.preparation_sha256,
             "maximum_native_commands":12,"maximum_client_commands":11,"maximum_setup_commands":1,"model_calls":0,"maximum_authorized_spending":0,
             "qualified":false,"inventory_source_policy":{"filesystem_paths":"packet_only",
-                "unrelated_builtin_label":"count_only","owned_builtin_label":"reject"},
+                "unrelated_builtin_label":"count_only","owned_builtin_label":"reject",
+                "unrelated_default_remote_display":"count_only","marketplace_local_display":"packet_path_checks",
+                "owned_marketplace":"exact_catalog_non_default"},
             "roots":locks.bindings(),"fixtures":rows});
         let header = serde_json::to_vec_pretty(&header).map_err(|_| Error::Preconditions)?;
         payload.insert(0, ("header.json".into(), header));

@@ -136,7 +136,9 @@ fn collector_orders_all_commands_after_durable_pending_and_preserves_exact_argv(
     assert_eq!(header["maximum_setup_commands"], 1);
     assert_eq!(
         header["inventory_source_policy"],
-        json!({"filesystem_paths":"packet_only","unrelated_builtin_label":"count_only","owned_builtin_label":"reject"})
+        json!({"filesystem_paths":"packet_only","unrelated_builtin_label":"count_only","owned_builtin_label":"reject",
+            "unrelated_default_remote_display":"count_only","marketplace_local_display":"packet_path_checks",
+            "owned_marketplace":"exact_catalog_non_default"})
     );
     let mut previous = digest(&fs::read(area.join("header.json")).unwrap());
     for sequence in 0..12 {
@@ -145,6 +147,7 @@ fn collector_orders_all_commands_after_durable_pending_and_preserves_exact_argv(
         let pending = json_file(&pending_path);
         let result = json_file(&result_path);
         assert_eq!(pending["previous_sha256"], previous);
+        assert_eq!(pending["collection"], "contract");
         assert_eq!(pending["timeout_seconds"], 20);
         assert_eq!(pending["output_limit_bytes"], 1048576);
         assert_eq!(
@@ -805,7 +808,7 @@ fn rejected_marketplace_sources_retain_only_a_fixed_category() {
         private(
             &fixture.parent.join("control/baseline-markets"),
             &serde_json::to_vec(&json!([{
-                "name":"secret-canary", "source":source, "isDefault":true
+                "name":"secret-canary", "source":source, "isDefault":false
             }]))
             .unwrap(),
             0o600,
@@ -861,6 +864,14 @@ fn marketplace_only_diagnostic_never_invokes_registration_or_plugin_inventory() 
             json_file(fixture.root.join("evidence/step-02.pending.json"))["arguments"],
             plan["commands"][2]
         );
+        assert_eq!(
+            fs::read_to_string(control.join("call-0")).unwrap(),
+            "2\n--no-auto-update\n--version\n"
+        );
+        assert_eq!(
+            fs::read_to_string(control.join("call-1")).unwrap(),
+            "5\n--no-auto-update\nplugin\nmarketplace\nlist\n--json\n"
+        );
         let terminal = json_file(fixture.root.join("evidence/step-02.result.json"));
         assert_eq!(
             terminal["source_rejection_category"],
@@ -908,4 +919,60 @@ fn marketplace_check_example_selects_only_the_read_only_sequence() {
         ])
     );
     assert_eq!(pending["collection"], "marketplace_sources");
+    assert_eq!(
+        fs::read_to_string(control.join("call-0")).unwrap(),
+        "2\n--no-auto-update\n--version\n"
+    );
+    assert_eq!(
+        fs::read_to_string(control.join("call-1")).unwrap(),
+        "5\n--no-auto-update\nplugin\nmarketplace\nlist\n--json\n"
+    );
+}
+
+#[test]
+fn marketplace_display_metadata_preserves_exact_owned_local_binding_and_privacy() {
+    let fixture = prepared("success");
+    let control = fixture.parent.join("control");
+    let defaults = json!([
+        {"name":"secret-canary-github", "source":"GitHub: secret-canary/repository", "isDefault":true},
+        {"name":"secret-canary-url", "source":"URL: https://secret-canary.invalid/catalog", "isDefault":true}
+    ]);
+    private(
+        &control.join("baseline-markets"),
+        &serde_json::to_vec(&defaults).unwrap(),
+        0o600,
+    );
+    let mut owned = json_file(control.join("markets"));
+    owned[0]["source"] = json!(format!("Local: {}", owned[0]["source"].as_str().unwrap()));
+    owned
+        .as_array_mut()
+        .unwrap()
+        .extend(defaults.as_array().unwrap().iter().cloned());
+    private(
+        &control.join("markets"),
+        &serde_json::to_vec(&owned).unwrap(),
+        0o600,
+    );
+    let preflight = fixture.capture().unwrap();
+    let mut evidence = preflight.begin_evidence().unwrap();
+    let summary = serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+    assert_eq!(summary["complete"], true);
+    assert_eq!(summary["client_commands"], 11);
+    for sequence in [3, 7, 11] {
+        let result = json_file(
+            fixture
+                .root
+                .join(format!("evidence/step-{sequence:02}.result.json")),
+        );
+        assert_eq!(
+            result["observation"]["unrelated_default_remote_display_entries"],
+            2
+        );
+        assert_eq!(
+            result["observation"]["fixture_named_entries"],
+            usize::from(sequence == 7)
+        );
+        assert_eq!(result["source_rejection_category"], Value::Null);
+    }
+    assert_no_secret(&fixture.root.join("evidence"));
 }

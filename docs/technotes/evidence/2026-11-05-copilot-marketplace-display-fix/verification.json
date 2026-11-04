@@ -1,0 +1,55 @@
+{
+  "just_verify": {
+    "exit": 0,
+    "environment": {
+      "RUST_TEST_THREADS": "1"
+    },
+    "log_sha256": "e330c0b2c077d437b4563621701d7422376b7b96c187d9edbc14a507d9cedc2d"
+  },
+  "focused_current_tree": [
+    {
+      "step": "owned-guard-current",
+      "exit": 0
+    },
+    {
+      "step": "actual-argv-current",
+      "exit": 0
+    },
+    {
+      "step": "driver",
+      "exit": 0
+    }
+  ],
+  "pure_guard_controls": {
+    "snapshot": "/private/tmp/upskill-display-guard-controls-u_vucd_j/source",
+    "working_source_unchanged": true,
+    "snapshot_restored": true,
+    "controls": [
+      {
+        "case": "baseline",
+        "exit": 0,
+        "runtime_failure": false,
+        "log": "/private/tmp/upskill-display-guard-controls-u_vucd_j/baseline.log"
+      },
+      {
+        "case": "without-exact-catalog",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-guard-controls-u_vucd_j/without-exact-catalog.log"
+      },
+      {
+        "case": "without-non-default",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-guard-controls-u_vucd_j/without-non-default.log"
+      }
+    ]
+  },
+  "review": "No production defect found; registered-inventory guard test gap corrected and proven by independent-source mutations.",
+  "tested_files_sha256": {
+    "src/native_delivery/copilot/probe/preflight/evidence.rs": "13d0ee45c3cbeaaf9f512ec3a70b72a40a4dced543ba8c9018038535f965aaef",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "d2338ce93be9f72032f2ff5c185563ebf84d1ff14f5b066a10b57d38179d57a7",
+    "tests/native_copilot_collector.rs": "08000cfe2efe97978f7e1db99e332ba95ed34991049da463389d0081eaa2d28e"
+  },
+  "source_changes_after_verify_started": "Only test assertions were strengthened; current focused checks and independent controls cover them."
+}

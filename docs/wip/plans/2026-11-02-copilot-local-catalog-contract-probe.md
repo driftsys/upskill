@@ -219,7 +219,7 @@ execution envelope below; it does not authorize a native mutation run.
 The research executable is
 [`copilot_contract_probe`](../../../examples/copilot_contract_probe.rs). Its
 syntax is
-`copilot_contract_probe [--check|--execute] ROOT PLAN_SHA256
+`copilot_contract_probe [--check|--execute|--execute-marketplace-check] ROOT PLAN_SHA256
 PREPARATION_SHA256`.
 The default and `--check` modes only validate captured inputs: they do not
 create evidence, initialize Git or invoke Copilot. Explicit `--execute`
@@ -559,3 +559,57 @@ selects only offline Git setup, the pinned version and baseline marketplace
 inventory. It uses a fresh packet and cannot continue into registration. Its new
 library and example-dispatch acceptance tests passed. A fresh explicit execution
 decision remains required; the old consumed packet is not replayed.
+
+## Marketplace display interpretation fix
+
+The offline collector now distinguishes marketplace display metadata from plugin
+filesystem sources. `Local:` is decoded only for marketplace rows, then
+subjected to the existing absolute packet-path and parent-component checks. A
+matching owned marketplace must have its exact native name, point to the
+captured catalog rather than an arbitrary revision, and report
+`isDefault: false`. Selector spellings, wrong directories, default-owned claims
+and remote-owned claims reject. Plugin source handling is unchanged.
+
+Unrelated marketplace rows reporting `isDefault: true` may contribute a count
+when their source is a recognized `GitHub: owner/repository` or HTTP(S) `URL:`
+display value. GitHub components must be nonempty ASCII repository-name
+components and cannot be dot or parent components. URL displays require a
+nonempty authority without user information and no whitespace or control
+characters; this is lexical classification, not full URI validation. The
+collector does not open or fetch either value. A default flag and recognized
+display label are metadata, not trusted-origin, isolation or binding evidence.
+Non-default remote entries, unsupported labels and malformed display values
+still stop. No source is truncated, normalized into an owned binding or emitted
+into retained evidence.
+
+The header declares this interpretation policy. Results expose only
+`unrelated_default_remote_display_entries`; no native names or display suffixes
+are retained. New acceptance coverage includes the complete fake-client
+registration/install/detach sequence with unrelated remote metadata and an exact
+owned `Local:` catalog, private-value canaries, and negative ownership/scope
+cases. Reduced-route tests now compare actual fake-client argv as well as
+Pending records. The URI-before-parent precedence and full-route collection
+discriminator are pinned too.
+
+This corrects the diagnostic collector. The retained native failures and their
+historical interpretation remain unchanged. No new native installation trial,
+profile qualification or production admission is implied.
+
+The source-policy fix passed `RUST_TEST_THREADS=1 just verify`. The serial
+harness avoids concurrent test execution; individual limits remain unchanged.
+Registered-inventory controls independently caught removal of exact-catalog
+matching and removal of the non-default requirement in a separate source
+snapshot. The snapshot was restored and matched the working source byte for
+byte; current focused guard and actual-argv tests also passed. The
+[verification receipt](../../technotes/evidence/2026-11-05-copilot-marketplace-display-fix/verification.json)
+records these separate outcomes and source digests.
+
+A fresh read-only baseline validation then ran one offline Git setup, the exact
+1.0.105 version query and marketplace inventory, once. It completed successfully
+with one unrelated default remote display entry, zero fixture-named entries,
+complete transport and no source-format refusal. All nine fixture files and
+three Pending/result digest links were verified. The sanitized
+[result](../../technotes/evidence/2026-11-05-copilot-marketplace-display-fix/summary.json)
+retains the declared policy and observations. No native registration,
+installation or cleanup was selected, no model request ran, and no worker
+quiescence, isolation or production profile was qualified.
