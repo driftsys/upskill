@@ -70,7 +70,9 @@ impl QualifiedScope {
             self.root.verify_binding()
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        anyhow::bail!("qualified scope roots are unsupported on this operating system")
+        {
+            anyhow::bail!("qualified scope roots are unsupported on this operating system")
+        }
     }
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -86,7 +88,9 @@ impl QualifiedScope {
             self.try_lock_writer_with(backend::PinnedRoot::try_lock_writer)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        anyhow::bail!("qualified scope writer locking is unsupported on this operating system")
+        {
+            anyhow::bail!("qualified scope writer locking is unsupported on this operating system")
+        }
     }
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
