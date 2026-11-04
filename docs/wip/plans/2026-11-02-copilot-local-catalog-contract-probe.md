@@ -450,14 +450,15 @@ Status: executed once after explicit user approval on 2026-11-04. Stopped at the
 baseline marketplace inventory before registration or installation; see the
 result below. The packet is consumed and must not be replayed.
 
-The unused packet is `/private/tmp/upskill-copilot-contract-v2-be_l1eav/packet`.
-The actual fixture compiler generated the new root-bound full 72-character name
-and payload; no original packet name or hash was substituted. The plan SHA-256
-is `f376208e6a03e82dabd097e50fdb160f8bfd1ca46c3d8b0b8f83d08f864b31d6`. The
+The prepared packet was
+`/private/tmp/upskill-copilot-contract-v2-be_l1eav/packet`. The actual fixture
+compiler generated the new root-bound full 72-character name and payload; no
+original packet name or hash was substituted. The plan SHA-256 is
+`f376208e6a03e82dabd097e50fdb160f8bfd1ca46c3d8b0b8f83d08f864b31d6`. The
 preparation receipt SHA-256 is
-`7e7fa4397364276f1fe6936347538f83c91a8df74a30f17507616c78ac58107e`. The plan and
-preparation are retained as `packet/plan.json` and `preparation.json` under that
-private root.
+`7e7fa4397364276f1fe6936347538f83c91a8df74a30f17507616c78ac58107e`. At
+preparation, the plan and preparation were retained as `packet/plan.json` and
+`preparation.json` under that private root.
 
 The maintainer diagnostic was rebuilt at `e4c793d`, whose full `just verify`
 passed. Its driver SHA-256 is
@@ -511,8 +512,8 @@ Read-only verification checked all four Pending/result digest links and all nine
 known fixture files against their exact retained bytes and modes. The sanitized
 [summary](../../technotes/evidence/2026-11-04-copilot-contract-retry/summary.json)
 retains the result projections and terminal digest. Private inputs, snapshots,
-Pending/result receipts, approval and execution wrapper result remain under
-`/private/tmp/upskill-copilot-contract-v2-be_l1eav/`. The original stopped
+Pending/result receipts, approval and execution wrapper result were recorded
+under `/private/tmp/upskill-copilot-contract-v2-be_l1eav/`. The original stopped
 packet is unchanged. Full-name acceptance, installation and every native
 qualification/admission gate remain unresolved. Further native diagnostics need
 a separate bounded decision; this failed run supplies no replay authority.
@@ -532,10 +533,11 @@ The collector now retains `source_rejection_category` on a source rejection. The
 fixed lexical labels are `display_github`, `display_local`, `display_url`,
 `uri`, `parent_component`, `outside_absolute` and `relative`, checked in that
 order. They describe string shape only, without retaining any suffix, path, name
-or other native value. All other failures emit a null category. The stop reason
-remains `outside_packet_source`; the collection still stops immediately and the
-failed observation stays null. No prefix is stripped, path opened or source
-admitted through this diagnostic.
+or other native value. Other post-invocation failures emit a null category;
+early pre-invocation refusals retain their existing receipt shape. The stop
+reason remains `outside_packet_source`; the collection still stops immediately
+and the failed observation stays null. No prefix is stripped, path opened or
+source admitted through this diagnostic.
 
 The first new fake-client acceptance run failed because the category was absent.
 After implementation it passed all seven marketplace-source cases, including
@@ -549,3 +551,11 @@ new local review note; after formatting that note, lint, documentation checks
 and the build each passed. The
 [offline verification receipt](../../technotes/evidence/2026-11-04-copilot-contract-retry/offline-verification.json)
 records the distinct command outcomes and source digests.
+
+## Prepared marketplace source check
+
+The [reduced source check](2026-11-04-copilot-marketplace-source-check.md)
+selects only offline Git setup, the pinned version and baseline marketplace
+inventory. It uses a fresh packet and cannot continue into registration. Its new
+library and example-dispatch acceptance tests passed. A fresh explicit execution
+decision remains required; the old consumed packet is not replayed.

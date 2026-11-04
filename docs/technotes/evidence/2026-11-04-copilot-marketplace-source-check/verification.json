@@ -1,0 +1,78 @@
+{
+  "standard_verify_exit": 101,
+  "standard_verify_failures": [
+    "native_claude_marketplace_observer: finite_output_obeys_caller_limits_at_both_query_boundaries",
+    "native_claude_marketplace_observer: incomplete_or_malformed_marketplace_capture_cannot_establish_empty_inventory",
+    "native_claude_marketplace_observer: marketplace_reader_refuses_unpinned_incomplete_versions_and_extra_arguments"
+  ],
+  "claude_observer_isolated_rerun": {
+    "exit": 0,
+    "passed": 8
+  },
+  "remaining_integration_targets": 31,
+  "remaining_integration_exit": 101,
+  "remaining_failure_target": "native_process",
+  "native_process_serial_rerun": {
+    "exit": 0,
+    "passed": 12,
+    "ignored": 1
+  },
+  "failure_limits_unchanged": true,
+  "docs_check_exit": 0,
+  "final_checks": [
+    {
+      "label": "doctests",
+      "arguments": [
+        "cargo",
+        "test",
+        "--doc"
+      ],
+      "returncode": 0
+    },
+    {
+      "label": "lint",
+      "arguments": [
+        "just",
+        "lint"
+      ],
+      "returncode": 0
+    },
+    {
+      "label": "assemble",
+      "arguments": [
+        "just",
+        "assemble"
+      ],
+      "returncode": 0
+    },
+    {
+      "label": "driver-build",
+      "arguments": [
+        "cargo",
+        "build",
+        "--example",
+        "copilot_contract_probe"
+      ],
+      "returncode": 0
+    }
+  ],
+  "new_diagnostic_review": "No concrete bug found in reduced selection, dispatcher, single-use or privacy behavior.",
+  "integration_target_coverage": {
+    "targets": 104,
+    "missing_targets": [],
+    "all_failed_targets_rerun_successfully": true
+  },
+  "test_count_note": "Nested subprocess test summaries are not summed as unique tests. All 104 integration targets were covered; two timing-sensitive targets passed on isolated reruns. Library and doctests also passed.",
+  "native_process_failures": [
+    "controller_environment_cannot_leak_into_the_native_child",
+    "exact_arguments_environment_cwd_closed_stdin_and_nonzero_exit_are_preserved",
+    "namespace_and_launcher_drift_are_reported_without_losing_the_attempt",
+    "output_overflow_is_bounded_and_never_becomes_a_success_exit"
+  ],
+  "tested_file_sha256": {
+    "examples/copilot_contract_probe.rs": "f498c82d52075fe1a43babd3efd57392eeeb9facc78f1d9d67cdecb2c992f3f7",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector.rs": "7a0c1c361f22a526dcc4799c852dd12583ddfc0465f7158ad99bf09671e86f3f",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "d3f705a50dcd6d6c60b3ec9c3b8cb31485037cf6d4fca3ca6b918826c69bff1d",
+    "tests/native_copilot_collector.rs": "226d6777878bfe8692f125151e35a9b168d33c380fac493530c6732fbd04dd99"
+  }
+}

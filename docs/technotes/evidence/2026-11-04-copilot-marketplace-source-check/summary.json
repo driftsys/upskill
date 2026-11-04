@@ -1,0 +1,171 @@
+{
+  "date": "2026-11-04",
+  "question": "Do formatted marketplace source strings reach the rejecting branch?",
+  "diagnosis": "Confirmed in a fresh reproduction: GitHub display prefix triggers outside_packet_source.",
+  "historical_limit": "The old scalar source was discarded; exact historical identity is inferred, not proven.",
+  "packet_root": "/private/tmp/upskill-marketplace-source-check-ck88rz0x/packet",
+  "driver_sha256": "e27a28ad03e59c47034574028b336c726f322ec7d83ee08370ebfdf5a18ddd6a",
+  "plan_sha256": "ab277a41d6d32cb1173663fc0d32ce341b2929fd27a36fadbd8c78153f67767a",
+  "preparation_sha256": "fccfd3eb321d1a659aa497399751b682167217f849e97f3d55083fe0450533e0",
+  "source_sha256": {
+    "src/native_delivery/copilot/probe/preflight/evidence/collector.rs": "7a0c1c361f22a526dcc4799c852dd12583ddfc0465f7158ad99bf09671e86f3f",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "d3f705a50dcd6d6c60b3ec9c3b8cb31485037cf6d4fca3ca6b918826c69bff1d",
+    "examples/copilot_contract_probe.rs": "f498c82d52075fe1a43babd3efd57392eeeb9facc78f1d9d67cdecb2c992f3f7",
+    "Cargo.toml": "62a8cd2cc52ff1006a49759f023d09dfda65febc6f4778f099cd4fa6f529c66f",
+    "Cargo.lock": "bb43a5f514ee73282d8c7e0d877b5266d3bb041ad725ab73e280bb3de5444a3f"
+  },
+  "runtime_version_matches_1_0_105": true,
+  "source_rejection_category": "display_github",
+  "marketplace_stdout_bytes": 113,
+  "previous_marketplace_stdout_bytes": 113,
+  "setup_commands": 1,
+  "client_commands": 2,
+  "model_requests": 0,
+  "registration_attempted": false,
+  "installation_attempted": false,
+  "qualified": false,
+  "fixture_files_unchanged": 9,
+  "pending_result_links_verified": 3,
+  "terminal_result_sha256": "10bcce453d12174e30d24e83b4f513b02b50e721b2de5a3e1e37e68e7f2cd353",
+  "native_worker_quiescence": "unqualified",
+  "results": [
+    {
+      "accepted": true,
+      "client_index": null,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "setup_complete": true
+      },
+      "pending_sha256": "077db145bf6f8dc70418dd6945082bf4e6a9b7f9eb690b606979196d9daf9668",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 0,
+      "source_rejection_category": null,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 0
+      }
+    },
+    {
+      "accepted": true,
+      "client_index": 0,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": [
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/.copilot"
+        },
+        {
+          "metadata": {
+            "type": "absent"
+          },
+          "path": "home/.copilot/config.json"
+        },
+        {
+          "metadata": {
+            "mode": 448,
+            "type": "directory"
+          },
+          "path": "home/cache/copilot"
+        },
+        {
+          "metadata": {
+            "mode": 420,
+            "type": "regular"
+          },
+          "path": "project/.git/config"
+        }
+      ],
+      "observation": {
+        "version_matches": true
+      },
+      "pending_sha256": "9925244334a1f693c1b6ce88d4cf1c60affd76df07f1baed767885659774917d",
+      "qualified": false,
+      "reason": null,
+      "schema": 1,
+      "sequence": 1,
+      "source_rejection_category": null,
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 71
+      }
+    },
+    {
+      "accepted": false,
+      "client_index": 2,
+      "inputs_unchanged": true,
+      "model_requests": 0,
+      "native_files": null,
+      "observation": null,
+      "pending_sha256": "24773d9dc23992be80fb8518485c33b90d94bbb4b52602fb3d0256dd416cbd10",
+      "qualified": false,
+      "reason": "outside_packet_source",
+      "schema": 1,
+      "sequence": 2,
+      "source_rejection_category": "display_github",
+      "transport": {
+        "cleanup_signal_sent": false,
+        "direct_child_reaped": true,
+        "executable_unchanged": true,
+        "exit_code": 0,
+        "group_empty": true,
+        "output_complete": true,
+        "reason": "exited",
+        "scope_unchanged": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 113
+      }
+    }
+  ]
+}

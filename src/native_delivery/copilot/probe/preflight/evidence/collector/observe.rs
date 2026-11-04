@@ -211,4 +211,53 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn source_categories_cannot_mask_transport_stderr_or_later_malformed_rows() {
+        let plan = json!({"native_name":"owned", "packet_root":"/packet", "catalog":"/packet/catalog", "home":"/packet/home", "revision_root":"revision", "version":"1"});
+        for (index, row) in [
+            (
+                1,
+                json!({"name":"unrelated", "marketplace":"unrelated", "source":"GitHub: secret-canary", "version":"1", "enabled":true}),
+            ),
+            (
+                2,
+                json!({"name":"unrelated", "source":"GitHub: secret-canary", "isDefault":true}),
+            ),
+        ] {
+            let mut output = successful();
+            output.stdout = serde_json::to_vec(&json!([row.clone()])).unwrap();
+            assert_eq!(
+                inspect(Some(index), &output, &plan)
+                    .unwrap_err()
+                    .source_category,
+                Some("display_github")
+            );
+            output.exit_code = Some(1);
+            assert_eq!(
+                inspect(Some(index), &output, &plan),
+                Err("transport".into())
+            );
+            output.exit_code = Some(0);
+            output.stderr = b"secret-canary".to_vec();
+            assert_eq!(inspect(Some(index), &output, &plan), Err("stderr".into()));
+            output.stderr.clear();
+            output.stdout = serde_json::to_vec(&json!([row, {"unknown":"secret-canary"}])).unwrap();
+            assert_eq!(
+                inspect(Some(index), &output, &plan),
+                Err("inventory".into())
+            );
+        }
+    }
+
+    #[test]
+    fn source_category_precedence_describes_only_lexical_shape() {
+        for (source, expected) in [
+            ("/secret-canary/../outside", "parent_component"),
+            ("GitHub: https://secret-canary.invalid", "display_github"),
+            ("Local: https://secret-canary.invalid", "display_local"),
+            ("URL: https://secret-canary.invalid/../path", "display_url"),
+        ] {
+            assert_eq!(source_category(source), expected);
+        }
+    }
 }

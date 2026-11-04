@@ -6,11 +6,14 @@ use upskill::native_delivery::copilot::probe::{CopilotProbePreflight, CopilotPro
 fn main() -> Result<()> {
     let mut arguments = std::env::args_os().skip(1).peekable();
     let execute = arguments.peek().is_some_and(|value| value == "--execute");
-    if execute || arguments.peek().is_some_and(|value| value == "--check") {
+    let marketplace_only = arguments
+        .peek()
+        .is_some_and(|value| value == "--execute-marketplace-check");
+    if execute || marketplace_only || arguments.peek().is_some_and(|value| value == "--check") {
         arguments.next();
     }
     let root = PathBuf::from(arguments.next().context(
-        "usage: copilot_contract_probe [--check|--execute] ROOT PLAN_SHA256 PREPARATION_SHA256",
+        "usage: copilot_contract_probe [--check|--execute|--execute-marketplace-check] ROOT PLAN_SHA256 PREPARATION_SHA256",
     )?);
     let plan = arguments
         .next()
@@ -29,12 +32,16 @@ fn main() -> Result<()> {
         preparation_sha256: preparation,
     };
     let preflight = CopilotProbePreflight::capture(&request)?;
-    if execute {
+    if execute || marketplace_only {
         let cancellation = Arc::new(AtomicBool::new(false));
         let signal = cancellation.clone();
         ctrlc::set_handler(move || signal.store(true, std::sync::atomic::Ordering::SeqCst))?;
         let mut evidence = preflight.begin_evidence()?;
-        let summary = evidence.collect(&cancellation)?;
+        let summary = if marketplace_only {
+            evidence.collect_marketplace_sources(&cancellation)?
+        } else {
+            evidence.collect(&cancellation)?
+        };
         println!("{}", serde_json::to_string_pretty(&summary)?);
     } else {
         println!(

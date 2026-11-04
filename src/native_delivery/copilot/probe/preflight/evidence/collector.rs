@@ -43,11 +43,28 @@ impl CopilotProbeEvidence<'_> {
         &mut self,
         cancellation: &AtomicBool,
     ) -> Result<CopilotCollectionSummary, Error> {
+        self.collect_once(cancellation, false)
+    }
+    /// Run only offline Git setup, the pinned version query and baseline
+    /// marketplace inventory. This consumes the packet once, even on failure.
+    /// No registration, installation, plugin inventory or cleanup is selected.
+    /// Real execution requires a separately approved bounded diagnostic.
+    pub fn collect_marketplace_sources(
+        &mut self,
+        cancellation: &AtomicBool,
+    ) -> Result<CopilotCollectionSummary, Error> {
+        self.collect_once(cancellation, true)
+    }
+    fn collect_once(
+        &mut self,
+        cancellation: &AtomicBool,
+        marketplace_only: bool,
+    ) -> Result<CopilotCollectionSummary, Error> {
         if self.collection_started || self.stopped {
             return Err(Error::Stopped);
         }
         self.collection_started = true;
-        let result = self.collect_inner(cancellation);
+        let result = self.collect_inner(cancellation, marketplace_only);
         if result.as_ref().map_or(true, |summary| !summary.complete) {
             self.stopped = true;
         }
@@ -68,6 +85,7 @@ impl CopilotProbeEvidence<'_> {
     fn collect_inner(
         &mut self,
         cancellation: &AtomicBool,
+        marketplace_only: bool,
     ) -> Result<CopilotCollectionSummary, Error> {
         self.verify_unchanged()?;
         let plan_bytes = &self
@@ -90,7 +108,14 @@ impl CopilotProbeEvidence<'_> {
                 .ok_or(Error::Preconditions)?
                 .bytes,
         );
-        for sequence in 0usize..12 {
+        let indices: Vec<Option<usize>> = if marketplace_only {
+            vec![None, Some(0), Some(2)]
+        } else {
+            (0usize..12)
+                .map(|sequence| sequence.checked_sub(1))
+                .collect()
+        };
+        for (sequence, index) in indices.into_iter().enumerate() {
             if cancellation.load(Ordering::SeqCst) {
                 self.record(
                     "stopped.json",
@@ -100,7 +125,6 @@ impl CopilotProbeEvidence<'_> {
                 return Ok(summary);
             }
             self.verify_unchanged()?;
-            let index = sequence.checked_sub(1);
             let (executable, arguments) = if let Some(index) = index {
                 let executable = self
                     .preflight
@@ -146,6 +170,7 @@ impl CopilotProbeEvidence<'_> {
                 .collect::<Result<Vec<_>, _>>()?;
             let pending = json!({"schema":1,"sequence":sequence,"client_index":index,"qualified":false,
                 "kind":if index.is_some(){"client"}else{"git_setup"},"arguments":argv,
+                "collection":if marketplace_only {"marketplace_sources"}else{"contract"},
                 "executable":executable.code_identity(),"previous_sha256":previous,
                 "timeout_seconds":20,"output_limit_bytes":1048576,"model_requests":0,"maximum_authorized_spending":0});
             let pending_name = format!("step-{sequence:02}.pending.json");
