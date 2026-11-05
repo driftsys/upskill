@@ -234,17 +234,19 @@ Any uncertainty stops the handle permanently. Existing or partial records are
 retained without reopening, replay or cleanup. Output stays in bounded memory;
 version must match the complete retained bytes, lists must match the observed
 strict schema and expected fixture claims, and mutation output must be empty.
-Unexpected diagnostics, conflicting claims or outside-packet sources stop the
+Unexpected diagnostics, conflicting claims or unsupported source forms stop the
 sequence. Filesystem source strings must be absolute paths under the packet and
-contain no parent-directory components. The candidate revision counts the exact
-`builtin` label on unrelated inventory rows without interpreting it as a
-filesystem path or trusted origin. Owned namespace references never receive this
-exemption. All other relative or ambiguous sources stop before mutations. This
-lexical check does not resolve arbitrary native paths or prove filesystem source
-binding. Plugin identity must match the exact expected name or selector as well
-as its marketplace, version and enabled state. Successful transport and fixture
-counts remain diagnostic facts. The initial evidence header records twelve
-external commands in total: eleven client commands and one setup command.
+contain no parent-directory components. Marketplace `Local:` labels are decoded
+before these checks; an owned marketplace additionally requires the exact
+captured catalog and a non-default row. Unrelated default marketplace GitHub/URL
+display values and exact unrelated `builtin` labels contribute metadata counts
+only. Owned namespace references never receive either exemption. Other relative,
+outside-packet or ambiguous filesystem sources stop before mutations. Neither
+lexical path checks nor metadata labels establish trusted origin or filesystem
+source binding. Plugin identity must match the exact expected name or selector
+as well as its marketplace, version and enabled state. Successful transport and
+fixture counts remain diagnostic facts. The initial evidence header records
+twelve external commands in total: eleven client commands and one setup command.
 
 Native file observations cover only `home/.copilot`,
 `home/.copilot/config.json`, `home/cache/copilot` and `project/.git/config`.
@@ -613,3 +615,13 @@ three Pending/result digest links were verified. The sanitized
 retains the declared policy and observations. No native registration,
 installation or cleanup was selected, no model request ran, and no worker
 quiescence, isolation or production profile was qualified.
+
+## Fresh installation trial prepared
+
+The
+[new installation contract trial](2026-11-05-copilot-installation-contract-trial.md)
+has a fresh compiled packet, exact code/input pins and a passing read-only
+preflight. It preserves the full generated name and revised source policy.
+Execution is pending a decision on that concrete packet; no prior consumed
+packet or approval is reused. The remaining source-grammar tests and outdated
+overview wording have been corrected without changing product implementation.

@@ -1,0 +1,116 @@
+{
+  "product_implementation_unchanged": true,
+  "observer_tests_passed": 7,
+  "clippy_all_targets_exit": 0,
+  "docs_check_exit": 0,
+  "markdown_lint_exit": 0,
+  "source_grammar_controls": {
+    "snapshot": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/source",
+    "working_source_unchanged": true,
+    "restored_snapshot_matches_working_source": true,
+    "source_sha256": "ad1fa3bd1f1673eeba54358131a4a2d135c6868a1bda0a684445901ca401f045",
+    "controls": [
+      {
+        "case": "baseline",
+        "exit": 0,
+        "runtime_failure": false,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/baseline.log",
+        "log_sha256": "79aae2c7f8135ba6394698cf40919c94c489aaf0831cdf5406a5a767c33903ef"
+      },
+      {
+        "case": "url-empty-authority",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-empty-authority.log",
+        "log_sha256": "8784c47ef1aaeb670edb20d1fec8593531cdc51ed584b995912b3232ee825770"
+      },
+      {
+        "case": "url-dot-authority",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-dot-authority.log",
+        "log_sha256": "ae8c6b7bd651dc94b412e7da636467cc8b975fde6aadc340b4fb30830124f6ef"
+      },
+      {
+        "case": "url-parent-authority",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-parent-authority.log",
+        "log_sha256": "c957d6f95f0502f4d0e43beb67f79df520f0f06f707268733aa8e24e4f08a9f1"
+      },
+      {
+        "case": "url-userinfo",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-userinfo.log",
+        "log_sha256": "e85a29ea8ddeac53d1cbff2039edbd7cd2daa1914abe2b2b49bcfb377b81d562"
+      },
+      {
+        "case": "url-whitespace",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-whitespace.log",
+        "log_sha256": "26a56eec870fe7791c16bd08a60476a15122e27af195fa97becb7bde92267475"
+      },
+      {
+        "case": "url-control",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/url-control.log",
+        "log_sha256": "7fda5dee05809346c46b878c4c239ed1b0e2d2af684e4c6c3c768c673aafcf3d"
+      },
+      {
+        "case": "github-empty-component",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/github-empty-component.log",
+        "log_sha256": "621f65cc48b715f9a6894992a2a36f92b84d4127da43d3b723a68c3ef8adbcae"
+      },
+      {
+        "case": "github-dot-component",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/github-dot-component.log",
+        "log_sha256": "ddf0acc7894c432ee1de017120c349699eb5b7f5f3d4491bb628215a1fe474f2"
+      },
+      {
+        "case": "http-acceptance",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/http-acceptance.log",
+        "log_sha256": "6114d926963396ebc8e4177be985e5e06b13e67a3f7e5f3a05afd398cc2c7922"
+      },
+      {
+        "case": "github-ascii",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-grammar-controls-x70w1cz1/github-ascii.log",
+        "log_sha256": "11890398aa48413ca587375f6695b5575be13516493b432d6df5a03e1897a7ba"
+      }
+    ]
+  },
+  "uri_scheme_control": {
+    "production_prefix_unchanged_from_595ddae": true,
+    "restored_snapshot_matches_working_source": true,
+    "source_sha256": "cd8b4e42b987e669a6521839ed9660cc5b7be8f35638a6f8eeed2a8b12209eeb",
+    "controls": [
+      {
+        "case": "current-baseline",
+        "exit": 0,
+        "runtime_failure": false,
+        "log": "/private/tmp/upskill-display-scheme-control-pu59ws8a/current-baseline.log",
+        "log_sha256": "7e1bc4931b3d09eb49a618daf9b36e8f6f77e035f620ea083f3d848e64928e93"
+      },
+      {
+        "case": "accept-any-uri-scheme",
+        "exit": 101,
+        "runtime_failure": true,
+        "log": "/private/tmp/upskill-display-scheme-control-pu59ws8a/accept-any-uri-scheme.log",
+        "log_sha256": "a79f77290de0c214f0988f7ca650af7404fb70253a680dd9aed4823184df1d37"
+      }
+    ]
+  },
+  "current_source_sha256": "cd8b4e42b987e669a6521839ed9660cc5b7be8f35638a6f8eeed2a8b12209eeb",
+  "native_commands": 0,
+  "trial_executed": false
+}

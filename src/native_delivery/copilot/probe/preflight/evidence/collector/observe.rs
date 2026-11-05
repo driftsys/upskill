@@ -414,4 +414,77 @@ mod tests {
         output.stdout = serde_json::to_vec(&json!([row, {"unknown":"secret-canary"}])).unwrap();
         assert_eq!(inspect(Some(2), &output, &plan), Err("inventory".into()));
     }
+    fn default_marketplace(source: &str) -> Result<Value, Rejection> {
+        let plan = json!({"native_name":"owned", "packet_root":"/packet", "catalog":"/packet/catalog", "home":"/packet/home", "revision_root":"revision", "version":"1"});
+        let mut output = successful();
+        output.stdout =
+            serde_json::to_vec(&json!([{"name":"unrelated","source":source,"isDefault":true}]))
+                .unwrap();
+        inspect(Some(2), &output, &plan)
+    }
+
+    #[test]
+    fn default_url_display_rejects_each_malformed_authority_and_character_class() {
+        for source in [
+            "URL: ftp://secret-canary.invalid/catalog",
+            "URL: file:///catalog",
+            "URL: unknown",
+            "URL: https://",
+            "URL: http://",
+            "URL: https:///catalog",
+            "URL: https://?query",
+            "URL: https://#fragment",
+            "URL: https://.",
+            "URL: http://..",
+            "URL: https://user@secret-canary.invalid/catalog",
+            "URL: https://user:password@secret-canary.invalid/catalog",
+            "URL: https://secret-canary.invalid/with space",
+            "URL: https://secret-canary.invalid/with\tcontrol",
+            "URL: https://secret-canary.invalid/with\u{7f}control",
+            "URL: https://secret-canary.invalid/with\0control",
+        ] {
+            let error = default_marketplace(source).unwrap_err();
+            assert_eq!(error.reason, "outside_packet_source", "{source:?}");
+            assert_eq!(error.source_category, Some("display_url"));
+        }
+        for source in [
+            "URL: https://secret-canary.invalid/catalog",
+            "URL: http://secret-canary.invalid/catalog",
+            "URL: https://secret-canary.invalid/catalog?query=value#fragment",
+        ] {
+            let result = default_marketplace(source).unwrap();
+            assert_eq!(result["unrelated_default_remote_display_entries"], 1);
+            assert_eq!(result["fixture_named_entries"], 0);
+            assert!(!result.to_string().contains("secret-canary"));
+        }
+    }
+
+    #[test]
+    fn default_github_display_rejects_each_malformed_component() {
+        for source in [
+            "GitHub: /repository",
+            "GitHub: owner/",
+            "GitHub: ./repository",
+            "GitHub: owner/.",
+            "GitHub: ../repository",
+            "GitHub: owner/..",
+            "GitHub: invalid owner/repository",
+            "GitHub: owner/invalid repository",
+            "GitHub: invalidé/repository",
+            "GitHub: owner/invalidé",
+            "GitHub: owner/repository/extra",
+        ] {
+            let error = default_marketplace(source).unwrap_err();
+            assert_eq!(error.reason, "outside_packet_source", "{source:?}");
+            assert_eq!(error.source_category, Some("display_github"));
+        }
+        for source in [
+            "GitHub: owner/repository",
+            "GitHub: owner-name/repo.name_1-2",
+        ] {
+            let result = default_marketplace(source).unwrap();
+            assert_eq!(result["unrelated_default_remote_display_entries"], 1);
+            assert_eq!(result["fixture_named_entries"], 0);
+        }
+    }
 }
