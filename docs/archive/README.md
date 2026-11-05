@@ -926,9 +926,9 @@ inventory; this archive does not resolve broader M1 or updater work.
 
 ## Rust CodeQL extraction coverage
 
-Source path: `docs/wip/plans/2026-11-04-codeql-extraction-coverage.md`. The raw
-[plan](plans/2026-11-04-codeql-extraction-coverage.md) retains its exact bytes
-and historical checkboxes. Requirements remain in
+Source path: `docs/wip/plans/2026-11-04-codeql-extraction-coverage.md`. The
+[plan](plans/2026-11-04-codeql-extraction-coverage.md) was reconciled before
+archival, including updates to its completion checkboxes. Requirements remain in
 [issue #344](https://github.com/driftsys/upskill/issues/344); there is no
 separate WIP spec. The durable successor is the
 [extraction note and linked receipts](../technotes/codeql-rust-extraction.md).
