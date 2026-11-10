@@ -22,7 +22,7 @@ const ACTIONS: [Action; 5] = [
 ];
 fn input(surface: TargetSurface) -> (NativeDeliveryProfile, SkillTarget, NativeSkillSelection) {
     let (namespace, version) = match surface {
-        TargetSurface::CopilotCli => ("copilot", "1.0.105"),
+        TargetSurface::CopilotCli => ("copilot", "1.0.107"),
         TargetSurface::CodexCli => ("codex", "0.166.0"),
         _ => unreachable!(),
     };

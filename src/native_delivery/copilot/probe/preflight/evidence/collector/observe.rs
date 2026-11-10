@@ -115,7 +115,7 @@ pub(super) fn inspect(
     };
     if index == 0 {
         return if output.stdout
-            == b"GitHub Copilot CLI 1.0.105.\nRun 'copilot update' to check for updates.\n"
+            == b"GitHub Copilot CLI 1.0.107.\nRun 'copilot update' to check for updates.\n"
         {
             Ok(json!({"version_matches":true}))
         } else {
@@ -134,7 +134,7 @@ pub(super) fn inspect(
             Err("unexpected_output".into())
         };
     };
-    let summary = summarize_inventory("1.0.105", kind, &output.stdout).map_err(|_| "inventory")?;
+    let summary = summarize_inventory("1.0.107", kind, &output.stdout).map_err(|_| "inventory")?;
     let text = std::str::from_utf8(&output.stdout).map_err(|_| "inventory")?;
     let rows = crate::parse::json::parse_unique(text).map_err(|_| "inventory")?;
     let name = plan["native_name"].as_str().ok_or("input")?;

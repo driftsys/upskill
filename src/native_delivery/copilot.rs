@@ -1,4 +1,4 @@
-//! Candidate Copilot 1.0.105 argv. No execution or native name acceptance proof.
+//! Candidate Copilot 1.0.107 argv. No execution or native name acceptance proof.
 use super::adapter::NativeDeliveryProfile;
 use super::user_plugin_command::validate;
 pub use super::user_plugin_command::{
@@ -39,7 +39,7 @@ pub fn plan_plugin_command(
         target,
         selection,
         TargetSurface::CopilotCli,
-        "1.0.105",
+        "1.0.107",
     )?;
     let selector = format!("{}@{}", selection.native_name, selection.native_name);
     let mut arguments: Vec<OsString> = vec!["--no-auto-update".into(), "plugin".into()];

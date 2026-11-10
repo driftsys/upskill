@@ -32,14 +32,15 @@ pub enum CopilotProbeError {
     UnsupportedShape,
 }
 
-/// Validate the observed 1.0.105 field types and discard every native value.
+/// Validate the field types observed at 1.0.105 against the pinned 1.0.107 output
+/// and discard every native value.
 /// This performs no native call, filesystem operation or profile admission.
 pub fn summarize_inventory(
     version: &str,
     kind: CopilotInventoryKind,
     bytes: &[u8],
 ) -> Result<CopilotInventorySummary, CopilotProbeError> {
-    if version != "1.0.105" {
+    if version != "1.0.107" {
         return Err(CopilotProbeError::UnsupportedVersion);
     }
     if bytes.len() > 1024 * 1024 {

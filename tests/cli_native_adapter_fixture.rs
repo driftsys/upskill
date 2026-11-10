@@ -113,7 +113,7 @@ fn executable_routes_both_forms_without_invoking_native_clients() {
             "user",
             "home",
             ".plugin/plugin.json",
-            "1.0.105",
+            "1.0.107",
             11,
         ),
     ] {

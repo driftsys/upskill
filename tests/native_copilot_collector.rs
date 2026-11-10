@@ -18,7 +18,7 @@ fn prepared(mode: &str) -> Fixture {
     private(&control.join("mode"), mode.as_bytes(), 0o600);
     private(
         &control.join("version"),
-        include_bytes!("fixtures/native-adapters/2026-11-01-help/copilot-version.stdout"),
+        b"GitHub Copilot CLI 1.0.107.\nRun 'copilot update' to check for updates.\n",
         0o600,
     );
     let plan: Value =

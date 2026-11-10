@@ -21,11 +21,11 @@ fn collector_retains_counts_without_native_scalar_values() {
             r#"{"kind":"marketplaces","entries":1}"#,
         ),
     ] {
-        let summary = summarize_inventory("1.0.105", kind, bytes).unwrap();
+        let summary = summarize_inventory("1.0.107", kind, bytes).unwrap();
         assert_eq!(serde_json::to_string(&summary).unwrap(), expected);
         assert!(!format!("{summary:?}").contains("secret"));
         assert_eq!(summary.entries(), 1);
-        let empty = summarize_inventory("1.0.105", kind, b"[]").unwrap();
+        let empty = summarize_inventory("1.0.107", kind, b"[]").unwrap();
         assert_eq!(empty.entries(), 0);
     }
 }
@@ -38,7 +38,7 @@ fn collector_rejects_schema_changes_in_every_row() {
         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":true,"secret-extra":"secret-value"}]"#,
         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":true},{}]"#,
     ] {
-        assert_eq!(summarize_inventory("1.0.105", CopilotInventoryKind::Plugins, bytes), Err(CopilotProbeError::UnsupportedShape));
+        assert_eq!(summarize_inventory("1.0.107", CopilotInventoryKind::Plugins, bytes), Err(CopilotProbeError::UnsupportedShape));
     }
     for bytes in [
         PLUGIN,
@@ -47,7 +47,7 @@ fn collector_rejects_schema_changes_in_every_row() {
         br#"[{"name":"a","source":"b","isDefault":true,"extra":null}]"#,
     ] {
         assert_eq!(
-            summarize_inventory("1.0.105", CopilotInventoryKind::Marketplaces, bytes),
+            summarize_inventory("1.0.107", CopilotInventoryKind::Marketplaces, bytes),
             Err(CopilotProbeError::UnsupportedShape)
         );
     }
@@ -60,13 +60,13 @@ fn collector_rejects_duplicate_decoded_keys_and_trailing_input() {
         br#"[{"ignored":{"x":1,"\u0078":2}}]"#,
         b"[] []", b"[", b"\xff",
     ] {
-        assert_eq!(summarize_inventory("1.0.105", CopilotInventoryKind::Plugins, bytes), Err(CopilotProbeError::Malformed));
+        assert_eq!(summarize_inventory("1.0.107", CopilotInventoryKind::Plugins, bytes), Err(CopilotProbeError::Malformed));
     }
 }
 
 #[test]
 fn collector_enforces_version_and_byte_limits_before_parsing() {
-    for version in ["1.0.4", "1.0.106", "1.0.105\n", ""] {
+    for version in ["1.0.4", "1.0.105", "1.0.106", "1.0.107\n", ""] {
         assert_eq!(
             summarize_inventory(version, CopilotInventoryKind::Plugins, PLUGIN),
             Err(CopilotProbeError::UnsupportedVersion)
@@ -75,14 +75,14 @@ fn collector_enforces_version_and_byte_limits_before_parsing() {
     let mut exact = b"[]".to_vec();
     exact.resize(1024 * 1024, b' ');
     assert_eq!(
-        summarize_inventory("1.0.105", CopilotInventoryKind::Plugins, &exact)
+        summarize_inventory("1.0.107", CopilotInventoryKind::Plugins, &exact)
             .unwrap()
             .entries(),
         0
     );
     exact.push(b' ');
     assert_eq!(
-        summarize_inventory("1.0.105", CopilotInventoryKind::Plugins, &exact),
+        summarize_inventory("1.0.107", CopilotInventoryKind::Plugins, &exact),
         Err(CopilotProbeError::TooLarge)
     );
 }
@@ -90,7 +90,7 @@ fn collector_enforces_version_and_byte_limits_before_parsing() {
 #[test]
 fn collector_errors_do_not_echo_input() {
     let error = summarize_inventory(
-        "1.0.105",
+        "1.0.107",
         CopilotInventoryKind::Plugins,
         br#"secret-authentication-diagnostic"#,
     )
@@ -139,7 +139,7 @@ fn collector_requires_each_field_type_and_does_not_sample_rows() {
                 }
                 let bytes = serde_json::to_vec(&changed).unwrap();
                 assert_eq!(
-                    summarize_inventory("1.0.105", kind, &bytes),
+                    summarize_inventory("1.0.107", kind, &bytes),
                     Err(CopilotProbeError::UnsupportedShape),
                     "{kind:?} {key}"
                 );
@@ -148,7 +148,7 @@ fn collector_requires_each_field_type_and_does_not_sample_rows() {
         let mut rows = vec![original[0].clone(); 100];
         rows.push(serde_json::json!({}));
         assert_eq!(
-            summarize_inventory("1.0.105", kind, &serde_json::to_vec(&rows).unwrap()),
+            summarize_inventory("1.0.107", kind, &serde_json::to_vec(&rows).unwrap()),
             Err(CopilotProbeError::UnsupportedShape)
         );
     }
@@ -164,7 +164,7 @@ fn collector_counts_both_boolean_values_and_all_entries() {
          br#"[{"name":"a","source":"b","isDefault":true},{"name":"c","source":"d","isDefault":false}]"#.as_slice(),
          r#"{"kind":"marketplaces","entries":2}"#),
     ] {
-        let summary = summarize_inventory("1.0.105", kind, bytes).unwrap();
+        let summary = summarize_inventory("1.0.107", kind, bytes).unwrap();
         assert_eq!(summary.entries(), 2);
         assert_eq!(serde_json::to_string(&summary).unwrap(), expected);
     }

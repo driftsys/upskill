@@ -123,7 +123,7 @@ fn prepare_fixture(root: &Path, client: FixtureClient) -> Result<PathBuf> {
         ),
         FixtureClient::Copilot => (
             TargetSurface::CopilotCli,
-            "1.0.105",
+            "1.0.107",
             InstallationRoot {
                 scope: OwnershipScope::User,
                 path: root.join("home"),
@@ -549,7 +549,7 @@ mod tests {
         let root = root.canonicalize().unwrap();
         let plan: Value = serde_json::from_slice(&std::fs::read(plan_path).unwrap()).unwrap();
         let home = root.join("home");
-        assert_eq!(plan["client_version"], "1.0.105");
+        assert_eq!(plan["client_version"], "1.0.107");
         assert_eq!(plan["scope"], "user");
         assert_eq!(plan["scope_root"], json!(home));
         assert_eq!(plan["cwd"], json!(root.join("project")));

@@ -100,7 +100,7 @@ impl Fixture {
             "os": if cfg!(target_os="macos") {"Darwin"} else {"Linux"},
             "machine": if cfg!(all(target_os="macos",target_arch="aarch64")) {"arm64"} else {std::env::consts::ARCH},
             "launcher":pin(&selected),"node":pin(&node),"platform_entrypoint":pin(&platform),
-            "wrapper_package_version":"1.0.4","required_cli_version":"1.0.105",
+            "wrapper_package_version":"1.0.107","required_cli_version":"1.0.107",
             "version_mismatch_policy":"stop before inventories or mutations; no update or fallback",
             "plan_sha256":plan_sha256,"fixture_files":rows});
         private(

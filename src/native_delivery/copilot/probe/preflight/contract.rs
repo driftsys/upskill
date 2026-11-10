@@ -176,7 +176,7 @@ fn expected(
         "--json"
     ]);
     let plan = json!({
-        "status":"prepared-only; native execution requires approval", "client_version":"1.0.105",
+        "status":"prepared-only; native execution requires approval", "client_version":"1.0.107",
         "scope":"user", "scope_root":home,"model_calls":0,"output_limit_bytes":1048576,
         "maximum_authorized_spending":0,"maximum_native_commands":11,"timeout_seconds_per_command":20,
         "packet_root":root,"cwd":root.join("project"),"home":home,"catalog":catalog,
@@ -220,8 +220,8 @@ impl Contract {
         if receipt.status != "prepared only; no native command executed"
             || receipt.os != os
             || receipt.machine != machine
-            || receipt.wrapper_package_version != "1.0.4"
-            || receipt.required_cli_version != "1.0.105"
+            || receipt.wrapper_package_version != "1.0.107"
+            || receipt.required_cli_version != "1.0.107"
             || receipt.plan_sha256 != request.plan_sha256
             || receipt.version_mismatch_policy
                 != "stop before inventories or mutations; no update or fallback"
