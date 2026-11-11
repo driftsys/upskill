@@ -17,15 +17,6 @@ pub enum LegacyClient {
 
 impl LegacyClient {
     pub const ALL: [Self; 3] = [Self::Claude, Self::Copilot, Self::OpenCode];
-
-    pub(super) fn from_label(label: &str) -> Option<Self> {
-        match label {
-            "claude" => Some(Self::Claude),
-            "copilot" => Some(Self::Copilot),
-            "opencode" => Some(Self::OpenCode),
-            _ => None,
-        }
-    }
 }
 
 impl From<crate::generate::Client> for LegacyClient {
