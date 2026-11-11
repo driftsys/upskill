@@ -11,6 +11,7 @@ import unittest
 
 SCRIPT = Path(__file__).parents[1] / 'prepare_copilot_install_trial.py'
 VERSION = '9.8.7'
+GOOD_NAME = 'upskill-' + 'a' * 39 + '-' + '0' * 16
 
 
 def digest(data):
@@ -35,7 +36,7 @@ class PrepareTrial(unittest.TestCase):
         path.chmod(0o755)
         return path
 
-    def make_fixture(self, *, files=9, commands=11, native_name=72, fail=False):
+    def make_fixture(self, *, files=9, commands=11, native_name=GOOD_NAME, fail=False):
         path = self.root / 'fixture'
         body = (
             f'#!{sys.executable}\n'
@@ -47,7 +48,7 @@ class PrepareTrial(unittest.TestCase):
             '    sys.exit(3)\n'
             'root = Path(sys.argv[2])\n'
             '(root / "sub").mkdir(parents=True)\n'
-            f'plan = {{"commands": list(range({commands})), "native_name": "n" * {native_name}}}\n'
+            f'plan = {{"commands": list(range({commands})), "native_name": {native_name!r}}}\n'
             '(root / "plan.json").write_text(json.dumps(plan))\n'
             f'for i in range({files} - 1):\n'
             '    (root / "sub" / f"f{i}.txt").write_text(f"file {i}")\n')
@@ -120,7 +121,7 @@ class PrepareTrial(unittest.TestCase):
                 'mode': oct(stat.S_IMODE(path.stat().st_mode))})
         self.assertEqual(out, {
             'packet_root': str(packet), 'plan_sha256': plan_hash,
-            'preparation_sha256': digest(prep_bytes), 'native_name': 'n' * 72})
+            'preparation_sha256': digest(prep_bytes), 'native_name': GOOD_NAME})
         self.assertEqual(result.stdout, json.dumps(out, indent=2) + '\n')
 
     def test_modes(self):
@@ -144,12 +145,13 @@ class PrepareTrial(unittest.TestCase):
         self.assertEqual(record['argv'], ['--copilot', str(parent / 'packet')])
 
     def test_count_checks_fail(self):
-        for kwargs in ({'files': 8}, {'commands': 10}, {'native_name': 71}):
+        for kwargs in ({'files': 8}, {'commands': 10}, {'native_name': 'upskill-' + '0' * 64}):
             with self.subTest(**kwargs):
                 result = self.run_script(self.make_fixture(**kwargs))
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, '')
                 self.assertIn(next(iter(kwargs)).split('_')[0], result.stderr)
+                self.assertNotIn('Traceback', result.stderr)
 
     def test_fixture_failure_propagates(self):
         result = self.run_script(self.make_fixture(fail=True))

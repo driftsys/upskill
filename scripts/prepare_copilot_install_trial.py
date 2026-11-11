@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import platform
+import re
 import stat
 import subprocess
 import sys
@@ -15,7 +16,8 @@ import tempfile
 
 EXPECTED_FILES = 9
 EXPECTED_COMMANDS = 11
-EXPECTED_NATIVE_NAME_LENGTH = 72
+# Mirrors upskill::compile::skill_package::is_valid_native_name.
+NATIVE_NAME = re.compile(r'upskill-(?!-)(?!.*--)[a-z0-9-]{1,39}(?<!-)-[0-9a-f]{16}')
 
 
 def digest(data):
@@ -103,10 +105,8 @@ def main(argv=None):
     if len(plan['commands']) != EXPECTED_COMMANDS:
         problems.append(
             f'expected {EXPECTED_COMMANDS} commands, found {len(plan["commands"])}')
-    if len(plan['native_name']) != EXPECTED_NATIVE_NAME_LENGTH:
-        problems.append(
-            f'expected native_name length {EXPECTED_NATIVE_NAME_LENGTH}, '
-            f'found {len(plan["native_name"])}')
+    if not NATIVE_NAME.fullmatch(plan['native_name']):
+        problems.append(f'native_name {plan["native_name"]!r} is not a valid native name')
     if problems:
         sys.stderr.write('; '.join(problems) + '\n')
         return 1
