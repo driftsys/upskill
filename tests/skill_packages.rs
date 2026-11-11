@@ -162,8 +162,10 @@ fn four_profiles_plan_exact_envelopes_and_contained_single_revision_catalogs() {
             result.revision_root,
             format!("{item}/revisions/{}", result.payload_sha256)
         );
-        assert_eq!(result.native_name.len(), 72);
-        assert!(result.native_name.starts_with("upskill-"));
+        assert!(upskill::compile::skill_package::is_valid_native_name(
+            &result.native_name
+        ));
+        assert!(result.native_name.starts_with("upskill-demo-"));
         assert_eq!(result.version, format!("0.0.0-r{}", result.payload_sha256));
         let prefix = result.revision_root.clone() + "/";
         let paths: Vec<_> = result
@@ -276,6 +278,7 @@ fn stable_native_identity_survives_revision_alias_and_source_updates() {
         newer.source = "other:source".into();
         let update = compile_skill_package(&request(&aliased, &root, &newer)).unwrap();
         assert_eq!(update.native_name, original.native_name);
+        assert!(update.native_name.starts_with("upskill-demo-"));
         assert_eq!(update.item_root, original.item_root);
         assert_ne!(update.payload_sha256, original.payload_sha256);
         assert_ne!(update.package_sha256, original.package_sha256);
@@ -519,15 +522,15 @@ fn framed_protocol_matches_independently_encoded_golden() {
     // independently encoded with C:\workspace, retaining all Unix controls.
     let (name, payload, package) = if cfg!(windows) {
         (
-            "upskill-20ce025e73798ca87972fb736f0e41923ca5f2074d5d5164cd1279fd996d1118",
-            "53e97de98a21c6227286e061c8a5b8a87a16f30171f8e87ebf5f1c1bc86cf2c4",
-            "b1618ac0ebdbd2d214ee2ae82e86a9a8e786ff5e54a8e93b92d25c2e29e9182e",
+            "upskill-demo-20ce025e73798ca8",
+            "2f4c6bf1151403ee7f33e5b17c66666784d15dd6be826b18a1f743ab44bd082f",
+            "feacb6699155a9e8a7e800375d3f6b7fc54c46778f5bd825b72e4d7c6b7ea315",
         )
     } else {
         (
-            "upskill-ca3f92288d5cf8ff96fb316d5b7c07953a11b35a401ae2f852a721763cac5af5",
-            "54ad588c40a1eb9035980be00719a214ee83d307a7df78888efd8ec688e48186",
-            "e46f4c71974f8618aca1cb58d3d5066520d37048cc7982a7c260c9f953456ce5",
+            "upskill-demo-ca3f92288d5cf8ff",
+            "65a93979c82b3536152f09a544aed718439cf649c1741c484c4e0f554deb67c0",
+            "202962263f1f14a622a297281e62c985923682427a42a63127d50b76203e00f5",
         )
     };
     assert_eq!(result.native_name, name);
@@ -572,13 +575,13 @@ fn aliased_resource_golden_pins_field_order_and_present_mode_encoding() {
     // source/installed names and the big-endian present mode 00 00 01 e9.
     let (payload, package) = if cfg!(windows) {
         (
-            "e947eb031cae36825a6e5e2ddb98687bd07a3b79a8b1ae59436288eab358ef38",
-            "33688f00cc188f8aa982895e1b2260e7c5b3e02ad4b55ef23601c204007f1f38",
+            "381df34e2eda56a531480d9e5820e723d7fd7ad867e422ed2db3fdc82576f35f",
+            "fe12d9d4cde79ace0af67d259382c38b0c6c4e1f6d8452eee72ec13c18263496",
         )
     } else {
         (
-            "f2d4917282f3bc0a135ccf17c43887c21ac8b540fe5c072330604c46339f0d4a",
-            "0fa3b4d799333bfcd8956a4cc18576d1197daaebd1941beef07b1d82789d6dad",
+            "42c505171beb0ae25c71908a12c64b0ddf8a121c1b2a6304060e64d2dd5fdf3e",
+            "07b15fea701b6ae2d707478810d7b2cf4e996d0d4d161f73c9a372fade6b5f39",
         )
     };
     assert_eq!(result.payload_sha256, payload);

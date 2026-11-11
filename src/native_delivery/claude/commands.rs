@@ -83,10 +83,7 @@ pub fn plan_plugin_command(
         || !absolute(&profile.scope.path)
         || !absolute(directory)
         || directory != &profile.scope.path.join(&item)
-        || !selection
-            .native_name
-            .strip_prefix("upskill-")
-            .is_some_and(digest)
+        || !crate::compile::skill_package::is_valid_native_name(&selection.native_name)
         || !digest(&selection.payload_sha256)
         || !digest(&selection.package_sha256)
         || selection.revision_root != format!("{item}/revisions/{}", selection.payload_sha256)

@@ -54,7 +54,7 @@ pub fn compile_skill_package(request: &SkillPackageRequest<'_>) -> Result<SkillP
     let mut identity = Sha256::new();
     identity.update(b"upskill:skill-owner:v1\0");
     identity_fields(&mut identity, request, scope_kind, scope_path);
-    let native_name = format!("upskill-{}", hex(identity.finalize()));
+    let native_name = build_native_name(&request.selected.source_name, &hex(identity.finalize()))?;
     let item_root = format!(
         ".upskill/exports/{}/{}",
         profile.client, request.owner.installation_id
@@ -122,6 +122,65 @@ pub fn compile_skill_package(request: &SkillPackageRequest<'_>) -> Result<SkillP
         catalog_file,
         binding,
     })
+}
+
+const NATIVE_PREFIX: &str = "upskill-";
+const NATIVE_HASH_LEN: usize = 16;
+const NATIVE_READABLE_MAX: usize = 39;
+
+/// Normalise a skill name to lowercase ASCII letters, digits and single hyphens.
+fn readable_part(skill_name: &str) -> String {
+    let mut out = String::new();
+    for byte in skill_name.bytes() {
+        let byte = byte.to_ascii_lowercase();
+        let mapped = if byte.is_ascii_lowercase() || byte.is_ascii_digit() {
+            byte
+        } else {
+            b'-'
+        };
+        if mapped == b'-' && (out.is_empty() || out.ends_with('-')) {
+            continue;
+        }
+        out.push(mapped as char);
+    }
+    out.truncate(NATIVE_READABLE_MAX);
+    out.trim_end_matches('-').to_string()
+}
+
+/// Build `upskill-<skill>-<hash16>`; the digest is the only ownership evidence.
+fn build_native_name(skill_name: &str, digest_hex: &str) -> Result<String> {
+    let readable = readable_part(skill_name);
+    if readable.is_empty() {
+        bail!("skill name has no usable characters for a native package name");
+    }
+    Ok(format!(
+        "{NATIVE_PREFIX}{readable}-{}",
+        &digest_hex[..NATIVE_HASH_LEN]
+    ))
+}
+
+/// Accept exactly `upskill-<middle>-<16 lowercase hex>` with a normalised middle
+/// of at most 39 characters and a total length of at most 64.
+pub fn is_valid_native_name(name: &str) -> bool {
+    let Some(rest) = name.strip_prefix(NATIVE_PREFIX) else {
+        return false;
+    };
+    let Some((middle, hash)) = rest.rsplit_once('-') else {
+        return false;
+    };
+    !middle.is_empty()
+        && middle.len() <= NATIVE_READABLE_MAX
+        && !middle.starts_with('-')
+        && !middle.ends_with('-')
+        && !middle.contains("--")
+        && middle
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        && hash.len() == NATIVE_HASH_LEN
+        && hash
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+        && name.len() <= 64
 }
 
 struct PackageProfile {
@@ -362,4 +421,79 @@ fn hex(bytes: impl AsRef<[u8]>) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+#[cfg(test)]
+mod native_name_tests {
+    use super::*;
+
+    const HASH: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    #[test]
+    fn generates_normal_name() {
+        let name = build_native_name("code-review", HASH).unwrap();
+        assert_eq!(name, "upskill-code-review-0123456789abcdef");
+        assert!(is_valid_native_name(&name));
+    }
+
+    #[test]
+    fn truncates_long_name_to_39() {
+        let name = build_native_name(&"a".repeat(80), HASH).unwrap();
+        assert_eq!(name, format!("upskill-{}-0123456789abcdef", "a".repeat(39)));
+        assert!(name.len() <= 64);
+        assert!(is_valid_native_name(&name));
+    }
+
+    #[test]
+    fn normalises_name() {
+        let name = build_native_name("My_Skill..v2", HASH).unwrap();
+        assert_eq!(name, "upskill-my-skill-v2-0123456789abcdef");
+    }
+
+    #[test]
+    fn trims_hyphen_left_by_truncation() {
+        let skill = format!("{}-bbbb", "a".repeat(38));
+        let name = build_native_name(&skill, HASH).unwrap();
+        assert_eq!(name, format!("upskill-{}-0123456789abcdef", "a".repeat(38)));
+        assert!(is_valid_native_name(&name));
+    }
+
+    #[test]
+    fn rejects_empty_normalised_name() {
+        assert!(build_native_name("___", HASH).is_err());
+        assert!(build_native_name("", HASH).is_err());
+    }
+
+    #[test]
+    fn validator_accepts_boundaries() {
+        let longest = format!("upskill-{}-0123456789abcdef", "a".repeat(39));
+        assert_eq!(longest.len(), 64);
+        assert!(is_valid_native_name(&longest));
+        assert!(is_valid_native_name("upskill-a-0123456789abcdef"));
+        assert!(is_valid_native_name("upskill-a-b-0123456789abcdef"));
+    }
+
+    #[test]
+    fn validator_rejects_malformed_names() {
+        let old = format!("upskill-{HASH}");
+        let cases = [
+            old.as_str(),
+            "upskill-a-0123456789ABCDEF",
+            "upskill-a-0123456789abcde",
+            "upskill-a-0123456789abcdef0",
+            "upskill--0123456789abcdef",
+            "upskill-a--0123456789abcdef",
+            "upskill--a-0123456789abcdef",
+            "upskill-a--b-0123456789abcdef",
+            "upskill-A-0123456789abcdef",
+            "upskill-a_b-0123456789abcdef",
+            "other-a-0123456789abcdef",
+            "upskill-0123456789abcdef",
+        ];
+        for case in cases {
+            assert!(!is_valid_native_name(case), "{case}");
+        }
+        let long_middle = format!("upskill-{}-0123456789abcdef", "a".repeat(40));
+        assert!(!is_valid_native_name(&long_middle));
+    }
 }

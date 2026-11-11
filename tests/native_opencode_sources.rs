@@ -20,7 +20,7 @@ const NEW: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 fn selection(id: &str, payload: &str) -> NativeSkillSelection {
     let revision = format!(".upskill/exports/opencode/{id}/revisions/{payload}");
     NativeSkillSelection {
-        native_name: format!("upskill-{}", "c".repeat(64)),
+        native_name: format!("upskill-demo-{}", "c".repeat(16)),
         payload_sha256: payload.into(),
         package_sha256: "d".repeat(64),
         binding: SkillPackageBinding::ExplicitSkillSource {
@@ -275,7 +275,7 @@ fn invalid_package_records_cannot_choose_a_foreign_or_unframed_source() {
     apply(&mut config, patch);
     change.before = change.after.clone();
     change.after = Some(selection("owned-1", NEW));
-    change.after.as_mut().unwrap().native_name = format!("upskill-{}", "e".repeat(64));
+    change.after.as_mut().unwrap().native_name = format!("upskill-demo-{}", "e".repeat(16));
     assert_eq!(
         plan_skill_sources(&profile, &config, &[change]).unwrap_err(),
         OpenCodeSourceError::InvalidSelection
@@ -342,10 +342,15 @@ fn legacy_object_fields_and_each_array_type_are_checked_independently() {
     }
 }
 #[test]
-fn a_managed_prefix_requires_a_complete_lowercase_hexadecimal_suffix() {
-    for suffix in ["a".repeat(63), "A".repeat(64), "z".repeat(64)] {
+fn a_managed_name_requires_a_complete_lowercase_hexadecimal_suffix() {
+    for suffix in [
+        "a".repeat(15),
+        "A".repeat(16),
+        "z".repeat(16),
+        "a".repeat(17),
+    ] {
         let (profile, config, mut change) = input(Some("{}"));
-        change.after.as_mut().unwrap().native_name = format!("upskill-{suffix}");
+        change.after.as_mut().unwrap().native_name = format!("upskill-demo-{suffix}");
         assert_eq!(
             plan_skill_sources(&profile, &config, &[change]).unwrap_err(),
             OpenCodeSourceError::InvalidSelection

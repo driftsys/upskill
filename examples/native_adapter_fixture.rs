@@ -374,7 +374,7 @@ mod tests {
         assert_eq!(plan["output_limit_bytes"], 1048576);
         assert_eq!(plan["maximum_authorized_spending"], 0);
         let name = plan["native_name"].as_str().unwrap();
-        assert_eq!(name.len(), 72);
+        assert!(upskill::compile::skill_package::is_valid_native_name(name));
         assert!(name.starts_with("upskill-"));
         let payload = plan["payload_sha256"].as_str().unwrap();
         assert_eq!(payload.len(), 64);
@@ -560,13 +560,8 @@ mod tests {
         assert_eq!(plan["maximum_authorized_spending"], 0);
         assert_eq!(plan["timeout_seconds_per_command"], 20);
         let name = plan["native_name"].as_str().unwrap();
-        assert_eq!(name.len(), 72);
+        assert!(upskill::compile::skill_package::is_valid_native_name(name));
         assert!(name.starts_with("upskill-"));
-        assert!(
-            name[8..]
-                .bytes()
-                .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f'))
-        );
         let payload = plan["payload_sha256"].as_str().unwrap();
         assert_eq!(payload.len(), 64);
         let item = ".upskill/exports/copilot/native-contract-probe";

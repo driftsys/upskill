@@ -12,7 +12,7 @@ use upskill::native_delivery::claude::{
 use upskill::ownership::{InstallationRoot, OwnershipScope};
 use upskill::target::TargetSurface;
 
-const NAME: &str = "upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NAME: &str = "upskill-demo-bbbbbbbbbbbbbbbb";
 const PAYLOAD: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 fn input() -> (NativeDeliveryProfile, SkillTarget, NativeSkillSelection) {
     let profile = NativeDeliveryProfile {
@@ -47,7 +47,7 @@ fn input() -> (NativeDeliveryProfile, SkillTarget, NativeSkillSelection) {
 fn every_effect_has_an_exact_selector_and_explicit_scope_without_trust_flags() {
     let (mut profile, target, selection) = input();
     let catalog = "/fixture/project with spaces/.upskill/exports/claude/owned-1";
-    let selector = "upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb@upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let selector = "upskill-demo-bbbbbbbbbbbbbbbb@upskill-demo-bbbbbbbbbbbbbbbb";
     for (kind, scope) in [
         (OwnershipScope::Project, "project"),
         (OwnershipScope::User, "user"),

@@ -609,9 +609,15 @@ mode is byte `1` followed by unsigned 32-bit big-endian permission bits.
 
 1. `upskill:skill-owner:v1\0` frames scope kind, canonical scope path,
    installation ID and target surface. Native plugin/catalog name is
-   `upskill-<full-digest>` and remains stable across source revisions and
-   aliases. Bundle references are resolved elsewhere and do not enter this
-   identity.
+   `upskill-<skill>-<hash16>` and remains stable across source revisions and
+   aliases. `<hash16>` is the first 16 lowercase hexadecimal characters of this
+   digest. `<skill>` is the source skill name, lowercased, with every byte
+   outside ASCII letters and digits mapped to `-`, repeated `-` collapsed, edge
+   `-` trimmed, truncated to 39 characters and trimmed again; an empty result is
+   an error. The total length is at most 64 characters, the limit Copilot CLI
+   1.0.107 enforces. Ownership is decided from `<hash16>` and the exact expected
+   name, never from `<skill>`, which does not enter the identity. Bundle
+   references are resolved elsewhere and do not enter this identity.
 2. `upskill:skill-payload:v1\0` starts with those same fields, then source
    identity, optional revision (presence byte plus framed value), source name,
    installed name, captured manifest digest and selected-body origin. Origin is

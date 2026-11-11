@@ -50,10 +50,7 @@ fn source_path<'a>(
         || !id
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
-        || !selection
-            .native_name
-            .strip_prefix("upskill-")
-            .is_some_and(digest)
+        || !crate::compile::skill_package::is_valid_native_name(&selection.native_name)
         || !digest(&selection.payload_sha256)
         || !digest(&selection.package_sha256)
         || selection.revision_root != revision

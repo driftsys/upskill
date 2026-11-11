@@ -10,8 +10,8 @@ use upskill::native_delivery::adapter::{
 use upskill::native_delivery::{codex, copilot};
 use upskill::ownership::{InstallationRoot, OwnershipScope};
 use upskill::target::TargetSurface;
-const NAME: &str = "upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const SELECTOR: &str = "upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb@upskill-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NAME: &str = "upskill-demo-bbbbbbbbbbbbbbbb";
+const SELECTOR: &str = "upskill-demo-bbbbbbbbbbbbbbbb@upskill-demo-bbbbbbbbbbbbbbbb";
 const PAYLOAD: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const ACTIONS: [Action; 5] = [
     Action::RegisterMarketplace,
@@ -213,7 +213,7 @@ fn invalid_selection_controls_keep_other_catalog_and_revision_fields_consistent(
                     };
                     selection.revision_root = format!("{item}/revisions/{PAYLOAD}");
                 }
-                2 => selection.native_name = format!("upskill-{}", "B".repeat(64)),
+                2 => selection.native_name = format!("upskill-demo-{}", "B".repeat(16)),
                 3 => {
                     selection.payload_sha256 = "a".repeat(63);
                     selection.revision_root = format!(
