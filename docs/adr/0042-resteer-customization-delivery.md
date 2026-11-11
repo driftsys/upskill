@@ -27,20 +27,21 @@ and installed through a command.
 
 ## Decision
 
-1. **Ownership record in the lockfile.** Each installed item records the files
-   written for it, with the client, the path relative to the scope root and the
-   SHA-256 of the bytes written. `update` and `remove` replace or delete only
-   files whose current hash equals the recorded hash, unless the user passes
-   `--force`.
-2. **Repeatable operations.** An install or update records its intended files as
-   pending in the lockfile before it writes, writes each file through a
-   temporary file and a rename, and then promotes the pending record. Running
-   the same command again after an interruption completes the operation. There
-   is no journal, no checkpoint model and no writer lock.
-3. **Support levels in place of activation gates.** Each client and kind has one
-   published level: supported, experimental or unsupported. A smoke test against
-   the real client sets the level. A failed or outdated cell changes only its
-   own level. It does not block a release or another cell.
+1. **Ownership record in the lockfile.** Each installed item will record the
+   files written for it, with the client, the path relative to the scope root
+   and the SHA-256 of the bytes written. `update` and `remove` will replace or
+   delete only files whose current hash equals the recorded hash, unless the
+   user passes `--force`.
+2. **Repeatable operations.** An install or update will record its intended
+   files as pending in the lockfile before it writes, will write each file
+   through a temporary file and a rename, and will then promote the pending
+   record. Running the same command again after an interruption will complete
+   the operation. There will be no journal, no checkpoint model and no writer
+   lock.
+3. **Support levels in place of activation gates.** Each client and kind will
+   have one published level: supported, experimental or unsupported. A smoke
+   test against the real client will set the level. A failed or outdated cell
+   will change only its own level. It will not block a release or another cell.
 4. **Claude Code and Copilot first.** Codex and OpenCode follow, each with its
    own short design. OpenCode keeps its current generation and is published as
    experimental. Codex stays unsupported in the MVP.
@@ -50,11 +51,16 @@ and installed through a command.
    `rustix` dependency were removed from `main`. They are kept on the branch
    `archive/lifecycle-2026-11`, which receives no further work.
 
-[AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md)
-and
-[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md)
-stay accepted. AD-0041 is revisited only if trial T1 shows that Copilot lists or
-applies an item installed for both Claude Code and Copilot twice.
+This record replaces the activation and release-gate clauses of
+[AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md),
+which block all-client release qualification and schema-2 activation until every
+applicable native requirement passes. It also replaces the exclusion of a
+reduced four-client release scope in
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md).
+The separation of delivery from discovery and activation (AD-0040) and separate
+client representations as the design baseline (AD-0041) stay accepted. AD-0041
+is revisited only if trial T1 shows that Copilot lists or applies an item
+installed for both Claude Code and Copilot twice.
 
 ## Consequences
 

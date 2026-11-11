@@ -152,8 +152,7 @@ superseded on 2026-11-11 by the
 is kept as an
 [unapproved archived comparison](../archive/specs/2026-10-23-customization-storage-delivery-candidates.md).
 It was registered as retained comparison context only. It is not an active
-proposal, an adopted route, or a file included in this reconciliation PR. Its
-source bytes remain untouched in the original worktree. The
+proposal or an adopted route. The
 [design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)
 identifies the draft and requires its disposition; the
 [delivery proposal](specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)

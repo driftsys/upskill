@@ -32,11 +32,12 @@ persistence boundary.
 
 The
 [foundation](../wip/specs/2026-10-11-agent-customization-foundation-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active: source
-verification, historical rendering and resources, adoption, requested-selection
-reconciliation, schema-2 lifecycle preservation, exact backup and transactional
-execution are unfinished. Other WIP material retains its existing disposition;
-this archive entry concerns only the named pair.
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11 (the foundation remains in WIP): source verification, historical
+rendering and resources, adoption, requested-selection reconciliation, schema-2
+lifecycle preservation, exact backup and transactional execution are unfinished.
+Other WIP material retains its existing disposition; this archive entry concerns
+only the named pair.
 
 ## Owned instruction operation planning
 
@@ -67,8 +68,8 @@ Durable successors:
 
 The
 [operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. Closeout
-status recorded before the whole-file planner:
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11. Closeout status recorded before the whole-file planner:
 
 > Source/filesystem evidence, complete reference authority, per-owner consumer
 > association, whole-file/resource planning, mixed-state lifecycle integration
@@ -86,8 +87,8 @@ composes explicit complete file/contribution sets. The
 producer binds rule outputs to explicit roots and consumers. Integration with
 lifecycle reconciliation and planning, qualified source/destination evidence,
 durable state and transactional execution remain pending. The operational
-lifecycle design and M1 plan remain active; the whole-file planning pair is
-archived in its own entry below.
+lifecycle design and M1 plan were active until 2026-11-11; the whole-file
+planning pair is archived in its own entry below.
 
 ## Strict captured source manifests
 
@@ -114,8 +115,8 @@ Durable successors:
 
 The
 [operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. Closeout
-status recorded before the whole-file planner:
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11. Closeout status recorded before the whole-file planner:
 
 > Whole-file/resource planning, immutable Git evidence, source stabilization,
 > qualified observation, destination qualification, state/execution and Codex
@@ -164,12 +165,13 @@ remain for hosted CI.
 Durable successors:
 [specification §4.4](../topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans),
 [whole-file planner design](../topics/0006-artifact-planning.md#architecture-owned-file-planning)
-and [AD-0021 through AD-0023](../adr/README.md#owned-whole-file-planning). The
+and [AD-0021 through AD-0023](../adr/README.md). The
 [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The
 [operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. The
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11. The
 [captured item compiler](../topics/0002-generation.md#45-captured-item-compilation)
 derives complete entrypoint/resource sets, and the
 [mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
@@ -205,7 +207,7 @@ execution remains pending.
 Durable successors:
 [specification §4.5](../topics/0002-generation.md#45-captured-item-compilation),
 [compiler design](../topics/0002-generation.md#architecture-captured-item-compilation)
-and [AD-0024 through AD-0026](../adr/README.md#captured-item-compilation). The
+and [AD-0024 through AD-0026](../adr/README.md). The
 [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The pure producer now derives complete generation entrypoint/resource sets from
@@ -219,16 +221,17 @@ permission policy, durable state, apply/recovery and native Codex activation
 remain pending. Active matching body overrides are explicitly rejected pending
 precedence implementation. The
 [operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active; this
-prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
-disposition; this entry resolves only the exact named pair.
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11; this prerequisite completes neither M1-A2 nor M1-A3. Other WIP
+retains its prior disposition; this entry resolves only the exact named pair.
 
 ## Mixed owned-artifact planning
 
 The archived [spec](specs/2026-10-12-mixed-owned-planning-design.md) and
 [plan](plans/2026-10-12-mixed-owned-planning.md) preserve the exact working
 material. Their parent-context links are historical relative references; the
-operational lifecycle design and M1 delivery plan remain active in WIP.
+operational lifecycle design and M1 delivery plan were active in WIP until
+2026-11-11.
 
 Implementation and reviewed corrections: `7d00798` through `73fb891`. Local
 completion evidence: 851 Rust tests and 11 documentation-checker tests, ordered
@@ -498,11 +501,11 @@ Gate 5 completion or a PR merge. Commands remain on schema 1.
 Source path: `docs/wip/plans/2026-10-16-m1-gate5-retirement.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-retirement.md) preserves its exact raw
 bytes, including historical unchecked task boxes and relative spec links. The
-current umbrella remains at
+umbrella was
 [Gate 5 lifecycle integration](specs/2026-10-15-m1-gate5-lifecycle-integration.md);
 the [M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
-also remains active. The approved scope archives only this completed plan. All
-other WIP retains its prior disposition.
+was also active until 2026-11-11. The approved scope archives only this
+completed plan. All other WIP retains its prior disposition.
 
 Durable successors:
 [specification §4.16](../topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning),

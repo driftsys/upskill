@@ -1,21 +1,9 @@
 # Sources and captured evidence
 
-Architecture reconciliation (2026-10-25): the
-[delivery, discovery and activation contract](0009-customization-delivery.md)
-controls intended production routes and reader intent. Existing Codex
-`AGENTS.md` contribution APIs described here are experimental library
-boundaries, not production independent-rule delivery. Independent Codex/OpenCode
-rules remain beside unchanged team guidance through a selected native or hook
-route. The native-first amendment permits explicit OpenCode paths after Q5 PASS
-and selects the trusted Codex hook with its declared recorded-history
-limitation. Reusable ownership, preflight and recovery mechanisms do not select
-or qualify a runtime route, and schema-2 production activation remains blocked
-([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
-
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+Every requirement and architecture section of this concern describes library
+code that was removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). Each section is marked
+withdrawn and is kept as history. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -241,7 +229,7 @@ Codex qualification and schema-2 production activation remain pending.
 ### Strict captured source manifests
 
 This record describes the implemented
-[`source_manifest`](https://github.com/driftsys/upskill/blob/main/src/source_manifest.rs)
+[`source_manifest`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/source_manifest.rs)
 library boundary.
 [strict captured source manifests](#43-strict-captured-source-manifests) owns
 its requirements. Capture observes source files; validation checks supplied
@@ -334,7 +322,7 @@ now composes complete explicit file/contribution sets from supplied ownership
 and observations; it does not derive those lifecycle inputs from compiler
 outputs.
 
-[`tests/source_manifests.rs`](https://github.com/driftsys/upskill/blob/main/tests/source_manifests.rs)
+[`tests/source_manifests.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/source_manifests.rs)
 pins literal file and manifest vectors, path/content/mode changes, complete
 inclusion, validation diagnostics and supported platform rejection fixtures.
 Private module tests pin fault propagation and read counts. Actual non-UTF-8
@@ -620,9 +608,9 @@ explicit resource execution policy, and keep the desired artifacts and owner
 contracts consistent before planning.
 
 The implementation lives in
-[`src/lifecycle/sources.rs`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/sources.rs),
+[`src/lifecycle/sources.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/sources.rs),
 with public acceptance coverage in
-[`tests/lifecycle_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_sources.rs).
+[`tests/lifecycle_sources.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_sources.rs).
 
 #### Requested bindings and scoped application
 
@@ -675,6 +663,6 @@ no speculative downstream diagnostics, and a blocked request cannot invoke the
 prepared callback or apply a successful subset. Native qualification, all-kind
 adapters and production activation remain later gates. Acceptance examples are
 in
-[`lifecycle_codex_sources.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_sources.rs)
+[`lifecycle_codex_sources.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_codex_sources.rs)
 and
-[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
+[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_codex_orchestration.rs).

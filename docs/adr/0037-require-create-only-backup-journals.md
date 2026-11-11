@@ -63,14 +63,14 @@ or activate lifecycle-schema-2 production writes. Gate 5 and native
 qualification remain separate work.
 
 The implementation is in
-[`run.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/run.rs),
-[`journal.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/journal.rs)
+[`run.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/run.rs),
+[`journal.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/journal.rs)
 and
-[`backend.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/backend.rs).
+[`backend.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/backend.rs).
 Public acceptance examples are in
-[`execution_backup.rs`](https://github.com/driftsys/upskill/blob/main/tests/execution_backup.rs);
+[`execution_backup.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/execution_backup.rs);
 private publication, policy and sync checks are in
-[`backup_tests.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/backup_tests.rs).
+[`backup_tests.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/backup_tests.rs).
 
 Satisfies:
 [specification §4.12](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery).

@@ -8,6 +8,10 @@ pending. Other package and release-scope amendments below remain proposals
 ([decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
 [evidence and adoption](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
+[AD-0042](0042-resteer-customization-delivery.md) replaces the activation and
+release-gate clauses of this record; the separation of delivery from discovery
+and activation stays accepted.
+
 ## Context
 
 The 2026-10-19 roadmap called for independent Codex/OpenCode rule delivery

@@ -1,21 +1,10 @@
 # State and ownership
 
-Architecture reconciliation (2026-10-25): the
-[delivery, discovery and activation contract](0009-customization-delivery.md)
-controls intended production routes and reader intent. Existing Codex
-`AGENTS.md` contribution APIs described here are experimental library
-boundaries, not production independent-rule delivery. Independent Codex/OpenCode
-rules remain beside unchanged team guidance through a selected native or hook
-route. The native-first amendment permits explicit OpenCode paths after Q5 PASS
-and selects the trusted Codex hook with its declared recorded-history
-limitation. Reusable ownership, preflight and recovery mechanisms do not select
-or qualify a runtime route, and schema-2 production activation remains blocked
-([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
-
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+The legacy layout in `src/legacy/layout.rs` is live code. The legacy-state
+projection, combined lifecycle state, per-owner contract evidence and durable
+lifecycle origin sections describe library code that was removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md); each of them is marked
+withdrawn and is kept as history. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -165,7 +154,7 @@ owned-content lifecycle. Current commands still use schema 1. These records do
 not migrate state, fetch sources, claim ownership or write output files. The
 [combined lifecycle state foundation](#413-combined-lifecycle-state-foundation)
 owns the requirements;
-[`lifecycle::state`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/mod.rs)
+[`lifecycle::state`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/mod.rs)
 exposes the records and public functions.
 
 <a id="architecture-combined-lifecycle-state-public-records-and-validation"></a>
@@ -183,10 +172,10 @@ installations, direct bundles, bundle membership and bundle dependencies.
 contribution selector and explicit consumers. Existing ownership, target and
 schema-1 types retain their wire representations. No new dependency is required.
 
-[`validate_state`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/validate.rs)
+[`validate_state`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/validate.rs)
 checks the complete envelope and reuses `ownership::validate_artifacts` for
 artifact shape.
-[`associations`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/associations.rs)
+[`associations`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/associations.rs)
 supplies the internal owner/selector checks within that same public validation
 boundary. Parsing and serialization both call this validator. Inputs remain
 unchanged on rejection.
@@ -283,7 +272,7 @@ normalized to new tags.
 
 #### Verification boundary
 
-[`tests/lifecycle_state.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_state.rs)
+[`tests/lifecycle_state.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_state.rs)
 exercises graph sharing, every reference kind, reachability and cycles, identity
 collisions, source revision/hash bindings, audience-excluded installations,
 exact owner/consumer associations, lexical roots and selectors, strict decoding,
@@ -400,11 +389,11 @@ source/destination observations, complete Gate 5 or qualify native clients.
 
 #### Components
 
-- [Contract model and agreement](https://github.com/driftsys/upskill/blob/main/src/lifecycle/contracts.rs)
-- [Combined-state validation and codec](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state)
-- [Upsert propagation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/upsert.rs)
-- [Reference retirement](https://github.com/driftsys/upskill/blob/main/src/lifecycle/retire/mod.rs)
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_contracts.rs)
+- [Contract model and agreement](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/contracts.rs)
+- [Combined-state validation and codec](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state)
+- [Upsert propagation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/upsert.rs)
+- [Reference retirement](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/retire/mod.rs)
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contracts.rs)
 - [Evidence policy](https://github.com/driftsys/upskill/blob/main/docs/adr/0034-record-explicit-owner-contracts.md)
 - [Validation limits](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-owner-contracts-validation.md)
 
@@ -501,7 +490,7 @@ verification, historical rendering, resource enumeration, adoption, requested
 selection reconciliation, schema-2 lifecycle preservation, exact backup and
 transactional execution remain outside this boundary.
 
-[`tests/legacy_projection.rs`](https://github.com/driftsys/upskill/blob/main/tests/legacy_projection.rs)
+[`tests/legacy_projection.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/legacy_projection.rs)
 pins typed preservation, all nine literal layouts, client order and candidate
 identity, source compatibility, malformed and duplicate rows, unsupported
 schemas and root-independent paths. Existing pipeline output and resource tests

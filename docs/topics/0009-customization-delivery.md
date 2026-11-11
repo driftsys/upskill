@@ -39,9 +39,10 @@ remain adapter qualification decisions. Missing capabilities block that route;
 they never authorize an `AGENTS.md` rewrite fallback.
 
 > **Withdrawn on 2026-11-11 by
-> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
-> record describes was removed from `main` and is kept on the branch
-> `archive/lifecycle-2026-11`. This record is retained as history.
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The next paragraph
+> only: the Codex contribution compiler and `with_prepared_codex` it names were
+> removed from `main` and are kept on the branch `archive/lifecycle-2026-11`.
+> The paragraph is retained as history.
 
 The merged Codex contribution compiler and `with_prepared_codex` are
 **experimental library mechanisms**. Their explicit reader reports and guarded
@@ -216,13 +217,12 @@ Every matrix row below inherits these installation, update and removal rules:
   explicit integration-removal policy remains; narrowed selection cannot
   silently uninstall a plugin or MCP server.
 
-Reuse complete selected-set preflight, captured source/destination evidence,
-qualified roots and writer locking, exact schema-1 backup, owner contracts and
-journaled recovery. Extend native-effect planning where needed; the file journal
-alone is not proof of native registration recovery. Keep schema-1 production
-routing until every applicable activation requirement passes. Never expose a
-schema-2 writer alongside legacy recursive removal or save only the legacy
-projection over an outer owned state.
+The selected-set preflight, captured source and destination evidence, qualified
+roots and writer locking, exact schema-1 backup, owner contracts and journaled
+recovery were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md) and are not reused.
+That decision replaces them with an ownership record in the lockfile and
+repeatable operations.
 
 ## Per-client delivery matrix
 
@@ -355,12 +355,11 @@ obligations.
 | Codex CLI       | Trusted static-index internal rule hook; Q9 observes bounded continuity at 0.164.0, complete lifecycle/re-trust still P ([Q9][D-Q9]) | Native tool identifiers and explicit capability refusal; package/shared-config exports inventoried | Native execution/approval policy and root authority; plugin cannot override sandbox restrictions | N; preserve user policy; general management P                          |
 | OpenCode v2 CLI | Native plugin events/API; guard reload/duplicate registration and imported config                                                    | Native tool/plugin/MCP registration; same-name tools and duplicate exports controlled              | V2 native permissions and deny rules; runtime-specific translation only when equivalent          | N; preserve ordered policy and unrelated config; expanded management P |
 
-> **Withdrawn on 2026-11-11 by
-> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
-> record describes was removed from `main` and is kept on the branch
-> `archive/lifecycle-2026-11`. This record is retained as history.
-
 ## Slice-1 evidence and adoption (2026-10-25)
+
+The adoption process of this section is superseded by
+[AD-0042](../adr/0042-resteer-customization-delivery.md); the trial results Q1
+to Q9 remain valid research.
 
 This is the separate step-7 reconciliation for
 [task #412](https://github.com/driftsys/upskill/issues/412). The user owns

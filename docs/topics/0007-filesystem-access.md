@@ -596,9 +596,9 @@ evidence, unknown existing mode, existing special bits and unknown
 executable-resource mode.
 
 The
-[implementation](https://github.com/driftsys/upskill/blob/main/src/files/permissions.rs)
+[implementation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/files/permissions.rs)
 selects from supplied values. The
-[public acceptance tests](https://github.com/driftsys/upskill/blob/main/tests/file_permissions.rs)
+[public acceptance tests](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/file_permissions.rs)
 exercise literal modes and diagnostics. Independent omission controls pin
 preservation, unknown-mode handling, explicit policy, owner execution,
 special-bit handling and both evidence ranges. No mutable input exists: all

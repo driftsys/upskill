@@ -6,6 +6,10 @@ Status: **accepted**. Date: 2026-10-31. Task
 summarizes the decision and its boundaries. This record has no production
 effects.
 
+[AD-0042](0042-resteer-customization-delivery.md) replaces the exclusion of a
+reduced four-client release scope in this record; the design baseline stays
+accepted.
+
 ## Context
 
 The [A/B comparison](../technotes/customization-delivery-policy-comparison.md)
