@@ -1085,6 +1085,10 @@ fn remove_keeps_an_unreadable_recorded_file_as_modified() {
     add_claude(tmp.path(), &home, "license-awareness");
     let rule = tmp.path().join(".claude/rules/api-conventions.md");
     make_unreadable(&rule);
+    if fs::read(&rule).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
     let other = tmp.path().join(".claude/rules/license-awareness.md");
 
     let out = remove_cmd(
@@ -1112,6 +1116,10 @@ fn remove_force_deletes_an_unreadable_recorded_file() {
     add_claude(tmp.path(), &home, "api-conventions");
     let rule = tmp.path().join(".claude/rules/api-conventions.md");
     make_unreadable(&rule);
+    if fs::read(&rule).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
 
     remove_cmd(
         tmp.path(),
@@ -1229,4 +1237,136 @@ fn remove_ignores_a_missing_recorded_file_and_prunes_its_directory() {
 
     assert!(!tmp.path().join(".claude/skills/tool").exists());
     assert!(!lists_item(tmp.path(), "tool"));
+}
+
+/// Installs the skill `bar` from `./s1` for Claude and returns its
+/// installed bytes.
+fn install_bar_from_another_source(tmp: &Path, home: &Path) -> Vec<u8> {
+    write_skill(&tmp.join("s1"), "bar", "First source.");
+    common::upskill_cmd(home)
+        .current_dir(tmp)
+        .args(["add", "./s1", "--claude"])
+        .assert()
+        .success();
+    fs::read(tmp.join(".claude/skills/bar/SKILL.md")).unwrap()
+}
+
+#[test]
+fn bundle_and_item_names_check_the_alias_for_conflicts() {
+    let (tmp, home) = project_with_bundles();
+    let before = install_bar_from_another_source(tmp.path(), &home);
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "platform-baseline",
+            "create-api-endpoint",
+            "--as",
+            "create-api-endpoint=bar",
+            "--claude",
+        ])
+        .assert()
+        .code(1);
+
+    assert!(
+        stderr_of(&out).contains("skill `bar` is already installed from"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".claude/skills/bar/SKILL.md")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn bundle_and_item_names_check_the_exact_alias_over_the_bare_alias() {
+    let (tmp, home) = project();
+    let before = install_bar_from_another_source(tmp.path(), &home);
+    let src = tmp.path().join("s2");
+    write_skill(&src, "orig", "Second source.");
+    fs::create_dir_all(src.join("bundles")).unwrap();
+    fs::write(
+        src.join("bundles/b.bundle.yaml"),
+        "schema: 1\nname: b\ndescription: One skill\nitems:\n  skills:\n    - orig\n",
+    )
+    .unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add", "./s2", "b", "orig", "--as", "foo", "--as", "orig=bar", "--claude",
+        ])
+        .assert()
+        .code(1);
+
+    assert!(
+        stderr_of(&out).contains("skill `bar` is already installed from"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".claude/skills/bar/SKILL.md")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn the_first_alias_given_for_a_name_is_used() {
+    let (tmp, home) = project();
+    write_skill(&tmp.path().join("s"), "orig", "Body.");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./s",
+            "--as",
+            "orig=first",
+            "--as",
+            "orig=second",
+            "--claude",
+        ])
+        .assert()
+        .success();
+
+    assert!(tmp.path().join(".claude/skills/first/SKILL.md").exists());
+    assert!(!tmp.path().join(".claude/skills/second").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_fails_before_any_deletion_when_a_recorded_path_cannot_be_inspected() {
+    use std::os::unix::fs::PermissionsExt;
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    let dir = tmp.path().join(".claude/skills/create-api-endpoint");
+    make_unreadable(&dir);
+    if fs::read_dir(&dir).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
+
+    let out = remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "create-api-endpoint", "--project"],
+    )
+    .assert()
+    .code(1);
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+
+    assert!(
+        stderr_of(&out).contains("cannot inspect the recorded file"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert!(rule.exists(), "the first item was deleted");
+    assert!(dir.join("SKILL.md").exists());
+    assert!(lists_item(tmp.path(), "api-conventions"));
+    assert!(lists_item(tmp.path(), "create-api-endpoint"));
 }

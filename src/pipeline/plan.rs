@@ -97,4 +97,12 @@ mod tests {
         assert_eq!(planned[1].source_name.as_deref(), Some("x"));
         assert_eq!(planned[2].source_name.as_deref(), Some("y"));
     }
+
+    #[test]
+    fn keeps_two_items_that_differ_only_in_their_files() {
+        let mut planned = vec![item("a", None, b"one"), item("a", None, b"two")];
+        merge_duplicates(&mut planned);
+        assert_eq!(planned.len(), 2);
+        assert!(super::super::apply::check_unique_names(&planned).is_err());
+    }
 }

@@ -763,3 +763,35 @@ fn doctor_does_not_adopt_a_schema_1_lockfile() {
     );
     assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
 }
+
+#[test]
+fn doctor_skips_a_recorded_path_that_remove_would_never_delete() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let lock = serde_json::json!({
+        "schema": 2,
+        "items": [{
+            "kind": "rule",
+            "name": "api-conventions",
+            "source": "github:owner/repo",
+            "clients": ["claude"],
+            "files": [{
+                "client": "claude",
+                "path": "docs/api-conventions.md",
+                "sha256": "00"
+            }]
+        }],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    let (code, v) = doctor_json(tmp.path(), &home);
+    assert_eq!(code, Some(0), "{v}");
+    assert!(v["missing_outputs"].as_array().unwrap().is_empty(), "{v}");
+}
