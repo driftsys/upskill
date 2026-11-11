@@ -1,7 +1,6 @@
 //! Frozen historical generation vocabulary and native path computation.
 //!
 //! Native path operations preserve the current pipeline's raw-name behavior.
-//! Projection validates names before presenting paths as portable strings.
 
 use std::path::PathBuf;
 
@@ -13,10 +12,6 @@ pub enum LegacyClient {
     Claude,
     Copilot,
     OpenCode,
-}
-
-impl LegacyClient {
-    pub const ALL: [Self; 3] = [Self::Claude, Self::Copilot, Self::OpenCode];
 }
 
 impl From<crate::generate::Client> for LegacyClient {
