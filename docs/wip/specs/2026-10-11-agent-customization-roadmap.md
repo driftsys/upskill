@@ -17,7 +17,8 @@ Date: 2026-10-11. Status: **Proposed delivery roadmap**. Baseline: `b866f5e` (PR
 
 Sequencing update (2026-10-14): the user now requests four initial clients and
 an updater/content/plugin MVP before tools, permissions, hooks and MCP
-management. See the [new roadmap](2026-10-14-customization-adapter-roadmap.md).
+management. See the
+[new roadmap](../../archive/specs/2026-10-14-customization-adapter-roadmap.md).
 The milestones below retain the earlier proposal for context; use the newer
 roadmap for release order. Existing foundation and lifecycle requirements remain
 inputs to that work.

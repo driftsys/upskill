@@ -532,11 +532,11 @@ incomplete.
 Source path: `docs/wip/plans/2026-10-16-m1-gate5-selection.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-selection.md) preserves its exact raw
 bytes, including historical unchecked boxes and relative spec links. Current
-scope remains in the active
+scope remained in the
 [Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) and the
-[M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md). The
-approved completion scope archives only this selection plan; all other WIP
-retains its prior disposition.
+[M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md),
+which were active until 2026-11-11. The approved completion scope archives only
+this selection plan; all other WIP retains its prior disposition.
 
 Durable successors:
 [specification §4.17](../topics/0005-lifecycle-planning.md#417-captured-lifecycle-selection-preflight),
@@ -559,7 +559,7 @@ activation remain incomplete.
 Source path: `docs/wip/plans/2026-10-16-m1-gate5-upsert.md`. The
 [archived plan](plans/2026-10-16-m1-gate5-upsert.md) preserves its exact
 original bytes, including unchecked task boxes and historical relative spec
-links. The active scope remains in the
+links. The active scope remained in the
 [Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md), the
 [M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md),
 [captured-rule desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
@@ -984,3 +984,12 @@ checkout. It is an unapproved comparison. It was never adopted, and it is
 superseded by the
 [re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11. Its relative links are not updated for this location.
+
+## Customization adapter model and delivery roadmap
+
+Source path: `docs/wip/specs/2026-10-14-customization-adapter-roadmap.md`. The
+[adapter roadmap](specs/2026-10-14-customization-adapter-roadmap.md) was moved
+without changes. It is superseded by the
+[re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
+2026-11-11, which replaces its four-client MVP sequencing and its proposed
+qualification gates. Its relative links are not updated for this location.

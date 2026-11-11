@@ -411,7 +411,7 @@ physical observations and all physical checks still apply.
 ### Pure legacy-state projection
 
 The public library boundary
-[`legacy::project_legacy`](https://github.com/driftsys/upskill/blob/main/src/legacy/mod.rs)
+[`legacy::project_legacy`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/legacy/mod.rs)
 accepts a borrowed typed `Lockfile` and returns an owned `LegacyProjection`. It
 has no scope-root input, I/O, state writer or CLI dispatch.
 [AD-0015](https://github.com/driftsys/upskill/blob/main/docs/adr/0015-pure-legacy-state-projection.md)

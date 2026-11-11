@@ -38,8 +38,7 @@ This document uses **Claude Code**, **GitHub Copilot**, **Codex** and
 **opencode** in prose. The lowercase source family identifiers `claude`,
 `copilot`, `codex` and `opencode` appear in `audience` lists (§3.1) and
 conditional content directives (§6). Historical passthrough blocks (§3.5) use
-`claude`, `copilot` and `opencode`; the restricted Codex instruction producer
-rejects native extension maps.
+`claude`, `copilot` and `opencode`.
 
 ---
 
@@ -213,15 +212,14 @@ Override file rules:
 - Frontmatter is always taken from the canonical entrypoint.
 - The `<client>` suffix MUST be one of `claude`, `copilot` or `opencode`. The
   four audience/directive family identifiers in §3.1 and §6.1 do not extend this
-  override vocabulary. `codex` is not a supported override suffix; the bounded
-  Codex instruction producer rejects rule overrides.
+  override vocabulary. `codex` is not a supported override suffix.
 
 **Current implementation status.** The resolution order below is the specified
 format contract, not current installer behavior. The historical installer
-renders the canonical body and does not apply override bodies. The captured
-compiler rejects an active matching override, including one hidden by `ignore`;
-it does not fall back to canonical content for that requested client. See
-[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
+renders the canonical body and does not apply override bodies. A captured
+compiler that rejected active matching overrides was removed with the code that
+no command could reach; see
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md)
 and [debt #324](https://github.com/driftsys/upskill/issues/324). Override
 execution requires a separate implementation and compatibility tests.
 
@@ -263,9 +261,8 @@ review/
 For example, each wrapper can say: “Read `references/review-procedure.md` and
 follow its review criteria. Launch two reviewers using this client's agent
 mechanism.” The example illustrates the specified override format; the current
-installer/compiler boundaries above still apply. The canonical body must also be
-complete for clients without an override. There is no `SKILL.codex.md` override
-suffix.
+installer boundary above still applies. The canonical body must also be complete
+for clients without an override. There is no `SKILL.codex.md` override suffix.
 
 This shares the procedure through runtime file loading. Supporting resources are
 copied alongside each generated entrypoint (§2.4); their contents are not
@@ -1165,9 +1162,8 @@ They are explicitly **permitted** inside:
   `AGENT.opencode.md`, etc. — when the filename suffix matches the construct's
   historical generation client (`claude`, `copilot` or `opencode`). This is a
   format permission for the specified matching-client override selection, not
-  implemented loading: the historical installer ignores override bodies and
-  captured compilation rejects active matching overrides as recorded in §2.3.
-  `codex` has no override-file form.
+  implemented loading: the historical installer ignores override bodies, as
+  recorded in §2.3. `codex` has no override-file form.
 
 | Construct                       | Why prohibited (in always-rendered content) | Client         |
 | ------------------------------- | ------------------------------------------- | -------------- |
@@ -1213,9 +1209,9 @@ Known audience/directive family identifiers: `claude`, `copilot`, `codex`,
 clients in §2.3; `codex` does not add an override suffix.
 
 These identifiers describe source families. They do not add selectable surfaces
-or change historical default clients. The library-only Codex instruction subset
-is documented in
-[generation](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#captured-codex-instruction-boundary).
+or change historical default clients. A library-only Codex instruction producer
+was removed with the code that no command could reach; see
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md).
 
 ### 6.2 Forms
 
@@ -1260,10 +1256,9 @@ Override-file precedence over directives is defined by §2.3 (per-client overrid
 file rules); this subsection exists only as a cross-reference. When generating
 output for a historical generation client (`claude`, `copilot` or `opencode`),
 the specified resolution order applies only once override execution is
-implemented. The current historical installer ignores override bodies; the
-captured compiler rejects active matching overrides under AD-0025. The bounded
-Codex instruction producer rejects rule override entrypoints and processes
-directives only in the canonical body.
+implemented. The current historical installer ignores override bodies. The
+captured compiler and the Codex instruction producer were removed; see
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md).
 
 ---
 
@@ -1613,9 +1608,7 @@ specified §2.3 resolution order, `AGENT.md` supplies frontmatter for all
 clients; the Claude and Copilot overrides replace the canonical body for their
 respective clients. OpenCode uses the canonical body with directives processed.
 The current historical installer instead renders the canonical body for all
-three clients; the captured compiler rejects an active matching override under
-[AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md).
-Neither path currently implements the illustrated override selection.
+three clients and does not implement the illustrated override selection.
 
 ---
 

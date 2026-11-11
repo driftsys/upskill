@@ -15,9 +15,11 @@ Related records:
 ## Why this re-steer exists
 
 Between 2026-10-14 and 2026-11-11 the work on the customization MVP added about
-25,000 lines of Rust and about 35,000 lines of tests. `src/main.rs`,
-`src/cli.rs` and `src/pipeline/` did not change in that period. No user-visible
-behaviour changed. The new code is not reachable from any command.
+11,000 lines under `src/` and about 19,000 lines under `tests/`. This change
+removes about 16,600 lines under `src/` and about 28,500 lines under `tests/`;
+part of the removed code predates 2026-10-14. `src/main.rs`, `src/cli.rs` and
+`src/pipeline/` did not change in that period. No user-visible behaviour
+changed. The new code is not reachable from any command.
 
 The approach required every client to pass every native trial before any new
 behaviour could be activated. Client versions changed during the trials, which

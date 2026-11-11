@@ -70,19 +70,19 @@ the result of trial T1 and on client paths that are not confirmed yet.
 
 ## File Structure
 
-| File                            | Responsibility after Part 1                                                                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `src/lockfile.rs`               | Schema 2 types: `OwnedFile`, `LockedItem.files`, `LockedItem.pending`; load/save.                |
-| `src/pipeline/owned.rs` (new)   | Hashing, file state classification, schema-1 adoption. No writes except adoption.                |
-| `src/pipeline/plan.rs` (new)    | `PlannedFile`, `PlannedItem`: the in-memory result of generation for one item.                   |
-| `src/pipeline/apply.rs` (new)   | Preflight, pending save, temporary file + rename, stale deletion, final save.                    |
-| `src/pipeline/install.rs`       | Builds `PlannedItem` values. Writes nothing.                                                     |
-| `src/pipeline/output.rs`        | Path computation only. `write_output`, `copy_item_resources`, `remove_item_outputs` are deleted. |
-| `src/pipeline/lifecycle.rs`     | `remove` and `update` use the record; `doctor` reports modified and missing files.               |
-| `src/pipeline/mod.rs`           | `install_with_lockfile` calls plan, then apply. Alias relocation code is deleted.                |
-| `src/legacy/mod.rs`             | Reduced to `pub(crate) mod layout; pub use layout::LegacyClient;`.                               |
-| `tests/cli_ownership.rs` (new)  | CLI acceptance tests for record, removal, protection.                                            |
-| `tests/cli_repeatable.rs` (new) | CLI acceptance tests for interruption and repeated runs.                                         |
+| File                            | Responsibility after Part 1                                                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/lockfile.rs`               | Schema 2 types: `OwnedFile`, `LockedItem.files`, `LockedItem.pending`; load/save.                                      |
+| `src/pipeline/owned.rs` (new)   | Hashing, file state classification, schema-1 adoption. No writes except adoption.                                      |
+| `src/pipeline/plan.rs` (new)    | `PlannedFile`, `PlannedItem`: the in-memory result of generation for one item.                                         |
+| `src/pipeline/apply.rs` (new)   | Preflight, pending save, temporary file + rename, stale deletion, final save.                                          |
+| `src/pipeline/install.rs`       | Builds `PlannedItem` values. Writes nothing.                                                                           |
+| `src/pipeline/output.rs`        | Path computation only. Task 8 deletes `write_output` and `copy_item_resources`; Task 10 deletes `remove_item_outputs`. |
+| `src/pipeline/lifecycle.rs`     | `remove` and `update` use the record; `doctor` reports modified and missing files.                                     |
+| `src/pipeline/mod.rs`           | `install_with_lockfile` calls plan, then apply. Alias relocation code is deleted.                                      |
+| `src/legacy/mod.rs`             | Reduced to `pub(crate) mod layout; pub use layout::LegacyClient;`.                                                     |
+| `tests/cli_ownership.rs` (new)  | CLI acceptance tests for record, removal, protection.                                                                  |
+| `tests/cli_repeatable.rs` (new) | CLI acceptance tests for interruption and repeated runs.                                                               |
 
 ---
 
@@ -499,8 +499,11 @@ unchanged, so `main.rs` printing is unchanged.
 already applied to the name, the output paths and the resource link rewrite,
 pushes it to `report.planned`, and writes nothing. The functions `relocate` and
 `relocate_aliased_output` in `mod.rs`, and `write_output`, `copy_item_resources`
-and `remove_item_outputs` in `output.rs`, are deleted together with their unit
-tests.
+in `output.rs`, are deleted together with their unit tests.
+`remove_item_outputs` in `output.rs` is not deleted in this task, because
+`remove` and `update` in `src/pipeline/lifecycle.rs` still call it. Task 9 stops
+using it in `remove`; Task 10 removes the last use in `update` and deletes the
+function with its unit tests.
 
 `install_with_lockfile` order: fetch, resolve, detect name conflicts, plan all
 items, `adopt_schema1`, `apply_plan`, upsert items, save lockfile, ancillary
@@ -580,9 +583,9 @@ add to `kept_modified`, or delete when `force` is true; `Absent` → ignore. Aft
 the files of an item are handled, remove each parent directory that is now
 empty, from the deepest upward, and stop at the first directory that is not
 empty or that is a client root (`.claude`, `.github`, `.agents`, `.opencode`).
-No call to `remove_dir_all` remains in `src/pipeline/`. The lockfile record of
-the item is dropped in all cases. `remove` gains the flag `--force`. `main.rs`
-prints one line per kept file: `kept modified file: <path>`. `doctor` fills
+`remove` no longer calls `remove_item_outputs`. The lockfile record of the item
+is dropped in all cases. `remove` gains the flag `--force`. `main.rs` prints one
+line per kept file: `kept modified file: <path>`. `doctor` fills
 `missing_outputs` from the record (state `Absent`) and `modified_files` from
 state `Modified`.
 
@@ -625,7 +628,8 @@ fn remove_cleans_an_install_made_by_schema_1() {
       Expected: the new tests FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** `just check`. Expected: PASS.
-      `grep -rn "remove_dir_all" src/pipeline` prints nothing.
+      `grep -rn "remove_dir_all" src/pipeline` shows a call only inside
+      `remove_item_outputs` in `output.rs`, which Task 10 deletes.
 - [ ] **Step 5: Update the docs:** `commands.md` (`remove --force`, the kept
       file message, the adoption step and its limit for manual files inside an
       item directory) and `specification.md` (lockfile schema 2, the three file
@@ -729,6 +733,10 @@ per conflict: `skipped <kind> <name>: <path> was modified` or
 `Use --force to replace.`. `update` reports the item with `SkippedModified` and
 exits with code 1.
 
+The public `install_from_local_path` passes `overwrite = true` to `apply_plan`,
+because it is a library entry without a lockfile and keeps its current replace
+behaviour.
+
 - [ ] **Step 1: Write the failing CLI tests:**
 
 ```rust
@@ -777,7 +785,11 @@ fn update_with_a_narrower_selection_keeps_a_modified_copilot_file() {
       Expected: the new tests FAIL.
 - [ ] **Step 3: Implement.** Remove the per-client clean-up loop at the end of
       `install_items_of_kind`; the stale deletion in `apply_plan` replaces it.
+      Remove the last use of `remove_item_outputs` in `update` in
+      `src/pipeline/lifecycle.rs`, then delete `remove_item_outputs` from
+      `src/pipeline/output.rs` together with its unit tests.
 - [ ] **Step 4: Run** `just check`. Expected: PASS.
+      `grep -rn "remove_dir_all" src/pipeline` prints nothing.
 - [ ] **Step 5: Update `commands.md` and `specification.md`** with the conflict
       rules, the messages and the exit codes.
 - [ ] **Step 6: Commit**

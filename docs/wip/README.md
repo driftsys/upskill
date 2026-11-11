@@ -51,9 +51,8 @@ references must be reconciled as part of that feature's review.
   provided provenance-bound Copilot calibration. The
   [completed registration cell](../technotes/gate6-project-registration-isolation.md)
   records automatic Copilot activation of the Claude project registration, clean
-  baseline and post-removal, and separate preservation failure. The profile
-  remains active for qualification reconciliation. Offline classification tests
-  do not qualify the client profile.
+  baseline and post-removal, and separate preservation failure. Offline
+  classification tests do not qualify the client profile.
 
 - [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
   : proposed under [#417](https://github.com/driftsys/upskill/issues/417).
@@ -101,16 +100,11 @@ references must be reconciled as part of that feature's review.
   preserved in the prior planning worktree; this revised design is the current
   planning copy.
 
-- [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
-  — Superseded on 2026-11-11 by the
-  [re-steer design](specs/2026-11-11-customization-resteer-design.md).
-  Four-client MVP sequencing and proposed qualification gates; retained
-  planning.
-
 - [Shared updater design](specs/2026-10-14-shared-updater-design.md) and
   [implementation plan](plans/2026-10-14-shared-updater.md) — proposed
-  `upskill maintain` command; implementation waits for M1 lifecycle completion
-  and design review.
+  `upskill maintain` command; superseded in part by section 4 of the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md).
+  Implementation waits for delivery step 6 and design review.
 
 - Superseded on 2026-11-11 by the
   [re-steer design](specs/2026-11-11-customization-resteer-design.md). Gate 5
