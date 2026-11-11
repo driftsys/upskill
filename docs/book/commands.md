@@ -498,7 +498,11 @@ least one file, `doctor` therefore no longer reports the other outputs of that
 item that were already missing before adoption. The adopted paths are printed
 also when the command fails after the adoption was saved. `update --dry-run` and
 `doctor` do not adopt, and neither does a `remove` that fails because a name is
-not in the lockfile.
+not in the lockfile. An `add` does not adopt when it is refused because a source
+item overlaps its own output paths, because an item conflicts with an item
+installed from another source, or because two items would install under one
+name. An `update` refused for one of these reasons does not adopt when the
+refused source is the first source it updates.
 
 ## Per-client output paths
 

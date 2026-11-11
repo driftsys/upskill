@@ -135,6 +135,10 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
 ///
+/// Before the adoption and before `apply_plan`, the overlap check refuses
+/// a source item directory that is, is inside, or contains one of its own
+/// output paths, so that a refused install changes no file.
+///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
