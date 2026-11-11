@@ -1,10 +1,12 @@
 //! Per-client output path computation, and the best-effort deletion of an
-//! item's outputs that `remove` and `update` use.
+//! item's outputs that `update` uses for an item that its source no longer
+//! contains. `remove` does not use it: it deletes only the files in the
+//! item's ownership record.
 //!
-//! The install pipeline plans (and `remove` deletes) per-client output
-//! files at the paths defined in format-spec §7 / ADR-0003. The frozen
-//! legacy layout keeps install, remove and legacy candidates in lockstep;
-//! pipeline callers go through [`output_path`].
+//! The install pipeline plans per-client output files at the paths defined
+//! in format-spec §7 / ADR-0003. The frozen legacy layout keeps install and
+//! legacy candidates in lockstep; pipeline callers go through
+//! [`output_path`].
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,10 +14,11 @@ use std::path::{Path, PathBuf};
 use super::{ALL_CLIENTS, ItemKind};
 use crate::generate::Client;
 
-/// Where the install pipeline writes — and `remove` deletes — the per-
-/// client output for a given `(kind, name)`. Path is relative to the
-/// install target root and matches format-spec §7. Used by both
-/// `install_*` and `remove` so the two stay in lockstep.
+/// Where the install pipeline writes the per-client output for a given
+/// `(kind, name)`. Path is relative to the install target root and matches
+/// format-spec §7. Also used by adoption of a `schema: 1` lockfile, and by
+/// `doctor` for an item that has no ownership record. `remove` does not use
+/// it: it deletes the paths in the item's record.
 pub(super) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
     crate::legacy::layout::output_path(kind, client.into(), name)
 }

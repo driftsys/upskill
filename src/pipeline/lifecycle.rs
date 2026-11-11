@@ -3,7 +3,7 @@
 //!
 //! These commands consult the lockfile to know what is installed and
 //! what to act on. They orchestrate the leaf modules (`output`,
-//! `hash`, `git`) and the top-level install coordinator
+//! `hash`, `git`, `apply`, `owned`) and the top-level install coordinator
 //! ([`super::install_with_lockfile`]) — they own no parsing or render
 //! logic themselves.
 
@@ -28,12 +28,12 @@ use super::{
 /// matching `filter`, and drop the matching entries from the lockfile.
 ///
 /// A `schema: 1` lockfile is adopted first (see
-/// [`super::owned::adopt_schema1`]), after the unknown-name check, so a
+/// `owned::adopt_schema1`), after the unknown-name check, so a
 /// command that fails on an unknown name changes nothing.
 ///
 /// Only the files in an item's `files` record are considered. Before any
 /// change on disk, every recorded path is checked: a path that is not
-/// accepted by [`deletable`] is skipped, and a symbolic link in the item
+/// accepted by `deletable` is skipped, and a symbolic link in the item
 /// part of a path's parent directories is an error. Then, per recorded
 /// file: an unchanged regular file is deleted; a modified file is kept
 /// and reported in `kept_modified`, or deleted when `force` is true and it

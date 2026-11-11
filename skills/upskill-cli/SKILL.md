@@ -178,9 +178,10 @@ Common findings:
 - Plugin skipped at install time because the client CLI was not on PATH
   (informational warning — install the CLI then run `update`)
 
-Exits 0 when clean. Exits 1 when drift is found (missing outputs, stale hashes,
-orphan entries, or missing plugins). Skipped plugins are warnings only and do
-not affect the exit code.
+Exits 0 when clean. Exits 1 when drift is found (missing outputs, modified
+files, unreadable files, stale hashes, orphan entries, missing plugins, or MCP
+servers that are not registered). Skipped plugins are warnings only and do not
+affect the exit code.
 
 ## Conventions to remember
 

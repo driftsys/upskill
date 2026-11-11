@@ -446,12 +446,13 @@ lockfile is written with `schema: 2`. Each item entry may carry `files` and
 `pending` lists. `add` and `update` record in `files` every file they write for
 the item, with its client, its path and the SHA-256 of its bytes. When they
 reinstall an item, they delete the recorded files that the new version no longer
-produces; a file that the record does not list is kept, with one exception: the
-entry file of a client that the item no longer targets is deleted even when the
-record does not list it. `update` still deletes all outputs of an item that its
-source no longer contains, whether recorded or not. No command fills `pending`
-yet. `remove` deletes only recorded files, as described in
-[`upskill remove`](#upskill-remove-name---source-label---force).
+produces; a file that the record does not list is not deleted, with one
+exception: the entry file of a client that the item no longer targets is deleted
+even when the record does not list it. A file at a path that the new version
+writes is replaced, whether the record lists it or not. `update` still deletes
+all outputs of an item that its source no longer contains, whether recorded or
+not. No command fills `pending` yet. `remove` deletes only recorded files, as
+described in [`upskill remove`](#upskill-remove-name---source-label---force).
 
 A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
 adopts it before it changes any file: it keeps a copy of the old lockfile as
@@ -460,10 +461,13 @@ every installed item with its current hash, saves the lockfile as `schema: 2`,
 and prints the adopted paths to stderr. Adoption cannot tell an edited file from
 one an earlier version wrote. It records two kinds of files as unchanged:
 generated files that were edited before the upgrade, and files that were added
-inside an item directory. A later `update` may replace them and `remove` may
-delete them. The adopted paths are printed also when the command fails after the
-adoption was saved. `update --dry-run` and `doctor` do not adopt, and neither
-does a `remove` that fails because a name is not in the lockfile.
+inside an item directory. The command that adopts them, or a later `update`, may
+replace or delete them, and a later `remove` may delete them. Adoption records
+only the files that exist, so after adoption `doctor` no longer reports an
+output that was already missing before adoption. The adopted paths are printed
+also when the command fails after the adoption was saved. `update --dry-run` and
+`doctor` do not adopt, and neither does a `remove` that fails because a name is
+not in the lockfile.
 
 ## Per-client output paths
 
