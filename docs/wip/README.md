@@ -12,6 +12,13 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
+- [Customization MVP re-steer design](specs/2026-11-11-customization-resteer-design.md)
+  and
+  [implementation plan, part 1](plans/2026-11-11-customization-resteer-part1.md)
+  — approved by the user on 2026-11-11. Replaces the gated delivery approach
+  with an ownership record in the lockfile, repeatable operations and support
+  levels. Part 1 covers delivery steps 0 to 4; implementation has not started.
+
 - [Copilot-local plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
   : proposed under [#446](https://github.com/driftsys/upskill/issues/446).
   Primary references and Copilot 1.0.103 help support investigating one owned
