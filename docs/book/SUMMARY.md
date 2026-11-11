@@ -15,6 +15,7 @@
 
 - [Tool specification](specification.md)
 - [Portable format](format-spec.md)
+- [Customization re-steer decision](adr/0042-resteer-customization-delivery.md)
 
 # Contracts and architecture
 

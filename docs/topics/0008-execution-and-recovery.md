@@ -1,9 +1,14 @@
 # Execution and recovery
 
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
+This concern owned the requirements and the architecture below. The architecture
+was implemented as library code until its removal from `main`. That library code
+was never reachable from production CLI commands; each section records its own
+limits. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -204,9 +209,9 @@ one `RecoveryStep` at the first unfinished index:
 For a state-only operation supplied as Pending and After, the decision is Ready
 with recorded prefix 0, verified post-state prefix 1 and Acknowledge at index 0.
 The pending final state write is recognized without proposing it again. See the
-[public model and planner](https://github.com/driftsys/upskill/blob/main/src/operations/recovery.rs)
+[public model and planner](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/operations/recovery.rs)
 and the
-[literal acceptance cases](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs).
+[literal acceptance cases](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/recovery_plans.rs).
 
 Apply is a proposed logical step, not permission to write. The function changes
 no checkpoint and skips no action. The opt-in
@@ -218,7 +223,7 @@ decision.
 
 #### Evidence and remaining contracts
 
-[`tests/recovery_plans.rs`](https://github.com/driftsys/upskill/blob/main/tests/recovery_plans.rs)
+[`tests/recovery_plans.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/recovery_plans.rs)
 pins all twelve checkpoint/relation combinations independently for both roles,
 whole-suffix validation, first-conflict selection, distinct prefixes and final
 State handling. Independent compiled semantic controls establish that these
@@ -243,7 +248,7 @@ activation are pending; M1-A2, M1-A3 and M1 remain incomplete. See
 ### Qualified file execution and recovery
 
 This design describes the opt-in library executor in
-[`src/filesystem/execution/`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/mod.rs).
+[`src/filesystem/execution/`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/mod.rs).
 Current commands do not call it, and it does not enable lifecycle-schema-2
 writes or establish installation ownership. Gate-4 delivery evidence is retained
 in its
@@ -322,14 +327,14 @@ The persisted prerequisite is recorded in
 
 #### Components and file effects
 
-[`request.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/request.rs)
+[`request.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/request.rs)
 validates the supplied plan.
-[`backend.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/backend.rs)
+[`backend.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/backend.rs)
 implements qualified descriptor-relative observations, parent traversal, sibling
 staging, replacement, unlink and sync.
-[`journal.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/journal.rs)
+[`journal.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/journal.rs)
 owns storage, strict decoding, payload binding, generations and cleanup.
-[`run.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/run.rs)
+[`run.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/run.rs)
 classifies fresh observations and executes only steps permitted by
 `operations::recovery::plan_recovery`.
 
@@ -350,7 +355,7 @@ ACLs and file flags, and other unsupported metadata reject. Darwin permits only
 `com.apple.provenance`; replacement proceeds only if its value matches on prior
 and staged files. The implementation does not copy or repair ACLs or metadata.
 
-[`macos_acl.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/macos_acl.rs)
+[`macos_acl.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/macos_acl.rs)
 uses minimal Darwin ACL inspection through the system ABI without a new
 dependency. The ABI and absence interpretation follow the SDK `sys/acl.h` and
 Apple Libc `posix1e/acl_file.c` and `gen/filesec.c`: `NULL` with `ENOENT` on a
@@ -434,7 +439,7 @@ race or make a multi-file operation atomic.
 The focused tests beside each component cover request validation, exact
 preconditions, ordinary modes, metadata rejection, journal corruption, payload
 identity, manual edits and prefix reporting.
-[`process_tests.rs`](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/process_tests.rs)
+[`process_tests.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/process_tests.rs)
 terminates real child processes at intent/effect/sync/receipt, initial journal
 publication, generation publication and completed-cleanup boundaries. It checks
 exact final bytes and modes, retained file identity after observed effects,
@@ -512,7 +517,7 @@ protocol. Production activation and complete Gate 5 delivery remain pending. See
 ## Lifecycle process acceptance
 
 The test-only
-[process driver](https://github.com/driftsys/upskill/blob/main/src/lifecycle/acceptance_tests.rs)
+[process driver](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/acceptance_tests.rs)
 records emitted executor events from successful source-backed fresh and migrated
 add, update and remove operations. It restores the before-state and starts a new
 child at each discovered event, including backup and final-state actions. The
@@ -535,7 +540,7 @@ Such stage residue remains tracked in
 establish neither native-client handling of staging names nor hardware
 power-loss durability. The ignored subprocess probe introduces no production
 hook or flag. The separate
-[actual CLI test](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_end_to_end.rs)
+[actual CLI test](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_end_to_end.rs)
 checks production schema 1 and backup absence with isolated HOME. The
 [acceptance evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-final-acceptance.md)
 maps all ten accepted criteria to tests and records validation and delivery

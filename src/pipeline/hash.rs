@@ -19,8 +19,7 @@ use super::discovery::{find_registry_root, is_bundle_file, iter_item_dirs, walk_
 /// Recursive discovery skips symlinks and traversal errors and can include
 /// non-directory special entries. A read failure retains that entry's path in the
 /// digest but omits its bytes. Returns `None` when discovery yields no entries.
-/// Used for `LockedItem.hash` and `doctor` drift detection; this is not complete
-/// captured source evidence.
+/// Used for `LockedItem.hash` and `doctor` drift detection.
 pub(crate) fn hash_item_dir(dir: &Path) -> Option<String> {
     let mut files = walk_files(dir);
     if files.is_empty() {

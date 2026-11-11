@@ -88,6 +88,11 @@ boundaries.
 
 ## Tested source manifest
 
+The files listed below were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch
+[`archive/lifecycle-2026-11`](https://github.com/driftsys/upskill/tree/archive/lifecycle-2026-11/src/filesystem).
+
 ```text
 d5acddd24defc3d509acf268a40f11dcab9464864ef6cdf841fa75ff7307fe7f  src/filesystem.rs
 383ee4e8258425ff6b26c75f7c62fa4182a573ced671d3e3cb65cf4f948d8027  src/filesystem/scope.rs

@@ -2,7 +2,7 @@
 
 Task [#377](https://github.com/driftsys/upskill/issues/377) continues
 [#337](https://github.com/driftsys/upskill/issues/337), Task 2/CD-02 of the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md).
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md).
 The unchanged, user-reviewed experimental
 [user-registration packages](gate6-codex-user-rule-controls.md) were observed
 through fresh sessions, native UUID resume and native UI compaction on macOS

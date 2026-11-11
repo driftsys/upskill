@@ -18,45 +18,6 @@ a source-registry repo).
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
-The library's strict source-manifest capture supplies values to the implemented
-pure item compiler, which derives complete per-client entrypoint and resource
-outputs. The inactive captured-rule desired-set producer and pure lifecycle
-reconciliation are implemented. Current commands keep their existing discovery,
-hashing and persistence behavior; they do not invoke capture or activate the
-owned lifecycle. Captured bytes do not establish source authenticity, an atomic
-snapshot or qualified filesystem containment. See the
-[strict captured source manifest specification](https://driftsys.github.io/upskill/specification.html#43-strict-captured-source-manifests).
-
-The library's pure `files::plan::plan_files` API plans complete owned whole-file
-sets from explicit desired bytes and supplied observations. Current commands do
-not call it or change their lifecycle behavior. Opt-in source-backed rule
-orchestration connects desired sets, qualified observation, combined state and
-guarded execution/recovery; native Codex qualification and production activation
-remain Gate 6 work. The complete mixed library coordinator is described below.
-See the
-[owned whole-file planning specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
-
-The library's pure `compile::item::compile_item` API produces complete
-per-client entrypoint and resource files from validated captured bytes,
-preserving resource modes and rejecting unsupported active overrides. It does
-not activate lifecycle planning, execution, state changes or native Codex
-support. Current commands keep their existing installer behavior. See the
-[captured item compilation specification](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation).
-
-The pure library `operations::plan::plan_owned_artifacts` API accepts one
-complete mixed Set per changed installation, containing dedicated files and
-instruction contributions, or explicit Remove. Callers supply ownership and
-exactly one observation per affected location. The combined result preserves
-manual bytes, aggregate modes, no-op actions and interleaved prior record order;
-cross-form collisions and affected ancestor paths conflict. Current commands do
-not invoke this coordinator. The opt-in source-backed rule library adapter now
-connects historical and explicitly selected Codex rule desired sets to lifecycle
-planning, qualified source/destination evidence, combined state and guarded
-execution/recovery. The Codex library route exposes reader reports separately
-from ownership; it adds no CLI flag. Production commands retain schema 1;
-production activation and native Codex qualification remain Gate 6 work. See the
-[mixed owned-artifact planning specification](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans).
-
 ## Global flags
 
 These work on every subcommand:
@@ -436,44 +397,6 @@ Files whose frontmatter and body are already canonical are left untouched (no
 
 The lockfile carries a top-level `schema: 1` field for forward compatibility.
 
-An internal library projection can describe typed legacy records and candidate
-historical output paths without reading files or changing state. It preserves
-raw records and leaves requested selections unresolved. This prerequisite adds
-no CLI command and leaves existing commands and schema-1 persistence unchanged;
-it does not migrate state or adopt output files.
-
-The pure library instruction planner can compute owned contribution changes from
-caller-supplied observations. It preserves untouched owners and manual bytes,
-verifies managed regions through the shared body reader, and retains exact
-before bytes even for content no-ops. Last-region removal retains manual bytes
-and keeps the file, which is empty only when no content remains. Affected whole
-files and multi-owner regions conflict; unrelated records survive. This library
-prerequisite adds no command. A separate pure
-[Codex instruction producer](topics/0002-generation.md#captured-codex-instruction-boundary)
-now supports an explicitly supplied Codex CLI revision-1 rule contract. It is
-library-only: existing commands have no Codex selection flag. Shared readers are
-reported separately from ownership. The opt-in library `with_prepared_codex`
-route now resolves selected local/Git rule sources, exposes complete reader
-reports and applies guarded add/update/remove operations. It requires exactly
-Codex CLI revision 1; native qualification and production activation remain
-pending. The separate pure whole-file planner is implemented as described in the
-[specification](https://driftsys.github.io/upskill/specification.html#44-owned-whole-file-operation-plans).
-The separate
-[captured item compiler](https://driftsys.github.io/upskill/specification.html#45-captured-item-compilation)
-derives complete per-client entrypoint and resource outputs from captured bytes.
-Qualified scope roots, writer locking, destination observation and
-[source observation](https://driftsys.github.io/upskill/specification.html#49-qualified-source-tree-observations)
-are implemented as separate inactive library capabilities. Final-head hosted
-source qualification remains required. Reference resolution and per-owner
-association integration now support removal planning. Opt-in source-backed rule
-orchestration connects qualified source evidence and captured-rule desired sets
-to complete add/update planning, combined state persistence and guarded
-execution/recovery. Native qualification and production activation remain
-pending. The separate
-[mixed coordinator](https://driftsys.github.io/upskill/specification.html#46-mixed-owned-artifact-operation-plans)
-composes explicit complete file and contribution sets; current commands and
-schema-1 persistence are unchanged.
-
 ## Per-client output paths
 
 | Item kind | Claude Code                | GitHub Copilot                                | opencode                       |
@@ -493,16 +416,3 @@ Mode.
 | 1    | General error          |
 | 2    | Usage error (bad args) |
 | 130  | Interrupted (Ctrl+C)   |
-
-The opt-in
-[combined-state validator](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state)
-now checks reference authority and explicit per-owner consumer associations.
-Reference-driven removal planning now connects this state to shared-owner
-retirement. The inactive
-[single-owner upsert coordinator](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#architecture-lifecycle-upsert)
-connects complete add/update sets to graph and mixed-artifact planning. The
-separate inactive `plan_shared_upsert` API accepts explicit matching owner
-contracts for shared outputs. An opt-in
-[guarded application boundary](topics/0008-execution-and-recovery.md#guarded-lifecycle-application)
-provides backup and executor recovery for supplied plans. Production command
-behavior is unchanged.

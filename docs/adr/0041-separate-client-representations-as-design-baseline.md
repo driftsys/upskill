@@ -6,6 +6,13 @@ Status: **accepted**. Date: 2026-10-31. Task
 summarizes the decision and its boundaries. This record has no production
 effects.
 
+[AD-0042](0042-resteer-customization-delivery.md) replaces the requirement of
+Q10/Q11 and CD-01 through CD-11 evidence before owned implementation, the clause
+that reuses capture, locking, backups and recovery, the skills-first
+implementation order and the one-copy Claude/Copilot rule policy of this record.
+AD-0042 is also the separate decision on a reduced four-client release scope
+that this record leaves open. The design baseline stays accepted.
+
 ## Context
 
 The [A/B comparison](../technotes/customization-delivery-policy-comparison.md)

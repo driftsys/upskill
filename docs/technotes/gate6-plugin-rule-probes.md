@@ -4,7 +4,7 @@ Task [#339](https://github.com/driftsys/upskill/issues/339) delivers the offline
 fixture prerequisite for native qualification
 [#337](https://github.com/driftsys/upskill/issues/337). It completes neither
 Task 2 of the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md)
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md)
 nor a production activation gate. The
 [frozen inventory](gate6-plugin-profile-inventory.md) still requires all four
 clients, both platforms and project/user scopes.

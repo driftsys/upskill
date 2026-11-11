@@ -22,9 +22,9 @@ worktree; the revised design is now the current planning copy.
 The [delivery contract](../topics/0009-customization-delivery.md) records every
 customization/client route, possible readers, intent, preservation strategy and
 I/X/O/Q/P status. The
-[corrected Gate 6 design](../wip/specs/2026-10-18-gate6-activation-design.md)
+[corrected Gate 6 design](../archive/specs/2026-10-18-gate6-activation-design.md)
 and
-[implementation plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md)
+[implementation plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md)
 sequence version/reader inventory, installed-plugin probes, opt-in qualified
 adapters, all-kind compatibility and finally combined dispatch/migration.
 Historical archive bytes were not rewritten. No runtime code changed.

@@ -2,7 +2,7 @@
 
 Task [#366](https://github.com/driftsys/upskill/issues/366) continues the
 bounded [#337](https://github.com/driftsys/upskill/issues/337) campaign and the
-[shared-core authoring criteria](../wip/plans/2026-10-19-customization-delivery-reconciliation.md#shared-core-authoring-clarification-324).
+[shared-core authoring criteria](../archive/plans/2026-10-19-customization-delivery-reconciliation.md#shared-core-authoring-clarification-324).
 It tests actual skill/resource behavior, not override execution, embedded
 composition or a new owned-skill lifecycle. All 160 delivery cells remain
 unqualified; no shared root or adapter is adopted and production stays schema 1.

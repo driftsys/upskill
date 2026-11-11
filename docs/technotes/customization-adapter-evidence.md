@@ -5,7 +5,7 @@ research. No Gemini, Cursor, or VS Code runtime conformance tests were
 performed. This note supplements the
 [2026-10-11 research pack](agent-customization/README.md) without rewriting its
 historical evidence. The related proposal is the
-[adapter model and delivery roadmap](../wip/specs/2026-10-14-customization-adapter-roadmap.md).
+[adapter model and delivery roadmap](../archive/specs/2026-10-14-customization-adapter-roadmap.md).
 Rolling documentation establishes candidate mechanisms, not a tested release
 range.
 

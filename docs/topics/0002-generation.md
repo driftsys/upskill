@@ -1,26 +1,20 @@
 # Generation and compilation
 
-Architecture reconciliation (2026-10-25): the
-[delivery, discovery and activation contract](0009-customization-delivery.md)
-controls intended production routes and reader intent. Existing Codex
-`AGENTS.md` contribution APIs described here are experimental library
-boundaries, not production independent-rule delivery. Independent Codex/OpenCode
-rules remain beside unchanged team guidance through a selected native or hook
-route. The native-first amendment permits explicit OpenCode paths after Q5 PASS
-and selects the trusted Codex hook with its declared recorded-history
-limitation. Reusable ownership, preflight and recovery mechanisms do not select
-or qualify a runtime route, and schema-2 production activation remains blocked
-([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
-
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+The section "Generation and installation" describes live code. The captured item
+compilation, captured rule desired set and captured Codex instruction sections
+describe library code that was removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md); each of them is marked
+withdrawn and is kept as history. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
 
 <a id="45-captured-item-compilation"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured item compilation
 
@@ -30,7 +24,7 @@ mutating inputs:
 
 `compile_item` borrows a `SourceManifest` and `ItemCompileRequest` and returns
 `anyhow::Result<CompiledItem>`. The exact public declarations are in
-[`compile::item`](https://github.com/driftsys/upskill/blob/main/src/compile/item.rs).
+[`compile::item`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/compile/item.rs).
 `ItemCompileRequest` contains `kind: ItemKind`, `folder_name: String`,
 `alias: Option<String>` and `clients: Vec<Client>`. `CompiledItemFile` contains
 `path: String`, `bytes: Vec<u8>` and `mode: Option<u32>`. `CompiledClientItem`
@@ -108,6 +102,11 @@ and
 
 <a id="414-captured-rule-desired-sets"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Captured rule desired sets
 
 The opt-in `lifecycle::desired::compile_rule_desired_set` API validates a
@@ -164,7 +163,7 @@ modules; presentation stays at the CLI boundary.
 | Bundle composition                          | `src/bundle.rs`                                        |
 | Per-client rendering                        | `src/generate/`                                        |
 | Installation and installed-state operations | `src/pipeline/`, `src/lockfile.rs`, `src/ancillary.rs` |
-| Pure legacy-state interpretation            | `src/legacy/`                                          |
+| Frozen historical output layout             | `src/legacy/`                                          |
 | Native integrations                         | `src/plugin.rs`, `src/mcp.rs`                          |
 | Author commands                             | `src/lint.rs`, `src/fmt.rs`, `src/scaffold.rs`         |
 
@@ -185,10 +184,15 @@ implemented adapters.
 
 <a id="architecture-captured-item-compilation-captured-item-compilation"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Captured item compilation
 
 This record describes the implemented pure producer in
-[`compile::item`](https://github.com/driftsys/upskill/blob/main/src/compile/item.rs).
+[`compile::item`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/compile/item.rs).
 [captured item compilation](#45-captured-item-compilation) owns its
 requirements. The producer consumes one supplied captured manifest and returns
 complete current-generation outputs; the current installer does not call it.
@@ -208,7 +212,7 @@ optional installed alias and explicit generation clients. Each client result
 contains files with portable relative paths, exact bytes and optional modes; the
 outer result retains kind, resolved source identity, installed name, supplied
 manifest digest and explicit audience exclusions. The
-[source module](https://github.com/driftsys/upskill/blob/main/src/source_manifest.rs)
+[source module](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/source_manifest.rs)
 owns capture and manifest validation. No source path is passed to the compiler.
 
 The `Client` vocabulary covers Claude, Copilot and OpenCode generation. It does
@@ -292,7 +296,7 @@ records why destination permission policy requires separate qualification.
 
 #### Evidence and downstream integration
 
-[`tests/compile_items.rs`](https://github.com/driftsys/upskill/blob/main/tests/compile_items.rs)
+[`tests/compile_items.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/compile_items.rs)
 pins all nine kind/client pairs with independent expected rendering and paths,
 complete resource vectors, nonuniform resource modes, explicit audiences for all
 clients, both flat alias link passes, source identity despite reserved or
@@ -318,6 +322,11 @@ incomplete.
 <a id="architecture-captured-rule-desired-sets"></a>
 
 <a id="architecture-captured-rule-desired-sets-captured-rule-desired-sets"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured rule desired sets
 
@@ -404,9 +413,9 @@ restricted library-only subset. The original single and batch producers keep
 their existing behavior and shared-path rejections.
 
 The
-[contract producer](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/contracts.rs)
+[contract producer](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/desired/contracts.rs)
 and
-[acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_contract_producer.rs)
+[acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contract_producer.rs)
 cover explicit profile validation and exact captured bindings. These are
 recorded supplied contracts, not native qualification.
 
@@ -434,16 +443,16 @@ or references.
 #### Interfaces and acceptance evidence
 
 The
-[single-rule producer](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/mod.rs)
+[single-rule producer](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/desired/mod.rs)
 defines `CompilerBinding`, `RuleDesiredSetRequest` and `DesiredInstallationSet`.
 The
-[batch boundary](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/batch.rs)
+[batch boundary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/desired/batch.rs)
 exposes `DesiredSetDiagnostic`, `DesiredSetsOutcome` and
 `compile_rule_desired_sets`. These supplied-value interfaces neither serialize
 plans nor authorize effects.
 
 The
-[public acceptance tests](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_desired.rs)
+[public acceptance tests](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_desired.rs)
 compare literal paths, binary resource bytes, modes and checked-in renderer
 goldens. They cover source identity and fallback names, exact requested and
 excluded consumers, OpenCode scope refusal, raw root retention, complete ordered
@@ -478,6 +487,11 @@ backup/application/recovery, observational adapters and native activation remain
 separate tasks.
 
 <a id="captured-codex-instruction-boundary"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured Codex instruction boundary
 
@@ -526,7 +540,7 @@ inferred.
 #### Interface and validation order
 
 The public declarations live in
-[`lifecycle::desired::codex`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/desired/codex.rs).
+[`lifecycle::desired::codex`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/desired/codex.rs).
 `CodexInstructionRequest` borrows the installation, captured manifest, folder
 name and instruction location, and supplies the intentional target profile.
 `CompiledCodexInstructions` owns the contracted desired set and reader report.
@@ -551,7 +565,7 @@ remain errors. Existing `process(body, Client)` delegates through the family
 processor, preserving the historical three-client selection and rendering.
 
 The
-[acceptance target](https://github.com/driftsys/upskill/blob/main/tests/codex_instruction_boundary.rs)
+[acceptance target](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/codex_instruction_boundary.rs)
 covers reader conflicts, ownership separation and captured lifecycle
 preservation of manual text, another installation and file mode during
 update/removal.

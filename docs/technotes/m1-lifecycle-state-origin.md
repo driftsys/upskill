@@ -3,13 +3,15 @@
 This bounded inactive prerequisite adds durable initial-state evidence and a
 bound applying entrypoint. Production commands remain on schema 1.
 
-Public acceptance examples in `tests/lifecycle_state_origin.rs` cover strict
-origin decoding/validation, a known SHA-256 result for original bytes, optional
-unbound inspection, planner preservation, fresh initialization/private state/no
-invented backup, and reopened fresh writes. Migration creates the exact private
-backup; reopened migrated writes succeed with original evidence and reject
-same-length changed unknown JSON bytes or non-private modes. Unknown origin,
-changed origin evidence and a pre-existing fresh backup block before outputs.
+Public acceptance examples in
+[`tests/lifecycle_state_origin.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_state_origin.rs)
+cover strict origin decoding/validation, a known SHA-256 result for original
+bytes, optional unbound inspection, planner preservation, fresh
+initialization/private state/no invented backup, and reopened fresh writes.
+Migration creates the exact private backup; reopened migrated writes succeed
+with original evidence and reject same-length changed unknown JSON bytes or
+non-private modes. Unknown origin, changed origin evidence and a pre-existing
+fresh backup block before outputs.
 
 The initial acceptance compile failed because the new APIs and origin field were
 absent. A strict-field regression then exposed internally tagged unit variant

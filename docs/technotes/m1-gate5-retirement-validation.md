@@ -3,6 +3,11 @@
 Validation record date: 2026-10-16. This date identifies the original evidence
 record; consolidation does not rerun or extend its qualification.
 
+The code and tests that this record names were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`tests/lifecycle_retirement.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_retirement.rs).
+
 This informative note records the inactive shared-owner removal planner. The
 [specification](../topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning)
 and

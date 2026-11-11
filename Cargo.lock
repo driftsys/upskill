@@ -1179,7 +1179,6 @@ dependencies = [
  "dprint-plugin-markdown",
  "predicates",
  "pulldown-cmark",
- "rustix",
  "serde",
  "serde_json",
  "serde_yaml_ng",

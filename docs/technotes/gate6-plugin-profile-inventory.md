@@ -2,7 +2,7 @@
 
 Task [#336](https://github.com/driftsys/upskill/issues/336) executes Task 1 of
 the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md)
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md)
 after architecture PR #334 merged as `44a5e2f`. This is qualification input, not
 an implementation or native support claim. Production installed state remains
 schema 1.

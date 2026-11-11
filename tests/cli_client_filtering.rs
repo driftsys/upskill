@@ -425,3 +425,72 @@ fn empty_audience_with_implicit_default_has_no_selection_warning() {
     assert!(!skill_copilot(&project, "empty-audience").exists());
     assert!(!skill_opencode(&project, "empty-audience").exists());
 }
+
+fn stage_audience_skill(root: &Path, skill: &str, audience: &str) -> std::path::PathBuf {
+    let registry = root.join("registry");
+    let dir = registry.join(skill);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        format!(
+            "---\nschema: 1\nname: {skill}\n\
+             description: A skill for testing audience filtering.\n\
+             audience: [{audience}]\n---\n\n# {skill}\n"
+        ),
+    )
+    .unwrap();
+    registry
+}
+
+/// An item whose only audience is `codex` writes no file when all clients are
+/// selected, because no supported client matches the `codex` audience.
+#[test]
+fn codex_only_audience_writes_no_client_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = stage_audience_skill(tmp.path(), "codex-only", "codex");
+    let project = stage_project(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert!(!skill_claude(&project, "codex-only").exists());
+    assert!(!skill_copilot(&project, "codex-only").exists());
+    assert!(!skill_opencode(&project, "codex-only").exists());
+}
+
+/// An item with audience `[codex, claude]` writes only the Claude file when all
+/// clients are selected, and writes no file when only opencode is selected.
+#[test]
+fn codex_and_claude_audience_writes_only_claude_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = stage_audience_skill(tmp.path(), "mixed", "codex, claude");
+    let project = stage_project(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", registry.to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert!(skill_claude(&project, "mixed").exists());
+    assert!(!skill_copilot(&project, "mixed").exists());
+    assert!(!skill_opencode(&project, "mixed").exists());
+
+    let other = tmp.path().join("other");
+    fs::create_dir_all(other.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&other)
+        .args(["add", registry.to_str().unwrap(), "--opencode"])
+        .assert()
+        .success();
+
+    assert!(!skill_claude(&other, "mixed").exists());
+    assert!(!skill_opencode(&other, "mixed").exists());
+}

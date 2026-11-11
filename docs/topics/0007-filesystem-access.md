@@ -1,9 +1,14 @@
 # Filesystem access
 
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
+This concern owned the requirements and the architecture below. The architecture
+was implemented as library code until its removal from `main`. That library code
+was never reachable from production CLI commands; each section records its own
+limits. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -591,9 +596,9 @@ evidence, unknown existing mode, existing special bits and unknown
 executable-resource mode.
 
 The
-[implementation](https://github.com/driftsys/upskill/blob/main/src/files/permissions.rs)
+[implementation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/files/permissions.rs)
 selects from supplied values. The
-[public acceptance tests](https://github.com/driftsys/upskill/blob/main/tests/file_permissions.rs)
+[public acceptance tests](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/file_permissions.rs)
 exercise literal modes and diagnostics. Independent omission controls pin
 preservation, unknown-mode handling, explicit policy, owner execution,
 special-bit handling and both evidence ranges. No mutable input exists: all
