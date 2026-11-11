@@ -33,18 +33,22 @@ references must be reconciled as part of that feature's review.
   and any gate amendment still require their own decision and evidence. No
   further native experiment is scheduled.
 
-- [Q11 intended-client registration and unintended discovery follow-up](specs/2026-10-25-q11-registration-isolation-follow-up.md)
-  : proposed under [#421](https://github.com/driftsys/upskill/issues/421).
+- [Q11 intended-client registration and unintended discovery follow-up](../archive/specs/2026-10-25-q11-registration-isolation-follow-up.md)
+  : Superseded on 2026-11-11 by the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md); moved to
+  the archive. Proposed under
+  [#421](https://github.com/driftsys/upskill/issues/421).
   [Q11](../technotes/gate6-cross-client-package-isolation.md) is merged and
   indexed with a Claude explicit-selector isolation FAIL and a blocked Copilot
   reverse direction. Defines Q11b without weakening the retained PASS entry
   gate. A narrower replacement gate requires the user's decision. The
-  [concrete project profile](specs/2026-10-27-q11b-project-profile.md) under
-  [#428](https://github.com/driftsys/upskill/issues/428) received user approval.
-  The [2026-10-29 attempt](../technotes/gate6-registration-isolation.md) stopped
-  at the failed Copilot positive. The
-  [native-name revision](specs/2026-10-30-q11b-native-name-profile.md) provided
-  provenance-bound Copilot calibration. The
+  [concrete project profile](../archive/specs/2026-10-27-q11b-project-profile.md)
+  under [#428](https://github.com/driftsys/upskill/issues/428) received user
+  approval. The
+  [2026-10-29 attempt](../technotes/gate6-registration-isolation.md) stopped at
+  the failed Copilot positive. The
+  [native-name revision](../archive/specs/2026-10-30-q11b-native-name-profile.md)
+  provided provenance-bound Copilot calibration. The
   [completed registration cell](../technotes/gate6-project-registration-isolation.md)
   records automatic Copilot activation of the Claude project registration, clean
   baseline and post-removal, and separate preservation failure. The profile
@@ -59,7 +63,7 @@ references must be reconciled as part of that feature's review.
   [Q11 packet](../technotes/gate6-cross-client-package-isolation.md) records
   explicit-selector activation; its proposed follow-up stays with the Q11 native
   owner
-  ([control design](specs/2026-10-25-q11-registration-isolation-follow-up.md)).
+  ([control design](../archive/specs/2026-10-25-q11-registration-isolation-follow-up.md)).
 
 - [Per-client package preservation contract](specs/2026-10-25-customization-preservation-contract.md)
   : D1-D6 preservation policies approved by the user on 2026-10-25 after
@@ -80,9 +84,12 @@ references must be reconciled as part of that feature's review.
   remain open, so this proposal/spec are not archived
   ([design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)).
 
-- [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md) and
-  [corrected customization delivery plan](plans/2026-10-19-customization-delivery-reconciliation.md)
-  — architecture reconciliation requested on 2026-10-19. Independent
+- [Gate 6 activation design](../archive/specs/2026-10-18-gate6-activation-design.md)
+  and
+  [corrected customization delivery plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md)
+  — Superseded on 2026-11-11 by the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md); moved to
+  the archive. Architecture reconciliation requested on 2026-10-19. Independent
   Codex/OpenCode rules remain independent of unchanged team `AGENTS.md`; the
   later
   [native-first amendment](../adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)
@@ -95,7 +102,9 @@ references must be reconciled as part of that feature's review.
   planning copy.
 
 - [Customization adapter model and delivery roadmap](specs/2026-10-14-customization-adapter-roadmap.md)
-  — four-client MVP sequencing and proposed qualification gates; retained
+  — Superseded on 2026-11-11 by the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md).
+  Four-client MVP sequencing and proposed qualification gates; retained
   planning.
 
 - [Shared updater design](specs/2026-10-14-shared-updater-design.md) and
@@ -103,9 +112,10 @@ references must be reconciled as part of that feature's review.
   `upskill maintain` command; implementation waits for M1 lifecycle completion
   and design review.
 
-- Gate 5 combined lifecycle has completed local implementation, full
-  verification, Rust 1.85 checks and an independent audit of all ten acceptance
-  criteria. Its
+- Superseded on 2026-11-11 by the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md). Gate 5
+  combined lifecycle had completed local implementation, full verification, Rust
+  1.85 checks and an independent audit of all ten acceptance criteria. Its
   [umbrella specification](../archive/specs/2026-10-15-m1-gate5-lifecycle-integration.md)
   and [completion lane](../archive/plans/2026-10-18-gate5-completion.md) are
   archived. The
@@ -119,9 +129,11 @@ references must be reconciled as part of that feature's review.
   sequencing of the broader M1 and updater work.
 
 - [M1 gate 4: qualified file application and recovery](../topics/0008-execution-and-recovery.md#architecture-qualified-file-execution)
-  — opt-in library implementation and durable records; hosted Linux/macOS
-  qualification pending. Gate 4 and M1 remain incomplete. The approved raw scope
-  and plan are archived with links to durable successors.
+  — Superseded on 2026-11-11 by the
+  [re-steer design](specs/2026-11-11-customization-resteer-design.md). Opt-in
+  library implementation and durable records; hosted Linux/macOS qualification
+  pending. Gate 4 and M1 remain incomplete. The approved raw scope and plan are
+  archived with links to durable successors.
 
 - [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md)
   — AC-00 target capabilities, ownership, installation planning, migrations, and
@@ -134,11 +146,14 @@ references must be reconciled as part of that feature's review.
 
 ## Retained context, not active proposals
 
-The local, uncommitted draft
-`specs/2026-10-23-customization-storage-delivery-candidates.md` is registered as
-retained comparison context only. It is not an active proposal, an adopted
-route, or a file included in this reconciliation PR. Its source bytes remain
-untouched in the original worktree. The
+The draft `specs/2026-10-23-customization-storage-delivery-candidates.md` is
+superseded on 2026-11-11 by the
+[re-steer design](specs/2026-11-11-customization-resteer-design.md). A byte copy
+is kept as an
+[unapproved archived comparison](../archive/specs/2026-10-23-customization-storage-delivery-candidates.md).
+It was registered as retained comparison context only. It is not an active
+proposal, an adopted route, or a file included in this reconciliation PR. Its
+source bytes remain untouched in the original worktree. The
 [design review ledger](https://github.com/driftsys/upskill/pull/385#issuecomment-6384387650)
 identifies the draft and requires its disposition; the
 [delivery proposal](specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)

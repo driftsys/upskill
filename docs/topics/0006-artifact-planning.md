@@ -1,5 +1,10 @@
 # Artifact planning
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 Architecture reconciliation (2026-10-25): the
 [delivery, discovery and activation contract](0009-customization-delivery.md)
 controls intended production routes and reader intent. Existing Codex
@@ -188,7 +193,7 @@ M1-A2, M1-A3 or M1.
 See the
 [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-file-planning)
 and the active
-[operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
+[operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 <a id="46-mixed-owned-artifact-operation-plans"></a>
 

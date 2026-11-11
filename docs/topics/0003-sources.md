@@ -22,6 +22,11 @@ section records its own limits. Accepted decisions remain in
 
 <a id="43-strict-captured-source-manifests"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Strict captured source manifests
 
 The separate library module `source_manifest` provides
@@ -94,6 +99,11 @@ See the
 and its decision records for implementation boundaries and rationale.
 
 <a id="49-qualified-source-tree-observations"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Qualified source tree observations
 
@@ -189,6 +199,11 @@ final PR head remain merge gates. No qualified Windows backend is implemented.
 
 <a id="selected-lifecycle-rule-sources"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Selected lifecycle rule sources
 
 The opt-in applying source prerequisite resolves one explicitly selected local
@@ -217,6 +232,11 @@ Codex qualification and schema-2 production activation remain pending.
 <a id="architecture-strict-source-manifests"></a>
 
 <a id="architecture-strict-source-manifests-strict-captured-source-manifests"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Strict captured source manifests
 
@@ -341,6 +361,11 @@ permission policy, application and recovery remain separate gates.
 <a id="architecture-qualified-source-observation"></a>
 
 <a id="architecture-qualified-source-observation-qualified-source-tree-observation"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Qualified source tree observation
 
@@ -523,6 +548,11 @@ Historical execution results are retained in the
 [filesystem validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/filesystem-validation.md#architecture-qualified-source-observation-local-implementation-evidence).
 
 <a id="architecture-selected-lifecycle-rule-sources"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Applying selected lifecycle rule sources
 

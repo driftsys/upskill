@@ -32,11 +32,11 @@ persistence boundary.
 
 The
 [foundation](../wip/specs/2026-10-11-agent-customization-foundation-design.md)
-and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active:
-source verification, historical rendering and resources, adoption,
-requested-selection reconciliation, schema-2 lifecycle preservation, exact
-backup and transactional execution are unfinished. Other WIP material retains
-its existing disposition; this archive entry concerns only the named pair.
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active: source
+verification, historical rendering and resources, adoption, requested-selection
+reconciliation, schema-2 lifecycle preservation, exact backup and transactional
+execution are unfinished. Other WIP material retains its existing disposition;
+this archive entry concerns only the named pair.
 
 ## Owned instruction operation planning
 
@@ -66,9 +66,9 @@ Durable successors:
 [AD-0018](../adr/0018-retain-empty-instruction-aggregates.md).
 
 The
-[operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-Closeout status recorded before the whole-file planner:
+[operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. Closeout
+status recorded before the whole-file planner:
 
 > Source/filesystem evidence, complete reference authority, per-owner consumer
 > association, whole-file/resource planning, mixed-state lifecycle integration
@@ -113,9 +113,9 @@ Durable successors:
 [AD-0020](../adr/0020-framed-source-manifest-evidence.md).
 
 The
-[operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-Closeout status recorded before the whole-file planner:
+[operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. Closeout
+status recorded before the whole-file planner:
 
 > Whole-file/resource planning, immutable Git evidence, source stabilization,
 > qualified observation, destination qualification, state/execution and Codex
@@ -168,9 +168,8 @@ and [AD-0021 through AD-0023](../adr/README.md#owned-whole-file-planning). The
 [command guide](../book/commands.md) describes the unchanged command boundary.
 
 The
-[operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active.
-The
+[operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active. The
 [captured item compiler](../topics/0002-generation.md#45-captured-item-compilation)
 derives complete entrypoint/resource sets, and the
 [mixed coordinator](../topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
@@ -219,9 +218,9 @@ planning, qualified source/destination observation, writer locking, destination
 permission policy, durable state, apply/recovery and native Codex activation
 remain pending. Active matching body overrides are explicitly rejected pending
 precedence implementation. The
-[operational lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
-and [M1 plan](../wip/plans/2026-10-11-instructions-rules-m1.md) remain active;
-this prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
+[operational lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
+and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) remain active; this
+prerequisite completes neither M1-A2 nor M1-A3. Other WIP retains its prior
 disposition; this entry resolves only the exact named pair.
 
 ## Mixed owned-artifact planning
@@ -501,8 +500,7 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-retirement.md`. The
 bytes, including historical unchecked task boxes and relative spec links. The
 current umbrella remains at
 [Gate 5 lifecycle integration](specs/2026-10-15-m1-gate5-lifecycle-integration.md);
-the
-[M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+the [M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
 also remains active. The approved scope archives only this completed plan. All
 other WIP retains its prior disposition.
 
@@ -533,8 +531,8 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-selection.md`. The
 bytes, including historical unchecked boxes and relative spec links. Current
 scope remains in the active
 [Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md) and the
-[M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
-The approved completion scope archives only this selection plan; all other WIP
+[M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md). The
+approved completion scope archives only this selection plan; all other WIP
 retains its prior disposition.
 
 Durable successors:
@@ -560,7 +558,7 @@ Source path: `docs/wip/plans/2026-10-16-m1-gate5-upsert.md`. The
 original bytes, including unchecked task boxes and historical relative spec
 links. The active scope remains in the
 [Gate 5 umbrella](specs/2026-10-15-m1-gate5-lifecycle-integration.md), the
-[M1 owned lifecycle design](../wip/specs/2026-10-12-m1-owned-lifecycle-design.md),
+[M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md),
 [captured-rule desired-set design](../topics/0002-generation.md#architecture-captured-rule-desired-sets)
 and
 [selection design](../topics/0005-lifecycle-planning.md#architecture-lifecycle-selection).
@@ -942,3 +940,44 @@ the restoration and record commit plus exact final-head hosted checks, tracked
 in [PR #462](https://github.com/driftsys/upskill/pull/462). This archive records
 the experiment and does not assert a merge. Only the named plan is archived. All
 other WIP retains its original paths, bytes and existing disposition.
+
+## Customization re-steer: withdrawn lifecycle working documents
+
+Source paths: `docs/wip/plans/2026-10-11-instructions-rules-m1.md`,
+`docs/wip/plans/2026-10-12-owned-artifact-records.md`,
+`docs/wip/plans/2026-10-19-customization-delivery-reconciliation.md`,
+`docs/wip/plans/2026-10-25-q11-cross-client-isolation.md`,
+`docs/wip/plans/2026-10-30-q11b-native-name.md`,
+`docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md`,
+`docs/wip/specs/2026-10-18-gate6-activation-design.md`,
+`docs/wip/specs/2026-10-25-q11-registration-isolation-follow-up.md`,
+`docs/wip/specs/2026-10-27-q11b-project-profile.md` and
+`docs/wip/specs/2026-10-30-q11b-native-name-profile.md`. They were moved without
+changes.
+
+- [Instructions and rules M1 plan](plans/2026-10-11-instructions-rules-m1.md)
+- [Owned artifact records plan](plans/2026-10-12-owned-artifact-records.md)
+- [Customization delivery reconciliation plan](plans/2026-10-19-customization-delivery-reconciliation.md)
+- [Q11 cross-client isolation plan](plans/2026-10-25-q11-cross-client-isolation.md)
+- [Q11b native-name plan](plans/2026-10-30-q11b-native-name.md)
+- [M1 owned lifecycle design](specs/2026-10-12-m1-owned-lifecycle-design.md)
+- [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md)
+- [Q11 registration isolation follow-up](specs/2026-10-25-q11-registration-isolation-follow-up.md)
+- [Q11b project profile](specs/2026-10-27-q11b-project-profile.md)
+- [Q11b native-name profile](specs/2026-10-30-q11b-native-name-profile.md)
+
+These documents belong to the gated lifecycle approach that
+[AD-0042](../adr/0042-resteer-customization-delivery.md) withdrew on 2026-11-11.
+The code they planned was removed from `main` and is kept on the branch
+`archive/lifecycle-2026-11`. The trial results they produced stay in
+`docs/technotes/` as research.
+
+## Customization storage and delivery candidates
+
+The
+[storage and delivery candidates](specs/2026-10-23-customization-storage-delivery-candidates.md)
+draft is a byte copy of a file that existed only as an untracked file in another
+checkout. It is an unapproved comparison. It was never adopted, and it is
+superseded by the
+[re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
+2026-11-11. Its relative links are not updated for this location.

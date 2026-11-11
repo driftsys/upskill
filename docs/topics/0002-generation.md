@@ -22,6 +22,11 @@ section records its own limits. Accepted decisions remain in
 
 <a id="45-captured-item-compilation"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Captured item compilation
 
 The opt-in `compile::item` library API compiles one captured item into complete
@@ -108,6 +113,11 @@ and
 
 <a id="414-captured-rule-desired-sets"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Captured rule desired sets
 
 The opt-in `lifecycle::desired::compile_rule_desired_set` API validates a
@@ -164,7 +174,7 @@ modules; presentation stays at the CLI boundary.
 | Bundle composition                          | `src/bundle.rs`                                        |
 | Per-client rendering                        | `src/generate/`                                        |
 | Installation and installed-state operations | `src/pipeline/`, `src/lockfile.rs`, `src/ancillary.rs` |
-| Pure legacy-state interpretation            | `src/legacy/`                                          |
+| Frozen historical output layout             | `src/legacy/`                                          |
 | Native integrations                         | `src/plugin.rs`, `src/mcp.rs`                          |
 | Author commands                             | `src/lint.rs`, `src/fmt.rs`, `src/scaffold.rs`         |
 
@@ -184,6 +194,11 @@ implemented adapters.
 <a id="architecture-captured-item-compilation"></a>
 
 <a id="architecture-captured-item-compilation-captured-item-compilation"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured item compilation
 
@@ -318,6 +333,11 @@ incomplete.
 <a id="architecture-captured-rule-desired-sets"></a>
 
 <a id="architecture-captured-rule-desired-sets-captured-rule-desired-sets"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured rule desired sets
 
@@ -478,6 +498,11 @@ backup/application/recovery, observational adapters and native activation remain
 separate tasks.
 
 <a id="captured-codex-instruction-boundary"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Captured Codex instruction boundary
 

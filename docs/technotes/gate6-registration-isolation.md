@@ -5,7 +5,7 @@ The [completed follow-up cell](gate6-project-registration-isolation.md) on
 registration. This page retains the earlier failed-positive attempt unchanged.
 
 Task [#428](https://github.com/driftsys/upskill/issues/428) attempted the
-[user-approved concrete profile](../wip/specs/2026-10-27-q11b-project-profile.md)
+[user-approved concrete profile](../archive/specs/2026-10-27-q11b-project-profile.md)
 on macOS arm64, 2026-10-29. Copilot's required positive failed, so Claude
 calibration, owner registration, baseline, candidate and post-removal controls
 were not run. This yields no registration-isolation result. Q11's retained

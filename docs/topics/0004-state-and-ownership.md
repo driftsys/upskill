@@ -22,6 +22,11 @@ section records its own limits. Accepted decisions remain in
 
 <a id="41-pure-legacy-state-projection"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Pure legacy-state projection
 
 The internal library boundary `legacy::project_legacy(&Lockfile)` describes
@@ -66,6 +71,11 @@ for implementation boundaries and rationale.
 
 <a id="413-combined-lifecycle-state-foundation"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Combined lifecycle state foundation
 
 The opt-in `lifecycle::state` library validates a schema-2 installation and
@@ -88,6 +98,11 @@ support. See
 [combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state).
 
 <a id="419-per-owner-recorded-contract-evidence"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Per-owner recorded contract evidence
 
@@ -137,6 +152,11 @@ and
 <a id="architecture-combined-lifecycle-state"></a>
 
 <a id="architecture-combined-lifecycle-state-combined-lifecycle-state"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Combined lifecycle state
 
@@ -292,6 +312,11 @@ this record does not declare Gate 5 or M1 complete.
 
 <a id="architecture-lifecycle-owner-contracts-per-owner-recorded-contract-evidence"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Per-owner recorded contract evidence
 
 The inactive `lifecycle::contracts` boundary records supplied contract evidence
@@ -389,6 +414,11 @@ physical observations and all physical checks still apply.
 
 <a id="architecture-generation-pipeline-pure-legacy-state-projection"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Pure legacy-state projection
 
 The public library boundary
@@ -424,6 +454,10 @@ remain separate from requested content selection.
 <a id="architecture-generation-pipeline-historical-clients-and-layout"></a>
 
 ##### Historical clients and layout
+
+`src/legacy/layout.rs` and the `pipeline::output` wrappers remain on `main`. The
+projector named below (`legacy::project_legacy`) was removed by
+[AD-0042](../adr/0042-resteer-customization-delivery.md).
 
 [`legacy::layout`](https://github.com/driftsys/upskill/blob/main/src/legacy/layout.rs)
 fixes the historical client set to Claude, Copilot and OpenCode. An empty
@@ -473,6 +507,11 @@ identity, source compatibility, malformed and duplicate rows, unsupported
 schemas and root-independent paths. Existing pipeline output and resource tests
 cover the unchanged wrappers. These checks do not establish native Windows
 execution, native discovery or actual artifact ownership.
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ## Durable lifecycle origin
 

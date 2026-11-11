@@ -29,9 +29,6 @@ on a case-by-case basis — see ADR-0001 §3 (dependency philosophy relaxed for
   `dprint-plugin-markdown` `=0.21.1` (exact pin — see
   [ADR-0003](docs/adr/0003-generation-pipeline.md)), `sha2` 0.11, `ureq` 2,
   `ctrlc` 3.
-- **Linux/macOS dependency**: `rustix` `=1.1.4` with the `fs` feature for
-  qualified scope roots and writer locking; see
-  [AD-0028](docs/adr/0028-lock-qualified-scope-directories.md).
 - **Out**: `tokio`, `reqwest` (no async, `ureq` is sync), `git2` (~5 MB — shell
   out to `git`), `dialoguer` (raw stdin is enough). Don't add these without a
   strong reason recorded in an ADR.
@@ -76,18 +73,13 @@ src/
 │                        Client enum + claude/copilot/opencode + directives + dprint
 │
 ├── source.rs            Source URL parsing and classification (typed errors)
-├── source_manifest.rs   Strict captured source evidence and pure validation
-├── files/               Pure whole-file operation planning
-├── operations/          Pure complete mixed owned-artifact planning and recovery decisions
-├── compile/             Pure captured-item compilation
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search
 │
 ├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
 │                        list / remove / update / doctor over the lockfile
-├── legacy/              Pure legacy projection and frozen historical layout
-├── lifecycle/           Opt-in combined state, desired sets, selection and lifecycle planning
+├── legacy/              Frozen historical output layout
 ├── bundle.rs            Bundle dependency resolution
 ├── lint.rs              Author command — validate SSOT against the format spec
 ├── fmt.rs               Author command — canonicalise YAML frontmatter

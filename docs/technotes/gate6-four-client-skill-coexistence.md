@@ -2,7 +2,7 @@
 
 Task [#372](https://github.com/driftsys/upskill/issues/372) continues
 [#337](https://github.com/driftsys/upskill/issues/337), Task 2/CD-11 of the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md).
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md).
 These are sequential macOS arm64 project observations, not adoption of a root, a
 production adapter or full four-client qualification. All 160 cells remain
 unqualified and production stays schema 1.

@@ -1,5 +1,10 @@
 # AD-0039 — Compile captured Codex instructions with a separate reader report
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](0042-resteer-customization-delivery.md).** The code this record
+> describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 Production-route clarification (2026-10-19):
 [AD-0040](0040-separate-customization-delivery-from-discovery.md) limits this
 decision to the experimental library boundary. It does not approve managed
@@ -96,7 +101,8 @@ All-kind lifecycle adapters, production activation, native
 user/IDE/Linux/OpenCode qualification and staging accounting remain later gates.
 See the
 [generation concern](../topics/0002-generation.md#captured-codex-instruction-boundary)
-and [acceptance target](../../tests/codex_instruction_boundary.rs).
+and
+[acceptance target](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/codex_instruction_boundary.rs).
 
 Satisfies:
 [captured Codex instruction boundary](../topics/0002-generation.md#captured-codex-instruction-boundary),
