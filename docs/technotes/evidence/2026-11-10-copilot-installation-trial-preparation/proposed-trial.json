@@ -1,0 +1,149 @@
+{
+  "status": "prepared; not executed",
+  "packet_root": "/private/tmp/upskill-copilot-install-trial-4bw_cs25/packet",
+  "plan_sha256": "8a7a1bf16a31776ecf60899367ea078a1ed98f7bf7589f9135f9c59729fa4519",
+  "preparation_sha256": "f3ea25c5de58a63caa6f1cd73aa14fa39d7e4ee818ef6d3a9e3bb3f68c111519",
+  "native_name": "upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827",
+  "package_sha256": "f3c9493944c20f2b32b6c2d04e452dac1f195dbe25ecc9f4670d94f85c9b1c91",
+  "payload_sha256": "c6a5e5ddfc12a940c4cb1ef9411d76afc421c7d8bbebdf3543b02a377ec1b72a",
+  "version": "0.0.0-rc6a5e5ddfc12a940c4cb1ef9411d76afc421c7d8bbebdf3543b02a377ec1b72a",
+  "commands": [
+    {
+      "sequence": 0,
+      "kind": "offline_git_setup",
+      "selected": "/usr/bin/git",
+      "arguments": [
+        "-c",
+        "init.defaultBranch=main",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "-c",
+        "init.templateDir=",
+        "init",
+        "--quiet",
+        "--template=",
+        "."
+      ]
+    },
+    {
+      "sequence": 1,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "--version"
+      ]
+    },
+    {
+      "sequence": 2,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "list",
+        "--json"
+      ]
+    },
+    {
+      "sequence": 3,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ]
+    },
+    {
+      "sequence": 4,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "add",
+        "/private/tmp/upskill-copilot-install-trial-4bw_cs25/packet/home/.upskill/exports/copilot/native-contract-probe"
+      ]
+    },
+    {
+      "sequence": 5,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "install",
+        "upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827@upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827"
+      ]
+    },
+    {
+      "sequence": 6,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "list",
+        "--json"
+      ]
+    },
+    {
+      "sequence": 7,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ]
+    },
+    {
+      "sequence": 8,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "uninstall",
+        "upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827@upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827"
+      ]
+    },
+    {
+      "sequence": 9,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "remove",
+        "upskill-ce53747012a89f509314561dba2b381e44d3fe17c187a2cdc56d1f7f181dd827"
+      ]
+    },
+    {
+      "sequence": 10,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "list",
+        "--json"
+      ]
+    },
+    {
+      "sequence": 11,
+      "kind": "copilot",
+      "arguments": [
+        "--no-auto-update",
+        "plugin",
+        "marketplace",
+        "list",
+        "--json"
+      ]
+    }
+  ],
+  "maximum_setup_commands": 1,
+  "maximum_client_commands": 11,
+  "timeout_seconds_per_command": 20,
+  "output_limit_bytes_per_command": 1048576,
+  "model_requests": 0,
+  "maximum_spending": 0,
+  "fresh_execution_approval_required": true
+}

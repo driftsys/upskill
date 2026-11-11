@@ -1,8 +1,8 @@
 # Fresh Copilot installation contract trial
 
-Status: prepared for approval, not executed. This packet is separate from every
-consumed contract or read-only packet. Preparing and validating it authorizes no
-native mutation. The full generated name remains unchanged at 72 characters.
+Status: superseded on 2026-11-10 by the
+[new installation contract trial plan](2026-11-10-copilot-installation-contract-trial.md).
+This packet was never executed.
 
 ## Purpose and exact input
 
