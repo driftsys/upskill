@@ -414,8 +414,9 @@ pub(super) fn rel_to_record(rel: &Path) -> String;
 /// One-time step for a schema-1 lockfile. Copies the lockfile bytes to
 /// `SCHEMA1_BACKUP_NAME`, records for every item each existing file at the
 /// item's layout paths with its current hash, sets `schema` to 2 and saves.
-/// Returns false and does nothing when `lock.needs_adoption()` is false.
-pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<bool>;
+/// Returns `None` and does nothing when `lock.needs_adoption()` is false.
+/// Otherwise returns the recorded paths, sorted, for the adoption notice.
+pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option<Vec<String>>>;
 ```
 
 `classify` rules: path missing → `Absent`; present and `recorded` is empty →
@@ -438,7 +439,8 @@ goes into the user guide in Task 9.
       after the call: schema 2, three `files` entries with correct hashes,
       backup file byte-identical to the original lockfile),
       `adoption_skips_missing_outputs` (item recorded, no file on disk: `files`
-      is empty, result is `Ok(true)`), `adoption_is_a_no_op_on_schema_2`.
+      is empty, result is `Ok(Some(vec![]))`),
+      `adoption_is_a_no_op_on_schema_2`.
 - [ ] **Step 2: Run** `cargo test --lib pipeline::owned`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** the same command. Expected: PASS.
@@ -630,6 +632,33 @@ fn remove_cleans_an_install_made_by_schema_1() {
       states).
 - [ ] **Step 6: Commit** `feat(remove): delete only recorded, unchanged files`
       and open pull request C.
+
+---
+
+### Adoption notice (applies to Tasks 8 and 9)
+
+Adoption cannot tell a file that the user edited or added before the upgrade
+from a file that an earlier upskill version wrote. It records all of them as
+unchanged, so a later `update` may replace them and `remove` may delete them.
+The user must be told at the moment this happens.
+
+- `InstallReport`, `RemoveReport` and `UpdateReport` each gain
+  `pub adopted: Option<Vec<String>>`, filled from `adopt_schema1`.
+- When the value is `Some` and not empty, `main.rs` prints to stderr:
+
+```text
+note: adopted <N> files installed by an earlier upskill version as unchanged.
+Manual edits made to these files before now are not protected:
+  <path>
+  ...
+The previous lockfile is kept as .upskill-lock.json.v1.
+```
+
+- CLI test in `tests/cli_ownership.rs`: `adoption_prints_the_adopted_files_once`
+  (the first `add` on a schema-1 lockfile prints the note and each path; a
+  second `add` prints no note).
+- `commands.md` states both cases: generated files edited before the upgrade,
+  and files added inside an item directory.
 
 ---
 
