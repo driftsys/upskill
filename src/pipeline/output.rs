@@ -128,6 +128,65 @@ pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
 mod tests {
     use super::*;
 
+    /// A project target with `rel` created as a directory. Returns
+    /// `(tmp, target)`.
+    fn target_with_dir(rel: &str) -> (tempfile::TempDir, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("proj");
+        fs::create_dir_all(target.join(rel)).unwrap();
+        (tmp, target)
+    }
+
+    fn assert_refused(target: &Path, kind: ItemKind, name: &str, source: &Path) {
+        let err = check_source_outside_outputs(target, kind, name, source)
+            .expect_err("overlap must be refused");
+        assert!(
+            err.to_string().contains("overlaps the output path"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn overlap_check_refuses_source_inside_an_output_path() {
+        let (_tmp, target) = target_with_dir(".claude/skills/x/nested");
+        let source = target.join(".claude/skills/x/nested");
+        assert_refused(&target, ItemKind::Skill, "x", &source);
+    }
+
+    #[test]
+    fn overlap_check_refuses_source_that_contains_an_output_path() {
+        let (_tmp, target) = target_with_dir(".git");
+        assert_refused(&target, ItemKind::Skill, "x", &target);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn overlap_check_compares_canonical_paths() {
+        let (tmp, target) = target_with_dir(".claude/skills/x");
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(target.join(".claude/skills/x"), &link).unwrap();
+        assert_refused(&target, ItemKind::Skill, "x", &link);
+        let dotted = target.join(".claude/skills/../skills/x");
+        assert_refused(&target, ItemKind::Skill, "x", &dotted);
+    }
+
+    #[test]
+    fn overlap_check_covers_the_resource_base_path() {
+        // A Claude rule renders to `.claude/rules/r.md`; only its resource
+        // base `.claude/rules/r` overlaps this source.
+        let (_tmp, target) = target_with_dir(".claude/rules/r");
+        let source = target.join(".claude/rules/r");
+        assert_refused(&target, ItemKind::Rule, "r", &source);
+    }
+
+    #[test]
+    fn overlap_check_accepts_a_separate_source() {
+        let (tmp, target) = target_with_dir(".claude/skills/x");
+        let source = tmp.path().join("source/x");
+        fs::create_dir_all(&source).unwrap();
+        check_source_outside_outputs(&target, ItemKind::Skill, "x", &source).unwrap();
+    }
+
     #[test]
     fn output_paths_and_resource_bases_match_historical_spec() {
         let cases = [
