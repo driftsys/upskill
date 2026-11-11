@@ -1,9 +1,9 @@
 # Copilot installation contract trial with 64-character names
 
-Status: prepared for approval, not executed. This packet replaces the packet of
-2026-11-10, which stopped at sequence 4 because Copilot CLI 1.0.107 limits
-marketplace and plugin names to 64 characters. Preparing and validating this
-packet authorizes no native mutation.
+Status: executed once on 2026-11-11 and stopped at sequence 4; see Outcome. This
+packet replaces the packet of 2026-11-10, which stopped at sequence 4 because
+Copilot CLI 1.0.107 limits marketplace and plugin names to 64 characters.
+Preparing and validating this packet authorizes no native mutation.
 
 ## Purpose and exact input
 
@@ -64,3 +64,24 @@ partial record that must be retained.
 Approve only this root, manifest and driver digest. Use the `--execute`
 entrypoint once, with the exact argv in the readiness receipt. All release and
 production qualification gates remain closed regardless of the outcome.
+
+## Outcome (2026-11-11)
+
+The user approved one run. The driver digest matched before the run, and the run
+used the exact execution argv once. It stopped with reason `unexpected_output`
+at sequence 4. The
+[execution records](../../technotes/evidence/2026-11-11-copilot-installation-trial-execution-2/)
+are copied byte for byte from the packet evidence directory.
+
+- Sequences 0 to 3 were accepted, with the same inventory counts as the previous
+  run.
+- Sequence 4, `plugin marketplace add`, exited with code 0, wrote 0 bytes to
+  stderr and wrote 74 bytes to stdout. The strict collector rejects nonempty
+  stdout from a mutation, as this plan stated, so sequences 5 to 11 did not run.
+  The run made zero model requests.
+- Copilot 1.0.107 accepted the 39-character name and the local marketplace path.
+  The marketplace registration is presumed to remain in the packet home. No
+  cleanup command ran.
+
+The collector rule for mutation stdout needs a decision before a new packet is
+prepared. This packet is consumed and must not be run again.
