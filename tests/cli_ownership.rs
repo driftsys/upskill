@@ -1404,13 +1404,12 @@ fn assert_overlap_refused_without_adoption(
 #[test]
 fn add_refused_for_an_overlapping_source_does_not_adopt_a_schema_1_lockfile() {
     let (tmp, home, original) = schema_1_project_with_overlapping_source();
-    let source = Path::new(".").join(".claude").join("skills");
 
+    // The source argument keeps `/`: the source parser reads `./` as a local
+    // path on every platform, but not `.\`.
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
-        .arg("add")
-        .arg(&source)
-        .args(["--claude", "--project"])
+        .args(["add", "./.claude/skills", "--claude", "--project"])
         .assert()
         .code(1);
 
