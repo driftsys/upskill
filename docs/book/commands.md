@@ -249,8 +249,8 @@ buckets:
   (a `schema: 1` lockfile, or a `schema: 2` item with an empty `files` list),
   each per-client entry file that does not exist. A recorded path that `remove`
   would never delete (outside the client roots, fewer than three components, or
-  with a `.` or `..` component) is skipped without a report, in this bucket and
-  in the next one.
+  with a `..` component) is skipped without a report, in this bucket and in the
+  next one.
 - **Modified files** — recorded files whose content differs from the recorded
   SHA-256, or that are no longer regular files. Causes exit 1.
 - **Unreadable files** — recorded files that could not be inspected (for example

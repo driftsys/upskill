@@ -171,7 +171,8 @@ is not in the lockfile, which is an error.
   when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
   and do not affect the exit code. Missing and modified files are checked
   against the `files` record; a recorded path that `remove` would never delete
-  (§2.3) is skipped without a report. For an item with an empty or missing
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
   `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
   list), `doctor` checks each per-client entry file instead.
 

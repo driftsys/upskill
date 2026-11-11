@@ -464,7 +464,7 @@ fn print_adoption_notice(adopted: Option<&[String]>) {
         eprintln!("  {path}");
     }
     eprintln!(
-        "A copy of the schema 1 lockfile is kept as {}; an existing copy is not replaced.",
+        "The schema 1 lockfile is copied to {}, unless that file already exists.",
         upskill::lockfile::SCHEMA1_BACKUP_NAME
     );
 }
