@@ -299,6 +299,51 @@ fn lint_flags_bundle_item_name_collision() {
         .stdout(predicates::str::contains("baseline"));
 }
 
+#[test]
+fn lint_accepts_items_without_schema_field() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let root = tmp.path().join("source");
+    for (dir, entrypoint) in [
+        ("skills/plain-skill", "SKILL.md"),
+        ("rules/plain-rule", "RULE.md"),
+        ("agents/plain-agent", "AGENT.md"),
+    ] {
+        write(
+            &root.join(dir).join(entrypoint),
+            "---\ndescription: An item without schema.\n---\n\nBody.\n",
+        );
+    }
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&root)
+        .args(["lint", "--strict"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(out.contains("0 findings"), "expected clean: {out}");
+}
+
+#[test]
+fn lint_rejects_bundle_without_schema_field() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let root = tmp.path().join("source");
+    write(
+        &root.join("bundles/meta.bundle.yaml"),
+        "name: meta\ndescription: d\nitems: {}\n",
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&root)
+        .args(["lint"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("missing field `schema`"));
+}
+
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from)? {

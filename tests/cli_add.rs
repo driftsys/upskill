@@ -174,15 +174,44 @@ fn stage_single_skill(
     std::path::PathBuf,
     std::path::PathBuf,
 ) {
+    stage_single_item(name, "SKILL.md", content)
+}
+
+/// Stage `source/<name>/<entrypoint>` with `content` and a project target.
+/// Returns `(tmp, home, source, target)`.
+fn stage_single_item(
+    name: &str,
+    entrypoint: &str,
+    content: &str,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let source = tmp.path().join("source");
     fs::create_dir_all(source.join(name)).unwrap();
-    fs::write(source.join(name).join("SKILL.md"), content).unwrap();
+    fs::write(source.join(name).join(entrypoint), content).unwrap();
     let target = tmp.path().join("target");
     fs::create_dir_all(target.join(".git")).unwrap();
     (tmp, home, source, target)
+}
+
+/// Run `upskill add <source> <name> --claude --project` from `target`.
+fn add_one(home: &Path, source: &Path, target: &Path, name: &str) -> assert_cmd::assert::Assert {
+    common::upskill_cmd(home)
+        .current_dir(target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            name,
+            "--claude",
+            "--project",
+        ])
+        .assert()
 }
 
 #[test]
@@ -208,51 +237,66 @@ fn add_accepts_skill_without_schema_field() {
 }
 
 #[test]
-fn frontmatter_error_names_the_file() {
-    let (_tmp, home, source, target) = stage_single_skill("broken", "---\nname: [unclosed\n---\n");
+fn add_accepts_rule_and_agent_without_schema_field() {
+    for (entrypoint, output) in [
+        ("RULE.md", ".claude/rules/plain.md"),
+        ("AGENT.md", ".claude/agents/plain.md"),
+    ] {
+        let (_tmp, home, source, target) = stage_single_item(
+            "plain",
+            entrypoint,
+            "---\nname: plain\ndescription: An item without schema.\n---\nBody\n",
+        );
+        add_one(&home, &source, &target, "plain").success();
+        assert!(target.join(output).exists(), "{entrypoint}: {output}");
+    }
+}
 
-    let assert = common::upskill_cmd(&home)
-        .current_dir(&target)
-        .args([
-            "add",
-            source.to_str().unwrap(),
-            "broken",
-            "--claude",
-            "--project",
-        ])
-        .assert()
-        .failure();
-    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
-    let expected = Path::new("broken").join("SKILL.md");
-    assert!(
-        stderr.contains(expected.to_str().unwrap()),
-        "stderr does not name the file: {stderr}"
-    );
+#[test]
+fn missing_required_field_error_names_the_file() {
+    // `description` is still a required field; the error must name the file
+    // for every item kind.
+    for entrypoint in ["SKILL.md", "RULE.md", "AGENT.md"] {
+        let (_tmp, home, source, target) =
+            stage_single_item("broken", entrypoint, "---\nname: broken\n---\nBody\n");
+        let assert = add_one(&home, &source, &target, "broken").failure();
+        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+        let expected = Path::new("broken").join(entrypoint);
+        assert!(
+            stderr.contains(expected.to_str().unwrap()),
+            "{entrypoint}: stderr does not name the file: {stderr}"
+        );
+        assert!(
+            stderr.contains("missing field `description`"),
+            "{entrypoint}: stderr does not name the missing field: {stderr}"
+        );
+    }
 }
 
 #[test]
 fn add_rejects_explicit_unsupported_schema() {
-    for (version, message) in [
-        ("0", "schema version must be >= 1, got 0"),
-        ("2", "schema version 2 is not supported"),
-    ] {
-        let (_tmp, home, source, target) = stage_single_skill(
-            "versioned",
-            &format!("---\nschema: {version}\nname: versioned\ndescription: d\n---\nBody\n"),
-        );
-        let assert = common::upskill_cmd(&home)
-            .current_dir(&target)
-            .args([
-                "add",
-                source.to_str().unwrap(),
+    for entrypoint in ["SKILL.md", "RULE.md", "AGENT.md"] {
+        for (version, message) in [
+            ("0", "schema version must be >= 1, got 0"),
+            ("2", "schema version 2 is not supported"),
+        ] {
+            let (_tmp, home, source, target) = stage_single_item(
                 "versioned",
-                "--claude",
-                "--project",
-            ])
-            .assert()
-            .failure();
-        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
-        assert!(stderr.contains(message), "schema {version}: {stderr}");
+                entrypoint,
+                &format!("---\nschema: {version}\nname: versioned\ndescription: d\n---\nBody\n"),
+            );
+            let assert = add_one(&home, &source, &target, "versioned").failure();
+            let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+            assert!(
+                stderr.contains(message),
+                "{entrypoint} schema {version}: {stderr}"
+            );
+            let expected = Path::new("versioned").join(entrypoint);
+            assert!(
+                stderr.contains(expected.to_str().unwrap()),
+                "{entrypoint} schema {version}: stderr does not name the file: {stderr}"
+            );
+        }
     }
 }
 

@@ -127,6 +127,11 @@ mod tests {
     use crate::target::TargetFamily;
 
     #[test]
+    fn schema_version_default_is_one() {
+        assert_eq!(SchemaVersion::default().get(), 1);
+    }
+
+    #[test]
     fn codex_audience_parses_and_serializes() {
         let audience: Audience = serde_yaml_ng::from_str("codex").unwrap();
         assert_eq!(audience, Audience::Codex);
