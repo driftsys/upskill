@@ -288,6 +288,27 @@ pub fn install_with_lockfile(
         anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
     }
 
+    // -- Refuse a source item that overlaps its own output paths --
+    // Runs before the adoption and before `apply_plan`, so a refused install
+    // changes no file. Aliases apply to entry-source items only, as in the
+    // plan below.
+    if let Some(closure) = &closure {
+        let no_aliases = plan::PlanNames::default();
+        for (src_label, si) in &closure.by_source {
+            let names = if *src_label == label {
+                &entry_names
+            } else {
+                &no_aliases
+            };
+            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), names)?;
+        }
+    } else {
+        // Without a closure, `items` is not empty: a bundle-file source always
+        // gets a closure, and only a request with names defers to name
+        // resolution.
+        install::check_name_resolution_outside_outputs(&local_source, target, items, &entry_names)?;
+    }
+
     // -- Plan every output; nothing is written until `apply_plan` --
     // With a closure, plan each source's resolved items from that
     // source's own fetched root. Without one (bundle file / name

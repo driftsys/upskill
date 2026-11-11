@@ -1,4 +1,5 @@
-//! Per-client output path computation, and the best-effort deletion of an
+//! Per-client output path computation, the check that a source item does
+//! not overlap its own output paths, and the best-effort deletion of an
 //! item's outputs that `update` uses for an item that its source no longer
 //! contains. `remove` does not use it: it deletes only the files in the
 //! item's ownership record.
@@ -9,6 +10,8 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
 
 use super::{ALL_CLIENTS, ItemKind};
 use crate::generate::Client;
@@ -30,6 +33,92 @@ pub(super) fn is_dir_backed(kind: ItemKind, client: Client) -> bool {
 /// Historical resource namespace, relative to the installation root.
 pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
     crate::legacy::layout::resource_base_path(kind, client.into(), name)
+}
+
+/// Refuse an install when the source item directory `source_dir` is the
+/// same directory as, is inside, or contains a path that the install
+/// deletes or writes for `(kind, name)` under `target`. These are the
+/// per-item paths (the entrypoint and the resource base), not a whole client
+/// output directory. Without this check, an item directory such as
+/// `.claude/skills/<name>` inside a source such as `.claude/skills` could be
+/// deleted or overwritten by its own install. A path that
+/// exists is compared in canonical form; a path that does not exist is
+/// compared as given. Every client is checked because the install also
+/// deletes files of clients that it does not write: the recorded files that
+/// the plan no longer contains, and the entrypoint of a client that is no
+/// longer selected (see [`super::apply::apply_plan`]).
+///
+/// When `source_dir` is inside an output path that is itself inside
+/// `source_root`, the source root holds upskill's own output (for example a
+/// registry rooted at `~/.claude`), and the error says so.
+pub(super) fn check_source_outside_outputs(
+    target: &Path,
+    kind: ItemKind,
+    name: &str,
+    source_dir: &Path,
+    source_root: &Path,
+) -> Result<()> {
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let source = canonical(source_dir);
+    let root = canonical(source_root);
+    let target = canonical(target);
+    let rels = |client| {
+        [
+            output_path(kind, client, name),
+            resource_base_path(kind, client, name),
+        ]
+    };
+    for client in ALL_CLIENTS {
+        for rel in rels(client) {
+            let out = canonical(&target.join(&rel));
+            if source.starts_with(&out) || out.starts_with(&source) {
+                let prefix = format!(
+                    "{kind} '{name}': source directory {} overlaps the output path {}; \
+                     installing would delete or overwrite the source.",
+                    source_dir.display(),
+                    out.display()
+                );
+                if let Some((owned, client_dir)) = output_inside_root(&target, &source, &root, rels)
+                {
+                    anyhow::bail!(
+                        "{prefix} The source root {} contains the output path {} that upskill \
+                         writes under the client directory {}. A source must not be rooted in a \
+                         client directory or contain one. Move the source items to a directory \
+                         outside the client directories and add them from there",
+                        root.display(),
+                        owned.display(),
+                        client_dir.display()
+                    );
+                }
+                anyhow::bail!(
+                    "{prefix} Copy the item to a directory outside the client output directories \
+                     and add it from there"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Find an output path that contains `source` (or is `source`) and is inside
+/// `root`. Returns that output path and its client directory (the first
+/// component of the output path under `target`).
+fn output_inside_root(
+    target: &Path,
+    source: &Path,
+    root: &Path,
+    rels: impl Fn(Client) -> [PathBuf; 2],
+) -> Option<(PathBuf, PathBuf)> {
+    for client in ALL_CLIENTS {
+        for rel in rels(client) {
+            let out = fs::canonicalize(target.join(&rel)).unwrap_or_else(|_| target.join(&rel));
+            if source.starts_with(&out) && out.starts_with(root) {
+                let first = rel.components().next()?;
+                return Some((out, target.join(first)));
+            }
+        }
+    }
+    None
 }
 
 /// Delete all per-client output files for an item (best-effort).
@@ -55,6 +144,65 @@ pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A project target with `rel` created as a directory. Returns
+    /// `(tmp, target)`.
+    fn target_with_dir(rel: &str) -> (tempfile::TempDir, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("proj");
+        fs::create_dir_all(target.join(rel)).unwrap();
+        (tmp, target)
+    }
+
+    fn assert_refused(target: &Path, kind: ItemKind, name: &str, source: &Path) {
+        let err = check_source_outside_outputs(target, kind, name, source, source)
+            .expect_err("overlap must be refused");
+        assert!(
+            err.to_string().contains("overlaps the output path"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn overlap_check_refuses_source_inside_an_output_path() {
+        let (_tmp, target) = target_with_dir(".claude/skills/x/nested");
+        let source = target.join(".claude/skills/x/nested");
+        assert_refused(&target, ItemKind::Skill, "x", &source);
+    }
+
+    #[test]
+    fn overlap_check_refuses_source_that_contains_an_output_path() {
+        let (_tmp, target) = target_with_dir(".git");
+        assert_refused(&target, ItemKind::Skill, "x", &target);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn overlap_check_compares_canonical_paths() {
+        let (tmp, target) = target_with_dir(".claude/skills/x");
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(target.join(".claude/skills/x"), &link).unwrap();
+        assert_refused(&target, ItemKind::Skill, "x", &link);
+        let dotted = target.join(".claude/skills/../skills/x");
+        assert_refused(&target, ItemKind::Skill, "x", &dotted);
+    }
+
+    #[test]
+    fn overlap_check_covers_the_resource_base_path() {
+        // A Claude rule renders to `.claude/rules/r.md`; only its resource
+        // base `.claude/rules/r` overlaps this source.
+        let (_tmp, target) = target_with_dir(".claude/rules/r");
+        let source = target.join(".claude/rules/r");
+        assert_refused(&target, ItemKind::Rule, "r", &source);
+    }
+
+    #[test]
+    fn overlap_check_accepts_a_separate_source() {
+        let (tmp, target) = target_with_dir(".claude/skills/x");
+        let source = tmp.path().join("source/x");
+        fs::create_dir_all(&source).unwrap();
+        check_source_outside_outputs(&target, ItemKind::Skill, "x", &source, &source).unwrap();
+    }
 
     #[test]
     fn output_paths_and_resource_bases_match_historical_spec() {

@@ -32,6 +32,13 @@ impl SchemaVersion {
     }
 }
 
+/// An item without a `schema` field is read as `schema: 1`.
+impl Default for SchemaVersion {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
 impl Serialize for SchemaVersion {
     fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(ser)
@@ -118,6 +125,11 @@ pub struct Metadata {
 mod tests {
     use super::*;
     use crate::target::TargetFamily;
+
+    #[test]
+    fn schema_version_default_is_one() {
+        assert_eq!(SchemaVersion::default().get(), 1);
+    }
 
     #[test]
     fn codex_audience_parses_and_serializes() {

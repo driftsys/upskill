@@ -111,10 +111,11 @@ and avoid content duplication.
 
 ### Schema versioning
 
-Every entrypoint carries `schema: 1`. Implementations reject unknown future
-versions with a clear upgrade message. Minor additions (new optional fields) do
-not bump the schema; breaking changes (removed fields, renamed fields, changed
-semantics, new required fields) do.
+Every bundle carries `schema: 1`; an item without `schema` is read as
+`schema: 1`. Implementations reject unknown future versions with a clear upgrade
+message. Minor additions (new optional fields) do not bump the schema; breaking
+changes (removed fields, renamed fields, changed semantics, new required fields)
+do.
 
 ### Body content conventions
 

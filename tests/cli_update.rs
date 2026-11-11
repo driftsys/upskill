@@ -556,3 +556,74 @@ fn update_replaces_a_resource_directory_with_a_file() {
         ]
     );
 }
+
+/// Add `<tmp>/src/my-skill` to a project (with `add_args` appended), then
+/// point the recorded source at `<proj>/<nested>`, a directory inside the
+/// item's own output path that holds a changed copy of the skill. Assert that
+/// `update` refuses the source and changes no file.
+fn assert_update_refuses_source_inside_output(add_args: &[&str], installed: &str, nested: &str) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let src = tmp.path().join("src");
+    fs::create_dir_all(src.join("my-skill")).unwrap();
+    fs::write(
+        src.join("my-skill/SKILL.md"),
+        "---\nname: my-skill\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+
+    let mut args = vec!["add", src.to_str().unwrap(), "--claude", "--project"];
+    args.extend_from_slice(add_args);
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(&args)
+        .assert()
+        .success();
+
+    let new_source = proj.join(nested);
+    let copy = new_source.join("my-skill/SKILL.md");
+    fs::create_dir_all(copy.parent().unwrap()).unwrap();
+    let changed = "---\nname: my-skill\ndescription: d\n---\nBody v2\n";
+    fs::write(&copy, changed).unwrap();
+    let lock_path = proj.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    lock["items"][0]["source"] = format!("local:{}", new_source.display()).into();
+    let lock_before = serde_json::to_string_pretty(&lock).unwrap();
+    fs::write(&lock_path, &lock_before).unwrap();
+    let output = proj.join(format!(".claude/skills/{installed}/SKILL.md"));
+    let output_before = fs::read_to_string(&output).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains(&format!("'{installed}'")) && stderr.contains("overlaps the output path"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&copy).unwrap(), changed);
+    assert_eq!(fs::read_to_string(&output).unwrap(), output_before);
+    assert_eq!(fs::read_to_string(&lock_path).unwrap(), lock_before);
+}
+
+#[test]
+fn update_refuses_source_inside_the_item_output_path() {
+    assert_update_refuses_source_inside_output(&[], "my-skill", ".claude/skills/my-skill/nested");
+}
+
+#[test]
+fn update_refuses_source_inside_the_recorded_alias_output_path() {
+    // The lockfile records `source_name: my-skill` for the installed name
+    // `other`; only the alias output path overlaps the source.
+    assert_update_refuses_source_inside_output(
+        &["--as", "other"],
+        "other",
+        ".claude/skills/other/nested",
+    );
+}
