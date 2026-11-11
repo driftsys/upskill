@@ -151,7 +151,7 @@ errors for CI use.
 
 Common findings:
 
-- Missing `schema:` / `name:` / `description:` in frontmatter
+- Missing `name:` / `description:` in frontmatter
 - `metadata.version` not quoted (YAML float coercion risk)
 - Invalid directory layout (entry file not in its own folder, etc.)
 - Bundle `items:` list references a name not present in the registry

@@ -1353,7 +1353,8 @@ Current version: **1**.
 - MUST accept files with `schema` equal to or less than the highest supported
   version.
 - MUST read an item (rule, skill, or agent) without a `schema` field as
-  `schema: 1`. A bundle without `schema` is not recognised as a bundle (§2.2).
+  `schema: 1`. Bundle discovery skips a bundle file without `schema`; an
+  explicit-path load or lint of that file fails with a parse error (§2.2).
 - When processing older schema versions, MUST NOT silently apply newer defaults
   that would change the file's meaning.
 
