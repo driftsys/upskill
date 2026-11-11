@@ -16,11 +16,12 @@ use std::path::{Path, PathBuf};
 
 use super::discovery::{
     detect_item_entrypoint, find_bundle_by_name, find_registry_root, has_matching_items,
-    is_bundle_file, iter_item_dirs, iter_item_resources,
+    is_bundle_file, iter_item_dirs, iter_item_resources, probe_effective_name,
 };
 use super::hash::hash_item_dir;
 use super::output::{
-    copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
+    check_source_outside_outputs, copy_item_resources, is_dir_backed, output_path,
+    remove_item_outputs, write_output,
 };
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
@@ -63,6 +64,30 @@ pub(super) fn install_from_local_path_selective(
         install_items_of_kind(kind, source, target, &mut report, filter, selection)?;
     }
     Ok(report)
+}
+
+/// Run [`check_source_outside_outputs`] for every item under `source` that
+/// `filter` selects (all items when `filter` is `None`). Called before the
+/// first deletion or write of an install.
+pub(super) fn check_sources_outside_outputs(
+    source: &Path,
+    target: &Path,
+    filter: Option<&crate::bundle::ResolvedItems>,
+) -> Result<()> {
+    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
+        for (folder, dir) in iter_item_dirs(source)? {
+            let entry_path = dir.join(kind.entrypoint_filename());
+            if !entry_path.exists() {
+                continue;
+            }
+            let name = probe_effective_name(&entry_path, kind, &folder);
+            if filter.is_some_and(|items| !items.contains(kind, &name)) {
+                continue;
+            }
+            check_source_outside_outputs(target, kind, &name, &dir)?;
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn install_bundle_file(

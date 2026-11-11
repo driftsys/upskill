@@ -68,6 +68,42 @@ pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<(
     Ok(())
 }
 
+/// Refuse an install when the source item directory `source_dir` is the
+/// same directory as, is inside, or contains a path that
+/// [`remove_item_outputs`] deletes or the install writes for `(kind, name)`
+/// under `target`. Without this check, a client output directory such as
+/// `.claude/skills` used as a source would be deleted before its files are
+/// copied. Paths are compared in canonical form; every client is checked
+/// because [`remove_item_outputs`] touches every client.
+pub(super) fn check_source_outside_outputs(
+    target: &Path,
+    kind: ItemKind,
+    name: &str,
+    source_dir: &Path,
+) -> Result<()> {
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let source = canonical(source_dir);
+    let target = canonical(target);
+    for client in ALL_CLIENTS {
+        for rel in [
+            output_path(kind, client, name),
+            resource_base_path(kind, client, name),
+        ] {
+            let out = canonical(&target.join(&rel));
+            if source.starts_with(&out) || out.starts_with(&source) {
+                anyhow::bail!(
+                    "{kind} '{name}': source directory {} overlaps the output path {}; \
+                     installing would delete or overwrite the source. \
+                     Copy the item to a directory outside the client output directories and add it from there",
+                    source_dir.display(),
+                    out.display()
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Delete all per-client output files for an item (best-effort).
 pub(super) fn remove_item_outputs(target: &Path, kind: ItemKind, name: &str) {
     for client in ALL_CLIENTS {

@@ -351,6 +351,15 @@ pub fn install_with_lockfile(
         anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
     }
 
+    // -- Refuse a source item that overlaps its own output paths --
+    if let Some(closure) = &closure {
+        for si in closure.by_source.values() {
+            install::check_sources_outside_outputs(&si.root, target, Some(&si.items))?;
+        }
+    } else {
+        install::check_sources_outside_outputs(&local_source, target, None)?;
+    }
+
     // -- Now proceed with generation (files are written here) --
     // With a closure, install each source's resolved items from that
     // source's own fetched root. Without one (bundle file / name

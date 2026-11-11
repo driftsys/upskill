@@ -255,3 +255,70 @@ fn add_rejects_explicit_unsupported_schema() {
         assert!(stderr.contains(message), "schema {version}: {stderr}");
     }
 }
+
+/// Stage a project at `<tmp>/proj` whose `<output_dir>/my-skill/` holds a
+/// schema-less `SKILL.md` and one resource file. Returns `(tmp, home, proj)`.
+fn stage_skill_in_client_output_dir(
+    output_dir: &str,
+) -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let item = proj.join(output_dir).join("my-skill");
+    fs::create_dir_all(item.join("references")).unwrap();
+    fs::write(
+        item.join("SKILL.md"),
+        "---\nname: my-skill\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+    fs::write(item.join("references/notes.md"), "user notes\n").unwrap();
+    (tmp, home, proj)
+}
+
+fn assert_source_overlap_refused(output_dir: &str, extra_args: &[&str]) {
+    let (_tmp, home, proj) = stage_skill_in_client_output_dir(output_dir);
+    let item = proj.join(output_dir).join("my-skill");
+    let skill_before = fs::read_to_string(item.join("SKILL.md")).unwrap();
+
+    let source = format!("./{output_dir}");
+    let mut args = vec!["add", source.as_str()];
+    args.extend_from_slice(extra_args);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(&args)
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("my-skill") && stderr.contains("overlaps the output path"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert!(
+        stderr.contains(Path::new(output_dir).join("my-skill").to_str().unwrap()),
+        "stderr does not name the source directory: {stderr}"
+    );
+
+    assert_eq!(
+        fs::read_to_string(item.join("SKILL.md")).unwrap(),
+        skill_before
+    );
+    assert_eq!(
+        fs::read_to_string(item.join("references/notes.md")).unwrap(),
+        "user notes\n"
+    );
+    assert!(!proj.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_refuses_source_inside_claude_output_dir() {
+    assert_source_overlap_refused(".claude/skills", &["--claude", "--project"]);
+}
+
+#[test]
+fn add_refuses_source_inside_unselected_client_output_dir() {
+    // `remove_item_outputs` cleans every client, so an `.agents/skills`
+    // source is deleted even when only Claude is selected.
+    assert_source_overlap_refused(".agents/skills", &["--claude", "--project"]);
+}
