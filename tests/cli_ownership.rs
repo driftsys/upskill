@@ -1370,3 +1370,118 @@ fn remove_fails_before_any_deletion_when_a_recorded_path_cannot_be_inspected() {
     assert!(lists_item(tmp.path(), "api-conventions"));
     assert!(lists_item(tmp.path(), "create-api-endpoint"));
 }
+
+/// A schema-1 lockfile with the rule `api-conventions`, and the skill `foo`
+/// staged at `.claude/skills/foo`, an output path of `foo` itself.
+fn schema_1_project_with_overlapping_source() -> (tempfile::TempDir, std::path::PathBuf, Vec<u8>) {
+    let (tmp, home) = project();
+    let original = write_schema_1_install(tmp.path());
+    write_skill(
+        &tmp.path().join(".claude").join("skills"),
+        "foo",
+        "Foo body.",
+    );
+    (tmp, home, original)
+}
+
+fn assert_overlap_refused_without_adoption(
+    tmp: &tempfile::TempDir,
+    out: &assert_cmd::assert::Assert,
+    original: &[u8],
+) {
+    assert!(
+        stderr_of(out).contains("overlaps the output path"),
+        "stderr: {}",
+        stderr_of(out)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        original
+    );
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+}
+
+#[test]
+fn add_refused_for_an_overlapping_source_does_not_adopt_a_schema_1_lockfile() {
+    let (tmp, home, original) = schema_1_project_with_overlapping_source();
+    let source = Path::new(".").join(".claude").join("skills");
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .arg("add")
+        .arg(&source)
+        .args(["--claude", "--project"])
+        .assert()
+        .code(1);
+
+    assert_overlap_refused_without_adoption(&tmp, &out, &original);
+}
+
+#[test]
+fn update_refused_for_an_overlapping_source_does_not_adopt_a_schema_1_lockfile() {
+    let (tmp, home, _) = schema_1_project_with_overlapping_source();
+    let source = tmp.path().join(".claude").join("skills");
+    let lock = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "foo",
+            "source": format!("local:{}", source.display()),
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    let original = serde_json::to_vec_pretty(&lock).unwrap();
+    fs::write(tmp.path().join(".upskill-lock.json"), &original).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(1);
+
+    assert_overlap_refused_without_adoption(&tmp, &out, &original);
+}
+
+/// Stages the single skill `foo` in a source directory below the output
+/// directory of the skill `under`, and runs `add` with a bare `--as x` and
+/// an exact `--as foo=y`. The exact alias wins, so `foo` installs as `y`.
+fn add_with_bare_and_exact_alias(under: &str) -> (tempfile::TempDir, assert_cmd::assert::Assert) {
+    let (tmp, home) = project();
+    let source = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join(under)
+        .join("nested");
+    write_skill(&source, "foo", "Foo body.");
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .arg("add")
+        .arg(&source)
+        .args(["--as", "x", "--as", "foo=y", "--claude", "--project"])
+        .assert();
+    (tmp, out)
+}
+
+#[test]
+fn overlap_check_uses_the_exact_alias_over_the_bare_alias() {
+    let (_tmp, out) = add_with_bare_and_exact_alias("y");
+    let out = out.code(1);
+    assert!(
+        stderr_of(&out).contains("skill 'y'")
+            && stderr_of(&out).contains("overlaps the output path"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+}
+
+#[test]
+fn overlap_check_ignores_the_bare_alias_that_the_exact_alias_replaces() {
+    let (tmp, out) = add_with_bare_and_exact_alias("x");
+    out.success();
+    let skills = tmp.path().join(".claude").join("skills");
+    assert!(skills.join("y").join("SKILL.md").is_file());
+    assert!(!skills.join("x").join("SKILL.md").exists());
+}
