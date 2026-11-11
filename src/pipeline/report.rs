@@ -121,8 +121,9 @@ pub enum RemoveFilter {
     /// that is not installed).
     ByNames(Vec<String>),
     /// Remove every lockfile entry whose `source` label matches this
-    /// string verbatim. No-op when the lockfile contains no entry from
-    /// the named source.
+    /// string verbatim. When the lockfile contains no entry from the named
+    /// source, nothing is deleted; a `schema: 1` lockfile is still adopted
+    /// and saved.
     BySource(String),
 }
 
@@ -165,6 +166,18 @@ pub struct ModifiedFile {
     pub name: String,
     /// Paths relative to the install target.
     pub files: Vec<PathBuf>,
+}
+
+/// Recorded files of one item that could not be inspected (for example
+/// because of a permission error).
+#[derive(Debug, Clone, Serialize)]
+pub struct UnreadableFile {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the install target.
+    pub files: Vec<PathBuf>,
+    /// The error text of the first file that could not be inspected.
+    pub error: String,
 }
 
 /// SSOT content hash differs from what the lockfile recorded at install
@@ -271,6 +284,9 @@ pub struct DoctorReport {
     /// Recorded files modified after upskill wrote them. Non-empty →
     /// `is_clean()` returns false.
     pub modified_files: Vec<ModifiedFile>,
+    /// Recorded files that could not be inspected. Non-empty →
+    /// `is_clean()` returns false.
+    pub unreadable_files: Vec<UnreadableFile>,
     pub stale_hashes: Vec<StaleHash>,
     pub orphan_entries: Vec<OrphanEntry>,
     /// Items present only as a dependency of an item that is no longer
@@ -294,7 +310,7 @@ pub struct DoctorReport {
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
-    /// every recorded file still has its recorded content,
+    /// every recorded file still has its recorded content and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, and no installed plugin is missing
     /// from its client.
@@ -305,6 +321,7 @@ impl DoctorReport {
     pub fn is_clean(&self) -> bool {
         self.missing_outputs.is_empty()
             && self.modified_files.is_empty()
+            && self.unreadable_files.is_empty()
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
@@ -428,6 +445,15 @@ mod tests {
             kind: ItemKind::Skill,
             name: "x".into(),
             files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.unreadable_files.push(UnreadableFile {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            files: vec![PathBuf::from("a")],
+            error: "denied".into(),
         });
         assert!(!report.is_clean());
 

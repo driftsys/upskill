@@ -28,7 +28,8 @@ pub(super) fn sha256_hex(bytes: &[u8]) -> String {
 /// link of any kind, or another file type is never read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum FileState {
-    /// The path does not exist.
+    /// The path does not exist, or a parent component is a regular file,
+    /// so the path cannot exist.
     Absent,
     /// The path is a regular file whose content matches a recorded hash.
     Owned,
@@ -44,7 +45,8 @@ pub(super) enum FileState {
 /// pending record.
 ///
 /// The path is examined without following symbolic links. It is `Absent`
-/// only when the lookup fails with "not found"; any other lookup error is
+/// only when the lookup fails with "not found" or "not a directory" (a
+/// parent component is a regular file); any other lookup error is
 /// returned. A present path is `Unowned` when `recorded` is empty. A path
 /// that is not a regular file is `Modified` when `recorded` is not empty.
 /// A regular file is `Owned` when its hash is in `recorded`, and
@@ -53,7 +55,9 @@ pub(super) fn classify(target: &Path, rel: &str, recorded: &[&str]) -> Result<Fi
     let path = target.join(rel);
     let meta = match fs::symlink_metadata(&path) {
         Ok(meta) => meta,
-        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(FileState::Absent),
+        Err(err) if matches!(err.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) => {
+            return Ok(FileState::Absent);
+        }
         Err(err) => {
             return Err(err).with_context(|| format!("inspecting {}", path.display()));
         }
@@ -453,9 +457,30 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn classify_propagates_an_error_that_is_not_not_found() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), Path::new("d/b.md"), b"x");
+        let dir = tmp.path().join("d");
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o000)).unwrap();
+        let readable = fs::symlink_metadata(dir.join("b.md")).is_ok();
+        let result = classify(tmp.path(), "d/b.md", &["00"]);
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        if readable {
+            // Running as root: the permission has no effect.
+            return;
+        }
+        assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn classify_is_absent_when_a_parent_is_a_regular_file() {
         let tmp = tempfile::tempdir().unwrap();
         write(tmp.path(), Path::new("a"), b"file, not a directory");
-        assert!(classify(tmp.path(), "a/b.md", &["00"]).is_err());
+        assert_eq!(
+            classify(tmp.path(), "a/b.md", &["00"]).unwrap(),
+            FileState::Absent
+        );
     }
 
     #[test]

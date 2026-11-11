@@ -135,13 +135,28 @@ pub(super) fn apply_plan(
 
 /// Fails when a component of `rel`, from the third one to the last one,
 /// exists and is a symbolic link. Links are not followed. The check stops
-/// at the first component that does not exist.
+/// at the first component that does not exist or that is a regular file
+/// (no path can exist below a regular file).
 pub(super) fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
+    check_item_components(target, rel, false)
+}
+
+/// Like [`check_no_item_symlink`], but the last component of `rel` is not
+/// checked: only the directories on the way to it.
+pub(super) fn check_no_item_symlink_above(target: &Path, rel: &Path) -> Result<()> {
+    check_item_components(target, rel, true)
+}
+
+fn check_item_components(target: &Path, rel: &Path, skip_last: bool) -> Result<()> {
+    let count = rel.components().count();
     let mut current = target.to_path_buf();
     for (index, component) in rel.components().enumerate() {
         current.push(component);
         if index < 2 {
             continue;
+        }
+        if skip_last && index + 1 == count {
+            break;
         }
         match fs::symlink_metadata(&current) {
             Ok(meta) if meta.file_type().is_symlink() => anyhow::bail!(
@@ -149,8 +164,11 @@ pub(super) fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
                 target.join(rel).display(),
                 current.display()
             ),
+            Ok(meta) if meta.file_type().is_file() => return Ok(()),
             Ok(_) => {}
-            Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(err) if matches!(err.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) => {
+                return Ok(());
+            }
             Err(err) => {
                 return Err(err).with_context(|| format!("inspecting {}", current.display()));
             }
@@ -187,6 +205,14 @@ pub(super) fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
         Err(err) if err.kind() == ErrorKind::NotFound => {}
         Err(err) => return Err(err).with_context(|| format!("inspecting {}", full.display())),
     }
+    prune_empty_parents(target, rel);
+    Ok(())
+}
+
+/// Removes each parent directory of `rel` that is empty, from the deepest
+/// upward. Stops at the first directory that is not empty and never
+/// removes the client root or the kind directory. Never deletes a file.
+pub(super) fn prune_empty_parents(target: &Path, rel: &Path) {
     let mut dir = rel.parent();
     while let Some(d) = dir {
         if d.components().count() <= 2 {
@@ -198,7 +224,6 @@ pub(super) fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
         }
         dir = d.parent();
     }
-    Ok(())
 }
 
 /// Best-effort removal of the entrypoint of a client the item no longer

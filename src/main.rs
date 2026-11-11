@@ -1030,6 +1030,25 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
+    if !report.unreadable_files.is_empty() {
+        println!(
+            "{} recorded files that could not be inspected ({} item(s))",
+            style::error_label("doctor:"),
+            report.unreadable_files.len()
+        );
+        for u in &report.unreadable_files {
+            println!(
+                "  {} {} {}",
+                style::dim(kind_label(u.kind)),
+                style::name(&u.name),
+                style::dim(&format!("({})", u.error))
+            );
+            for path in &u.files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
     if !report.stale_hashes.is_empty() {
         println!(
             "{} SSOT hash drift on local sources ({} item(s)) — `upskill update` to fix",

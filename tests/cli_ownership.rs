@@ -558,6 +558,25 @@ fn remove_deletes_empty_item_directories_but_not_client_roots() {
             .exists()
     );
     assert!(tmp.path().join(".claude/settings.json").exists());
+    assert!(tmp.path().join(".claude/skills").is_dir());
+}
+
+#[test]
+fn remove_keeps_the_kind_directory_and_client_root_when_empty() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+
+    remove_cmd(tmp.path(), &home, &["create-api-endpoint", "--project"])
+        .assert()
+        .success();
+
+    assert!(
+        !tmp.path()
+            .join(".claude/skills/create-api-endpoint")
+            .exists()
+    );
+    assert!(tmp.path().join(".claude/skills").is_dir());
+    assert!(tmp.path().join(".claude").is_dir());
 }
 
 #[test]
@@ -676,7 +695,7 @@ fn remove_does_not_delete_through_a_symlinked_item_directory() {
 
     let stderr = stderr_of(&out);
     assert!(
-        stderr.contains(".claude/skills/create-api-endpoint"),
+        stderr.contains(".claude/skills/create-api-endpoint/SKILL.md"),
         "stderr: {stderr}"
     );
     assert_eq!(fs::read(outside.join("SKILL.md")).unwrap(), before);
@@ -745,4 +764,64 @@ fn remove_of_an_item_with_an_empty_record_deletes_nothing() {
 
     assert_eq!(fs::read(&rule).unwrap(), b"hand-written rule\n");
     assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_drops_an_item_whose_directory_was_replaced_by_a_file() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let dir = tmp.path().join(".claude/skills/create-api-endpoint");
+    fs::remove_dir_all(&dir).unwrap();
+    fs::write(&dir, "not a directory\n").unwrap();
+
+    remove_cmd(tmp.path(), &home, &["create-api-endpoint", "--project"])
+        .assert()
+        .success();
+
+    assert_eq!(fs::read(&dir).unwrap(), b"not a directory\n");
+    assert!(!lists_item(tmp.path(), "create-api-endpoint"));
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_prints_the_adoption_notice_when_it_fails_after_adoption() {
+    let (tmp, home) = project();
+    let outside = tmp.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("SKILL.md"), "outside skill\n").unwrap();
+    fs::create_dir_all(tmp.path().join(".claude/skills")).unwrap();
+    std::os::unix::fs::symlink(
+        &outside,
+        tmp.path().join(".claude/skills/create-api-endpoint"),
+    )
+    .unwrap();
+    let lock = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "create-api-endpoint",
+            "source": "./source",
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    let out = remove_cmd(tmp.path(), &home, &["create-api-endpoint"])
+        .assert()
+        .failure()
+        .code(1);
+
+    let stderr = stderr_of(&out);
+    let notice = stderr.find("note: adopted 1 files").expect(&stderr);
+    let error = stderr.find("symbolic link").expect(&stderr);
+    assert!(notice < error, "{stderr}");
+    assert_eq!(
+        fs::read(outside.join("SKILL.md")).unwrap(),
+        b"outside skill\n"
+    );
 }

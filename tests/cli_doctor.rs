@@ -579,3 +579,186 @@ fn doctor_reports_modified_files() {
     );
     assert!(v["missing_outputs"].as_array().unwrap().is_empty());
 }
+
+/// A target with the fixture items installed for every client. Returns
+/// `(tmp, home, target)`.
+fn installed() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+    (tmp, home, target)
+}
+
+fn doctor_json(target: &Path, home: &Path) -> (Option<i32>, serde_json::Value) {
+    let out = common::upskill_cmd(home)
+        .current_dir(target)
+        .args(["doctor", "--json"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    let v = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout: {stdout}\nstderr: {stderr}"));
+    (out.status.code(), v)
+}
+
+fn bucket_paths(v: &serde_json::Value, bucket: &str, field: &str, name: &str) -> Vec<String> {
+    v[bucket]
+        .as_array()
+        .unwrap_or_else(|| panic!("no {bucket} in {v}"))
+        .iter()
+        .filter(|e| e["name"] == name)
+        .flat_map(|e| e[field].as_array().unwrap().clone())
+        .map(|p| p.as_str().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn doctor_reports_a_recorded_file_under_a_non_directory_as_missing() {
+    let (_tmp, home, target) = installed();
+    let dir = target.join(".claude/skills/create-api-endpoint");
+    fs::remove_dir_all(&dir).unwrap();
+    fs::write(&dir, "not a directory\n").unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "{v}");
+    assert!(
+        bucket_paths(
+            &v,
+            "missing_outputs",
+            "missing_files",
+            "create-api-endpoint"
+        )
+        .contains(&".claude/skills/create-api-endpoint/SKILL.md".to_string()),
+        "{v}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn doctor_reports_an_unreadable_recorded_file_and_continues() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_tmp, home, target) = installed();
+    let locked = target.join(".claude/skills/create-api-endpoint/SKILL.md");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::read(&locked).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
+    fs::remove_file(target.join(".claude/rules/api-conventions.md")).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o644)).unwrap();
+
+    assert_eq!(code, Some(1), "{v}");
+    assert_eq!(
+        bucket_paths(&v, "unreadable_files", "files", "create-api-endpoint"),
+        vec![".claude/skills/create-api-endpoint/SKILL.md".to_string()],
+        "{v}"
+    );
+    assert!(
+        bucket_paths(&v, "missing_outputs", "missing_files", "api-conventions")
+            .contains(&".claude/rules/api-conventions.md".to_string()),
+        "{v}"
+    );
+}
+
+#[test]
+fn doctor_reports_a_missing_recorded_resource_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    let skill = source.join("with-script");
+    fs::create_dir_all(skill.join("scripts")).unwrap();
+    fs::write(
+        skill.join("SKILL.md"),
+        "---\nschema: 1\nname: with-script\ndescription: A skill with a script\n---\nRun scripts/run.sh.\n",
+    )
+    .unwrap();
+    fs::write(skill.join("scripts/run.sh"), "#!/bin/sh\necho hi\n").unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+    fs::remove_file(target.join(".claude/skills/with-script/scripts/run.sh")).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "{v}");
+    assert_eq!(
+        bucket_paths(&v, "missing_outputs", "missing_files", "with-script"),
+        vec![".claude/skills/with-script/scripts/run.sh".to_string()],
+        "{v}"
+    );
+}
+
+#[test]
+fn doctor_uses_the_layout_check_for_an_item_without_a_record() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let lock = serde_json::json!({
+        "schema": 2,
+        "items": [{
+            "kind": "rule",
+            "name": "api-conventions",
+            "source": "github:owner/repo",
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    let (code, v) = doctor_json(tmp.path(), &home);
+    assert_eq!(code, Some(1), "{v}");
+    assert_eq!(
+        bucket_paths(&v, "missing_outputs", "missing_files", "api-conventions"),
+        vec![".claude/rules/api-conventions.md".to_string()],
+        "{v}"
+    );
+}
+
+#[test]
+fn doctor_does_not_adopt_a_schema_1_lockfile() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    fs::create_dir_all(rule.parent().unwrap()).unwrap();
+    fs::write(&rule, "hand-written rule\n").unwrap();
+    let lock = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "rule",
+            "name": "api-conventions",
+            "source": "github:owner/repo",
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    let bytes = serde_json::to_vec_pretty(&lock).unwrap();
+    fs::write(tmp.path().join(".upskill-lock.json"), &bytes).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["doctor"])
+        .assert()
+        .success();
+
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        bytes
+    );
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+}

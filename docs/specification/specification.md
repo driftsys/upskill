@@ -159,14 +159,16 @@ is not in the lockfile, which is an error.
 - `list` — show installed content from `.upskill-lock.json`, grouped by kind.
   Bundles are surfaced in a separate section. The `--available` view (items
   discoverable from configured sources) is deferred for a future release.
-- `doctor` — verify on-disk state matches the lock file. Six independent
+- `doctor` — verify on-disk state matches the lock file. Nine independent
   buckets: missing per-client outputs (reinstall fixes), modified recorded files
-  (content differs from the recorded SHA-256), SSOT hash drift on `local:`
+  (content differs from the recorded SHA-256), recorded files that could not be
+  inspected (`doctor` continues with the others), SSOT hash drift on `local:`
   sources (`update` fixes), lockfile entries with no recoverable source
   (`remove` fixes), installed plugins missing from the client (`update`
-  reinstalls), and skipped plugins (informational — CLI was absent at install
-  time). Exit 0 when clean, 1 when any drift bucket is non-empty. Skipped
-  plugins are warnings and do not affect the exit code.
+  reinstalls), skipped plugins (informational — CLI was absent at install time),
+  orphaned dependencies (informational), and MCP server reconciliation. Exit 0
+  when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
+  and do not affect the exit code.
 
 ### 2.5 `new` / `lint` / `fmt`
 

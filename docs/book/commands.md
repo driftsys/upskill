@@ -237,8 +237,8 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 
 ### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports drift in seven
-independent buckets:
+Verify on-disk state matches `.upskill-lock.json`. Reports nine independent
+buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
@@ -247,9 +247,14 @@ independent buckets:
   lockfile), each per-client entry file that does not exist.
 - **Modified files** — recorded files whose content differs from the recorded
   SHA-256, or that are no longer regular files. Causes exit 1.
+- **Unreadable files** — recorded files that could not be inspected (for example
+  a permission error). `doctor` continues with the other files and items. Causes
+  exit 1.
 - **SSOT hash drift on `local:` sources** — `upskill update` fixes.
 - **Lockfile entries with no recoverable source** (the local path went away, or
   the named item was removed in the source) — `upskill remove` to clear.
+- **Orphaned dependencies** (informational) — items installed only as a
+  dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill
   update`
@@ -263,10 +268,10 @@ independent buckets:
   `claude` CLI or a failed query is advisory and does **not** cause exit 1.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
-modified files, stale hashes, orphan entries, missing plugins, or unregistered
-MCP servers). Skipped plugins and unverifiable MCP entries are informational
-warnings and do not affect the exit code. `doctor` never fetches; remote-source
-drift detection is `update --dry-run`.
+modified files, unreadable files, stale hashes, orphan entries, missing plugins,
+or unregistered MCP servers). Skipped plugins and unverifiable MCP entries are
+informational warnings and do not affect the exit code. `doctor` never fetches;
+remote-source drift detection is `update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 
@@ -275,6 +280,13 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "missing_outputs": [
     { "kind": "skill", "name": "...", "missing_files": ["..."] }
   ],
+  "modified_files": [
+    { "kind": "rule", "name": "...", "files": ["..."] }
+  ],
+  "unreadable_files": [
+    { "kind": "skill", "name": "...", "files": ["..."],
+      "error": "..." }
+  ],
   "stale_hashes": [
     { "kind": "rule",  "name": "...", "source": "local:...",
       "stored_hash": "...", "current_hash": "..." }
@@ -282,6 +294,9 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "orphan_entries": [
     { "kind": "agent", "name": "...", "source": "local:...",
       "reason": "local-path-gone" }
+  ],
+  "orphaned_dependencies": [
+    { "kind": "skill", "name": "...", "former_requirers": ["skill:..."] }
   ],
   "missing_plugins": [
     { "name": "superpowers", "client": "vscode",

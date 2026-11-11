@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::apply::{check_no_item_symlink, deletable, delete_recorded};
+use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
 use super::git::fetch_ssot;
 use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
@@ -20,7 +20,7 @@ use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
     ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin,
-    StaleHash, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    StaleHash, UnreadableFile, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
     install_with_lockfile,
 };
 
@@ -145,9 +145,7 @@ fn plan_removal(
         let Some(rel) = deletable(&file.path) else {
             continue;
         };
-        if let Some(parent) = rel.parent() {
-            check_no_item_symlink(target, parent)?;
-        }
+        check_no_item_symlink_above(target, &rel)?;
         let recorded: Vec<&str> = entry
             .files
             .iter()
@@ -155,7 +153,9 @@ fn plan_removal(
             .filter(|f| f.path == file.path)
             .map(|f| f.sha256.as_str())
             .collect();
-        match classify(target, &file.path, &recorded)? {
+        let state = classify(target, &file.path, &recorded)
+            .with_context(|| format!("cannot inspect the recorded file {}", file.path))?;
+        match state {
             FileState::Owned => plan.delete.push(rel),
             FileState::Absent => plan.absent.push(rel),
             FileState::Modified | FileState::Unowned => {
@@ -201,15 +201,24 @@ fn remove_selected(
     }
 
     let mut report = RemoveReport::default();
+    // A path recorded by two removed items is reported once, for the first.
+    let mut reported = std::collections::BTreeSet::new();
     for plan in plans {
-        for rel in plan.delete.iter().chain(&plan.absent) {
+        let mut deleted_files = Vec::new();
+        for rel in &plan.delete {
             delete_recorded(target, rel)?;
+            if reported.insert(rel.clone()) {
+                deleted_files.push(rel.clone());
+            }
+        }
+        for rel in &plan.absent {
+            prune_empty_parents(target, rel);
         }
         lock.remove(plan.kind, &plan.name);
         report.items.push(RemovedItem {
             kind: plan.kind,
             name: plan.name,
-            deleted_files: plan.delete,
+            deleted_files,
             kept_modified: plan.kept,
         });
     }
@@ -251,17 +260,29 @@ fn remove_selected(
 }
 
 /// Verify installed-state consistency against `.upskill-lock.json`.
-/// Three independent buckets per ADR-0004:
+/// The report has these buckets:
 /// - **missing outputs** — file paths the lockfile says should exist
-///   but don't. Reinstall (`upskill add <source>`) fixes it.
+///   but don't: every recorded path that is absent, or, for an item
+///   without a `files` record, each per-client entrypoint that is absent.
+///   Reinstall (`upskill add <source>`) fixes it.
+/// - **modified files** — recorded files whose content differs from the
+///   recorded hash, or that are no longer regular files.
+/// - **unreadable files** — recorded files that could not be inspected.
+///   `doctor` continues with the other files and items.
 /// - **stale hashes** — for `local:` sources still on disk, the SSOT
 ///   item directory hashes to a value that does not match the lockfile.
 ///   `upskill update` (or `--dry-run`) fixes it.
 /// - **orphan entries** — the lockfile points at a `local:` source that
 ///   is gone, or at an item that no longer exists in its source. The
 ///   user has to `upskill remove` to clear it.
+/// - **orphaned dependencies** (advisory) — items pulled in only as a
+///   dependency of items that are no longer installed.
+/// - **missing plugins** and **skipped plugins** (advisory) — plugin
+///   reconciliation against each client.
+/// - **MCP entries** — MCP server reconciliation against each client.
 ///
-/// Doctor never fetches. Remote-source drift is detected by
+/// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
+/// never fetches. Remote-source drift is detected by
 /// `update --dry-run`, which does fetch.
 pub fn doctor(target: &Path) -> Result<DoctorReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
@@ -272,6 +293,8 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 
         let mut missing = Vec::new();
         let mut modified = Vec::new();
+        let mut unreadable = Vec::new();
+        let mut unreadable_error: Option<String> = None;
         if entry.files.is_empty() {
             // No record (a `schema: 1` lockfile, which `doctor` does not
             // adopt): check the entrypoint of each layout path.
@@ -301,10 +324,16 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                     .filter(|f| f.path == file.path)
                     .map(|f| f.sha256.as_str())
                     .collect();
-                match classify(target, &file.path, &recorded)? {
-                    FileState::Absent => missing.push(rel),
-                    FileState::Modified => modified.push(rel),
-                    FileState::Owned | FileState::Unowned => {}
+                match classify(target, &file.path, &recorded) {
+                    Ok(FileState::Absent) => missing.push(rel),
+                    Ok(FileState::Modified) => modified.push(rel),
+                    Ok(FileState::Owned | FileState::Unowned) => {}
+                    Err(err) => {
+                        if unreadable_error.is_none() {
+                            unreadable_error = Some(format!("{err:#}"));
+                        }
+                        unreadable.push(rel);
+                    }
                 }
             }
             missing.sort();
@@ -324,6 +353,16 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 kind,
                 name: entry.name.clone(),
                 files: modified,
+            });
+        }
+        if let Some(error) = unreadable_error {
+            unreadable.sort();
+            unreadable.dedup();
+            report.unreadable_files.push(UnreadableFile {
+                kind,
+                name: entry.name.clone(),
+                files: unreadable,
+                error,
             });
         }
 
