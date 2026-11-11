@@ -279,8 +279,9 @@ git ref, with what content hashes. Same schema in both locations. A new lockfile
 is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
 `sha256` fields. `add` and `update` fill `files` with every file they write for
-the item and delete the recorded files that a reinstall no longer produces; no
-command fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
+the item and delete the recorded files that a reinstall no longer produces,
+unless another item installed by the same command writes that path; no command
+fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
 `update` and `remove` (not `update --dry-run`, not `doctor`, not a `remove` that
 fails on an unknown name) adopt a `schema: 1` lockfile: they keep the old bytes
 as `.upskill-lock.json.v1`, record each existing file at the items' output paths
