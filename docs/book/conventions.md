@@ -51,6 +51,10 @@ Why this shape:
   ([format-spec §2.1](format-spec.md#21-item-directory-structure)), not by the
   parent directory.
 
+Keep the registry root outside every client directory (such as `.claude/` or
+`~/.claude`): upskill does not support a source that is rooted in a client
+directory or contains one.
+
 ### When bundles outgrow the flat layout
 
 Once a registry holds enough bundles that `*.bundle.yaml` files start to drown

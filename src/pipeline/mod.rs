@@ -349,6 +349,29 @@ pub fn install_with_lockfile(
         anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
     }
 
+    // -- Refuse a source item that overlaps its own output paths --
+    // Aliases apply to entry-source items only, as in the alias step below.
+    if let Some(closure) = &closure {
+        for (src_label, si) in &closure.by_source {
+            let aliases: &[(String, String)] = if *src_label == label {
+                &options.aliases
+            } else {
+                &[]
+            };
+            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), aliases)?;
+        }
+    } else {
+        // Without a closure, `items` is not empty: a bundle-file source always
+        // gets a closure, and only a request with names defers to name
+        // resolution.
+        install::check_name_resolution_outside_outputs(
+            &local_source,
+            target,
+            items,
+            &options.aliases,
+        )?;
+    }
+
     // -- Now proceed with generation (files are written here) --
     // With a closure, install each source's resolved items from that
     // source's own fetched root. Without one (bundle file / name

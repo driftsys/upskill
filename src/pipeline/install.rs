@@ -16,11 +16,12 @@ use std::path::{Path, PathBuf};
 
 use super::discovery::{
     detect_item_entrypoint, find_bundle_by_name, find_registry_root, has_matching_items,
-    is_bundle_file, iter_item_dirs, iter_item_resources,
+    is_bundle_file, iter_item_dirs, iter_item_resources, probe_effective_name,
 };
 use super::hash::hash_item_dir;
 use super::output::{
-    copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
+    check_source_outside_outputs, copy_item_resources, is_dir_backed, output_path,
+    remove_item_outputs, write_output,
 };
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
@@ -65,11 +66,43 @@ pub(super) fn install_from_local_path_selective(
     Ok(report)
 }
 
-pub(super) fn install_bundle_file(
-    bundle_path: &Path,
+/// Run [`check_source_outside_outputs`] for every item under `source` that
+/// `filter` selects (all items when `filter` is `None`). The item `audience`
+/// is not applied, so an item that the install skips for the selected
+/// clients is still checked. An item that `aliases` (`--as` pairs, `from`
+/// empty for every item) renames is also checked under its installed name.
+/// Called before the first deletion or write of an install for one source.
+pub(super) fn check_sources_outside_outputs(
+    source: &Path,
     target: &Path,
-    selection: &ClientSelection,
-) -> Result<InstallReport> {
+    filter: Option<&crate::bundle::ResolvedItems>,
+    aliases: &[(String, String)],
+) -> Result<()> {
+    for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
+        for (folder, dir) in iter_item_dirs(source)? {
+            let entry_path = dir.join(kind.entrypoint_filename());
+            if !entry_path.exists() {
+                continue;
+            }
+            let name = probe_effective_name(&entry_path, kind, &folder);
+            if filter.is_some_and(|items| !items.contains(kind, &name)) {
+                continue;
+            }
+            check_source_outside_outputs(target, kind, &name, &dir, source)?;
+            if let Some((_, alias)) = aliases
+                .iter()
+                .find(|(from, _)| from.is_empty() || *from == name)
+            {
+                check_source_outside_outputs(target, kind, alias, &dir, source)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Find the registry root of `bundle_path` and resolve the bundle against
+/// its sibling bundles.
+fn resolve_bundle_file(bundle_path: &Path) -> Result<(PathBuf, crate::bundle::Resolved)> {
     let registry_root = find_registry_root(bundle_path).with_context(|| {
         format!(
             "find SSOT registry root containing skills/, rules/, agents/, or bundles/ \
@@ -93,6 +126,15 @@ pub(super) fn install_bundle_file(
         .collect();
 
     let resolved = crate::bundle::resolve(&entry, &available)?;
+    Ok((registry_root, resolved))
+}
+
+pub(super) fn install_bundle_file(
+    bundle_path: &Path,
+    target: &Path,
+    selection: &ClientSelection,
+) -> Result<InstallReport> {
+    let (registry_root, resolved) = resolve_bundle_file(bundle_path)?;
 
     let mut report = InstallReport {
         bundles: resolved.bundles.clone(),
@@ -109,6 +151,33 @@ pub(super) fn install_bundle_file(
         )?;
     }
     Ok(report)
+}
+
+/// Run [`check_sources_outside_outputs`] for the items that
+/// [`install_with_name_resolution_from_local`] installs for `names`: the
+/// items of each named bundle and each named item. Called before the first
+/// deletion or write.
+pub(super) fn check_name_resolution_outside_outputs(
+    local_source: &Path,
+    target: &Path,
+    names: &[String],
+    aliases: &[(String, String)],
+) -> Result<()> {
+    let mut item_names = Vec::new();
+    for name in names {
+        if let Some(bundle_path) = find_bundle_by_name(local_source, name) {
+            let (registry_root, resolved) = resolve_bundle_file(&bundle_path)?;
+            check_sources_outside_outputs(&registry_root, target, Some(&resolved.items), aliases)?;
+        } else {
+            item_names.push(name.clone());
+        }
+    }
+    let filter = crate::bundle::ResolvedItems {
+        rules: item_names.clone(),
+        skills: item_names.clone(),
+        agents: item_names,
+    };
+    check_sources_outside_outputs(local_source, target, Some(&filter), aliases)
 }
 
 /// Like [`super::install_with_lockfile`]'s name-resolution branch but
@@ -248,10 +317,9 @@ fn read_item_requires(
     let entry = dir.join(kind.entrypoint_filename());
     let raw = fs::read_to_string(&entry).with_context(|| format!("read {}", entry.display()))?;
     let req = match kind {
-        ItemKind::Skill => frontmatter::parse::<Skill>(&raw)?.0.requires,
-        ItemKind::Rule => frontmatter::parse::<Rule>(&raw)?.0.requires,
-        ItemKind::Agent => {
-            let agent = frontmatter::parse::<Agent>(&raw)?.0;
+        ItemKind::Skill => frontmatter::parse::<Skill>(&raw).map(|(skill, _)| skill.requires),
+        ItemKind::Rule => frontmatter::parse::<Rule>(&raw).map(|(rule, _)| rule.requires),
+        ItemKind::Agent => frontmatter::parse::<Agent>(&raw).map(|(agent, _)| {
             let mut req = agent.requires;
             for s in &agent.preload_skills {
                 let present = index.contains_key(&(ItemKind::Skill, s.clone()));
@@ -260,8 +328,9 @@ fn read_item_requires(
                 }
             }
             req
-        }
-    };
+        }),
+    }
+    .with_context(|| format!("parse {}", entry.display()))?;
     Ok(req)
 }
 

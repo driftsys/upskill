@@ -338,3 +338,93 @@ fn add_bundle_missing_cross_source_bundle_errors() {
         .assert()
         .failure();
 }
+
+/// Stage a project at `<tmp>/target` whose `.claude/rules` directory is the
+/// DEP source: it holds the bundle `dep` and the rule `dep-rule` in the folder
+/// `dep_folder`. The META source at `<tmp>/reg-meta` holds the rule
+/// `meta-rule` and the bundle `meta`, which requires `dep` from DEP.
+/// Returns `(tmp, home, target, meta bundle path, dep rule path)`.
+fn stage_dep_source_in_claude_rules(
+    dep_folder: &str,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg_dep = target.join(".claude/rules");
+    let dep_dir = reg_dep.join(dep_folder);
+    fs::create_dir_all(&dep_dir).unwrap();
+    let dep_rule = dep_dir.join("RULE.md");
+    fs::write(
+        &dep_rule,
+        "---\nschema: 1\nname: dep-rule\ndescription: d\n---\n# dep-rule\n",
+    )
+    .unwrap();
+    write_bundle(&reg_dep, "dep", "items:\n  rules:\n  - dep-rule\n");
+
+    let reg_meta = tmp.path().join("reg-meta");
+    write_rule(&reg_meta, "meta-rule");
+    write_bundle(
+        &reg_meta,
+        "meta",
+        &format!(
+            "items:\n  rules:\n  - meta-rule\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            reg_dep.display()
+        ),
+    );
+    let bundle = reg_meta.join("bundles/meta.bundle.yaml");
+    (tmp, home, target, bundle, dep_rule)
+}
+
+#[test]
+fn add_bundle_refuses_cross_source_dependency_inside_an_output_path() {
+    // The dependency rule `dep-rule` lives at `.claude/rules/dep-rule/`, the
+    // Claude resource base of `dep-rule`.
+    let (_tmp, home, target, bundle, dep_rule) = stage_dep_source_in_claude_rules("dep-rule");
+    let before = fs::read_to_string(&dep_rule).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", bundle.to_str().unwrap(), "--claude", "--project"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("'dep-rule'") && stderr.contains("overlaps the output path"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&dep_rule).unwrap(), before);
+    assert!(!target.join(".claude/rules/meta-rule.md").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_bundle_alias_does_not_apply_to_cross_source_dependency_items() {
+    // The dependency rule `dep-rule` lives at `.claude/rules/x/`, the Claude
+    // resource base of a rule named `x`. `--as dep-rule=x` names an entry
+    // source alias only, so `dep-rule` keeps its name and is not refused.
+    let (_tmp, home, target, bundle, dep_rule) = stage_dep_source_in_claude_rules("x");
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            bundle.to_str().unwrap(),
+            "--as",
+            "dep-rule=x",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/rules/dep-rule.md").exists());
+    assert!(dep_rule.exists());
+}

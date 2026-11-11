@@ -301,6 +301,16 @@ items:
     }
 
     #[test]
+    fn load_rejects_bundle_without_schema() {
+        let content = "name: meta\ndescription: d\nitems: {}\n";
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(tmp.path(), "meta.bundle.yaml", content);
+        let err = load(&path).expect_err("a bundle without schema must not load");
+        let msg = format!("{:#}", err);
+        assert!(msg.contains("missing field `schema`"), "got: {msg}");
+    }
+
+    #[test]
     fn load_accepts_empty_items_when_only_requires() {
         // A meta-bundle that just composes other bundles is valid.
         let content = "schema: 1
