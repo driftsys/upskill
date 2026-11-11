@@ -973,9 +973,11 @@ These documents belong to the gated lifecycle approach that
 [AD-0042](../adr/0042-resteer-customization-delivery.md) withdrew on 2026-11-11.
 The library code that the lifecycle and owned-artifact documents planned was
 removed from `main` and is kept on the branch `archive/lifecycle-2026-11`. The
-Q11, Q11b and Gate 6 documents planned native trials; their scripts and tests
-stay on `main`. The trial results they produced stay in `docs/technotes/` as
-research.
+Gate 6 activation design planned production activation on that library code, and
+the customization delivery reconciliation plan planned changes to modules that
+were removed. The Q11 and Q11b documents planned native trials; their scripts
+and tests stay on `main`. The trial results they produced stay in
+`docs/technotes/` as research.
 
 ## Customization storage and delivery candidates
 

@@ -52,8 +52,23 @@ and installed through a command.
    (`lifecycle`, `filesystem`, `operations`, `files`, `compile`, `instructions`,
    `source_manifest`, `ownership`), their tests, the legacy projection and the
    direct `rustix` dependency were removed from `main`. `rustix` stays in
-   `Cargo.lock` as a dependency of `tempfile`. They are kept on the branch
-   `archive/lifecycle-2026-11`, which receives no further work.
+   `Cargo.lock` as a dependency of `tempfile`. The removed modules, tests and
+   legacy projection are kept on the branch `archive/lifecycle-2026-11`, which
+   receives no further work.
+6. **Delivery order by capability.** The work follows the delivery order of the
+   re-steer design: each step delivers one capability (ownership record,
+   `update`, repeatable operations, scope, update check, support levels) for all
+   content kinds at the same time. There is no order between skills, rules and
+   automatic maintenance.
+7. **Both copies of a rule for Claude Code and Copilot.** Decided by the
+   maintainer on 2026-11-11, after trial T1. When a rule is installed for both
+   Claude Code and Copilot, upskill writes both the `.claude/rules` file and the
+   `.github/instructions` file. Each client can then be removed without an
+   effect on the other client's file. Known limit: in trial T1 (Copilot CLI
+   1.0.109), with both copies present, `copilot instruction list` listed the
+   rule twice and the model applied its marker twice. A skill installed for both
+   clients was listed once. The trial report is recorded with the change for
+   [#465](https://github.com/driftsys/upskill/issues/465).
 
 This record replaces the following clauses of
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):
@@ -64,21 +79,30 @@ This record replaces the following clauses of
 - the clause that reuses source capture, per-owner contracts, complete
   preflight, qualified locking, exact backup and recovery foundations (Decisions
   2 and 5);
-- the selected Codex policy, "supported with declared limitation" (Decision 4).
+- the selected Codex policy, "supported with declared limitation" (Decision 4);
+- the implementation order of skills and resources first, then rules, then
+  automatic maintenance (Decision 6);
+- the one-copy policy for a rule read by both Claude Code and Copilot, which
+  rejects a second `.github/instructions` copy (Decision 7).
 
 It also replaces the following clauses of
 [AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md):
 
-- the exclusion of a reduced four-client release scope, and the requirement of
-  Q10/Q11 and CD-01 through CD-11 evidence before owned implementation
-  (Decisions 3 and 4);
+- the requirement of Q10/Q11 and CD-01 through CD-11 evidence before owned
+  implementation (Decision 3);
+- the implementation order of skills and resources first, then rules, then
+  automatic maintenance (Decision 6);
+- the one-copy policy for a rule read by both Claude Code and Copilot, which
+  rejects a second Copilot copy (Decision 7);
 - the clause that reuses capture, owner/reference contracts, complete preflight,
   qualified locking, backups and recovery (Decisions 2 and 5).
 
 The separation of delivery from discovery and activation (AD-0040) and separate
-client representations as the design baseline (AD-0041) stay accepted. AD-0041
-is revisited only if trial T1 shows that Copilot lists or applies an item
-installed for both Claude Code and Copilot twice.
+client representations as the design baseline (AD-0041) stay accepted.
+
+AD-0041 leaves a reduced four-client release scope to a separate decision. This
+record is that decision: the MVP release covers Claude Code and Copilot, with
+OpenCode experimental and Codex unsupported (Decisions 3 and 4).
 
 ## Consequences
 

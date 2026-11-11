@@ -1,6 +1,13 @@
 # M1 Gate 5 final acceptance evidence
 
-Gate 5 remains an opt-in library path. Source-backed rule operations use
+The code and tests that this record names were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`src/lifecycle`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle),
+[`tests/lifecycle_commands.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_commands.rs),
+[`tests/lifecycle_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_orchestration.rs).
+
+Gate 5 was an opt-in library path. Source-backed rule operations use
 `orchestration::with_prepared`; supplied instruction contributions use
 `commands::LifecycleSession`. These are the adapters available for Gate 6. There
 is no production schema-2 activation or native Codex qualification.
@@ -18,7 +25,7 @@ The names below identify executable tests, rather than inferred guarantees.
 | AC5: safe individual removal             | `lifecycle_orchestration::resource_policy_is_applied_to_output_and_contract_and_manual_neighbors_survive`; `lifecycle_commands::fresh_and_migrated_add_update_remove_preserve_extra_files_and_exact_backup`; `lifecycle_retirement::shared_whole_file_survives_until_final_owner_retires`                                                |
 | AC6: observational inspection            | `lifecycle_inspection::qualified_inspection_does_not_create_storage_backup_or_lock`; `qualified_doctor_reports_drift_without_changing_state_or_outputs`; `scope_inspection_remains_read_only_while_writer_guard_is_held`; `lifecycle_preview::preview_preserves_physical_state_sources_outputs_and_unowned_resources`                    |
 | AC7: stale evidence and writer rejection | `lifecycle_commands::stale_state_source_or_destination_rejects_without_partial_output`; `lifecycle_orchestration::stale_source_after_preparation_rejects_without_destination_effects`; process acceptance rejects a second writer while the child is paused                                                                              |
-| AC8: checkpoint recovery                 | `lifecycle::acceptance_tests::every_observed_lifecycle_checkpoint_recovers_exact_captured_intent`, complemented by executor process tests in `src/filesystem/execution/process_tests.rs`                                                                                                                                                 |
+| AC8: checkpoint recovery                 | `lifecycle::acceptance_tests::every_observed_lifecycle_checkpoint_recovers_exact_captured_intent`, complemented by executor process tests in [`src/filesystem/execution/process_tests.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/process_tests.rs)                                 |
 | AC9: retained and unsupported records    | `lifecycle_inspection::legacy_inspection_retains_exact_bytes_unknown_fields_and_duplicate_rows`; `mixed_state_keeps_unresolved_native_and_legacy_rows_visible`; `lifecycle_retirement::unsupported_owned_kind_blocks_retirement_but_survives_disjoint_work`; captured command selection tests above                                      |
 | AC10: inactive production boundary       | `lifecycle_end_to_end::production_add_retains_schema_one` invokes the actual CLI with isolated HOME and checks schema 1 and backup absence                                                                                                                                                                                               |
 

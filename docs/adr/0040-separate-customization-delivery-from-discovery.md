@@ -10,9 +10,10 @@ pending. Other package and release-scope amendments below remain proposals
 
 [AD-0042](0042-resteer-customization-delivery.md) replaces the activation and
 release-gate clauses of this record, the clause that reuses capture, locking,
-backup and recovery foundations, and the selected Codex policy "supported with
-declared limitation"; the separation of delivery from discovery and activation
-stays accepted.
+backup and recovery foundations, the selected Codex policy "supported with
+declared limitation", the skills-before-rules implementation order and the
+one-copy Claude/Copilot rule policy; the separation of delivery from discovery
+and activation stays accepted.
 
 ## Context
 

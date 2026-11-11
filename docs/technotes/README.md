@@ -181,10 +181,10 @@ snapshot; a stable name does not imply that external research remains current.
 
 Validation records retain their individual revision and platform limits. They
 are not proof of production activation or complete lifecycle qualification. The
-library code and tests that the filesystem, execution and M1 lifecycle
-validation records describe were removed from `main` by
-[AD-0042](../adr/0042-resteer-customization-delivery.md); their links point to
-the branch `archive/lifecycle-2026-11`. Keep schema bytes, licenses and
+library code and tests that the filesystem, execution, CodeQL extraction and M1
+lifecycle and Gate 5 validation records describe were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md); each of those records
+links to the branch `archive/lifecycle-2026-11`. Keep schema bytes, licenses and
 provenance manifests together. Preserve captured evidence and its hashes; update
 research explicitly when upstream contracts change. Technical notes and evidence
 assets are outside the published book.

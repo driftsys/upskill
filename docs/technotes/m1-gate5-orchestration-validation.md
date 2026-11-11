@@ -1,6 +1,12 @@
 # Source-backed lifecycle orchestration validation
 
-`lifecycle::orchestration::with_prepared` is an opt-in library boundary for
+The code and tests that this record names were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`src/lifecycle/orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/orchestration.rs),
+[`tests/lifecycle_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_orchestration.rs).
+
+`lifecycle::orchestration::with_prepared` was an opt-in library boundary for
 explicitly selected rule item roots. It opens `LifecycleSession` under the
 caller-retained matching writer guard before source work. A recovery report
 stops the new request. Complete literal/all selection preflight blocks selected

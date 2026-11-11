@@ -15,7 +15,7 @@ executor/application helpers. No new journal or writer.
 **Tech stack:** Existing Rust library; Rust 1.85, no new dependencies.
 
 **Spec:**
-[Gate 5 umbrella](../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md).
+[Gate 5 umbrella](../specs/2026-10-15-m1-gate5-lifecycle-integration.md).
 
 ## Acceptance and execution
 

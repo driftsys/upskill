@@ -143,12 +143,12 @@ additional scope stay separate, not implied by one success. No Q5 retry,
 production route change or package-default adoption follows from this document
 ([handoff][handoff], [Q11][Q11], [preservation contract][preservation]).
 
-[handoff]: 2026-10-23-customization-delivery-implementation-spec.md
+[handoff]: ../../wip/specs/2026-10-23-customization-delivery-implementation-spec.md
 [contract]: ../../topics/0009-customization-delivery.md
 [direction]: ../../adr/0040-separate-customization-delivery-from-discovery.md
 [Q11]: ../../technotes/gate6-cross-client-package-isolation.md
 [claude-summary]: ../../technotes/evidence/2026-10-25-cross-client-package-isolation/claude-authenticated-retry/summary.json
 [copilot-summary]: ../../technotes/evidence/2026-10-25-cross-client-package-isolation/copilot-slash-retry/summary.json
 [Q6]: ../../technotes/gate6-claude-managed-root.md
-[preflight]: 2026-10-25-preflight-discovery-inventory-design.md
-[preservation]: 2026-10-25-customization-preservation-contract.md
+[preflight]: ../../wip/specs/2026-10-25-preflight-discovery-inventory-design.md
+[preservation]: ../../wip/specs/2026-10-25-customization-preservation-contract.md
