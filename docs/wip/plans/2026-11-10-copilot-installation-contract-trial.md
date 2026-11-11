@@ -1,9 +1,9 @@
 # Fresh Copilot installation contract trial
 
-Status: prepared for approval, not executed. This packet replaces the packet of
-2026-11-05, which was built for Copilot 1.0.105 and was never executed.
-Preparing and validating it authorizes no native mutation. The full generated
-name remains unchanged at 72 characters.
+Status: executed once on 2026-11-11 and stopped at sequence 4; see Outcome. This
+packet replaces the packet of 2026-11-05, which was built for Copilot 1.0.105
+and was never executed. Preparing and validating it authorizes no native
+mutation. The full generated name remains unchanged at 72 characters.
 
 ## Purpose and exact input
 
@@ -114,3 +114,36 @@ test targets: 1760 passed, 0 failed, 7 ignored. Preparing this packet ran only
 read-only native commands: `--version` and ten `plugin ... --help` commands of
 the private installation, with an isolated HOME and no model use. No inventory,
 registration, installation or removal command ran.
+
+## Outcome (2026-11-11)
+
+The user approved one run. The run used the fixed `--execute` entrypoint once
+and stopped with reason `transport` at sequence 4. The
+[execution records](../../technotes/evidence/2026-11-11-copilot-installation-trial-execution/)
+are copied from the packet evidence directory.
+
+- Sequences 0 to 3 were accepted. The version output matched 1.0.107. The
+  baseline plugin inventory had 2 unrelated builtin entries. The baseline
+  marketplace inventory had 1 default remote entry. No entry used the fixture
+  name. These are the first 1.0.107 inventory observations, and the strict
+  collector accepted both schemas.
+- Sequence 4, `plugin marketplace add`, exited with code 1 and wrote 225 bytes
+  to stderr. Sequences 5 to 11 did not run. The run made zero model requests.
+- Deviation: the driver that ran had SHA-256
+  `c9cf4ab1067595b63518bbcdb6ea1ae8e8e09cd7d1688336693167675fbd6fdc`, not the
+  `driver_sha256` in `readiness.json`. The driver was rebuilt after the
+  readiness receipt was written, and `--check` did not compare the driver
+  digest. This run is therefore evidence outside the approved bindings. The
+  execution modes of `copilot_contract_probe` now require a fourth
+  `DRIVER_SHA256` argument and stop before any effect when it does not match.
+- A separate diagnosis repeated the same command against a copy of the export,
+  in a throwaway home directory, with stderr kept. Copilot 1.0.107 reported:
+  `Invalid marketplace.json: name: String must contain at most 64 character(s),
+  plugins.0.name: String must contain at most 64 character(s)`.
+  The generated 72-character name exceeds this limit for both the marketplace
+  and the plugin. A relative path argument (`./mp`) was interpreted as a GitHub
+  repository and caused a failed network clone; the trial uses absolute paths
+  only.
+
+The naming scheme needs a decision before a new packet is prepared. This packet
+is consumed and must not be run again.

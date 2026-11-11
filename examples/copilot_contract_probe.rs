@@ -1,5 +1,6 @@
 //! Maintainer diagnostic only; no admitted production profile or owned-skills CLI.
 use anyhow::{Context, Result, ensure};
+use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::sync::{Arc, atomic::AtomicBool};
 use upskill::native_delivery::copilot::probe::{CopilotProbePreflight, CopilotProbeRequest};
@@ -13,7 +14,7 @@ fn main() -> Result<()> {
         arguments.next();
     }
     let root = PathBuf::from(arguments.next().context(
-        "usage: copilot_contract_probe [--check|--execute|--execute-marketplace-check] ROOT PLAN_SHA256 PREPARATION_SHA256",
+        "usage: copilot_contract_probe [--check] ROOT PLAN_SHA256 PREPARATION_SHA256\n       copilot_contract_probe --execute|--execute-marketplace-check ROOT PLAN_SHA256 PREPARATION_SHA256 DRIVER_SHA256",
     )?);
     let plan = arguments
         .next()
@@ -25,6 +26,25 @@ fn main() -> Result<()> {
         .context("missing reviewed preparation digest")?
         .into_string()
         .map_err(|_| anyhow::anyhow!("invalid preparation digest"))?;
+    if execute || marketplace_only {
+        // The reviewed readiness receipt binds this executable's digest.
+        // A rebuilt driver must stop before any packet or native effect.
+        let expected = arguments
+            .next()
+            .context("missing reviewed driver digest")?
+            .into_string()
+            .map_err(|_| anyhow::anyhow!("invalid driver digest"))?;
+        let path = std::env::current_exe().context("locating the probe driver")?;
+        let bytes = std::fs::read(&path).context("reading the probe driver")?;
+        let actual: String = Sha256::digest(&bytes)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        ensure!(
+            actual == expected,
+            "probe driver digest {actual} does not match the reviewed digest {expected}"
+        );
+    }
     ensure!(arguments.next().is_none(), "unexpected probe arguments");
     let request = CopilotProbeRequest {
         packet_root: root,

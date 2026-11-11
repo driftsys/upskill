@@ -386,7 +386,9 @@ fn maintainer_example_check_is_read_only_and_execution_uses_closed_environment()
         assert!(!fixture.root.join("project/.git").exists());
         assert!(!fixture.parent.join("control/count").exists());
     }
-    let output = assert_cmd::Command::from_std(command(Some("--execute")))
+    let mut execute = command(Some("--execute"));
+    execute.arg(digest(&fs::read(program).unwrap()));
+    let output = assert_cmd::Command::from_std(execute)
         .timeout(std::time::Duration::from_secs(120))
         .assert()
         .success()
@@ -887,6 +889,36 @@ fn marketplace_only_diagnostic_never_invokes_registration_or_plugin_inventory() 
 }
 
 #[test]
+fn example_execution_refuses_a_driver_digest_mismatch_before_any_effect() {
+    let program = executable::collector_example();
+    for (mode, driver) in [
+        ("--execute", Some("0".repeat(64))),
+        ("--execute-marketplace-check", Some("0".repeat(64))),
+        ("--execute", None),
+    ] {
+        let fixture = prepared("driver-digest");
+        let mut command = std::process::Command::new(program);
+        command
+            .env_clear()
+            .env("HOME", &fixture.parent)
+            .env("PATH", "/usr/bin:/bin")
+            .arg(mode)
+            .arg(&fixture.request.packet_root)
+            .arg(&fixture.request.plan_sha256)
+            .arg(&fixture.request.preparation_sha256);
+        if let Some(driver) = &driver {
+            command.arg(driver);
+        }
+        let output = command.output().unwrap();
+        assert!(!output.status.success(), "{mode} {driver:?}");
+        assert!(output.stdout.is_empty());
+        assert!(!fixture.root.join("evidence").exists());
+        assert!(!fixture.root.join("project/.git").exists());
+        assert!(!fixture.parent.join("control/count").exists());
+    }
+}
+
+#[test]
 fn marketplace_check_example_selects_only_the_read_only_sequence() {
     let fixture = prepared("marketplace-only");
     let control = fixture.parent.join("control");
@@ -899,6 +931,7 @@ fn marketplace_check_example_selects_only_the_read_only_sequence() {
         .arg(&fixture.request.packet_root)
         .arg(&fixture.request.plan_sha256)
         .arg(&fixture.request.preparation_sha256)
+        .arg(digest(&fs::read(executable::collector_example()).unwrap()))
         .output()
         .unwrap();
     assert!(output.status.success());
