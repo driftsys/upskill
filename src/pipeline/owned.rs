@@ -322,6 +322,29 @@ mod tests {
     }
 
     #[test]
+    fn adoption_records_only_the_listed_clients() {
+        let tmp = tempfile::tempdir().unwrap();
+        let claude = output_path(ItemKind::Rule, Client::Claude, "r");
+        let copilot = output_path(ItemKind::Rule, Client::Copilot, "r");
+        write(tmp.path(), &claude, b"claude");
+        write(tmp.path(), &copilot, b"copilot");
+        let mut lock = schema1_lock(tmp.path(), vec![item(ItemKind::Rule, "r", &["claude"])]);
+        let paths = adopt_schema1(tmp.path(), &mut lock).unwrap().unwrap();
+        assert_eq!(paths, vec![rel_to_record(&claude).unwrap()]);
+        assert_eq!(lock.items[0].files.len(), 1);
+        assert_eq!(lock.items[0].files[0].client, "claude");
+    }
+
+    #[test]
+    fn adoption_treats_a_path_below_a_regular_file_as_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), Path::new(".claude/skills"), b"a file");
+        let mut lock = schema1_lock(tmp.path(), vec![item(ItemKind::Skill, "s", &["claude"])]);
+        let paths = adopt_schema1(tmp.path(), &mut lock).unwrap().unwrap();
+        assert!(paths.is_empty());
+    }
+
+    #[test]
     fn adoption_records_existing_files_and_keeps_backup() {
         let tmp = tempfile::tempdir().unwrap();
         let target = tmp.path();

@@ -834,6 +834,88 @@ mod pre_check_tests {
     }
 
     #[test]
+    fn ignores_a_recorded_path_with_a_parent_component_inside_a_client_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside.md");
+        fs::write(&outside, b"keep").unwrap();
+        let target = tmp.path().join("t");
+        fs::create_dir_all(target.join(".claude/skills")).unwrap();
+        let mut lock = stale_record(".claude/skills/../../../outside.md", b"keep");
+        let s = PlannedItem {
+            files: vec![],
+            ..planned("s", ".claude/skills/s/SKILL.md")
+        };
+        apply_plan(&target, &mut lock, &[s]).unwrap();
+        assert_eq!(fs::read(&outside).unwrap(), b"keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_side_symlink_check_runs_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("old.md"), b"x").unwrap();
+        fs::create_dir_all(tmp.path().join(".claude/skills")).unwrap();
+        std::os::unix::fs::symlink(&outside, tmp.path().join(".claude/skills/s")).unwrap();
+        let mut lock = stale_record(".claude/skills/s/old.md", b"x");
+        let s = PlannedItem {
+            files: vec![],
+            ..planned("s", ".claude/skills/s/SKILL.md")
+        };
+        let plan = [planned("first", ".claude/skills/first/SKILL.md"), s];
+        assert!(apply_plan(tmp.path(), &mut lock, &plan).is_err());
+        assert!(!tmp.path().join(".claude/skills/first").exists());
+        assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"x");
+    }
+
+    #[test]
+    fn pre_check_rejects_an_empty_directory_where_a_file_is_planned() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join(".claude/skills/s/notes");
+        fs::create_dir_all(&dir).unwrap();
+        let plan = [planned("s", ".claude/skills/s/notes")];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("is not a regular file"),
+            "{err:#}"
+        );
+        assert!(dir.is_dir());
+    }
+
+    #[test]
+    fn record_is_sorted_by_client_then_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = |client, rel: &str| PlannedFile {
+            client,
+            rel: PathBuf::from(rel),
+            bytes: b"body".to_vec(),
+            mode: None,
+        };
+        let item = PlannedItem {
+            files: vec![
+                file(Client::Copilot, ".github/skills/s/b.md"),
+                file(Client::Copilot, ".claude/skills/s/a.md"),
+                file(Client::Claude, ".github/skills/s/z.md"),
+            ],
+            ..planned("s", ".claude/skills/s/SKILL.md")
+        };
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item]).unwrap();
+        let order: Vec<(&str, &str)> = rec[&(ItemKind::Skill, "s".to_string())]
+            .iter()
+            .map(|f| (f.client.as_str(), f.path.as_str()))
+            .collect();
+        assert_eq!(
+            order,
+            [
+                ("claude", ".github/skills/s/z.md"),
+                ("copilot", ".claude/skills/s/a.md"),
+                ("copilot", ".github/skills/s/b.md"),
+            ]
+        );
+    }
+
+    #[test]
     fn prune_empty_parents_never_deletes_a_file() {
         let tmp = tempfile::tempdir().unwrap();
         let file = tmp.path().join(".claude/skills/s/SKILL.md");

@@ -1123,3 +1123,109 @@ fn remove_force_deletes_an_unreadable_recorded_file() {
     assert!(fs::symlink_metadata(&rule).is_err());
     assert!(!lists_item(tmp.path(), "api-conventions"));
 }
+
+/// A skill `tool` under `<root>/tools` with the resource `scripts/run.sh`
+/// (mode 0755 on Unix).
+fn write_skill_with_script(root: &Path) {
+    let src = root.join("tools");
+    write_skill(&src, "tool", "Run [the script](./scripts/run.sh).");
+    let script = src.join("tool/scripts/run.sh");
+    fs::create_dir_all(script.parent().unwrap()).unwrap();
+    fs::write(&script, "#!/bin/sh\necho run\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
+#[test]
+fn narrowing_the_clients_deletes_the_dropped_client_files() {
+    let (tmp, home) = project();
+    write_skill_with_script(tmp.path());
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--copilot", "--project"])
+        .assert()
+        .success();
+    let copilot_script = tmp.path().join(".github/skills/tool/scripts/run.sh");
+    assert!(copilot_script.exists());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .success();
+
+    assert!(!copilot_script.exists());
+    assert!(!tmp.path().join(".github/skills/tool").exists());
+    assert!(
+        tmp.path()
+            .join(".claude/skills/tool/scripts/run.sh")
+            .exists()
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn add_keeps_the_executable_bit_of_a_source_resource() {
+    use std::os::unix::fs::PermissionsExt;
+    let (tmp, home) = project();
+    write_skill_with_script(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .success();
+
+    let mode = fs::metadata(tmp.path().join(".claude/skills/tool/scripts/run.sh"))
+        .unwrap()
+        .permissions()
+        .mode();
+    assert_eq!(mode & 0o777, 0o755);
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_of_two_items_fails_before_any_deletion_when_the_second_is_blocked() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    let dir = tmp.path().join(".claude/skills/create-api-endpoint");
+    let outside = tmp.path().join("outside");
+    fs::rename(&dir, &outside).unwrap();
+    std::os::unix::fs::symlink(&outside, &dir).unwrap();
+
+    remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "create-api-endpoint", "--project"],
+    )
+    .assert()
+    .failure();
+
+    assert!(rule.exists(), "the first item was deleted");
+    assert!(outside.join("SKILL.md").exists());
+    assert!(lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_ignores_a_missing_recorded_file_and_prunes_its_directory() {
+    let (tmp, home) = project();
+    write_skill_with_script(tmp.path());
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .success();
+    fs::remove_file(tmp.path().join(".claude/skills/tool/scripts/run.sh")).unwrap();
+
+    remove_cmd(tmp.path(), &home, &["tool", "--project"])
+        .assert()
+        .success();
+
+    assert!(!tmp.path().join(".claude/skills/tool").exists());
+    assert!(!lists_item(tmp.path(), "tool"));
+}
