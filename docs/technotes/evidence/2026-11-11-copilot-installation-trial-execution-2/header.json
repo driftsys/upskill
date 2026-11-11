@@ -1,0 +1,135 @@
+{
+  "fixtures": [
+    {
+      "bytes": 280,
+      "mode": 384,
+      "sha256": "168820148b9c34ae9e6b791569ff757942b874e2fed924ecf4e4cf86b5be05f7",
+      "snapshot": "fixture-00.bin",
+      "source": "home/.upskill/exports/copilot/native-contract-probe/.plugin/marketplace.json"
+    },
+    {
+      "bytes": 197,
+      "mode": 384,
+      "sha256": "d8bee35e790a7b74a8c3d1594209d9d61c267fe1f4f8a678c668a31b3f4e8200",
+      "snapshot": "fixture-01.bin",
+      "source": "home/.upskill/exports/copilot/native-contract-probe/revisions/ab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d/.plugin/plugin.json"
+    },
+    {
+      "bytes": 127,
+      "mode": 384,
+      "sha256": "f5ebfba1118ff01ed36830d24aa4d0f3207b7bb965e36d1f36e8a10b1c4b7fe3",
+      "snapshot": "fixture-02.bin",
+      "source": "home/.upskill/exports/copilot/native-contract-probe/revisions/ab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d/skills/contract-probe/SKILL.md"
+    },
+    {
+      "bytes": 68,
+      "mode": 384,
+      "sha256": "182f42c8243befbbd87d1949388161afddba42d308031b0f0248591e9009d159",
+      "snapshot": "fixture-03.bin",
+      "source": "home/.upskill/exports/copilot/native-contract-probe/revisions/ab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d/skills/contract-probe/resources/probe.txt"
+    },
+    {
+      "bytes": 25,
+      "mode": 384,
+      "sha256": "75d9a757e056549f897d9a5d7ae325b3e7e54acbbc40fc1952be444ecc3e0ee0",
+      "snapshot": "fixture-04.bin",
+      "source": "home/manual-preservation.txt"
+    },
+    {
+      "bytes": 2503,
+      "mode": 384,
+      "sha256": "0cb3d581ff421a73653d00c8e487452a70f4aa92eea801d2f0a9d0a0d00eb604",
+      "snapshot": "fixture-05.bin",
+      "source": "plan.json"
+    },
+    {
+      "bytes": 129,
+      "mode": 384,
+      "sha256": "f0a5030131f8fde8553118744f223053a4f9e425e0c54de9a93a088bb2629bba",
+      "snapshot": "fixture-06.bin",
+      "source": "project/.claude/settings.json"
+    },
+    {
+      "bytes": 115,
+      "mode": 384,
+      "sha256": "99fe28586740d6e6d01ef0ab2f4ab078673ebcd6a10df2c392d77e2568b225c4",
+      "snapshot": "fixture-07.bin",
+      "source": "source/SKILL.md"
+    },
+    {
+      "bytes": 68,
+      "mode": 384,
+      "sha256": "182f42c8243befbbd87d1949388161afddba42d308031b0f0248591e9009d159",
+      "snapshot": "fixture-08.bin",
+      "source": "source/resources/probe.txt"
+    }
+  ],
+  "inventory_source_policy": {
+    "filesystem_paths": "packet_only",
+    "marketplace_local_display": "packet_path_checks",
+    "owned_builtin_label": "reject",
+    "owned_marketplace": "exact_catalog_non_default",
+    "unrelated_builtin_label": "count_only",
+    "unrelated_default_remote_display": "count_only"
+  },
+  "maximum_authorized_spending": 0,
+  "maximum_client_commands": 11,
+  "maximum_native_commands": 12,
+  "maximum_setup_commands": 1,
+  "model_calls": 0,
+  "plan_sha256": "0cb3d581ff421a73653d00c8e487452a70f4aa92eea801d2f0a9d0a0d00eb604",
+  "preparation_sha256": "cf709761292057c6a20700e4aef0774ca7e6e221b864545321ec6c7417134470",
+  "qualified": false,
+  "roots": [
+    {
+      "binding": {
+        "device": 16777231,
+        "inode": 558103469,
+        "resolved": "/private/tmp/upskill-copilot-install-trial-zvmlkujh",
+        "selected": "/private/tmp/upskill-copilot-install-trial-zvmlkujh"
+      },
+      "root": {
+        "path": "/private/tmp/upskill-copilot-install-trial-zvmlkujh",
+        "scope": "project"
+      }
+    },
+    {
+      "binding": {
+        "device": 16777231,
+        "inode": 558103471,
+        "resolved": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet",
+        "selected": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet"
+      },
+      "root": {
+        "path": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet",
+        "scope": "project"
+      }
+    },
+    {
+      "binding": {
+        "device": 16777231,
+        "inode": 558103472,
+        "resolved": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/home",
+        "selected": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/home"
+      },
+      "root": {
+        "path": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/home",
+        "scope": "user"
+      }
+    },
+    {
+      "binding": {
+        "device": 16777231,
+        "inode": 558103473,
+        "resolved": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/project",
+        "selected": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/project"
+      },
+      "root": {
+        "path": "/private/tmp/upskill-copilot-install-trial-zvmlkujh/packet/project",
+        "scope": "project"
+      }
+    }
+  ],
+  "schema": 1,
+  "status": "prepared; no native command pending"
+}

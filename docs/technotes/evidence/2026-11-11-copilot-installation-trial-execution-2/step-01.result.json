@@ -1,0 +1,56 @@
+{
+  "accepted": true,
+  "client_index": 0,
+  "inputs_unchanged": true,
+  "model_requests": 0,
+  "native_files": [
+    {
+      "metadata": {
+        "mode": 448,
+        "type": "directory"
+      },
+      "path": "home/.copilot"
+    },
+    {
+      "metadata": {
+        "type": "absent"
+      },
+      "path": "home/.copilot/config.json"
+    },
+    {
+      "metadata": {
+        "mode": 448,
+        "type": "directory"
+      },
+      "path": "home/cache/copilot"
+    },
+    {
+      "metadata": {
+        "mode": 420,
+        "type": "regular"
+      },
+      "path": "project/.git/config"
+    }
+  ],
+  "observation": {
+    "version_matches": true
+  },
+  "pending_sha256": "f10816d371f8551bf1867469b35de4934abd117370ded6f082430f4c177a89a2",
+  "qualified": false,
+  "reason": null,
+  "schema": 1,
+  "sequence": 1,
+  "source_rejection_category": null,
+  "transport": {
+    "cleanup_signal_sent": false,
+    "direct_child_reaped": true,
+    "executable_unchanged": true,
+    "exit_code": 0,
+    "group_empty": true,
+    "output_complete": true,
+    "reason": "exited",
+    "scope_unchanged": true,
+    "stderr_bytes": 0,
+    "stdout_bytes": 71
+  }
+}
