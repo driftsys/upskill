@@ -131,8 +131,8 @@ implemented or that the historical OpenCode glob description establishes current
 ### State file
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
-git ref, with what content hashes. One shape (`schema: 1`), two possible
-locations:
+git ref, with what content hashes. One shape, written as `schema: 2` for a new
+lockfile (`schema: 1` lockfiles are still read), two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

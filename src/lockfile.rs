@@ -29,7 +29,8 @@ pub const LOCKFILE_NAME: &str = ".upskill-lock.json";
 /// `schema: 1`.
 pub const CURRENT_SCHEMA: u32 = 2;
 
-/// File kept beside the lockfile by the adoption step.
+/// File kept beside the lockfile by the adoption step. The adoption step is
+/// not implemented yet.
 pub const SCHEMA1_BACKUP_NAME: &str = ".upskill-lock.json.v1";
 
 /// One file written for an item, recorded in the item's `files` or
@@ -449,7 +450,7 @@ mod tests {
             owned("claude", ".claude/skills/code-review/SKILL.md"),
             owned("copilot", ".github/skills/code-review/SKILL.md"),
         ];
-        it.pending = vec![owned("opencode", ".opencode/skills/code-review/SKILL.md")];
+        it.pending = vec![owned("opencode", ".agents/skills/code-review/SKILL.md")];
         let mut lock = Lockfile::new();
         lock.upsert(it);
         lock.save(tmp.path()).expect("save");
@@ -461,6 +462,21 @@ mod tests {
         assert_eq!(loaded.items[0].files.len(), 2);
         assert_eq!(loaded.items[0].pending.len(), 1);
         assert!(!loaded.needs_adoption());
+    }
+
+    #[test]
+    fn schema_1_lockfile_is_saved_back_as_schema_1() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 1, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let mut lock = Lockfile::load(tmp.path()).expect("load");
+        lock.upsert(item(ItemKind::Skill, "code-review"));
+        lock.save(tmp.path()).expect("save");
+        let raw = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+        assert!(raw.contains("\"schema\": 1"));
     }
 
     #[test]
