@@ -60,6 +60,20 @@ pub struct InstallReport {
     pub adopted: Option<Vec<String>>,
 }
 
+/// Error context attached when a command fails after it saved the
+/// adoption of a `schema: 1` lockfile. `paths` are the adopted paths, for
+/// the adoption notice that `main.rs` prints before the error.
+#[derive(Debug, Clone)]
+pub struct AdoptedBeforeFailure {
+    pub paths: Vec<String>,
+}
+
+impl std::fmt::Display for AdoptedBeforeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the lockfile was adopted before this error")
+    }
+}
+
 /// Result of a single plugin install attempt, for reporting to the user.
 #[derive(Debug, Clone)]
 pub struct PluginResult {
@@ -321,6 +335,9 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Paths recorded when a reinstall adopted a `schema: 1` lockfile,
+    /// sorted and without duplicates; `None` when no adoption happened.
+    pub adopted: Option<Vec<String>>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

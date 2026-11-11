@@ -1,6 +1,7 @@
 //! Install plan: every output file of every item, computed in memory before
 //! anything is written. [`super::apply::apply_plan`] writes a plan.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::ItemKind;
@@ -29,4 +30,21 @@ pub(crate) struct PlannedItem {
     /// (author `audience:` or consumer selection). `apply_plan` deletes
     /// each of them, and the item directory that holds it when empty.
     pub deselected_entries: Vec<PathBuf>,
+}
+
+/// Consumer naming choices applied at plan time.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct PlanNames {
+    /// Source name to installed name (`--as`). The key `""` applies to
+    /// every item.
+    pub aliases: BTreeMap<String, String>,
+    /// Source names to skip (`--exclude`).
+    pub excludes: Vec<String>,
+}
+
+impl PlanNames {
+    /// The alias of the item named `name` in the source, if any.
+    pub fn alias_for(&self, name: &str) -> Option<&String> {
+        self.aliases.get(name).or_else(|| self.aliases.get(""))
+    }
 }

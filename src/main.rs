@@ -274,6 +274,7 @@ fn run_add(args: AddArgs) -> i32 {
             EXIT_SUCCESS
         }
         Err(err) => {
+            print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
             eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -465,6 +466,14 @@ fn print_adoption_notice(adopted: Option<&[String]>) {
         "The previous lockfile is kept as {}.",
         upskill::lockfile::SCHEMA1_BACKUP_NAME
     );
+}
+
+/// Print the adoption notice when `err` carries the paths of an adoption
+/// that was saved before the error.
+fn print_adoption_after_error(err: &anyhow::Error) {
+    if let Some(adopted) = err.downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>() {
+        print_adoption_notice(Some(&adopted.paths));
+    }
 }
 
 /// Warn about items skipped because the consumer's client selection
@@ -741,6 +750,7 @@ fn run_update(
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -752,9 +762,11 @@ fn run_update(
         match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
+                print_adoption_notice(report.adopted.as_deref());
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -766,6 +778,7 @@ fn run_update(
         let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
             Ok(r) => r,
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -797,9 +810,11 @@ fn run_update(
         match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
+                print_adoption_notice(report.adopted.as_deref());
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");

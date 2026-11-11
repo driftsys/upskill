@@ -32,29 +32,6 @@ pub fn rewrite_resource_links(
     }))
 }
 
-/// Re-prefix already-namespaced resource links from `<old_name>/` to
-/// `<new_name>/`. Used when an item that ships supporting resources is
-/// relocated by `--as`: its resource directory moves from `<old_name>/` to
-/// `<new_name>/`, so the entrypoint links — which a prior
-/// [`rewrite_resource_links`] pass pointed at `<old_name>/` — must follow.
-/// `copied` holds the resource paths relative to the (relocated) resource
-/// directory; only destinations whose remainder resolves to one of them are
-/// rewritten, so a coincidental `<old_name>/…` link that is not a resource is
-/// left intact.
-pub fn reprefix_resource_links(
-    rendered: &str,
-    old_name: &str,
-    new_name: &str,
-    copied: &HashSet<PathBuf>,
-) -> Result<String> {
-    if copied.is_empty() || old_name == new_name {
-        return Ok(rendered.to_string());
-    }
-    Ok(apply_dest_edits(rendered, |dest| {
-        reprefixed_dest(dest, old_name, new_name, copied)
-    }))
-}
-
 /// Scan `rendered` for link, image, and reference-definition destinations,
 /// ask `remap` for each one's replacement, and splice the accepted
 /// replacements in. Inline-code and fenced-code spans are reported by
@@ -187,54 +164,6 @@ fn percent_decode(s: &str) -> String {
         i += 1;
     }
     String::from_utf8(out).unwrap_or_else(|_| s.to_string())
-}
-
-/// Returns `Some(new_dest)` when `dest` is a relative path (optionally with a
-/// `#fragment`) already namespaced under `old_name/` whose remainder is a
-/// copied resource, with the leading `old_name/` segment swapped for
-/// `new_name/`; else `None`. The `/` after `old_name` is required, so a
-/// sibling prefix like `old_name-2/…` is not mistaken for a match.
-fn reprefixed_dest(
-    dest: &str,
-    old_name: &str,
-    new_name: &str,
-    copied: &HashSet<PathBuf>,
-) -> Option<String> {
-    let (path_part, frag) = match dest.split_once('#') {
-        Some((p, f)) => (p, Some(f)),
-        None => (dest, None),
-    };
-    if path_part.is_empty() || has_scheme(path_part) || path_part.starts_with('/') {
-        return None;
-    }
-    let had_dot_slash = path_part.starts_with("./");
-    let normalized = path_part.strip_prefix("./").unwrap_or(path_part);
-    // Strip the existing `<old_name>/` namespace segment, keeping the encoded
-    // remainder for output. Decode it only for the path-semantic checks below
-    // (parent-escape guard and `copied` membership, which holds real decoded
-    // filenames), mirroring `rewritten_dest`.
-    let rest = normalized
-        .strip_prefix(old_name)
-        .and_then(|r| r.strip_prefix('/'))?;
-    let decoded = percent_decode(rest);
-    if Path::new(&decoded)
-        .components()
-        .any(|c| matches!(c, Component::ParentDir))
-    {
-        return None;
-    }
-    if !copied.contains(&PathBuf::from(&decoded)) {
-        return None;
-    }
-    let prefixed = if had_dot_slash {
-        format!("./{new_name}/{rest}")
-    } else {
-        format!("{new_name}/{rest}")
-    };
-    Some(match frag {
-        Some(f) => format!("{prefixed}#{f}"),
-        None => prefixed,
-    })
 }
 
 /// True for `scheme:` URLs (`https:`, `mailto:`, …). A relative file path
@@ -446,69 +375,6 @@ mod tests {
                 &["scripts/gate.sh"]
             ),
             "[g]: demo/scripts/gate.sh \"scripts/gate.sh\"\n"
-        );
-    }
-
-    fn reprefix(body: &str, paths: &[&str]) -> String {
-        reprefix_resource_links(body, "demo", "renamed", &copied(paths)).unwrap()
-    }
-
-    #[test]
-    fn reprefix_swaps_namespaced_segment() {
-        assert_eq!(
-            reprefix("See [g](./demo/scripts/gate.sh).", &["scripts/gate.sh"]),
-            "See [g](./renamed/scripts/gate.sh)."
-        );
-    }
-
-    #[test]
-    fn reprefix_without_dot_slash() {
-        assert_eq!(
-            reprefix("[g](demo/scripts/gate.sh)", &["scripts/gate.sh"]),
-            "[g](renamed/scripts/gate.sh)"
-        );
-    }
-
-    #[test]
-    fn reprefix_preserves_fragment() {
-        assert_eq!(
-            reprefix("[p](./demo/refs/p.md#sec)", &["refs/p.md"]),
-            "[p](./renamed/refs/p.md#sec)"
-        );
-    }
-
-    #[test]
-    fn reprefix_percent_encoded_remainder() {
-        // The namespaced remainder is percent-decoded to match the copied
-        // resource `my notes.md`; the rewritten destination keeps the encoding.
-        assert_eq!(
-            reprefix("[n](./demo/my%20notes.md)", &["my notes.md"]),
-            "[n](./renamed/my%20notes.md)"
-        );
-    }
-
-    #[test]
-    fn reprefix_leaves_non_resource_coincidence_untouched() {
-        // `demo/other.md` is namespaced under `demo/` but is not a copied
-        // resource, so re-prefixing must not touch it.
-        let body = "[x](./demo/other.md)";
-        assert_eq!(reprefix(body, &["scripts/gate.sh"]), body);
-    }
-
-    #[test]
-    fn reprefix_leaves_sibling_prefix_untouched() {
-        // `demo-2/` shares a textual prefix with `demo` but is a different
-        // namespace segment; the required `/` boundary protects it.
-        let body = "[x](./demo-2/scripts/gate.sh)";
-        assert_eq!(reprefix(body, &["scripts/gate.sh"]), body);
-    }
-
-    #[test]
-    fn reprefix_identity_when_names_equal() {
-        let body = "[g](./demo/scripts/gate.sh)";
-        assert_eq!(
-            reprefix_resource_links(body, "demo", "demo", &copied(&["scripts/gate.sh"])).unwrap(),
-            body
         );
     }
 }

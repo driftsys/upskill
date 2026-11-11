@@ -1,11 +1,18 @@
 //! Writes an install plan to disk and computes the ownership record of
 //! each planned item.
+//!
+//! Symbolic link rule: the first two components of a layout path (the
+//! client root and the kind directory, for example `.claude/skills`) may be
+//! symbolic links. Every existing component from the third one to the last
+//! one (the item directory, resource subdirectories and the file) must not
+//! be a symbolic link. `apply_plan` checks this for every path it writes or
+//! deletes before it changes anything on disk.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::ErrorKind;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
 use super::owned::{rel_to_record, sha256_hex};
@@ -14,31 +21,54 @@ use crate::lockfile::{Lockfile, OwnedFile};
 
 /// The record of written files for each planned `(kind, installed name)`,
 /// sorted by `client`, then `path`. `install_with_lockfile` copies it into
-/// the `LockedItem` it builds for an item that has no lockfile entry yet.
+/// the `LockedItem` it upserts for each installed item.
 pub(super) type RecordedFiles = BTreeMap<(ItemKind, String), Vec<OwnedFile>>;
+
+/// Client roots under which a recorded path may be deleted.
+const CLIENT_ROOTS: [&str; 4] = [".claude", ".github", ".agents", ".opencode"];
+
+/// What `apply_plan` does for one item, computed before any change.
+struct ItemChanges {
+    files: Vec<OwnedFile>,
+    stale: Vec<PathBuf>,
+}
 
 /// Writes every planned file and updates `lock.items[..].files` for the
 /// planned items that already have a lockfile entry. Before writing an
 /// item, it deletes the files of that item's previous record that the plan
 /// no longer contains, and the entrypoints of clients the item no longer
-/// targets. It writes with `fs::write`, never through a symbolic link, and
-/// does not save the lockfile. Returns the record of every planned item.
+/// targets. It writes with `fs::write` and does not save the lockfile.
+/// Returns the record of every planned item.
+///
+/// Before any change on disk it fails when two planned items have the same
+/// `(kind, name)`, when two planned files have the same path, or when a
+/// path to write or delete breaks the symbolic link rule of this module.
 pub(super) fn apply_plan(
     target: &Path,
     lock: &mut Lockfile,
     planned: &[PlannedItem],
 ) -> Result<RecordedFiles> {
-    // Refuse before any change on disk.
+    let mut items_seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
+    let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
+    let mut changes = Vec::with_capacity(planned.len());
     for item in planned {
-        for file in &item.files {
-            refuse_symlink(&target.join(&file.rel))?;
+        if !items_seen.insert((item.kind, item.name.as_str())) {
+            anyhow::bail!(
+                "two planned items install the {} `{}`; each installed name must be unique",
+                item.kind,
+                item.name
+            );
         }
-    }
-
-    let mut recorded = RecordedFiles::new();
-    for item in planned {
         let mut files = Vec::with_capacity(item.files.len());
         for file in &item.files {
+            if let Some(other) = paths_seen.insert(&file.rel, &item.name) {
+                anyhow::bail!(
+                    "the items `{other}` and `{}` both write {}",
+                    item.name,
+                    file.rel.display()
+                );
+            }
+            check_no_item_symlink(target, &file.rel)?;
             files.push(OwnedFile {
                 client: file.client.name().to_string(),
                 path: rel_to_record(&file.rel)?,
@@ -47,17 +77,33 @@ pub(super) fn apply_plan(
         }
         files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
 
-        let entry = lock
+        let kept: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        let mut stale = Vec::new();
+        if let Some(entry) = lock
             .items
-            .iter_mut()
-            .find(|i| i.kind == item.kind && i.name == item.name);
-        if let Some(previous) = entry.as_ref().map(|e| &e.files) {
-            let kept: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
-            for old in previous {
-                if !kept.contains(old.path.as_str()) {
-                    delete_recorded(target, &old.path)?;
+            .iter()
+            .find(|i| i.kind == item.kind && i.name == item.name)
+        {
+            for old in &entry.files {
+                if kept.contains(old.path.as_str()) {
+                    continue;
+                }
+                if let Some(rel) = deletable(&old.path) {
+                    check_no_item_symlink(target, &rel)?;
+                    stale.push(rel);
                 }
             }
+        }
+        for rel in &item.deselected_entries {
+            check_no_item_symlink(target, rel)?;
+        }
+        changes.push(ItemChanges { files, stale });
+    }
+
+    let mut recorded = RecordedFiles::new();
+    for (item, ItemChanges { files, stale }) in planned.iter().zip(changes) {
+        for rel in &stale {
+            delete_recorded(target, rel)?;
         }
         for rel in &item.deselected_entries {
             delete_deselected_entry(target, rel, &item.name);
@@ -75,7 +121,11 @@ pub(super) fn apply_plan(
             }
         }
 
-        if let Some(entry) = entry {
+        if let Some(entry) = lock
+            .items
+            .iter_mut()
+            .find(|i| i.kind == item.kind && i.name == item.name)
+        {
             entry.files = files.clone();
         }
         recorded.insert((item.kind, item.name.clone()), files);
@@ -83,30 +133,51 @@ pub(super) fn apply_plan(
     Ok(recorded)
 }
 
-/// Fails when `path` exists and is a symbolic link. The link is not
-/// followed.
-fn refuse_symlink(path: &Path) -> Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(meta) if meta.file_type().is_symlink() => anyhow::bail!(
-            "refusing to write {}: the destination is a symbolic link",
-            path.display()
-        ),
-        Ok(_) => Ok(()),
-        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(err).with_context(|| format!("inspecting {}", path.display())),
+/// Fails when a component of `rel`, from the third one to the last one,
+/// exists and is a symbolic link. Links are not followed. The check stops
+/// at the first component that does not exist.
+fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
+    let mut current = target.to_path_buf();
+    for (index, component) in rel.components().enumerate() {
+        current.push(component);
+        if index < 2 {
+            continue;
+        }
+        match fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => anyhow::bail!(
+                "refusing to change {}: {} is a symbolic link",
+                target.join(rel).display(),
+                current.display()
+            ),
+            Ok(_) => {}
+            Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(err) => {
+                return Err(err).with_context(|| format!("inspecting {}", current.display()));
+            }
+        }
     }
+    Ok(())
 }
 
-/// Deletes the recorded file `rel` (a `/`-separated path relative to
-/// `target`), then each parent directory left empty. A path that is not a
-/// plain relative path is skipped. The client root (`.claude`, `.github`,
-/// `.agents`, `.opencode`) and the kind directory below it (for example
-/// `.claude/skills`) are never removed.
-fn delete_recorded(target: &Path, rel: &str) -> Result<()> {
-    let rel = Path::new(rel);
-    if rel.components().any(|c| !matches!(c, Component::Normal(_))) {
-        return Ok(());
-    }
+/// The recorded path `rel` as a relative path, when it may be deleted: only
+/// plain components, at least three of them, and a first component that is
+/// a client root. `None` for any other recorded path, which is skipped.
+fn deletable(rel: &str) -> Option<PathBuf> {
+    let path = PathBuf::from(rel);
+    let parts: Vec<Component> = path.components().collect();
+    let plain = parts.iter().all(|c| matches!(c, Component::Normal(_)));
+    let in_root = parts
+        .first()
+        .and_then(|c| c.as_os_str().to_str())
+        .is_some_and(|first| CLIENT_ROOTS.contains(&first));
+    (plain && parts.len() >= 3 && in_root).then_some(path)
+}
+
+/// Deletes the file `rel` (relative to `target`, accepted by [`deletable`]
+/// and checked by [`check_no_item_symlink`]), then each parent directory
+/// left empty. The client root and the kind directory below it (for
+/// example `.claude/skills`) are never removed.
+fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
     let full = target.join(rel);
     match fs::symlink_metadata(&full) {
         Ok(meta) if meta.is_dir() => return Ok(()),
@@ -316,5 +387,102 @@ mod tests {
             .permissions()
             .mode();
         assert_eq!(mode & 0o777, 0o755);
+    }
+
+    fn record(path: &str) -> OwnedFile {
+        OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(b"x"),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refuses_a_symlinked_item_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("SKILL.md"), b"keep").unwrap();
+        fs::create_dir_all(tmp.path().join("t/.claude/skills")).unwrap();
+        std::os::unix::fs::symlink(&outside, tmp.path().join("t/.claude/skills/s")).unwrap();
+        let plan = [planned(
+            "s",
+            &[
+                (".claude/skills/s/SKILL.md", b"body"),
+                (".claude/skills/s/new.md", b"new"),
+            ],
+        )];
+        let err = apply_plan(&tmp.path().join("t"), &mut Lockfile::new(), &plan).unwrap_err();
+        assert!(format!("{err:#}").contains(".claude/skills/s"), "{err:#}");
+        assert_eq!(fs::read(outside.join("SKILL.md")).unwrap(), b"keep");
+        assert!(!outside.join("new.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn allows_a_symlinked_kind_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let real = tmp.path().join("real-skills");
+        fs::create_dir_all(&real).unwrap();
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        std::os::unix::fs::symlink(&real, tmp.path().join(".claude/skills")).unwrap();
+        let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
+        apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap();
+        assert_eq!(fs::read(real.join("s/SKILL.md")).unwrap(), b"body");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_delete_through_a_symlinked_item_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("old.md"), b"keep").unwrap();
+        let target = tmp.path().join("t");
+        fs::create_dir_all(target.join(".claude/skills")).unwrap();
+        std::os::unix::fs::symlink(&outside, target.join(".claude/skills/s")).unwrap();
+        let mut lock = Lockfile::new();
+        lock.items
+            .push(locked("s", vec![record(".claude/skills/s/old.md")]));
+        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])]).is_err());
+        assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"keep");
+    }
+
+    #[test]
+    fn does_not_delete_a_recorded_path_outside_the_client_roots() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path().join("src/main.rs");
+        fs::create_dir_all(main.parent().unwrap()).unwrap();
+        fs::write(&main, b"fn main() {}").unwrap();
+        let shallow = tmp.path().join(".claude/x.md");
+        fs::create_dir_all(shallow.parent().unwrap()).unwrap();
+        fs::write(&shallow, b"x").unwrap();
+        let mut lock = Lockfile::new();
+        lock.items.push(locked(
+            "s",
+            vec![record("src/main.rs"), record(".claude/x.md")],
+        ));
+        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])]).unwrap();
+        assert!(main.exists());
+        assert!(shallow.exists());
+    }
+
+    #[test]
+    fn refuses_two_planned_items_with_the_same_destination() {
+        let tmp = tempfile::tempdir().unwrap();
+        let same_name = [
+            planned("s", &[(".claude/skills/s/SKILL.md", b"a")]),
+            planned("s", &[(".claude/skills/s/OTHER.md", b"b")]),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name).unwrap_err();
+        assert!(format!("{err}").contains("`s`"), "{err}");
+        let same_path = [
+            planned("a", &[(".claude/skills/x/SKILL.md", b"a")]),
+            planned("b", &[(".claude/skills/x/SKILL.md", b"b")]),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path).unwrap_err();
+        assert!(format!("{err}").contains("`a` and `b`"), "{err}");
+        assert!(!tmp.path().join(".claude").exists());
     }
 }

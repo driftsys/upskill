@@ -397,20 +397,23 @@ Files whose frontmatter and body are already canonical are left untouched (no
 
 The lockfile carries a top-level `schema` field for forward compatibility. A new
 lockfile is written with `schema: 2`. Each item entry may carry `files` and
-`pending` lists. `add` records in `files` every file it writes for the item,
-with its client, its path and the SHA-256 of its bytes; no command fills
-`pending` yet. `remove` and `update` do not use the record yet.
+`pending` lists. `add` and `update` record in `files` every file they write for
+the item, with its client, its path and the SHA-256 of its bytes. When they
+reinstall an item, they delete the recorded files that the new version no longer
+produces; a file that the record does not list is kept. `update` still deletes
+all outputs of an item that its source no longer contains, whether recorded or
+not. No command fills `pending` yet. `remove` does not use the record yet.
 
-A `schema: 1` lockfile is still read. The first `add` on it adopts it: it keeps
-a copy of the old lockfile as `.upskill-lock.json.v1`, records each file that
-exists at the output paths of every installed item with its current hash, saves
-the lockfile as `schema: 2`, and prints the adopted paths to stderr. Adoption
-cannot tell an edited file from one an earlier version wrote. It records two
-kinds of files as unchanged: generated files that were edited before the
-upgrade, and files that were added inside an item directory. A later `update`
-may replace them and `remove` may delete them. `update` reinstalls through the
-same install step, so `update --yes` on a `schema: 1` lockfile also adopts it,
-but does not print the adopted paths yet.
+A `schema: 1` lockfile is still read. The first `add` or `update` that writes
+files adopts it: it keeps a copy of the old lockfile as `.upskill-lock.json.v1`,
+records each file that exists at the output paths of every installed item with
+its current hash, saves the lockfile as `schema: 2`, and prints the adopted
+paths to stderr. Adoption cannot tell an edited file from one an earlier version
+wrote. It records two kinds of files as unchanged: generated files that were
+edited before the upgrade, and files that were added inside an item directory. A
+later `update` may replace them and `remove` may delete them. The adopted paths
+are printed also when the command fails after the adoption was saved.
+`update --dry-run` and `remove` do not adopt.
 
 ## Per-client output paths
 

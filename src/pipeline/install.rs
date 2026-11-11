@@ -22,7 +22,7 @@ use super::discovery::{
 };
 use super::hash::hash_item_dir;
 use super::output::{is_dir_backed, output_path, resource_base_path};
-use super::plan::{PlannedFile, PlannedItem};
+use super::plan::{PlanNames, PlannedFile, PlannedItem};
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
@@ -52,7 +52,7 @@ pub fn install_from_local_path(
         source,
         filter,
         &ClientSelection::all(),
-        &BTreeMap::new(),
+        &PlanNames::default(),
     )?;
     super::apply::apply_plan(
         target,
@@ -63,21 +63,21 @@ pub fn install_from_local_path(
 }
 
 /// Plans [`install_from_local_path`] with an explicit consumer-side client
-/// selection (ADR-0012) and `--as` aliases (source name to installed name;
-/// the key `""` applies to every item). Writes nothing: the outputs are in
+/// selection (ADR-0012), `--as` aliases and `--exclude` names (see
+/// [`PlanNames`]). Writes nothing: the outputs are in
 /// [`InstallReport::planned`].
 pub(super) fn install_from_local_path_selective(
     source: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
-    aliases: &BTreeMap<String, String>,
+    names: &PlanNames,
 ) -> Result<InstallReport> {
     if is_bundle_file(source) {
-        return install_bundle_file(source, selection, aliases);
+        return install_bundle_file(source, selection, names);
     }
     let mut report = InstallReport::default();
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        install_items_of_kind(kind, source, &mut report, filter, selection, aliases)?;
+        install_items_of_kind(kind, source, &mut report, filter, selection, names)?;
     }
     Ok(report)
 }
@@ -87,7 +87,7 @@ pub(super) fn install_from_local_path_selective(
 pub(super) fn install_bundle_file(
     bundle_path: &Path,
     selection: &ClientSelection,
-    aliases: &BTreeMap<String, String>,
+    names: &PlanNames,
 ) -> Result<InstallReport> {
     let registry_root = find_registry_root(bundle_path).with_context(|| {
         format!(
@@ -124,7 +124,7 @@ pub(super) fn install_bundle_file(
             &mut report,
             Some(&resolved.items),
             selection,
-            aliases,
+            names,
         )?;
     }
     Ok(report)
@@ -138,7 +138,7 @@ pub(super) fn install_with_name_resolution_from_local(
     local_source: &Path,
     names: &[String],
     selection: &ClientSelection,
-    aliases: &BTreeMap<String, String>,
+    plan_names: &PlanNames,
 ) -> Result<InstallReport> {
     let mut bundle_paths: Vec<std::path::PathBuf> = Vec::new();
     let mut item_names: Vec<String> = Vec::new();
@@ -178,7 +178,7 @@ pub(super) fn install_with_name_resolution_from_local(
     let mut report = InstallReport::default();
 
     for bp in &bundle_paths {
-        let bundle_report = install_bundle_file(bp, selection, aliases)?;
+        let bundle_report = install_bundle_file(bp, selection, plan_names)?;
         report.items.extend(bundle_report.items);
         report.planned.extend(bundle_report.planned);
         report.bundles.extend(bundle_report.bundles);
@@ -194,7 +194,7 @@ pub(super) fn install_with_name_resolution_from_local(
             agents: item_names.clone(),
         };
         let item_report =
-            install_from_local_path_selective(local_source, Some(&filter), selection, aliases)?;
+            install_from_local_path_selective(local_source, Some(&filter), selection, plan_names)?;
         report.items.extend(item_report.items);
         report.planned.extend(item_report.planned);
         report
@@ -1104,16 +1104,16 @@ struct ParsedItem {
 
 /// Plans every item of `kind` under `source`: pushes one [`PlannedItem`]
 /// to `report.planned` and one [`InstalledItem`] per client to
-/// `report.items`. Writes nothing. `aliases` maps a source name to its
-/// installed name (the key `""` applies to every item); the installed name
-/// drives the output paths and the resource link rewrite.
+/// `report.items`. Writes nothing. An item whose source name is in
+/// `names.excludes` is skipped. `names.aliases` gives the installed name,
+/// which drives the output paths and the resource link rewrite.
 fn install_items_of_kind(
     kind: ItemKind,
     source: &Path,
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
-    aliases: &BTreeMap<String, String>,
+    names: &PlanNames,
 ) -> Result<()> {
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
@@ -1207,6 +1207,10 @@ fn install_items_of_kind(
         if filter.is_some_and(|items| !items.contains(kind, &name)) {
             continue;
         }
+        // `--exclude` matches the source name, before any alias.
+        if names.excludes.contains(&name) {
+            continue;
+        }
 
         // Warn-skip: a restrictive consumer selection (ADR-0012) that shares
         // no client with this item's author `audience:` yields zero renders.
@@ -1222,7 +1226,7 @@ fn install_items_of_kind(
         let copied: std::collections::HashSet<std::path::PathBuf> =
             resources.iter().cloned().collect();
 
-        let alias = aliases.get(&name).or_else(|| aliases.get(""));
+        let alias = names.alias_for(&name);
         let installed = alias.cloned().unwrap_or_else(|| name.clone());
         let source_name = alias.map(|_| name.clone());
 

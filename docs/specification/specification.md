@@ -260,12 +260,13 @@ adoption changes these commands
 git ref, with what content hashes. Same schema in both locations. A new lockfile
 is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
-`sha256` fields. `add` fills `files` with every file it writes for the item; no
-command fills `pending` yet, and `remove` and `update` do not use the record
-yet. The install step of `add`, which `update` also runs, adopts a `schema: 1`
-lockfile: it keeps the old bytes as `.upskill-lock.json.v1`, records each
-existing file at the items' output paths with its current hash, and saves
-`schema: 2`. Two possible locations:
+`sha256` fields. `add` and `update` fill `files` with every file they write for
+the item and delete the recorded files that a reinstall no longer produces; no
+command fills `pending` yet, and `remove` does not use the record yet. `add` and
+`update` (not `update --dry-run`, not `remove`) adopt a `schema: 1` lockfile:
+they keep the old bytes as `.upskill-lock.json.v1`, record each existing file at
+the items' output paths with its current hash, save `schema: 2`, and print the
+adopted paths to stderr. Two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

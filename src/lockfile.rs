@@ -9,10 +9,10 @@
 //!   lockfile is written as `schema: 2`. A `schema: 1` lockfile is loaded
 //!   as-is and `save` writes the schema it holds;
 //!   [`Lockfile::needs_adoption`] reports it. The install step of `add`
-//!   (also reached by `update`) converts it to `schema: 2` by adoption.
+//!   and `update` converts it to `schema: 2` by adoption.
 //! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
-//!   records. The install step of `add` fills `files` with every file it
-//!   writes; no command fills `pending` yet.
+//!   records. The install step of `add` and `update` fills `files` with
+//!   every file it writes; no command fills `pending` yet.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
 //!   is written after a successful install.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3

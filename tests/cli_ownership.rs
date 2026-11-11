@@ -237,11 +237,265 @@ fn add_does_not_write_through_a_symlink() {
     fs::create_dir_all(link.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink(&outside, &link).unwrap();
 
-    common::upskill_cmd(&home)
+    let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["add", "./source", "api-conventions", "--claude"])
         .assert()
         .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains(".claude/rules/api-conventions.md"),
+        "stderr: {stderr}"
+    );
 
     assert_eq!(fs::read(&outside).unwrap(), b"outside bytes\n");
+}
+
+/// Writes a skill `name` under `root/skills/<name>` with `body`.
+fn write_skill(dir: &Path, name: &str, body: &str) {
+    fs::create_dir_all(dir.join(name)).unwrap();
+    fs::write(
+        dir.join(name).join("SKILL.md"),
+        format!("---\nschema: 1\nname: {name}\ndescription: Use for {name}\n---\n{body}\n"),
+    )
+    .unwrap();
+}
+
+fn stderr_of(assert: &assert_cmd::assert::Assert) -> String {
+    String::from_utf8(assert.get_output().stderr.clone()).unwrap()
+}
+
+#[test]
+fn exclude_matches_the_source_name_not_the_alias() {
+    let (tmp, home) = project();
+    let src = tmp.path().join("ab");
+    write_skill(&src, "alpha", "Alpha body.");
+    write_skill(&src, "beta", "Beta body.");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./ab",
+            "alpha",
+            "beta",
+            "--exclude",
+            "beta",
+            "--as",
+            "alpha=beta",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+
+    let written = fs::read_to_string(tmp.path().join(".claude/skills/beta/SKILL.md")).unwrap();
+    assert!(written.contains("Alpha body."), "{written}");
+    let lock = lockfile(tmp.path());
+    let beta = item(&lock, "beta");
+    assert_eq!(beta["source_name"], "alpha");
+    assert!(!file_paths(beta).is_empty());
+}
+
+#[test]
+fn excluded_item_is_neither_written_nor_recorded() {
+    let (tmp, home) = project();
+    let reg = tmp.path().join("reg");
+    write_skill(&reg.join("skills"), "alpha", "Alpha body.");
+    write_skill(&reg.join("skills"), "beta", "Beta body.");
+    fs::create_dir_all(reg.join("bundles")).unwrap();
+    fs::write(
+        reg.join("bundles/team.bundle.yaml"),
+        "schema: 1\nname: team\ndescription: Team bundle\nitems:\n  skills:\n    - alpha\n    - beta\n",
+    )
+    .unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./reg/bundles/team.bundle.yaml",
+            "--exclude",
+            "beta",
+            "--claude",
+        ])
+        .assert()
+        .success();
+
+    assert!(tmp.path().join(".claude/skills/alpha/SKILL.md").exists());
+    assert!(!tmp.path().join(".claude/skills/beta").exists());
+    let lock = lockfile(tmp.path());
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["name"] != "beta"),
+        "{lock}"
+    );
+}
+
+#[test]
+fn update_dry_run_does_not_adopt_a_schema_1_lockfile() {
+    let (tmp, home) = project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "create-api-endpoint", "--claude"])
+        .assert()
+        .success();
+    downgrade_to_schema_1(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run"])
+        .assert()
+        .success();
+
+    assert_eq!(lockfile(tmp.path())["schema"], 1);
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+}
+
+/// Rewrites the lockfile as schema 1 without `files` records.
+fn downgrade_to_schema_1(root: &Path) {
+    let mut lock = lockfile(root);
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        entry.as_object_mut().unwrap().remove("files");
+    }
+    fs::write(
+        root.join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn adoption_notice_is_printed_when_add_fails_after_adoption() {
+    let (tmp, home) = project();
+    write_schema_1_install(tmp.path());
+    let outside = tmp.path().join("outside.md");
+    fs::write(&outside, "outside bytes\n").unwrap();
+    let link = tmp
+        .path()
+        .join(".claude/skills/create-api-endpoint/SKILL.md");
+    fs::create_dir_all(link.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "create-api-endpoint", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&out);
+    assert!(stderr.contains("note: adopted 1 files"), "stderr: {stderr}");
+    assert!(
+        stderr.contains("  .claude/rules/api-conventions.md\n"),
+        "stderr: {stderr}"
+    );
+    assert_eq!(fs::read(&outside).unwrap(), b"outside bytes\n");
+}
+
+#[test]
+fn update_prints_the_adoption_notice() {
+    let (tmp, home) = project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "create-api-endpoint", "--claude"])
+        .assert()
+        .success();
+    downgrade_to_schema_1(tmp.path());
+    let skill = tmp.path().join("source/create-api-endpoint/SKILL.md");
+    let body = fs::read_to_string(&skill).unwrap();
+    fs::write(&skill, format!("{body}\nChanged.\n")).unwrap();
+
+    let first = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+    let stderr = stderr_of(&first);
+    assert_eq!(
+        stderr.matches("note: adopted").count(),
+        1,
+        "stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("  .claude/skills/create-api-endpoint/SKILL.md\n"),
+        "stderr: {stderr}"
+    );
+
+    let second = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+    assert!(!stderr_of(&second).contains("note: adopted"));
+}
+
+#[cfg(unix)]
+#[test]
+fn add_does_not_write_through_a_symlinked_item_directory() {
+    let (tmp, home) = project();
+    let outside = tmp.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("SKILL.md"), "outside bytes\n").unwrap();
+    fs::create_dir_all(tmp.path().join(".claude/skills")).unwrap();
+    std::os::unix::fs::symlink(
+        &outside,
+        tmp.path().join(".claude/skills/create-api-endpoint"),
+    )
+    .unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "create-api-endpoint", "--claude"])
+        .assert()
+        .failure();
+    assert!(
+        stderr_of(&out).contains(".claude/skills/create-api-endpoint"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert_eq!(
+        fs::read(outside.join("SKILL.md")).unwrap(),
+        b"outside bytes\n"
+    );
+}
+
+#[test]
+fn add_refuses_two_items_aliased_to_one_name() {
+    let (tmp, home) = project();
+    let src = tmp.path().join("ab");
+    write_skill(&src, "alpha", "Alpha body.");
+    write_skill(&src, "beta", "Beta body.");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add", "./ab", "alpha", "beta", "--as", "alpha=z", "--as", "beta=z", "--claude",
+        ])
+        .assert()
+        .failure();
+
+    assert!(!tmp.path().join(".claude/skills/z").exists());
+}
+
+#[test]
+fn a_file_the_lockfile_does_not_record_survives_add() {
+    let (tmp, home) = project();
+    let add = || {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", "./source", "create-api-endpoint", "--claude"])
+            .assert()
+            .success();
+    };
+    add();
+    let notes = tmp
+        .path()
+        .join(".claude/skills/create-api-endpoint/NOTES.md");
+    fs::write(&notes, "mine\n").unwrap();
+    add();
+    assert_eq!(fs::read(&notes).unwrap(), b"mine\n");
 }

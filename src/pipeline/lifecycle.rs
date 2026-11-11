@@ -14,10 +14,10 @@ use super::git::fetch_ssot;
 use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
 use super::{
-    ALL_CLIENTS, AddOptions, DoctorReport, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, OrphanEntry, OrphanReason, OrphanedDependency, RemoveFilter,
-    RemoveReport, RemovedItem, SkippedPlugin, StaleHash, UpdateMode, UpdateReport, UpdateStatus,
-    UpdatedItem, hash_item_dir, install_with_lockfile,
+    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
+    ListedBundle, ListedItem, MissingOutput, MissingPlugin, OrphanEntry, OrphanReason,
+    OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin, StaleHash,
+    UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir, install_with_lockfile,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -443,167 +443,198 @@ pub fn update(
     }
 
     let mut report = UpdateReport::default();
-    for (source_label, source_entries) in by_source {
-        let source = crate::source::parse_install_source_label(&source_label)
-            .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
+    // A reinstall may adopt a `schema: 1` lockfile and save it. A later
+    // error must still carry the adopted paths for the adoption notice.
+    let result = (|| -> Result<()> {
+        for (source_label, source_entries) in by_source {
+            let source = crate::source::parse_install_source_label(&source_label)
+                .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
-        match mode {
-            UpdateMode::Apply => {
-                // Build aliases from lockfile entries that have source_name
-                let aliases: Vec<(String, String)> = source_entries
-                    .iter()
-                    .filter_map(|e| {
-                        e.source_name
-                            .as_ref()
-                            .map(|sn| (sn.clone(), e.name.clone()))
-                    })
-                    .collect();
-                // Preserve each source's recorded client selection so a bare
-                // `update` (no flags, no config → `is_all`) does not silently
-                // re-expand a flag-narrowed install and overwrite its lockfile
-                // `clients` record (ADR-0012). An explicit flag/config
-                // selection still overrides. Note: recorded `clients` are
-                // generation clients, so a `--vscode`-only install reconstructs
-                // to Copilot on the MCP axis; MCP config is additive and never
-                // auto-removed (see the MCP fan-out note in install.rs), so
-                // this widens rather than loses.
-                let effective_selection = if selection.is_all() {
-                    reselect_from_entries(&source_entries)
-                } else {
-                    selection.clone()
-                };
-                let options = AddOptions {
-                    force: true,
-                    aliases,
-                    excludes: vec![],
-                    selection: effective_selection,
-                };
-                // Scope the reinstall to exactly the items this source already
-                // contributes to the lockfile (by their in-source name), rather
-                // than reinstalling every item the source vends. Without this, a
-                // source that only contributed a single cross-source dependency
-                // would pull in all of its unrelated siblings on `update`
-                // (issue #211). An item's cross-source `requires` are still
-                // resolved and refreshed because `install_with_lockfile`
-                // re-expands the closure for each requested item.
-                //
-                // Bundle sources are exempt: a bundle is its own unit and must
-                // be reinstalled as a whole (an empty filter routes it through
-                // the bundle-resolution path), so scoping to item names there
-                // would mis-route a `.bundle.yaml` source into name resolution.
-                let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
-                    || lock.bundles.iter().any(|b| b.source == source_label);
-                let item_filter: Vec<String> = if is_bundle_source {
-                    Vec::new()
-                } else {
-                    source_entries
+            match mode {
+                UpdateMode::Apply => {
+                    // Build aliases from lockfile entries that have source_name
+                    let aliases: Vec<(String, String)> = source_entries
                         .iter()
-                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
-                        .collect()
-                };
-                let install_report =
-                    install_with_lockfile(&source, target, &item_filter, plugin_scope, &options)?;
-                let mut new_hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> =
-                    std::collections::BTreeMap::new();
-                for it in &install_report.items {
-                    new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
-                }
-                guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
-                // Collect orphans first, then batch-remove from lockfile.
-                let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
-                for entry in &source_entries {
-                    let kind = entry.kind;
-                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
-                        orphans.push((entry, kind));
-                    }
-                }
-                if !orphans.is_empty() {
-                    let mut lock = crate::lockfile::Lockfile::load(target)?;
-                    for (entry, kind) in &orphans {
-                        remove_item_outputs(target, *kind, &entry.name);
-                        lock.remove(entry.kind, &entry.name);
-                        report.items.push(UpdatedItem {
-                            kind: *kind,
-                            name: entry.name.clone(),
-                            source: source_label.clone(),
-                            status: UpdateStatus::Removed,
-                        });
-                    }
-                    lock.save(target)?;
-                }
-                for entry in &source_entries {
-                    let kind = entry.kind;
-                    if !new_hashes.contains_key(&(kind, entry.name.clone())) {
-                        continue; // already handled as orphan
-                    }
-                    let new_hash = new_hashes
-                        .get(&(kind, entry.name.clone()))
-                        .cloned()
-                        .flatten();
-                    let status = if new_hash == entry.hash {
-                        UpdateStatus::UpToDate
+                        .filter_map(|e| {
+                            e.source_name
+                                .as_ref()
+                                .map(|sn| (sn.clone(), e.name.clone()))
+                        })
+                        .collect();
+                    // Preserve each source's recorded client selection so a bare
+                    // `update` (no flags, no config → `is_all`) does not silently
+                    // re-expand a flag-narrowed install and overwrite its lockfile
+                    // `clients` record (ADR-0012). An explicit flag/config
+                    // selection still overrides. Note: recorded `clients` are
+                    // generation clients, so a `--vscode`-only install reconstructs
+                    // to Copilot on the MCP axis; MCP config is additive and never
+                    // auto-removed (see the MCP fan-out note in install.rs), so
+                    // this widens rather than loses.
+                    let effective_selection = if selection.is_all() {
+                        reselect_from_entries(&source_entries)
                     } else {
-                        UpdateStatus::Updated {
-                            old_hash: entry.hash.clone(),
-                            new_hash,
-                        }
+                        selection.clone()
                     };
-                    report.items.push(UpdatedItem {
-                        kind,
-                        name: entry.name.clone(),
-                        source: source_label.clone(),
-                        status,
-                    });
-                }
-            }
-            UpdateMode::DryRun => {
-                let (root, _guard) = fetch_ssot(&source)?;
-                let new_hashes = planned_source_hashes(&root)
-                    .with_context(|| format!("resolve items for source `{source_label}`"))?;
-                guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
-                for entry in &source_entries {
-                    let kind = entry.kind;
-                    // The source-side hash map is keyed by the item's FOLDER
-                    // (see `hash_items` / `iter_item_dirs`), which is the
-                    // co-location group. A rule/agent whose frontmatter name
-                    // diverges from its folder must be looked up by that folder,
-                    // not its effective name, or it is falsely reported as
-                    // `WouldRemove` (issue #214; mirrors the #208 doctor fix).
-                    let lookup_name = entry
-                        .group
-                        .as_deref()
-                        .or(entry.source_name.as_deref())
-                        .unwrap_or(&entry.name);
-                    if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
+                    let options = AddOptions {
+                        force: true,
+                        aliases,
+                        excludes: vec![],
+                        selection: effective_selection,
+                    };
+                    // Scope the reinstall to exactly the items this source already
+                    // contributes to the lockfile (by their in-source name), rather
+                    // than reinstalling every item the source vends. Without this, a
+                    // source that only contributed a single cross-source dependency
+                    // would pull in all of its unrelated siblings on `update`
+                    // (issue #211). An item's cross-source `requires` are still
+                    // resolved and refreshed because `install_with_lockfile`
+                    // re-expands the closure for each requested item.
+                    //
+                    // Bundle sources are exempt: a bundle is its own unit and must
+                    // be reinstalled as a whole (an empty filter routes it through
+                    // the bundle-resolution path), so scoping to item names there
+                    // would mis-route a `.bundle.yaml` source into name resolution.
+                    let is_bundle_source = source_label
+                        .ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
+                        || lock.bundles.iter().any(|b| b.source == source_label);
+                    let item_filter: Vec<String> = if is_bundle_source {
+                        Vec::new()
+                    } else {
+                        source_entries
+                            .iter()
+                            .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                            .collect()
+                    };
+                    let install_report = install_with_lockfile(
+                        &source,
+                        target,
+                        &item_filter,
+                        plugin_scope,
+                        &options,
+                    )?;
+                    if let Some(paths) = &install_report.adopted {
+                        let all = report.adopted.get_or_insert_with(Vec::new);
+                        all.extend(paths.iter().cloned());
+                        all.sort();
+                        all.dedup();
+                    }
+                    let mut new_hashes: std::collections::BTreeMap<
+                        (ItemKind, String),
+                        Option<String>,
+                    > = std::collections::BTreeMap::new();
+                    for it in &install_report.items {
+                        new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
+                    }
+                    guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+                    // Collect orphans first, then batch-remove from lockfile.
+                    let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
+                    for entry in &source_entries {
+                        let kind = entry.kind;
+                        if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                            orphans.push((entry, kind));
+                        }
+                    }
+                    if !orphans.is_empty() {
+                        let mut lock = crate::lockfile::Lockfile::load(target)?;
+                        for (entry, kind) in &orphans {
+                            remove_item_outputs(target, *kind, &entry.name);
+                            lock.remove(entry.kind, &entry.name);
+                            report.items.push(UpdatedItem {
+                                kind: *kind,
+                                name: entry.name.clone(),
+                                source: source_label.clone(),
+                                status: UpdateStatus::Removed,
+                            });
+                        }
+                        lock.save(target)?;
+                    }
+                    for entry in &source_entries {
+                        let kind = entry.kind;
+                        if !new_hashes.contains_key(&(kind, entry.name.clone())) {
+                            continue; // already handled as orphan
+                        }
+                        let new_hash = new_hashes
+                            .get(&(kind, entry.name.clone()))
+                            .cloned()
+                            .flatten();
+                        let status = if new_hash == entry.hash {
+                            UpdateStatus::UpToDate
+                        } else {
+                            UpdateStatus::Updated {
+                                old_hash: entry.hash.clone(),
+                                new_hash,
+                            }
+                        };
                         report.items.push(UpdatedItem {
                             kind,
                             name: entry.name.clone(),
                             source: source_label.clone(),
-                            status: UpdateStatus::WouldRemove,
+                            status,
                         });
-                        continue;
                     }
-                    let new_hash = new_hashes
-                        .get(&(kind, lookup_name.to_string()))
-                        .cloned()
-                        .flatten();
-                    let status = if new_hash == entry.hash {
-                        UpdateStatus::UpToDate
-                    } else {
-                        UpdateStatus::WouldChange {
-                            old_hash: entry.hash.clone(),
-                            new_hash,
+                }
+                UpdateMode::DryRun => {
+                    let (root, _guard) = fetch_ssot(&source)?;
+                    let new_hashes = planned_source_hashes(&root)
+                        .with_context(|| format!("resolve items for source `{source_label}`"))?;
+                    guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+                    for entry in &source_entries {
+                        let kind = entry.kind;
+                        // The source-side hash map is keyed by the item's FOLDER
+                        // (see `hash_items` / `iter_item_dirs`), which is the
+                        // co-location group. A rule/agent whose frontmatter name
+                        // diverges from its folder must be looked up by that folder,
+                        // not its effective name, or it is falsely reported as
+                        // `WouldRemove` (issue #214; mirrors the #208 doctor fix).
+                        let lookup_name = entry
+                            .group
+                            .as_deref()
+                            .or(entry.source_name.as_deref())
+                            .unwrap_or(&entry.name);
+                        if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
+                            report.items.push(UpdatedItem {
+                                kind,
+                                name: entry.name.clone(),
+                                source: source_label.clone(),
+                                status: UpdateStatus::WouldRemove,
+                            });
+                            continue;
                         }
-                    };
-                    report.items.push(UpdatedItem {
-                        kind,
-                        name: entry.name.clone(),
-                        source: source_label.clone(),
-                        status,
-                    });
+                        let new_hash = new_hashes
+                            .get(&(kind, lookup_name.to_string()))
+                            .cloned()
+                            .flatten();
+                        let status = if new_hash == entry.hash {
+                            UpdateStatus::UpToDate
+                        } else {
+                            UpdateStatus::WouldChange {
+                                old_hash: entry.hash.clone(),
+                                new_hash,
+                            }
+                        };
+                        report.items.push(UpdatedItem {
+                            kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status,
+                        });
+                    }
                 }
             }
         }
+        Ok(())
+    })();
+    if let Err(err) = result {
+        return Err(match &report.adopted {
+            Some(paths)
+                if !paths.is_empty() && err.downcast_ref::<AdoptedBeforeFailure>().is_none() =>
+            {
+                err.context(AdoptedBeforeFailure {
+                    paths: paths.clone(),
+                })
+            }
+            _ => err,
+        });
     }
 
     Ok(report)
