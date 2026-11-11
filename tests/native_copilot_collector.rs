@@ -1085,7 +1085,11 @@ fn each_mutation_with_unexpected_stdout_stops_at_its_sequence() {
             |text| format!("{text}extra\n"),
             |_| String::new(),
             |text| text.trim_end().to_owned(),
-            |text| text.replace("/home/", "/hom/"),
+            // A different absolute path in the install or uninstall message.
+            |text| {
+                text.replacen(" from /", " from /other/", 1)
+                    .replacen(" at /", " at /other/", 1)
+            },
         ];
         for make in cases.iter() {
             let mut wrong = None;

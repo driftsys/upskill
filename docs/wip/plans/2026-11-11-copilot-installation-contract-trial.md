@@ -83,5 +83,10 @@ are copied byte for byte from the packet evidence directory.
   The marketplace registration is presumed to remain in the packet home. No
   cleanup command ran.
 
-The collector rule for mutation stdout needs a decision before a new packet is
-prepared. This packet is consumed and must not be run again.
+Decided after the run: the collector now accepts the stdout of each mutation
+only when it equals the exact Copilot 1.0.107 success text, built from the
+native name, marketplace path and payload digest (commit `f78114e`). After
+install it requires one owned plugin entry with `"source": "live"` and
+`"installedFrom"` equal to the marketplace path. The
+[mutation output diagnosis](../../technotes/evidence/2026-11-11-copilot-mutation-output-diagnosis/transcript.txt)
+records the measured text. This packet is consumed and must not be run again.

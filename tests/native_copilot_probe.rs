@@ -37,6 +37,7 @@ fn collector_rejects_schema_changes_in_every_row() {
         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":"true"}]"#,
         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":true,"secret-extra":"secret-value"}]"#,
         br#"[{"name":"a","marketplace":"b","source":"c","version":"d","enabled":true},{}]"#,
+        br#"[{"name":"a","marketplace":"b","source":"live","version":"d","enabled":true,"installedFrom":4}]"#,
     ] {
         assert_eq!(summarize_inventory("1.0.107", CopilotInventoryKind::Plugins, bytes), Err(CopilotProbeError::UnsupportedShape));
     }
