@@ -58,7 +58,14 @@ pub fn summarize_inventory(
     };
     for row in rows {
         let fields = row.as_object().ok_or(CopilotProbeError::UnsupportedShape)?;
-        if fields.len() != strings.len() + 1
+        // A live plugin entry also carries the string `installedFrom`.
+        let extra = usize::from(
+            kind == CopilotInventoryKind::Plugins
+                && fields
+                    .get("installedFrom")
+                    .is_some_and(serde_json::Value::is_string),
+        );
+        if fields.len() != strings.len() + 1 + extra
             || !strings
                 .iter()
                 .all(|key| fields.get(*key).is_some_and(serde_json::Value::is_string))

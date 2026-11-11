@@ -11,6 +11,28 @@ use std::sync::atomic::AtomicBool;
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
+/// Exact Copilot 1.0.107 stdout of the four mutating commands, by zero-based call index.
+fn mutation_outputs(plan: &Value) -> [(usize, String); 4] {
+    let name = plan["native_name"].as_str().unwrap();
+    let catalog = plan["catalog"].as_str().unwrap();
+    let payload = plan["payload_sha256"].as_str().unwrap();
+    [
+        (3, format!("Marketplace \"{name}\" added successfully.\n")),
+        (
+            4,
+            format!(
+                "Plugin \"{name}\" installed successfully. Installed 1 skill.\nEnabled \"{name}@{name}\". It is loaded live from {catalog}/revisions/{payload}, so edits take effect on the next session \u{2014} nothing was copied.\n"
+            ),
+        ),
+        (
+            7,
+            format!(
+                "Plugin \"{name}@{name}\" disabled. It is still on disk at {catalog} \u{2014} nothing was removed.\n"
+            ),
+        ),
+        (8, format!("Marketplace \"{name}\" removed successfully.\n")),
+    ]
+}
 fn prepared(mode: &str) -> Fixture {
     let mut fixture = Fixture::new();
     let control = fixture.parent.join("control");
@@ -26,11 +48,14 @@ fn prepared(mode: &str) -> Fixture {
     let name = plan["native_name"].as_str().unwrap();
     let version = plan["version"].as_str().unwrap();
     let catalog = plan["catalog"].as_str().unwrap();
+    for (n, text) in mutation_outputs(&plan) {
+        private(&control.join(format!("out-{n}")), text.as_bytes(), 0o600);
+    }
     for (file, value) in [
         ("empty", json!([])),
         (
             "plugins",
-            json!([{"name":name,"marketplace":name,"source":catalog,"version":version,"enabled":true}]),
+            json!([{"name":name,"marketplace":name,"source":"live","installedFrom":catalog,"version":version,"enabled":true}]),
         ),
         (
             "markets",
@@ -92,6 +117,7 @@ fi
 case "$n" in
   1|9) if [ -f "$control/baseline-plugins" ]; then /bin/cat "$control/baseline-plugins"; else /bin/cat "$control/empty"; fi;;
   2|10) if [ -f "$control/baseline-markets" ]; then /bin/cat "$control/baseline-markets"; else /bin/cat "$control/empty"; fi;;
+  3|4|7|8) /bin/cat "$control/out-$n";;
   5) /bin/cat "$control/plugins";;
   6) /bin/cat "$control/markets";;
 esac
@@ -1008,4 +1034,113 @@ fn marketplace_display_metadata_preserves_exact_owned_local_binding_and_privacy(
         assert_eq!(result["source_rejection_category"], Value::Null);
     }
     assert_no_secret(&fixture.root.join("evidence"));
+}
+
+fn run_with(edit: impl FnOnce(&std::path::Path, &Value)) -> (Fixture, Value) {
+    let fixture = prepared("success");
+    let plan = json_file(fixture.root.join("plan.json"));
+    edit(&fixture.parent.join("control"), &plan);
+    let preflight = fixture.capture().unwrap();
+    let mut evidence = preflight.begin_evidence().unwrap();
+    let summary = serde_json::to_value(evidence.collect(&AtomicBool::new(false)).unwrap()).unwrap();
+    (fixture, summary)
+}
+fn assert_stopped(fixture: &Fixture, summary: &Value, calls: usize, reason: &str) {
+    assert_eq!(summary["complete"], false);
+    assert_eq!(summary["client_commands"], calls);
+    assert_eq!(summary["stop"], reason);
+    assert_eq!(
+        fs::read_to_string(fixture.parent.join("control/count")).unwrap(),
+        calls.to_string()
+    );
+    assert_no_secret(&fixture.root.join("evidence"));
+}
+
+#[test]
+fn exact_mutation_outputs_complete_and_record_only_a_boolean() {
+    let (fixture, summary) = run_with(|_, _| {});
+    assert_eq!(summary["complete"], true);
+    assert_eq!(summary["client_commands"], 11);
+    let area = fixture.root.join("evidence");
+    for sequence in [4, 5, 8, 9] {
+        let result = json_file(area.join(format!("step-{sequence:02}.result.json")));
+        assert_eq!(result["accepted"], true, "{sequence}");
+        assert_eq!(
+            result["observation"],
+            json!({"output_matches_expected":true})
+        );
+    }
+    for entry in fs::read_dir(&area).unwrap() {
+        let text = fs::read_to_string(entry.unwrap().path()).unwrap();
+        assert!(!text.contains("added successfully") && !text.contains("nothing was"));
+    }
+}
+
+#[test]
+fn each_mutation_with_unexpected_stdout_stops_at_its_sequence() {
+    for n in [3usize, 4, 7, 8] {
+        let cases: [fn(&str) -> String; 6] = [
+            |text| text.replace('"', "\"x"),
+            |text| text.replace('\u{2014}', "-"),
+            |text| format!("{text}extra\n"),
+            |_| String::new(),
+            |text| text.trim_end().to_owned(),
+            |text| text.replace("/home/", "/hom/"),
+        ];
+        for make in cases.iter() {
+            let mut wrong = None;
+            let (fixture, summary) = run_with(|control, plan| {
+                let (_, text) = mutation_outputs(plan)
+                    .into_iter()
+                    .find(|(i, _)| *i == n)
+                    .unwrap();
+                let changed = make(&text);
+                // Messages without a path or an em dash have no such variant.
+                if changed == text {
+                    return;
+                }
+                private(&control.join(format!("out-{n}")), changed.as_bytes(), 0o600);
+                wrong = Some(changed);
+            });
+            if wrong.is_none() {
+                continue;
+            }
+            assert_stopped(&fixture, &summary, n + 1, "unexpected_output");
+            assert!(
+                !fixture
+                    .parent
+                    .join(format!("control/call-{}", n + 1))
+                    .exists()
+            );
+        }
+    }
+}
+
+#[test]
+fn install_inventory_must_be_the_live_entry_installed_from_the_marketplace_path() {
+    for case in 0..4 {
+        let (fixture, summary) = run_with(|control, plan| {
+            let name = plan["native_name"].as_str().unwrap();
+            let catalog = plan["catalog"].as_str().unwrap();
+            let mut row = json!({"name":name,"marketplace":name,"source":"live","installedFrom":catalog,
+                "version":plan["version"],"enabled":true});
+            match case {
+                0 => row["source"] = json!("local"),
+                1 => row["installedFrom"] = json!(format!("{catalog}/other")),
+                2 => row["enabled"] = json!(false),
+                _ => row["source"] = json!(catalog),
+            }
+            private(
+                &control.join("plugins"),
+                &serde_json::to_vec(&json!([row])).unwrap(),
+                0o600,
+            );
+        });
+        let reason = if case == 0 {
+            "outside_packet_source"
+        } else {
+            "fixture_conflict"
+        };
+        assert_stopped(&fixture, &summary, 6, reason);
+    }
 }

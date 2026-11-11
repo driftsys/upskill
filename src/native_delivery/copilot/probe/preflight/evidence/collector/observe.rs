@@ -95,6 +95,26 @@ pub(super) fn facts(output: &NativeProcessOutput) -> Value {
         "output_complete":output.output_complete,"scope_unchanged":output.scope_unchanged,
         "executable_unchanged":output.executable_unchanged,"cleanup_signal_sent":output.cleanup_signal_sent})
 }
+/// Exact Copilot 1.0.107 stdout of the four mutating commands. The text is
+/// compared in memory and never recorded.
+fn mutation_output(index: usize, plan: &Value) -> Option<String> {
+    let name = plan["native_name"].as_str()?;
+    let catalog = plan["catalog"].as_str()?;
+    let payload = plan["payload_sha256"].as_str()?;
+    Some(match index {
+        3 => format!("Marketplace \"{name}\" added successfully.\n"),
+        4 => format!(
+            "Plugin \"{name}\" installed successfully. Installed 1 skill.\n\
+             Enabled \"{name}@{name}\". It is loaded live from {catalog}/revisions/{payload}, \
+             so edits take effect on the next session \u{2014} nothing was copied.\n"
+        ),
+        7 => format!(
+            "Plugin \"{name}@{name}\" disabled. It is still on disk at {catalog} \u{2014} nothing was removed.\n"
+        ),
+        8 => format!("Marketplace \"{name}\" removed successfully.\n"),
+        _ => return None,
+    })
+}
 pub(super) fn inspect(
     index: Option<usize>,
     output: &NativeProcessOutput,
@@ -128,8 +148,9 @@ pub(super) fn inspect(
         _ => None,
     };
     let Some(kind) = kind else {
-        return if output.stdout.is_empty() {
-            Ok(json!({"unstructured_output_empty":true}))
+        let expected = mutation_output(index, plan).ok_or("input")?;
+        return if output.stdout == expected.as_bytes() {
+            Ok(json!({"output_matches_expected":true}))
         } else {
             Err("unexpected_output".into())
         };
@@ -168,6 +189,19 @@ pub(super) fn inspect(
             unrelated_default_remote_display_entries += 1;
             continue;
         }
+        // An installed plugin is loaded live from the marketplace path.
+        if kind == CopilotInventoryKind::Plugins && named && source == "live" {
+            if (row["name"] != name && row["name"] != selector)
+                || row["marketplace"] != name
+                || row["version"] != plan["version"]
+                || row["enabled"] != true
+                || row["installedFrom"] != catalog
+            {
+                return Err("fixture_conflict".into());
+            }
+            matches += 1;
+            continue;
+        }
         let local_source = if kind == CopilotInventoryKind::Marketplaces {
             source.strip_prefix("Local: ").unwrap_or(source)
         } else {
@@ -197,12 +231,8 @@ pub(super) fn inspect(
         {
             return Err("fixture_conflict".into());
         }
-        if kind == CopilotInventoryKind::Plugins
-            && ((row["name"] != name && row["name"] != selector)
-                || row["marketplace"] != name
-                || row["version"] != plan["version"]
-                || row["enabled"] != true)
-        {
+        // Only the live source above can describe an owned plugin entry.
+        if kind == CopilotInventoryKind::Plugins {
             return Err("fixture_conflict".into());
         }
         if source_path != Path::new(catalog)
