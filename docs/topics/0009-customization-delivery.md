@@ -616,8 +616,9 @@ mode is byte `1` followed by unsigned 32-bit big-endian permission bits.
    `-` trimmed, truncated to 39 characters and trimmed again; an empty result is
    an error. The total length is at most 64 characters, the limit Copilot CLI
    1.0.107 enforces. Ownership is decided from `<hash16>` and the exact expected
-   name, never from `<skill>`, which does not enter the identity. Bundle
-   references are resolved elsewhere and do not enter this identity.
+   name, never from `<skill>`, which does not enter the identity. Renaming the
+   source skill changes the native name. Bundle references are resolved
+   elsewhere and do not enter this identity.
 2. `upskill:skill-payload:v1\0` starts with those same fields, then source
    identity, optional revision (presence byte plus framed value), source name,
    installed name, captured manifest digest and selected-body origin. Origin is

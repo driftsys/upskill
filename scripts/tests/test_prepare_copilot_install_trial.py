@@ -145,7 +145,10 @@ class PrepareTrial(unittest.TestCase):
         self.assertEqual(record['argv'], ['--copilot', str(parent / 'packet')])
 
     def test_count_checks_fail(self):
-        for kwargs in ({'files': 8}, {'commands': 10}, {'native_name': 'upskill-' + '0' * 64}):
+        for kwargs in ({'files': 8}, {'commands': 10}, {'native_name': 'upskill-' + '0' * 64},
+                       {'native_name': 'upskill-a--b-' + '0' * 16},
+                       {'native_name': 'upskill-a-' + 'A' * 16},
+                       {'native_name': 'upskill-' + 'a' * 40 + '-' + '0' * 16}):
             with self.subTest(**kwargs):
                 result = self.run_script(self.make_fixture(**kwargs))
                 self.assertNotEqual(result.returncode, 0)
