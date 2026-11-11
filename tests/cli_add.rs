@@ -343,6 +343,14 @@ fn assert_source_overlap_refused(output_dir: &str, extra_args: &[&str]) {
         stderr.contains(Path::new(output_dir).join("my-skill").to_str().unwrap()),
         "stderr does not name the source directory: {stderr}"
     );
+    let output = fs::canonicalize(&proj)
+        .unwrap()
+        .join(output_dir)
+        .join("my-skill/SKILL.md");
+    assert!(
+        stderr.contains(&format!("overlaps the output path {};", output.display())),
+        "stderr does not name the output path: {stderr}"
+    );
 
     assert_eq!(
         fs::read_to_string(item.join("SKILL.md")).unwrap(),
@@ -444,6 +452,13 @@ fn write_files(root: &Path, files: &[(&str, &str)]) {
 /// Run `add` with `args` in a project whose `files` are staged first, and
 /// assert that the alias overlap is refused with every file unchanged.
 fn assert_alias_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str) {
+    assert_overlap_refused(files, args, item, None);
+}
+
+/// Like [`assert_alias_overlap_refused`]. When `output` is given, also assert
+/// that the refusal names that output path, relative to the canonical
+/// project directory.
+fn assert_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str, output: Option<&str>) {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -461,6 +476,13 @@ fn assert_alias_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &st
         stderr.contains(&format!("'{item}'")) && stderr.contains("overlaps the output path"),
         "stderr does not explain the refusal: {stderr}"
     );
+    if let Some(output) = output {
+        let output = fs::canonicalize(&proj).unwrap().join(output);
+        assert!(
+            stderr.contains(&format!("overlaps the output path {};", output.display())),
+            "stderr does not name the output path: {stderr}"
+        );
+    }
     for (rel, content) in files {
         assert_eq!(
             fs::read_to_string(proj.join(rel)).unwrap(),
@@ -473,7 +495,7 @@ fn assert_alias_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &st
 
 #[test]
 fn add_refuses_alias_whose_output_contains_the_source() {
-    assert_alias_overlap_refused(
+    assert_overlap_refused(
         &[
             (
                 ".claude/skills/bar/foo/SKILL.md",
@@ -491,12 +513,13 @@ fn add_refuses_alias_whose_output_contains_the_source() {
             "--project",
         ],
         "bar",
+        Some(".claude/skills/bar"),
     );
 }
 
 #[test]
 fn add_refuses_alias_whose_resource_dir_is_the_source() {
-    assert_alias_overlap_refused(
+    assert_overlap_refused(
         &[
             (
                 ".claude/rules/bar/RULE.md",
@@ -514,5 +537,121 @@ fn add_refuses_alias_whose_resource_dir_is_the_source() {
             "--project",
         ],
         "bar",
+        Some(".claude/rules/bar"),
     );
+}
+
+#[test]
+fn add_refuses_source_inside_copilot_skills_dir() {
+    assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);
+}
+
+#[test]
+fn add_refuses_source_inside_copilot_instructions_dir() {
+    assert_overlap_refused(
+        &[
+            (
+                ".github/instructions/my-rule/RULE.md",
+                "---\nname: my-rule\ndescription: d\n---\nBody\n",
+            ),
+            (".github/instructions/my-rule/extra.md", "extra\n"),
+        ],
+        &["add", "./.github/instructions", "--copilot", "--project"],
+        "my-rule",
+        Some(".github/instructions/my-rule"),
+    );
+}
+
+#[test]
+fn add_refuses_agent_source_inside_claude_agents_dir() {
+    assert_overlap_refused(
+        &[
+            (
+                ".claude/agents/my-agent/AGENT.md",
+                "---\nname: my-agent\ndescription: d\n---\nBody\n",
+            ),
+            (".claude/agents/my-agent/extra.md", "extra\n"),
+        ],
+        &["add", "./.claude/agents", "--claude", "--project"],
+        "my-agent",
+        Some(".claude/agents/my-agent"),
+    );
+}
+
+#[test]
+fn add_refuses_overlap_on_the_name_resolution_path() {
+    // `pack my-skill` mixes a bundle name and an item name, so `add` uses the
+    // name-resolution path; the requested item `my-skill` overlaps its own
+    // global Claude output path.
+    let (tmp, home, registry) = stage_registry_in_global_claude_dir();
+    let other = registry.join("skills/my-skill");
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            registry.to_str().unwrap(),
+            "pack",
+            "my-skill",
+            "--claude",
+            "--global",
+        ])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("'my-skill'") && stderr.contains("overlaps the output path"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(other.join("SKILL.md")).unwrap(),
+        "---\nname: my-skill\ndescription: d\n---\nBody\n"
+    );
+    assert_eq!(
+        fs::read_to_string(other.join("references/notes.md")).unwrap(),
+        "user notes\n"
+    );
+    assert!(!home.join(".claude/skills/wanted").exists());
+    assert!(!home.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_applies_an_alias_only_to_the_item_it_names() {
+    // The rule in folder `bar` is named `baz`; its directory is the resource
+    // base of a rule named `bar`. The alias `foo=bar` renames only the skill
+    // `foo`, so the rule `baz` is not checked under the name `bar`.
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    // Both items live under the source `.claude/rules`.
+    write_files(
+        &proj,
+        &[
+            (
+                ".claude/rules/foo/SKILL.md",
+                "---\nname: foo\ndescription: d\n---\nBody\n",
+            ),
+            (
+                ".claude/rules/bar/RULE.md",
+                "---\nname: baz\ndescription: d\n---\nBody\n",
+            ),
+        ],
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args([
+            "add",
+            "./.claude/rules",
+            "--as",
+            "foo=bar",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    assert!(proj.join(".claude/skills/bar/SKILL.md").exists());
+    assert!(proj.join(".claude/rules/baz.md").exists());
+    assert!(proj.join(".claude/rules/bar/RULE.md").exists());
 }
