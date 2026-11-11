@@ -33,7 +33,9 @@ use crate::source::{GitRepo, GithubRepo, InstallSource};
 ///
 /// Every variant ends in [`install_from_local_path`], which applies the
 /// plan against an empty lockfile: a reinstall through this function does
-/// not delete the files that the new version no longer produces.
+/// not delete the recorded files that the new version no longer produces.
+/// It still deletes the entrypoint file of each client that the item's
+/// `audience:` excludes.
 pub fn install_from_source(
     source: &InstallSource,
     target: &Path,
@@ -154,8 +156,10 @@ fn clone_to_tempdir(
 /// when an `InstallSource` already exists.
 ///
 /// Like [`install_from_local_path`], it applies the plan against an empty
-/// lockfile: a reinstall through this function does not delete the files
-/// that the new version no longer produces.
+/// lockfile: a reinstall through this function does not delete the
+/// recorded files that the new version no longer produces. It still
+/// deletes the entrypoint file of each client that the item's `audience:`
+/// excludes.
 pub fn install_from_git_url(
     url: &str,
     git_ref: Option<&str>,

@@ -43,7 +43,9 @@ use crate::source::{InstallSource, parse_install_source};
 /// Plans every output, then writes the plan with no previous ownership
 /// record (a new empty [`crate::lockfile::Lockfile`]); the computed record
 /// is discarded. A reinstall through this function therefore does not
-/// delete the files that the new version no longer produces.
+/// delete the recorded files that the new version no longer produces. It
+/// still deletes the entrypoint file of each client that the item's
+/// `audience:` excludes (the plan's `deselected_entries`).
 pub fn install_from_local_path(
     source: &Path,
     target: &Path,

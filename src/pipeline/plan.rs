@@ -53,7 +53,8 @@ impl PlanNames {
 /// under the same installed name, for example an item that is named on
 /// the command line and is also a member of a named bundle. Two items are
 /// such copies when they are equal: same kind, installed name, source
-/// name and planned files. The first copy keeps its position.
+/// name, planned files and deselected entries. The first copy keeps its
+/// position.
 pub(crate) fn merge_duplicates(planned: &mut Vec<PlannedItem>) {
     let mut kept: Vec<PlannedItem> = Vec::with_capacity(planned.len());
     for item in planned.drain(..) {

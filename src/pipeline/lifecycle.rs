@@ -280,7 +280,7 @@ fn remove_selected(
 ///   but don't: every recorded path that is absent, or, for an item
 ///   with an empty `files` record, each per-client entrypoint that is
 ///   absent. A recorded path that `deletable` rejects is skipped without
-///   a report, here and in the modified files.
+///   a report, here and in the modified and unreadable files.
 ///   Reinstall (`upskill add <source>`) fixes it.
 /// - **modified files** — recorded files whose content differs from the
 ///   recorded hash, or that are no longer regular files.

@@ -169,9 +169,9 @@ is not in the lockfile, which is an error.
   reinstalls), skipped plugins (informational — CLI was absent at install time),
   orphaned dependencies (informational), and MCP server reconciliation. Exit 0
   when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
-  and do not affect the exit code. Missing and modified files are checked
-  against the `files` record; a recorded path that `remove` would never delete
-  (outside the client roots, fewer than three components, or with a `..`
+  and do not affect the exit code. Missing, modified and unreadable files are
+  checked against the `files` record; a recorded path that `remove` would never
+  delete (outside the client roots, fewer than three components, or with a `..`
   component) is skipped without a report. For an item with an empty or missing
   `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
   list), `doctor` checks each per-client entry file instead.

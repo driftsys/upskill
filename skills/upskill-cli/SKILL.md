@@ -50,16 +50,16 @@ usage error.
 
 ## When to use upskill vs raw edits
 
-| Operation                                              | Use upskill    | Raw edits OK                                                     |
-| ------------------------------------------------------ | -------------- | ---------------------------------------------------------------- |
-| Authoring a new item in a source registry              | Yes (`new`)    | No                                                               |
-| Adding installable content to a consumer project       | Yes (`add`)    | No                                                               |
-| Updating installed content from its source             | Yes (`update`) | No                                                               |
-| Removing installed content                             | Yes (`remove`) | No                                                               |
-| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                         |
-| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                         |
-| Auditing installed content for drift                   | Yes (`doctor`) | No                                                               |
-| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` overwrites them; `doctor` reports them as modified |
+| Operation                                              | Use upskill    | Raw edits OK                                                                           |
+| ------------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------- |
+| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                     |
+| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                     |
+| Updating installed content from its source             | Yes (`update`) | No                                                                                     |
+| Removing installed content                             | Yes (`remove`) | No                                                                                     |
+| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                               |
+| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                               |
+| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                     |
+| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` overwrites them; `doctor` reports recorded files as modified (see below) |
 
 When in doubt, use upskill. Raw edits are a sharp tool — only reach for them on
 content you authored and understand, and always lint after.
@@ -196,8 +196,10 @@ affect the exit code.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —
-  `upskill update` overwrites them, and `upskill doctor` reports each edited
-  file as modified and exits 1.
+  `upskill update` overwrites them. For an item with a `files` record in a
+  `schema: 2` lockfile, `upskill doctor` reports each edited file as modified
+  and exits 1. For a `schema: 1` lockfile or an item with an empty `files`
+  record, `doctor` only checks that the entry files exist.
 
 ### `.upskill-lock.json`
 
