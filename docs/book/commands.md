@@ -395,7 +395,10 @@ Files whose frontmatter and body are already canonical are left untouched (no
 | Project | `<cwd>/.upskill-lock.json` | Yes        | Deterministic regeneration in CI.          |
 | Global  | `$HOME/.upskill-lock.json` | No         | Cross-repo continuity for global installs. |
 
-The lockfile carries a top-level `schema: 1` field for forward compatibility.
+The lockfile carries a top-level `schema` field for forward compatibility. A new
+lockfile is written with `schema: 2`. A `schema: 1` lockfile is still read and
+is saved back with `schema: 1`. Each item entry may carry `files` and `pending`
+lists; no command fills them yet.
 
 ## Per-client output paths
 

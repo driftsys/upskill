@@ -256,8 +256,10 @@ adoption changes these commands
 ## 4. State files
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
-git ref, with what content hashes. Same schema (`schema: 1`), two possible
-locations:
+git ref, with what content hashes. Same schema in both locations. A new lockfile
+is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
+entry may carry `files` and `pending` lists of records with `client`, `path` and
+`sha256` fields; no command fills them yet. Two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |
@@ -270,7 +272,7 @@ across-repo continuity for global scope.
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "items": [
     {
       "kind": "skill",

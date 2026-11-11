@@ -91,6 +91,8 @@ mod tests {
                     required_by: vec![],
                     group: None,
                     clients: vec![],
+                    files: Vec::new(),
+                    pending: Vec::new(),
                 })
                 .collect(),
             bundles: vec![],
