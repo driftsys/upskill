@@ -450,14 +450,9 @@ fn write_files(root: &Path, files: &[(&str, &str)]) {
 }
 
 /// Run `add` with `args` in a project whose `files` are staged first, and
-/// assert that the alias overlap is refused with every file unchanged.
-fn assert_alias_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str) {
-    assert_overlap_refused(files, args, item, None);
-}
-
-/// Like [`assert_alias_overlap_refused`]. When `output` is given, also assert
-/// that the refusal names that output path, relative to the canonical
-/// project directory.
+/// assert that the overlap is refused with every file unchanged. When
+/// `output` is given, also assert that the refusal names that output path,
+/// relative to the canonical project directory.
 fn assert_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str, output: Option<&str>) {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
