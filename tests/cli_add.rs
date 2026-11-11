@@ -300,6 +300,12 @@ fn add_rejects_explicit_unsupported_schema() {
     }
 }
 
+/// `rel`, written with `/`, as a path built from its components, so that it
+/// uses the native separator as the paths that the binary prints do.
+fn native(rel: &str) -> std::path::PathBuf {
+    rel.split('/').collect()
+}
+
 /// Stage a project at `<tmp>/proj` whose `<output_dir>/my-skill/` holds a
 /// schema-less `SKILL.md` and one resource file. Returns `(tmp, home, proj)`.
 fn stage_skill_in_client_output_dir(
@@ -340,13 +346,12 @@ fn assert_source_overlap_refused(output_dir: &str, extra_args: &[&str]) {
         "stderr does not explain the refusal: {stderr}"
     );
     assert!(
-        stderr.contains(Path::new(output_dir).join("my-skill").to_str().unwrap()),
+        stderr.contains(native(&format!("{output_dir}/my-skill")).to_str().unwrap()),
         "stderr does not name the source directory: {stderr}"
     );
     let output = fs::canonicalize(&proj)
         .unwrap()
-        .join(output_dir)
-        .join("my-skill/SKILL.md");
+        .join(native(&format!("{output_dir}/my-skill/SKILL.md")));
     assert!(
         stderr.contains(&format!("overlaps the output path {};", output.display())),
         "stderr does not name the output path: {stderr}"
@@ -502,7 +507,7 @@ fn add_and_update_explain_a_source_rooted_in_a_client_directory() {
             stderr.contains(&format!(
                 "The source root {} contains the output path {}",
                 root.display(),
-                root.join("skills/wanted").display()
+                root.join("skills").join("wanted").display()
             )),
             "{args:?}: stderr does not name the source root: {stderr}"
         );
@@ -559,7 +564,7 @@ fn assert_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str, out
         "stderr does not explain the refusal: {stderr}"
     );
     if let Some(output) = output {
-        let output = fs::canonicalize(&proj).unwrap().join(output);
+        let output = fs::canonicalize(&proj).unwrap().join(native(output));
         assert!(
             stderr.contains(&format!("overlaps the output path {};", output.display())),
             "stderr does not name the output path: {stderr}"
