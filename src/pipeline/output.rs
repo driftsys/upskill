@@ -4,9 +4,8 @@
 //! item's ownership record.
 //!
 //! The install pipeline plans per-client output files at the paths defined
-//! in format-spec §7 / ADR-0003. The frozen legacy layout keeps install and
-//! legacy candidates in lockstep; pipeline callers go through
-//! [`output_path`].
+//! in format-spec §7 / ADR-0003. The paths come from the frozen layout in
+//! `crate::legacy::layout`; pipeline callers go through [`output_path`].
 
 use std::fs;
 use std::path::{Path, PathBuf};

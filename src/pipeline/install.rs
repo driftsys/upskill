@@ -42,7 +42,8 @@ use crate::source::{InstallSource, parse_install_source};
 ///
 /// Plans every output, then writes the plan with no previous ownership
 /// record (a new empty [`crate::lockfile::Lockfile`]); the computed record
-/// is discarded.
+/// is discarded. A reinstall through this function therefore does not
+/// delete the files that the new version no longer produces.
 pub fn install_from_local_path(
     source: &Path,
     target: &Path,

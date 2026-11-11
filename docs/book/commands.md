@@ -173,7 +173,9 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
   no longer a regular file (for example a symbolic link or a directory).
   `remove` keeps it and prints `kept modified file: <path>` to stderr. With
   `--force`, `remove` deletes a modified regular file; a path that is not a
-  regular file is kept even with `--force`.
+  regular file is kept even with `--force`. A recorded regular file that
+  `remove` cannot read (for example because of its permissions) is handled as
+  modified.
 - **Absent** — the path does not exist. `remove` ignores it.
 
 A file that the record does not list (unowned), for example a file you added
@@ -242,9 +244,13 @@ buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
-  <source>`). For an item with a `files` record, every recorded
-  path that does not exist; for an item without a record (a `schema: 1`
-  lockfile), each per-client entry file that does not exist.
+  <source>`). For an item with a non-empty `files` record, every
+  recorded path that does not exist; for an item with an empty or missing record
+  (a `schema: 1` lockfile, or a `schema: 2` item with an empty `files` list),
+  each per-client entry file that does not exist. A recorded path that `remove`
+  would never delete (outside the client roots, fewer than three components, or
+  with a `.` or `..` component) is skipped without a report, in this bucket and
+  in the next one.
 - **Modified files** — recorded files whose content differs from the recorded
   SHA-256, or that are no longer regular files. Causes exit 1.
 - **Unreadable files** — recorded files that could not be inspected (for example
@@ -457,19 +463,20 @@ fills `pending` yet. `remove` deletes only recorded files, as described in
 
 A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
 adopts it before it changes any file: it keeps a copy of the old lockfile as
-`.upskill-lock.json.v1`, records each file that exists at the output paths of
-every installed item with its current hash, saves the lockfile as `schema: 2`,
-and prints the adopted paths to stderr. Adoption cannot tell an edited file from
-one an earlier version wrote. It records two kinds of files as unchanged:
-generated files that were edited before the upgrade, and files that were added
-inside an item directory. The command that adopts them, or a later `update`, may
-replace or delete them, and a later `remove` may delete them. Adoption records
-only the files that exist. For an item that still has at least one file,
-`doctor` therefore no longer reports the other outputs of that item that were
-already missing before adoption. The adopted paths are printed also when the
-command fails after the adoption was saved. `update --dry-run` and `doctor` do
-not adopt, and neither does a `remove` that fails because a name is not in the
-lockfile.
+`.upskill-lock.json.v1` (when that file already exists, from an earlier
+adoption, it is kept unchanged and not replaced), records each file that exists
+at the output paths of every installed item with its current hash, saves the
+lockfile as `schema: 2`, and prints the adopted paths to stderr. Adoption cannot
+tell an edited file from one an earlier version wrote. It records two kinds of
+files as unchanged: generated files that were edited before the upgrade, and
+files that were added inside an item directory. The command that adopts them, or
+a later `update`, may replace or delete them, and a later `remove` may delete
+them. Adoption records only the files that exist. For an item that still has at
+least one file, `doctor` therefore no longer reports the other outputs of that
+item that were already missing before adoption. The adopted paths are printed
+also when the command fails after the adoption was saved. `update --dry-run` and
+`doctor` do not adopt, and neither does a `remove` that fails because a name is
+not in the lockfile.
 
 ## Per-client output paths
 

@@ -278,7 +278,9 @@ fn remove_selected(
 /// The report has these buckets:
 /// - **missing outputs** — file paths the lockfile says should exist
 ///   but don't: every recorded path that is absent, or, for an item
-///   without a `files` record, each per-client entrypoint that is absent.
+///   with an empty `files` record, each per-client entrypoint that is
+///   absent. A recorded path that `deletable` rejects is skipped without
+///   a report, here and in the modified files.
 ///   Reinstall (`upskill add <source>`) fixes it.
 /// - **modified files** — recorded files whose content differs from the
 ///   recorded hash, or that are no longer regular files.
@@ -313,7 +315,8 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         let mut unreadable = Vec::new();
         if entry.files.is_empty() {
             // No record (a `schema: 1` lockfile, which `doctor` does not
-            // adopt): check the entrypoint of each layout path.
+            // adopt, or an empty record): check the entrypoint of each
+            // layout path.
             for client in ALL_CLIENTS {
                 // Only check clients this item was actually written for. An
                 // empty `clients` list means "all" — pre-ADR-0012 lockfiles

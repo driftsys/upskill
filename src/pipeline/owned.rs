@@ -1,8 +1,9 @@
 //! Ownership of installed files: content hashes, file state
 //! classification, and the one-time adoption of a `schema: 1` lockfile.
 //!
-//! Pure helpers over the filesystem. This module writes nothing to stdout
-//! or stderr.
+//! `classify` and the record helpers only read the filesystem;
+//! `adopt_schema1` also writes the lockfile backup and the lockfile. This
+//! module writes nothing to stdout or stderr.
 
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};

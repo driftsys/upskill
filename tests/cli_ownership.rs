@@ -215,7 +215,8 @@ fn adoption_prints_the_adopted_files_once() {
     let expected = "note: adopted 1 files installed by an earlier upskill version as unchanged.\n\
                     Manual edits made to these files before now are not protected:\n  \
                     .claude/rules/api-conventions.md\n\
-                    The previous lockfile is kept as .upskill-lock.json.v1.\n";
+                    A copy of the schema 1 lockfile is kept as .upskill-lock.json.v1; \
+                    an existing copy is not replaced.\n";
     assert!(stderr.contains(expected), "stderr: {stderr}");
 
     let second = common::upskill_cmd(&home)

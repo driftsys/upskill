@@ -144,8 +144,9 @@ file is **owned** when it is a regular file with the recorded SHA-256: `remove`
 deletes it. It is **modified** when its content differs or it is no longer a
 regular file: `remove` keeps it and prints `kept modified file: <path>` to
 stderr; `--force` deletes a modified regular file, but never a path that is not
-a regular file. An absent recorded file is ignored. A file that the record does
-not list is **unowned** and is never deleted. Empty item directories are then
+a regular file. A recorded regular file that cannot be read is handled as
+modified. An absent recorded file is ignored. A file that the record does not
+list is **unowned** and is never deleted. Empty item directories are then
 deleted; client roots and kind directories are kept. A recorded path outside the
 client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
 and a symbolic link in the item part of a recorded path's parent directories
@@ -168,7 +169,11 @@ is not in the lockfile, which is an error.
   reinstalls), skipped plugins (informational — CLI was absent at install time),
   orphaned dependencies (informational), and MCP server reconciliation. Exit 0
   when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
-  and do not affect the exit code.
+  and do not affect the exit code. Missing and modified files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (§2.3) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -284,8 +289,10 @@ unless another item installed by the same command writes that path; no command
 fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
 `update` and `remove` (not `update --dry-run`, not `doctor`, not a `remove` that
 fails on an unknown name) adopt a `schema: 1` lockfile: they keep the old bytes
-as `.upskill-lock.json.v1`, record each existing file at the items' output paths
-with its current hash, save `schema: 2`, and print the adopted paths to stderr.
+as `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
+replaced), record each existing file at the items' output paths with its current
+hash, save `schema: 2`, and print the adopted paths to stderr.
+
 Two possible locations:
 
 | Scope   | Location                   | Committed? |
