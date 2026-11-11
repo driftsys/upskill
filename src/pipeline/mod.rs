@@ -352,14 +352,25 @@ pub fn install_with_lockfile(
     }
 
     // -- Refuse a source item that overlaps its own output paths --
+    // Aliases apply to entry-source items only, as in the alias step below.
     if let Some(closure) = &closure {
-        for si in closure.by_source.values() {
-            install::check_sources_outside_outputs(&si.root, target, Some(&si.items))?;
+        for (src_label, si) in &closure.by_source {
+            let aliases: &[(String, String)] = if *src_label == label {
+                &options.aliases
+            } else {
+                &[]
+            };
+            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), aliases)?;
         }
     } else if items.is_empty() {
-        install::check_sources_outside_outputs(&local_source, target, None)?;
+        install::check_sources_outside_outputs(&local_source, target, None, &options.aliases)?;
     } else {
-        install::check_name_resolution_outside_outputs(&local_source, target, items)?;
+        install::check_name_resolution_outside_outputs(
+            &local_source,
+            target,
+            items,
+            &options.aliases,
+        )?;
     }
 
     // -- Now proceed with generation (files are written here) --

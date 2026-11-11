@@ -67,12 +67,15 @@ pub(super) fn install_from_local_path_selective(
 }
 
 /// Run [`check_source_outside_outputs`] for every item under `source` that
-/// `filter` selects (all items when `filter` is `None`). Called before the
-/// first deletion or write of an install.
+/// `filter` selects (all items when `filter` is `None`). An item that
+/// `aliases` (`--as` pairs, `from` empty for every item) renames is also
+/// checked under its installed name. Called before the first deletion or
+/// write of an install.
 pub(super) fn check_sources_outside_outputs(
     source: &Path,
     target: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
+    aliases: &[(String, String)],
 ) -> Result<()> {
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
         for (folder, dir) in iter_item_dirs(source)? {
@@ -85,6 +88,12 @@ pub(super) fn check_sources_outside_outputs(
                 continue;
             }
             check_source_outside_outputs(target, kind, &name, &dir)?;
+            if let Some((_, alias)) = aliases
+                .iter()
+                .find(|(from, _)| from.is_empty() || *from == name)
+            {
+                check_source_outside_outputs(target, kind, alias, &dir)?;
+            }
         }
     }
     Ok(())
@@ -151,12 +160,13 @@ pub(super) fn check_name_resolution_outside_outputs(
     local_source: &Path,
     target: &Path,
     names: &[String],
+    aliases: &[(String, String)],
 ) -> Result<()> {
     let mut item_names = Vec::new();
     for name in names {
         if let Some(bundle_path) = find_bundle_by_name(local_source, name) {
             let (registry_root, resolved) = resolve_bundle_file(&bundle_path)?;
-            check_sources_outside_outputs(&registry_root, target, Some(&resolved.items))?;
+            check_sources_outside_outputs(&registry_root, target, Some(&resolved.items), aliases)?;
         } else {
             item_names.push(name.clone());
         }
@@ -166,7 +176,7 @@ pub(super) fn check_name_resolution_outside_outputs(
         skills: item_names.clone(),
         agents: item_names,
     };
-    check_sources_outside_outputs(local_source, target, Some(&filter))
+    check_sources_outside_outputs(local_source, target, Some(&filter), aliases)
 }
 
 /// Like [`super::install_with_lockfile`]'s name-resolution branch but

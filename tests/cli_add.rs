@@ -431,3 +431,88 @@ fn add_ignores_overlap_of_an_item_that_is_not_requested() {
         );
     }
 }
+
+/// Write `files` (relative path, content) under `root`.
+fn write_files(root: &Path, files: &[(&str, &str)]) {
+    for (rel, content) in files {
+        let path = root.join(rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, content).unwrap();
+    }
+}
+
+/// Run `add` with `args` in a project whose `files` are staged first, and
+/// assert that the alias overlap is refused with every file unchanged.
+fn assert_alias_overlap_refused(files: &[(&str, &str)], args: &[&str], item: &str) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_files(&proj, files);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(args)
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains(&format!("'{item}'")) && stderr.contains("overlaps the output path"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    for (rel, content) in files {
+        assert_eq!(
+            fs::read_to_string(proj.join(rel)).unwrap(),
+            *content,
+            "{rel} changed"
+        );
+    }
+    assert!(!proj.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_refuses_alias_whose_output_contains_the_source() {
+    assert_alias_overlap_refused(
+        &[
+            (
+                ".claude/skills/bar/foo/SKILL.md",
+                "---\nname: foo\ndescription: d\n---\nBody\n",
+            ),
+            (".claude/skills/bar/foo/scripts/run.sh", "echo run\n"),
+            (".claude/skills/bar/notes.txt", "user notes\n"),
+        ],
+        &[
+            "add",
+            "./.claude/skills/bar",
+            "--as",
+            "bar",
+            "--claude",
+            "--project",
+        ],
+        "bar",
+    );
+}
+
+#[test]
+fn add_refuses_alias_whose_resource_dir_is_the_source() {
+    assert_alias_overlap_refused(
+        &[
+            (
+                ".claude/rules/bar/RULE.md",
+                "---\nname: foo\ndescription: d\nignore: [draft.md]\n---\nBody\n",
+            ),
+            (".claude/rules/bar/extra.md", "extra\n"),
+            (".claude/rules/bar/draft.md", "draft\n"),
+        ],
+        &[
+            "add",
+            "./.claude/rules",
+            "--as",
+            "foo=bar",
+            "--claude",
+            "--project",
+        ],
+        "bar",
+    );
+}
