@@ -1,0 +1,12 @@
+{
+  "name": "upskill-contract-probe-f32d91261162a3c7",
+  "owner": {
+    "name": "upskill"
+  },
+  "plugins": [
+    {
+      "name": "upskill-contract-probe-f32d91261162a3c7",
+      "source": "./revisions/1b7f4f637c651e9cff829671eebd7a27ae6b9340076b43b522f5276eaff541b5"
+    }
+  ]
+}

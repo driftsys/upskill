@@ -1,0 +1,26 @@
+{
+  "arguments": [
+    "--no-auto-update",
+    "plugin",
+    "list",
+    "--json"
+  ],
+  "client_index": 5,
+  "collection": "contract",
+  "executable": {
+    "bytes": 2118,
+    "mode": 493,
+    "resolved": "/Users/sebastientasson/.local/share/upskill-trial/copilot-1.0.107/node_modules/@github/copilot/npm-loader.js",
+    "selected": "/Users/sebastientasson/.local/share/upskill-trial/copilot-1.0.107/node_modules/.bin/copilot",
+    "sha256": "d83678c00d0560eb715628b49318f6fc77e634696743aee025496956015f88e0"
+  },
+  "kind": "client",
+  "maximum_authorized_spending": 0,
+  "model_requests": 0,
+  "output_limit_bytes": 1048576,
+  "previous_sha256": "c364a1701f0a582640824e99ddcb94c819e2028ae17dc87f2fb1db7ffe0a9b24",
+  "qualified": false,
+  "schema": 1,
+  "sequence": 6,
+  "timeout_seconds": 20
+}

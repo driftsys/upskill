@@ -1,6 +1,6 @@
 # Third Copilot installation contract trial
 
-Status: prepared for approval, not executed. This packet replaces the second
+Status: executed once on 2026-11-11 and completed; see Outcome. This packet replaces the second
 packet of 2026-11-11, which stopped at sequence 4 because the collector rejected
 the success text of `plugin marketplace add`. Preparing and validating this
 packet authorizes no native mutation.
@@ -79,3 +79,22 @@ a separate decision. A stop leaves a partial record that must be retained.
 Approve only this root, manifest and driver digest. Use the `--execute`
 entrypoint once, with the exact argv in the readiness receipt. All release and
 production qualification gates remain closed regardless of the outcome.
+
+## Outcome (2026-11-11)
+
+The user approved one run. The driver digest matched before the run, `--check`
+passed, and the run used the exact execution argv once. The run completed: one
+git setup command and eleven Copilot commands were accepted, with no stop
+reason and zero model requests. The
+[execution records](../../technotes/evidence/2026-11-11-copilot-installation-trial-execution-3/)
+are copied byte for byte from the packet evidence directory.
+
+- The stdout of all four mutations equalled the expected Copilot 1.0.107 text.
+- After installation, the plugin list held one owned live entry, and the
+  marketplace list held the owned local entry.
+- The final plugin and marketplace lists held no owned entry.
+
+This is the first complete install and removal cycle on Copilot CLI 1.0.107. It
+does not test activation, isolation or production admission. All release and
+production qualification gates remain closed. This packet is consumed and must
+not be run again.

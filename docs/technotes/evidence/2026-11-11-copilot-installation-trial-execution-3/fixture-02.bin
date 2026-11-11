@@ -1,0 +1,6 @@
+---
+name: contract-probe
+description: Native adapter contract fixture.
+---
+
+Read the local resource when explicitly requested.
