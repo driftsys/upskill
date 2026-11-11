@@ -30,7 +30,7 @@ Seven warnings identify exactly those five files at the baseline revision:
 These five files were later removed from `main` by
 [AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
 branch
-[`archive/lifecycle-2026-11`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem).
+[`archive/lifecycle-2026-11`](https://github.com/driftsys/upskill/tree/archive/lifecycle-2026-11/src/filesystem).
 
 The job uses build mode `none`, the runner default stable Linux toolchain, and
 no explicit sysroot or configuration overrides. The log does not record the

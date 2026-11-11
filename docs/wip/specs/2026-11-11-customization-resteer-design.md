@@ -276,6 +276,12 @@ one once or twice.
   reader of the Claude file. This changes AD-0041 for that kind and needs the
   user's approval at that time.
 
+Result (2026-11-11): trial T1 ran with Copilot CLI 1.0.109. Copilot listed and
+applied the rule twice, listed the skill once, and gave no result for the
+subagent. The user decided to keep both copies of a rule, so that one client can
+be removed without an effect on the other. The second outcome above is therefore
+not applied. AD-0042 Decision 7 records this.
+
 ### 6. Support levels in place of activation gates
 
 Each client and kind has one level, published in the user guide and printed by
@@ -364,8 +370,8 @@ These are the author's decisions, not the user's statements.
 2. A modified file causes the item to be skipped, not merged.
 3. The session notice uses a 24-hour limit for network checks.
 4. The updater plugin is installed by the user with the client's own command.
-5. The current Copilot output paths stay unless trial T1 shows a visible
-   duplicate.
+5. The current Copilot output paths stay. Trial T1 showed a duplicate for a
+   rule, and the user decided on 2026-11-11 to keep both copies (section 5).
 6. OpenCode receives the shared ownership behaviour and is published as
    experimental. Codex stays unsupported.
 7. Simultaneous upskill processes on one scope are not supported.

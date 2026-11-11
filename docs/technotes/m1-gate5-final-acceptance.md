@@ -3,7 +3,7 @@
 The code and tests that this record names were removed from `main` by
 [AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
 branch `archive/lifecycle-2026-11`:
-[`src/lifecycle`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle),
+[`src/lifecycle`](https://github.com/driftsys/upskill/tree/archive/lifecycle-2026-11/src/lifecycle),
 [`tests/lifecycle_commands.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_commands.rs),
 [`tests/lifecycle_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_orchestration.rs).
 

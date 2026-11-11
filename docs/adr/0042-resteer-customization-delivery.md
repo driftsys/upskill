@@ -4,8 +4,9 @@ Status: **accepted**. Date: 2026-11-11.
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283). The
 [re-steer design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-11-customization-resteer-design.md)
 holds the full design and delivery order. The change that adds this record is
-delivery step 0: it removes the unused code (Decision 5). The other decisions
-are not implemented yet.
+delivery step 0: it removes the unused code (Decision 5). Decision 7 describes
+the layout that upskill already writes. The other decisions are not implemented
+yet.
 
 ## Context
 
@@ -58,8 +59,8 @@ and installed through a command.
 6. **Delivery order by capability.** The work follows the delivery order of the
    re-steer design: each step delivers one capability (ownership record,
    `update`, repeatable operations, scope, update check, support levels) for all
-   content kinds at the same time. There is no order between skills, rules and
-   automatic maintenance.
+   content kinds at the same time. There is no order between skills and rules.
+   The update check and the updater plugins stay after the other capabilities.
 7. **Both copies of a rule for Claude Code and Copilot.** Decided by the
    maintainer on 2026-11-11, after trial T1. When a rule is installed for both
    Claude Code and Copilot, upskill writes both the `.claude/rules` file and the
@@ -67,8 +68,12 @@ and installed through a command.
    effect on the other client's file. Known limit: in trial T1 (Copilot CLI
    1.0.109), with both copies present, `copilot instruction list` listed the
    rule twice and the model applied its marker twice. A skill installed for both
-   clients was listed once. The trial report is recorded with the change for
-   [#465](https://github.com/driftsys/upskill/issues/465).
+   clients was listed once. The trial could not determine the result for a
+   subagent, because Copilot CLI has no command that lists agents. This decision
+   replaces the two outcomes that section 5 of the re-steer design gives for
+   trial T1. The change for
+   [#465](https://github.com/driftsys/upskill/issues/465) adds the trial record
+   as the technote `t1-copilot-duplicate-visibility.md`.
 
 This record replaces the following clauses of
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):
