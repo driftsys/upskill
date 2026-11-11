@@ -470,13 +470,20 @@ fn add_refuses_two_items_aliased_to_one_name() {
     write_skill(&src, "alpha", "Alpha body.");
     write_skill(&src, "beta", "Beta body.");
 
-    common::upskill_cmd(&home)
+    let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args([
             "add", "./ab", "alpha", "beta", "--as", "alpha=z", "--as", "beta=z", "--claude",
         ])
         .assert()
-        .failure();
+        .code(1);
+    assert!(
+        stderr_of(&out).contains(
+            "two planned items install the skill `z`; each installed name must be unique"
+        ),
+        "stderr: {}",
+        stderr_of(&out)
+    );
 
     assert!(!tmp.path().join(".claude/skills/z").exists());
 }
@@ -861,4 +868,54 @@ fn remove_reports_a_path_recorded_by_two_items_once() {
     assert_eq!(stdout.matches("(1 file(s))").count(), 1, "{stdout}");
     assert_eq!(stdout.matches("(0 file(s))").count(), 1, "{stdout}");
     assert!(!shared.exists());
+}
+
+fn write_rule(dir: &Path, name: &str, body: &str) {
+    fs::create_dir_all(dir).unwrap();
+    fs::write(
+        dir.join("RULE.md"),
+        format!(
+            "---\nschema: 1\nname: {name}\ndescription: Use when testing things\n---\n\n## Body\n\n{body}\n"
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn stale_file_of_one_item_does_not_delete_a_file_another_item_writes() {
+    let (tmp, home) = project();
+    let src = tmp.path().join("rules");
+    write_rule(&src.join("a"), "a", "See [b](./b.md).");
+    fs::write(src.join("a/b.md"), "resource\n").unwrap();
+    write_rule(&src.join("0"), "zero", "other rule");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./rules", "a", "--claude", "--project"])
+        .assert()
+        .success();
+
+    // Rule `a` loses its resource `.claude/rules/a/b.md`; rule `zero`,
+    // aliased to `a/b` and planned first, now writes that path.
+    fs::remove_file(src.join("a/b.md")).unwrap();
+    write_rule(&src.join("a"), "a", "no resource");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./rules",
+            "--as",
+            "zero=a/b",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+
+    let written = fs::read_to_string(tmp.path().join(".claude/rules/a/b.md")).unwrap();
+    assert!(written.contains("other rule"), "{written}");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
 }

@@ -5,10 +5,9 @@
 //! client root and the kind directory, for example `.claude/skills`) may be
 //! symbolic links. Every existing component from the third one to the last
 //! one (the item directory, resource subdirectories and the file) must not
-//! be a symbolic link. `apply_plan` checks this for every path it writes or
-//! deletes before it changes anything on disk. For a path it writes, it
-//! also fails when an existing component on the way to the file is not a
-//! directory, or when the file exists and is not a regular file.
+//! be a symbolic link. The checks that `apply_plan` runs before any change
+//! on disk are described in the rustdoc of `apply_plan` and
+//! `check_writable`.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
@@ -37,9 +36,10 @@ struct ItemChanges {
 
 /// Writes every planned file and updates `lock.items[..].files` for the
 /// planned items that already have a lockfile entry. Before writing an
-/// item, it deletes the files of that item's previous record that the plan
-/// no longer contains, and the entrypoints of clients the item no longer
-/// targets. It writes with `fs::write` and does not save the lockfile.
+/// item, it deletes the files of that item's previous record that no
+/// planned item of this run writes (the stale files), and the entrypoints
+/// of clients the item no longer targets. A recorded path that another
+/// planned item writes is not deleted; that item overwrites it. It writes with `fs::write` and does not save the lockfile.
 /// Returns the record of every planned item.
 ///
 /// Before any change on disk it fails when two planned items have the same
@@ -61,6 +61,11 @@ pub(super) fn apply_plan(
     let mut items_seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
     let mut changes = Vec::with_capacity(planned.len());
+    // No item deletes, as stale, a path that any item of this run writes.
+    let all_planned: BTreeSet<&Path> = planned
+        .iter()
+        .flat_map(|item| item.files.iter().map(|file| file.rel.as_path()))
+        .collect();
     for item in planned {
         if !items_seen.insert((item.kind, item.name.as_str())) {
             anyhow::bail!(
@@ -98,6 +103,9 @@ pub(super) fn apply_plan(
                     continue;
                 }
                 if let Some(rel) = deletable(&old.path) {
+                    if all_planned.contains(rel.as_path()) {
+                        continue;
+                    }
                     check_no_item_symlink(target, &rel)?;
                     stale.push(rel);
                 }
@@ -800,7 +808,12 @@ mod pre_check_tests {
         ];
         let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
         let text = format!("{err:#}");
-        assert!(text.contains(".claude/skills/x/notes/a.md"), "{text}");
+        assert!(
+            text.contains(
+                "the planned files .claude/skills/x/notes and .claude/skills/x/notes/a.md conflict"
+            ),
+            "{text}"
+        );
         assert!(!tmp.path().join(".claude/skills").exists());
     }
 
