@@ -1,7 +1,8 @@
 //! ATDD tests for `upskill doctor`.
 //!
-//! Verifies the three drift buckets per ADR-0004:
+//! Verifies the item buckets:
 //! - missing per-client output files (reinstall fixes)
+//! - modified and unreadable recorded files
 //! - SSOT hash drift on `local:` sources (update fixes)
 //! - lockfile entries with no recoverable source (manual remove)
 //!

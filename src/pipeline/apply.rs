@@ -43,8 +43,16 @@ struct ItemChanges {
 /// Returns the record of every planned item.
 ///
 /// Before any change on disk it fails when two planned items have the same
-/// `(kind, name)`, when two planned files have the same path, or when a
-/// path to write or delete breaks the symbolic link rule of this module.
+/// `(kind, name)`, when two planned files have the same path, when one
+/// planned file is a directory on the way to another, when a path to write
+/// or delete breaks the symbolic link rule of this module, or when a path
+/// to write is blocked: the client root or kind directory is a symbolic
+/// link to a missing target or is not a directory, a component on the way
+/// to the file is not a directory, or the file exists and is not a regular
+/// file. A blocking regular file, or a directory that holds only regular
+/// files, is accepted when those files are stale recorded files of the same
+/// item, because they are deleted (and empty directories removed) before
+/// the write. See `check_writable`.
 pub(super) fn apply_plan(
     target: &Path,
     lock: &mut Lockfile,
@@ -70,7 +78,6 @@ pub(super) fn apply_plan(
                     file.rel.display()
                 );
             }
-            check_writable(target, &file.rel)?;
             files.push(OwnedFile {
                 client: file.client.name().to_string(),
                 path: rel_to_record(&file.rel)?,
@@ -99,7 +106,30 @@ pub(super) fn apply_plan(
         for rel in &item.deselected_entries {
             check_no_item_symlink(target, rel)?;
         }
+        // The stale files that the write loop deletes before it writes this
+        // item: each planned path is judged against the state after them.
+        let mut stale_files = BTreeSet::new();
+        for rel in &stale {
+            if fs::symlink_metadata(target.join(rel)).is_ok_and(|m| m.file_type().is_file()) {
+                stale_files.insert(rel.clone());
+            }
+        }
+        for file in &item.files {
+            check_writable(target, &file.rel, &stale_files)?;
+        }
         changes.push(ItemChanges { files, stale });
+    }
+
+    // A planned file cannot also be a directory on the way to another one.
+    let planned_paths: Vec<&Path> = paths_seen.keys().copied().collect();
+    for pair in planned_paths.windows(2) {
+        if pair[1].starts_with(pair[0]) {
+            anyhow::bail!(
+                "the planned files {} and {} conflict: the first is a directory of the second",
+                pair[0].display(),
+                pair[1].display()
+            );
+        }
     }
 
     let mut recorded = RecordedFiles::new();
@@ -144,20 +174,44 @@ pub(super) fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
     check_item_components(target, rel, false)
 }
 
-/// Check for a planned file `rel`, run before any change on disk. Fails
-/// when the client root or the kind directory (the first two components,
-/// which may be symbolic links and are followed) exists and is not a
-/// directory; when a later component exists and is a symbolic link; when a
-/// component between the kind directory and the file exists and is not a
-/// directory; or when the file itself exists and is not a regular file.
-fn check_writable(target: &Path, rel: &Path) -> Result<()> {
+/// Check for a planned file `rel`, run before any change on disk.
+/// `stale` holds the regular files of the same item that the write loop
+/// deletes, followed by the removal of directories left empty, before it
+/// writes `rel`. The check judges `rel` against the state after that.
+///
+/// - The client root and the kind directory (the first two components)
+///   may be symbolic links and are followed. When one of them exists, it
+///   must resolve to a directory. A symbolic link to a missing target
+///   fails.
+/// - A later component must not be a symbolic link.
+/// - A component between the kind directory and the file that exists must
+///   be a directory, or a regular file listed in `stale`.
+/// - The file itself, when it exists, must be a regular file, or a
+///   directory whose entries, recursively, are all regular files listed in
+///   `stale` (it has at least one entry, and every subdirectory too).
+/// - A component that does not exist ends the check.
+fn check_writable(target: &Path, rel: &Path, stale: &BTreeSet<PathBuf>) -> Result<()> {
     let count = rel.components().count();
     let mut current = target.to_path_buf();
+    let mut current_rel = PathBuf::new();
     for (index, component) in rel.components().enumerate() {
         current.push(component);
+        current_rel.push(component);
         let last = index + 1 == count;
         let meta = if index < 2 {
-            fs::metadata(&current)
+            match fs::metadata(&current) {
+                Err(err) if err.kind() == ErrorKind::NotFound => {
+                    if fs::symlink_metadata(&current).is_ok() {
+                        anyhow::bail!(
+                            "cannot write {}: {} is a symbolic link to a missing target",
+                            target.join(rel).display(),
+                            current.display()
+                        );
+                    }
+                    return Ok(());
+                }
+                other => other,
+            }
         } else {
             fs::symlink_metadata(&current)
         };
@@ -177,12 +231,17 @@ fn check_writable(target: &Path, rel: &Path) -> Result<()> {
             );
         }
         if last {
-            if !file_type.is_file() {
+            let replaceable_dir =
+                file_type.is_dir() && only_stale_files(target, &current_rel, stale);
+            if !file_type.is_file() && !replaceable_dir {
                 anyhow::bail!(
                     "cannot write {}: it exists and is not a regular file",
                     target.join(rel).display()
                 );
             }
+        } else if file_type.is_file() && stale.contains(&current_rel) {
+            // Deleted before the write; nothing exists below it.
+            return Ok(());
         } else if !file_type.is_dir() {
             anyhow::bail!(
                 "cannot write {}: {} is not a directory",
@@ -192,6 +251,37 @@ fn check_writable(target: &Path, rel: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// True when the directory `rel` has at least one entry and every entry,
+/// recursively, is a regular file listed in `stale` or a directory for
+/// which this is also true. Links are not followed.
+fn only_stale_files(target: &Path, rel: &Path, stale: &BTreeSet<PathBuf>) -> bool {
+    let Ok(entries) = fs::read_dir(target.join(rel)) else {
+        return false;
+    };
+    let mut any = false;
+    for entry in entries {
+        let Ok(entry) = entry else {
+            return false;
+        };
+        let Ok(file_type) = entry.file_type() else {
+            return false;
+        };
+        let child = rel.join(entry.file_name());
+        let ok = if file_type.is_file() {
+            stale.contains(&child)
+        } else if file_type.is_dir() {
+            only_stale_files(target, &child, stale)
+        } else {
+            false
+        };
+        if !ok {
+            return false;
+        }
+        any = true;
+    }
+    any
 }
 
 /// Like [`check_no_item_symlink`], but the last component of `rel` is not
@@ -245,7 +335,8 @@ pub(super) fn deletable(rel: &str) -> Option<PathBuf> {
 }
 
 /// Deletes the file `rel` (relative to `target`, accepted by [`deletable`]
-/// and checked by [`check_no_item_symlink`]), then each parent directory
+/// and checked by [`check_no_item_symlink`] in `apply_plan` or by
+/// [`check_no_item_symlink_above`] in `remove`), then each parent directory
 /// left empty. The client root and the kind directory below it (for
 /// example `.claude/skills`) are never removed.
 pub(super) fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
@@ -626,6 +717,91 @@ mod pre_check_tests {
             fs::read(tmp.path().join(".claude/skills/second")).unwrap(),
             b"a file"
         );
+    }
+
+    fn stale_record(path: &str, bytes: &[u8]) -> Lockfile {
+        let mut lock = Lockfile::new();
+        lock.items.push(crate::lockfile::LockedItem {
+            kind: ItemKind::Skill,
+            name: "s".into(),
+            source: "./src".into(),
+            git_ref: None,
+            hash: None,
+            source_name: None,
+            required_by: vec![],
+            group: None,
+            clients: vec![],
+            files: vec![OwnedFile {
+                client: "claude".into(),
+                path: path.into(),
+                sha256: sha256_hex(bytes),
+            }],
+            pending: vec![],
+        });
+        lock
+    }
+
+    #[test]
+    fn pre_check_rejects_a_directory_with_an_unrecorded_file_where_a_file_is_planned() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join(".claude/skills/s/notes");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("a.md"), b"old").unwrap();
+        fs::write(dir.join("mine.md"), b"user file").unwrap();
+        let mut lock = stale_record(".claude/skills/s/notes/a.md", b"old");
+        let plan = [planned("s", ".claude/skills/s/notes")];
+        let err = apply_plan(tmp.path(), &mut lock, &plan).unwrap_err();
+        assert!(
+            format!("{err:#}").contains(".claude/skills/s/notes"),
+            "{err:#}"
+        );
+        assert_eq!(fs::read(dir.join("a.md")).unwrap(), b"old");
+        assert_eq!(fs::read(dir.join("mine.md")).unwrap(), b"user file");
+    }
+
+    #[test]
+    fn pre_check_rejects_a_regular_file_ancestor_that_is_not_stale() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".claude/skills/s")).unwrap();
+        fs::write(tmp.path().join(".claude/skills/s/notes"), b"user file").unwrap();
+        let plan = [planned("s", ".claude/skills/s/notes/a.md")];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        assert!(format!("{err:#}").contains("is not a directory"), "{err:#}");
+        assert_eq!(
+            fs::read(tmp.path().join(".claude/skills/s/notes")).unwrap(),
+            b"user file"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pre_check_fails_when_the_kind_directory_is_a_dangling_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        std::os::unix::fs::symlink(tmp.path().join("missing"), tmp.path().join(".claude/rules"))
+            .unwrap();
+        let plan = [
+            planned("first", ".claude/skills/first/SKILL.md"),
+            planned("second", ".claude/rules/second.md"),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let text = format!("{err:#}");
+        assert!(text.contains(".claude/rules/second.md"), "{text}");
+        assert!(text.contains("missing target"), "{text}");
+        assert!(!tmp.path().join(".claude/skills").exists());
+    }
+
+    #[test]
+    fn pre_check_rejects_a_planned_file_that_is_a_prefix_of_another() {
+        let tmp = tempfile::tempdir().unwrap();
+        let plan = [
+            planned("first", ".claude/skills/x/notes"),
+            planned("second", ".claude/skills/x/notes/a.md"),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let text = format!("{err:#}");
+        assert!(text.contains(".claude/skills/x/notes/a.md"), "{text}");
+        assert!(!tmp.path().join(".claude/skills").exists());
     }
 
     #[test]

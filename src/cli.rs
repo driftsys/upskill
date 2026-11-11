@@ -202,7 +202,7 @@ pub enum Commands {
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable
-        /// grouping. See `docs/commands.md` for the schema.
+        /// grouping. See `docs/book/commands.md` for the schema.
         #[arg(long = "json")]
         json: bool,
     },

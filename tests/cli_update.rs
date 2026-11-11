@@ -457,3 +457,102 @@ fn update_changes_nothing_when_a_directory_was_replaced_by_a_file() {
     );
     assert_eq!(fs::read(&rules).unwrap(), b"a file\n");
 }
+
+/// A project with a skill `res` whose source holds `SKILL.md` and the
+/// resource entries written by `setup`, installed for Claude.
+fn res_project(setup: impl Fn(&Path)) -> (tempfile::TempDir, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let skill = tmp.path().join("source/res");
+    fs::create_dir_all(&skill).unwrap();
+    fs::write(
+        skill.join("SKILL.md"),
+        "---\nschema: 1\nname: res\ndescription: Use for res\n---\nRead notes.\n",
+    )
+    .unwrap();
+    setup(&skill);
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "res", "--claude", "--project"])
+        .assert()
+        .success();
+    (tmp, home)
+}
+
+fn recorded_paths(root: &Path, name: &str) -> Vec<String> {
+    let raw = fs::read_to_string(root.join(".upskill-lock.json")).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    let item = v["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == name)
+        .unwrap()
+        .clone();
+    let mut paths: Vec<String> = item["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["path"].as_str().unwrap().to_string())
+        .collect();
+    paths.sort();
+    paths
+}
+
+#[test]
+fn update_replaces_a_resource_file_with_a_directory() {
+    let (tmp, home) = res_project(|skill| fs::write(skill.join("notes"), "old file\n").unwrap());
+    let notes = tmp.path().join("source/res/notes");
+    fs::remove_file(&notes).unwrap();
+    fs::create_dir_all(&notes).unwrap();
+    fs::write(notes.join("a.md"), "new nested\n").unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+
+    assert_eq!(
+        fs::read(tmp.path().join(".claude/skills/res/notes/a.md")).unwrap(),
+        b"new nested\n"
+    );
+    assert_eq!(
+        recorded_paths(tmp.path(), "res"),
+        vec![
+            ".claude/skills/res/SKILL.md".to_string(),
+            ".claude/skills/res/notes/a.md".to_string()
+        ]
+    );
+}
+
+#[test]
+fn update_replaces_a_resource_directory_with_a_file() {
+    let (tmp, home) = res_project(|skill| {
+        fs::create_dir_all(skill.join("notes")).unwrap();
+        fs::write(skill.join("notes/a.md"), "old nested\n").unwrap();
+    });
+    let notes = tmp.path().join("source/res/notes");
+    fs::remove_dir_all(&notes).unwrap();
+    fs::write(&notes, "new file\n").unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+
+    assert_eq!(
+        fs::read(tmp.path().join(".claude/skills/res/notes")).unwrap(),
+        b"new file\n"
+    );
+    assert_eq!(
+        recorded_paths(tmp.path(), "res"),
+        vec![
+            ".claude/skills/res/SKILL.md".to_string(),
+            ".claude/skills/res/notes".to_string()
+        ]
+    );
+}
