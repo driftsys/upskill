@@ -306,9 +306,9 @@ fn lint_accepts_items_without_schema_field() {
     fs::create_dir_all(&home).unwrap();
     let root = tmp.path().join("source");
     for (dir, entrypoint) in [
-        ("skills/plain-skill", "SKILL.md"),
-        ("rules/plain-rule", "RULE.md"),
-        ("agents/plain-agent", "AGENT.md"),
+        ("plain-skill", "SKILL.md"),
+        ("plain-rule", "RULE.md"),
+        ("plain-agent", "AGENT.md"),
     ] {
         write(
             &root.join(dir).join(entrypoint),
@@ -322,7 +322,10 @@ fn lint_accepts_items_without_schema_field() {
         .assert()
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert!(out.contains("0 findings"), "expected clean: {out}");
+    assert!(
+        out.contains("3 file(s) checked, 0 findings"),
+        "expected three clean files: {out}"
+    );
 }
 
 #[test]
