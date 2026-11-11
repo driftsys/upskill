@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Skill {
+    #[serde(default)]
     pub schema: SchemaVersion,
     /// Effective name resolution is layout-dependent (§2.1): absent means
     /// the directory name is used. Resolved by the pipeline/lint layer.

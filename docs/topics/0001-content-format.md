@@ -325,7 +325,7 @@ schema, but the file content IS the YAML, with no `---` wrapping and no body.
 
 | Field         | Type     | Required | Description                                                                                                                                                                                                |
 | ------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`      | integer  | YES      | Protocol version of this specification. Current: `1`.                                                                                                                                                      |
+| `schema`      | integer  | varies   | Protocol version of this specification. Current: `1`. Required for bundles; optional for items (an item without `schema` is read as `schema: 1`).                                                          |
 | `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                                                                     |
 | `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                                                            |
 | `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                                                                 |
@@ -352,7 +352,9 @@ Field semantics:
 
 - `schema`: implementations MUST reject files with `schema` greater than the
   highest version they support and SHOULD report a clear upgrade message. See §8
-  for evolution rules.
+  for evolution rules. An item (rule, skill, or agent) without a `schema` field
+  is read as `schema: 1`, so a standard Agent Skills file with only `name` and
+  `description` is accepted. A bundle MUST declare `schema`.
 - `name`: the effective name (§2.1) is used as the `/slash-command` name in
   clients that support it and as the identifier in bundle manifests. When `name`
   is omitted on an item, the directory name is the effective name; a rule or
@@ -1350,6 +1352,8 @@ Current version: **1**.
   version and suggesting an upgrade of the implementing tool.
 - MUST accept files with `schema` equal to or less than the highest supported
   version.
+- MUST read an item (rule, skill, or agent) without a `schema` field as
+  `schema: 1`. A bundle without `schema` is not recognised as a bundle (§2.2).
 - When processing older schema versions, MUST NOT silently apply newer defaults
   that would change the file's meaning.
 

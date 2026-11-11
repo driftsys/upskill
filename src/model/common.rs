@@ -32,6 +32,13 @@ impl SchemaVersion {
     }
 }
 
+/// An item without a `schema` field is read as `schema: 1`.
+impl Default for SchemaVersion {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
 impl Serialize for SchemaVersion {
     fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(ser)

@@ -162,3 +162,96 @@ fn add_with_items_no_match_is_general_error() {
         "stderr should name the missing items or say no match: {stderr}"
     );
 }
+
+/// Stage `source/<name>/SKILL.md` with `content` and a project target.
+/// Returns `(tmp, home, source, target)`.
+fn stage_single_skill(
+    name: &str,
+    content: &str,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    fs::create_dir_all(source.join(name)).unwrap();
+    fs::write(source.join(name).join("SKILL.md"), content).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    (tmp, home, source, target)
+}
+
+#[test]
+fn add_accepts_skill_without_schema_field() {
+    let (_tmp, home, source, target) = stage_single_skill(
+        "plain",
+        "---\nname: plain\ndescription: A standard Agent Skills file.\n---\nBody\n",
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "plain",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+
+    assert!(target.join(".claude/skills/plain/SKILL.md").exists());
+}
+
+#[test]
+fn frontmatter_error_names_the_file() {
+    let (_tmp, home, source, target) = stage_single_skill("broken", "---\nname: [unclosed\n---\n");
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "broken",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    let expected = Path::new("broken").join("SKILL.md");
+    assert!(
+        stderr.contains(expected.to_str().unwrap()),
+        "stderr does not name the file: {stderr}"
+    );
+}
+
+#[test]
+fn add_rejects_explicit_unsupported_schema() {
+    for (version, message) in [
+        ("0", "schema version must be >= 1, got 0"),
+        ("2", "schema version 2 is not supported"),
+    ] {
+        let (_tmp, home, source, target) = stage_single_skill(
+            "versioned",
+            &format!("---\nschema: {version}\nname: versioned\ndescription: d\n---\nBody\n"),
+        );
+        let assert = common::upskill_cmd(&home)
+            .current_dir(&target)
+            .args([
+                "add",
+                source.to_str().unwrap(),
+                "versioned",
+                "--claude",
+                "--project",
+            ])
+            .assert()
+            .failure();
+        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+        assert!(stderr.contains(message), "schema {version}: {stderr}");
+    }
+}

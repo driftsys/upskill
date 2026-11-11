@@ -248,10 +248,22 @@ fn read_item_requires(
     let entry = dir.join(kind.entrypoint_filename());
     let raw = fs::read_to_string(&entry).with_context(|| format!("read {}", entry.display()))?;
     let req = match kind {
-        ItemKind::Skill => frontmatter::parse::<Skill>(&raw)?.0.requires,
-        ItemKind::Rule => frontmatter::parse::<Rule>(&raw)?.0.requires,
+        ItemKind::Skill => {
+            frontmatter::parse::<Skill>(&raw)
+                .with_context(|| format!("parse {}", entry.display()))?
+                .0
+                .requires
+        }
+        ItemKind::Rule => {
+            frontmatter::parse::<Rule>(&raw)
+                .with_context(|| format!("parse {}", entry.display()))?
+                .0
+                .requires
+        }
         ItemKind::Agent => {
-            let agent = frontmatter::parse::<Agent>(&raw)?.0;
+            let agent = frontmatter::parse::<Agent>(&raw)
+                .with_context(|| format!("parse {}", entry.display()))?
+                .0;
             let mut req = agent.requires;
             for s in &agent.preload_skills {
                 let present = index.contains_key(&(ItemKind::Skill, s.clone()));
