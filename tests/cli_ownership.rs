@@ -919,3 +919,207 @@ fn stale_file_of_one_item_does_not_delete_a_file_another_item_writes() {
         .assert()
         .success();
 }
+
+// ---------------------------------------------------------------------------
+// Fix wave for PR #468
+// ---------------------------------------------------------------------------
+
+#[cfg(unix)]
+#[test]
+fn add_replaces_a_read_only_installed_file() {
+    use std::os::unix::fs::PermissionsExt;
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let installed = tmp
+        .path()
+        .join(".claude/skills/create-api-endpoint/SKILL.md");
+    fs::set_permissions(&installed, fs::Permissions::from_mode(0o444)).unwrap();
+    let skill = tmp.path().join("source/create-api-endpoint/SKILL.md");
+    let body = fs::read_to_string(&skill).unwrap();
+    fs::write(&skill, format!("{body}\nChanged.\n")).unwrap();
+
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+
+    assert!(
+        fs::read_to_string(&installed).unwrap().contains("Changed."),
+        "the installed file was not replaced"
+    );
+}
+
+/// The fixture items staged under `source/`, with the fixture bundles
+/// under `source/bundles/`.
+fn project_with_bundles() -> (tempfile::TempDir, std::path::PathBuf) {
+    let (tmp, home) = project();
+    copy_dir_all(
+        &Path::new(FIXTURES).join("bundles"),
+        &tmp.path().join("source/bundles"),
+    );
+    (tmp, home)
+}
+
+#[test]
+fn add_of_a_bundle_and_one_of_its_items_installs_the_item_once() {
+    let (tmp, home) = project_with_bundles();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "platform-baseline",
+            "create-api-endpoint",
+            "--claude",
+        ])
+        .assert()
+        .success();
+
+    assert!(
+        tmp.path()
+            .join(".claude/skills/create-api-endpoint/SKILL.md")
+            .exists()
+    );
+    let lock = lockfile(tmp.path());
+    let count = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|i| i["name"] == "create-api-endpoint")
+        .count();
+    assert_eq!(count, 1, "{lock}");
+}
+
+#[test]
+fn two_items_aliased_to_one_name_do_not_adopt_a_schema_1_lockfile() {
+    let (tmp, home) = project();
+    let original = write_schema_1_install(tmp.path());
+    let src = tmp.path().join("ab");
+    write_skill(&src, "alpha", "Alpha body.");
+    write_skill(&src, "beta", "Beta body.");
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add", "./ab", "alpha", "beta", "--as", "alpha=z", "--as", "beta=z", "--claude",
+        ])
+        .assert()
+        .code(1);
+
+    assert!(
+        stderr_of(&out).contains("two planned items install the skill `z`"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        original
+    );
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+}
+
+#[test]
+fn adoption_ignores_an_output_path_below_a_regular_file() {
+    let (tmp, home) = project();
+    fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+    fs::write(tmp.path().join(".claude/skills"), "a regular file\n").unwrap();
+    let lock = serde_json::json!({
+        "schema": 1,
+        "items": [{
+            "kind": "skill",
+            "name": "create-api-endpoint",
+            "source": "./source",
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    remove_cmd(tmp.path(), &home, &["create-api-endpoint"])
+        .assert()
+        .success();
+
+    assert!(!lists_item(tmp.path(), "create-api-endpoint"));
+    assert_eq!(
+        fs::read(tmp.path().join(".claude/skills")).unwrap(),
+        b"a regular file\n"
+    );
+}
+
+#[test]
+fn conflict_check_uses_the_exact_alias_over_the_bare_alias() {
+    let (tmp, home) = project();
+    write_skill(&tmp.path().join("s1"), "bar", "First source.");
+    write_skill(&tmp.path().join("s2"), "orig", "Second source.");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./s1", "--claude"])
+        .assert()
+        .success();
+    let installed = tmp.path().join(".claude/skills/bar/SKILL.md");
+    let before = fs::read(&installed).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./s2", "--as", "foo", "--as", "orig=bar", "--claude"])
+        .assert()
+        .code(1);
+
+    assert_eq!(fs::read(&installed).unwrap(), before);
+}
+
+#[cfg(unix)]
+fn make_unreadable(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o000)).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_keeps_an_unreadable_recorded_file_as_modified() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    add_claude(tmp.path(), &home, "license-awareness");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    make_unreadable(&rule);
+    let other = tmp.path().join(".claude/rules/license-awareness.md");
+
+    let out = remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "license-awareness", "--project"],
+    )
+    .assert()
+    .success();
+
+    assert!(fs::symlink_metadata(&rule).is_ok(), "the file was deleted");
+    assert!(!other.exists());
+    assert!(
+        stderr_of(&out).contains("kept modified file: .claude/rules/api-conventions.md"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_force_deletes_an_unreadable_recorded_file() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    make_unreadable(&rule);
+
+    remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "--force", "--project"],
+    )
+    .assert()
+    .success();
+
+    assert!(fs::symlink_metadata(&rule).is_err());
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}

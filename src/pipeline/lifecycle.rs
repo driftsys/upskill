@@ -37,7 +37,9 @@ use super::{
 /// part of a path's parent directories is an error. Then, per recorded
 /// file: an unchanged regular file is deleted; a modified file is kept
 /// and reported in `kept_modified`, or deleted when `force` is true and it
-/// is a regular file; an absent file is ignored. A file that the record
+/// is a regular file; an absent file is ignored. A regular file that exists
+/// but cannot be read is handled as a modified file; any other error while
+/// inspecting a recorded path fails the command before any deletion. A file that the record
 /// does not list is never deleted. Directories left empty are removed, up
 /// to and excluding the kind directory (for example `.claude/skills`).
 ///
@@ -101,8 +103,8 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
     let keys: Vec<(ItemKind, String)> =
         to_remove.iter().map(|i| (i.kind, i.name.clone())).collect();
 
-    // Adoption is saved at once. Every later error carries the adopted
-    // paths, so that `main.rs` can still print the adoption notice.
+    // The adoption is saved before any file is deleted. Every later error
+    // carries the adopted paths, so that `main.rs` can still print the adoption notice.
     let adopted = adopt_schema1(target, &mut lock)?;
     let result = remove_selected(target, &mut lock, &filter, &keys, force);
     match (result, adopted) {
@@ -153,8 +155,21 @@ fn plan_removal(
             .filter(|f| f.path == file.path)
             .map(|f| f.sha256.as_str())
             .collect();
-        let state = classify(target, &file.path, &recorded)
-            .with_context(|| format!("cannot inspect the recorded file {}", file.path))?;
+        let state = match classify(target, &file.path, &recorded) {
+            Ok(state) => state,
+            // A regular file that exists but cannot be read is handled as
+            // a modified file. Any other lookup error fails.
+            Err(_)
+                if fs::symlink_metadata(target.join(&rel))
+                    .is_ok_and(|m| m.file_type().is_file()) =>
+            {
+                FileState::Modified
+            }
+            Err(err) => {
+                return Err(err)
+                    .with_context(|| format!("cannot inspect the recorded file {}", file.path));
+            }
+        };
         match state {
             FileState::Owned => plan.delete.push(rel),
             FileState::Absent => plan.absent.push(rel),

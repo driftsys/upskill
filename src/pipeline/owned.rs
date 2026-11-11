@@ -186,7 +186,13 @@ fn existing_item_files(target: &Path, item: &LockedItem) -> Result<Vec<OwnedFile
             let abs = target.join(&rel);
             let is_file = match fs::symlink_metadata(&abs) {
                 Ok(meta) => meta.file_type().is_file(),
-                Err(err) if err.kind() == ErrorKind::NotFound => false,
+                // "Not a directory": a parent is a regular file, so the
+                // path cannot exist, as in `classify`.
+                Err(err)
+                    if matches!(err.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) =>
+                {
+                    false
+                }
                 Err(err) => {
                     return Err(err).with_context(|| format!("inspecting {}", abs.display()));
                 }

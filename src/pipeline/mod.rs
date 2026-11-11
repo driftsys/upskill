@@ -224,6 +224,20 @@ pub fn install_with_lockfile(
             )
         };
 
+    // Installed names of entry-source items. The first mapping given for
+    // a name wins; an exact `orig=alias` wins over a bare `--as`. The
+    // conflict check below and the plan use the same names.
+    let mut entry_names = plan::PlanNames {
+        excludes: options.excludes.clone(),
+        ..plan::PlanNames::default()
+    };
+    for (from, to) in &options.aliases {
+        entry_names
+            .aliases
+            .entry(from.clone())
+            .or_insert_with(|| to.clone());
+    }
+
     // -- Conflict detection (before any files are written) --
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     let mut conflicts = Vec::new();
@@ -235,11 +249,9 @@ pub fn install_with_lockfile(
             std::collections::BTreeMap::new();
         for ((kind, name), src_label) in &closure.item_source {
             let effective = if *src_label == label {
-                options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == *name)
-                    .map(|(_, to)| to.clone())
+                entry_names
+                    .alias_for(name)
+                    .cloned()
                     .unwrap_or_else(|| name.clone())
             } else {
                 name.clone()
@@ -259,11 +271,9 @@ pub fn install_with_lockfile(
             .filter(|(_, n)| !options.excludes.contains(n))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter_map(|(kind, name)| {
-                let effective_name = options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == *name)
-                    .map(|(_, to)| to.clone())
+                let effective_name = entry_names
+                    .alias_for(name)
+                    .cloned()
                     .unwrap_or_else(|| name.clone());
                 if seen.insert((*kind, effective_name.clone())) {
                     Some((*kind, effective_name))
@@ -284,19 +294,8 @@ pub fn install_with_lockfile(
     // resolution), keep the existing dispatch. Aliases (source name ->
     // installed name; the key "" applies to every item) apply only to
     // entry-source items: dependency-pulled (cross-source) items are never
-    // renamed. Without a closure, every item is entry-source. The first
-    // mapping given for a name wins. `--exclude` matches source names and
-    // applies to every source.
-    let mut entry_names = plan::PlanNames {
-        excludes: options.excludes.clone(),
-        ..plan::PlanNames::default()
-    };
-    for (from, to) in &options.aliases {
-        entry_names
-            .aliases
-            .entry(from.clone())
-            .or_insert_with(|| to.clone());
-    }
+    // renamed. Without a closure, every item is entry-source. `--exclude`
+    // matches source names and applies to every source.
     let dependency_names = plan::PlanNames {
         excludes: options.excludes.clone(),
         ..plan::PlanNames::default()
@@ -337,8 +336,14 @@ pub fn install_with_lockfile(
     };
 
     // -- Adopt a schema-1 lockfile, then write every planned file --
-    // The adoption is saved at once. Every later error carries the adopted
-    // paths, so that `main.rs` can still print the adoption notice.
+    // An item planned twice from the same source item (for example named
+    // and also a member of a named bundle) is kept once. Two items with one
+    // installed name fail here, before the adoption.
+    plan::merge_duplicates(&mut report.planned);
+    apply::check_unique_names(&report.planned)?;
+    // The adoption is saved before any file is written. Every later error
+    // carries the adopted paths, so that `main.rs` can still print the
+    // adoption notice.
     let adopted = owned::adopt_schema1(target, &mut lock)?;
     report.adopted = adopted.clone();
     let result = (|| -> Result<InstallReport> {

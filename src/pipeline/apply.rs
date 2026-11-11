@@ -39,8 +39,10 @@ struct ItemChanges {
 /// item, it deletes the files of that item's previous record that no
 /// planned item of this run writes (the stale files), and the entrypoints
 /// of clients the item no longer targets. A recorded path that another
-/// planned item writes is not deleted; that item overwrites it. It writes with `fs::write` and does not save the lockfile.
-/// Returns the record of every planned item.
+/// planned item writes is not deleted; that item overwrites it. An
+/// existing regular file at a planned path is removed, then the file is
+/// written with `fs::write`. It does not save the lockfile. Returns the
+/// record of every planned item.
 ///
 /// Before any change on disk it fails when two planned items have the same
 /// `(kind, name)`, when two planned files have the same path, when one
@@ -58,7 +60,7 @@ pub(super) fn apply_plan(
     lock: &mut Lockfile,
     planned: &[PlannedItem],
 ) -> Result<RecordedFiles> {
-    let mut items_seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
+    check_unique_names(planned)?;
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
     let mut changes = Vec::with_capacity(planned.len());
     // No item deletes, as stale, a path that any item of this run writes.
@@ -67,13 +69,6 @@ pub(super) fn apply_plan(
         .flat_map(|item| item.files.iter().map(|file| file.rel.as_path()))
         .collect();
     for item in planned {
-        if !items_seen.insert((item.kind, item.name.as_str())) {
-            anyhow::bail!(
-                "two planned items install the {} `{}`; each installed name must be unique",
-                item.kind,
-                item.name
-            );
-        }
         let mut files = Vec::with_capacity(item.files.len());
         for file in &item.files {
             if let Some(other) = paths_seen.insert(&file.rel, &item.name) {
@@ -155,6 +150,11 @@ pub(super) fn apply_plan(
                 fs::create_dir_all(parent)
                     .with_context(|| format!("create dir {}", parent.display()))?;
             }
+            // The pre-check accepted this path. An existing regular file is
+            // removed first, so that a read-only file is replaced too.
+            if fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file()) {
+                fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
+            }
             fs::write(&full, &file.bytes).with_context(|| format!("write {}", full.display()))?;
             if let Some(mode) = file.mode {
                 set_mode(&full, mode)?;
@@ -171,6 +171,22 @@ pub(super) fn apply_plan(
         recorded.insert((item.kind, item.name.clone()), files);
     }
     Ok(recorded)
+}
+
+/// Fails when two planned items have the same `(kind, installed name)`.
+/// Changes nothing on disk.
+pub(super) fn check_unique_names(planned: &[PlannedItem]) -> Result<()> {
+    let mut seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
+    for item in planned {
+        if !seen.insert((item.kind, item.name.as_str())) {
+            anyhow::bail!(
+                "two planned items install the {} `{}`; each installed name must be unique",
+                item.kind,
+                item.name
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Check for a path to delete. Fails when a component of `rel`, from the
