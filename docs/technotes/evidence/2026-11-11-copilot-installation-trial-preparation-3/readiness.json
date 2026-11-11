@@ -1,0 +1,49 @@
+{
+  "status": "ready for explicit execution approval; no native command run",
+  "request": {
+    "packet_root": "/private/tmp/upskill-copilot-install-trial-tvpjqnjn/packet",
+    "plan_sha256": "ef6668a74b07172f70930cf599b699c35b353cfce69ef6be1adc1eb2f58562b3",
+    "preparation_sha256": "b7c96506392ddf2c210c55c7ed255a40cbc7cc6863c688be15bdeb0d92dd8817"
+  },
+  "driver": "/Users/sebastientasson/Workspace/driftsys/upskill/.claude/worktrees/native-delivery/target/debug/examples/copilot_contract_probe",
+  "driver_sha256": "af6db5bf1a94026f8539e50918ec01ecd7f9978682e5d405849666cfe4fc8720",
+  "source_base": "b4bc38b",
+  "source_sha256": {
+    "examples/copilot_contract_probe.rs": "f602d65ed1964087980b50bff190ce60964b3ba2bb416f509b4138d7ff921215",
+    "src/native_delivery/copilot/probe/preflight/evidence.rs": "13d0ee45c3cbeaaf9f512ec3a70b72a40a4dced543ba8c9018038535f965aaef",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector.rs": "7a0c1c361f22a526dcc4799c852dd12583ddfc0465f7158ad99bf09671e86f3f",
+    "src/native_delivery/copilot/probe/preflight/evidence/collector/observe.rs": "08fc7f57223ee11e2f97dafdbf4b322d6f896fb385dca55d80ba6f17a7b5c550",
+    "src/native_delivery/process.rs": "0e74f4f61744431f350d864dd1c841db75d2a99e18cf90127702dd0d5f037028",
+    "src/native_delivery/copilot/probe.rs": "7ec6b925f6793ce131951807c164bdcffb9a90c3f6747620d2129bc8bd409f31",
+    "src/compile/skill_package.rs": "dfe51e68bd1c40ecb4b6b43ccca736d7600e51b44e944a4dd58757e83c9a2f62",
+    "Cargo.toml": "62a8cd2cc52ff1006a49759f023d09dfda65febc6f4778f099cd4fa6f529c66f",
+    "Cargo.lock": "bb43a5f514ee73282d8c7e0d877b5266d3bb041ad725ab73e280bb3de5444a3f"
+  },
+  "git_setup_code": {
+    "selected": "/usr/bin/git",
+    "resolved": "/usr/bin/git",
+    "sha256": "7588ceab299393618d6f8861502ac0588d1594025f301d9a61a898215b5571d3",
+    "bytes": 118864,
+    "mode": "0o755"
+  },
+  "preflight": {
+    "executed": false,
+    "fixture_files": 9,
+    "qualified": false
+  },
+  "packet_unused_after": true,
+  "maximum_setup_commands": 1,
+  "maximum_client_commands": 11,
+  "timeout_seconds_per_command": 20,
+  "output_limit_bytes_per_command": 1048576,
+  "maximum_spending": 0,
+  "model_requests": 0,
+  "execution_argv": [
+    "/Users/sebastientasson/Workspace/driftsys/upskill/.claude/worktrees/native-delivery/target/debug/examples/copilot_contract_probe",
+    "--execute",
+    "/private/tmp/upskill-copilot-install-trial-tvpjqnjn/packet",
+    "ef6668a74b07172f70930cf599b699c35b353cfce69ef6be1adc1eb2f58562b3",
+    "b7c96506392ddf2c210c55c7ed255a40cbc7cc6863c688be15bdeb0d92dd8817",
+    "af6db5bf1a94026f8539e50918ec01ecd7f9978682e5d405849666cfe4fc8720"
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "status": "prepared; not executed",
+  "packet_root": "/private/tmp/upskill-copilot-install-trial-tvpjqnjn/packet",
+  "plan_sha256": "ef6668a74b07172f70930cf599b699c35b353cfce69ef6be1adc1eb2f58562b3",
+  "preparation_sha256": "b7c96506392ddf2c210c55c7ed255a40cbc7cc6863c688be15bdeb0d92dd8817",
+  "native_name": "upskill-contract-probe-f32d91261162a3c7",
+  "package_sha256": "a4a49554e995f2f64c7d7c27cfd20a7154a4546ceb0edfa22052a441e6789093",
+  "payload_sha256": "1b7f4f637c651e9cff829671eebd7a27ae6b9340076b43b522f5276eaff541b5",
+  "version": "0.0.0-r1b7f4f637c651e9cff829671eebd7a27ae6b9340076b43b522f5276eaff541b5",
+  "commands": [
+    [
+      "--no-auto-update",
+      "--version"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "list",
+      "--json"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "add",
+      "/private/tmp/upskill-copilot-install-trial-tvpjqnjn/packet/home/.upskill/exports/copilot/native-contract-probe"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "install",
+      "upskill-contract-probe-f32d91261162a3c7@upskill-contract-probe-f32d91261162a3c7"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "list",
+      "--json"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "uninstall",
+      "upskill-contract-probe-f32d91261162a3c7@upskill-contract-probe-f32d91261162a3c7"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "remove",
+      "upskill-contract-probe-f32d91261162a3c7"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "list",
+      "--json"
+    ],
+    [
+      "--no-auto-update",
+      "plugin",
+      "marketplace",
+      "list",
+      "--json"
+    ]
+  ],
+  "maximum_setup_commands": 1,
+  "maximum_client_commands": 11,
+  "timeout_seconds_per_command": 20,
+  "output_limit_bytes_per_command": 1048576,
+  "model_requests": 0,
+  "maximum_spending": 0,
+  "fresh_execution_approval_required": true
+}
