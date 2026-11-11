@@ -1,0 +1,45 @@
+## plugin marketplace list --json
+[
+  {
+    "name": "awesome-copilot",
+    "source": "GitHub: github/awesome-copilot",
+    "isDefault": true
+  }
+]
+exit 0
+## plugin marketplace add <T>/mp
+Marketplace "upskill-contract-probe-7b1e4a48bd2a2045" added successfully.
+exit 0
+## plugin install upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045
+Plugin "upskill-contract-probe-7b1e4a48bd2a2045" installed successfully. Installed 1 skill.
+Enabled "upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045". It is loaded live from <T>/mp/revisions/ab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d, so edits take effect on the next session — nothing was copied.
+exit 0
+## plugin marketplace list --json
+[
+  {
+    "name": "upskill-contract-probe-7b1e4a48bd2a2045",
+    "source": "Local: <T>/mp",
+    "isDefault": false
+  },
+  {
+    "name": "awesome-copilot",
+    "source": "GitHub: github/awesome-copilot",
+    "isDefault": true
+  }
+]
+exit 0
+## plugin uninstall upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045
+Plugin "upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045" disabled. It is still on disk at <T>/mp — nothing was removed.
+exit 0
+## plugin marketplace remove upskill-contract-probe-7b1e4a48bd2a2045
+Marketplace "upskill-contract-probe-7b1e4a48bd2a2045" removed successfully.
+exit 0
+## plugin marketplace list --json
+[
+  {
+    "name": "awesome-copilot",
+    "source": "GitHub: github/awesome-copilot",
+    "isDefault": true
+  }
+]
+exit 0
