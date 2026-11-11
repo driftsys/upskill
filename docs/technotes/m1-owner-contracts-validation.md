@@ -6,8 +6,9 @@ record; consolidation does not rerun or extend its qualification.
 The initial implementation at `d809fe2f10d221874fdf0af8c7cc5636ad40adf1` had 16
 passing public examples and 1,191 passing Rust tests across 74 result groups.
 The review fixes add fifteen examples, giving 31 in
-[the contract suite](../../tests/lifecycle_contracts.rs). Captured reports and
-control recipes are retained as compressed files alongside a
+[the contract suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contracts.rs).
+Captured reports and control recipes are retained as compressed files alongside
+a
 [content-addressed manifest](evidence/2026-10-16-m1-owner-contracts/manifest.json).
 It identifies the parent commit and exact production/test source hashes. The
 later snapshot includes uncommitted review fixes at capture time. These are

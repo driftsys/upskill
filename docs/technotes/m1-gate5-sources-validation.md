@@ -6,14 +6,15 @@ until the resolver is dropped. Captured source bytes are privately associated
 with their resolved metadata, and compilation produces both complete desired
 artifacts and matching owner contracts through the existing compiler.
 
-Acceptance coverage in `tests/lifecycle_sources.rs` includes exact captured
-bytes, aliases, executable resource modes, malformed and unavailable sources,
-final symlink rejection, post-capture edits, explicit expected-name/profile
-mismatches, Codex rejection, temporary checkout retention, and Git
-branch/tag/full SHA resolution to the actual commit. Git acceptance tests run in
-child processes with private HOME and Git configuration and controlled local
-repositories. They perform no network authentication or process-wide environment
-mutation.
+Acceptance coverage in
+[`tests/lifecycle_sources.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_sources.rs)
+includes exact captured bytes, aliases, executable resource modes, malformed and
+unavailable sources, final symlink rejection, post-capture edits, explicit
+expected-name/profile mismatches, Codex rejection, temporary checkout retention,
+and Git branch/tag/full SHA resolution to the actual commit. Git acceptance
+tests run in child processes with private HOME and Git configuration and
+controlled local repositories. They perform no network authentication or
+process-wide environment mutation.
 
 The initial acceptance test failed because the API was absent. A repository-root
 capture test then exposed Git metadata in the captured tree (26 files instead of

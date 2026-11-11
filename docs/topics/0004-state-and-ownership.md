@@ -1,26 +1,20 @@
 # State and ownership
 
-Architecture reconciliation (2026-10-25): the
-[delivery, discovery and activation contract](0009-customization-delivery.md)
-controls intended production routes and reader intent. Existing Codex
-`AGENTS.md` contribution APIs described here are experimental library
-boundaries, not production independent-rule delivery. Independent Codex/OpenCode
-rules remain beside unchanged team guidance through a selected native or hook
-route. The native-first amendment permits explicit OpenCode paths after Q5 PASS
-and selects the trusted Codex hook with its declared recorded-history
-limitation. Reusable ownership, preflight and recovery mechanisms do not select
-or qualify a runtime route, and schema-2 production activation remains blocked
-([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
-
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+The legacy layout in `src/legacy/layout.rs` is live code. The legacy-state
+projection, combined lifecycle state, per-owner contract evidence and durable
+lifecycle origin sections describe library code that was removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md); each of them is marked
+withdrawn and is kept as history. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
 
 <a id="41-pure-legacy-state-projection"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Pure legacy-state projection
 
@@ -66,6 +60,11 @@ for implementation boundaries and rationale.
 
 <a id="413-combined-lifecycle-state-foundation"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Combined lifecycle state foundation
 
 The opt-in `lifecycle::state` library validates a schema-2 installation and
@@ -88,6 +87,11 @@ support. See
 [combined lifecycle state](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#architecture-combined-lifecycle-state).
 
 <a id="419-per-owner-recorded-contract-evidence"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Per-owner recorded contract evidence
 
@@ -138,6 +142,11 @@ and
 
 <a id="architecture-combined-lifecycle-state-combined-lifecycle-state"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Combined lifecycle state
 
 The opt-in `lifecycle::state` library describes schema-2 state for the future
@@ -145,7 +154,7 @@ owned-content lifecycle. Current commands still use schema 1. These records do
 not migrate state, fetch sources, claim ownership or write output files. The
 [combined lifecycle state foundation](#413-combined-lifecycle-state-foundation)
 owns the requirements;
-[`lifecycle::state`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/mod.rs)
+[`lifecycle::state`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/mod.rs)
 exposes the records and public functions.
 
 <a id="architecture-combined-lifecycle-state-public-records-and-validation"></a>
@@ -163,10 +172,10 @@ installations, direct bundles, bundle membership and bundle dependencies.
 contribution selector and explicit consumers. Existing ownership, target and
 schema-1 types retain their wire representations. No new dependency is required.
 
-[`validate_state`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/validate.rs)
+[`validate_state`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/validate.rs)
 checks the complete envelope and reuses `ownership::validate_artifacts` for
 artifact shape.
-[`associations`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state/associations.rs)
+[`associations`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state/associations.rs)
 supplies the internal owner/selector checks within that same public validation
 boundary. Parsing and serialization both call this validator. Inputs remain
 unchanged on rejection.
@@ -263,7 +272,7 @@ normalized to new tags.
 
 #### Verification boundary
 
-[`tests/lifecycle_state.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_state.rs)
+[`tests/lifecycle_state.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_state.rs)
 exercises graph sharing, every reference kind, reachability and cycles, identity
 collisions, source revision/hash bindings, audience-excluded installations,
 exact owner/consumer associations, lexical roots and selectors, strict decoding,
@@ -291,6 +300,11 @@ this record does not declare Gate 5 or M1 complete.
 <a id="architecture-lifecycle-owner-contracts"></a>
 
 <a id="architecture-lifecycle-owner-contracts-per-owner-recorded-contract-evidence"></a>
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ### Per-owner recorded contract evidence
 
@@ -375,11 +389,11 @@ source/destination observations, complete Gate 5 or qualify native clients.
 
 #### Components
 
-- [Contract model and agreement](https://github.com/driftsys/upskill/blob/main/src/lifecycle/contracts.rs)
-- [Combined-state validation and codec](https://github.com/driftsys/upskill/blob/main/src/lifecycle/state)
-- [Upsert propagation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/upsert.rs)
-- [Reference retirement](https://github.com/driftsys/upskill/blob/main/src/lifecycle/retire/mod.rs)
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_contracts.rs)
+- [Contract model and agreement](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/contracts.rs)
+- [Combined-state validation and codec](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/state)
+- [Upsert propagation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/upsert.rs)
+- [Reference retirement](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/retire/mod.rs)
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contracts.rs)
 - [Evidence policy](https://github.com/driftsys/upskill/blob/main/docs/adr/0034-record-explicit-owner-contracts.md)
 - [Validation limits](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-owner-contracts-validation.md)
 
@@ -389,10 +403,15 @@ physical observations and all physical checks still apply.
 
 <a id="architecture-generation-pipeline-pure-legacy-state-projection"></a>
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 ### Pure legacy-state projection
 
 The public library boundary
-[`legacy::project_legacy`](https://github.com/driftsys/upskill/blob/main/src/legacy/mod.rs)
+[`legacy::project_legacy`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/legacy/mod.rs)
 accepts a borrowed typed `Lockfile` and returns an owned `LegacyProjection`. It
 has no scope-root input, I/O, state writer or CLI dispatch.
 [AD-0015](https://github.com/driftsys/upskill/blob/main/docs/adr/0015-pure-legacy-state-projection.md)
@@ -425,28 +444,33 @@ remain separate from requested content selection.
 
 ##### Historical clients and layout
 
+`src/legacy/layout.rs` and the `pipeline::output` wrappers remain on `main`. The
+projector named below (`legacy::project_legacy`) was removed by
+[AD-0042](../adr/0042-resteer-customization-delivery.md).
+
 [`legacy::layout`](https://github.com/driftsys/upskill/blob/main/src/legacy/layout.rs)
-fixes the historical client set to Claude, Copilot and OpenCode. An empty
-recorded list expands to those three in that order. Explicit known clients
-retain first-occurrence order and produce one candidate each; unknown spellings
-produce diagnostics and remain in the cloned record. An unknown-only list
-produces no candidates.
+defines the historical client set: Claude, Copilot and OpenCode. The removed
+projector expanded an empty recorded list to those three in that order. Explicit
+known clients retained first-occurrence order and produced one candidate each;
+unknown spellings produced diagnostics and remained in the cloned record. An
+unknown-only list produced no candidates.
 
 The nine kind/client path mappings use the installed alias. Current
 [`pipeline::output`](https://github.com/driftsys/upskill/blob/main/src/pipeline/output.rs)
 wrappers delegate to the same native `PathBuf` helpers through explicit
 current-client conversion. Those helpers retain raw-name behavior for existing
-pipeline callers. Only the projector validates names before converting paths to
-forward-slash strings: empty names, dot, dot-dot, slash, backslash, colon and
-control characters suppress candidates; spaces and Unicode remain representable.
+pipeline callers. Only the removed projector validated names before converting
+paths to forward-slash strings: empty names, dot, dot-dot, slash, backslash,
+colon and control characters suppressed candidates; spaces and Unicode remained
+representable.
 
-Each candidate carries a client, relative entrypoint and relative resource
-search base. Skills and OpenCode rules are directory-backed; flat entrypoints
-use a sibling name directory for resources. These paths are relative to a later
-caller's established legacy scope root. They do not establish existence,
-containment or ownership, enumerate resources or permit recursive adoption.
-Malformed sources do not erase otherwise known layout facts. Bundles and
-ancillary files have no candidates.
+Each projected candidate carried a client, relative entrypoint and relative
+resource search base. Skills and OpenCode rules are directory-backed; flat
+entrypoints use a sibling name directory for resources. These paths are relative
+to a later caller's established legacy scope root. They do not establish
+existence, containment or ownership, enumerate resources or permit recursive
+adoption. Malformed sources do not erase otherwise known layout facts. Bundles
+and ancillary files have no candidates.
 
 <a id="architecture-generation-pipeline-diagnostics-and-later-consumers"></a>
 
@@ -467,12 +491,17 @@ verification, historical rendering, resource enumeration, adoption, requested
 selection reconciliation, schema-2 lifecycle preservation, exact backup and
 transactional execution remain outside this boundary.
 
-[`tests/legacy_projection.rs`](https://github.com/driftsys/upskill/blob/main/tests/legacy_projection.rs)
+[`tests/legacy_projection.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/legacy_projection.rs)
 pins typed preservation, all nine literal layouts, client order and candidate
 identity, source compatibility, malformed and duplicate rows, unsupported
 schemas and root-independent paths. Existing pipeline output and resource tests
 cover the unchanged wrappers. These checks do not establish native Windows
 execution, native discovery or actual artifact ownership.
+
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
 
 ## Durable lifecycle origin
 

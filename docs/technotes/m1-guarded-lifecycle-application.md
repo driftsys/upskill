@@ -2,6 +2,11 @@
 
 Validation record date: 2026-10-17.
 
+The code and tests that this record describes were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`tests/lifecycle_application.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_application.rs).
+
 The
 [guarded application architecture](../topics/0008-execution-and-recovery.md#guarded-lifecycle-application)
 records the implemented integration boundary.

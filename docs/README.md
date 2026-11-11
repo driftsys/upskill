@@ -15,8 +15,7 @@ architecture.
 | [Archive](archive/README.md)                         | Completed or superseded working documents and provenance.               |
 
 Requirements and architecture share a concern document but remain separate
-sections. The portable content format retains its Draft status. Library-only
-capabilities retain their activation and qualification limits.
+sections. The portable content format retains its Draft status.
 
 The book publishes canonical sources through includes and reference chapters.
 Research, working documents and archive assets remain outside publication.
@@ -25,8 +24,9 @@ published chapter URLs and historical specification anchors remain available.
 
 See [Contributing](../CONTRIBUTING.md#documentation-lifecycle) for maintenance
 and verification. Current planning remains in the [Upskill roadmap](roadmap.md),
-with the four-client MVP first, post-MVP cleanup, and additional customization
-management afterward. Planned scope remains separate from implemented contracts.
+with Claude Code and Copilot first, post-MVP cleanup, and additional
+customization management afterward. Planned scope remains separate from
+implemented contracts.
 
 The [compatibility inventory](compatibility.json) preserves historical section
 anchors and evidence hashes from the consolidation baseline. Documentation

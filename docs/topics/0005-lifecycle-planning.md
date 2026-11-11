@@ -1,6 +1,11 @@
 # Lifecycle planning
 
-Architecture reconciliation (2026-10-25): the
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
+Architecture reconciliation (2026-10-25, before the withdrawal): the
 [delivery, discovery and activation contract](0009-customization-delivery.md)
 controls intended production routes and reader intent. Existing Codex
 `AGENTS.md` contribution APIs described here are experimental library
@@ -12,10 +17,10 @@ limitation. Reusable ownership, preflight and recovery mechanisms do not select
 or qualify a runtime route, and schema-2 production activation remains blocked
 ([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+This concern owned the requirements and the architecture below. The architecture
+was implemented as library code until its removal from `main`. That library code
+was never reachable from production CLI commands; each section records its own
+limits. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -352,8 +357,8 @@ final delivery, M1 activation and Codex qualification remain pending.
 
 #### Components
 
-- [Pure selector](https://github.com/driftsys/upskill/blob/main/src/lifecycle/selection.rs)
-- [Public acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_selection.rs)
+- [Pure selector](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/selection.rs)
+- [Public acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_selection.rs)
 - [Dated validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-selection-validation.md)
 
 Satisfies:
@@ -375,11 +380,11 @@ migration, backup, application or schema-2 production write.
 #### Interfaces and components
 
 The public
-[reconciliation module](https://github.com/driftsys/upskill/blob/main/src/lifecycle/reconcile/mod.rs)
+[reconciliation module](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/reconcile/mod.rs)
 exposes `GraphChanges`, which carries node upserts and exact edge edits, and
 `ReconciledGraph`, which carries surviving graph records and removed IDs. The
 private
-[reachability traversal](https://github.com/driftsys/upskill/blob/main/src/lifecycle/reconcile/reachability.rs)
+[reachability traversal](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/reconcile/reachability.rs)
 indexes bundle dependencies and memberships and follows direct roots using an
 iterative queue. It keeps installation and bundle reachability separate even
 when IDs have the same spelling.
@@ -470,7 +475,7 @@ does not complete task 2b, Gate 5, M1 or the updater prerequisite.
 Requirements are recorded in
 [authoritative lifecycle reference reconciliation](#415-authoritative-lifecycle-reference-reconciliation).
 The
-[public acceptance suite](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_references.rs)
+[public acceptance suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_references.rs)
 establishes retention, edit rejection, binding immutability, deterministic
 output and input preservation.
 [Validation evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-reference-validation.md)
@@ -546,11 +551,11 @@ conservative multi-owner rejection.
 
 #### Components
 
-- [Retirement boundary](https://github.com/driftsys/upskill/blob/main/src/lifecycle/retire/mod.rs):
+- [Retirement boundary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/retire/mod.rs):
   graph-driven state and per-owner retirement.
-- [File planning](https://github.com/driftsys/upskill/blob/main/src/lifecycle/retire/files.rs):
+- [File planning](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/retire/files.rs):
   location evidence and aggregate/file actions.
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_retirement.rs):
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_retirement.rs):
   public contract coverage.
 
 Satisfies:
@@ -744,12 +749,12 @@ authenticity, physical containment or native support authority.
 
 #### Components
 
-- [Coordinator](https://github.com/driftsys/upskill/blob/main/src/lifecycle/upsert.rs)
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_upsert.rs)
+- [Coordinator](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/upsert.rs)
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_upsert.rs)
 - [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate5-upsert-validation.md)
 
-- [Shared reconciliation implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/sharing/mod.rs)
-- [Shared acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_sharing.rs)
+- [Shared reconciliation implementation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/sharing/mod.rs)
+- [Shared acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_sharing.rs)
 - [Shared validation limits](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-shared-reconciliation-validation.md)
 
 ## Read-only lifecycle inspection
@@ -799,9 +804,9 @@ repair or ownership adoption.
 
 Components:
 
-- [Inspection implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/inspection.rs).
-- [Read-only journal observation](https://github.com/driftsys/upskill/blob/main/src/filesystem/execution/run.rs).
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_inspection.rs).
+- [Inspection implementation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/inspection.rs).
+- [Read-only journal observation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/execution/run.rs).
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_inspection.rs).
 - [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-inspection.md).
 
 ## Read-only lifecycle preview
@@ -847,14 +852,14 @@ adapters and explicit rule-source orchestration are implemented as opt-in
 library boundaries. Complete lifecycle delivery and Gate 6 native qualification
 remain pending.
 
-- [Preview implementation](https://github.com/driftsys/upskill/blob/main/src/lifecycle/preview.rs).
-- [Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_preview.rs).
+- [Preview implementation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/preview.rs).
+- [Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_preview.rs).
 - [Validation record](https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-lifecycle-preview.md).
 
 ## Captured lifecycle command adapters
 
 The opt-in
-[command adapter](https://github.com/driftsys/upskill/blob/main/src/lifecycle/commands.rs)
+[command adapter](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/commands.rs)
 connects the existing selection, shared upsert and reference-removal planners to
 origin-bound qualified execution. It is a library interface for applying
 requests; production command dispatch remains on schema 1. Source fetching and
@@ -912,7 +917,7 @@ and sources before calling the existing
 That writer owns output/state checkpoints and recovery; no second journal or
 writer is introduced.
 
-[Acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_commands.rs)
+[Acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_commands.rs)
 cover fresh and migrated writes, update/removal, complete blockers, stale
 captures, direct roots, shared ownership, permissions and reserved destinations.
 The
@@ -966,7 +971,7 @@ qualification and production schema-2 activation remain Gate 6 work.
 
 #### Interfaces and preparation lifetime
 
-[`lifecycle::orchestration::with_prepared`](https://github.com/driftsys/upskill/blob/main/src/lifecycle/orchestration.rs)
+[`lifecycle::orchestration::with_prepared`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/orchestration.rs)
 accepts a qualified scope, its caller-retained writer guard, installation root,
 `SourceRequest`, `SourceOptions` and a callback. `SourceRequest` distinguishes
 explicit add roots, selected updates and selected removals. `SourceOptions`
@@ -1001,7 +1006,7 @@ history; this module neither discovers registries nor constructs bundle graphs.
 
 #### Acceptance and limits
 
-[Integration examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_orchestration.rs)
+[Integration examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_orchestration.rs)
 cover local add/update/remove, branch advancement, exact revision and manifest
 evidence, ID and alias preservation, repeated add, target precedence, stale
 captures, manual output conflicts, disjoint legacy preservation, complete
@@ -1046,7 +1051,7 @@ sources compile before the callback, and application rechecks original capture
 bytes and actual Git revision. Local/Git project/user examples, stable exclusion
 and reinclusion, complete preflight failures, manual bytes/modes, and a
 revision-only private-checkout mutation are covered by
-[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_codex_orchestration.rs).
+[`lifecycle_codex_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_codex_orchestration.rs).
 Production commands and schema 1 remain unchanged; native qualification,
 all-kind compatibility, activation and staging accounting in #316 remain
 separate gates. Complete independently observable preflight reporting is

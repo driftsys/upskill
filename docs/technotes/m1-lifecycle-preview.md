@@ -4,13 +4,14 @@ This slice exposes opt-in captured preview for restrictive/shared installation
 upserts and exact reference removals. It does not activate production commands,
 fetch sources or qualify native discovery.
 
-The public integration tests in `tests/lifecycle_preview.rs` cover complete
-ordered actions at distinct locations with reversed observations; content, mode,
-combined, create, remove and unchanged classifications; exact schema-1 bytes and
-retained legacy/native rows; typed legacy selection blockers; semantically
-invalid schema-2 state; edited output rejection; explicit shared owner release;
-metadata-only reference edits; and semantic no-ops despite serialization or
-record-order differences.
+The public integration tests in
+[`tests/lifecycle_preview.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_preview.rs)
+cover complete ordered actions at distinct locations with reversed observations;
+content, mode, combined, create, remove and unchanged classifications; exact
+schema-1 bytes and retained legacy/native rows; typed legacy selection blockers;
+semantically invalid schema-2 state; edited output rejection; explicit shared
+owner release; metadata-only reference edits; and semantic no-ops despite
+serialization or record-order differences.
 
 The physical temporary-root example snapshots state, source, output and extra
 resource bytes plus the directory inventory before successful and failing

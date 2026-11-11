@@ -121,10 +121,11 @@ or Windows size claim follows from these local macOS measurements.
 
 ### Implementation evidence and remaining gates
 
-The library boundary is implemented in `src/filesystem/destinations.rs`, with
-portable candidate validation, descriptor-relative acquisition/revalidation and
-filesystem qualification in separate private modules. Scope reopening reuses the
-original selected-spelling, canonical-path and pinned-identity comparisons.
+The library boundary was implemented in
+[`src/filesystem/destinations.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/filesystem/destinations.rs),
+with portable candidate validation, descriptor-relative acquisition/revalidation
+and filesystem qualification in separate private modules. Scope reopening reuses
+the original selected-spelling, canonical-path and pinned-identity comparisons.
 
 Local APFS acceptance covers D01-D09, including exact binary bytes and modes,
 absence, root aliases, conservative overlap, stored spelling, FIFO/socket

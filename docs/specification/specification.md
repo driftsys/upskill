@@ -2,16 +2,10 @@
 
 > Upskill your coding agents.
 
-Production-architecture direction is specified by the
-[customization delivery contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md).
-Independent Codex/OpenCode rules use a selected native or hook route beside
-unchanged team `AGENTS.md`. The native-first amendment selects a trusted Codex
-hook with its declared recorded-history limitation and permits explicit OpenCode
-paths only after Q5 PASS; it does not mandate a plugin where a native route
-works. Experimental contribution APIs and generated-file tests do not activate
-that route or schema 2. Current released command behavior below remains separate
-from those planned gates
-([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
+This specification describes the released command behaviour. Sections 4.1 to
+4.21 keep their headings for link compatibility; the library behaviour they
+described was removed and withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md).
 
 ## 1. Overview
 
@@ -300,129 +294,171 @@ across-repo continuity for global scope.
 
 ### 4.1 Pure legacy-state projection
 
-See
-[Pure legacy-state projection](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#41-pure-legacy-state-projection)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#41-pure-legacy-state-projection)
+is retained as history.
 
 ### 4.2 Pure owned instruction planning
 
-See
-[Pure owned instruction planning](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#42-pure-owned-instruction-planning)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#42-pure-owned-instruction-planning)
+is retained as history.
 
 ### 4.3 Strict captured source manifests
 
-See
-[Strict captured source manifests](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#43-strict-captured-source-manifests)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#43-strict-captured-source-manifests)
+is retained as history.
 
 ### 4.4 Owned whole-file operation plans
 
-See
-[Owned whole-file operation plans](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#44-owned-whole-file-operation-plans)
+is retained as history.
 
 ### 4.5 Captured item compilation
 
-See
-[Captured item compilation](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#45-captured-item-compilation)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#45-captured-item-compilation)
+is retained as history.
 
 ### 4.6 Mixed owned-artifact operation plans
 
-See
-[Mixed owned-artifact operation plans](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#46-mixed-owned-artifact-operation-plans)
+is retained as history.
 
 ### 4.7 Qualified scope roots and advisory writer locking
 
-See
-[Qualified scope roots and advisory writer locking](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#47-qualified-scope-roots-and-advisory-writer-locking)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#47-qualified-scope-roots-and-advisory-writer-locking)
+is retained as history.
 
 ### 4.8 Qualified destination observations
 
-See
-[Qualified destination observations](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#48-qualified-destination-observations)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#48-qualified-destination-observations)
+is retained as history.
 
 ### 4.9 Qualified source tree observations
 
-See
-[Qualified source tree observations](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#49-qualified-source-tree-observations)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0003-sources.md#49-qualified-source-tree-observations)
+is retained as history.
 
 ### 4.10 Explicit file permission selection
 
-See
-[Explicit file permission selection](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#410-explicit-file-permission-selection)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0007-filesystem-access.md#410-explicit-file-permission-selection)
+is retained as history.
 
 ### 4.11 Ordered recovery checkpoint model
 
-See
-[Ordered recovery checkpoint model](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#411-ordered-recovery-checkpoint-model)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#411-ordered-recovery-checkpoint-model)
+is retained as history.
 
 ### 4.12 Qualified file execution and recovery
 
-See
-[Qualified file execution and recovery](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0008-execution-and-recovery.md#412-qualified-file-execution-and-recovery)
+is retained as history.
 
 ### 4.13 Combined lifecycle state foundation
 
-See
-[Combined lifecycle state foundation](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#413-combined-lifecycle-state-foundation)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#413-combined-lifecycle-state-foundation)
+is retained as history.
 
 ### 4.14 Captured rule desired sets
 
-See
-[Captured rule desired sets](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#414-captured-rule-desired-sets)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0002-generation.md#414-captured-rule-desired-sets)
+is retained as history.
 
 ### 4.15 Authoritative lifecycle reference reconciliation
 
-See
-[Authoritative lifecycle reference reconciliation](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#415-authoritative-lifecycle-reference-reconciliation)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#415-authoritative-lifecycle-reference-reconciliation)
+is retained as history.
 
 ### 4.16 Reference-driven shared-owner removal planning
 
-See
-[Reference-driven shared-owner removal planning](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#416-reference-driven-shared-owner-removal-planning)
+is retained as history.
 
 ### 4.17 Captured lifecycle selection preflight
 
-See
-[Captured lifecycle selection preflight](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#417-captured-lifecycle-selection-preflight)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#417-captured-lifecycle-selection-preflight)
+is retained as history.
 
 ### 4.18 Complete single-owner lifecycle upsert planning
 
-See
-[Complete single-owner lifecycle upsert planning](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#418-complete-single-owner-lifecycle-upsert-planning)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#418-complete-single-owner-lifecycle-upsert-planning)
+is retained as history.
 
 ### 4.19 Per-owner recorded contract evidence
 
-See
-[Per-owner recorded contract evidence](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#419-per-owner-recorded-contract-evidence)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0004-state-and-ownership.md#419-per-owner-recorded-contract-evidence)
+is retained as history.
 
 ### 4.20 Explicit shared-output reconciliation
 
-See
-[Explicit shared-output reconciliation](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation)
-for the canonical requirements and architecture.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#420-explicit-shared-output-reconciliation)
+is retained as history.
 
 ### 4.21 Complete selected-set preflight reporting
 
-See
-[Complete selected-set preflight reporting](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting)
-for the opt-in library diagnostic contract and its production activation limits.
+This library behaviour was withdrawn by
+[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md);
+the
+[historical record](https://github.com/driftsys/upskill/blob/main/docs/topics/0005-lifecycle-planning.md#421-complete-selected-set-preflight-reporting)
+is retained as history.
 
 ## 5. Source format and authentication
 

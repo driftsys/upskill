@@ -1,6 +1,11 @@
 # Artifact planning
 
-Architecture reconciliation (2026-10-25): the
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The code this
+> record describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
+Architecture reconciliation (2026-10-25, before the withdrawal): the
 [delivery, discovery and activation contract](0009-customization-delivery.md)
 controls intended production routes and reader intent. Existing Codex
 `AGENTS.md` contribution APIs described here are experimental library
@@ -12,10 +17,10 @@ limitation. Reusable ownership, preflight and recovery mechanisms do not select
 or qualify a runtime route, and schema-2 production activation remains blocked
 ([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+This concern owned the requirements and the architecture below. The architecture
+was implemented as library code until its removal from `main`. That library code
+was never reachable from production CLI commands; each section records its own
+limits. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements
@@ -187,8 +192,9 @@ M1-A2, M1-A3 or M1.
 
 See the
 [whole-file planning design](https://github.com/driftsys/upskill/blob/main/docs/topics/0006-artifact-planning.md#architecture-owned-file-planning)
-and the active
-[operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
+and the
+[operational lifecycle design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-12-m1-owned-lifecycle-design.md),
+which was active until 2026-11-11.
 
 <a id="46-mixed-owned-artifact-operation-plans"></a>
 
@@ -289,7 +295,7 @@ guarded persistence and apply/recovery remains later lifecycle work. Pure
 [permission selection](0007-filesystem-access.md#architecture-file-permission-policy)
 is implemented as a separate inactive supplied-value capability. It does not
 complete M1-A2, M1-A3 or M1. The public declarations are in
-[`operations::plan`](https://github.com/driftsys/upskill/blob/main/src/operations/plan.rs).
+[`operations::plan`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/operations/plan.rs).
 
 ## Architecture
 
@@ -300,7 +306,7 @@ complete M1-A2, M1-A3 or M1. The public declarations are in
 ### Owned instruction operation planning
 
 This record describes the pure library planner implemented in
-[`instructions::plan`](https://github.com/driftsys/upskill/blob/main/src/instructions/plan.rs).
+[`instructions::plan`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/instructions/plan.rs).
 The [pure owned instruction planning](#42-pure-owned-instruction-planning) owns
 its requirements. The planner has no CLI dispatch, state codec or I/O.
 
@@ -348,7 +354,7 @@ absent bytes; observed aggregates must decode as UTF-8.
 
 #### Verified body inspection and editing
 
-[`aggregate::inspect_owned`](https://github.com/driftsys/upskill/blob/main/src/instructions/aggregate.rs)
+[`aggregate::inspect_owned`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/instructions/aggregate.rs)
 shares the private span validator with `aggregate::reconcile`. Verified spans
 retain body start offsets and end-marker positions, so the reader takes exact
 body slices and returns contributions in document order. It rejects duplicate
@@ -407,10 +413,10 @@ composes complete explicit sets across both forms; neither individual planner
 authorizes partial application of a mixed installation. Current commands,
 lockfile/source formats and native client support are unchanged.
 
-[`tests/instruction_plans.rs`](https://github.com/driftsys/upskill/blob/main/tests/instruction_plans.rs)
+[`tests/instruction_plans.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/instruction_plans.rs)
 covers owner retention, complete replacements and moves, exact preconditions,
 conflicts, consumer propagation, lexical scope/root identity and row ordering.
-[`tests/instruction_contributions.rs`](https://github.com/driftsys/upskill/blob/main/tests/instruction_contributions.rs)
+[`tests/instruction_contributions.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/instruction_contributions.rs)
 covers the shared reader and editor validation. These tests establish the pure
 boundary, without native discovery or filesystem execution claims.
 
@@ -435,7 +441,7 @@ observational adapters.
 ### Owned whole-file operation planning
 
 This record describes the pure planner implemented in
-[`files::plan`](https://github.com/driftsys/upskill/blob/main/src/files/plan.rs).
+[`files::plan`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/files/plan.rs).
 [owned whole-file operation plans](#44-owned-whole-file-operation-plans) owns
 its requirements. The implementation consumes supplied values and performs no
 I/O.
@@ -525,7 +531,7 @@ returns no successful partial plan. Inputs remain unchanged.
 [AD-0021](https://github.com/driftsys/upskill/blob/main/docs/adr/0021-pure-file-planning.md)
 records the ordering choice.
 
-[`tests/file_plans.rs`](https://github.com/driftsys/upskill/blob/main/tests/file_plans.rs)
+[`tests/file_plans.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/file_plans.rs)
 covers exact creation, replacement, removal, owner handoff, no-op preconditions,
 untouched-record retention, metadata validation, mode boundaries,
 binary/empty/Unicode values, raw-root and scope isolation, ancestor conflicts
@@ -570,7 +576,7 @@ does not complete M1-A2, M1-A3 or M1.
 ### Mixed owned-artifact operation planning
 
 This record describes the implemented pure coordinator in
-[`operations::plan`](https://github.com/driftsys/upskill/blob/main/src/operations/plan.rs).
+[`operations::plan`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/operations/plan.rs).
 [mixed owned-artifact operation plans](#46-mixed-owned-artifact-operation-plans)
 owns its requirements.
 [AD-0027](https://github.com/driftsys/upskill/blob/main/docs/adr/0027-compose-complete-owned-artifact-plans.md)
@@ -674,7 +680,7 @@ duplicate-location guard.
 
 #### Evidence and remaining integration
 
-[`tests/operation_plans.rs`](https://github.com/driftsys/upskill/blob/main/tests/operation_plans.rs)
+[`tests/operation_plans.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/operation_plans.rs)
 covers mixed creation, complete replacements and removals, disjoint-form binding
 checks, coherent and conflicting revisions, physical collisions and topology,
 exact observations, manual bytes and aggregate modes, shared ownership,

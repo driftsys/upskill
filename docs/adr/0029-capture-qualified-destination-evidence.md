@@ -1,5 +1,10 @@
 # AD-0029: Capture qualified destination evidence
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](0042-resteer-customization-delivery.md).** The code this record
+> describes was removed from `main` and is kept on the branch
+> `archive/lifecycle-2026-11`. This record is retained as history.
+
 Implemented with local APFS and hosted Linux evidence, plus hosted Windows
 unsupported-boundary checks. Windows qualification remains pending.
 

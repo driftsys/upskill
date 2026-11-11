@@ -17,7 +17,9 @@ schema 1. No migration backup, application or recovery is invoked by this slice.
 
 ## Local evidence
 
-- Acceptance tests: 33 cases in `tests/lifecycle_state.rs` passed.
+- Acceptance tests: 33 cases in
+  [`tests/lifecycle_state.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_state.rs)
+  passed.
 - Graph controls: omitting ID syntax, duplicate installation ID, endpoint,
   duplicate edge and delegated artifact-shape checks made their targeted tests
   fail.

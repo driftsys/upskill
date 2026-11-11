@@ -3,6 +3,11 @@
 Validation record date: 2026-10-15. This date identifies the original evidence
 record; consolidation does not rerun or extend its qualification.
 
+The code and tests that this record names were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`tests/lifecycle_desired.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_desired.rs).
+
 This informative note records local evidence for completed task 2a: the inactive
 captured-rule producer and complete batch preflight. The requirements remain in
 [specification §4.14](../topics/0002-generation.md#414-captured-rule-desired-sets)

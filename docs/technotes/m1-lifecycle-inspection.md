@@ -3,7 +3,7 @@
 This slice adds opt-in captured list and doctor descriptions and qualified
 read-only scope inspection. It does not activate production commands.
 
-[Public acceptance examples](https://github.com/driftsys/upskill/blob/main/tests/lifecycle_inspection.rs)
+[Public acceptance examples](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_inspection.rs)
 cover exact schema-1 byte retention, unknown fields, duplicate legacy rows,
 invalid/unsupported schemas, validated schema-2 records, missing evidence versus
 missing outputs, content and mode drift, unknown modes, duplicate observations,

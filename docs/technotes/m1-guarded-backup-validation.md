@@ -12,11 +12,11 @@ preparation, application adapters and observational inspection remain separate.
 ## Acceptance evidence
 
 Six real-filesystem integration examples in
-[execution_backup.rs](../../tests/execution_backup.rs) cover literal original
-bytes including unknown JSON fields and whitespace, mode 0o600, retained
-matching-backup identity, ordinary original State mode 0o644 with private backup
-mode 0o600, mismatched bytes/modes, full-request preflight and invalid backup
-topology or missing original state.
+[execution_backup.rs](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/execution_backup.rs)
+cover literal original bytes including unknown JSON fields and whitespace, mode
+0o600, retained matching-backup identity, ordinary original State mode 0o644
+with private backup mode 0o600, mismatched bytes/modes, full-request preflight
+and invalid backup topology or missing original state.
 
 Four focused internal examples cover a file appearing immediately before
 publication, edits to a completed backup blocking recovery, nine journal policy

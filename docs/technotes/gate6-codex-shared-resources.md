@@ -2,7 +2,7 @@
 
 Task [#369](https://github.com/driftsys/upskill/issues/369) continues the
 bounded [#337](https://github.com/driftsys/upskill/issues/337) campaign and the
-[shared-core criteria](../wip/plans/2026-10-19-customization-delivery-reconciliation.md#shared-core-authoring-clarification-324).
+[shared-core criteria](../archive/plans/2026-10-19-customization-delivery-reconciliation.md#shared-core-authoring-clarification-324).
 All 160 cells remain unqualified; no shared route is adopted and production
 stays schema 1.
 

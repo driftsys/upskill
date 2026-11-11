@@ -1,8 +1,13 @@
 # Captured lifecycle command adapters
 
-`lifecycle::commands` connects the opt-in combined-state planners to guarded
-application. It remains a library path; production commands still write
-schema 1.
+The code and tests that this record names were removed from `main` by
+[AD-0042](../adr/0042-resteer-customization-delivery.md). They are kept on the
+branch `archive/lifecycle-2026-11`:
+[`src/lifecycle/commands.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/src/lifecycle/commands.rs),
+[`tests/lifecycle_commands.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_commands.rs).
+
+`lifecycle::commands` connected the opt-in combined-state planners to guarded
+application. It was a library path; production commands write schema 1.
 
 Callers acquire a `QualifiedScope` and its writer guard, then call
 `LifecycleSession::open`. The session recovers the executor journal before

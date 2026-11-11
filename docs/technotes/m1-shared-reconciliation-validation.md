@@ -10,17 +10,19 @@ application.
 
 ## Acceptance examples
 
-The [contract producer suite](../../tests/lifecycle_contract_producer.rs)
+The
+[contract producer suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contract_producer.rs)
 contains five examples covering exact captured output/source/profile bindings,
 invalid profile coverage/family/revision, empty audience, mismatched capture and
 mixed client bindings. Expected outputs are compared with the original producer
 and independent literal consumer expectations.
 
-The [shared planner suite](../../tests/lifecycle_sharing.rs) contains 31
-examples covering new sharing, retained-owner addition, coordinated update,
-selected explicit requalification, unknown retained proof, conflicting content
-and modes, owner release/final retirement, immutable real bindings, exact
-observations, malformed unrelated state, legacy collisions, topology,
+The
+[shared planner suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_sharing.rs)
+contains 31 examples covering new sharing, retained-owner addition, coordinated
+update, selected explicit requalification, unknown retained proof, conflicting
+content and modes, owner release/final retirement, immutable real bindings,
+exact observations, malformed unrelated state, legacy collisions, topology,
 instruction manual bytes/modes/neighbors and empty aggregate retention. Codec
 roundtrips retain real owner evidence; projection identities do not enter
 returned state. Original upsert rejection and single-owner parity remain

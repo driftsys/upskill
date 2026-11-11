@@ -2,7 +2,7 @@
 
 Task [#345](https://github.com/driftsys/upskill/issues/345) retains a bounded
 part of [#337](https://github.com/driftsys/upskill/issues/337), Task 2 of the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md).
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md).
 These are native macOS arm64 project observations after normal authentication,
 not qualification of a complete profile or an activation gate. All 160 matrix
 cells remain unqualified. Production stays schema 1.

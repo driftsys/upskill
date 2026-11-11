@@ -2,7 +2,7 @@
 
 Task [#375](https://github.com/driftsys/upskill/issues/375) continues
 [#337](https://github.com/driftsys/upskill/issues/337), Task 2/CD-03 of the
-[corrected plan](../wip/plans/2026-10-19-customization-delivery-reconciliation.md).
+[corrected plan](../archive/plans/2026-10-19-customization-delivery-reconciliation.md).
 These are bounded OpenCode `2.0.32` macOS arm64 observations in a normally
 provisioned isolated user profile. All 160 qualification cells remain
 unqualified and production stays schema 1.

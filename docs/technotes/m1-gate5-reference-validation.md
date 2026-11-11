@@ -13,15 +13,15 @@ and implemented interfaces in the
 ## Local evidence
 
 Initial implementation spans `b01a67d..dd53bd4`. The focused
-[acceptance suite](../../tests/lifecycle_references.rs) passed nine tests before
-final review. Review found that an explicitly added edge from a detached bundle
-could be silently pruned. A failing example preceded the survival check; both
-membership and dependency edges are now rejected when they would disappear.
-Further examples independently exercise reachable duplicate installation and
-bundle upserts and installation roots with same-named bundles. The focused suite
-passed 13 tests after those corrections and an additional example for prior
-installation and removed-ID ordering and successful membership/dependency edge
-ordering.
+[acceptance suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_references.rs)
+passed nine tests before final review. Review found that an explicitly added
+edge from a detached bundle could be silently pruned. A failing example preceded
+the survival check; both membership and dependency edges are now rejected when
+they would disappear. Further examples independently exercise reachable
+duplicate installation and bundle upserts and installation roots with same-named
+bundles. The focused suite passed 13 tests after those corrections and an
+additional example for prior installation and removed-ID ordering and successful
+membership/dependency edge ordering.
 
 Seven initial assertion-failing controls exercised retention traversal,
 installation binding, raw root immutability, complete candidate validation,

@@ -1,7 +1,7 @@
 # Q11b: Copilot native-name positive passes
 
 The user-approved
-[native-name calibration revision](../wip/specs/2026-10-30-q11b-native-name-profile.md)
+[native-name calibration revision](../archive/specs/2026-10-30-q11b-native-name-profile.md)
 passes on macOS arm64, 2026-10-30 Europe/Paris (2026-10-29 23:21 UTC), in one
 fresh Copilot process. This is one positive, not a registration-isolation
 qualification. Task [#428](https://github.com/driftsys/upskill/issues/428) stays
