@@ -410,3 +410,50 @@ fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
         "divergent-named rule must not be reported as would-remove:\n{out}"
     );
 }
+
+#[test]
+fn update_changes_nothing_when_a_directory_was_replaced_by_a_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    stage_source(&tmp.path().join("source"));
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "api-conventions",
+            "create-api-endpoint",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    let rules = tmp.path().join(".claude/rules");
+    fs::rename(&rules, tmp.path().join("rules-moved")).unwrap();
+    fs::write(&rules, b"a file\n").unwrap();
+    let skill_md = tmp.path().join("source/create-api-endpoint/SKILL.md");
+    let mut src = fs::read(&skill_md).unwrap();
+    src.extend_from_slice(b"\nA new line.\n");
+    fs::write(&skill_md, src).unwrap();
+    let installed = tmp
+        .path()
+        .join(".claude/skills/create-api-endpoint/SKILL.md");
+    let before = fs::read(&installed).unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .failure()
+        .code(1);
+
+    assert_eq!(fs::read(&installed).unwrap(), before);
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(fs::read(&rules).unwrap(), b"a file\n");
+}

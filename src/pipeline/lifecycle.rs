@@ -275,10 +275,12 @@ fn remove_selected(
 /// - **orphan entries** — the lockfile points at a `local:` source that
 ///   is gone, or at an item that no longer exists in its source. The
 ///   user has to `upskill remove` to clear it.
-/// - **orphaned dependencies** (advisory) — items pulled in only as a
-///   dependency of items that are no longer installed.
-/// - **missing plugins** and **skipped plugins** (advisory) — plugin
-///   reconciliation against each client.
+/// - **orphaned dependencies** — items pulled in only as a dependency of
+///   items that are no longer installed. Does not affect `is_clean`.
+/// - **missing plugins** — plugins recorded as installed that the client
+///   no longer has.
+/// - **skipped plugins** (advisory) — plugins that were never installed
+///   because the client CLI was missing.
 /// - **MCP entries** — MCP server reconciliation against each client.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
@@ -294,7 +296,6 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         let mut missing = Vec::new();
         let mut modified = Vec::new();
         let mut unreadable = Vec::new();
-        let mut unreadable_error: Option<String> = None;
         if entry.files.is_empty() {
             // No record (a `schema: 1` lockfile, which `doctor` does not
             // adopt): check the entrypoint of each layout path.
@@ -329,10 +330,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                     Ok(FileState::Modified) => modified.push(rel),
                     Ok(FileState::Owned | FileState::Unowned) => {}
                     Err(err) => {
-                        if unreadable_error.is_none() {
-                            unreadable_error = Some(format!("{err:#}"));
-                        }
-                        unreadable.push(rel);
+                        unreadable.push((rel, format!("{err:#}")));
                     }
                 }
             }
@@ -355,14 +353,14 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 files: modified,
             });
         }
-        if let Some(error) = unreadable_error {
-            unreadable.sort();
-            unreadable.dedup();
+        unreadable.sort();
+        unreadable.dedup_by(|a, b| a.0 == b.0);
+        if let Some((_, error)) = unreadable.first() {
             report.unreadable_files.push(UnreadableFile {
                 kind,
                 name: entry.name.clone(),
-                files: unreadable,
-                error,
+                error: error.clone(),
+                files: unreadable.into_iter().map(|(rel, _)| rel).collect(),
             });
         }
 

@@ -176,7 +176,8 @@ pub struct UnreadableFile {
     pub name: String,
     /// Paths relative to the install target.
     pub files: Vec<PathBuf>,
-    /// The error text of the first file that could not be inspected.
+    /// The error text for `files[0]`, the first path in sorted order. The
+    /// errors of the other paths are not kept.
     pub error: String,
 }
 

@@ -6,7 +6,9 @@
 //! symbolic links. Every existing component from the third one to the last
 //! one (the item directory, resource subdirectories and the file) must not
 //! be a symbolic link. `apply_plan` checks this for every path it writes or
-//! deletes before it changes anything on disk.
+//! deletes before it changes anything on disk. For a path it writes, it
+//! also fails when an existing component on the way to the file is not a
+//! directory, or when the file exists and is not a regular file.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
@@ -68,7 +70,7 @@ pub(super) fn apply_plan(
                     file.rel.display()
                 );
             }
-            check_no_item_symlink(target, &file.rel)?;
+            check_writable(target, &file.rel)?;
             files.push(OwnedFile {
                 client: file.client.name().to_string(),
                 path: rel_to_record(&file.rel)?,
@@ -133,12 +135,63 @@ pub(super) fn apply_plan(
     Ok(recorded)
 }
 
-/// Fails when a component of `rel`, from the third one to the last one,
-/// exists and is a symbolic link. Links are not followed. The check stops
-/// at the first component that does not exist or that is a regular file
-/// (no path can exist below a regular file).
+/// Check for a path to delete. Fails when a component of `rel`, from the
+/// third one to the last one, exists and is a symbolic link. Links are not
+/// followed. The check stops at the first component that does not exist or
+/// that is a regular file (no path can exist below a regular file, so
+/// there is nothing to delete). Planned files use [`check_writable`].
 pub(super) fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
     check_item_components(target, rel, false)
+}
+
+/// Check for a planned file `rel`, run before any change on disk. Fails
+/// when the client root or the kind directory (the first two components,
+/// which may be symbolic links and are followed) exists and is not a
+/// directory; when a later component exists and is a symbolic link; when a
+/// component between the kind directory and the file exists and is not a
+/// directory; or when the file itself exists and is not a regular file.
+fn check_writable(target: &Path, rel: &Path) -> Result<()> {
+    let count = rel.components().count();
+    let mut current = target.to_path_buf();
+    for (index, component) in rel.components().enumerate() {
+        current.push(component);
+        let last = index + 1 == count;
+        let meta = if index < 2 {
+            fs::metadata(&current)
+        } else {
+            fs::symlink_metadata(&current)
+        };
+        let meta = match meta {
+            Ok(meta) => meta,
+            Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(err) => {
+                return Err(err).with_context(|| format!("inspecting {}", current.display()));
+            }
+        };
+        let file_type = meta.file_type();
+        if file_type.is_symlink() {
+            anyhow::bail!(
+                "refusing to change {}: {} is a symbolic link",
+                target.join(rel).display(),
+                current.display()
+            );
+        }
+        if last {
+            if !file_type.is_file() {
+                anyhow::bail!(
+                    "cannot write {}: it exists and is not a regular file",
+                    target.join(rel).display()
+                );
+            }
+        } else if !file_type.is_dir() {
+            anyhow::bail!(
+                "cannot write {}: {} is not a directory",
+                target.join(rel).display(),
+                current.display()
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Like [`check_no_item_symlink`], but the last component of `rel` is not
@@ -202,7 +255,9 @@ pub(super) fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
         Ok(_) => {
             fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
         }
-        Err(err) if err.kind() == ErrorKind::NotFound => {}
+        // "Not a directory": a parent is a regular file, so the path
+        // cannot exist and there is nothing to delete.
+        Err(err) if matches!(err.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) => {}
         Err(err) => return Err(err).with_context(|| format!("inspecting {}", full.display())),
     }
     prune_empty_parents(target, rel);
@@ -509,5 +564,77 @@ mod tests {
         let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path).unwrap_err();
         assert!(format!("{err}").contains("`a` and `b`"), "{err}");
         assert!(!tmp.path().join(".claude").exists());
+    }
+}
+
+#[cfg(test)]
+mod pre_check_tests {
+    use super::*;
+    use crate::generate::Client;
+    use crate::pipeline::plan::PlannedFile;
+
+    fn planned(name: &str, rel: &str) -> PlannedItem {
+        PlannedItem {
+            kind: ItemKind::Skill,
+            name: name.to_string(),
+            source_name: None,
+            files: vec![PlannedFile {
+                client: Client::Claude,
+                rel: PathBuf::from(rel),
+                bytes: b"body".to_vec(),
+                mode: None,
+            }],
+            deselected_entries: vec![],
+        }
+    }
+
+    #[test]
+    fn pre_check_fails_when_the_kind_directory_is_a_regular_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        fs::write(tmp.path().join(".claude/rules"), b"a file").unwrap();
+        let plan = [
+            planned("first", ".claude/skills/first/SKILL.md"),
+            planned("second", ".claude/rules/second.md"),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let text = format!("{err:#}");
+        assert!(text.contains(".claude/rules/second.md"), "{text}");
+        assert!(text.contains("is not a directory"), "{text}");
+        assert!(!tmp.path().join(".claude/skills").exists());
+        assert_eq!(
+            fs::read(tmp.path().join(".claude/rules")).unwrap(),
+            b"a file"
+        );
+    }
+
+    #[test]
+    fn pre_check_fails_when_the_item_directory_is_a_regular_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".claude/skills")).unwrap();
+        fs::write(tmp.path().join(".claude/skills/second"), b"a file").unwrap();
+        let plan = [
+            planned("first", ".claude/skills/first/SKILL.md"),
+            planned("second", ".claude/skills/second/SKILL.md"),
+        ];
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let text = format!("{err:#}");
+        assert!(text.contains(".claude/skills/second/SKILL.md"), "{text}");
+        assert!(text.contains("is not a directory"), "{text}");
+        assert!(!tmp.path().join(".claude/skills/first").exists());
+        assert_eq!(
+            fs::read(tmp.path().join(".claude/skills/second")).unwrap(),
+            b"a file"
+        );
+    }
+
+    #[test]
+    fn prune_empty_parents_never_deletes_a_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join(".claude/skills/s/SKILL.md");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, b"keep").unwrap();
+        prune_empty_parents(tmp.path(), Path::new(".claude/skills/s/SKILL.md"));
+        assert_eq!(fs::read(&file).unwrap(), b"keep");
     }
 }

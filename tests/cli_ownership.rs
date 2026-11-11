@@ -825,3 +825,40 @@ fn remove_prints_the_adoption_notice_when_it_fails_after_adoption() {
         b"outside skill\n"
     );
 }
+
+#[test]
+fn remove_reports_a_path_recorded_by_two_items_once() {
+    let (tmp, home) = project();
+    let shared = tmp.path().join(".claude/rules/shared.md");
+    fs::create_dir_all(shared.parent().unwrap()).unwrap();
+    fs::write(&shared, "shared rule\n").unwrap();
+    let record = serde_json::json!([{
+        "client": "claude",
+        "path": ".claude/rules/shared.md",
+        "sha256": sha256_hex(b"shared rule\n")
+    }]);
+    let lock = serde_json::json!({
+        "schema": 2,
+        "items": [
+            { "kind": "rule", "name": "first", "source": "./source",
+              "clients": ["claude"], "files": record },
+            { "kind": "rule", "name": "second", "source": "./source",
+              "clients": ["claude"], "files": record }
+        ],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    let out = remove_cmd(tmp.path(), &home, &["first", "second"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert_eq!(stdout.matches("(1 file(s))").count(), 1, "{stdout}");
+    assert_eq!(stdout.matches("(0 file(s))").count(), 1, "{stdout}");
+    assert!(!shared.exists());
+}
