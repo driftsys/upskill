@@ -60,7 +60,8 @@ and installed through a command.
    re-steer design: each step delivers one capability (ownership record,
    `update`, repeatable operations, scope, update check, support levels) for all
    content kinds at the same time. There is no order between skills and rules.
-   The update check and the updater plugins stay after the other capabilities.
+   The update check stays after the scope step, and the updater plugins stay
+   last.
 7. **Both copies of a rule for Claude Code and Copilot.** Decided by the
    maintainer on 2026-11-11, after trial T1. When a rule is installed for both
    Claude Code and Copilot, upskill writes both the `.claude/rules` file and the
@@ -80,7 +81,8 @@ This record replaces the following clauses of
 
 - the activation and release-gate clauses, which block all-client release
   qualification, schema-2 activation and owned implementation until every
-  applicable native requirement passes in all four clients (Decision 3);
+  applicable native requirement passes in all four clients, and the four-client
+  release scope that follows from them (Decisions 3 and 4);
 - the clause that reuses source capture, per-owner contracts, complete
   preflight, qualified locking, exact backup and recovery foundations (Decisions
   2 and 5);

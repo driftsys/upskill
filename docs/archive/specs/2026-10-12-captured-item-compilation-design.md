@@ -1,7 +1,7 @@
 # Captured item compilation
 
 Status: proposed bounded implementation prerequisite. This does not activate the
-[M1 lifecycle](2026-10-12-m1-owned-lifecycle-design.md).
+[M1 lifecycle](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
 
 ## Intent and boundary
 

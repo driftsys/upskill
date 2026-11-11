@@ -7,10 +7,10 @@ branch `archive/lifecycle-2026-11`:
 [`tests/lifecycle_commands.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_commands.rs),
 [`tests/lifecycle_orchestration.rs`](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_orchestration.rs).
 
-Gate 5 was an opt-in library path. Source-backed rule operations use
-`orchestration::with_prepared`; supplied instruction contributions use
-`commands::LifecycleSession`. These are the adapters available for Gate 6. There
-is no production schema-2 activation or native Codex qualification.
+Gate 5 was an opt-in library path. Source-backed rule operations used
+`orchestration::with_prepared`; supplied instruction contributions used
+`commands::LifecycleSession`. These were the adapters available for Gate 6.
+There was no production schema-2 activation or native Codex qualification.
 
 ## Acceptance matrix
 

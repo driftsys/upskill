@@ -16,7 +16,7 @@ fetch, generation, filesystem inspection, adoption, save, backup, or native
 operation.
 
 Authority:
-[foundation design](../../wip/specs/2026-10-11-agent-customization-foundation-design.md)
+[foundation design](2026-10-11-agent-customization-foundation-design.md)
 sections 2, 3 and 5; [M1-A2](../plans/2026-10-11-instructions-rules-m1.md).
 Preserve Rust 1.85, the synchronous/static-binary constraints, existing OpenCode
 behavior, and the fixed original defaults.

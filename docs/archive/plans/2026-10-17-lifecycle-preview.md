@@ -17,7 +17,7 @@ diagnostics; planner errors return no partial preview.
 dependencies.
 
 **Spec:**
-[Active Gate 5 umbrella](../specs/2026-10-15-m1-gate5-lifecycle-integration.md).
+[Active Gate 5 umbrella](../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md).
 
 ## Constraints
 

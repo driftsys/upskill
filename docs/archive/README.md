@@ -956,7 +956,11 @@ Source paths: `docs/wip/plans/2026-10-11-instructions-rules-m1.md`,
 `docs/wip/specs/2026-10-25-q11-registration-isolation-follow-up.md`,
 `docs/wip/specs/2026-10-27-q11b-project-profile.md` and
 `docs/wip/specs/2026-10-30-q11b-native-name-profile.md`. They were moved with
-only their relative links updated for this location.
+only their relative links updated for this location. The documents that were
+already in this archive before 2026-11-11 keep their original bytes. A relative
+link in one of them to a document that this entry moved from `docs/wip` no
+longer resolves; the moved document is in `plans/` or `specs/` of this archive
+under the same file name.
 
 - [Instructions and rules M1 plan](plans/2026-10-11-instructions-rules-m1.md)
 - [Owned artifact records plan](plans/2026-10-12-owned-artifact-records.md)

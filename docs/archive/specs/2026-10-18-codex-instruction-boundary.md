@@ -1,8 +1,8 @@
 # Captured Codex instruction boundary
 
 Task: #322. This bounded slice implements part of M1-B from the approved
-[foundation](../../wip/specs/2026-10-11-agent-customization-foundation-design.md)
-and [owned lifecycle](2026-10-12-m1-owned-lifecycle-design.md) designs. Routine
+[foundation](2026-10-11-agent-customization-foundation-design.md) and
+[owned lifecycle](2026-10-12-m1-owned-lifecycle-design.md) designs. Routine
 decisions and delivery are delegated by the user.
 
 Produce complete desired instruction contributions from validated captured rule

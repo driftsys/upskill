@@ -6,7 +6,8 @@ source-resolution orchestration and Gate 5 acceptance. Preserve the accepted
 inactive-production boundary; Gate 6 activation/native qualification is outside
 this lane.
 
-Spec: [Gate 5 umbrella](../specs/2026-10-15-m1-gate5-lifecycle-integration.md).
+Spec:
+[Gate 5 umbrella](../../wip/specs/2026-10-15-m1-gate5-lifecycle-integration.md).
 
 ## Delivery order
 
