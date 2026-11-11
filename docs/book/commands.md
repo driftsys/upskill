@@ -146,6 +146,13 @@ recorded aliases, but it checks each source just before it updates that source:
 the refusal comes before any change for that source, and an `update` over
 several sources may have updated earlier sources before it stops.
 
+A source rooted in a client directory (for example `~/.claude`) or one that
+contains a client output directory is not supported. The first `add` succeeds,
+but its output is inside the source, so the next `add` and every `update` of
+that source are refused with a message that names the source root and the client
+directory. Move the source items to a directory outside the client directories
+and add them from there.
+
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those
 client-native plugins by shelling out to each client's own CLI
