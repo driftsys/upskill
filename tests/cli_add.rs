@@ -440,6 +440,93 @@ fn add_ignores_overlap_of_an_item_that_is_not_requested() {
     }
 }
 
+/// Every file under `root`, as (path, content), sorted by path.
+fn snapshot_files(root: &Path) -> Vec<(std::path::PathBuf, Vec<u8>)> {
+    let mut files = Vec::new();
+    let mut dirs = vec![root.to_path_buf()];
+    while let Some(dir) = dirs.pop() {
+        for entry in fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                dirs.push(path);
+            } else {
+                let content = fs::read(&path).unwrap();
+                files.push((path, content));
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+#[test]
+fn add_and_update_explain_a_source_rooted_in_a_client_directory() {
+    // The first `add` writes `$HOME/.claude/skills/wanted`, which is inside
+    // the registry root `$HOME/.claude`. Discovery then finds that output as a
+    // second item `wanted`, so the second `add` and `update` are refused.
+    let (tmp, home, registry) = stage_registry_in_global_claude_dir();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            registry.to_str().unwrap(),
+            "wanted",
+            "--claude",
+            "--global",
+        ])
+        .assert()
+        .success();
+    let lock_path = home.join(".upskill-lock.json");
+    let lock_before = fs::read_to_string(&lock_path).unwrap();
+    let files_before = snapshot_files(&registry);
+    let root = fs::canonicalize(&registry).unwrap();
+
+    let runs: [&[&str]; 2] = [
+        &[
+            "add",
+            registry.to_str().unwrap(),
+            "wanted",
+            "--claude",
+            "--global",
+        ],
+        &["update", "--global"],
+    ];
+    for args in runs {
+        let assert = common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(args)
+            .assert()
+            .failure();
+        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+        assert!(
+            stderr.contains(&format!(
+                "The source root {} contains the output path {}",
+                root.display(),
+                root.join("skills/wanted").display()
+            )),
+            "{args:?}: stderr does not name the source root: {stderr}"
+        );
+        assert!(
+            stderr.contains(&format!("under the client directory {}", root.display())),
+            "{args:?}: stderr does not name the client directory: {stderr}"
+        );
+        assert!(
+            stderr.contains("A source must not be rooted in a client directory or contain one")
+                && stderr.contains(
+                    "Move the source items to a directory outside the client directories \
+                     and add them from there"
+                ),
+            "{args:?}: stderr does not state the remedy: {stderr}"
+        );
+        assert_eq!(snapshot_files(&registry), files_before, "{args:?}");
+        assert_eq!(
+            fs::read_to_string(&lock_path).unwrap(),
+            lock_before,
+            "{args:?}"
+        );
+    }
+}
+
 /// Write `files` (relative path, content) under `root`.
 fn write_files(root: &Path, files: &[(&str, &str)]) {
     for (rel, content) in files {

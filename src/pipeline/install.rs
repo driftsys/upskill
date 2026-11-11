@@ -88,12 +88,12 @@ pub(super) fn check_sources_outside_outputs(
             if filter.is_some_and(|items| !items.contains(kind, &name)) {
                 continue;
             }
-            check_source_outside_outputs(target, kind, &name, &dir)?;
+            check_source_outside_outputs(target, kind, &name, &dir, source)?;
             if let Some((_, alias)) = aliases
                 .iter()
                 .find(|(from, _)| from.is_empty() || *from == name)
             {
-                check_source_outside_outputs(target, kind, alias, &dir)?;
+                check_source_outside_outputs(target, kind, alias, &dir, source)?;
             }
         }
     }

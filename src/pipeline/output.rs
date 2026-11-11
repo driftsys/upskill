@@ -78,33 +78,78 @@ pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<(
 /// exists is compared in canonical form; a path that does not exist is
 /// compared as given. Every client is checked because [`remove_item_outputs`]
 /// touches every client.
+///
+/// When `source_dir` is inside an output path that is itself inside
+/// `source_root`, the source root holds upskill's own output (for example a
+/// registry rooted at `~/.claude`), and the error says so.
 pub(super) fn check_source_outside_outputs(
     target: &Path,
     kind: ItemKind,
     name: &str,
     source_dir: &Path,
+    source_root: &Path,
 ) -> Result<()> {
     let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     let source = canonical(source_dir);
+    let root = canonical(source_root);
     let target = canonical(target);
-    for client in ALL_CLIENTS {
-        for rel in [
+    let rels = |client| {
+        [
             output_path(kind, client, name),
             resource_base_path(kind, client, name),
-        ] {
+        ]
+    };
+    for client in ALL_CLIENTS {
+        for rel in rels(client) {
             let out = canonical(&target.join(&rel));
             if source.starts_with(&out) || out.starts_with(&source) {
-                anyhow::bail!(
+                let prefix = format!(
                     "{kind} '{name}': source directory {} overlaps the output path {}; \
-                     installing would delete or overwrite the source. \
-                     Copy the item to a directory outside the client output directories and add it from there",
+                     installing would delete or overwrite the source.",
                     source_dir.display(),
                     out.display()
+                );
+                if let Some((owned, client_dir)) = output_inside_root(&target, &source, &root, rels)
+                {
+                    anyhow::bail!(
+                        "{prefix} The source root {} contains the output path {} that upskill \
+                         writes under the client directory {}. A source must not be rooted in a \
+                         client directory or contain one. Move the source items to a directory \
+                         outside the client directories and add them from there",
+                        root.display(),
+                        owned.display(),
+                        client_dir.display()
+                    );
+                }
+                anyhow::bail!(
+                    "{prefix} Copy the item to a directory outside the client output directories \
+                     and add it from there"
                 );
             }
         }
     }
     Ok(())
+}
+
+/// Find an output path that contains `source` (or is `source`) and is inside
+/// `root`. Returns that output path and its client directory (the first
+/// component of the output path under `target`).
+fn output_inside_root(
+    target: &Path,
+    source: &Path,
+    root: &Path,
+    rels: impl Fn(Client) -> [PathBuf; 2],
+) -> Option<(PathBuf, PathBuf)> {
+    for client in ALL_CLIENTS {
+        for rel in rels(client) {
+            let out = fs::canonicalize(target.join(&rel)).unwrap_or_else(|_| target.join(&rel));
+            if source.starts_with(&out) && out.starts_with(root) {
+                let first = rel.components().next()?;
+                return Some((out, target.join(first)));
+            }
+        }
+    }
+    None
 }
 
 /// Delete all per-client output files for an item (best-effort).
@@ -141,7 +186,7 @@ mod tests {
     }
 
     fn assert_refused(target: &Path, kind: ItemKind, name: &str, source: &Path) {
-        let err = check_source_outside_outputs(target, kind, name, source)
+        let err = check_source_outside_outputs(target, kind, name, source, source)
             .expect_err("overlap must be refused");
         assert!(
             err.to_string().contains("overlaps the output path"),
@@ -187,7 +232,7 @@ mod tests {
         let (tmp, target) = target_with_dir(".claude/skills/x");
         let source = tmp.path().join("source/x");
         fs::create_dir_all(&source).unwrap();
-        check_source_outside_outputs(&target, ItemKind::Skill, "x", &source).unwrap();
+        check_source_outside_outputs(&target, ItemKind::Skill, "x", &source, &source).unwrap();
     }
 
     #[test]
