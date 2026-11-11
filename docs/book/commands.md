@@ -149,7 +149,7 @@ before correcting a label; verify the intended HTTPS remote, ref and subfolder.
 This label compatibility step does not itself change the schema; the reinstall
 adopts a `schema: 1` lockfile as described in [State files](#state-files).
 
-### `upskill remove [name...] [--source <label>]`
+### `upskill remove [name...] [--source <label>] [--force]`
 
 Remove installed items.
 
@@ -158,10 +158,37 @@ upskill remove code-review                         # remove one item
 upskill remove code-review secret-scanner          # remove several
 upskill remove --source github:driftsys/skills     # remove every item from a source
 upskill remove --global code-review                # global scope
+upskill remove --force code-review                 # also delete modified files
 ```
 
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
+
+`remove` deletes only files listed in the item's `files` record in the lockfile
+(see [State files](#state-files)). Each recorded file is in one of three states:
+
+- **Owned** — a regular file whose content matches the recorded SHA-256.
+  `remove` deletes it.
+- **Modified** — the content differs from the recorded SHA-256, or the path is
+  no longer a regular file (for example a symbolic link or a directory).
+  `remove` keeps it and prints `kept modified file: <path>` to stderr. With
+  `--force`, `remove` deletes a modified regular file; a path that is not a
+  regular file is kept even with `--force`.
+- **Absent** — the path does not exist. `remove` ignores it.
+
+A file that the record does not list (unowned), for example a file you added
+inside an item directory, is never deleted. After the files of an item are
+handled, `remove` deletes each item directory left empty; it never deletes a
+client root (such as `.claude`) or a kind directory (such as `.claude/skills`).
+A recorded path outside the client roots `.claude`, `.github`, `.agents` and
+`.opencode` is never deleted. If a directory inside the item part of a recorded
+path (below the kind directory) is a symbolic link, `remove` fails before it
+deletes anything. An item whose record is empty has nothing deleted. The
+lockfile entry of every removed item is dropped, including when files were kept.
+
+`remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
+described in [State files](#state-files). A name that is not in the lockfile is
+an error, and in that case `remove` does not adopt.
 
 `--source` triggers a y/N confirmation prompt on a TTY (it removes every item
 from that label at once). Pass `-y` / `--yes` to skip. Non-interactive contexts
@@ -210,12 +237,16 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 
 ### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports drift in six
+Verify on-disk state matches `.upskill-lock.json`. Reports drift in seven
 independent buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
-  <source>`).
+  <source>`). For an item with a `files` record, every recorded
+  path that does not exist; for an item without a record (a `schema: 1`
+  lockfile), each per-client entry file that does not exist.
+- **Modified files** — recorded files whose content differs from the recorded
+  SHA-256, or that are no longer regular files. Causes exit 1.
 - **SSOT hash drift on `local:` sources** — `upskill update` fixes.
 - **Lockfile entries with no recoverable source** (the local path went away, or
   the named item was removed in the source) — `upskill remove` to clear.
@@ -231,11 +262,11 @@ independent buckets:
   the client causes exit 1 (`upskill update` reconfigures it). A missing
   `claude` CLI or a failed query is advisory and does **not** cause exit 1.
 
-Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs, stale
-hashes, orphan entries, missing plugins, or unregistered MCP servers). Skipped
-plugins and unverifiable MCP entries are informational warnings and do not
-affect the exit code. `doctor` never fetches; remote-source drift detection is
-`update --dry-run`.
+Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
+modified files, stale hashes, orphan entries, missing plugins, or unregistered
+MCP servers). Skipped plugins and unverifiable MCP entries are informational
+warnings and do not affect the exit code. `doctor` never fetches; remote-source
+drift detection is `update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 
@@ -400,20 +431,24 @@ lockfile is written with `schema: 2`. Each item entry may carry `files` and
 `pending` lists. `add` and `update` record in `files` every file they write for
 the item, with its client, its path and the SHA-256 of its bytes. When they
 reinstall an item, they delete the recorded files that the new version no longer
-produces; a file that the record does not list is kept. `update` still deletes
-all outputs of an item that its source no longer contains, whether recorded or
-not. No command fills `pending` yet. `remove` does not use the record yet.
+produces; a file that the record does not list is kept, with one exception: the
+entry file of a client that the item no longer targets is deleted even when the
+record does not list it. `update` still deletes all outputs of an item that its
+source no longer contains, whether recorded or not. No command fills `pending`
+yet. `remove` deletes only recorded files, as described in
+[`upskill remove`](#upskill-remove-name---source-label---force).
 
-A `schema: 1` lockfile is still read. The first `add` or `update` that writes
-files adopts it: it keeps a copy of the old lockfile as `.upskill-lock.json.v1`,
-records each file that exists at the output paths of every installed item with
-its current hash, saves the lockfile as `schema: 2`, and prints the adopted
-paths to stderr. Adoption cannot tell an edited file from one an earlier version
-wrote. It records two kinds of files as unchanged: generated files that were
-edited before the upgrade, and files that were added inside an item directory. A
-later `update` may replace them and `remove` may delete them. The adopted paths
-are printed also when the command fails after the adoption was saved.
-`update --dry-run` and `remove` do not adopt.
+A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
+adopts it before it changes any file: it keeps a copy of the old lockfile as
+`.upskill-lock.json.v1`, records each file that exists at the output paths of
+every installed item with its current hash, saves the lockfile as `schema: 2`,
+and prints the adopted paths to stderr. Adoption cannot tell an edited file from
+one an earlier version wrote. It records two kinds of files as unchanged:
+generated files that were edited before the upgrade, and files that were added
+inside an item directory. A later `update` may replace them and `remove` may
+delete them. The adopted paths are printed also when the command fails after the
+adoption was saved. `update --dry-run` and `doctor` do not adopt, and neither
+does a `remove` that fails because a name is not in the lockfile.
 
 ## Per-client output paths
 

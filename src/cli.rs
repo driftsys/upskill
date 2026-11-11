@@ -108,7 +108,8 @@ pub enum Commands {
             upskill remove code-review\n  \
             upskill remove rule-a skill-b agent-c\n  \
             upskill remove --source github:owner/repo\n  \
-            upskill remove --global code-review"
+            upskill remove --global code-review\n  \
+            upskill remove --force code-review"
     )]
     Remove {
         /// Item names to remove. Mutually exclusive with `--source`.
@@ -130,6 +131,10 @@ pub enum Commands {
         /// Already implicit when stdin is not a terminal (CI / pipes).
         #[arg(short = 'y', long = "yes")]
         yes: bool,
+        /// Also delete recorded files that were modified after upskill
+        /// wrote them. A recorded path that is not a regular file is kept.
+        #[arg(long = "force")]
+        force: bool,
     },
     /// Pull latest sources and regenerate changed items.
     ///

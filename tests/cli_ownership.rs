@@ -499,3 +499,250 @@ fn a_file_the_lockfile_does_not_record_survives_add() {
     add();
     assert_eq!(fs::read(&notes).unwrap(), b"mine\n");
 }
+
+// ---------------------------------------------------------------------------
+// `remove` deletes recorded, unchanged files only
+// ---------------------------------------------------------------------------
+
+fn add_claude(tmp: &Path, home: &Path, name: &str) {
+    common::upskill_cmd(home)
+        .current_dir(tmp)
+        .args(["add", "./source", name, "--claude", "--project"])
+        .assert()
+        .success();
+}
+
+fn remove_cmd(tmp: &Path, home: &Path, args: &[&str]) -> assert_cmd::Command {
+    let mut cmd = common::upskill_cmd(home);
+    cmd.current_dir(tmp).arg("remove").args(args);
+    cmd
+}
+
+fn lists_item(root: &Path, name: &str) -> bool {
+    lockfile(root)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["name"] == name)
+}
+
+#[test]
+fn remove_keeps_a_manual_file_in_the_skill_directory() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let dir = tmp.path().join(".claude/skills/create-api-endpoint");
+    fs::write(dir.join("NOTES.md"), "my notes\n").unwrap();
+
+    remove_cmd(tmp.path(), &home, &["create-api-endpoint", "--project"])
+        .assert()
+        .success();
+
+    assert!(!dir.join("SKILL.md").exists());
+    assert_eq!(fs::read(dir.join("NOTES.md")).unwrap(), b"my notes\n");
+    assert!(dir.is_dir());
+}
+
+#[test]
+fn remove_deletes_empty_item_directories_but_not_client_roots() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    fs::write(tmp.path().join(".claude/settings.json"), "{}\n").unwrap();
+
+    remove_cmd(tmp.path(), &home, &["create-api-endpoint", "--project"])
+        .assert()
+        .success();
+
+    assert!(
+        !tmp.path()
+            .join(".claude/skills/create-api-endpoint")
+            .exists()
+    );
+    assert!(tmp.path().join(".claude/settings.json").exists());
+}
+
+#[test]
+fn remove_keeps_a_modified_file_and_reports_it() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    let mut bytes = fs::read(&rule).unwrap();
+    bytes.extend_from_slice(b"my local line\n");
+    fs::write(&rule, &bytes).unwrap();
+
+    let out = remove_cmd(tmp.path(), &home, &["api-conventions", "--project"])
+        .assert()
+        .success();
+
+    assert_eq!(fs::read(&rule).unwrap(), bytes);
+    let stderr = stderr_of(&out);
+    assert!(
+        stderr.contains("kept modified file: .claude/rules/api-conventions.md"),
+        "stderr: {stderr}"
+    );
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_force_deletes_a_modified_file() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    let mut bytes = fs::read(&rule).unwrap();
+    bytes.extend_from_slice(b"my local line\n");
+    fs::write(&rule, &bytes).unwrap();
+
+    let out = remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "--force", "--project"],
+    )
+    .assert()
+    .success();
+
+    assert!(!rule.exists());
+    assert!(!stderr_of(&out).contains("kept modified file"));
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_cleans_an_install_made_by_schema_1() {
+    let (tmp, home) = project();
+    write_schema_1_install(tmp.path());
+
+    remove_cmd(tmp.path(), &home, &["api-conventions"])
+        .assert()
+        .success();
+
+    assert!(!tmp.path().join(".claude/rules/api-conventions.md").exists());
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_prints_the_adoption_notice() {
+    let (tmp, home) = project();
+    write_schema_1_install(tmp.path());
+
+    let out = remove_cmd(tmp.path(), &home, &["api-conventions"])
+        .assert()
+        .success();
+
+    let stderr = stderr_of(&out);
+    assert_eq!(
+        stderr.matches("note: adopted 1 files").count(),
+        1,
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("  .claude/rules/api-conventions.md\n"),
+        "{stderr}"
+    );
+    assert!(tmp.path().join(".upskill-lock.json.v1").exists());
+    assert!(!tmp.path().join(".claude/rules/api-conventions.md").exists());
+}
+
+#[test]
+fn remove_of_an_unknown_name_does_not_adopt() {
+    let (tmp, home) = project();
+    let original = write_schema_1_install(tmp.path());
+
+    let out = remove_cmd(tmp.path(), &home, &["no-such-item"])
+        .assert()
+        .failure();
+
+    let stderr = stderr_of(&out);
+    assert!(stderr.contains("not in lockfile: no-such-item"), "{stderr}");
+    assert!(!stderr.contains("note: adopted"), "{stderr}");
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        original
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_does_not_delete_through_a_symlinked_item_directory() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let dir = tmp.path().join(".claude/skills/create-api-endpoint");
+    let outside = tmp.path().join("outside");
+    fs::rename(&dir, &outside).unwrap();
+    std::os::unix::fs::symlink(&outside, &dir).unwrap();
+    let before = fs::read(outside.join("SKILL.md")).unwrap();
+
+    let out = remove_cmd(tmp.path(), &home, &["create-api-endpoint", "--project"])
+        .assert()
+        .failure();
+
+    let stderr = stderr_of(&out);
+    assert!(
+        stderr.contains(".claude/skills/create-api-endpoint"),
+        "stderr: {stderr}"
+    );
+    assert_eq!(fs::read(outside.join("SKILL.md")).unwrap(), before);
+    assert!(lists_item(tmp.path(), "create-api-endpoint"));
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_force_keeps_a_symlink_at_a_recorded_path() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "api-conventions");
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    let outside = tmp.path().join("outside.md");
+    fs::write(&outside, "outside bytes\n").unwrap();
+    fs::remove_file(&rule).unwrap();
+    std::os::unix::fs::symlink(&outside, &rule).unwrap();
+
+    let out = remove_cmd(
+        tmp.path(),
+        &home,
+        &["api-conventions", "--force", "--project"],
+    )
+    .assert()
+    .success();
+
+    assert!(
+        fs::symlink_metadata(&rule)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(fs::read(&outside).unwrap(), b"outside bytes\n");
+    assert!(
+        stderr_of(&out).contains("kept modified file: .claude/rules/api-conventions.md"),
+        "stderr: {}",
+        stderr_of(&out)
+    );
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn remove_of_an_item_with_an_empty_record_deletes_nothing() {
+    let (tmp, home) = project();
+    let rule = tmp.path().join(".claude/rules/api-conventions.md");
+    fs::create_dir_all(rule.parent().unwrap()).unwrap();
+    fs::write(&rule, "hand-written rule\n").unwrap();
+    let lock = serde_json::json!({
+        "schema": 2,
+        "items": [{
+            "kind": "rule",
+            "name": "api-conventions",
+            "source": "./source",
+            "clients": ["claude"]
+        }],
+        "bundles": []
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+
+    remove_cmd(tmp.path(), &home, &["api-conventions"])
+        .assert()
+        .success();
+
+    assert_eq!(fs::read(&rule).unwrap(), b"hand-written rule\n");
+    assert!(!lists_item(tmp.path(), "api-conventions"));
+}

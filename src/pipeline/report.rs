@@ -129,16 +129,23 @@ pub enum RemoveFilter {
 #[derive(Debug, Default, Clone)]
 pub struct RemoveReport {
     pub items: Vec<RemovedItem>,
+    /// Paths recorded when this command adopted a `schema: 1` lockfile;
+    /// `None` when no adoption happened.
+    pub adopted: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RemovedItem {
     pub kind: ItemKind,
     pub name: String,
-    /// Files actually deleted from disk (paths relative to `target`).
-    /// May be empty if the lockfile knew about the item but its outputs
-    /// were already gone.
+    /// Recorded files actually deleted from disk (paths relative to
+    /// `target`), sorted. Empty when the record is empty or every recorded
+    /// file was already gone or kept.
     pub deleted_files: Vec<PathBuf>,
+    /// Recorded files kept because they were modified after upskill wrote
+    /// them (paths relative to `target`), sorted. With `--force` this holds
+    /// only recorded paths that are not regular files.
+    pub kept_modified: Vec<PathBuf>,
 }
 
 /// One per-client output file the lockfile said should exist but doesn't.
@@ -148,6 +155,16 @@ pub struct MissingOutput {
     pub name: String,
     /// Paths relative to the install target.
     pub missing_files: Vec<PathBuf>,
+}
+
+/// Recorded files of one item whose content differs from the recorded
+/// hash, or that are no longer regular files.
+#[derive(Debug, Clone, Serialize)]
+pub struct ModifiedFile {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the install target.
+    pub files: Vec<PathBuf>,
 }
 
 /// SSOT content hash differs from what the lockfile recorded at install
@@ -251,6 +268,9 @@ pub struct OrphanedDependency {
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
+    /// Recorded files modified after upskill wrote them. Non-empty →
+    /// `is_clean()` returns false.
+    pub modified_files: Vec<ModifiedFile>,
     pub stale_hashes: Vec<StaleHash>,
     pub orphan_entries: Vec<OrphanEntry>,
     /// Items present only as a dependency of an item that is no longer
@@ -274,6 +294,7 @@ pub struct DoctorReport {
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
+    /// every recorded file still has its recorded content,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, and no installed plugin is missing
     /// from its client.
@@ -283,6 +304,7 @@ impl DoctorReport {
     /// They are reported but do not affect cleanness.
     pub fn is_clean(&self) -> bool {
         self.missing_outputs.is_empty()
+            && self.modified_files.is_empty()
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
@@ -398,6 +420,14 @@ mod tests {
             kind: ItemKind::Skill,
             name: "x".into(),
             missing_files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.modified_files.push(ModifiedFile {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            files: vec![PathBuf::from("a")],
         });
         assert!(!report.is_clean());
 

@@ -26,8 +26,6 @@ pub(super) fn sha256_hex(bytes: &[u8]) -> String {
 /// State of one path at an item's output location, relative to the
 /// lockfile. Only a regular file can be `Owned`; a directory, a symbolic
 /// link of any kind, or another file type is never read.
-// The caller arrives with the `remove`/`update` change of this series.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum FileState {
     /// The path does not exist.
@@ -51,8 +49,6 @@ pub(super) enum FileState {
 /// that is not a regular file is `Modified` when `recorded` is not empty.
 /// A regular file is `Owned` when its hash is in `recorded`, and
 /// `Modified` otherwise.
-// The caller arrives with the `remove`/`update` change of this series.
-#[allow(dead_code)]
 pub(super) fn classify(target: &Path, rel: &str, recorded: &[&str]) -> Result<FileState> {
     let path = target.join(rel);
     let meta = match fs::symlink_metadata(&path) {

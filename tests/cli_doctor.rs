@@ -232,7 +232,12 @@ fn doctor_json_clean_install_emits_empty_buckets() {
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     let v: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
-    for bucket in ["missing_outputs", "stale_hashes", "orphan_entries"] {
+    for bucket in [
+        "missing_outputs",
+        "modified_files",
+        "stale_hashes",
+        "orphan_entries",
+    ] {
         let arr = v[bucket].as_array().unwrap_or_else(|| {
             panic!("expected {bucket} to be an array, got: {v}");
         });
@@ -538,4 +543,39 @@ fn doctor_json_includes_skipped_plugins_bucket() {
         v.get("missing_plugins").is_some(),
         "expected missing_plugins key in JSON: {v}"
     );
+}
+
+#[test]
+fn doctor_reports_modified_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    stage_source(&source);
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let edited = target.join(".claude/skills/create-api-endpoint/SKILL.md");
+    let mut bytes = fs::read(&edited).unwrap();
+    bytes.extend_from_slice(b"local edit\n");
+    fs::write(&edited, bytes).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--json"])
+        .assert()
+        .failure()
+        .code(1);
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    let modified = v["modified_files"].as_array().unwrap();
+    assert_eq!(modified.len(), 1, "{stdout}");
+    assert_eq!(modified[0]["name"], "create-api-endpoint");
+    assert_eq!(modified[0]["kind"], "skill");
+    assert_eq!(
+        modified[0]["files"],
+        serde_json::json!([".claude/skills/create-api-endpoint/SKILL.md"])
+    );
+    assert!(v["missing_outputs"].as_array().unwrap().is_empty());
 }

@@ -131,7 +131,7 @@ still rejects the removed GitLab shorthands with exit 2; use a full HTTPS URL.
 ### 2.3 `remove`
 
 ```text
-upskill remove [name...] [--source <label>] [--global]
+upskill remove [name...] [--source <label>] [--global] [--force]
 ```
 
 Removes installed items from the matching scope. Either name one or more items,
@@ -139,14 +139,30 @@ or pass `--source <label>` to remove every item that came from a single source.
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
+`remove` deletes only files listed in the item's `files` record (§4). A recorded
+file is **owned** when it is a regular file with the recorded SHA-256: `remove`
+deletes it. It is **modified** when its content differs or it is no longer a
+regular file: `remove` keeps it and prints `kept modified file: <path>` to
+stderr; `--force` deletes a modified regular file, but never a path that is not
+a regular file. An absent recorded file is ignored. A file that the record does
+not list is **unowned** and is never deleted. Empty item directories are then
+deleted; client roots and kind directories are kept. A recorded path outside the
+client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
+and a symbolic link in the item part of a recorded path's parent directories
+makes `remove` fail before any deletion. An item with an empty record has no
+file deleted. The lockfile entry of each removed item is dropped. `remove`
+adopts a `schema: 1` lockfile and prints the adoption notice, except when a name
+is not in the lockfile, which is an error.
+
 ### 2.4 `list` / `doctor`
 
 - `list` — show installed content from `.upskill-lock.json`, grouped by kind.
   Bundles are surfaced in a separate section. The `--available` view (items
   discoverable from configured sources) is deferred for a future release.
-- `doctor` — verify on-disk state matches the lock file. Five independent
-  buckets: missing per-client outputs (reinstall fixes), SSOT hash drift on
-  `local:` sources (`update` fixes), lockfile entries with no recoverable source
+- `doctor` — verify on-disk state matches the lock file. Six independent
+  buckets: missing per-client outputs (reinstall fixes), modified recorded files
+  (content differs from the recorded SHA-256), SSOT hash drift on `local:`
+  sources (`update` fixes), lockfile entries with no recoverable source
   (`remove` fixes), installed plugins missing from the client (`update`
   reinstalls), and skipped plugins (informational — CLI was absent at install
   time). Exit 0 when clean, 1 when any drift bucket is non-empty. Skipped
@@ -262,11 +278,12 @@ is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
 `sha256` fields. `add` and `update` fill `files` with every file they write for
 the item and delete the recorded files that a reinstall no longer produces; no
-command fills `pending` yet, and `remove` does not use the record yet. `add` and
-`update` (not `update --dry-run`, not `remove`) adopt a `schema: 1` lockfile:
-they keep the old bytes as `.upskill-lock.json.v1`, record each existing file at
-the items' output paths with its current hash, save `schema: 2`, and print the
-adopted paths to stderr. Two possible locations:
+command fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
+`update` and `remove` (not `update --dry-run`, not `doctor`, not a `remove` that
+fails on an unknown name) adopt a `schema: 1` lockfile: they keep the old bytes
+as `.upskill-lock.json.v1`, record each existing file at the items' output paths
+with its current hash, save `schema: 2`, and print the adopted paths to stderr.
+Two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

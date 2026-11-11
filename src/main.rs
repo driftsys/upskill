@@ -74,7 +74,8 @@ fn main() {
             global,
             project,
             yes,
-        } => run_remove(&names, source.as_deref(), global, project, yes),
+            force,
+        } => run_remove(&names, source.as_deref(), global, project, yes, force),
         Commands::Update {
             names,
             dry_run,
@@ -651,6 +652,7 @@ fn run_remove(
     global: bool,
     project: bool,
     yes: bool,
+    force: bool,
 ) -> i32 {
     let filter = match (names.is_empty(), source) {
         (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
@@ -680,12 +682,19 @@ fn run_remove(
         }
     };
 
-    match remove(&target, filter) {
+    match remove(&target, filter, force) {
         Ok(report) => {
+            print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
+            for item in &report.items {
+                for path in &item.kept_modified {
+                    eprintln!("kept modified file: {}", path.display());
+                }
+            }
             EXIT_SUCCESS
         }
         Err(err) => {
+            print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
             eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -998,6 +1007,24 @@ fn print_doctor_report(report: &DoctorReport) {
                 style::name(&m.name)
             );
             for path in &m.missing_files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
+    if !report.modified_files.is_empty() {
+        println!(
+            "{} recorded files modified after install ({} item(s))",
+            style::warn("doctor:"),
+            report.modified_files.len()
+        );
+        for m in &report.modified_files {
+            println!(
+                "  {} {}",
+                style::dim(kind_label(m.kind)),
+                style::name(&m.name)
+            );
+            for path in &m.files {
                 println!("    - {}", style::dim(&path.display().to_string()));
             }
         }

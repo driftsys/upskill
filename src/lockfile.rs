@@ -9,10 +9,11 @@
 //!   lockfile is written as `schema: 2`. A `schema: 1` lockfile is loaded
 //!   as-is and `save` writes the schema it holds;
 //!   [`Lockfile::needs_adoption`] reports it. The install step of `add`
-//!   and `update` converts it to `schema: 2` by adoption.
+//!   and `update`, and `remove`, convert it to `schema: 2` by adoption.
 //! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
 //!   records. The install step of `add` and `update` fills `files` with
-//!   every file it writes; no command fills `pending` yet.
+//!   every file it writes, and `remove` deletes only recorded files; no
+//!   command fills `pending` yet.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
 //!   is written after a successful install.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
@@ -99,8 +100,8 @@ pub struct LockedItem {
     /// installs both read as "check every client" in `doctor`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub clients: Vec<String>,
-    /// Files written for this item. Omitted from JSON when empty. No
-    /// command fills this list yet.
+    /// Files written for this item. Omitted from JSON when empty. Filled
+    /// by `add` and `update`, and by the adoption of a `schema: 1` lockfile.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<OwnedFile>,
     /// Files of an operation on this item that has not completed. Omitted

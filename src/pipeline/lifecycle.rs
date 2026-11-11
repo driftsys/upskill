@@ -8,28 +8,43 @@
 //! logic themselves.
 
 use anyhow::{Context, Result};
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
+use super::apply::{check_no_item_symlink, deletable, delete_recorded};
 use super::git::fetch_ssot;
 use super::hash::planned_source_hashes;
 use super::output::{output_path, remove_item_outputs};
+use super::owned::{FileState, adopt_schema1, classify};
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
-    ListedBundle, ListedItem, MissingOutput, MissingPlugin, OrphanEntry, OrphanReason,
-    OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin, StaleHash,
-    UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir, install_with_lockfile,
+    ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
+    OrphanReason, OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin,
+    StaleHash, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    install_with_lockfile,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
-/// matching `filter`. For each matching entry, deletes every per-client
-/// output file (per [`output_path`]) and drops the entry from the
-/// lockfile. Best-effort `rmdir` of empty per-item parent directories
-/// (e.g., `.claude/skills/<name>/`) so the workspace stays clean.
+/// matching `filter`, and drop the matching entries from the lockfile.
+///
+/// A `schema: 1` lockfile is adopted first (see
+/// [`super::owned::adopt_schema1`]), after the unknown-name check, so a
+/// command that fails on an unknown name changes nothing.
+///
+/// Only the files in an item's `files` record are considered. Before any
+/// change on disk, every recorded path is checked: a path that is not
+/// accepted by [`deletable`] is skipped, and a symbolic link in the item
+/// part of a path's parent directories is an error. Then, per recorded
+/// file: an unchanged regular file is deleted; a modified file is kept
+/// and reported in `kept_modified`, or deleted when `force` is true and it
+/// is a regular file; an absent file is ignored. A file that the record
+/// does not list is never deleted. Directories left empty are removed, up
+/// to and excluding the kind directory (for example `.claude/skills`).
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are deliberately left alone — they are
 /// user-owned after creation per ADR-0003.
-pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
+pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
 
     let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
@@ -83,31 +98,124 @@ pub fn remove(target: &Path, filter: RemoveFilter) -> Result<RemoveReport> {
         }
     }
 
-    let mut report = RemoveReport::default();
-    for entry in &to_remove {
-        let kind = entry.kind;
-        // Record which entrypoint outputs existed (for the user-facing
-        // report) before deleting everything for this item.
-        let mut deleted_files = Vec::new();
-        for client in ALL_CLIENTS {
-            let rel = output_path(kind, client, &entry.name);
-            if target.join(&rel).exists() {
-                deleted_files.push(rel);
+    let keys: Vec<(ItemKind, String)> =
+        to_remove.iter().map(|i| (i.kind, i.name.clone())).collect();
+
+    // Adoption is saved at once. Every later error carries the adopted
+    // paths, so that `main.rs` can still print the adoption notice.
+    let adopted = adopt_schema1(target, &mut lock)?;
+    let result = remove_selected(target, &mut lock, &filter, &keys, force);
+    match (result, adopted) {
+        (Ok(mut report), adopted) => {
+            report.adopted = adopted;
+            Ok(report)
+        }
+        (Err(err), Some(paths)) if !paths.is_empty() => {
+            Err(err.context(AdoptedBeforeFailure { paths }))
+        }
+        (Err(err), _) => Err(err),
+    }
+}
+
+/// What `remove` does with the recorded files of one item, computed before
+/// any change on disk.
+struct RemovalPlan {
+    kind: ItemKind,
+    name: String,
+    delete: Vec<PathBuf>,
+    absent: Vec<PathBuf>,
+    kept: Vec<PathBuf>,
+}
+
+/// Classify every recorded file of `entry` and decide its action. Fails on
+/// a symbolic link in the item part of a recorded path's parents.
+fn plan_removal(
+    target: &Path,
+    entry: &crate::lockfile::LockedItem,
+    force: bool,
+) -> Result<RemovalPlan> {
+    let mut plan = RemovalPlan {
+        kind: entry.kind,
+        name: entry.name.clone(),
+        delete: Vec::new(),
+        absent: Vec::new(),
+        kept: Vec::new(),
+    };
+    for file in &entry.files {
+        let Some(rel) = deletable(&file.path) else {
+            continue;
+        };
+        if let Some(parent) = rel.parent() {
+            check_no_item_symlink(target, parent)?;
+        }
+        let recorded: Vec<&str> = entry
+            .files
+            .iter()
+            .chain(&entry.pending)
+            .filter(|f| f.path == file.path)
+            .map(|f| f.sha256.as_str())
+            .collect();
+        match classify(target, &file.path, &recorded)? {
+            FileState::Owned => plan.delete.push(rel),
+            FileState::Absent => plan.absent.push(rel),
+            FileState::Modified | FileState::Unowned => {
+                let full = target.join(&rel);
+                let is_file = fs::symlink_metadata(&full)
+                    .with_context(|| format!("inspecting {}", full.display()))?
+                    .file_type()
+                    .is_file();
+                if force && is_file {
+                    plan.delete.push(rel);
+                } else {
+                    plan.kept.push(rel);
+                }
             }
         }
-        // Deletes the entrypoint files, directory-backed item dirs, and
-        // flat-kind sibling resource namespace dirs in lockstep with install.
-        remove_item_outputs(target, kind, &entry.name);
-        lock.remove(entry.kind, &entry.name);
+    }
+    plan.delete.sort();
+    plan.delete.dedup();
+    plan.kept.sort();
+    plan.kept.dedup();
+    Ok(plan)
+}
+
+/// The part of `remove` that runs after adoption: plan every selected
+/// item, then delete, then clean up bundles and plugins and save.
+fn remove_selected(
+    target: &Path,
+    lock: &mut crate::lockfile::Lockfile,
+    filter: &RemoveFilter,
+    keys: &[(ItemKind, String)],
+    force: bool,
+) -> Result<RemoveReport> {
+    let mut plans = Vec::with_capacity(keys.len());
+    for (kind, name) in keys {
+        let Some(entry) = lock
+            .items
+            .iter()
+            .find(|i| i.kind == *kind && &i.name == name)
+        else {
+            continue;
+        };
+        plans.push(plan_removal(target, entry, force)?);
+    }
+
+    let mut report = RemoveReport::default();
+    for plan in plans {
+        for rel in plan.delete.iter().chain(&plan.absent) {
+            delete_recorded(target, rel)?;
+        }
+        lock.remove(plan.kind, &plan.name);
         report.items.push(RemovedItem {
-            kind,
-            name: entry.name.clone(),
-            deleted_files,
+            kind: plan.kind,
+            name: plan.name,
+            deleted_files: plan.delete,
+            kept_modified: plan.kept,
         });
     }
 
     // Clean up plugins associated with removed bundles.
-    let bundles_to_remove: Vec<String> = match &filter {
+    let bundles_to_remove: Vec<String> = match filter {
         RemoveFilter::ByNames(names) => lock
             .bundles
             .iter()
@@ -163,24 +271,59 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         let kind = entry.kind;
 
         let mut missing = Vec::new();
-        for client in ALL_CLIENTS {
-            // Only check clients this item was actually written for. An empty
-            // `clients` list means "all" — pre-ADR-0012 lockfiles and
-            // unrestricted installs both check every client. A narrowed
-            // install's unselected outputs are a deliberate choice, not drift.
-            if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
-                continue;
+        let mut modified = Vec::new();
+        if entry.files.is_empty() {
+            // No record (a `schema: 1` lockfile, which `doctor` does not
+            // adopt): check the entrypoint of each layout path.
+            for client in ALL_CLIENTS {
+                // Only check clients this item was actually written for. An
+                // empty `clients` list means "all" — pre-ADR-0012 lockfiles
+                // and unrestricted installs both check every client. A
+                // narrowed install's unselected outputs are a deliberate
+                // choice, not drift.
+                if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
+                    continue;
+                }
+                let rel = output_path(kind, client, &entry.name);
+                if !target.join(&rel).exists() {
+                    missing.push(rel);
+                }
             }
-            let rel = output_path(kind, client, &entry.name);
-            if !target.join(&rel).exists() {
-                missing.push(rel);
+        } else {
+            for file in &entry.files {
+                let Some(rel) = deletable(&file.path) else {
+                    continue;
+                };
+                let recorded: Vec<&str> = entry
+                    .files
+                    .iter()
+                    .chain(&entry.pending)
+                    .filter(|f| f.path == file.path)
+                    .map(|f| f.sha256.as_str())
+                    .collect();
+                match classify(target, &file.path, &recorded)? {
+                    FileState::Absent => missing.push(rel),
+                    FileState::Modified => modified.push(rel),
+                    FileState::Owned | FileState::Unowned => {}
+                }
             }
+            missing.sort();
+            missing.dedup();
+            modified.sort();
+            modified.dedup();
         }
         if !missing.is_empty() {
             report.missing_outputs.push(MissingOutput {
                 kind,
                 name: entry.name.clone(),
                 missing_files: missing,
+            });
+        }
+        if !modified.is_empty() {
+            report.modified_files.push(ModifiedFile {
+                kind,
+                name: entry.name.clone(),
+                files: modified,
             });
         }
 

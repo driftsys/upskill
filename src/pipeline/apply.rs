@@ -136,7 +136,7 @@ pub(super) fn apply_plan(
 /// Fails when a component of `rel`, from the third one to the last one,
 /// exists and is a symbolic link. Links are not followed. The check stops
 /// at the first component that does not exist.
-fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
+pub(super) fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
     let mut current = target.to_path_buf();
     for (index, component) in rel.components().enumerate() {
         current.push(component);
@@ -162,7 +162,7 @@ fn check_no_item_symlink(target: &Path, rel: &Path) -> Result<()> {
 /// The recorded path `rel` as a relative path, when it may be deleted: only
 /// plain components, at least three of them, and a first component that is
 /// a client root. `None` for any other recorded path, which is skipped.
-fn deletable(rel: &str) -> Option<PathBuf> {
+pub(super) fn deletable(rel: &str) -> Option<PathBuf> {
     let path = PathBuf::from(rel);
     let parts: Vec<Component> = path.components().collect();
     let plain = parts.iter().all(|c| matches!(c, Component::Normal(_)));
@@ -177,7 +177,7 @@ fn deletable(rel: &str) -> Option<PathBuf> {
 /// and checked by [`check_no_item_symlink`]), then each parent directory
 /// left empty. The client root and the kind directory below it (for
 /// example `.claude/skills`) are never removed.
-fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
+pub(super) fn delete_recorded(target: &Path, rel: &Path) -> Result<()> {
     let full = target.join(rel);
     match fs::symlink_metadata(&full) {
         Ok(meta) if meta.is_dir() => return Ok(()),
