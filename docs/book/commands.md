@@ -168,10 +168,10 @@ namespace: `gitlab+gitlab.example.com:8443:org/team/repo`. Malformed or
 ambiguous authorities receive reconciliation guidance before fetch. See the
 [historical grammar and limits](https://github.com/driftsys/upskill/blob/main/docs/adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12)
 before correcting a label; verify the intended HTTPS remote, ref and subfolder.
-This compatibility step retains schema 1 and does not establish output
-ownership.
+This label compatibility step does not itself change the schema; the reinstall
+adopts a `schema: 1` lockfile as described in [State files](#state-files).
 
-### `upskill remove [name...] [--source <label>]`
+### `upskill remove [name...] [--source <label>] [--force]`
 
 Remove installed items.
 
@@ -180,10 +180,39 @@ upskill remove code-review                         # remove one item
 upskill remove code-review secret-scanner          # remove several
 upskill remove --source github:driftsys/skills     # remove every item from a source
 upskill remove --global code-review                # global scope
+upskill remove --force code-review                 # also delete modified files
 ```
 
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
+
+`remove` deletes only files listed in the item's `files` record in the lockfile
+(see [State files](#state-files)). Each recorded file is in one of three states:
+
+- **Owned** — a regular file whose content matches the recorded SHA-256.
+  `remove` deletes it.
+- **Modified** — the content differs from the recorded SHA-256, or the path is
+  no longer a regular file (for example a symbolic link or a directory).
+  `remove` keeps it and prints `kept modified file: <path>` to stderr. With
+  `--force`, `remove` deletes a modified regular file; a path that is not a
+  regular file is kept even with `--force`. A recorded regular file that
+  `remove` cannot read (for example because of its permissions) is handled as
+  modified.
+- **Absent** — the path does not exist. `remove` ignores it.
+
+A file that the record does not list (unowned), for example a file you added
+inside an item directory, is never deleted. After the files of an item are
+handled, `remove` deletes each item directory left empty; it never deletes a
+client root (such as `.claude`) or a kind directory (such as `.claude/skills`).
+A recorded path outside the client roots `.claude`, `.github`, `.agents` and
+`.opencode` is never deleted. If a directory inside the item part of a recorded
+path (below the kind directory) is a symbolic link, `remove` fails before it
+deletes anything. An item whose record is empty has nothing deleted. The
+lockfile entry of every removed item is dropped, including when files were kept.
+
+`remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
+described in [State files](#state-files). A name that is not in the lockfile is
+an error, and in that case `remove` does not adopt.
 
 `--source` triggers a y/N confirmation prompt on a TTY (it removes every item
 from that label at once). Pass `-y` / `--yes` to skip. Non-interactive contexts
@@ -232,15 +261,28 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 
 ### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports drift in six
-independent buckets:
+Verify on-disk state matches `.upskill-lock.json`. Reports nine independent
+buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
-  <source>`).
+  <source>`). For an item with a non-empty `files` record, every
+  recorded path that does not exist; for an item with an empty or missing record
+  (a `schema: 1` lockfile, or a `schema: 2` item with an empty `files` list),
+  each per-client entry file that does not exist. A recorded path that `remove`
+  would never delete (outside the client roots, fewer than three components, or
+  with a `..` component) is skipped without a report, in this bucket and in the
+  modified and unreadable buckets.
+- **Modified files** — recorded files whose content differs from the recorded
+  SHA-256, or that are no longer regular files. Causes exit 1.
+- **Unreadable files** — recorded files that could not be inspected (for example
+  a permission error). `doctor` continues with the other files and items. Causes
+  exit 1.
 - **SSOT hash drift on `local:` sources** — `upskill update` fixes.
 - **Lockfile entries with no recoverable source** (the local path went away, or
   the named item was removed in the source) — `upskill remove` to clear.
+- **Orphaned dependencies** (informational) — items installed only as a
+  dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill
   update`
@@ -253,11 +295,11 @@ independent buckets:
   the client causes exit 1 (`upskill update` reconfigures it). A missing
   `claude` CLI or a failed query is advisory and does **not** cause exit 1.
 
-Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs, stale
-hashes, orphan entries, missing plugins, or unregistered MCP servers). Skipped
-plugins and unverifiable MCP entries are informational warnings and do not
-affect the exit code. `doctor` never fetches; remote-source drift detection is
-`update --dry-run`.
+Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
+modified files, unreadable files, stale hashes, orphan entries, missing plugins,
+or unregistered MCP servers). Skipped plugins and unverifiable MCP entries are
+informational warnings and do not affect the exit code. `doctor` never fetches;
+remote-source drift detection is `update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 
@@ -266,6 +308,13 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "missing_outputs": [
     { "kind": "skill", "name": "...", "missing_files": ["..."] }
   ],
+  "modified_files": [
+    { "kind": "rule", "name": "...", "files": ["..."] }
+  ],
+  "unreadable_files": [
+    { "kind": "skill", "name": "...", "files": ["..."],
+      "error": "..." }
+  ],
   "stale_hashes": [
     { "kind": "rule",  "name": "...", "source": "local:...",
       "stored_hash": "...", "current_hash": "..." }
@@ -273,6 +322,9 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "orphan_entries": [
     { "kind": "agent", "name": "...", "source": "local:...",
       "reason": "local-path-gone" }
+  ],
+  "orphaned_dependencies": [
+    { "kind": "skill", "name": "...", "former_requirers": ["skill:..."] }
   ],
   "missing_plugins": [
     { "name": "superpowers", "client": "vscode",
@@ -417,7 +469,40 @@ Files whose frontmatter and body are already canonical are left untouched (no
 | Project | `<cwd>/.upskill-lock.json` | Yes        | Deterministic regeneration in CI.          |
 | Global  | `$HOME/.upskill-lock.json` | No         | Cross-repo continuity for global installs. |
 
-The lockfile carries a top-level `schema: 1` field for forward compatibility.
+The lockfile carries a top-level `schema` field for forward compatibility. A new
+lockfile is written with `schema: 2`. Each item entry may carry `files` and
+`pending` lists. `add` and `update` record in `files` every file they write for
+the item, with its client, its path and the SHA-256 of its bytes. When they
+reinstall an item, they delete the recorded files that the new version no longer
+produces, unless another item installed by the same command writes that path; a
+file that the record does not list is not deleted, with one exception: the entry
+file of a client that the item no longer targets is deleted even when the record
+does not list it. A file at a path that the new version writes is replaced,
+whether the record lists it or not. `update` still deletes all outputs of an
+item that its source no longer contains, whether recorded or not. No command
+fills `pending` yet. `remove` deletes only recorded files, as described in
+[`upskill remove`](#upskill-remove-name---source-label---force).
+
+A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
+adopts it before it changes any file: it keeps a copy of the old lockfile as
+`.upskill-lock.json.v1` (when that file already exists, from an earlier
+adoption, it is kept unchanged and not replaced), records each file that exists
+at the output paths of every installed item with its current hash, saves the
+lockfile as `schema: 2`, and prints the adopted paths to stderr. Adoption cannot
+tell an edited file from one an earlier version wrote. It records two kinds of
+files as unchanged: generated files that were edited before the upgrade, and
+files that were added inside an item directory. The command that adopts them, or
+a later `update`, may replace or delete them, and a later `remove` may delete
+them. Adoption records only the files that exist. For an item that still has at
+least one file, `doctor` therefore no longer reports the other outputs of that
+item that were already missing before adoption. The adopted paths are printed
+also when the command fails after the adoption was saved. `update --dry-run` and
+`doctor` do not adopt, and neither does a `remove` that fails because a name is
+not in the lockfile. An `add` does not adopt when it is refused because a source
+item overlaps its own output paths, because an item conflicts with an item
+installed from another source, or because two items would install under one
+name. An `update` refused for one of these reasons does not adopt when the
+refused source is the first source it updates.
 
 ## Per-client output paths
 

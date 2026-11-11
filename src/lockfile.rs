@@ -1,11 +1,19 @@
-//! Lockfile (`.upskill-lock.json`, `schema: 1`).
+//! Lockfile (`.upskill-lock.json`, `schema: 2`; `schema: 1` is still read).
 //!
 //! Per [ADR-0003](../../docs/adr/0003-generation-pipeline.md). Records what
 //! the pipeline installed into a consumer project so a future `update` /
 //! `remove` / `doctor` can reason about state.
 //!
 //! Scope:
-//! - Types + load/save/upsert for `schema: 1` items and (placeholder) bundles.
+//! - Types + load/save/upsert for items and (placeholder) bundles. A new
+//!   lockfile is written as `schema: 2`. A `schema: 1` lockfile is loaded
+//!   as-is and `save` writes the schema it holds;
+//!   [`Lockfile::needs_adoption`] reports it. The install step of `add`
+//!   and `update`, and `remove`, convert it to `schema: 2` by adoption.
+//! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
+//!   records. The install step of `add` and `update` fills `files` with
+//!   every file it writes, and `remove` deletes only recorded files; no
+//!   command fills `pending` yet.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
 //!   is written after a successful install.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
@@ -20,8 +28,25 @@ use crate::pipeline::{InstallReport, ItemKind};
 /// On-disk filename.
 pub const LOCKFILE_NAME: &str = ".upskill-lock.json";
 
-/// The schema version this module produces.
-pub const CURRENT_SCHEMA: u32 = 1;
+/// The schema version of a newly created lockfile. `load` also accepts
+/// `schema: 1`.
+pub const CURRENT_SCHEMA: u32 = 2;
+
+/// File kept beside the lockfile by the adoption step: a copy of the
+/// `schema: 1` lockfile bytes before adoption.
+pub const SCHEMA1_BACKUP_NAME: &str = ".upskill-lock.json.v1";
+
+/// One file written for an item, recorded in the item's `files` or
+/// `pending` list.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OwnedFile {
+    /// `claude` | `copilot` | `opencode`.
+    pub client: String,
+    /// Relative to the scope root, with `/` separators on every platform.
+    pub path: String,
+    /// Lowercase hex SHA-256 of the bytes written.
+    pub sha256: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Lockfile {
@@ -75,6 +100,14 @@ pub struct LockedItem {
     /// installs both read as "check every client" in `doctor`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub clients: Vec<String>,
+    /// Files written for this item. Omitted from JSON when empty. Filled
+    /// by `add` and `update`, and by the adoption of a `schema: 1` lockfile.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<OwnedFile>,
+    /// Files of an operation on this item that has not completed. Omitted
+    /// from JSON when empty. No command fills this list yet.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pending: Vec<OwnedFile>,
 }
 
 /// Bundle entry recorded when an install resolves a `.bundle.yaml` file
@@ -178,6 +211,7 @@ impl Default for Lockfile {
 }
 
 impl Lockfile {
+    /// An empty lockfile with schema [`CURRENT_SCHEMA`] (2).
     pub fn new() -> Self {
         Self {
             schema: CURRENT_SCHEMA,
@@ -188,13 +222,15 @@ impl Lockfile {
         }
     }
 
-    /// Load `<project_root>/.upskill-lock.json`. Returns an empty `schema: 1`
-    /// lockfile when the file does not exist.
+    /// Load `<project_root>/.upskill-lock.json`. Returns an empty lockfile
+    /// with schema [`CURRENT_SCHEMA`] when the file does not exist. Accepts
+    /// `schema` 1 and 2 and keeps the value it read.
     ///
     /// Errors:
-    /// - File exists but does not parse as a `schema: 1` lockfile.
+    /// - File exists but does not parse as a lockfile.
     /// - File parses but its `schema` is greater than the version this
     ///   implementation supports.
+    /// - File parses but its `schema` is 0.
     pub fn load(project_root: &Path) -> Result<Self> {
         let path = lockfile_path(project_root);
         let raw = match std::fs::read_to_string(&path) {
@@ -215,7 +251,7 @@ impl Lockfile {
                 CURRENT_SCHEMA
             );
         }
-        if parsed.schema != CURRENT_SCHEMA {
+        if parsed.schema == 0 {
             anyhow::bail!(
                 "{}: unsupported schema {} (expected {})",
                 path.display(),
@@ -224,6 +260,11 @@ impl Lockfile {
             );
         }
         Ok(parsed)
+    }
+
+    /// True when the loaded lockfile has `schema: 1`.
+    pub fn needs_adoption(&self) -> bool {
+        self.schema == 1
     }
 
     /// Add or replace by `(kind, name)`. Items are kept sorted for
@@ -346,6 +387,8 @@ pub fn items_from_report(
                 .unwrap_or_default(),
             group,
             clients,
+            files: Vec::new(),
+            pending: Vec::new(),
         });
     }
     out
@@ -369,15 +412,105 @@ mod tests {
             required_by: vec![],
             group: None,
             clients: vec![],
+            files: Vec::new(),
+            pending: Vec::new(),
         }
     }
 
     #[test]
     fn new_lockfile_has_current_schema() {
         let lock = Lockfile::new();
-        assert_eq!(lock.schema, CURRENT_SCHEMA);
+        assert_eq!(lock.schema, 2);
+        assert_eq!(CURRENT_SCHEMA, 2);
         assert!(lock.items.is_empty());
         assert!(lock.bundles.is_empty());
+    }
+
+    #[test]
+    fn load_accepts_schema_1_and_reports_needs_adoption() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 1, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let lock = Lockfile::load(tmp.path()).expect("load");
+        assert_eq!(lock.schema, 1);
+        assert!(lock.needs_adoption());
+        assert!(!Lockfile::new().needs_adoption());
+    }
+
+    #[test]
+    fn load_accepts_schema_2_with_files_and_pending() {
+        let tmp = tempfile::tempdir().unwrap();
+        let owned = |client: &str, path: &str| OwnedFile {
+            client: client.to_string(),
+            path: path.to_string(),
+            sha256: "ab".repeat(32),
+        };
+        let mut it = item(ItemKind::Skill, "code-review");
+        it.files = vec![
+            owned("claude", ".claude/skills/code-review/SKILL.md"),
+            owned("copilot", ".github/skills/code-review/SKILL.md"),
+        ];
+        it.pending = vec![owned("opencode", ".agents/skills/code-review/SKILL.md")];
+        let mut lock = Lockfile::new();
+        lock.upsert(it);
+        lock.save(tmp.path()).expect("save");
+
+        let raw = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+        assert!(raw.contains("\"schema\": 2"));
+        let loaded = Lockfile::load(tmp.path()).expect("load");
+        assert_eq!(loaded, lock);
+        assert_eq!(loaded.items[0].files.len(), 2);
+        assert_eq!(loaded.items[0].pending.len(), 1);
+        assert!(!loaded.needs_adoption());
+    }
+
+    #[test]
+    fn schema_1_lockfile_is_saved_back_as_schema_1() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 1, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let mut lock = Lockfile::load(tmp.path()).expect("load");
+        lock.upsert(item(ItemKind::Skill, "code-review"));
+        lock.save(tmp.path()).expect("save");
+        let raw = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+        assert!(raw.contains("\"schema\": 1"));
+    }
+
+    #[test]
+    fn load_rejects_schema_3() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 3, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let err = Lockfile::load(tmp.path()).expect_err("must reject");
+        assert!(err.to_string().contains("schema 3"));
+    }
+
+    #[test]
+    fn load_rejects_schema_0() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 0, "items": [], "bundles": []}"#,
+        )
+        .unwrap();
+        let err = Lockfile::load(tmp.path()).expect_err("must reject");
+        assert!(err.to_string().contains("unsupported schema 0"));
+    }
+
+    #[test]
+    fn item_without_files_omits_the_keys() {
+        let json = serde_json::to_string(&item(ItemKind::Skill, "code-review")).unwrap();
+        assert!(!json.contains("\"files\""));
+        assert!(!json.contains("\"pending\""));
     }
 
     #[test]
@@ -482,6 +615,8 @@ mod tests {
             plugin_results: Vec::new(),
             mcp_results: Vec::new(),
             selection_skipped: Vec::new(),
+            planned: Vec::new(),
+            adopted: None,
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,
@@ -667,6 +802,8 @@ mod tests {
             required_by: vec![],
             group: None,
             clients: vec![],
+            files: Vec::new(),
+            pending: Vec::new(),
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(json.contains("\"source_name\":\"brainstorming\""), "{json}");
@@ -684,6 +821,8 @@ mod tests {
             required_by: vec![],
             group: None,
             clients: vec![],
+            files: Vec::new(),
+            pending: Vec::new(),
         };
         let json = serde_json::to_string(&item).unwrap();
         assert!(!json.contains("source_name"), "{json}");

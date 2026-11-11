@@ -51,6 +51,27 @@ pub struct InstallReport {
     /// (ADR-0012) left no client in common with the item's author `audience:`.
     /// Surfaced to the user by `main.rs`; never an error.
     pub selection_skipped: Vec<String>,
+    /// Every output file of every item, computed before anything is
+    /// written. `install_with_lockfile` writes it with one call.
+    pub(crate) planned: Vec<super::plan::PlannedItem>,
+    /// Paths recorded when this install adopted a `schema: 1` lockfile;
+    /// `None` when no adoption happened. `main.rs` prints the adoption
+    /// notice when it is `Some` and not empty.
+    pub adopted: Option<Vec<String>>,
+}
+
+/// Error context attached when a command fails after it saved the
+/// adoption of a `schema: 1` lockfile. `paths` are the adopted paths, for
+/// the adoption notice that `main.rs` prints before the error.
+#[derive(Debug, Clone)]
+pub struct AdoptedBeforeFailure {
+    pub paths: Vec<String>,
+}
+
+impl std::fmt::Display for AdoptedBeforeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the lockfile was adopted before this error")
+    }
 }
 
 /// Result of a single plugin install attempt, for reporting to the user.
@@ -100,24 +121,32 @@ pub enum RemoveFilter {
     /// that is not installed).
     ByNames(Vec<String>),
     /// Remove every lockfile entry whose `source` label matches this
-    /// string verbatim. No-op when the lockfile contains no entry from
-    /// the named source.
+    /// string verbatim. When the lockfile contains no entry from the named
+    /// source, nothing is deleted; a `schema: 1` lockfile is still adopted
+    /// and saved.
     BySource(String),
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct RemoveReport {
     pub items: Vec<RemovedItem>,
+    /// Paths recorded when this command adopted a `schema: 1` lockfile;
+    /// `None` when no adoption happened.
+    pub adopted: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RemovedItem {
     pub kind: ItemKind,
     pub name: String,
-    /// Files actually deleted from disk (paths relative to `target`).
-    /// May be empty if the lockfile knew about the item but its outputs
-    /// were already gone.
+    /// Recorded files actually deleted from disk (paths relative to
+    /// `target`), sorted. Empty when the record is empty or every recorded
+    /// file was already gone or kept.
     pub deleted_files: Vec<PathBuf>,
+    /// Recorded files kept because they were modified after upskill wrote
+    /// them (paths relative to `target`), sorted. With `--force` this holds
+    /// only recorded paths that are not regular files.
+    pub kept_modified: Vec<PathBuf>,
 }
 
 /// One per-client output file the lockfile said should exist but doesn't.
@@ -127,6 +156,29 @@ pub struct MissingOutput {
     pub name: String,
     /// Paths relative to the install target.
     pub missing_files: Vec<PathBuf>,
+}
+
+/// Recorded files of one item whose content differs from the recorded
+/// hash, or that are no longer regular files.
+#[derive(Debug, Clone, Serialize)]
+pub struct ModifiedFile {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the install target.
+    pub files: Vec<PathBuf>,
+}
+
+/// Recorded files of one item that could not be inspected (for example
+/// because of a permission error).
+#[derive(Debug, Clone, Serialize)]
+pub struct UnreadableFile {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the install target.
+    pub files: Vec<PathBuf>,
+    /// The error text for `files[0]`, the first path in sorted order. The
+    /// errors of the other paths are not kept.
+    pub error: String,
 }
 
 /// SSOT content hash differs from what the lockfile recorded at install
@@ -230,6 +282,12 @@ pub struct OrphanedDependency {
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
+    /// Recorded files modified after upskill wrote them. Non-empty →
+    /// `is_clean()` returns false.
+    pub modified_files: Vec<ModifiedFile>,
+    /// Recorded files that could not be inspected. Non-empty →
+    /// `is_clean()` returns false.
+    pub unreadable_files: Vec<UnreadableFile>,
     pub stale_hashes: Vec<StaleHash>,
     pub orphan_entries: Vec<OrphanEntry>,
     /// Items present only as a dependency of an item that is no longer
@@ -253,6 +311,7 @@ pub struct DoctorReport {
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
+    /// every recorded file still has its recorded content and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, and no installed plugin is missing
     /// from its client.
@@ -262,6 +321,8 @@ impl DoctorReport {
     /// They are reported but do not affect cleanness.
     pub fn is_clean(&self) -> bool {
         self.missing_outputs.is_empty()
+            && self.modified_files.is_empty()
+            && self.unreadable_files.is_empty()
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
@@ -314,6 +375,9 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Paths recorded when a reinstall adopted a `schema: 1` lockfile,
+    /// sorted and without duplicates; `None` when no adoption happened.
+    pub adopted: Option<Vec<String>>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded
@@ -374,6 +438,23 @@ mod tests {
             kind: ItemKind::Skill,
             name: "x".into(),
             missing_files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.modified_files.push(ModifiedFile {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            files: vec![PathBuf::from("a")],
+        });
+        assert!(!report.is_clean());
+
+        let mut report = DoctorReport::default();
+        report.unreadable_files.push(UnreadableFile {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            files: vec![PathBuf::from("a")],
+            error: "denied".into(),
         });
         assert!(!report.is_clean());
 

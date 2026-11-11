@@ -108,7 +108,8 @@ pub enum Commands {
             upskill remove code-review\n  \
             upskill remove rule-a skill-b agent-c\n  \
             upskill remove --source github:owner/repo\n  \
-            upskill remove --global code-review"
+            upskill remove --global code-review\n  \
+            upskill remove --force code-review"
     )]
     Remove {
         /// Item names to remove. Mutually exclusive with `--source`.
@@ -130,6 +131,10 @@ pub enum Commands {
         /// Already implicit when stdin is not a terminal (CI / pipes).
         #[arg(short = 'y', long = "yes")]
         yes: bool,
+        /// Also delete recorded files that were modified after upskill
+        /// wrote them. A recorded path that is not a regular file is kept.
+        #[arg(long = "force")]
+        force: bool,
     },
     /// Pull latest sources and regenerate changed items.
     ///
@@ -197,16 +202,16 @@ pub enum Commands {
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable
-        /// grouping. See `docs/commands.md` for the schema.
+        /// grouping. See `docs/book/commands.md` for the schema.
         #[arg(long = "json")]
         json: bool,
     },
     /// Verify installed-state consistency.
     ///
-    /// Three independent drift buckets:
-    /// - missing per-client output files (reinstall fixes)
-    /// - SSOT hash drift on `local:` sources (`update` fixes)
-    /// - lockfile entries with no recoverable source (manual `remove`)
+    /// Reports missing and modified recorded files, recorded files that
+    /// cannot be inspected, SSOT hash drift on `local:` sources, lockfile
+    /// entries with no recoverable source, orphaned dependencies, missing
+    /// and skipped plugins, and MCP server state.
     ///
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
@@ -224,9 +229,9 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Emit the three drift buckets as a stable JSON document. Exit
-        /// code is unchanged (0 clean, 1 drifted). See `docs/commands.md`
-        /// for the schema.
+        /// Emit every report bucket as a stable JSON document. Exit code is
+        /// unchanged (0 clean, 1 drifted). See `docs/book/commands.md` for
+        /// the schema.
         #[arg(long = "json")]
         json: bool,
     },

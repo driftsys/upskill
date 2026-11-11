@@ -1,21 +1,26 @@
-//! Per-client output path computation and file I/O.
+//! Per-client output path computation, the check that a source item does
+//! not overlap its own output paths, and the best-effort deletion of an
+//! item's outputs that `update` uses for an item that its source no longer
+//! contains. `remove` does not use it: it deletes only the files in the
+//! item's ownership record.
 //!
-//! The install pipeline writes (and `remove` deletes) per-client output
-//! files at the paths defined in format-spec §7 / ADR-0003. The frozen
-//! legacy layout keeps install, remove and legacy candidates in lockstep;
-//! pipeline callers go through [`output_path`].
+//! The install pipeline plans per-client output files at the paths defined
+//! in format-spec §7 / ADR-0003. The paths come from the frozen layout in
+//! `crate::legacy::layout`; pipeline callers go through [`output_path`].
 
-use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use anyhow::Result;
 
 use super::{ALL_CLIENTS, ItemKind};
 use crate::generate::Client;
 
-/// Where the install pipeline writes — and `remove` deletes — the per-
-/// client output for a given `(kind, name)`. Path is relative to the
-/// install target root and matches format-spec §7. Used by both
-/// `install_*` and `remove` so the two stay in lockstep.
+/// Where the install pipeline writes the per-client output for a given
+/// `(kind, name)`. Path is relative to the install target root and matches
+/// format-spec §7. Also used by adoption of a `schema: 1` lockfile, and by
+/// `doctor` for an item that has no ownership record. `remove` does not use
+/// it: it deletes the paths in the item's record.
 pub(super) fn output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
     crate::legacy::layout::output_path(kind, client.into(), name)
 }
@@ -30,54 +35,18 @@ pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> 
     crate::legacy::layout::resource_base_path(kind, client.into(), name)
 }
 
-/// Copy each resource (a path relative to the SSOT item directory
-/// `source_dir`) into the client's [`resource_base_path`], preserving
-/// sub-structure. `fs::copy` preserves the file mode on Unix, so an
-/// executable script stays executable.
-pub(super) fn copy_item_resources(
-    target: &Path,
-    source_dir: &Path,
-    kind: ItemKind,
-    client: Client,
-    name: &str,
-    resources: &[PathBuf],
-) -> Result<()> {
-    if resources.is_empty() {
-        return Ok(());
-    }
-    let base = resource_base_path(kind, client, name);
-    for rel in resources {
-        let from = source_dir.join(rel);
-        let to = target.join(&base).join(rel);
-        if let Some(parent) = to.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("create dir {}", parent.display()))?;
-        }
-        fs::copy(&from, &to)
-            .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
-    }
-    Ok(())
-}
-
-pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<()> {
-    let full = target.join(rel);
-    if let Some(parent) = full.parent() {
-        fs::create_dir_all(parent).with_context(|| format!("create dir {}", parent.display()))?;
-    }
-    fs::write(&full, content).with_context(|| format!("write {}", full.display()))?;
-    Ok(())
-}
-
 /// Refuse an install when the source item directory `source_dir` is the
-/// same directory as, is inside, or contains a path that
-/// [`remove_item_outputs`] deletes or the install writes for `(kind, name)`
-/// under `target`. These are the per-item paths (the entrypoint and the
-/// resource base), not a whole client output directory. Without this check,
-/// an item directory such as `.claude/skills/<name>` inside a source such as
-/// `.claude/skills` would be deleted before its files are copied. A path that
+/// same directory as, is inside, or contains a path that the install
+/// deletes or writes for `(kind, name)` under `target`. These are the
+/// per-item paths (the entrypoint and the resource base), not a whole client
+/// output directory. Without this check, an item directory such as
+/// `.claude/skills/<name>` inside a source such as `.claude/skills` could be
+/// deleted or overwritten by its own install. A path that
 /// exists is compared in canonical form; a path that does not exist is
-/// compared as given. Every client is checked because [`remove_item_outputs`]
-/// touches every client.
+/// compared as given. Every client is checked because the install also
+/// deletes files of clients that it does not write: the recorded files that
+/// the plan no longer contains, and the entrypoint of a client that is no
+/// longer selected (see [`super::apply::apply_plan`]).
 ///
 /// When `source_dir` is inside an output path that is itself inside
 /// `source_root`, the source root holds upskill's own output (for example a
@@ -370,28 +339,6 @@ mod tests {
             resource_base_path(ItemKind::Agent, Client::OpenCode, "x"),
             PathBuf::from(".opencode/agents/x")
         );
-    }
-
-    #[test]
-    fn copy_item_resources_preserves_tree() {
-        let src = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(src.path().join("scripts")).unwrap();
-        std::fs::write(src.path().join("scripts/gate.sh"), b"#!/bin/sh\n").unwrap();
-        let target = tempfile::tempdir().unwrap();
-
-        copy_item_resources(
-            target.path(),
-            src.path(),
-            ItemKind::Rule,
-            Client::Claude,
-            "demo",
-            &[PathBuf::from("scripts/gate.sh")],
-        )
-        .unwrap();
-
-        let dest = target.path().join(".claude/rules/demo/scripts/gate.sh");
-        assert!(dest.is_file());
-        assert_eq!(std::fs::read(&dest).unwrap(), b"#!/bin/sh\n");
     }
 
     #[test]

@@ -30,6 +30,12 @@ use crate::source::{GitRepo, GithubRepo, InstallSource};
 /// Authentication: clones use the bare URL and rely on git's own
 /// configuration (credential helpers, `insteadOf` rewrites, SSH).
 /// upskill does not resolve or inject tokens.
+///
+/// Every variant ends in [`install_from_local_path`], which applies the
+/// plan against an empty lockfile: a reinstall through this function does
+/// not delete the recorded files that the new version no longer produces.
+/// It still deletes the entrypoint file of each client that the item's
+/// `audience:` excludes.
 pub fn install_from_source(
     source: &InstallSource,
     target: &Path,
@@ -148,6 +154,12 @@ fn clone_to_tempdir(
 /// `file://` clones) without going through
 /// [`InstallSource`]. The high-level [`install_from_source`] is preferred
 /// when an `InstallSource` already exists.
+///
+/// Like [`install_from_local_path`], it applies the plan against an empty
+/// lockfile: a reinstall through this function does not delete the
+/// recorded files that the new version no longer produces. It still
+/// deletes the entrypoint file of each client that the item's `audience:`
+/// excludes.
 pub fn install_from_git_url(
     url: &str,
     git_ref: Option<&str>,

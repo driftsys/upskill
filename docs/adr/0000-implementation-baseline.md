@@ -110,7 +110,7 @@ src/
 ├── bundle.rs            Bundle dependency resolution (transitive items closure).
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files.
-├── lockfile.rs          .upskill-lock.json (`schema: 1`) read/write.
+├── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`).
 │
 ├── lint.rs              Author command — validate SSOT against the format spec.
 ├── fmt.rs               Author command — canonicalise YAML frontmatter.

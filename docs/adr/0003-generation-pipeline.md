@@ -107,12 +107,12 @@ source). Rules require the glob entry because opencode has no equivalent
 
 ### Native-first transition planned on 2026-10-24
 
-The tables above remain the current schema-1 generation/installer contract. The
-selected next rule routes are native Claude rules, one shared Claude/Copilot
-file with per-item intended readers when both clients are selected, native
-Copilot modular files otherwise, a trusted Codex static-index hook, and explicit
-OpenCode instruction paths after Q5 PASS. Managed package ownership also covers
-native files; it does not require every rule to load from a package. Package
+The tables above remain the current generation/installer contract. The selected
+next rule routes are native Claude rules, one shared Claude/Copilot file with
+per-item intended readers when both clients are selected, native Copilot modular
+files otherwise, a trusted Codex static-index hook, and explicit OpenCode
+instruction paths after Q5 PASS. Managed package ownership also covers native
+files; it does not require every rule to load from a package. Package
 root/registration and declared-reader persistence still need implementation
 work; no new lockfile field is specified here
 ([AD-0040](0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24),
@@ -131,8 +131,8 @@ implemented or that the historical OpenCode glob description establishes current
 ### State file
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
-git ref, with what content hashes. One shape (`schema: 1`), two possible
-locations:
+git ref, with what content hashes. One shape, written as `schema: 2` for a new
+lockfile (`schema: 1` lockfiles are still read), two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

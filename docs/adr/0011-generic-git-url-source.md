@@ -142,7 +142,8 @@ still uses only git configuration, credential helpers and URL rewrites.
 
 New `add` input is unchanged: `gitlab:` and `gitlab+` shorthands still exit 2
 with the full-HTTPS replacement hint. Modern HTTPS, GitHub and local parsing is
-unchanged. This amendment keeps lockfile schema 1; it neither infers artifact
-ownership nor adopts files, writes schema 2 or reconciles native integrations.
-Legacy projection, ownership verification, migration backup and lifecycle
-integration remain separate M1-A2 work.
+unchanged. The label decoding itself does not change the lockfile schema, infer
+artifact ownership or reconcile native integrations. An applying `update` adopts
+a `schema: 1` lockfile as the specification (§4, State files) describes: it
+records the existing files, writes schema 2 and keeps a copy of the previous
+lockfile as `.upskill-lock.json.v1` unless that file already exists.

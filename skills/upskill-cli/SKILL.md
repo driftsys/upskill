@@ -50,16 +50,16 @@ usage error.
 
 ## When to use upskill vs raw edits
 
-| Operation                                              | Use upskill    | Raw edits OK                                  |
-| ------------------------------------------------------ | -------------- | --------------------------------------------- |
-| Authoring a new item in a source registry              | Yes (`new`)    | No                                            |
-| Adding installable content to a consumer project       | Yes (`add`)    | No                                            |
-| Updating installed content from its source             | Yes (`update`) | No                                            |
-| Removing installed content                             | Yes (`remove`) | No                                            |
-| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                      |
-| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization      |
-| Auditing installed content for drift                   | Yes (`doctor`) | No                                            |
-| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — these are regenerated and drift silently |
+| Operation                                              | Use upskill    | Raw edits OK                                                                           |
+| ------------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------- |
+| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                     |
+| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                     |
+| Updating installed content from its source             | Yes (`update`) | No                                                                                     |
+| Removing installed content                             | Yes (`remove`) | No                                                                                     |
+| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                               |
+| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                               |
+| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                     |
+| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` overwrites them; `doctor` reports recorded files as modified (see below) |
 
 When in doubt, use upskill. Raw edits are a sharp tool — only reach for them on
 content you authored and understand, and always lint after.
@@ -123,10 +123,14 @@ install.
 1. Run `upskill remove <item-name>` (or `upskill remove --source <label>` to
    remove every item installed from one source — use the label shown in
    `upskill list` or the lockfile).
-2. Verify with `upskill list` that the item is gone and `upskill doctor` that
+2. `remove` deletes only the files recorded for the item with their recorded
+   hash. It keeps each recorded file that you edited, prints
+   `kept modified file: <path>`, and still drops the item from the lockfile. To
+   delete edited files as well, run the command with `--force`.
+3. Verify with `upskill list` that the item is gone and `upskill doctor` that
    nothing else depended on it.
-3. Commit the changed lockfile and the deletion of the now-removed per-client
-   files.
+4. Commit the changed lockfile and the deleted per-client files. For each kept
+   modified file, decide whether to keep it or delete it by hand.
 
 ### Auditing for drift or misrouted content
 
@@ -178,9 +182,10 @@ Common findings:
 - Plugin skipped at install time because the client CLI was not on PATH
   (informational warning — install the CLI then run `update`)
 
-Exits 0 when clean. Exits 1 when drift is found (missing outputs, stale hashes,
-orphan entries, or missing plugins). Skipped plugins are warnings only and do
-not affect the exit code.
+Exits 0 when clean. Exits 1 when drift is found (missing outputs, modified
+files, unreadable files, stale hashes, orphan entries, missing plugins, or MCP
+servers that are not registered). Skipped plugins are warnings only and do not
+affect the exit code.
 
 ## Conventions to remember
 
@@ -191,7 +196,10 @@ not affect the exit code.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —
-  `upskill update` will overwrite them and the intervening drift is silent.
+  `upskill update` overwrites them. For an item with a `files` record in a
+  `schema: 2` lockfile, `upskill doctor` reports each edited file as modified
+  and exits 1. For a `schema: 1` lockfile or an item with an empty `files`
+  record, `doctor` only checks that the entry files exist.
 
 ### `.upskill-lock.json`
 
@@ -239,7 +247,8 @@ bug. The mechanism is org-specific; this skill does not assume one exists.
 - About to commit generated artifacts because "the next person won't have
   upskill installed" → that is the right reason to commit them, but it is also
   the reason `update` is mandatory after any source change. Drift between SSOT
-  and generated output is the dominant silent failure mode.
+  and generated output is the dominant failure mode: `doctor` reports it only
+  for `local:` sources; for other sources, run `update --dry-run`.
 - About to vendor a bundle without a NOTICE file → MIT and similar licenses
   require attribution. Don't ship without it.
 - About to write a skill body explaining HOW upskill works (every flag, every

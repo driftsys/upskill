@@ -1,6 +1,6 @@
 //! ATDD tests for `pipeline::install_with_lockfile`.
 //!
-//! Validates that a successful install writes a `schema: 1` lockfile
+//! Validates that a successful install writes a `schema: 2` lockfile
 //! (`.upskill-lock.json`) at the consumer-project root with one entry
 //! per `(kind, name)` carrying the source label, optional git ref, and
 //! SSOT content hash.
@@ -147,6 +147,8 @@ fn install_preserves_unrelated_existing_entries() {
         required_by: vec![],
         group: None,
         clients: vec![],
+        files: Vec::new(),
+        pending: Vec::new(),
     });
     seed.save(&target).unwrap();
 

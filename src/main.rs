@@ -74,7 +74,8 @@ fn main() {
             global,
             project,
             yes,
-        } => run_remove(&names, source.as_deref(), global, project, yes),
+            force,
+        } => run_remove(&names, source.as_deref(), global, project, yes, force),
         Commands::Update {
             names,
             dry_run,
@@ -267,12 +268,14 @@ fn run_add(args: AddArgs) -> i32 {
     match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_adoption_notice(report.adopted.as_deref());
             print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
             EXIT_SUCCESS
         }
         Err(err) => {
+            print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
             eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -441,6 +444,36 @@ fn print_install_report(report: &InstallReport, source: &str) {
             style::name(&name),
             clients.join(", ")
         );
+    }
+}
+
+/// Tell the user which files the adoption of a `schema: 1` lockfile
+/// recorded as unchanged. Adoption cannot tell an edited file from one an
+/// earlier version wrote, so manual edits to these files are not protected.
+/// Printed to stderr, so `-q/--quiet` does not hide it.
+fn print_adoption_notice(adopted: Option<&[String]>) {
+    let Some(paths) = adopted.filter(|p| !p.is_empty()) else {
+        return;
+    };
+    eprintln!(
+        "note: adopted {} files installed by an earlier upskill version as unchanged.",
+        paths.len()
+    );
+    eprintln!("Manual edits made to these files before now are not protected:");
+    for path in paths {
+        eprintln!("  {path}");
+    }
+    eprintln!(
+        "The schema 1 lockfile is copied to {}, unless that file already exists.",
+        upskill::lockfile::SCHEMA1_BACKUP_NAME
+    );
+}
+
+/// Print the adoption notice when `err` carries the paths of an adoption
+/// that was saved before the error.
+fn print_adoption_after_error(err: &anyhow::Error) {
+    if let Some(adopted) = err.downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>() {
+        print_adoption_notice(Some(&adopted.paths));
     }
 }
 
@@ -619,6 +652,7 @@ fn run_remove(
     global: bool,
     project: bool,
     yes: bool,
+    force: bool,
 ) -> i32 {
     let filter = match (names.is_empty(), source) {
         (true, Some(s)) => RemoveFilter::BySource(s.to_string()),
@@ -648,12 +682,19 @@ fn run_remove(
         }
     };
 
-    match remove(&target, filter) {
+    match remove(&target, filter, force) {
         Ok(report) => {
+            print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
+            for item in &report.items {
+                for path in &item.kept_modified {
+                    eprintln!("kept modified file: {}", path.display());
+                }
+            }
             EXIT_SUCCESS
         }
         Err(err) => {
+            print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
             eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -718,6 +759,7 @@ fn run_update(
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -729,9 +771,11 @@ fn run_update(
         match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
+                print_adoption_notice(report.adopted.as_deref());
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -743,6 +787,7 @@ fn run_update(
         let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
             Ok(r) => r,
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -774,9 +819,11 @@ fn run_update(
         match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
             Ok(report) => {
                 print_update_report(&report, false);
+                print_adoption_notice(report.adopted.as_deref());
                 EXIT_SUCCESS
             }
             Err(err) => {
+                print_adoption_after_error(&err);
                 print_error_chain(&err);
                 eprintln!();
                 eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
@@ -960,6 +1007,43 @@ fn print_doctor_report(report: &DoctorReport) {
                 style::name(&m.name)
             );
             for path in &m.missing_files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
+    if !report.modified_files.is_empty() {
+        println!(
+            "{} recorded files modified after install ({} item(s))",
+            style::warn("doctor:"),
+            report.modified_files.len()
+        );
+        for m in &report.modified_files {
+            println!(
+                "  {} {}",
+                style::dim(kind_label(m.kind)),
+                style::name(&m.name)
+            );
+            for path in &m.files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
+    if !report.unreadable_files.is_empty() {
+        println!(
+            "{} recorded files that could not be inspected ({} item(s))",
+            style::error_label("doctor:"),
+            report.unreadable_files.len()
+        );
+        for u in &report.unreadable_files {
+            println!(
+                "  {} {} {}",
+                style::dim(kind_label(u.kind)),
+                style::name(&u.name),
+                style::dim(&format!("({})", u.error))
+            );
+            for path in &u.files {
                 println!("    - {}", style::dim(&path.display().to_string()));
             }
         }

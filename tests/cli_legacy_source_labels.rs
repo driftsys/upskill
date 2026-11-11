@@ -167,6 +167,15 @@ impl Fixture {
     }
 }
 
+/// Lowercase hex SHA-256, as recorded in an item's `files` list.
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::Digest;
+    sha2::Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
 fn snapshot(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     fn walk(root: &Path, dir: &Path, files: &mut BTreeMap<PathBuf, Vec<u8>>) {
         for entry in fs::read_dir(dir).unwrap() {
@@ -250,6 +259,8 @@ fn legacy_item_update_preserves_alias_subfolder_and_preview_bytes() {
         let mut expected = old_lock;
         expected["items"][0]["source"] = modern.into();
         expected["items"][0]["hash"] = expected_hash.into();
+        // The ownership record follows the rewritten output.
+        expected["items"][0]["files"][0]["sha256"] = sha256_hex(&f.output("installed")).into();
         assert_eq!(
             lock, expected,
             "only source spelling and changed hash may change"
@@ -324,6 +335,8 @@ fn reported_legacy_bundle_updates_and_preserves_unrelated_metadata() {
         if entry["name"] == "original" {
             entry["source"] = modern.into();
             entry["hash"] = expected_hash.clone().into();
+            // The ownership record follows the rewritten output.
+            entry["files"][0]["sha256"] = sha256_hex(&f.output("original")).into();
         }
     }
     expected["bundles"][0]["source"] = modern.into();

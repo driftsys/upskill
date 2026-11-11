@@ -3,8 +3,8 @@
 //!
 //! Walks a source directory laid out per format-spec §2.1, parses each
 //! item's frontmatter into the model (§3), renders per-client output via
-//! `crate::generate`, and writes the result to the per-client paths
-//! defined in format-spec §7 / ADR-0003.
+//! `crate::generate`, plans the result, and writes the plan to the
+//! per-client paths defined in format-spec §7 / ADR-0003.
 //!
 //! Entry points:
 //! - [`install_with_lockfile`] — consumer-facing; install + record state +
@@ -20,14 +20,14 @@
 //! Audience filter: the top-level `audience` field (per format-spec §3.1)
 //! restricts emission to listed clients; absence means all clients.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::generate::Client;
 use crate::source::InstallSource;
 
+mod apply;
 mod discovery;
 mod git;
 mod hash;
@@ -35,6 +35,8 @@ mod ignore;
 mod install;
 mod lifecycle;
 mod output;
+mod owned;
+pub(crate) mod plan;
 mod report;
 
 use discovery::scan_source_items;
@@ -124,87 +126,18 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
-/// Move a file or directory from `from` to `to`, creating `to`'s parent
-/// directory first and replacing any stale destination. A no-op when `from`
-/// does not exist, or when `from` and `to` are the same path.
-///
-/// Replacing the destination matters on `update` / re-add: the fresh install
-/// writes under the item's original name and then relocates to the alias, so
-/// a prior aliased install can still be sitting at `to`. A plain `fs::rename`
-/// of a directory onto a non-empty directory fails ("Directory not empty"),
-/// so the stale destination is removed first.
-fn relocate(from: &Path, to: &Path) -> Result<()> {
-    if !from.exists() || from == to {
-        return Ok(());
-    }
-    if let Some(parent) = to.parent() {
-        fs::create_dir_all(parent).with_context(|| format!("create dir {}", parent.display()))?;
-    }
-    if to.is_dir() {
-        let _ = fs::remove_dir_all(to);
-    } else if to.exists() {
-        let _ = fs::remove_file(to);
-    }
-    fs::rename(from, to).with_context(|| format!("rename {} to {}", from.display(), to.display()))
-}
-
-/// Relocate one already-installed per-client output from its original name to
-/// `alias`, including any supporting resources (format-spec §2.4).
-///
-/// - **Directory-backed** kinds (all skills, opencode rules) keep the
-///   entrypoint and resources together in `resource_base_path`, so the whole
-///   directory is moved. Their links are not namespaced — no rewrite.
-/// - **Flat** kinds (Claude/Copilot rules, all agents) keep the entrypoint
-///   file beside a sibling `<name>/` resource namespace dir. The entrypoint
-///   file and the namespace dir are moved, then the entrypoint's namespaced
-///   links are re-prefixed from `<orig>/` to `<alias>/`.
-///
-/// Returns the new output path (relative to `target`) for the entrypoint.
-fn relocate_aliased_output(
-    target: &Path,
-    item: &report::InstalledItem,
-    alias: &str,
-) -> Result<PathBuf> {
-    let (kind, client, orig) = (item.kind, item.client, item.name.as_str());
-    let new_output = output::output_path(kind, client, alias);
-
-    if output::is_dir_backed(kind, client) {
-        // Entrypoint + resources share one directory; move it wholesale.
-        let old_base = target.join(output::resource_base_path(kind, client, orig));
-        let new_base = target.join(output::resource_base_path(kind, client, alias));
-        relocate(&old_base, &new_base)?;
-        return Ok(new_output);
-    }
-
-    // Flat kind: move the entrypoint file, then its resource namespace dir.
-    relocate(&target.join(&item.output_path), &target.join(&new_output))?;
-    let old_base = target.join(output::resource_base_path(kind, client, orig));
-    if old_base.is_dir() {
-        let new_base = target.join(output::resource_base_path(kind, client, alias));
-        relocate(&old_base, &new_base)?;
-        // Re-prefix the entrypoint's namespaced links to the moved dir.
-        let copied: std::collections::HashSet<PathBuf> = discovery::iter_item_resources(&new_base)
-            .into_iter()
-            .collect();
-        let entry = target.join(&new_output);
-        let body =
-            fs::read_to_string(&entry).with_context(|| format!("read {}", entry.display()))?;
-        let rewritten =
-            crate::generate::link_rewrite::reprefix_resource_links(&body, orig, alias, &copied)
-                .with_context(|| format!("re-prefix resource links for {alias} ({client:?})"))?;
-        if rewritten != body {
-            fs::write(&entry, rewritten).with_context(|| format!("write {}", entry.display()))?;
-        }
-    }
-    Ok(new_output)
-}
-
 /// Install + write lockfile. Consumer-facing entry point.
 ///
-/// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
-/// into `<target>/.upskill-lock.json` via [`crate::lockfile`]. Existing
+/// Fetches the source, plans every output file, adopts a `schema: 1`
+/// lockfile, writes the plan with one call, then merges the resulting
+/// [`InstallReport`] into `<target>/.upskill-lock.json` via
+/// [`crate::lockfile`], with each item's written files in `files`. Existing
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
+///
+/// Before the adoption and before `apply_plan`, the overlap check refuses
+/// a source item directory that is, is inside, or contains one of its own
+/// output paths, so that a refused install changes no file.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
@@ -295,6 +228,20 @@ pub fn install_with_lockfile(
             )
         };
 
+    // Installed names of entry-source items. The first mapping given for
+    // a name wins; an exact `orig=alias` wins over a bare `--as`. The
+    // conflict check below and the plan use the same names.
+    let mut entry_names = plan::PlanNames {
+        excludes: options.excludes.clone(),
+        ..plan::PlanNames::default()
+    };
+    for (from, to) in &options.aliases {
+        entry_names
+            .aliases
+            .entry(from.clone())
+            .or_insert_with(|| to.clone());
+    }
+
     // -- Conflict detection (before any files are written) --
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     let mut conflicts = Vec::new();
@@ -306,11 +253,9 @@ pub fn install_with_lockfile(
             std::collections::BTreeMap::new();
         for ((kind, name), src_label) in &closure.item_source {
             let effective = if *src_label == label {
-                options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == *name)
-                    .map(|(_, to)| to.clone())
+                entry_names
+                    .alias_for(name)
+                    .cloned()
                     .unwrap_or_else(|| name.clone())
             } else {
                 name.clone()
@@ -330,11 +275,9 @@ pub fn install_with_lockfile(
             .filter(|(_, n)| !options.excludes.contains(n))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter_map(|(kind, name)| {
-                let effective_name = options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == *name)
-                    .map(|(_, to)| to.clone())
+                let effective_name = entry_names
+                    .alias_for(name)
+                    .cloned()
                     .unwrap_or_else(|| name.clone());
                 if seen.insert((*kind, effective_name.clone())) {
                     Some((*kind, effective_name))
@@ -350,270 +293,283 @@ pub fn install_with_lockfile(
     }
 
     // -- Refuse a source item that overlaps its own output paths --
-    // Aliases apply to entry-source items only, as in the alias step below.
+    // Runs before the adoption and before `apply_plan`, so a refused install
+    // changes no file. Aliases apply to entry-source items only, as in the
+    // plan below.
     if let Some(closure) = &closure {
+        let no_aliases = plan::PlanNames::default();
         for (src_label, si) in &closure.by_source {
-            let aliases: &[(String, String)] = if *src_label == label {
-                &options.aliases
+            let names = if *src_label == label {
+                &entry_names
             } else {
-                &[]
+                &no_aliases
             };
-            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), aliases)?;
+            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), names)?;
         }
     } else {
         // Without a closure, `items` is not empty: a bundle-file source always
         // gets a closure, and only a request with names defers to name
         // resolution.
-        install::check_name_resolution_outside_outputs(
-            &local_source,
-            target,
-            items,
-            &options.aliases,
-        )?;
+        install::check_name_resolution_outside_outputs(&local_source, target, items, &entry_names)?;
     }
 
-    // -- Now proceed with generation (files are written here) --
-    // With a closure, install each source's resolved items from that
+    // -- Plan every output; nothing is written until `apply_plan` --
+    // With a closure, plan each source's resolved items from that
     // source's own fetched root. Without one (bundle file / name
-    // resolution), keep the existing dispatch.
+    // resolution), keep the existing dispatch. Aliases (source name ->
+    // installed name; the key "" applies to every item) apply only to
+    // entry-source items: dependency-pulled (cross-source) items are never
+    // renamed. Without a closure, every item is entry-source. `--exclude`
+    // matches source names and applies to every source.
+    let dependency_names = plan::PlanNames {
+        excludes: options.excludes.clone(),
+        ..plan::PlanNames::default()
+    };
     let mut report = if let Some(closure) = &closure {
         // The cross-source clone guards in `closure.guards` are held alive by
-        // the owned `closure` until after every source's items are installed;
-        // dropping them early would delete the fetched roots.
+        // the owned `closure` until this function returns; planning reads
+        // every source file into memory, and dropping the guards early would
+        // delete the fetched roots before they are read.
         let mut r = InstallReport::default();
-        for si in closure.by_source.values() {
+        for (src_label, si) in &closure.by_source {
+            let names = if *src_label == label {
+                &entry_names
+            } else {
+                &dependency_names
+            };
             let part = install_from_local_path_selective(
                 &si.root,
-                target,
                 Some(&si.items),
                 &options.selection,
+                names,
             )?;
             r.items.extend(part.items);
+            r.planned.extend(part.planned);
             r.bundles.extend(part.bundles);
             r.selection_skipped.extend(part.selection_skipped);
         }
         r
     } else if items.is_empty() {
-        install_from_local_path_selective(&local_source, target, None, &options.selection)?
+        install_from_local_path_selective(&local_source, None, &options.selection, &entry_names)?
     } else {
-        install_with_name_resolution_from_local(&local_source, target, items, &options.selection)?
+        install_with_name_resolution_from_local(
+            &local_source,
+            items,
+            &options.selection,
+            &entry_names,
+        )?
     };
 
-    // A bundle-shaped install resolves its items per source above (no bundles
-    // in the per-source reports); attach the resolved bundles so plugin/MCP
-    // install and the lockfile see them with their own sources.
-    if !resolved_bundles.is_empty() {
-        report.bundles = resolved_bundles
-            .iter()
-            .map(|rb| rb.bundle.clone())
-            .collect();
-    }
+    // -- Adopt a schema-1 lockfile, then write every planned file --
+    // An item planned twice from the same source item (for example named
+    // and also a member of a named bundle) is kept once. Two items with one
+    // installed name fail here, before the adoption.
+    plan::merge_duplicates(&mut report.planned);
+    apply::check_unique_names(&report.planned)?;
+    // The adoption is saved before any file is written. Every later error
+    // carries the adopted paths, so that `main.rs` can still print the
+    // adoption notice.
+    let adopted = owned::adopt_schema1(target, &mut lock)?;
+    report.adopted = adopted.clone();
+    let result = (|| -> Result<InstallReport> {
+        let mut recorded = apply::apply_plan(target, &mut lock, &report.planned)?;
 
-    // -- Plugin installation (ADR-0008) --
-    let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
-    report.plugin_results = plugin_results;
-
-    // -- MCP server configuration (ADR-0010), restricted to the selection --
-    let mcp_results =
-        install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
-    report.mcp_results = mcp_results;
-
-    // -- Apply excludes --
-    if !options.excludes.is_empty() {
-        report
-            .items
-            .retain(|item| !options.excludes.contains(&item.name));
-    }
-
-    // -- Apply aliases --
-    let mut aliased_names: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
-    if !options.aliases.is_empty() {
-        // Relocate output files (and any supporting resources) on disk and
-        // update report items.
-        for item in &mut report.items {
-            // Only entry-source items are aliasable; dependency-pulled
-            // (cross-source) items are never renamed. When there is no
-            // closure (bundle / name-resolution paths), every item is
-            // treated as entry-source, preserving prior behavior.
-            let is_entry_source = closure
-                .as_ref()
-                .and_then(|c| c.item_source.get(&(item.kind, item.name.clone())))
-                .is_none_or(|l| *l == label);
-            let alias = if is_entry_source {
-                options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == item.name)
-            } else {
-                None
-            };
-            if let Some((_, alias_name)) = alias {
-                let new_output = relocate_aliased_output(target, item, alias_name)?;
-                aliased_names
-                    .entry(alias_name.clone())
-                    .or_insert_with(|| item.name.clone());
-                item.output_path = new_output;
-                item.name = alias_name.clone();
-            }
-        }
-    }
-
-    let hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> = report
-        .items
-        .iter()
-        .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
-        .collect();
-    // Translate `requires` provenance through any applied `--as` aliases so
-    // the recorded `required_by` is consistent with the post-alias names that
-    // `doctor` matches against (#205). The closure keys dependencies and labels
-    // requirers by ORIGINAL effective name; the rename loop above already moved
-    // the installed items to their alias. `aliased_names` maps `alias ->
-    // original`; invert it to `original -> alias` and rewrite (a) each
-    // dependency key's name and (b) each `"{kind}:{name}"` requirer label.
-    let original_to_alias: std::collections::HashMap<&str, &str> = aliased_names
-        .iter()
-        .map(|(alias, original)| (original.as_str(), alias.as_str()))
-        .collect();
-    let alias_label = |label: &str| -> String {
-        match label.split_once(':') {
-            Some((kind, name)) => match original_to_alias.get(name) {
-                Some(alias) => format!("{kind}:{alias}"),
-                None => label.to_string(),
-            },
-            None => label.to_string(),
-        }
-    };
-    let provenance: std::collections::BTreeMap<(ItemKind, String), Vec<String>> =
-        if let Some(closure) = &closure {
-            closure
-                .required_by
+        // A bundle-shaped install resolves its items per source above (no bundles
+        // in the per-source reports); attach the resolved bundles so plugin/MCP
+        // install and the lockfile see them with their own sources.
+        if !resolved_bundles.is_empty() {
+            report.bundles = resolved_bundles
                 .iter()
-                .map(|((kind, name), requirers)| {
-                    let aliased_name = original_to_alias
-                        .get(name.as_str())
-                        .map(|a| a.to_string())
-                        .unwrap_or_else(|| name.clone());
-                    let aliased_requirers =
-                        requirers.iter().map(|r| alias_label(r)).collect::<Vec<_>>();
-                    ((*kind, aliased_name), aliased_requirers)
-                })
-                .collect()
-        } else {
-            std::collections::BTreeMap::new()
-        };
-    let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
-        if let Some(closure) = &closure {
-            if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
-                let gr = closure
-                    .by_source
-                    .get(src_label)
-                    .and_then(|si| si.git_ref.clone());
-                return (src_label.clone(), gr);
+                .map(|rb| rb.bundle.clone())
+                .collect();
+        }
+
+        // -- Plugin installation (ADR-0008) --
+        let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
+        report.plugin_results = plugin_results;
+
+        // -- MCP server configuration (ADR-0010), restricted to the selection --
+        let mcp_results =
+            install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
+        report.mcp_results = mcp_results;
+
+        // -- Aliases were applied at plan time; map each alias to its source
+        // name for the lockfile `source_name` and the provenance below --
+        let mut aliased_names: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for planned in &report.planned {
+            if let Some(original) = &planned.source_name {
+                aliased_names
+                    .entry(planned.name.clone())
+                    .or_insert_with(|| original.clone());
             }
         }
-        (label.clone(), git_ref.map(str::to_string))
-    };
-    let new_items =
-        crate::lockfile::items_from_report(&report, item_source_lookup, &provenance, |k, n| {
-            hashes.get(&(k, n.to_string())).cloned().flatten()
-        });
 
-    for mut item in new_items {
-        if let Some(original) = aliased_names.get(&item.name) {
-            item.source_name = Some(original.clone());
+        let hashes: std::collections::BTreeMap<(ItemKind, String), Option<String>> = report
+            .items
+            .iter()
+            .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
+            .collect();
+        // Translate `requires` provenance through any applied `--as` aliases so
+        // the recorded `required_by` is consistent with the post-alias names that
+        // `doctor` matches against (#205). The closure keys dependencies and labels
+        // requirers by ORIGINAL effective name; the plan already installed the
+        // items under their alias. `aliased_names` maps `alias ->
+        // original`; invert it to `original -> alias` and rewrite (a) each
+        // dependency key's name and (b) each `"{kind}:{name}"` requirer label.
+        let original_to_alias: std::collections::HashMap<&str, &str> = aliased_names
+            .iter()
+            .map(|(alias, original)| (original.as_str(), alias.as_str()))
+            .collect();
+        let alias_label = |label: &str| -> String {
+            match label.split_once(':') {
+                Some((kind, name)) => match original_to_alias.get(name) {
+                    Some(alias) => format!("{kind}:{alias}"),
+                    None => label.to_string(),
+                },
+                None => label.to_string(),
+            }
+        };
+        let provenance: std::collections::BTreeMap<(ItemKind, String), Vec<String>> =
+            if let Some(closure) = &closure {
+                closure
+                    .required_by
+                    .iter()
+                    .map(|((kind, name), requirers)| {
+                        let aliased_name = original_to_alias
+                            .get(name.as_str())
+                            .map(|a| a.to_string())
+                            .unwrap_or_else(|| name.clone());
+                        let aliased_requirers =
+                            requirers.iter().map(|r| alias_label(r)).collect::<Vec<_>>();
+                        ((*kind, aliased_name), aliased_requirers)
+                    })
+                    .collect()
+            } else {
+                std::collections::BTreeMap::new()
+            };
+        let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
+            if let Some(closure) = &closure {
+                if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
+                    let gr = closure
+                        .by_source
+                        .get(src_label)
+                        .and_then(|si| si.git_ref.clone());
+                    return (src_label.clone(), gr);
+                }
+            }
+            (label.clone(), git_ref.map(str::to_string))
+        };
+        let new_items =
+            crate::lockfile::items_from_report(&report, item_source_lookup, &provenance, |k, n| {
+                hashes.get(&(k, n.to_string())).cloned().flatten()
+            });
+
+        for mut item in new_items {
+            if let Some(original) = aliased_names.get(&item.name) {
+                item.source_name = Some(original.clone());
+            }
+            item.files = recorded
+                .remove(&(item.kind, item.name.clone()))
+                .unwrap_or_default();
+            lock.upsert(item);
         }
-        lock.upsert(item);
-    }
-    if resolved_bundles.is_empty() {
-        // Same-source bundle install (no cross-source provenance): every bundle
-        // came from the entry source.
-        for bundle in &report.bundles {
-            lock.upsert_bundle(crate::lockfile::LockedBundle {
-                name: bundle.name.clone(),
-                source: label.clone(),
-                git_ref: git_ref.map(str::to_string),
-                items: bundle_item_names(bundle),
+        if resolved_bundles.is_empty() {
+            // Same-source bundle install (no cross-source provenance): every bundle
+            // came from the entry source.
+            for bundle in &report.bundles {
+                lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    name: bundle.name.clone(),
+                    source: label.clone(),
+                    git_ref: git_ref.map(str::to_string),
+                    items: bundle_item_names(bundle),
+                });
+            }
+        } else {
+            // Bundle closure: record each bundle under its OWN source and ref.
+            for rb in &resolved_bundles {
+                lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    name: rb.bundle.name.clone(),
+                    source: rb.source_label.clone(),
+                    git_ref: rb.git_ref.clone(),
+                    items: bundle_item_names(&rb.bundle),
+                });
+            }
+        }
+        // Record installed and warn-skipped plugins in the lockfile so that
+        // `doctor` can surface skipped ones and verify installed ones.
+        // Plugins that failed (non-zero exit) are NOT recorded — they are
+        // transient errors; the CLI is present but misbehaving.
+        for pr in &report.plugin_results {
+            use crate::lockfile::PluginInstallStatus;
+            use crate::plugin::PluginOutcome;
+
+            let status = match &pr.outcome {
+                PluginOutcome::Success => PluginInstallStatus::Installed,
+                PluginOutcome::CliNotFound => PluginInstallStatus::Skipped,
+                PluginOutcome::ManualInstructions => PluginInstallStatus::Instructions,
+                PluginOutcome::Failed { .. } => continue,
+            };
+            lock.upsert_plugin(crate::lockfile::LockedPlugin {
+                name: pr.name.clone(),
+                client: pr.client.clone(),
+                identifier: pr.identifier.clone(),
+                scope: match plugin_scope {
+                    crate::plugin::PluginScope::Project => Some("project".into()),
+                    crate::plugin::PluginScope::User => Some("user".into()),
+                },
+                bundle: pr.bundle.clone(),
+                status,
             });
         }
-    } else {
-        // Bundle closure: record each bundle under its OWN source and ref.
-        for rb in &resolved_bundles {
-            lock.upsert_bundle(crate::lockfile::LockedBundle {
-                name: rb.bundle.name.clone(),
-                source: rb.source_label.clone(),
-                git_ref: rb.git_ref.clone(),
-                items: bundle_item_names(&rb.bundle),
+        // Record configured and warn-skipped MCP servers in the lockfile.
+        for mr in &report.mcp_results {
+            use crate::lockfile::McpInstallStatus;
+            use crate::plugin::PluginOutcome;
+
+            let status = match &mr.outcome {
+                PluginOutcome::Success => McpInstallStatus::Installed,
+                PluginOutcome::CliNotFound => McpInstallStatus::Skipped,
+                // ManualInstructions is unused for MCP; Failed is transient.
+                PluginOutcome::ManualInstructions | PluginOutcome::Failed { .. } => continue,
+            };
+            lock.upsert_mcp(crate::lockfile::LockedMcp {
+                name: mr.name.clone(),
+                client: mr.client.clone(),
+                scope: match plugin_scope {
+                    crate::plugin::PluginScope::Project => Some("project".into()),
+                    crate::plugin::PluginScope::User => Some("user".into()),
+                },
+                bundle: mr.bundle.clone(),
+                status,
             });
         }
+        lock.save(target)?;
+
+        // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file
+        // exists at the consumer-project root. Created once with `@AGENTS.md`
+        // content, never overwritten — protects user customisations.
+        crate::ancillary::ensure_claude_bridge(target)?;
+
+        // Per ADR-0003 / format-spec §7.4: when the install includes any rule,
+        // register the opencode.json `instructions[]` glob so opencode picks up
+        // generated rules under `.agents/rules/`. Idempotent; preserves other
+        // keys.
+        let has_rules = report.items.iter().any(|i| i.kind == ItemKind::Rule);
+        crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+
+        // Per ADR-0003: when the install includes any rule, register
+        // `.github/instructions` in `.vscode/settings.json`'s
+        // `chat.instructionsFilesLocations` so VS Code Copilot picks up the
+        // generated `<name>.instructions.md` files.
+        crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
+
+        Ok(report)
+    })();
+    match (result, adopted) {
+        (Err(err), Some(paths)) if !paths.is_empty() => {
+            Err(err.context(AdoptedBeforeFailure { paths }))
+        }
+        (result, _) => result,
     }
-    // Record installed and warn-skipped plugins in the lockfile so that
-    // `doctor` can surface skipped ones and verify installed ones.
-    // Plugins that failed (non-zero exit) are NOT recorded — they are
-    // transient errors; the CLI is present but misbehaving.
-    for pr in &report.plugin_results {
-        use crate::lockfile::PluginInstallStatus;
-        use crate::plugin::PluginOutcome;
-
-        let status = match &pr.outcome {
-            PluginOutcome::Success => PluginInstallStatus::Installed,
-            PluginOutcome::CliNotFound => PluginInstallStatus::Skipped,
-            PluginOutcome::ManualInstructions => PluginInstallStatus::Instructions,
-            PluginOutcome::Failed { .. } => continue,
-        };
-        lock.upsert_plugin(crate::lockfile::LockedPlugin {
-            name: pr.name.clone(),
-            client: pr.client.clone(),
-            identifier: pr.identifier.clone(),
-            scope: match plugin_scope {
-                crate::plugin::PluginScope::Project => Some("project".into()),
-                crate::plugin::PluginScope::User => Some("user".into()),
-            },
-            bundle: pr.bundle.clone(),
-            status,
-        });
-    }
-    // Record configured and warn-skipped MCP servers in the lockfile.
-    for mr in &report.mcp_results {
-        use crate::lockfile::McpInstallStatus;
-        use crate::plugin::PluginOutcome;
-
-        let status = match &mr.outcome {
-            PluginOutcome::Success => McpInstallStatus::Installed,
-            PluginOutcome::CliNotFound => McpInstallStatus::Skipped,
-            // ManualInstructions is unused for MCP; Failed is transient.
-            PluginOutcome::ManualInstructions | PluginOutcome::Failed { .. } => continue,
-        };
-        lock.upsert_mcp(crate::lockfile::LockedMcp {
-            name: mr.name.clone(),
-            client: mr.client.clone(),
-            scope: match plugin_scope {
-                crate::plugin::PluginScope::Project => Some("project".into()),
-                crate::plugin::PluginScope::User => Some("user".into()),
-            },
-            bundle: mr.bundle.clone(),
-            status,
-        });
-    }
-    lock.save(target)?;
-
-    // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file
-    // exists at the consumer-project root. Created once with `@AGENTS.md`
-    // content, never overwritten — protects user customisations.
-    crate::ancillary::ensure_claude_bridge(target)?;
-
-    // Per ADR-0003 / format-spec §7.4: when the install includes any rule,
-    // register the opencode.json `instructions[]` glob so opencode picks up
-    // generated rules under `.agents/rules/`. Idempotent; preserves other
-    // keys.
-    let has_rules = report.items.iter().any(|i| i.kind == ItemKind::Rule);
-    crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
-
-    // Per ADR-0003: when the install includes any rule, register
-    // `.github/instructions` in `.vscode/settings.json`'s
-    // `chat.instructionsFilesLocations` so VS Code Copilot picks up the
-    // generated `<name>.instructions.md` files.
-    crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
-
-    Ok(report)
 }
