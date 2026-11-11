@@ -267,6 +267,7 @@ fn run_add(args: AddArgs) -> i32 {
     match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_adoption_notice(report.adopted.as_deref());
             print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
@@ -442,6 +443,28 @@ fn print_install_report(report: &InstallReport, source: &str) {
             clients.join(", ")
         );
     }
+}
+
+/// Tell the user which files the adoption of a `schema: 1` lockfile
+/// recorded as unchanged. Adoption cannot tell an edited file from one an
+/// earlier version wrote, so manual edits to these files are not protected.
+/// Printed to stderr, so `-q/--quiet` does not hide it.
+fn print_adoption_notice(adopted: Option<&[String]>) {
+    let Some(paths) = adopted.filter(|p| !p.is_empty()) else {
+        return;
+    };
+    eprintln!(
+        "note: adopted {} files installed by an earlier upskill version as unchanged.",
+        paths.len()
+    );
+    eprintln!("Manual edits made to these files before now are not protected:");
+    for path in paths {
+        eprintln!("  {path}");
+    }
+    eprintln!(
+        "The previous lockfile is kept as {}.",
+        upskill::lockfile::SCHEMA1_BACKUP_NAME
+    );
 }
 
 /// Warn about items skipped because the consumer's client selection

@@ -3,8 +3,8 @@
 //!
 //! Walks a source directory laid out per format-spec §2.1, parses each
 //! item's frontmatter into the model (§3), renders per-client output via
-//! `crate::generate`, and writes the result to the per-client paths
-//! defined in format-spec §7 / ADR-0003.
+//! `crate::generate`, plans the result, and writes the plan to the
+//! per-client paths defined in format-spec §7 / ADR-0003.
 //!
 //! Entry points:
 //! - [`install_with_lockfile`] — consumer-facing; install + record state +
@@ -20,14 +20,14 @@
 //! Audience filter: the top-level `audience` field (per format-spec §3.1)
 //! restricts emission to listed clients; absence means all clients.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::generate::Client;
 use crate::source::InstallSource;
 
+mod apply;
 mod discovery;
 mod git;
 mod hash;
@@ -35,9 +35,8 @@ mod ignore;
 mod install;
 mod lifecycle;
 mod output;
-// The callers arrive with the install plan in the next change of this series.
-#[allow(dead_code)]
 mod owned;
+pub(crate) mod plan;
 mod report;
 
 use discovery::scan_source_items;
@@ -127,85 +126,12 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
-/// Move a file or directory from `from` to `to`, creating `to`'s parent
-/// directory first and replacing any stale destination. A no-op when `from`
-/// does not exist, or when `from` and `to` are the same path.
-///
-/// Replacing the destination matters on `update` / re-add: the fresh install
-/// writes under the item's original name and then relocates to the alias, so
-/// a prior aliased install can still be sitting at `to`. A plain `fs::rename`
-/// of a directory onto a non-empty directory fails ("Directory not empty"),
-/// so the stale destination is removed first.
-fn relocate(from: &Path, to: &Path) -> Result<()> {
-    if !from.exists() || from == to {
-        return Ok(());
-    }
-    if let Some(parent) = to.parent() {
-        fs::create_dir_all(parent).with_context(|| format!("create dir {}", parent.display()))?;
-    }
-    if to.is_dir() {
-        let _ = fs::remove_dir_all(to);
-    } else if to.exists() {
-        let _ = fs::remove_file(to);
-    }
-    fs::rename(from, to).with_context(|| format!("rename {} to {}", from.display(), to.display()))
-}
-
-/// Relocate one already-installed per-client output from its original name to
-/// `alias`, including any supporting resources (format-spec §2.4).
-///
-/// - **Directory-backed** kinds (all skills, opencode rules) keep the
-///   entrypoint and resources together in `resource_base_path`, so the whole
-///   directory is moved. Their links are not namespaced — no rewrite.
-/// - **Flat** kinds (Claude/Copilot rules, all agents) keep the entrypoint
-///   file beside a sibling `<name>/` resource namespace dir. The entrypoint
-///   file and the namespace dir are moved, then the entrypoint's namespaced
-///   links are re-prefixed from `<orig>/` to `<alias>/`.
-///
-/// Returns the new output path (relative to `target`) for the entrypoint.
-fn relocate_aliased_output(
-    target: &Path,
-    item: &report::InstalledItem,
-    alias: &str,
-) -> Result<PathBuf> {
-    let (kind, client, orig) = (item.kind, item.client, item.name.as_str());
-    let new_output = output::output_path(kind, client, alias);
-
-    if output::is_dir_backed(kind, client) {
-        // Entrypoint + resources share one directory; move it wholesale.
-        let old_base = target.join(output::resource_base_path(kind, client, orig));
-        let new_base = target.join(output::resource_base_path(kind, client, alias));
-        relocate(&old_base, &new_base)?;
-        return Ok(new_output);
-    }
-
-    // Flat kind: move the entrypoint file, then its resource namespace dir.
-    relocate(&target.join(&item.output_path), &target.join(&new_output))?;
-    let old_base = target.join(output::resource_base_path(kind, client, orig));
-    if old_base.is_dir() {
-        let new_base = target.join(output::resource_base_path(kind, client, alias));
-        relocate(&old_base, &new_base)?;
-        // Re-prefix the entrypoint's namespaced links to the moved dir.
-        let copied: std::collections::HashSet<PathBuf> = discovery::iter_item_resources(&new_base)
-            .into_iter()
-            .collect();
-        let entry = target.join(&new_output);
-        let body =
-            fs::read_to_string(&entry).with_context(|| format!("read {}", entry.display()))?;
-        let rewritten =
-            crate::generate::link_rewrite::reprefix_resource_links(&body, orig, alias, &copied)
-                .with_context(|| format!("re-prefix resource links for {alias} ({client:?})"))?;
-        if rewritten != body {
-            fs::write(&entry, rewritten).with_context(|| format!("write {}", entry.display()))?;
-        }
-    }
-    Ok(new_output)
-}
-
 /// Install + write lockfile. Consumer-facing entry point.
 ///
-/// Calls [`install_from_source`] then merges the resulting [`InstallReport`]
-/// into `<target>/.upskill-lock.json` via [`crate::lockfile`]. Existing
+/// Fetches the source, plans every output file, adopts a `schema: 1`
+/// lockfile, writes the plan with one call, then merges the resulting
+/// [`InstallReport`] into `<target>/.upskill-lock.json` via
+/// [`crate::lockfile`], with each item's written files in `files`. Existing
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
 ///
@@ -352,32 +278,57 @@ pub fn install_with_lockfile(
         anyhow::bail!("{}", crate::conflict::format_conflict_error(&conflicts));
     }
 
-    // -- Now proceed with generation (files are written here) --
-    // With a closure, install each source's resolved items from that
+    // -- Plan every output; nothing is written until `apply_plan` --
+    // With a closure, plan each source's resolved items from that
     // source's own fetched root. Without one (bundle file / name
-    // resolution), keep the existing dispatch.
+    // resolution), keep the existing dispatch. Aliases (source name ->
+    // installed name; the key "" applies to every item) apply only to
+    // entry-source items: dependency-pulled (cross-source) items are never
+    // renamed. Without a closure, every item is entry-source. The first
+    // mapping given for a name wins.
+    let mut alias_map: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::new();
+    for (from, to) in &options.aliases {
+        alias_map.entry(from.clone()).or_insert_with(|| to.clone());
+    }
+    let no_aliases = std::collections::BTreeMap::new();
     let mut report = if let Some(closure) = &closure {
         // The cross-source clone guards in `closure.guards` are held alive by
         // the owned `closure` until after every source's items are installed;
         // dropping them early would delete the fetched roots.
         let mut r = InstallReport::default();
-        for si in closure.by_source.values() {
+        for (src_label, si) in &closure.by_source {
+            let aliases = if *src_label == label {
+                &alias_map
+            } else {
+                &no_aliases
+            };
             let part = install_from_local_path_selective(
                 &si.root,
-                target,
                 Some(&si.items),
                 &options.selection,
+                aliases,
             )?;
             r.items.extend(part.items);
+            r.planned.extend(part.planned);
             r.bundles.extend(part.bundles);
             r.selection_skipped.extend(part.selection_skipped);
         }
         r
     } else if items.is_empty() {
-        install_from_local_path_selective(&local_source, target, None, &options.selection)?
+        install_from_local_path_selective(&local_source, None, &options.selection, &alias_map)?
     } else {
-        install_with_name_resolution_from_local(&local_source, target, items, &options.selection)?
+        install_with_name_resolution_from_local(
+            &local_source,
+            items,
+            &options.selection,
+            &alias_map,
+        )?
     };
+
+    // -- Adopt a schema-1 lockfile, then write every planned file --
+    report.adopted = owned::adopt_schema1(target, &mut lock)?;
+    let mut recorded = apply::apply_plan(target, &mut lock, &report.planned)?;
 
     // A bundle-shaped install resolves its items per source above (no bundles
     // in the per-source reports); attach the resolved bundles so plugin/MCP
@@ -405,37 +356,18 @@ pub fn install_with_lockfile(
             .retain(|item| !options.excludes.contains(&item.name));
     }
 
-    // -- Apply aliases --
+    // -- Aliases were applied at plan time; map each alias to its source
+    // name for the lockfile `source_name` and the provenance below --
     let mut aliased_names: std::collections::HashMap<String, String> =
         std::collections::HashMap::new();
-    if !options.aliases.is_empty() {
-        // Relocate output files (and any supporting resources) on disk and
-        // update report items.
-        for item in &mut report.items {
-            // Only entry-source items are aliasable; dependency-pulled
-            // (cross-source) items are never renamed. When there is no
-            // closure (bundle / name-resolution paths), every item is
-            // treated as entry-source, preserving prior behavior.
-            let is_entry_source = closure
-                .as_ref()
-                .and_then(|c| c.item_source.get(&(item.kind, item.name.clone())))
-                .is_none_or(|l| *l == label);
-            let alias = if is_entry_source {
-                options
-                    .aliases
-                    .iter()
-                    .find(|(from, _)| from.is_empty() || *from == item.name)
-            } else {
-                None
-            };
-            if let Some((_, alias_name)) = alias {
-                let new_output = relocate_aliased_output(target, item, alias_name)?;
-                aliased_names
-                    .entry(alias_name.clone())
-                    .or_insert_with(|| item.name.clone());
-                item.output_path = new_output;
-                item.name = alias_name.clone();
+    for planned in &report.planned {
+        if let Some(original) = &planned.source_name {
+            if options.excludes.contains(original) {
+                continue;
             }
+            aliased_names
+                .entry(planned.name.clone())
+                .or_insert_with(|| original.clone());
         }
     }
 
@@ -447,8 +379,8 @@ pub fn install_with_lockfile(
     // Translate `requires` provenance through any applied `--as` aliases so
     // the recorded `required_by` is consistent with the post-alias names that
     // `doctor` matches against (#205). The closure keys dependencies and labels
-    // requirers by ORIGINAL effective name; the rename loop above already moved
-    // the installed items to their alias. `aliased_names` maps `alias ->
+    // requirers by ORIGINAL effective name; the plan already installed the
+    // items under their alias. `aliased_names` maps `alias ->
     // original`; invert it to `original -> alias` and rewrite (a) each
     // dependency key's name and (b) each `"{kind}:{name}"` requirer label.
     let original_to_alias: std::collections::HashMap<&str, &str> = aliased_names
@@ -503,6 +435,9 @@ pub fn install_with_lockfile(
         if let Some(original) = aliased_names.get(&item.name) {
             item.source_name = Some(original.clone());
         }
+        item.files = recorded
+            .remove(&(item.kind, item.name.clone()))
+            .unwrap_or_default();
         lock.upsert(item);
     }
     if resolved_bundles.is_empty() {

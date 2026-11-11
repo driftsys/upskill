@@ -51,6 +51,13 @@ pub struct InstallReport {
     /// (ADR-0012) left no client in common with the item's author `audience:`.
     /// Surfaced to the user by `main.rs`; never an error.
     pub selection_skipped: Vec<String>,
+    /// Every output file of every item, computed before anything is
+    /// written. `install_with_lockfile` writes it with one call.
+    pub(crate) planned: Vec<super::plan::PlannedItem>,
+    /// Paths recorded when this install adopted a `schema: 1` lockfile;
+    /// `None` when no adoption happened. `main.rs` prints the adoption
+    /// notice when it is `Some` and not empty.
+    pub adopted: Option<Vec<String>>,
 }
 
 /// Result of a single plugin install attempt, for reporting to the user.

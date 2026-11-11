@@ -308,14 +308,19 @@ fn update_removes_stale_output_file_from_previous_generation() {
     stage_source(&source);
     fs::create_dir_all(&target).unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
+    // A resource that the previous generation copies and the next one does
+    // not: the install records it as a written file.
+    fs::write(
+        source.join("create-api-endpoint/OLD_FILE.md"),
+        "# stale content",
+    )
+    .unwrap();
     install(&target, &source, &home);
-
-    // Inject a stale file into the generated output directory.
     let stale_path = target.join(".claude/skills/create-api-endpoint/OLD_FILE.md");
-    fs::write(&stale_path, "# stale content").unwrap();
     assert!(stale_path.exists());
 
-    // Mutate the source so update will regenerate.
+    // Drop the resource and mutate the source so update will regenerate.
+    fs::remove_file(source.join("create-api-endpoint/OLD_FILE.md")).unwrap();
     mutate_skill(&source);
 
     common::upskill_cmd(&home)

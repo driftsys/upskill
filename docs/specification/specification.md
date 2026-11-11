@@ -117,8 +117,9 @@ preserving namespace, ref and subfolder. Applying `update` canonicalizes the
 source labels of reinstalled items and bundles, even when their content is
 unchanged. `update --dry-run`, `list` and `doctor` do not rewrite lockfiles or
 generated output. Aliases, recorded selection, bundle membership and unrelated
-item/plugin/MCP records remain intact. This does not introduce schema 2 or infer
-artifact ownership.
+item/plugin/MCP records remain intact. The label canonicalization itself does
+not change the schema; the reinstall adopts a `schema: 1` lockfile as described
+in §4 (State files).
 
 The supported historical authority grammar and reconciliation limits are defined
 in the
@@ -259,7 +260,12 @@ adoption changes these commands
 git ref, with what content hashes. Same schema in both locations. A new lockfile
 is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
-`sha256` fields; no command fills them yet. Two possible locations:
+`sha256` fields. `add` fills `files` with every file it writes for the item; no
+command fills `pending` yet, and `remove` and `update` do not use the record
+yet. The install step of `add`, which `update` also runs, adopts a `schema: 1`
+lockfile: it keeps the old bytes as `.upskill-lock.json.v1`, records each
+existing file at the items' output paths with its current hash, and saves
+`schema: 2`. Two possible locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

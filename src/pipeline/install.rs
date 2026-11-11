@@ -1,9 +1,11 @@
-//! Core install pipeline: walk SSOT layout → parse → render → write.
+//! Core install pipeline: walk SSOT layout → parse → render → plan.
 //!
 //! These functions own the "for each item: parse its frontmatter,
-//! render per-client, write the result, prune stale outputs" loop. The
-//! consumer-facing entry point [`super::install_with_lockfile`]
-//! coordinates this module with the lockfile and ancillary writes.
+//! render per-client, plan the output files" loop. They write nothing;
+//! [`super::apply::apply_plan`] writes the plan and deletes stale
+//! outputs. The consumer-facing entry point
+//! [`super::install_with_lockfile`] coordinates this module with the
+//! lockfile and ancillary writes.
 //!
 //! Plugin orchestration ([`install_plugins_from_bundles`], ADR-0008)
 //! also lives here because it is logically part of "what the install
@@ -19,9 +21,8 @@ use super::discovery::{
     is_bundle_file, iter_item_dirs, iter_item_resources,
 };
 use super::hash::hash_item_dir;
-use super::output::{
-    copy_item_resources, is_dir_backed, output_path, remove_item_outputs, write_output,
-};
+use super::output::{is_dir_backed, output_path, resource_base_path};
+use super::plan::{PlannedFile, PlannedItem};
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
@@ -38,37 +39,55 @@ use crate::source::{InstallSource, parse_install_source};
 /// and installs only the resolved items. The reached bundles are
 /// surfaced via [`InstallReport::bundles`] so the lockfile slice can
 /// record them.
+///
+/// Plans every output, then writes the plan with no previous ownership
+/// record (a new empty [`crate::lockfile::Lockfile`]); the computed record
+/// is discarded.
 pub fn install_from_local_path(
     source: &Path,
     target: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
 ) -> Result<InstallReport> {
-    install_from_local_path_selective(source, target, filter, &ClientSelection::all())
+    let report = install_from_local_path_selective(
+        source,
+        filter,
+        &ClientSelection::all(),
+        &BTreeMap::new(),
+    )?;
+    super::apply::apply_plan(
+        target,
+        &mut crate::lockfile::Lockfile::new(),
+        &report.planned,
+    )?;
+    Ok(report)
 }
 
-/// [`install_from_local_path`] with an explicit consumer-side client
-/// selection (ADR-0012). The public entry defaults to all clients; the
-/// lockfile `add` path threads the resolved selection here.
+/// Plans [`install_from_local_path`] with an explicit consumer-side client
+/// selection (ADR-0012) and `--as` aliases (source name to installed name;
+/// the key `""` applies to every item). Writes nothing: the outputs are in
+/// [`InstallReport::planned`].
 pub(super) fn install_from_local_path_selective(
     source: &Path,
-    target: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
+    aliases: &BTreeMap<String, String>,
 ) -> Result<InstallReport> {
     if is_bundle_file(source) {
-        return install_bundle_file(source, target, selection);
+        return install_bundle_file(source, selection, aliases);
     }
     let mut report = InstallReport::default();
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        install_items_of_kind(kind, source, target, &mut report, filter, selection)?;
+        install_items_of_kind(kind, source, &mut report, filter, selection, aliases)?;
     }
     Ok(report)
 }
 
+/// Plans the items of the bundle at `bundle_path` and its resolved
+/// dependencies. Writes nothing.
 pub(super) fn install_bundle_file(
     bundle_path: &Path,
-    target: &Path,
     selection: &ClientSelection,
+    aliases: &BTreeMap<String, String>,
 ) -> Result<InstallReport> {
     let registry_root = find_registry_root(bundle_path).with_context(|| {
         format!(
@@ -102,10 +121,10 @@ pub(super) fn install_bundle_file(
         install_items_of_kind(
             kind,
             &registry_root,
-            target,
             &mut report,
             Some(&resolved.items),
             selection,
+            aliases,
         )?;
     }
     Ok(report)
@@ -114,11 +133,12 @@ pub(super) fn install_bundle_file(
 /// Like [`super::install_with_lockfile`]'s name-resolution branch but
 /// operates on an already-fetched local source path (avoids double-fetch
 /// when `install_with_lockfile` has already called `fetch_ssot`).
+/// Writes nothing: the outputs are in [`InstallReport::planned`].
 pub(super) fn install_with_name_resolution_from_local(
     local_source: &Path,
-    target: &Path,
     names: &[String],
     selection: &ClientSelection,
+    aliases: &BTreeMap<String, String>,
 ) -> Result<InstallReport> {
     let mut bundle_paths: Vec<std::path::PathBuf> = Vec::new();
     let mut item_names: Vec<String> = Vec::new();
@@ -158,8 +178,9 @@ pub(super) fn install_with_name_resolution_from_local(
     let mut report = InstallReport::default();
 
     for bp in &bundle_paths {
-        let bundle_report = install_bundle_file(bp, target, selection)?;
+        let bundle_report = install_bundle_file(bp, selection, aliases)?;
         report.items.extend(bundle_report.items);
+        report.planned.extend(bundle_report.planned);
         report.bundles.extend(bundle_report.bundles);
         report
             .selection_skipped
@@ -173,8 +194,9 @@ pub(super) fn install_with_name_resolution_from_local(
             agents: item_names.clone(),
         };
         let item_report =
-            install_from_local_path_selective(local_source, target, Some(&filter), selection)?;
+            install_from_local_path_selective(local_source, Some(&filter), selection, aliases)?;
         report.items.extend(item_report.items);
+        report.planned.extend(item_report.planned);
         report
             .selection_skipped
             .extend(item_report.selection_skipped);
@@ -1080,13 +1102,18 @@ struct ParsedItem {
     renders: Vec<(Client, String)>,
 }
 
+/// Plans every item of `kind` under `source`: pushes one [`PlannedItem`]
+/// to `report.planned` and one [`InstalledItem`] per client to
+/// `report.items`. Writes nothing. `aliases` maps a source name to its
+/// installed name (the key `""` applies to every item); the installed name
+/// drives the output paths and the resource link rewrite.
 fn install_items_of_kind(
     kind: ItemKind,
     source: &Path,
-    target: &Path,
     report: &mut InstallReport,
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
+    aliases: &BTreeMap<String, String>,
 ) -> Result<()> {
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
@@ -1195,28 +1222,51 @@ fn install_items_of_kind(
         let copied: std::collections::HashSet<std::path::PathBuf> =
             resources.iter().cloned().collect();
 
-        // Clean existing output directories for this specific item before
-        // writing new outputs. This removes stale sibling files while keeping
-        // other items' outputs intact if generation fails later.
-        remove_item_outputs(target, kind, &name);
+        let alias = aliases.get(&name).or_else(|| aliases.get(""));
+        let installed = alias.cloned().unwrap_or_else(|| name.clone());
+        let source_name = alias.map(|_| name.clone());
 
+        // Read each resource once; every client gets a copy.
+        let mut resource_bytes = Vec::with_capacity(resources.len());
+        for rel in &resources {
+            let from = dir.join(rel);
+            let bytes = fs::read(&from).with_context(|| format!("read {}", from.display()))?;
+            resource_bytes.push((rel, bytes, source_mode(&from)?));
+        }
+
+        let mut files = Vec::new();
         for (client, rendered) in &renders {
             // Flat-kind entrypoints (Claude/Copilot rules, all agents) live
             // beside a `<name>/` resource directory; rewrite their relative
             // resource links to point into it. Directory-backed kinds need
             // no rewrite (entrypoint and resources share the directory).
             let body = if !copied.is_empty() && !is_dir_backed(kind, *client) {
-                crate::generate::link_rewrite::rewrite_resource_links(rendered, &name, &copied)
-                    .with_context(|| format!("rewrite resource links for {name} ({client:?})"))?
+                crate::generate::link_rewrite::rewrite_resource_links(rendered, &installed, &copied)
+                    .with_context(|| {
+                        format!("rewrite resource links for {installed} ({client:?})")
+                    })?
             } else {
                 rendered.clone()
             };
-            let rel = output_path(kind, *client, &name);
-            write_output(target, &rel, &body)?;
-            copy_item_resources(target, &dir, kind, *client, &name, &resources)?;
+            let rel = output_path(kind, *client, &installed);
+            files.push(PlannedFile {
+                client: *client,
+                rel: rel.clone(),
+                bytes: body.into_bytes(),
+                mode: None,
+            });
+            let base = resource_base_path(kind, *client, &installed);
+            for (res_rel, bytes, mode) in &resource_bytes {
+                files.push(PlannedFile {
+                    client: *client,
+                    rel: base.join(res_rel),
+                    bytes: bytes.clone(),
+                    mode: *mode,
+                });
+            }
             report.items.push(InstalledItem {
                 kind,
-                name: name.clone(),
+                name: installed.clone(),
                 client: *client,
                 output_path: rel,
                 source_hash: source_hash.clone(),
@@ -1224,29 +1274,39 @@ fn install_items_of_kind(
             });
         }
 
-        // Clean up outputs for clients no longer targeted — by author
-        // audience or by the consumer selection (ADR-0012).
-        for client in ALL_CLIENTS {
-            if targets(client, audience.as_deref()) && selection.targets_generation(client) {
-                continue;
-            }
-            let rel = output_path(kind, client, &name);
-            let full = target.join(&rel);
-            if full.exists() {
-                let _ = fs::remove_file(&full);
-            }
-            if let Some(parent) = full.parent().filter(|parent| {
-                parent
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .is_some_and(|f| f == name)
-                    && parent.is_dir()
-            }) {
-                let _ = fs::remove_dir(parent);
-            }
-        }
+        // Outputs for clients no longer targeted — by author audience or by
+        // the consumer selection (ADR-0012) — are deleted at apply time.
+        let deselected_entries = ALL_CLIENTS
+            .into_iter()
+            .filter(|client| {
+                !(targets(*client, audience.as_deref()) && selection.targets_generation(*client))
+            })
+            .map(|client| output_path(kind, client, &installed))
+            .collect();
+
+        report.planned.push(PlannedItem {
+            kind,
+            name: installed,
+            source_name,
+            files,
+            deselected_entries,
+        });
     }
     Ok(())
+}
+
+/// Unix permission bits of the source file at `path`; `None` on other
+/// platforms.
+#[cfg(unix)]
+fn source_mode(path: &Path) -> Result<Option<u32>> {
+    use std::os::unix::fs::PermissionsExt;
+    let meta = fs::metadata(path).with_context(|| format!("inspecting {}", path.display()))?;
+    Ok(Some(meta.permissions().mode() & 0o7777))
+}
+
+#[cfg(not(unix))]
+fn source_mode(_path: &Path) -> Result<Option<u32>> {
+    Ok(None)
 }
 
 fn targets(client: Client, audience: Option<&[Audience]>) -> bool {

@@ -7,10 +7,12 @@
 //! Scope:
 //! - Types + load/save/upsert for items and (placeholder) bundles. A new
 //!   lockfile is written as `schema: 2`. A `schema: 1` lockfile is loaded
-//!   as-is and saved back as `schema: 1`; [`Lockfile::needs_adoption`]
-//!   reports it. Nothing converts it yet.
+//!   as-is and `save` writes the schema it holds;
+//!   [`Lockfile::needs_adoption`] reports it. The install step of `add`
+//!   (also reached by `update`) converts it to `schema: 2` by adoption.
 //! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
-//!   records. No command fills them yet.
+//!   records. The install step of `add` fills `files` with every file it
+//!   writes; no command fills `pending` yet.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
 //!   is written after a successful install.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
@@ -29,8 +31,8 @@ pub const LOCKFILE_NAME: &str = ".upskill-lock.json";
 /// `schema: 1`.
 pub const CURRENT_SCHEMA: u32 = 2;
 
-/// File kept beside the lockfile by the adoption step. The adoption step is
-/// not implemented yet.
+/// File kept beside the lockfile by the adoption step: a copy of the
+/// `schema: 1` lockfile bytes before adoption.
 pub const SCHEMA1_BACKUP_NAME: &str = ".upskill-lock.json.v1";
 
 /// One file written for an item, recorded in the item's `files` or
@@ -612,6 +614,8 @@ mod tests {
             plugin_results: Vec::new(),
             mcp_results: Vec::new(),
             selection_skipped: Vec::new(),
+            planned: Vec::new(),
+            adopted: None,
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,

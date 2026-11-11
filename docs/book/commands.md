@@ -146,8 +146,8 @@ namespace: `gitlab+gitlab.example.com:8443:org/team/repo`. Malformed or
 ambiguous authorities receive reconciliation guidance before fetch. See the
 [historical grammar and limits](https://github.com/driftsys/upskill/blob/main/docs/adr/0011-generic-git-url-source.md#amendment-persisted-gitlab-source-labels-2026-10-12)
 before correcting a label; verify the intended HTTPS remote, ref and subfolder.
-This compatibility step retains schema 1 and does not establish output
-ownership.
+This label compatibility step does not itself change the schema; the reinstall
+adopts a `schema: 1` lockfile as described in [State files](#state-files).
 
 ### `upskill remove [name...] [--source <label>]`
 
@@ -396,9 +396,21 @@ Files whose frontmatter and body are already canonical are left untouched (no
 | Global  | `$HOME/.upskill-lock.json` | No         | Cross-repo continuity for global installs. |
 
 The lockfile carries a top-level `schema` field for forward compatibility. A new
-lockfile is written with `schema: 2`. A `schema: 1` lockfile is still read and
-is saved back with `schema: 1`. Each item entry may carry `files` and `pending`
-lists; no command fills them yet.
+lockfile is written with `schema: 2`. Each item entry may carry `files` and
+`pending` lists. `add` records in `files` every file it writes for the item,
+with its client, its path and the SHA-256 of its bytes; no command fills
+`pending` yet. `remove` and `update` do not use the record yet.
+
+A `schema: 1` lockfile is still read. The first `add` on it adopts it: it keeps
+a copy of the old lockfile as `.upskill-lock.json.v1`, records each file that
+exists at the output paths of every installed item with its current hash, saves
+the lockfile as `schema: 2`, and prints the adopted paths to stderr. Adoption
+cannot tell an edited file from one an earlier version wrote. It records two
+kinds of files as unchanged: generated files that were edited before the
+upgrade, and files that were added inside an item directory. A later `update`
+may replace them and `remove` may delete them. `update` reinstalls through the
+same install step, so `update --yes` on a `schema: 1` lockfile also adopts it,
+but does not print the adopted paths yet.
 
 ## Per-client output paths
 

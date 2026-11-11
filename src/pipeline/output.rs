@@ -1,11 +1,11 @@
-//! Per-client output path computation and file I/O.
+//! Per-client output path computation, and the best-effort deletion of an
+//! item's outputs that `remove` and `update` use.
 //!
-//! The install pipeline writes (and `remove` deletes) per-client output
+//! The install pipeline plans (and `remove` deletes) per-client output
 //! files at the paths defined in format-spec §7 / ADR-0003. The frozen
 //! legacy layout keeps install, remove and legacy candidates in lockstep;
 //! pipeline callers go through [`output_path`].
 
-use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -28,44 +28,6 @@ pub(super) fn is_dir_backed(kind: ItemKind, client: Client) -> bool {
 /// Historical resource namespace, relative to the installation root.
 pub(super) fn resource_base_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
     crate::legacy::layout::resource_base_path(kind, client.into(), name)
-}
-
-/// Copy each resource (a path relative to the SSOT item directory
-/// `source_dir`) into the client's [`resource_base_path`], preserving
-/// sub-structure. `fs::copy` preserves the file mode on Unix, so an
-/// executable script stays executable.
-pub(super) fn copy_item_resources(
-    target: &Path,
-    source_dir: &Path,
-    kind: ItemKind,
-    client: Client,
-    name: &str,
-    resources: &[PathBuf],
-) -> Result<()> {
-    if resources.is_empty() {
-        return Ok(());
-    }
-    let base = resource_base_path(kind, client, name);
-    for rel in resources {
-        let from = source_dir.join(rel);
-        let to = target.join(&base).join(rel);
-        if let Some(parent) = to.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("create dir {}", parent.display()))?;
-        }
-        fs::copy(&from, &to)
-            .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
-    }
-    Ok(())
-}
-
-pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<()> {
-    let full = target.join(rel);
-    if let Some(parent) = full.parent() {
-        fs::create_dir_all(parent).with_context(|| format!("create dir {}", parent.display()))?;
-    }
-    fs::write(&full, content).with_context(|| format!("write {}", full.display()))?;
-    Ok(())
 }
 
 /// Delete all per-client output files for an item (best-effort).
@@ -227,28 +189,6 @@ mod tests {
             resource_base_path(ItemKind::Agent, Client::OpenCode, "x"),
             PathBuf::from(".opencode/agents/x")
         );
-    }
-
-    #[test]
-    fn copy_item_resources_preserves_tree() {
-        let src = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(src.path().join("scripts")).unwrap();
-        std::fs::write(src.path().join("scripts/gate.sh"), b"#!/bin/sh\n").unwrap();
-        let target = tempfile::tempdir().unwrap();
-
-        copy_item_resources(
-            target.path(),
-            src.path(),
-            ItemKind::Rule,
-            Client::Claude,
-            "demo",
-            &[PathBuf::from("scripts/gate.sh")],
-        )
-        .unwrap();
-
-        let dest = target.path().join(".claude/rules/demo/scripts/gate.sh");
-        assert!(dest.is_file());
-        assert_eq!(std::fs::read(&dest).unwrap(), b"#!/bin/sh\n");
     }
 
     #[test]

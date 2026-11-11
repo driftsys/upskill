@@ -26,6 +26,8 @@ pub(super) fn sha256_hex(bytes: &[u8]) -> String {
 /// State of one path at an item's output location, relative to the
 /// lockfile. Only a regular file can be `Owned`; a directory, a symbolic
 /// link of any kind, or another file type is never read.
+// The caller arrives with the `remove`/`update` change of this series.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum FileState {
     /// The path does not exist.
@@ -49,6 +51,8 @@ pub(super) enum FileState {
 /// that is not a regular file is `Modified` when `recorded` is not empty.
 /// A regular file is `Owned` when its hash is in `recorded`, and
 /// `Modified` otherwise.
+// The caller arrives with the `remove`/`update` change of this series.
+#[allow(dead_code)]
 pub(super) fn classify(target: &Path, rel: &str, recorded: &[&str]) -> Result<FileState> {
     let path = target.join(rel);
     let meta = match fs::symlink_metadata(&path) {
@@ -90,9 +94,10 @@ pub(super) fn rel_to_record(rel: &Path) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-/// One-time step for a schema-1 lockfile. Copies the lockfile bytes to
-/// `SCHEMA1_BACKUP_NAME`, records for every item each existing file at the
-/// item's layout paths with its current hash, sets `schema` to 2 and saves.
+/// One-time step for a schema-1 lockfile. Records for every item each
+/// existing file at the item's layout paths with its current hash, then
+/// copies the lockfile bytes to `SCHEMA1_BACKUP_NAME`, sets `schema` to 2
+/// and saves.
 /// Returns `None` and does nothing when `lock.needs_adoption()` is false.
 /// Otherwise returns the recorded paths, sorted, for the adoption notice.
 ///
@@ -104,6 +109,13 @@ pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option
         return Ok(None);
     }
 
+    let mut all_files = Vec::with_capacity(lock.items.len());
+    for item in &lock.items {
+        all_files.push(existing_item_files(target, item)?);
+    }
+
+    // The backup is written only after every item was scanned, so a failed
+    // scan leaves the disk unchanged.
     let lock_path = target.join(LOCKFILE_NAME);
     let backup_path = target.join(SCHEMA1_BACKUP_NAME);
     if lock_path.exists() && !backup_path.exists() {
@@ -118,11 +130,6 @@ pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option
                 backup_path.display()
             )
         })?;
-    }
-
-    let mut all_files = Vec::with_capacity(lock.items.len());
-    for item in &lock.items {
-        all_files.push(existing_item_files(target, item)?);
     }
 
     let mut paths = Vec::new();
@@ -504,6 +511,7 @@ mod tests {
         assert!(adopt_schema1(tmp.path(), &mut lock).is_err());
         fs::set_permissions(&blocked, fs::Permissions::from_mode(0o644)).unwrap();
         assert_eq!(lock, before);
+        assert!(!tmp.path().join(SCHEMA1_BACKUP_NAME).exists());
     }
 
     #[cfg(unix)]
