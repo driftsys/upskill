@@ -1,0 +1,78 @@
+# Copilot 1.0.107 mutation output, throwaway HOME, copy of the 2026-11-11 export.
+# Each command: --no-auto-update, closed stdin, 20 s limit, LANG=C. <T> is the throwaway root.
+## output 1
+Marketplace "upskill-contract-probe-7b1e4a48bd2a2045" added successfully.
+## output 2
+Plugin "upskill-contract-probe-7b1e4a48bd2a2045" installed successfully. Installed 1 skill.
+Enabled "upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045". It is loaded live from <T>/mp/revisions/ab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d, so edits take effect on the next session — nothing was copied.
+## output 3
+[
+  {
+    "name": "upskill-contract-probe-7b1e4a48bd2a2045",
+    "marketplace": "upskill-contract-probe-7b1e4a48bd2a2045",
+    "version": "0.0.0-rab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d",
+    "enabled": true,
+    "source": "live",
+    "installedFrom": "<T>/mp"
+  },
+  {
+    "name": "computer-use",
+    "marketplace": "",
+    "version": "0.1.97",
+    "enabled": false,
+    "source": "builtin"
+  },
+  {
+    "name": "browser-use",
+    "marketplace": "",
+    "version": "0.1.0",
+    "enabled": false,
+    "source": "builtin"
+  }
+]
+## output 4
+Plugin "upskill-contract-probe-7b1e4a48bd2a2045@upskill-contract-probe-7b1e4a48bd2a2045" disabled. It is still on disk at <T>/mp — nothing was removed.
+## output 5
+[
+  {
+    "name": "upskill-contract-probe-7b1e4a48bd2a2045",
+    "marketplace": "upskill-contract-probe-7b1e4a48bd2a2045",
+    "version": "0.0.0-rab1676c5328625e2e9d0470f75d5c1ef6ba76585f96c2e08254f8f9d7a00037d",
+    "enabled": false,
+    "source": "live",
+    "installedFrom": "<T>/mp"
+  },
+  {
+    "name": "computer-use",
+    "marketplace": "",
+    "version": "0.1.97",
+    "enabled": false,
+    "source": "builtin"
+  },
+  {
+    "name": "browser-use",
+    "marketplace": "",
+    "version": "0.1.0",
+    "enabled": false,
+    "source": "builtin"
+  }
+]
+## output 6
+Marketplace "upskill-contract-probe-7b1e4a48bd2a2045" removed successfully.
+## output 7
+[
+  {
+    "name": "computer-use",
+    "marketplace": "",
+    "version": "0.1.97",
+    "enabled": false,
+    "source": "builtin"
+  },
+  {
+    "name": "browser-use",
+    "marketplace": "",
+    "version": "0.1.0",
+    "enabled": false,
+    "source": "builtin"
+  }
+]
