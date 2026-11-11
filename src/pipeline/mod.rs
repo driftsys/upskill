@@ -362,9 +362,10 @@ pub fn install_with_lockfile(
             };
             install::check_sources_outside_outputs(&si.root, target, Some(&si.items), aliases)?;
         }
-    } else if items.is_empty() {
-        install::check_sources_outside_outputs(&local_source, target, None, &options.aliases)?;
     } else {
+        // Without a closure, `items` is not empty: a bundle-file source always
+        // gets a closure, and only a request with names defers to name
+        // resolution.
         install::check_name_resolution_outside_outputs(
             &local_source,
             target,
