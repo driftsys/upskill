@@ -35,6 +35,9 @@ mod ignore;
 mod install;
 mod lifecycle;
 mod output;
+// The callers arrive with the install plan in the next change of this series.
+#[allow(dead_code)]
+mod owned;
 mod report;
 
 use discovery::scan_source_items;
