@@ -83,5 +83,7 @@ Statements of the model only:
 On 2026-11-11 the maintainer decided that upskill keeps both copies of a rule:
 the `.claude/rules` file and the `.github/instructions` file. With both copies,
 one client can be removed without an effect on the other client. The known limit
-is that Copilot lists and applies such a rule twice when both clients are
-selected. The decision is recorded in AD-0042, which pull request #466 adds.
+is that Copilot lists such a rule twice when both clients are selected; this was
+observed with `copilot instruction list`. That Copilot also applies the rule
+twice rests only on the model's own statement about its context. The decision is
+recorded in AD-0042, which pull request #466 adds.

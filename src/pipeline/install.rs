@@ -67,10 +67,11 @@ pub(super) fn install_from_local_path_selective(
 }
 
 /// Run [`check_source_outside_outputs`] for every item under `source` that
-/// `filter` selects (all items when `filter` is `None`). An item that
-/// `aliases` (`--as` pairs, `from` empty for every item) renames is also
-/// checked under its installed name. Called before the first deletion or
-/// write of an install.
+/// `filter` selects (all items when `filter` is `None`). The item `audience`
+/// is not applied, so an item that the install skips for the selected
+/// clients is still checked. An item that `aliases` (`--as` pairs, `from`
+/// empty for every item) renames is also checked under its installed name.
+/// Called before the first deletion or write of an install for one source.
 pub(super) fn check_sources_outside_outputs(
     source: &Path,
     target: &Path,

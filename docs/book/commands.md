@@ -134,11 +134,17 @@ to match. See [format-spec §2.4](format-spec.md).
 `add` refuses a source item that it installs when the item's directory is the
 same as, is inside, or contains one of that item's output paths for any client
 in the target scope (for example `upskill add ./.claude/skills`). With `--as`,
-the output paths of the installed (alias) name are checked as well. Items of the
-source that this run does not install are not checked. The command fails before
-any file is changed and names the item, the source directory and the output
-path. `upskill update` is refused in the same way, including for recorded
-aliases.
+the output paths of the installed (alias) name are checked as well. The check
+covers the items that the run selects from the source, the positional names, the
+bundles and their `requires` dependencies; other items of the source are not
+checked. The `audience` field is not applied to the check: an item whose
+`audience` shares no client with the selected clients is still checked and can
+cause a refusal, although nothing would be installed for the item. The refusal
+names the item, the source directory and the output path. `add` fails before any
+file is changed. `upskill update` is refused in the same way, including for
+recorded aliases, but it checks each source just before it updates that source:
+the refusal comes before any change for that source, and an `update` over
+several sources may have updated earlier sources before it stops.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

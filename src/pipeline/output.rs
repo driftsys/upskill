@@ -71,10 +71,13 @@ pub(super) fn write_output(target: &Path, rel: &Path, content: &str) -> Result<(
 /// Refuse an install when the source item directory `source_dir` is the
 /// same directory as, is inside, or contains a path that
 /// [`remove_item_outputs`] deletes or the install writes for `(kind, name)`
-/// under `target`. Without this check, a client output directory such as
-/// `.claude/skills` used as a source would be deleted before its files are
-/// copied. Paths are compared in canonical form; every client is checked
-/// because [`remove_item_outputs`] touches every client.
+/// under `target`. These are the per-item paths (the entrypoint and the
+/// resource base), not a whole client output directory. Without this check,
+/// an item directory such as `.claude/skills/<name>` inside a source such as
+/// `.claude/skills` would be deleted before its files are copied. A path that
+/// exists is compared in canonical form; a path that does not exist is
+/// compared as given. Every client is checked because [`remove_item_outputs`]
+/// touches every client.
 pub(super) fn check_source_outside_outputs(
     target: &Path,
     kind: ItemKind,
