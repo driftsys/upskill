@@ -449,27 +449,28 @@ projector named below (`legacy::project_legacy`) was removed by
 [AD-0042](../adr/0042-resteer-customization-delivery.md).
 
 [`legacy::layout`](https://github.com/driftsys/upskill/blob/main/src/legacy/layout.rs)
-fixes the historical client set to Claude, Copilot and OpenCode. An empty
-recorded list expands to those three in that order. Explicit known clients
-retain first-occurrence order and produce one candidate each; unknown spellings
-produce diagnostics and remain in the cloned record. An unknown-only list
-produces no candidates.
+defines the historical client set: Claude, Copilot and OpenCode. The removed
+projector expanded an empty recorded list to those three in that order. Explicit
+known clients retained first-occurrence order and produced one candidate each;
+unknown spellings produced diagnostics and remained in the cloned record. An
+unknown-only list produced no candidates.
 
 The nine kind/client path mappings use the installed alias. Current
 [`pipeline::output`](https://github.com/driftsys/upskill/blob/main/src/pipeline/output.rs)
 wrappers delegate to the same native `PathBuf` helpers through explicit
 current-client conversion. Those helpers retain raw-name behavior for existing
-pipeline callers. Only the projector validates names before converting paths to
-forward-slash strings: empty names, dot, dot-dot, slash, backslash, colon and
-control characters suppress candidates; spaces and Unicode remain representable.
+pipeline callers. Only the removed projector validated names before converting
+paths to forward-slash strings: empty names, dot, dot-dot, slash, backslash,
+colon and control characters suppressed candidates; spaces and Unicode remained
+representable.
 
-Each candidate carries a client, relative entrypoint and relative resource
-search base. Skills and OpenCode rules are directory-backed; flat entrypoints
-use a sibling name directory for resources. These paths are relative to a later
-caller's established legacy scope root. They do not establish existence,
-containment or ownership, enumerate resources or permit recursive adoption.
-Malformed sources do not erase otherwise known layout facts. Bundles and
-ancillary files have no candidates.
+Each projected candidate carried a client, relative entrypoint and relative
+resource search base. Skills and OpenCode rules are directory-backed; flat
+entrypoints use a sibling name directory for resources. These paths are relative
+to a later caller's established legacy scope root. They do not establish
+existence, containment or ownership, enumerate resources or permit recursive
+adoption. Malformed sources do not erase otherwise known layout facts. Bundles
+and ancillary files have no candidates.
 
 <a id="architecture-generation-pipeline-diagnostics-and-later-consumers"></a>
 

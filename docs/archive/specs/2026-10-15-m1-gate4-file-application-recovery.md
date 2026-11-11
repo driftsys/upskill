@@ -11,9 +11,9 @@ Date: **2026-10-15**. Status: **scope approved; implementation plan for
 review**.
 
 This scope implements the executor and recovery contract in the
-[M1 lifecycle design](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md).
-Gate 5 consumes its reviewed interfaces. PR #280 supplies pure recovery
-decisions, not file effects or durable checkpoint receipts.
+[M1 lifecycle design](2026-10-12-m1-owned-lifecycle-design.md). Gate 5 consumes
+its reviewed interfaces. PR #280 supplies pure recovery decisions, not file
+effects or durable checkpoint receipts.
 
 ## Goal and boundary
 

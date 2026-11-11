@@ -17,8 +17,7 @@ APIs; Rust 1.85; no new dependencies.
 
 **Spec:**
 [Owned instruction operation planning](../specs/2026-10-12-owned-instruction-planning-design.md).
-The
-[operational direction](../../wip/specs/2026-10-12-m1-owned-lifecycle-design.md)
+The [operational direction](../specs/2026-10-12-m1-owned-lifecycle-design.md)
 remains active future work.
 
 ## Global Constraints

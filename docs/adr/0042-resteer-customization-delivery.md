@@ -3,8 +3,9 @@
 Status: **accepted**. Date: 2026-11-11.
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283). The
 [re-steer design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-11-customization-resteer-design.md)
-holds the full design and delivery order. This record describes the decision;
-the behaviour it selects is not implemented yet.
+holds the full design and delivery order. The change that adds this record is
+delivery step 0: it removes the unused code (Decision 5). The other decisions
+are not implemented yet.
 
 ## Context
 
@@ -50,15 +51,30 @@ and installed through a command.
 5. **Unused code is parked.** The library modules that no command could reach
    (`lifecycle`, `filesystem`, `operations`, `files`, `compile`, `instructions`,
    `source_manifest`, `ownership`), their tests, the legacy projection and the
-   `rustix` dependency were removed from `main`. They are kept on the branch
+   direct `rustix` dependency were removed from `main`. `rustix` stays in
+   `Cargo.lock` as a dependency of `tempfile`. They are kept on the branch
    `archive/lifecycle-2026-11`, which receives no further work.
 
-This record replaces the activation and release-gate clauses of
-[AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md),
-which block all-client release qualification and schema-2 activation until every
-applicable native requirement passes. It also replaces the exclusion of a
-reduced four-client release scope in
-[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md).
+This record replaces the following clauses of
+[AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):
+
+- the activation and release-gate clauses, which block all-client release
+  qualification, schema-2 activation and owned implementation until every
+  applicable native requirement passes in all four clients (Decision 3);
+- the clause that reuses source capture, per-owner contracts, complete
+  preflight, qualified locking, exact backup and recovery foundations (Decisions
+  2 and 5);
+- the selected Codex policy, "supported with declared limitation" (Decision 4).
+
+It also replaces the following clauses of
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md):
+
+- the exclusion of a reduced four-client release scope, and the requirement of
+  Q10/Q11 and CD-01 through CD-11 evidence before owned implementation
+  (Decisions 3 and 4);
+- the clause that reuses capture, owner/reference contracts, complete preflight,
+  qualified locking, backups and recovery (Decisions 2 and 5).
+
 The separation of delivery from discovery and activation (AD-0040) and separate
 client representations as the design baseline (AD-0041) stay accepted. AD-0041
 is revisited only if trial T1 shows that Copilot lists or applies an item

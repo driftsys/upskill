@@ -18,7 +18,7 @@ later state integration will use; they perform no filesystem operations.
 dependency.
 
 **Spec:**
-[Foundation design §3 and §5](../specs/2026-10-11-agent-customization-foundation-design.md),
+[Foundation design §3 and §5](../../wip/specs/2026-10-11-agent-customization-foundation-design.md),
 [M1 plan](2026-10-11-instructions-rules-m1.md).
 
 ## Global constraints

@@ -11,8 +11,8 @@ user's later amendment; canonical-file experiments retain their bounded meaning
 
 Date: 2026-10-12. Status: **Proposed implementation contract**. Baseline:
 `f7d36bf` (PR #258). Authority:
-[foundation](2026-10-11-agent-customization-foundation-design.md) and
-[M1 delivery plan](../plans/2026-10-11-instructions-rules-m1.md).
+[foundation](../../wip/specs/2026-10-11-agent-customization-foundation-design.md)
+and [M1 delivery plan](../plans/2026-10-11-instructions-rules-m1.md).
 
 ## Intent and current boundary
 

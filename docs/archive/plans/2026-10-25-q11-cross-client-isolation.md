@@ -24,7 +24,7 @@ retain sanitized receipts and a technote. No production routing changes.
 Claude and Copilot CLIs on macOS arm64.
 
 **Spec:**
-[Implementation handoff](../specs/2026-10-23-customization-delivery-implementation-spec.md),
+[Implementation handoff](../../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
 Q11, and [issue #410](https://github.com/driftsys/upskill/issues/410).
 
 ## Global constraints

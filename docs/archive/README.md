@@ -955,8 +955,8 @@ Source paths: `docs/wip/plans/2026-10-11-instructions-rules-m1.md`,
 `docs/wip/specs/2026-10-18-gate6-activation-design.md`,
 `docs/wip/specs/2026-10-25-q11-registration-isolation-follow-up.md`,
 `docs/wip/specs/2026-10-27-q11b-project-profile.md` and
-`docs/wip/specs/2026-10-30-q11b-native-name-profile.md`. They were moved without
-changes.
+`docs/wip/specs/2026-10-30-q11b-native-name-profile.md`. They were moved with
+only their relative links updated for this location.
 
 - [Instructions and rules M1 plan](plans/2026-10-11-instructions-rules-m1.md)
 - [Owned artifact records plan](plans/2026-10-12-owned-artifact-records.md)
@@ -971,9 +971,11 @@ changes.
 
 These documents belong to the gated lifecycle approach that
 [AD-0042](../adr/0042-resteer-customization-delivery.md) withdrew on 2026-11-11.
-The code they planned was removed from `main` and is kept on the branch
-`archive/lifecycle-2026-11`. The trial results they produced stay in
-`docs/technotes/` as research.
+The library code that the lifecycle and owned-artifact documents planned was
+removed from `main` and is kept on the branch `archive/lifecycle-2026-11`. The
+Q11, Q11b and Gate 6 documents planned native trials; their scripts and tests
+stay on `main`. The trial results they produced stay in `docs/technotes/` as
+research.
 
 ## Customization storage and delivery candidates
 
@@ -989,7 +991,7 @@ superseded by the
 
 Source path: `docs/wip/specs/2026-10-14-customization-adapter-roadmap.md`. The
 [adapter roadmap](specs/2026-10-14-customization-adapter-roadmap.md) was moved
-without changes. It is superseded by the
+with only its relative links updated for this location. It is superseded by the
 [re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11, which replaces its four-client MVP sequencing and its proposed
-qualification gates. Its relative links are not updated for this location.
+qualification gates.

@@ -7,7 +7,7 @@
 
 AD-0015
 
-**Status**: Accepted (2026-10-12)
+**Status**: Withdrawn (2026-11-11). Accepted on 2026-10-12.
 
 ## Context
 

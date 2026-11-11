@@ -7,7 +7,9 @@ summarizes the decision and its boundaries. This record has no production
 effects.
 
 [AD-0042](0042-resteer-customization-delivery.md) replaces the exclusion of a
-reduced four-client release scope in this record; the design baseline stays
+reduced four-client release scope in this record, the requirement of Q10/Q11 and
+CD-01 through CD-11 evidence before owned implementation, and the clause that
+reuses capture, locking, backups and recovery; the design baseline stays
 accepted.
 
 ## Context

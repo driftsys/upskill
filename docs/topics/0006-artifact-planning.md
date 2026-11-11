@@ -5,7 +5,7 @@
 > record describes was removed from `main` and is kept on the branch
 > `archive/lifecycle-2026-11`. This record is retained as history.
 
-Architecture reconciliation (2026-10-25): the
+Architecture reconciliation (2026-10-25, before the withdrawal): the
 [delivery, discovery and activation contract](0009-customization-delivery.md)
 controls intended production routes and reader intent. Existing Codex
 `AGENTS.md` contribution APIs described here are experimental library
@@ -17,10 +17,10 @@ limitation. Reusable ownership, preflight and recovery mechanisms do not select
 or qualify a runtime route, and schema-2 production activation remains blocked
 ([AD-0040 amendment](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)).
 
-This concern owns the requirements and implemented architecture below. Moving
-these records does not change their implementation or approval status.
-Library-only capabilities remain separate from production CLI activation; each
-section records its own limits. Accepted decisions remain in
+This concern owned the requirements and the architecture below. The architecture
+was implemented as library code until its removal from `main`. That library code
+was never reachable from production CLI commands; each section records its own
+limits. Accepted decisions remain in
 [ADRs](https://github.com/driftsys/upskill/blob/main/docs/adr/README.md).
 
 ## Requirements

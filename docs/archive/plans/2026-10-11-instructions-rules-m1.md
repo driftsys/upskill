@@ -1,7 +1,7 @@
 # M1 instructions and rules delivery plan
 
 > This plan implements the M1 milestone in the
-> [agent customization roadmap](../specs/2026-10-11-agent-customization-roadmap.md).
+> [agent customization roadmap](../../wip/specs/2026-10-11-agent-customization-roadmap.md).
 > F-A target identities are its base. Keep each reviewable task in its own PR,
 > with code, tests, and documentation together.
 
@@ -23,7 +23,7 @@ routes
 Copilot VS Code Local remains a separately qualified existing surface.
 
 **Contract:** Follow the
-[foundation design](../specs/2026-10-11-agent-customization-foundation-design.md),
+[foundation design](../../wip/specs/2026-10-11-agent-customization-foundation-design.md),
 especially target selection, shared discovery, ownership, preflight, and
 schema-1 migration. Preserve OpenCode behavior and the fixed default selection.
 
@@ -113,7 +113,7 @@ or alias checks, symlink containment, source verification, or writer locking.
 Those checks remain executor and state integration work.
 
 The
-[legacy source-label compatibility prerequisite](2026-10-12-legacy-source-labels.md)
+[legacy source-label compatibility prerequisite](../../wip/plans/2026-10-12-legacy-source-labels.md)
 restores schema-1 updates from unambiguous persisted `gitlab:` and `gitlab+`
 labels. The applying lifecycle canonicalizes reinstalled item and bundle labels
 to HTTPS while preserving aliases, pins and unrelated records. Inspection and

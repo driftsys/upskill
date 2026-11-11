@@ -16,8 +16,8 @@ gates.
 The initial implementation clients are **Claude Code, Copilot CLI, Codex and
 OpenCode**. Cursor and Gemini CLI remain design targets with later
 implementation. This changes the three-client-first sequencing in the
-[2026-10-11 roadmap](2026-10-11-agent-customization-roadmap.md), while
-preserving the six-family commitment in
+[2026-10-11 roadmap](../../wip/specs/2026-10-11-agent-customization-roadmap.md),
+while preserving the six-family commitment in
 [ADR-0013](../../adr/0013-agent-customization-targets.md).
 
 Release scope, ordering and implementation dependencies are maintained only in

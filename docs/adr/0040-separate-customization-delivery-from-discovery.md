@@ -9,8 +9,10 @@ pending. Other package and release-scope amendments below remain proposals
 [evidence and adoption](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
 [AD-0042](0042-resteer-customization-delivery.md) replaces the activation and
-release-gate clauses of this record; the separation of delivery from discovery
-and activation stays accepted.
+release-gate clauses of this record, the clause that reuses capture, locking,
+backup and recovery foundations, and the selected Codex policy "supported with
+declared limitation"; the separation of delivery from discovery and activation
+stays accepted.
 
 ## Context
 
