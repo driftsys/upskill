@@ -442,8 +442,8 @@ fn stage_audience_skill(root: &Path, skill: &str, audience: &str) -> std::path::
     registry
 }
 
-/// An item whose only audience is `codex` writes no file for any client,
-/// because no supported client matches the `codex` audience.
+/// An item whose only audience is `codex` writes no file when all clients are
+/// selected, because no supported client matches the `codex` audience.
 #[test]
 fn codex_only_audience_writes_no_client_file() {
     let tmp = tempfile::tempdir().unwrap();
@@ -454,7 +454,7 @@ fn codex_only_audience_writes_no_client_file() {
 
     common::upskill_cmd(&home)
         .current_dir(&project)
-        .args(["add", registry.to_str().unwrap(), "--claude"])
+        .args(["add", registry.to_str().unwrap()])
         .assert()
         .success();
 
@@ -463,9 +463,8 @@ fn codex_only_audience_writes_no_client_file() {
     assert!(!skill_opencode(&project, "codex-only").exists());
 }
 
-/// An item with audience `[codex, claude]` writes the Claude file when Claude
-/// is the only selected client, and writes no file when only opencode is
-/// selected.
+/// An item with audience `[codex, claude]` writes only the Claude file when all
+/// clients are selected, and writes no file when only opencode is selected.
 #[test]
 fn codex_and_claude_audience_writes_only_claude_file() {
     let tmp = tempfile::tempdir().unwrap();
@@ -476,7 +475,7 @@ fn codex_and_claude_audience_writes_only_claude_file() {
 
     common::upskill_cmd(&home)
         .current_dir(&project)
-        .args(["add", registry.to_str().unwrap(), "--claude"])
+        .args(["add", registry.to_str().unwrap()])
         .assert()
         .success();
 
