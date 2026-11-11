@@ -90,11 +90,9 @@ pub(super) fn check_sources_outside_outputs(
     Ok(())
 }
 
-pub(super) fn install_bundle_file(
-    bundle_path: &Path,
-    target: &Path,
-    selection: &ClientSelection,
-) -> Result<InstallReport> {
+/// Find the registry root of `bundle_path` and resolve the bundle against
+/// its sibling bundles.
+fn resolve_bundle_file(bundle_path: &Path) -> Result<(PathBuf, crate::bundle::Resolved)> {
     let registry_root = find_registry_root(bundle_path).with_context(|| {
         format!(
             "find SSOT registry root containing skills/, rules/, agents/, or bundles/ \
@@ -118,6 +116,15 @@ pub(super) fn install_bundle_file(
         .collect();
 
     let resolved = crate::bundle::resolve(&entry, &available)?;
+    Ok((registry_root, resolved))
+}
+
+pub(super) fn install_bundle_file(
+    bundle_path: &Path,
+    target: &Path,
+    selection: &ClientSelection,
+) -> Result<InstallReport> {
+    let (registry_root, resolved) = resolve_bundle_file(bundle_path)?;
 
     let mut report = InstallReport {
         bundles: resolved.bundles.clone(),
@@ -134,6 +141,32 @@ pub(super) fn install_bundle_file(
         )?;
     }
     Ok(report)
+}
+
+/// Run [`check_sources_outside_outputs`] for the items that
+/// [`install_with_name_resolution_from_local`] installs for `names`: the
+/// items of each named bundle and each named item. Called before the first
+/// deletion or write.
+pub(super) fn check_name_resolution_outside_outputs(
+    local_source: &Path,
+    target: &Path,
+    names: &[String],
+) -> Result<()> {
+    let mut item_names = Vec::new();
+    for name in names {
+        if let Some(bundle_path) = find_bundle_by_name(local_source, name) {
+            let (registry_root, resolved) = resolve_bundle_file(&bundle_path)?;
+            check_sources_outside_outputs(&registry_root, target, Some(&resolved.items))?;
+        } else {
+            item_names.push(name.clone());
+        }
+    }
+    let filter = crate::bundle::ResolvedItems {
+        rules: item_names.clone(),
+        skills: item_names.clone(),
+        agents: item_names,
+    };
+    check_sources_outside_outputs(local_source, target, Some(&filter))
 }
 
 /// Like [`super::install_with_lockfile`]'s name-resolution branch but

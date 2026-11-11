@@ -356,8 +356,10 @@ pub fn install_with_lockfile(
         for si in closure.by_source.values() {
             install::check_sources_outside_outputs(&si.root, target, Some(&si.items))?;
         }
-    } else {
+    } else if items.is_empty() {
         install::check_sources_outside_outputs(&local_source, target, None)?;
+    } else {
+        install::check_name_resolution_outside_outputs(&local_source, target, items)?;
     }
 
     // -- Now proceed with generation (files are written here) --

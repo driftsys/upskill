@@ -131,10 +131,12 @@ agents that render to a flat file (Claude Code, GitHub Copilot), resources go
 into a sibling `<name>/` directory and the body's relative links are rewritten
 to match. See [format-spec §2.4](format-spec.md).
 
-`add` refuses a source item whose directory is the same as, is inside, or
-contains one of that item's output paths for any client in the target scope (for
-example `upskill add ./.claude/skills`). The command fails before any file is
-changed and names the item, the source directory and the output path.
+`add` refuses a source item that it installs when the item's directory is the
+same as, is inside, or contains one of that item's output paths for any client
+in the target scope (for example `upskill add ./.claude/skills`). Items of the
+source that this run does not install are not checked. The command fails before
+any file is changed and names the item, the source directory and the output
+path.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

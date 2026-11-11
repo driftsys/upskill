@@ -366,3 +366,68 @@ fn add_refuses_source_inside_unselected_client_output_dir() {
     // source is deleted even when only Claude is selected.
     assert_source_overlap_refused(".agents/skills", &["--claude", "--project"]);
 }
+
+/// Stage a global-scope registry at `$HOME/.claude`. Its item
+/// `skills/my-skill` is the global Claude output path of `my-skill`; its item
+/// `wanted` overlaps no output path. A bundle `pack` lists `wanted`.
+/// Returns `(tmp, home, registry)`.
+fn stage_registry_in_global_claude_dir()
+-> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let registry = home.join(".claude");
+    let other = registry.join("skills/my-skill");
+    fs::create_dir_all(other.join("references")).unwrap();
+    fs::write(
+        other.join("SKILL.md"),
+        "---\nname: my-skill\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+    fs::write(other.join("references/notes.md"), "user notes\n").unwrap();
+    fs::create_dir_all(registry.join("wanted")).unwrap();
+    fs::write(
+        registry.join("wanted/SKILL.md"),
+        "---\nname: wanted\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+    fs::write(
+        registry.join("pack.bundle.yaml"),
+        "schema: 1\nname: pack\ndescription: d\nitems:\n  skills: [wanted]\n",
+    )
+    .unwrap();
+    (tmp, home, registry)
+}
+
+#[test]
+fn add_ignores_overlap_of_an_item_that_is_not_requested() {
+    // `wanted` alone uses the dependency closure; `pack wanted` mixes a bundle
+    // name and an item name and uses the name-resolution path.
+    for names in [&["wanted"][..], &["pack", "wanted"][..]] {
+        let (tmp, home, registry) = stage_registry_in_global_claude_dir();
+        let other = registry.join("skills/my-skill");
+        let mut args = vec!["add", registry.to_str().unwrap()];
+        args.extend_from_slice(names);
+        args.extend_from_slice(&["--claude", "--global"]);
+
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(&args)
+            .assert()
+            .success();
+
+        assert!(
+            home.join(".claude/skills/wanted/SKILL.md").exists(),
+            "{names:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(other.join("SKILL.md")).unwrap(),
+            "---\nname: my-skill\ndescription: d\n---\nBody\n",
+            "{names:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(other.join("references/notes.md")).unwrap(),
+            "user notes\n",
+            "{names:?}"
+        );
+    }
+}
