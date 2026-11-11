@@ -133,10 +133,12 @@ to match. See [format-spec §2.4](format-spec.md).
 
 `add` refuses a source item that it installs when the item's directory is the
 same as, is inside, or contains one of that item's output paths for any client
-in the target scope (for example `upskill add ./.claude/skills`). Items of the
+in the target scope (for example `upskill add ./.claude/skills`). With `--as`,
+the output paths of the installed (alias) name are checked as well. Items of the
 source that this run does not install are not checked. The command fails before
 any file is changed and names the item, the source directory and the output
-path.
+path. `upskill update` is refused in the same way, including for recorded
+aliases.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

@@ -52,7 +52,8 @@ Statements of the model only:
   instructions, one copy with `applyTo: '**'` and one without; it could not name
   the source files. In project B it said the marker appears once.
 - Skill: the model found two `SKILL.md` files by file search in project A, but
-  said the skill marker appears once, from the skill it loaded.
+  said the skill marker appears once, from the skill it loaded. The model said
+  that the loaded skill was the `.github/skills/t1-skill` copy.
 - Agent: the model named two agent files in project A by file search and said
   its tool list shows a single `t1-agent`.
 
@@ -83,4 +84,4 @@ On 2026-11-11 the maintainer decided that upskill keeps both copies of a rule:
 the `.claude/rules` file and the `.github/instructions` file. With both copies,
 one client can be removed without an effect on the other client. The known limit
 is that Copilot lists and applies such a rule twice when both clients are
-selected. AD-0042 (pull request #466) records the decision.
+selected. The decision is recorded in AD-0042, which pull request #466 adds.
