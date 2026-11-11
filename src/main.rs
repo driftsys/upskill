@@ -82,18 +82,20 @@ fn main() {
             global,
             project,
             yes,
+            force,
             claude,
             copilot,
             vscode,
             opencode,
-        } => run_update(
-            &names,
+        } => run_update(UpdateArgs {
+            names: &names,
             dry_run,
             yes,
             global,
             project,
-            &client_flags(claude, copilot, vscode, opencode),
-        ),
+            force,
+            flag_clients: client_flags(claude, copilot, vscode, opencode),
+        }),
         Commands::List {
             global,
             project,
@@ -152,9 +154,19 @@ fn print_error(err: impl std::fmt::Display) {
 }
 
 /// Like [`print_error`] but uses the `:#` formatter to print the full
-/// anyhow context chain (root cause last).
+/// anyhow context chain (root cause last). The adoption context that
+/// `AdoptedBeforeFailure` adds is left out: `print_adoption_after_error`
+/// prints the adoption notice instead.
 fn print_error_chain(err: &anyhow::Error) {
-    eprintln!("{} {err:#}", style::error_label("error:"));
+    if err
+        .downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>()
+        .is_some()
+    {
+        let rest: Vec<String> = err.chain().skip(1).map(ToString::to_string).collect();
+        eprintln!("{} {}", style::error_label("error:"), rest.join(": "));
+    } else {
+        eprintln!("{} {err:#}", style::error_label("error:"));
+    }
 }
 
 fn map_clap_error(err: &clap::Error) -> i32 {
@@ -254,6 +266,7 @@ fn run_add(args: AddArgs) -> i32 {
 
     let options = upskill::pipeline::AddOptions {
         force,
+        overwrite: force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
@@ -272,7 +285,13 @@ fn run_add(args: AddArgs) -> i32 {
             print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
-            EXIT_SUCCESS
+            print_kept_modified(&report.kept_modified);
+            if report.conflicts.is_empty() {
+                EXIT_SUCCESS
+            } else {
+                print_conflicts(&report.conflicts);
+                EXIT_ERROR
+            }
         }
         Err(err) => {
             print_adoption_after_error(&err);
@@ -281,6 +300,32 @@ fn run_add(args: AddArgs) -> i32 {
             eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
             EXIT_ERROR
         }
+    }
+}
+
+/// One line per destination that stopped the write of an item, then the
+/// hint. Printed to stderr, so `-q/--quiet` does not hide it.
+fn print_conflicts(conflicts: &[upskill::pipeline::FileConflict]) {
+    for conflict in conflicts {
+        let reason = match conflict.state {
+            upskill::pipeline::ConflictState::Modified => "was modified",
+            upskill::pipeline::ConflictState::Unowned => "exists and is not managed by upskill",
+        };
+        eprintln!(
+            "skipped {} {}: {} {reason}",
+            conflict.kind,
+            conflict.name,
+            conflict.path.display()
+        );
+    }
+    eprintln!("Use --force to replace.");
+}
+
+/// One line per modified file that was kept instead of deleted. Printed to
+/// stderr, so `-q/--quiet` does not hide it.
+fn print_kept_modified(paths: &[PathBuf]) {
+    for path in paths {
+        eprintln!("kept modified file: {}", path.display());
     }
 }
 
@@ -418,15 +463,26 @@ fn print_install_report(report: &InstallReport, source: &str) {
     }
     use std::collections::BTreeMap;
 
+    // Items skipped because of a conflict were not written.
+    let written: Vec<_> = report
+        .items
+        .iter()
+        .filter(|item| {
+            !report
+                .conflicts
+                .iter()
+                .any(|c| c.kind == item.kind && c.name == item.name)
+        })
+        .collect();
     println!(
         "{} {} files from {}",
         style::success("Installed"),
-        report.items.len(),
+        written.len(),
         style::dim(source)
     );
 
     let mut grouped: BTreeMap<(ItemKind, String), Vec<&'static str>> = BTreeMap::new();
-    for item in &report.items {
+    for item in written {
         grouped
             .entry((item.kind, item.name.clone()))
             .or_default()
@@ -687,9 +743,7 @@ fn run_remove(
             print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
             for item in &report.items {
-                for path in &item.kept_modified {
-                    eprintln!("kept modified file: {}", path.display());
-                }
+                print_kept_modified(&item.kept_modified);
             }
             EXIT_SUCCESS
         }
@@ -731,14 +785,56 @@ fn print_remove_report(report: &RemoveReport) {
     }
 }
 
-fn run_update(
-    names: &[String],
+/// `update` inputs grouped into one struct to keep the call under
+/// clippy's `too_many_arguments` bar (AGENTS.md).
+struct UpdateArgs<'a> {
+    names: &'a [String],
     dry_run: bool,
     yes: bool,
     global: bool,
     project: bool,
-    flag_clients: &[SelectedClient],
-) -> i32 {
+    /// `--force`: replace modified and unowned files.
+    force: bool,
+    flag_clients: Vec<SelectedClient>,
+}
+
+/// Exit code of an applied update: 1 when an item was skipped because of
+/// modified or unowned files, 0 otherwise. Prints the kept files and the
+/// skipped files to stderr.
+fn finish_update(report: &UpdateReport) -> i32 {
+    print_kept_modified(&report.kept_modified);
+    let mut skipped = false;
+    for item in &report.items {
+        if let UpdateStatus::SkippedModified { files } = &item.status {
+            skipped = true;
+            for path in files {
+                eprintln!(
+                    "skipped {} {}: {} was modified or is not managed by upskill",
+                    item.kind,
+                    item.name,
+                    path.display()
+                );
+            }
+        }
+    }
+    if skipped {
+        eprintln!("Use --force to replace.");
+        EXIT_ERROR
+    } else {
+        EXIT_SUCCESS
+    }
+}
+
+fn run_update(args: UpdateArgs) -> i32 {
+    let UpdateArgs {
+        names,
+        dry_run,
+        yes,
+        global,
+        project,
+        force,
+        flag_clients,
+    } = args;
     let target = match install_target(global, project) {
         Ok(t) => t,
         Err(err) => {
@@ -749,11 +845,18 @@ fn run_update(
 
     let plugin_scope = scope_to_plugin_scope(global, project);
     let is_global = global || (!project && !is_inside_git_repo());
-    let selection = resolve_selection(flag_clients, project_config_root(is_global));
+    let selection = resolve_selection(&flag_clients, project_config_root(is_global));
 
     if dry_run {
         // Explicit --dry-run: compute and report without applying.
-        match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
+        match update(
+            &target,
+            names,
+            UpdateMode::DryRun,
+            plugin_scope,
+            &selection,
+            force,
+        ) {
             Ok(report) => {
                 print_update_report(&report, true);
                 EXIT_SUCCESS
@@ -768,11 +871,18 @@ fn run_update(
         }
     } else if yes || !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
         // No confirmation needed — apply directly (single fetch).
-        match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
+        match update(
+            &target,
+            names,
+            UpdateMode::Apply,
+            plugin_scope,
+            &selection,
+            force,
+        ) {
             Ok(report) => {
                 print_update_report(&report, false);
                 print_adoption_notice(report.adopted.as_deref());
-                EXIT_SUCCESS
+                finish_update(&report)
             }
             Err(err) => {
                 print_adoption_after_error(&err);
@@ -784,7 +894,14 @@ fn run_update(
         }
     } else {
         // Interactive: dry-run first to show plan, then apply if confirmed.
-        let plan = match update(&target, names, UpdateMode::DryRun, plugin_scope, &selection) {
+        let plan = match update(
+            &target,
+            names,
+            UpdateMode::DryRun,
+            plugin_scope,
+            &selection,
+            force,
+        ) {
             Ok(r) => r,
             Err(err) => {
                 print_adoption_after_error(&err);
@@ -816,11 +933,18 @@ fn run_update(
             return EXIT_SUCCESS;
         }
 
-        match update(&target, names, UpdateMode::Apply, plugin_scope, &selection) {
+        match update(
+            &target,
+            names,
+            UpdateMode::Apply,
+            plugin_scope,
+            &selection,
+            force,
+        ) {
             Ok(report) => {
                 print_update_report(&report, false);
                 print_adoption_notice(report.adopted.as_deref());
-                EXIT_SUCCESS
+                finish_update(&report)
             }
             Err(err) => {
                 print_adoption_after_error(&err);
@@ -900,9 +1024,18 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
     let changes = report
         .items
         .iter()
-        .filter(|i| !matches!(i.status, UpdateStatus::UpToDate))
+        .filter(|i| {
+            !matches!(
+                i.status,
+                UpdateStatus::UpToDate | UpdateStatus::SkippedModified { .. }
+            )
+        })
         .count();
-    if changes == 0 && !dry_run {
+    let skipped = report
+        .items
+        .iter()
+        .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
+    if changes == 0 && !dry_run && !skipped {
         println!("everything is up to date — nothing to do");
         return;
     }
@@ -928,6 +1061,9 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             }
             UpdateStatus::Removed => style::error_label("removed — no longer in source"),
             UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
+            UpdateStatus::SkippedModified { .. } => {
+                style::warn("skipped — modified or unmanaged files kept")
+            }
         };
         println!(
             "  {} {:<32} {}",

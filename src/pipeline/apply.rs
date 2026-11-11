@@ -6,8 +6,8 @@
 //! symbolic links. Every existing component from the third one to the last
 //! one (the item directory, resource subdirectories and the file) must not
 //! be a symbolic link. The checks that `apply_plan` runs before any change
-//! on disk are described in the rustdoc of `apply_plan` and
-//! `check_writable`.
+//! on disk, and the conflict rules for modified and unowned files, are
+//! described in the rustdoc of `apply_plan` and `check_writable`.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
@@ -16,7 +16,7 @@ use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
-use super::owned::{rel_to_record, sha256_hex};
+use super::owned::{FileState, classify, rel_to_record, sha256_hex};
 use super::plan::PlannedItem;
 use crate::lockfile::{Lockfile, OwnedFile};
 
@@ -28,39 +28,90 @@ pub(super) type RecordedFiles = BTreeMap<(ItemKind, String), Vec<OwnedFile>>;
 /// Client roots under which a recorded path may be deleted.
 const CLIENT_ROOTS: [&str; 4] = [".claude", ".github", ".agents", ".opencode"];
 
+/// State of a destination that blocks the write of an item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictState {
+    /// upskill recorded the path, and its content changed since.
+    Modified,
+    /// The path exists and upskill has no record of it.
+    Unowned,
+}
+
+/// A path that stops `add` or `update` from writing an item, because the
+/// write would replace a file that upskill did not write or that was
+/// changed after upskill wrote it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileConflict {
+    pub kind: ItemKind,
+    /// Installed name of the item.
+    pub name: String,
+    /// Path relative to the install target root.
+    pub path: PathBuf,
+    pub state: ConflictState,
+}
+
+/// What `apply_plan` did.
+#[derive(Debug, Default)]
+pub(super) struct ApplyOutcome {
+    /// Items that were not written because of a conflict.
+    pub skipped: Vec<FileConflict>,
+    /// Modified files of a previous record that the plan no longer
+    /// contains. They are kept on disk and stay in the item's record.
+    pub kept: Vec<PathBuf>,
+    /// The record of every written item.
+    pub recorded: RecordedFiles,
+}
+
 /// What `apply_plan` does for one item, computed before any change.
 struct ItemChanges {
     files: Vec<OwnedFile>,
-    stale: Vec<PathBuf>,
+    /// Stale files to delete.
+    delete: Vec<PathBuf>,
+    /// Stale files that are kept, with their previous records.
+    kept: Vec<(PathBuf, Vec<OwnedFile>)>,
+    /// Destinations that stop the write of this item.
+    conflicts: Vec<FileConflict>,
 }
 
-/// Writes every planned file and updates `lock.items[..].files` for the
-/// planned items that already have a lockfile entry. Before writing an
-/// item, it deletes the files of that item's previous record that no
-/// planned item of this run writes (the stale files), and the entrypoints
-/// of clients the item no longer targets. A recorded path that another
-/// planned item writes is not deleted; that item overwrites it. An
-/// existing regular file at a planned path is removed, then the file is
-/// written with `fs::write`. It does not save the lockfile. Returns the
-/// record of every planned item.
+/// Writes every planned item that has no conflict and updates
+/// `lock.items[..].files` for the written items that already have a
+/// lockfile entry. It does not save the lockfile.
+///
+/// Conflicts: every destination of every item is classified with
+/// [`classify`] before anything is written. A destination whose content
+/// already equals the planned bytes is not a conflict, in any state. A
+/// destination that is `Modified` or `Unowned` is a conflict. When
+/// `overwrite` is false, an item with at least one conflict is skipped as a
+/// whole: none of its files is written or deleted, and its lockfile record
+/// is unchanged. The other items are written. When `overwrite` is true, a
+/// conflicting regular file is replaced.
+///
+/// Stale files: the files of an item's previous record that no planned item
+/// of this run writes. Before writing an item, its stale files that are
+/// unchanged (`Owned`) or absent are deleted, and directories left empty
+/// are removed. A stale file that is `Modified`, or that cannot be read, is
+/// kept and stays in the record; with `overwrite` it is deleted when it is
+/// a regular file. A kept stale file that is a planned path, or a directory
+/// on the way to one, is a conflict of the item.
 ///
 /// Before any change on disk it fails when two planned items have the same
-/// `(kind, name)`, when two planned files have the same path, when one
-/// planned file is a directory on the way to another, when a path to write
-/// or delete breaks the symbolic link rule of this module, or when a path
-/// to write is blocked: the client root or kind directory is a symbolic
-/// link to a missing target or is not a directory, a component on the way
-/// to the file is not a directory, or the file exists and is not a regular
-/// file. A blocking regular file, or a directory that holds only regular
-/// files, is accepted when those files are stale recorded files of the same
-/// item, because they are deleted (and empty directories removed) before
-/// the write. See `check_writable`.
+/// `(kind, name)` or an installed name contains a path separator, when two
+/// planned files have the same path, when one planned file is a directory
+/// on the way to another, when a path to write or delete breaks the
+/// symbolic link rule of this module, or when a path to write is blocked:
+/// the client root or kind directory is a symbolic link to a missing target
+/// or is not a directory, a component on the way to the file is not a
+/// directory, or the file exists and is not a regular file. A blocking
+/// regular file, or a directory that holds only regular files, is accepted
+/// when those files are stale recorded files of the same item. See
+/// `check_writable`.
 pub(super) fn apply_plan(
     target: &Path,
     lock: &mut Lockfile,
     planned: &[PlannedItem],
-) -> Result<RecordedFiles> {
-    check_unique_names(planned)?;
+    overwrite: bool,
+) -> Result<ApplyOutcome> {
+    check_installed_names(planned)?;
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
     let mut changes = Vec::with_capacity(planned.len());
     // No item deletes, as stale, a path that any item of this run writes.
@@ -86,19 +137,33 @@ pub(super) fn apply_plan(
         }
         files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
 
-        let kept: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
-        let mut stale = Vec::new();
-        if let Some(entry) = lock
+        let entry = lock
             .items
             .iter()
-            .find(|i| i.kind == item.kind && i.name == item.name)
-        {
+            .find(|i| i.kind == item.kind && i.name == item.name);
+        // Every hash recorded for `path` by this item: current and pending.
+        let recorded_for = |path: &str| -> Vec<OwnedFile> {
+            entry
+                .map(|e| {
+                    e.files
+                        .iter()
+                        .chain(&e.pending)
+                        .filter(|f| f.path == path)
+                        .cloned()
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        let kept_paths: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        let mut stale = Vec::new();
+        if let Some(entry) = entry {
             for old in &entry.files {
-                if kept.contains(old.path.as_str()) {
+                if kept_paths.contains(old.path.as_str()) {
                     continue;
                 }
                 if let Some(rel) = deletable(&old.path) {
-                    if all_planned.contains(rel.as_path()) {
+                    if all_planned.contains(rel.as_path()) || stale.contains(&rel) {
                         continue;
                     }
                     check_no_item_symlink(target, &rel)?;
@@ -106,11 +171,9 @@ pub(super) fn apply_plan(
                 }
             }
         }
-        for rel in &item.deselected_entries {
-            check_no_item_symlink(target, rel)?;
-        }
-        // The stale files that the write loop deletes before it writes this
-        // item: each planned path is judged against the state after them.
+        // The stale files that the write loop may delete before it writes
+        // this item: each planned path is judged against the state after
+        // them.
         let mut stale_files = BTreeSet::new();
         for rel in &stale {
             if fs::symlink_metadata(target.join(rel)).is_ok_and(|m| m.file_type().is_file()) {
@@ -120,7 +183,66 @@ pub(super) fn apply_plan(
         for file in &item.files {
             check_writable(target, &file.rel, &stale_files)?;
         }
-        changes.push(ItemChanges { files, stale });
+
+        let mut delete = Vec::new();
+        let mut kept = Vec::new();
+        for rel in stale {
+            let path = rel_to_record(&rel)?;
+            let records = recorded_for(&path);
+            let hashes: Vec<&str> = records.iter().map(|f| f.sha256.as_str()).collect();
+            let state = state_of(target, &rel, &path, &hashes)?;
+            let is_file = stale_files.contains(&rel);
+            match state {
+                FileState::Owned | FileState::Absent => delete.push(rel),
+                FileState::Modified | FileState::Unowned if overwrite && is_file => {
+                    delete.push(rel);
+                }
+                FileState::Modified | FileState::Unowned => {
+                    let old: Vec<OwnedFile> = records
+                        .into_iter()
+                        .filter(|f| entry.is_some_and(|e| e.files.contains(f)))
+                        .collect();
+                    kept.push((rel, old));
+                }
+            }
+        }
+
+        let mut conflicts = Vec::new();
+        for file in &item.files {
+            let path = rel_to_record(&file.rel)?;
+            let records = recorded_for(&path);
+            let hashes: Vec<&str> = records.iter().map(|f| f.sha256.as_str()).collect();
+            if let Some(state) =
+                destination_conflict(target, &file.rel, &path, &hashes, &file.bytes)?
+            {
+                conflicts.push(FileConflict {
+                    kind: item.kind,
+                    name: item.name.clone(),
+                    path: file.rel.clone(),
+                    state,
+                });
+            }
+            if !overwrite {
+                for (rel, _) in &kept {
+                    if file.rel.starts_with(rel) || rel.starts_with(&file.rel) {
+                        conflicts.push(FileConflict {
+                            kind: item.kind,
+                            name: item.name.clone(),
+                            path: rel.clone(),
+                            state: ConflictState::Modified,
+                        });
+                    }
+                }
+            }
+        }
+        conflicts.sort_by(|a, b| a.path.cmp(&b.path));
+        conflicts.dedup();
+        changes.push(ItemChanges {
+            files,
+            delete,
+            kept,
+            conflicts,
+        });
     }
 
     // A planned file cannot also be a directory on the way to another one.
@@ -135,13 +257,20 @@ pub(super) fn apply_plan(
         }
     }
 
-    let mut recorded = RecordedFiles::new();
-    for (item, ItemChanges { files, stale }) in planned.iter().zip(changes) {
-        for rel in &stale {
-            delete_recorded(target, rel)?;
+    let mut outcome = ApplyOutcome::default();
+    for (item, changes) in planned.iter().zip(changes) {
+        let ItemChanges {
+            mut files,
+            delete,
+            kept,
+            conflicts,
+        } = changes;
+        if !overwrite && !conflicts.is_empty() {
+            outcome.skipped.extend(conflicts);
+            continue;
         }
-        for rel in &item.deselected_entries {
-            delete_deselected_entry(target, rel, &item.name);
+        for rel in &delete {
+            delete_recorded(target, rel)?;
         }
 
         for file in &item.files {
@@ -161,6 +290,13 @@ pub(super) fn apply_plan(
             }
         }
 
+        for (rel, old) in kept {
+            files.extend(old);
+            outcome.kept.push(rel);
+        }
+        files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
+        files.dedup();
+
         if let Some(entry) = lock
             .items
             .iter_mut()
@@ -168,16 +304,79 @@ pub(super) fn apply_plan(
         {
             entry.files = files.clone();
         }
-        recorded.insert((item.kind, item.name.clone()), files);
+        outcome
+            .recorded
+            .insert((item.kind, item.name.clone()), files);
     }
-    Ok(recorded)
+    Ok(outcome)
 }
 
-/// Fails when two planned items have the same `(kind, installed name)`.
+/// State of the recorded or planned path `rel` (`path` is its record form).
+/// A regular file that exists but cannot be read is `Modified` when
+/// `recorded` is not empty and `Unowned` otherwise; any other error while
+/// inspecting the path fails.
+fn state_of(target: &Path, rel: &Path, path: &str, recorded: &[&str]) -> Result<FileState> {
+    match classify(target, path, recorded) {
+        Ok(state) => Ok(state),
+        Err(_) if fs::symlink_metadata(target.join(rel)).is_ok_and(|m| m.file_type().is_file()) => {
+            Ok(if recorded.is_empty() {
+                FileState::Unowned
+            } else {
+                FileState::Modified
+            })
+        }
+        Err(err) => Err(err).with_context(|| format!("cannot inspect {path}")),
+    }
+}
+
+/// The conflict at the planned destination `rel`, if any. An absent path,
+/// an `Owned` file, and a regular file whose content equals `bytes` are not
+/// conflicts. A directory is not classified here: `check_writable` accepts
+/// it only when it holds stale files of the same item, and those are judged
+/// as stale files.
+fn destination_conflict(
+    target: &Path,
+    rel: &Path,
+    path: &str,
+    recorded: &[&str],
+    bytes: &[u8],
+) -> Result<Option<ConflictState>> {
+    let full = target.join(rel);
+    if fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_dir()) {
+        return Ok(None);
+    }
+    let state = match state_of(target, rel, path, recorded)? {
+        FileState::Absent | FileState::Owned => return Ok(None),
+        FileState::Modified => ConflictState::Modified,
+        FileState::Unowned => ConflictState::Unowned,
+    };
+    let same = fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file())
+        && fs::read(&full).is_ok_and(|current| current == bytes);
+    Ok((!same).then_some(state))
+}
+
+/// Fails when two planned items have the same `(kind, installed name)`, or
+/// when an installed name contains a path separator (`/` or `\`).
 /// Changes nothing on disk.
-pub(super) fn check_unique_names(planned: &[PlannedItem]) -> Result<()> {
+pub(super) fn check_installed_names(planned: &[PlannedItem]) -> Result<()> {
     let mut seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
     for item in planned {
+        if item.name.contains(['/', '\\']) {
+            match &item.source_name {
+                Some(source) => anyhow::bail!(
+                    "cannot install the {} `{source}` as `{}`: an installed name must not \
+                     contain a path separator",
+                    item.kind,
+                    item.name
+                ),
+                None => anyhow::bail!(
+                    "cannot install the {} `{}`: an installed name must not contain a path \
+                     separator",
+                    item.kind,
+                    item.name
+                ),
+            }
+        }
         if !seen.insert((item.kind, item.name.as_str())) {
             anyhow::bail!(
                 "two planned items install the {} `{}`; each installed name must be unique",
@@ -396,25 +595,6 @@ pub(super) fn prune_empty_parents(target: &Path, rel: &Path) {
     }
 }
 
-/// Best-effort removal of the entrypoint of a client the item no longer
-/// targets, and of its parent directory when that directory is named after
-/// the item and is empty.
-fn delete_deselected_entry(target: &Path, rel: &Path, name: &str) {
-    let full = target.join(rel);
-    if full.exists() {
-        let _ = fs::remove_file(&full);
-    }
-    if let Some(parent) = full.parent().filter(|parent| {
-        parent
-            .file_name()
-            .and_then(|f| f.to_str())
-            .is_some_and(|f| f == name)
-            && parent.is_dir()
-    }) {
-        let _ = fs::remove_dir(parent);
-    }
-}
-
 #[cfg(unix)]
 fn set_mode(path: &Path, mode: u32) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -449,7 +629,6 @@ mod tests {
                     mode: None,
                 })
                 .collect(),
-            deselected_entries: vec![],
         }
     }
 
@@ -479,8 +658,8 @@ mod tests {
                 (".claude/skills/s/SKILL.md", b"body"),
             ],
         )];
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap();
-        let files = &rec[&(ItemKind::Skill, "s".to_string())];
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
+        let files = &rec.recorded[&(ItemKind::Skill, "s".to_string())];
         assert_eq!(files[0].path, ".claude/skills/s/SKILL.md");
         assert_eq!(files[0].sha256, sha256_hex(b"body"));
         assert_eq!(files[1].path, ".claude/skills/s/z.md");
@@ -506,7 +685,7 @@ mod tests {
             }],
         ));
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut lock, &plan).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, true).unwrap();
         assert!(!stale.exists());
         assert!(!tmp.path().join(".claude/skills/s/old").exists());
         assert!(tmp.path().join(".claude/skills/s/SKILL.md").exists());
@@ -529,7 +708,7 @@ mod tests {
                 sha256: sha256_hex(b"x"),
             }],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])]).unwrap();
+        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true).unwrap();
         assert!(!tmp.path().join(".claude/skills/s").exists());
         assert!(tmp.path().join(".claude/skills").is_dir());
     }
@@ -550,7 +729,7 @@ mod tests {
                 sha256: sha256_hex(b"keep"),
             }],
         ));
-        apply_plan(&target, &mut lock, &[planned("s", &[])]).unwrap();
+        apply_plan(&target, &mut lock, &[planned("s", &[])], true).unwrap();
         assert!(outside.exists());
     }
 
@@ -564,7 +743,7 @@ mod tests {
         fs::create_dir_all(link.parent().unwrap()).unwrap();
         std::os::unix::fs::symlink(&outside, &link).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         assert!(format!("{err:#}").contains("symbolic link"), "{err:#}");
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
@@ -576,7 +755,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut item = planned("s", &[(".claude/skills/s/run.sh", b"#!/bin/sh\n")]);
         item.files[0].mode = Some(0o755);
-        apply_plan(tmp.path(), &mut Lockfile::new(), &[item]).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true).unwrap();
         let mode = fs::metadata(tmp.path().join(".claude/skills/s/run.sh"))
             .unwrap()
             .permissions()
@@ -608,7 +787,7 @@ mod tests {
                 (".claude/skills/s/new.md", b"new"),
             ],
         )];
-        let err = apply_plan(&tmp.path().join("t"), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(&tmp.path().join("t"), &mut Lockfile::new(), &plan, true).unwrap_err();
         assert!(format!("{err:#}").contains(".claude/skills/s"), "{err:#}");
         assert_eq!(fs::read(outside.join("SKILL.md")).unwrap(), b"keep");
         assert!(!outside.join("new.md").exists());
@@ -623,7 +802,7 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".claude")).unwrap();
         std::os::unix::fs::symlink(&real, tmp.path().join(".claude/skills")).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
         assert_eq!(fs::read(real.join("s/SKILL.md")).unwrap(), b"body");
     }
 
@@ -640,7 +819,7 @@ mod tests {
         let mut lock = Lockfile::new();
         lock.items
             .push(locked("s", vec![record(".claude/skills/s/old.md")]));
-        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])]).is_err());
+        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])], true).is_err());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"keep");
     }
 
@@ -658,7 +837,7 @@ mod tests {
             "s",
             vec![record("src/main.rs"), record(".claude/x.md")],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])]).unwrap();
+        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true).unwrap();
         assert!(main.exists());
         assert!(shallow.exists());
     }
@@ -670,13 +849,13 @@ mod tests {
             planned("s", &[(".claude/skills/s/SKILL.md", b"a")]),
             planned("s", &[(".claude/skills/s/OTHER.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name, true).unwrap_err();
         assert!(format!("{err}").contains("`s`"), "{err}");
         let same_path = [
             planned("a", &[(".claude/skills/x/SKILL.md", b"a")]),
             planned("b", &[(".claude/skills/x/SKILL.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path, true).unwrap_err();
         assert!(format!("{err}").contains("`a` and `b`"), "{err}");
         assert!(!tmp.path().join(".claude").exists());
     }
@@ -699,7 +878,6 @@ mod pre_check_tests {
                 bytes: b"body".to_vec(),
                 mode: None,
             }],
-            deselected_entries: vec![],
         }
     }
 
@@ -712,7 +890,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -732,7 +910,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/skills/second/SKILL.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/skills/second/SKILL.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -774,7 +952,7 @@ mod pre_check_tests {
         fs::write(dir.join("mine.md"), b"user file").unwrap();
         let mut lock = stale_record(".claude/skills/s/notes/a.md", b"old");
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut lock, &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut lock, &plan, true).unwrap_err();
         assert!(
             format!("{err:#}").contains(".claude/skills/s/notes"),
             "{err:#}"
@@ -789,7 +967,7 @@ mod pre_check_tests {
         fs::create_dir_all(tmp.path().join(".claude/skills/s")).unwrap();
         fs::write(tmp.path().join(".claude/skills/s/notes"), b"user file").unwrap();
         let plan = [planned("s", ".claude/skills/s/notes/a.md")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         assert!(format!("{err:#}").contains("is not a directory"), "{err:#}");
         assert_eq!(
             fs::read(tmp.path().join(".claude/skills/s/notes")).unwrap(),
@@ -808,7 +986,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("missing target"), "{text}");
@@ -822,7 +1000,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/x/notes"),
             planned("second", ".claude/skills/x/notes/a.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         let text = format!("{err:#}");
         assert!(
             text.contains(
@@ -845,7 +1023,7 @@ mod pre_check_tests {
             files: vec![],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        apply_plan(&target, &mut lock, &[s]).unwrap();
+        apply_plan(&target, &mut lock, &[s], true).unwrap();
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
 
@@ -864,7 +1042,7 @@ mod pre_check_tests {
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
         let plan = [planned("first", ".claude/skills/first/SKILL.md"), s];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, true).is_err());
         assert!(!tmp.path().join(".claude/skills/first").exists());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"x");
     }
@@ -875,7 +1053,7 @@ mod pre_check_tests {
         let dir = tmp.path().join(".claude/skills/s/notes");
         fs::create_dir_all(&dir).unwrap();
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
         assert!(
             format!("{err:#}").contains("is not a regular file"),
             "{err:#}"
@@ -900,8 +1078,8 @@ mod pre_check_tests {
             ],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item]).unwrap();
-        let order: Vec<(&str, &str)> = rec[&(ItemKind::Skill, "s".to_string())]
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true).unwrap();
+        let order: Vec<(&str, &str)> = rec.recorded[&(ItemKind::Skill, "s".to_string())]
             .iter()
             .map(|f| (f.client.as_str(), f.path.as_str()))
             .collect();
@@ -923,5 +1101,271 @@ mod pre_check_tests {
         fs::write(&file, b"keep").unwrap();
         prune_empty_parents(tmp.path(), Path::new(".claude/skills/s/SKILL.md"));
         assert_eq!(fs::read(&file).unwrap(), b"keep");
+    }
+}
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::generate::Client;
+    use crate::lockfile::LockedItem;
+    use crate::pipeline::plan::PlannedFile;
+
+    fn planned(name: &str, files: &[(&str, &[u8])]) -> PlannedItem {
+        PlannedItem {
+            kind: ItemKind::Skill,
+            name: name.to_string(),
+            source_name: None,
+            files: files
+                .iter()
+                .map(|(rel, bytes)| PlannedFile {
+                    client: Client::Claude,
+                    rel: PathBuf::from(rel),
+                    bytes: bytes.to_vec(),
+                    mode: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn owned(path: &str, bytes: &[u8]) -> OwnedFile {
+        OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        }
+    }
+
+    fn lock_with(name: &str, files: Vec<OwnedFile>) -> Lockfile {
+        let mut lock = Lockfile::new();
+        lock.items.push(LockedItem {
+            kind: ItemKind::Skill,
+            name: name.to_string(),
+            source: "./src".to_string(),
+            git_ref: None,
+            hash: None,
+            source_name: None,
+            required_by: vec![],
+            group: None,
+            clients: vec![],
+            files,
+            pending: vec![],
+        });
+        lock
+    }
+
+    fn put(root: &Path, rel: &str, bytes: &[u8]) {
+        let full = root.join(rel);
+        fs::create_dir_all(full.parent().unwrap()).unwrap();
+        fs::write(full, bytes).unwrap();
+    }
+
+    const ENTRY: &str = ".claude/skills/s/SKILL.md";
+
+    #[test]
+    fn identical_content_is_not_a_conflict_when_unowned() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"body");
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut Lockfile::new(),
+            &[planned("s", &[(ENTRY, b"body")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert!(
+            outcome
+                .recorded
+                .contains_key(&(ItemKind::Skill, "s".into()))
+        );
+    }
+
+    #[test]
+    fn identical_content_is_not_a_conflict_when_modified() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"new");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"new")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"new")]);
+    }
+
+    #[test]
+    fn owned_destination_is_replaced_without_overwrite() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"old");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"new")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"new");
+    }
+
+    #[test]
+    fn an_item_with_a_conflict_is_skipped_as_a_whole() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"edited");
+        put(tmp.path(), ".claude/skills/s/old.md", b"old");
+        let before = vec![
+            owned(".claude/skills/s/old.md", b"old"),
+            owned(ENTRY, b"v1"),
+        ];
+        let mut lock = lock_with("s", before.clone());
+        let plan = [
+            planned("s", &[(ENTRY, b"v2"), (".claude/skills/s/new.md", b"new")]),
+            planned("t", &[(".claude/skills/t/SKILL.md", b"t")]),
+        ];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert_eq!(
+            outcome.skipped,
+            vec![FileConflict {
+                kind: ItemKind::Skill,
+                name: "s".into(),
+                path: PathBuf::from(ENTRY),
+                state: ConflictState::Modified,
+            }]
+        );
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"edited");
+        assert!(!tmp.path().join(".claude/skills/s/new.md").exists());
+        assert!(tmp.path().join(".claude/skills/s/old.md").exists());
+        assert_eq!(lock.items[0].files, before);
+        assert!(
+            !outcome
+                .recorded
+                .contains_key(&(ItemKind::Skill, "s".into()))
+        );
+        assert!(tmp.path().join(".claude/skills/t/SKILL.md").is_file());
+    }
+
+    #[test]
+    fn an_unowned_destination_is_a_conflict_and_overwrite_replaces_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"manual");
+        let plan = [planned("s", &[(ENTRY, b"body")])];
+        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, false).unwrap();
+        assert_eq!(outcome.skipped[0].state, ConflictState::Unowned);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"manual");
+        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"body");
+    }
+
+    const STALE: &str = ".claude/skills/s/old.md";
+
+    #[test]
+    fn an_owned_stale_file_is_deleted() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), STALE, b"old");
+        let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"e")])],
+            false,
+        )
+        .unwrap();
+        assert!(!tmp.path().join(STALE).exists());
+        assert!(outcome.kept.is_empty());
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
+    }
+
+    #[test]
+    fn a_modified_stale_file_is_kept_and_stays_recorded() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), STALE, b"edited");
+        let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"e")])],
+            false,
+        )
+        .unwrap();
+        assert_eq!(fs::read(tmp.path().join(STALE)).unwrap(), b"edited");
+        assert_eq!(outcome.kept, vec![PathBuf::from(STALE)]);
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(
+            lock.items[0].files,
+            vec![owned(ENTRY, b"e"), owned(STALE, b"old")]
+        );
+    }
+
+    #[test]
+    fn overwrite_deletes_a_modified_stale_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), STALE, b"edited");
+        let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"e")])],
+            true,
+        )
+        .unwrap();
+        assert!(!tmp.path().join(STALE).exists());
+        assert!(outcome.kept.is_empty());
+    }
+
+    #[test]
+    fn a_kept_stale_file_on_the_way_to_a_planned_file_is_a_conflict() {
+        let tmp = tempfile::tempdir().unwrap();
+        let notes = ".claude/skills/s/notes";
+        put(tmp.path(), notes, b"edited");
+        let mut lock = lock_with("s", vec![owned(notes, b"old")]);
+        let plan = [planned("s", &[(".claude/skills/s/notes/a.md", b"a")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert_eq!(outcome.skipped[0].path, PathBuf::from(notes));
+        assert_eq!(fs::read(tmp.path().join(notes)).unwrap(), b"edited");
+    }
+
+    #[test]
+    fn stale_file_of_one_item_is_not_deleted_when_another_item_writes_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared = ".claude/skills/x/SKILL.md";
+        put(tmp.path(), shared, b"old");
+        let mut lock = lock_with("s", vec![owned(shared, b"old")]);
+        let mut writer = planned("t", &[(shared, b"old")]);
+        writer.kind = ItemKind::Agent;
+        let plan = [writer, planned("s", &[(ENTRY, b"e")])];
+        apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"old");
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
+    }
+
+    #[test]
+    fn refuses_an_installed_name_with_a_path_separator() {
+        let tmp = tempfile::tempdir().unwrap();
+        for name in ["a/b", "a\\b"] {
+            let item = planned(name, &[(".claude/skills/a/SKILL.md", b"x")]);
+            let err = check_installed_names(std::slice::from_ref(&item)).unwrap_err();
+            assert!(
+                err.to_string()
+                    .contains(&format!("the skill `{name}`: an installed name must not")),
+                "{err}"
+            );
+            let aliased = PlannedItem {
+                source_name: Some("orig".into()),
+                ..item
+            };
+            let err = apply_plan(tmp.path(), &mut Lockfile::new(), &[aliased], true).unwrap_err();
+            assert!(
+                err.to_string()
+                    .contains(&format!("the skill `orig` as `{name}`")),
+                "{err}"
+            );
+        }
+        assert!(!tmp.path().join(".claude").exists());
     }
 }

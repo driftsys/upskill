@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
 use super::git::fetch_ssot;
 use super::hash::planned_source_hashes;
-use super::output::{output_path, remove_item_outputs};
+use super::output::output_path;
 use super::owned::{FileState, adopt_schema1, classify};
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
@@ -194,6 +194,27 @@ fn plan_removal(
     Ok(plan)
 }
 
+/// Deletes the files that `plan` marks for deletion and removes the
+/// directories left empty, also above the absent recorded files. Returns
+/// the deleted paths that are not already in `reported`, and adds them.
+fn execute_removal(
+    target: &Path,
+    plan: &RemovalPlan,
+    reported: &mut std::collections::BTreeSet<PathBuf>,
+) -> Result<Vec<PathBuf>> {
+    let mut deleted_files = Vec::new();
+    for rel in &plan.delete {
+        delete_recorded(target, rel)?;
+        if reported.insert(rel.clone()) {
+            deleted_files.push(rel.clone());
+        }
+    }
+    for rel in &plan.absent {
+        prune_empty_parents(target, rel);
+    }
+    Ok(deleted_files)
+}
+
 /// The part of `remove` that runs after adoption: plan every selected
 /// item, then delete, then clean up bundles and plugins and save.
 fn remove_selected(
@@ -219,16 +240,7 @@ fn remove_selected(
     // A path recorded by two removed items is reported once, for the first.
     let mut reported = std::collections::BTreeSet::new();
     for plan in plans {
-        let mut deleted_files = Vec::new();
-        for rel in &plan.delete {
-            delete_recorded(target, rel)?;
-            if reported.insert(rel.clone()) {
-                deleted_files.push(rel.clone());
-            }
-        }
-        for rel in &plan.absent {
-            prune_empty_parents(target, rel);
-        }
+        let deleted_files = execute_removal(target, &plan, &mut reported)?;
         lock.remove(plan.kind, &plan.name);
         report.items.push(RemovedItem {
             kind: plan.kind,
@@ -598,12 +610,23 @@ fn reselect_from_entries(
 }
 
 /// `update` always fetches per ADR-0004 — there is no `--offline`.
+///
+/// In `Apply` mode, `overwrite` (`update --force`) replaces modified and
+/// unowned files. Without it, an item with such a file at one of its
+/// destinations is not written and is reported as
+/// [`UpdateStatus::SkippedModified`]; a modified file that the new version
+/// no longer contains is kept and listed in `kept_modified`. An item that
+/// its source no longer contains is removed with the rules of [`remove`]:
+/// its unchanged recorded files are deleted, its modified files are kept
+/// (deleted with `overwrite` when they are regular files) and listed in
+/// `kept_modified`, and its lockfile entry is dropped.
 pub fn update(
     target: &Path,
     names: &[String],
     mode: UpdateMode,
     plugin_scope: crate::plugin::PluginScope,
     selection: &crate::select::ClientSelection,
+    overwrite: bool,
 ) -> Result<UpdateReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
 
@@ -675,6 +698,7 @@ pub fn update(
                     };
                     let options = AddOptions {
                         force: true,
+                        overwrite,
                         aliases,
                         excludes: vec![],
                         selection: effective_selection,
@@ -724,22 +748,45 @@ pub fn update(
                         new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
                     }
                     guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
-                    // Collect orphans first, then batch-remove from lockfile.
-                    let mut orphans: Vec<(&crate::lockfile::LockedItem, ItemKind)> = Vec::new();
-                    for entry in &source_entries {
-                        let kind = entry.kind;
-                        if !new_hashes.contains_key(&(kind, entry.name.clone())) {
-                            orphans.push((entry, kind));
-                        }
+                    report
+                        .kept_modified
+                        .extend(install_report.kept_modified.iter().cloned());
+                    let mut skipped: std::collections::BTreeMap<(ItemKind, String), Vec<PathBuf>> =
+                        std::collections::BTreeMap::new();
+                    for conflict in &install_report.conflicts {
+                        skipped
+                            .entry((conflict.kind, conflict.name.clone()))
+                            .or_default()
+                            .push(conflict.path.clone());
                     }
+                    // An item that the source no longer contains is removed
+                    // as `remove` does: plan every orphan from the saved
+                    // lockfile (it holds the adopted record, if any), then
+                    // delete.
+                    let orphans: Vec<&crate::lockfile::LockedItem> = source_entries
+                        .iter()
+                        .filter(|e| !new_hashes.contains_key(&(e.kind, e.name.clone())))
+                        .collect();
                     if !orphans.is_empty() {
                         let mut lock = crate::lockfile::Lockfile::load(target)?;
-                        for (entry, kind) in &orphans {
-                            remove_item_outputs(target, *kind, &entry.name);
-                            lock.remove(entry.kind, &entry.name);
+                        let mut plans = Vec::with_capacity(orphans.len());
+                        for orphan in &orphans {
+                            if let Some(entry) = lock
+                                .items
+                                .iter()
+                                .find(|i| i.kind == orphan.kind && i.name == orphan.name)
+                            {
+                                plans.push(plan_removal(target, entry, overwrite)?);
+                            }
+                        }
+                        let mut reported = std::collections::BTreeSet::new();
+                        for plan in plans {
+                            execute_removal(target, &plan, &mut reported)?;
+                            report.kept_modified.extend(plan.kept.iter().cloned());
+                            lock.remove(plan.kind, &plan.name);
                             report.items.push(UpdatedItem {
-                                kind: *kind,
-                                name: entry.name.clone(),
+                                kind: plan.kind,
+                                name: plan.name,
                                 source: source_label.clone(),
                                 status: UpdateStatus::Removed,
                             });
@@ -755,14 +802,17 @@ pub fn update(
                             .get(&(kind, entry.name.clone()))
                             .cloned()
                             .flatten();
-                        let status = if new_hash == entry.hash {
-                            UpdateStatus::UpToDate
-                        } else {
-                            UpdateStatus::Updated {
-                                old_hash: entry.hash.clone(),
-                                new_hash,
-                            }
-                        };
+                        let status =
+                            if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
+                                UpdateStatus::SkippedModified { files }
+                            } else if new_hash == entry.hash {
+                                UpdateStatus::UpToDate
+                            } else {
+                                UpdateStatus::Updated {
+                                    old_hash: entry.hash.clone(),
+                                    new_hash,
+                                }
+                            };
                         report.items.push(UpdatedItem {
                             kind,
                             name: entry.name.clone(),

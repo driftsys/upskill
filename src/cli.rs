@@ -69,7 +69,9 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Replace existing items from a different source without error.
+        /// Replace existing items from a different source without error,
+        /// and replace files at the destinations that were modified after
+        /// upskill wrote them or that upskill does not manage.
         #[arg(long = "force")]
         force: bool,
         /// Install under an alternate name to avoid conflicts.
@@ -167,6 +169,12 @@ pub enum Commands {
         /// not a terminal (CI / pipes) or when `--dry-run` is used.
         #[arg(short = 'y', long = "yes")]
         yes: bool,
+        /// Replace files that were modified after upskill wrote them or
+        /// that upskill does not manage, and delete modified files that the
+        /// new version no longer contains. Without it, such an item is
+        /// skipped and the command exits with code 1.
+        #[arg(long = "force")]
+        force: bool,
         /// Restrict regenerated output to Claude Code. Combine client flags to
         /// target several; no client flag regenerates for all clients.
         #[arg(long = "claude", help_heading = "Client selection")]

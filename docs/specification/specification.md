@@ -94,10 +94,24 @@ Default scope is `--project` (write into the current repo's `.agents/...`),
 falling back to `--global` (`$HOME/.agents/...`) when the current directory is
 not inside a git repo. Either flag can be passed explicitly.
 
+Before any write, `add` classifies every destination of every item against the
+item's `files` record (§4). A destination is a conflict when it is **modified**
+(recorded, with other content or no longer a regular file) or **unowned** (it
+exists and is not recorded), unless its content already equals the planned
+bytes. Without `--force`, an item with at least one conflict is skipped as a
+whole: none of its files is written or deleted and its lockfile entry is not
+changed. The other items are written. `add` then prints one line per conflict to
+stderr, `skipped <kind> <name>: <path> was modified` or
+`skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
+by `Use --force to replace.`, and exits with code 1. `--force` replaces these
+files and also replaces items installed from another source. An installed name
+or an `--as` alias that contains `/` or `\` is refused before any change, with
+an error that names the item.
+
 ### 2.2 `update`
 
 ```text
-upskill update [name...] [--global|--project] [--dry-run]
+upskill update [name...] [--global|--project] [--dry-run] [--force]
 ```
 
 Always fetches the latest source before regenerating. Absorbs the role of a
@@ -110,6 +124,19 @@ covered by passing local paths to `add` / `update`.
   frontmatter field, `update` regenerates outputs from the same SSOT.
 - **Track upstream evolution.** `update` git-pulls source repos and regenerates
   items whose source hash changed.
+
+`update` applies the conflict rules of `add` (§2.1). An item with a modified or
+unowned destination is not written, keeps its lockfile entry, is reported as
+skipped with
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` and
+`Use --force to replace.` on stderr, and makes `update` exit with code 1 after
+the other items are written. A recorded file that the new version of an item no
+longer produces, for example a file of a client that a narrower selection no
+longer targets, is deleted when it is owned; a modified one is kept, stays in
+the record, and is reported as `kept modified file: <path>`. An item that its
+source no longer contains is removed with the rules of `remove` (§2.3).
+`update --force` replaces modified and unowned destinations and deletes modified
+regular files that are no longer produced.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -285,17 +312,18 @@ git ref, with what content hashes. Same schema in both locations. A new lockfile
 is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
 `sha256` fields. `add` and `update` fill `files` with every file they write for
-the item and delete the recorded files that a reinstall no longer produces,
-unless another item installed by the same command writes that path; no command
-fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
-`update` and `remove` (not `update --dry-run`, not `doctor`, not a `remove` that
-fails on an unknown name, not an `add`, or an `update` for its first source,
-that is refused for a source item that overlaps its own output paths, for a
-conflict with another source, or for two items with one installed name) adopt a
-`schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an
-existing `.upskill-lock.json.v1` is kept and not replaced), record each existing
-file at the items' output paths with its current hash, save `schema: 2`, and
-print the adopted paths to stderr.
+the item and delete the recorded files that a reinstall no longer produces and
+that are unchanged, unless another item installed by the same command writes
+that path; a modified recorded file is kept and stays in `files`, unless
+`--force` deletes it (§2.1, §2.2). No command fills `pending` yet. `remove`
+deletes only recorded files (§2.3). `add`, `update` and `remove` (not
+`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
+not an `add`, or an `update` for its first source, that is refused for a source
+item that overlaps its own output paths, for a conflict with another source, or
+for two items with one installed name) adopt a `schema: 1` lockfile: they keep
+the old bytes as `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is
+kept and not replaced), record each existing file at the items' output paths
+with its current hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 
@@ -518,12 +546,12 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.1 Exit codes
 
-| Code  | Meaning                              |
-| ----- | ------------------------------------ |
-| `0`   | Success.                             |
-| `1`   | General error (network, parse, I/O). |
-| `2`   | Usage error (invalid args or flags). |
-| `130` | Interrupted (Ctrl+C / SIGINT).       |
+| Code  | Meaning                                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| `0`   | Success.                                                                                                               |
+| `1`   | General error (network, parse, I/O), or `add` / `update` skipped an item because of a modified or unowned file (§2.1). |
+| `2`   | Usage error (invalid args or flags).                                                                                   |
+| `130` | Interrupted (Ctrl+C / SIGINT).                                                                                         |
 
 ### 6.2 Conventions
 

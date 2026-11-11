@@ -627,3 +627,170 @@ fn update_refuses_source_inside_the_recorded_alias_output_path() {
         ".claude/skills/other/nested",
     );
 }
+
+// -- Task 10: `update` keeps modified files --
+
+fn res_skill_md(root: &Path) -> std::path::PathBuf {
+    root.join(".claude")
+        .join("skills")
+        .join("res")
+        .join("SKILL.md")
+}
+
+fn change_res_source(root: &Path) {
+    let path = root.join("source").join("res").join("SKILL.md");
+    let text = fs::read_to_string(&path).unwrap();
+    fs::write(&path, format!("{text}Changed.\n")).unwrap();
+}
+
+#[test]
+fn update_keeps_a_modified_file_and_skips_the_item() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    let hash_before = lockfile_hash_for(tmp.path(), "res");
+    change_res_source(tmp.path());
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(1);
+    let all = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.get_output().stdout),
+        String::from_utf8_lossy(&out.get_output().stderr)
+    );
+    assert!(all.contains("SKILL.md"), "{all}");
+    assert!(all.contains("Use --force to replace."), "{all}");
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    assert_eq!(lockfile_hash_for(tmp.path(), "res"), hash_before);
+}
+
+#[test]
+fn update_force_replaces_a_modified_file() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    change_res_source(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force"])
+        .assert()
+        .success();
+    assert!(fs::read_to_string(&dest).unwrap().contains("Changed."));
+}
+
+#[test]
+fn update_deletes_a_file_the_new_version_no_longer_contains() {
+    let (tmp, home) = res_project(|skill| {
+        fs::create_dir_all(skill.join("scripts")).unwrap();
+        fs::write(skill.join("scripts").join("a.sh"), "echo a\n").unwrap();
+    });
+    let scripts = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("res")
+        .join("scripts");
+    assert!(scripts.join("a.sh").is_file());
+    fs::remove_dir_all(tmp.path().join("source").join("res").join("scripts")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+    assert!(!scripts.join("a.sh").exists());
+    assert!(!scripts.exists());
+}
+
+fn copilot_res_project() -> (tempfile::TempDir, std::path::PathBuf) {
+    let (tmp, home) = res_project(|_| {});
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "res",
+            "--claude",
+            "--copilot",
+            "--project",
+        ])
+        .assert()
+        .success();
+    (tmp, home)
+}
+
+fn copilot_res_md(root: &Path) -> std::path::PathBuf {
+    root.join(".github")
+        .join("skills")
+        .join("res")
+        .join("SKILL.md")
+}
+
+#[test]
+fn update_with_a_narrower_selection_deletes_the_owned_copilot_file() {
+    let (tmp, home) = copilot_res_project();
+    assert!(copilot_res_md(tmp.path()).is_file());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--claude"])
+        .assert()
+        .success();
+    assert!(!copilot_res_md(tmp.path()).exists());
+    assert_eq!(
+        recorded_paths(tmp.path(), "res"),
+        vec![".claude/skills/res/SKILL.md".to_string()]
+    );
+}
+
+#[test]
+fn update_with_a_narrower_selection_keeps_a_modified_copilot_file() {
+    let (tmp, home) = copilot_res_project();
+    fs::write(copilot_res_md(tmp.path()), "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--claude"])
+        .assert()
+        .success();
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert!(stderr.contains("SKILL.md"), "{stderr}");
+    assert_eq!(fs::read(copilot_res_md(tmp.path())).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn update_keeps_a_modified_file_of_an_item_the_source_no_longer_contains() {
+    let (tmp, home) = res_project(|_| {});
+    // A second item, so the source does not resolve to zero items.
+    let other = tmp.path().join("source").join("other");
+    fs::create_dir_all(&other).unwrap();
+    fs::write(
+        other.join("SKILL.md"),
+        "---\nschema: 1\nname: other\ndescription: Use for other\n---\nOther.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "other", "--claude", "--project"])
+        .assert()
+        .success();
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    fs::remove_dir_all(tmp.path().join("source").join("res")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(!lock.contains("\"name\": \"res\""), "{lock}");
+}

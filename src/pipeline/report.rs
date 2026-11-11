@@ -58,6 +58,12 @@ pub struct InstallReport {
     /// `None` when no adoption happened. `main.rs` prints the adoption
     /// notice when it is `Some` and not empty.
     pub adopted: Option<Vec<String>>,
+    /// Destinations that stopped the write of an item. Every item listed
+    /// here was not written, and its lockfile entry is unchanged.
+    pub conflicts: Vec<super::FileConflict>,
+    /// Modified files that the new version of an item no longer contains.
+    /// They are kept on disk and stay in the item's record.
+    pub kept_modified: Vec<PathBuf>,
 }
 
 /// Error context attached when a command fails after it saved the
@@ -356,12 +362,18 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
-    /// `Apply` mode: item no longer exists in the source. Outputs deleted
-    /// and lockfile entry removed.
+    /// `Apply` mode: item no longer exists in the source. Its unchanged
+    /// recorded files were deleted (modified ones are kept and listed in
+    /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile
+    /// entry was removed.
     Removed,
     /// `DryRun` mode: item no longer exists in the source; an `update`
     /// (without `--dry-run`) would remove it.
     WouldRemove,
+    /// `Apply` mode: the item was not written because these destinations
+    /// (relative to the install target root) are modified or not managed
+    /// by upskill. The files and the lockfile entry are unchanged.
+    SkippedModified { files: Vec<PathBuf> },
 }
 
 #[derive(Debug, Clone)]
@@ -378,6 +390,10 @@ pub struct UpdateReport {
     /// Paths recorded when a reinstall adopted a `schema: 1` lockfile,
     /// sorted and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
+    /// Modified files that `update` kept: files that the new version of an
+    /// item no longer contains, and files of an item that its source no
+    /// longer contains.
+    pub kept_modified: Vec<PathBuf>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

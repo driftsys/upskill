@@ -394,6 +394,10 @@ fn adoption_notice_is_printed_when_add_fails_after_adoption() {
         stderr.contains("  .claude/rules/api-conventions.md\n"),
         "stderr: {stderr}"
     );
+    // The notice replaces the adoption context: the error line starts with
+    // the underlying error.
+    assert!(!stderr.contains("adopted before this error"), "{stderr}");
+    assert!(stderr.contains("error: refusing to change"), "{stderr}");
     assert_eq!(fs::read(&outside).unwrap(), b"outside bytes\n");
 }
 
@@ -882,8 +886,14 @@ fn write_rule(dir: &Path, name: &str, body: &str) {
     .unwrap();
 }
 
+/// Before Task 10 this test installed a rule under the alias `a/b`, so that
+/// the alias wrote the stale resource path of rule `a`. An installed name
+/// with a path separator is now refused before any change, so that overlap
+/// cannot be produced from the command line; the cross-item rule of
+/// `apply_plan` is covered by its unit test
+/// `stale_file_of_one_item_is_not_deleted_when_another_item_writes_it`.
 #[test]
-fn stale_file_of_one_item_does_not_delete_a_file_another_item_writes() {
+fn an_alias_onto_the_resource_path_of_another_item_is_refused() {
     let (tmp, home) = project();
     let src = tmp.path().join("rules");
     write_rule(&src.join("a"), "a", "See [b](./b.md).");
@@ -894,12 +904,15 @@ fn stale_file_of_one_item_does_not_delete_a_file_another_item_writes() {
         .args(["add", "./rules", "a", "--claude", "--project"])
         .assert()
         .success();
+    let resource = tmp
+        .path()
+        .join(".claude")
+        .join("rules")
+        .join("a")
+        .join("b.md");
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    // Rule `a` loses its resource `.claude/rules/a/b.md`; rule `zero`,
-    // aliased to `a/b` and planned first, now writes that path.
-    fs::remove_file(src.join("a/b.md")).unwrap();
-    write_rule(&src.join("a"), "a", "no resource");
-    common::upskill_cmd(&home)
+    let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args([
             "add",
@@ -910,15 +923,17 @@ fn stale_file_of_one_item_does_not_delete_a_file_another_item_writes() {
             "--project",
         ])
         .assert()
-        .success();
-
-    let written = fs::read_to_string(tmp.path().join(".claude/rules/a/b.md")).unwrap();
-    assert!(written.contains("other rule"), "{written}");
-    common::upskill_cmd(&home)
-        .current_dir(tmp.path())
-        .args(["doctor", "--project"])
-        .assert()
-        .success();
+        .code(1);
+    assert!(
+        stderr_of(&out).contains("an installed name must not contain a path separator"),
+        "{}",
+        stderr_of(&out)
+    );
+    assert_eq!(fs::read(&resource).unwrap(), b"resource\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1483,4 +1498,156 @@ fn overlap_check_ignores_the_bare_alias_that_the_exact_alias_replaces() {
     let skills = tmp.path().join(".claude").join("skills");
     assert!(skills.join("y").join("SKILL.md").is_file());
     assert!(!skills.join("x").join("SKILL.md").exists());
+}
+
+// -- Task 10: `add` protects modified and unowned files --
+
+fn claude_rule_path(root: &Path) -> std::path::PathBuf {
+    root.join(".claude")
+        .join("rules")
+        .join("api-conventions.md")
+}
+
+fn add_rule(home: &Path, root: &Path, extra: &[&str]) -> assert_cmd::assert::Assert {
+    common::upskill_cmd(home)
+        .current_dir(root)
+        .args([
+            "add",
+            "./source",
+            "api-conventions",
+            "--claude",
+            "--project",
+        ])
+        .args(extra)
+        .assert()
+}
+
+fn has_item(root: &Path, name: &str) -> bool {
+    let path = root.join(".upskill-lock.json");
+    if !path.exists() {
+        return false;
+    }
+    lockfile(root)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["name"] == name)
+}
+
+#[test]
+fn add_refuses_an_unowned_file_at_the_destination() {
+    let (tmp, home) = project();
+    let dest = claude_rule_path(tmp.path());
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::write(&dest, "manual\n").unwrap();
+
+    let out = add_rule(&home, tmp.path(), &[]).code(1);
+    let stderr = stderr_of(&out);
+    assert!(
+        stderr.contains("skipped rule api-conventions: ")
+            && stderr.contains("exists and is not managed by upskill"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Use --force to replace."), "{stderr}");
+    assert_eq!(fs::read(&dest).unwrap(), b"manual\n");
+    assert!(!has_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn add_accepts_an_unowned_file_with_identical_content() {
+    let (tmp, home) = project();
+    add_rule(&home, tmp.path(), &[]).success();
+    let dest = claude_rule_path(tmp.path());
+    let generated = fs::read(&dest).unwrap();
+    fs::remove_file(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    add_rule(&home, tmp.path(), &[]).success();
+    assert_eq!(fs::read(&dest).unwrap(), generated);
+    assert_eq!(
+        file_paths(item(&lockfile(tmp.path()), "api-conventions")),
+        vec![".claude/rules/api-conventions.md".to_string()]
+    );
+}
+
+#[test]
+fn add_force_replaces_an_unowned_file() {
+    let (tmp, home) = project();
+    add_rule(&home, tmp.path(), &[]).success();
+    let dest = claude_rule_path(tmp.path());
+    let generated = fs::read(&dest).unwrap();
+    fs::remove_file(tmp.path().join(".upskill-lock.json")).unwrap();
+    fs::write(&dest, "manual\n").unwrap();
+
+    add_rule(&home, tmp.path(), &["--force"]).success();
+    assert_eq!(fs::read(&dest).unwrap(), generated);
+    assert!(has_item(tmp.path(), "api-conventions"));
+}
+
+#[test]
+fn a_conflict_on_one_item_does_not_block_another_item() {
+    let (tmp, home) = project();
+    let dest = claude_rule_path(tmp.path());
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::write(&dest, "manual\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "api-conventions",
+            "create-api-endpoint",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .code(1);
+    assert!(
+        stderr_of(&out).contains("skipped rule api-conventions: "),
+        "{}",
+        stderr_of(&out)
+    );
+    assert_eq!(fs::read(&dest).unwrap(), b"manual\n");
+    assert!(!has_item(tmp.path(), "api-conventions"));
+    assert!(
+        tmp.path()
+            .join(".claude")
+            .join("skills")
+            .join("create-api-endpoint")
+            .join("SKILL.md")
+            .is_file()
+    );
+    assert!(has_item(tmp.path(), "create-api-endpoint"));
+}
+
+#[test]
+fn add_refuses_an_alias_that_contains_a_path_separator() {
+    let (tmp, home) = project();
+    for alias in ["api-conventions=a/b", "api-conventions=a\\b"] {
+        let out = add_rule(&home, tmp.path(), &["--as", alias]).code(1);
+        assert!(
+            stderr_of(&out).contains("an installed name must not contain a path separator"),
+            "{}",
+            stderr_of(&out)
+        );
+        assert!(!tmp.path().join(".claude").exists());
+        assert!(!tmp.path().join(".upskill-lock.json").exists());
+    }
+}
+
+#[test]
+fn add_refuses_an_item_name_that_contains_a_path_separator() {
+    let (tmp, home) = project();
+    write_rule(&tmp.path().join("sep").join("r"), "a/b", "Body.");
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./sep", "--claude", "--project"])
+        .assert()
+        .code(1);
+    assert!(
+        stderr_of(&out).contains("an installed name must not contain a path separator"),
+        "{}",
+        stderr_of(&out)
+    );
+    assert!(!tmp.path().join(".claude").exists());
 }
