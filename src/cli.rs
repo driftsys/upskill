@@ -178,8 +178,12 @@ pub enum Commands {
         /// Replace files that were modified after upskill wrote them or
         /// that upskill does not manage, and delete modified files that the
         /// new version no longer contains. Without it, an item with a
-        /// modified or unmanaged destination is skipped and the command exits
-        /// with code 1; a modified file that is no longer produced is kept.
+        /// modified or unmanaged destination is not written. When its source
+        /// did not change, it has no interrupted operation, every such file
+        /// is a modified recorded file, and nothing else of the item would
+        /// change, the file is kept with a note; otherwise the item is
+        /// skipped and the command exits with code 1. A modified file that
+        /// is no longer produced is kept.
         #[arg(long = "force")]
         force: bool,
         /// Restrict regenerated output to Claude Code. Combine client flags to

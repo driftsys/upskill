@@ -63,6 +63,7 @@ pub fn install_from_local_path(
         &report.planned,
         true,
         None,
+        false,
     )?;
     Ok(report)
 }

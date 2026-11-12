@@ -636,8 +636,12 @@ fn reselect_from_entries(
 ///
 /// In `Apply` mode, `overwrite` (`update --force`) replaces modified and
 /// unowned files. Without it, an item with such a file at one of its
-/// destinations is not written and is reported as
-/// [`UpdateStatus::SkippedModified`]; a modified file that the new version
+/// destinations is not written. When its source hash did not change, it
+/// has no `pending` record, every such file is modified (none is unowned)
+/// and nothing else of the item would be written or deleted, the modified
+/// files are listed in `kept_modified` and the item is reported as
+/// [`UpdateStatus::UpToDate`]; otherwise it is reported as
+/// [`UpdateStatus::SkippedModified`]. A modified file that the new version
 /// no longer contains is kept and listed in `kept_modified`. An item that
 /// its source no longer contains is removed with the rules of [`remove`]:
 /// its unchanged recorded files are deleted, its modified files are kept
@@ -731,6 +735,7 @@ pub fn update(
                         aliases,
                         excludes: vec![],
                         selection: effective_selection,
+                        keep_unwithheld_edits: true,
                     };
                     // Scope the reinstall to exactly the items this source already
                     // contributes to the lockfile (by their in-source name), rather
@@ -935,6 +940,10 @@ pub fn update(
         !matches!(item.status, UpdateStatus::SkippedModified { .. })
             || seen_skipped.insert((item.kind, item.name.clone()))
     });
+    // A file kept by the reinstall of two sources (a dependency from
+    // another source) is reported once.
+    report.kept_modified.sort();
+    report.kept_modified.dedup();
     if let Err(err) = result {
         return Err(match &report.adopted {
             Some(paths)

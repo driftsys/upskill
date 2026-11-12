@@ -104,7 +104,8 @@ pub struct AddOptions {
     /// Replace modified and unowned files. Set by `--force` on `add` and
     /// `update`. When false, an item with such a file at one of its
     /// destinations is not written and is reported in
-    /// [`InstallReport::conflicts`].
+    /// [`InstallReport::conflicts`], except as described for
+    /// `keep_unwithheld_edits`.
     pub overwrite: bool,
     /// Alias mappings. For direct `--as alt-name`: vec contains `("", "alt-name")`.
     /// For bundle `--as original=alias`: vec contains `("original", "alias")`.
@@ -114,6 +115,12 @@ pub struct AddOptions {
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,
+    /// Set by `update`. When true, an item whose only conflicts are
+    /// modified destinations, and from which nothing is withheld (see
+    /// `decide_plan`), is not written and is not reported in
+    /// [`InstallReport::conflicts`]: its modified destinations are listed in
+    /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged.
+    pub keep_unwithheld_edits: bool,
 }
 
 const ALL_CLIENTS: [Client; 3] = Client::ALL;
@@ -476,16 +483,22 @@ pub fn install_with_lockfile(
             &report.planned,
             options.overwrite,
             Some(&new_items),
+            options.keep_unwithheld_edits,
         )?;
         let mut recorded = outcome.recorded;
         report.kept_modified = outcome.kept;
+        report
+            .kept_modified
+            .extend(outcome.kept_edits.iter().map(|c| c.path.clone()));
         report.conflicts = outcome.skipped;
         report.forced = outcome.forced;
         report.changed = outcome.changed;
-        // A skipped item keeps its lockfile entry unchanged, or gets none.
+        // A skipped item keeps its lockfile entry unchanged, or gets none. An
+        // item kept for its modified files keeps its lockfile entry unchanged.
         let skipped: std::collections::BTreeSet<(ItemKind, String)> = report
             .conflicts
             .iter()
+            .chain(&outcome.kept_edits)
             .map(|c| (c.kind, c.name.clone()))
             .collect();
 

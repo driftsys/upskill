@@ -5,9 +5,9 @@
 //! client root and the kind directory, for example `.claude/skills`) may be
 //! symbolic links. Every existing component from the third one to the last
 //! one (the item directory, resource subdirectories and the file) must not
-//! be a symbolic link. The checks that `apply_plan` runs before any change
-//! on disk, and the conflict rules for modified and unowned files, are
-//! described in the rustdoc of `apply_plan` and `check_writable`.
+//! be a symbolic link. The checks that `decide_plan` runs before any
+//! change on disk, and the conflict rules for modified and unowned files,
+//! are described in the rustdoc of `decide_plan` and `check_writable`.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
@@ -53,8 +53,12 @@ pub struct FileConflict {
 /// What `apply_plan` did.
 #[derive(Debug, Default)]
 pub(super) struct ApplyOutcome {
-    /// Items that were not written because of a conflict.
+    /// The conflicts of the items that were not written because an update
+    /// is withheld from them ([`Disposition::Skip`]).
     pub skipped: Vec<FileConflict>,
+    /// The modified destinations of the items that were not written
+    /// because nothing is withheld from them ([`Disposition::KeepEdits`]).
+    pub kept_edits: Vec<FileConflict>,
     /// Modified files of a previous record that the plan no longer
     /// contains. They are kept on disk and stay in the item's record.
     pub kept: Vec<PathBuf>,
@@ -68,70 +72,98 @@ pub(super) struct ApplyOutcome {
     pub changed: Vec<PathBuf>,
 }
 
-/// What `apply_plan` does for one item, computed before any change.
-struct ItemChanges {
-    files: Vec<OwnedFile>,
-    /// Stale files to delete.
-    delete: Vec<PathBuf>,
-    /// Stale files that are kept, with their previous records.
-    kept: Vec<(PathBuf, Vec<OwnedFile>)>,
-    /// Destinations that stop the write of this item.
-    conflicts: Vec<FileConflict>,
-    /// `Owned` destinations that are not rewritten: see the rule in the
-    /// rustdoc of [`apply_plan`].
-    unchanged: BTreeSet<PathBuf>,
+/// What `execute_plan` will do, computed without any change on disk or
+/// in `lock`. One entry per planned item, in the order of `planned`.
+pub(super) struct PlanDecision {
+    pub items: Vec<ItemChanges>,
 }
 
-/// Writes every planned item that has no conflict and updates
-/// `lock.items[..].files` for the written items that have a lockfile entry.
-///
-/// With `new_entries` (the lockfile entry of each planned item, given by
-/// `install_with_lockfile`), the operation can be completed by a second
-/// run after a failure. The lockfile is saved in step 2 when at least one
-/// item gets a `pending` record, and always in step 4:
-///
-/// 1. The checks below run; nothing is changed on disk yet.
-/// 2. For each item that is written (no conflict, or `overwrite`) and that
-///    writes at least one file or deletes at least one existing stale file,
-///    the planned files are added to the `pending` record of its lockfile
-///    entry. The old `pending` records that the plan does not repeat stay,
-///    so a path and hash of a previous failed run stay recorded until the
-///    promotion of step 4. An item that has no entry yet is inserted from
-///    `new_entries`, with an empty `files` record. The lockfile is saved
-///    when at least one item got a `pending` record.
-/// 3. For each item, after the save of step 2: its stale files are deleted
-///    first (the checks of step 1 judge each planned path against the state
-///    after that deletion), then each file that is not `unchanged` (see
-///    below) is written to a stage file `.upskill-stage-<16 hex digits>` in
-///    the destination directory, which gets the planned mode (a file
-///    without a planned mode gets the default mode of a new file), and is
-///    renamed to the destination. On an error the stage file is deleted and
-///    the error is returned; files already renamed stay, and the lockfile
-///    keeps the `pending` record of step 2.
-/// 4. The `files` record of each written item is set to the planned files
-///    and the records of its kept stale files, and its `pending` record is
-///    cleared. The lockfile is saved.
-///
-/// A second run finds the files written by a failed run `Owned` through
-/// their `pending` hash, and the files not yet written `Owned` through
-/// their `files` hash, so neither is a conflict. This holds after several
-/// failed runs, because step 2 keeps the old `pending` records. Without
-/// `new_entries` (the library entry points), no `pending` record is set and
-/// the lockfile is not saved.
+/// What `execute_plan` does for one item, computed by `decide_plan`
+/// before any change.
+pub(super) struct ItemChanges {
+    pub kind: ItemKind,
+    /// Installed name of the item.
+    pub name: String,
+    /// The record of the planned files, sorted by `client`, then `path`.
+    pub files: Vec<OwnedFile>,
+    /// Stale files to delete.
+    pub delete: Vec<PathBuf>,
+    /// Stale files that are kept, with their previous records.
+    pub kept: Vec<(PathBuf, Vec<OwnedFile>)>,
+    /// Destinations that stop the write of this item.
+    pub conflicts: Vec<FileConflict>,
+    /// `Owned` destinations that are not rewritten: see the rule in the
+    /// rustdoc of [`decide_plan`].
+    pub unchanged: BTreeSet<PathBuf>,
+    /// What [`execute_plan`] does with the item.
+    pub disposition: Disposition,
+}
+
+/// What [`execute_plan`] does with one item. See the rule in the rustdoc
+/// of [`decide_plan`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Disposition {
+    /// Written (no conflict, or `overwrite`).
+    Write,
+    /// Not written; an update is withheld. Reported in `ApplyOutcome::skipped`.
+    Skip,
+    /// Not written; nothing is withheld. Its modified destinations are
+    /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is unchanged.
+    KeepEdits,
+}
+
+/// Writes an install plan: [`decide_plan`] followed by [`execute_plan`].
+/// See the rustdoc of both functions for the rules.
+pub(super) fn apply_plan(
+    target: &Path,
+    lock: &mut Lockfile,
+    planned: &[PlannedItem],
+    overwrite: bool,
+    new_entries: Option<&[LockedItem]>,
+    keep_unwithheld_edits: bool,
+) -> Result<ApplyOutcome> {
+    let decision = decide_plan(
+        target,
+        lock,
+        planned,
+        overwrite,
+        new_entries,
+        keep_unwithheld_edits,
+    )?;
+    execute_plan(target, lock, planned, decision, new_entries)
+}
+
+/// Computes what [`execute_plan`] does for each planned item, without any
+/// change on disk or in `lock`.
 ///
 /// Conflicts: every destination of every item is classified with
 /// [`classify`] before anything is written. A destination whose content
 /// already equals the planned bytes is not a conflict, in any state; at a
 /// `Modified` destination, a CRLF variant of the planned bytes (see
 /// [`matches_recorded`]) also counts as equal. A destination that is
-/// `Modified` or `Unowned` is a conflict. When
-/// `overwrite` is false, an item with at least one conflict is skipped as a
-/// whole: none of its files is written or deleted, and its lockfile record
-/// is unchanged. The other items are written. When `overwrite` is true, a
-/// conflicting regular file is replaced. An `Owned` destination is
-/// `unchanged`: it is not rewritten and is not counted in `changed` when
-/// its bytes equal the planned bytes, or when they are a CRLF variant of
-/// the planned bytes (see [`matches_recorded`]) and the hash of the planned
+/// `Modified` or `Unowned` is a conflict. An item without a conflict, or
+/// any item when `overwrite` is true, is written ([`Disposition::Write`]):
+/// a conflicting regular file is replaced. When `overwrite` is false, an
+/// item with at least one conflict is not written: none of its files is
+/// written or deleted, and its lockfile record is unchanged. It is
+/// [`Disposition::KeepEdits`] (nothing is withheld from it) when all of
+/// these hold, and [`Disposition::Skip`] otherwise:
+///
+/// - `keep_unwithheld_edits` is true;
+/// - every conflict is `Modified` and is a planned file of the item (not a
+///   kept stale file);
+/// - the item has a lockfile entry with an empty `pending` record;
+/// - `new_entries` holds the item, its `hash` is `Some`, and its entry
+///   equals the lockfile entry in every field except `files`, `pending`
+///   and `required_by`
+///   (the source of the item did not change, and no field of the record,
+///   for example `clients`, would change);
+/// - the item has no stale file, to delete or to keep;
+/// - every planned file that is not a conflict is `unchanged`.
+///
+/// An `Owned` destination is `unchanged`: it is not rewritten and is not
+/// counted in `changed` when its bytes equal the planned bytes, or when
+/// they are a CRLF variant of the planned bytes (see [`matches_recorded`]) and the hash of the planned
 /// bytes was already recorded for the file in its `files` record (a
 /// `pending` hash does not count here). Its record is the hash of the
 /// planned bytes. In that case a file with a planned mode has the mode set
@@ -147,7 +179,7 @@ struct ItemChanges {
 /// record; with `overwrite` it is deleted when it is a regular file. A kept stale file that is a planned path, or a directory
 /// on the way to one, is a conflict of the item.
 ///
-/// Before any change on disk it fails when two planned items have the same
+/// It fails when two planned items have the same
 /// `(kind, name)` or an installed name contains a path separator, when two
 /// planned files have the same path, when one planned file is a directory
 /// on the way to another, when a path to write or delete breaks the
@@ -158,13 +190,14 @@ struct ItemChanges {
 /// regular file, or a directory that holds only regular files, is accepted
 /// when those files are stale recorded files of the same item. See
 /// `check_writable`.
-pub(super) fn apply_plan(
+pub(super) fn decide_plan(
     target: &Path,
-    lock: &mut Lockfile,
+    lock: &Lockfile,
     planned: &[PlannedItem],
     overwrite: bool,
     new_entries: Option<&[LockedItem]>,
-) -> Result<ApplyOutcome> {
+    keep_unwithheld_edits: bool,
+) -> Result<PlanDecision> {
     check_installed_names(planned)?;
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
     let mut changes = Vec::with_capacity(planned.len());
@@ -317,12 +350,41 @@ pub(super) fn apply_plan(
         }
         conflicts.sort_by(|a, b| a.path.cmp(&b.path));
         conflicts.dedup();
+        let disposition = if overwrite || conflicts.is_empty() {
+            Disposition::Write
+        } else if keep_unwithheld_edits
+            && conflicts.iter().all(|c| {
+                c.state == ConflictState::Modified
+                    && item.files.iter().any(|file| file.rel == c.path)
+            })
+            && entry.is_some_and(|e| {
+                e.pending.is_empty()
+                    && e.hash.is_some()
+                    && new_entries.is_some_and(|new| {
+                        new.iter().any(|n| {
+                            n.kind == item.kind && n.name == item.name && same_record(n, e)
+                        })
+                    })
+            })
+            && delete.is_empty()
+            && kept.is_empty()
+            && item.files.iter().all(|file| {
+                unchanged.contains(&file.rel) || conflicts.iter().any(|c| c.path == file.rel)
+            })
+        {
+            Disposition::KeepEdits
+        } else {
+            Disposition::Skip
+        };
         changes.push(ItemChanges {
+            kind: item.kind,
+            name: item.name.clone(),
             files,
             delete,
             kept,
             conflicts,
             unchanged,
+            disposition,
         });
     }
 
@@ -337,13 +399,64 @@ pub(super) fn apply_plan(
             );
         }
     }
+    Ok(PlanDecision { items: changes })
+}
 
+/// Writes every planned item whose disposition in `decision` is
+/// [`Disposition::Write`] and updates `lock.items[..].files` for the
+/// written items that have a lockfile entry. `decision` is the result of
+/// [`decide_plan`] for the same `target`, `lock`, `planned`, `overwrite`
+/// and `new_entries`. A `Skip` item is reported in `skipped`, a `KeepEdits`
+/// item in `kept_edits`; neither is written, and neither gets a `pending`
+/// record.
+///
+/// With `new_entries` (the lockfile entry of each planned item, given by
+/// `install_with_lockfile`), the operation can be completed by a second
+/// run after a failure. The lockfile is saved in step 2 when at least one
+/// item gets a `pending` record, and always in step 4:
+///
+/// 1. [`decide_plan`] ran its checks; nothing is changed on disk yet.
+/// 2. For each item that is written (`Write`) and that
+///    writes at least one file or deletes at least one existing stale file,
+///    the planned files are added to the `pending` record of its lockfile
+///    entry. The old `pending` records that the plan does not repeat stay,
+///    so a path and hash of a previous failed run stay recorded until the
+///    promotion of step 4. An item that has no entry yet is inserted from
+///    `new_entries`, with an empty `files` record. The lockfile is saved
+///    when at least one item got a `pending` record.
+/// 3. For each item, after the save of step 2: its stale files are deleted
+///    first ([`decide_plan`] judges each planned path against the state
+///    after that deletion), then each file that is not `unchanged` (see
+///    [`decide_plan`]) is written to a stage file `.upskill-stage-<16 hex digits>` in
+///    the destination directory, which gets the planned mode (a file
+///    without a planned mode gets the default mode of a new file), and is
+///    renamed to the destination. On an error the stage file is deleted and
+///    the error is returned; files already renamed stay, and the lockfile
+///    keeps the `pending` record of step 2.
+/// 4. The `files` record of each written item is set to the planned files
+///    and the records of its kept stale files, and its `pending` record is
+///    cleared. The lockfile is saved.
+///
+/// A second run finds the files written by a failed run `Owned` through
+/// their `pending` hash, and the files not yet written `Owned` through
+/// their `files` hash, so neither is a conflict. This holds after several
+/// failed runs, because step 2 keeps the old `pending` records. Without
+/// `new_entries` (the library entry points), no `pending` record is set and
+/// the lockfile is not saved.
+pub(super) fn execute_plan(
+    target: &Path,
+    lock: &mut Lockfile,
+    planned: &[PlannedItem],
+    decision: PlanDecision,
+    new_entries: Option<&[LockedItem]>,
+) -> Result<ApplyOutcome> {
+    let changes = decision.items;
     // Record the planned files of every item that this run changes on disk
     // as `pending`, and save, before the first change on disk.
     if let Some(new_entries) = new_entries {
         let mut any_pending = false;
         for (item, changes) in planned.iter().zip(&changes) {
-            if !overwrite && !changes.conflicts.is_empty() {
+            if changes.disposition != Disposition::Write {
                 continue;
             }
             // An item that writes no file and deletes no existing file
@@ -403,15 +516,25 @@ pub(super) fn apply_plan(
     let mut outcome = ApplyOutcome::default();
     for (item, changes) in planned.iter().zip(changes) {
         let ItemChanges {
+            kind,
+            name,
             mut files,
             delete,
             kept,
             conflicts,
             unchanged,
+            disposition,
         } = changes;
-        if !overwrite && !conflicts.is_empty() {
-            outcome.skipped.extend(conflicts);
-            continue;
+        match disposition {
+            Disposition::Write => {}
+            Disposition::Skip => {
+                outcome.skipped.extend(conflicts);
+                continue;
+            }
+            Disposition::KeepEdits => {
+                outcome.kept_edits.extend(conflicts);
+                continue;
+            }
         }
         outcome
             .forced
@@ -454,19 +577,34 @@ pub(super) fn apply_plan(
         if let Some(entry) = lock
             .items
             .iter_mut()
-            .find(|i| i.kind == item.kind && i.name == item.name)
+            .find(|i| i.kind == kind && i.name == name)
         {
             entry.files = files.clone();
             entry.pending.clear();
         }
-        outcome
-            .recorded
-            .insert((item.kind, item.name.clone()), files);
+        outcome.recorded.insert((kind, name), files);
     }
     if new_entries.is_some() {
         lock.save(target)?;
     }
     Ok(outcome)
+}
+
+/// Whether `a` and `b` are equal in every field except `files`, `pending`
+/// and `required_by`. The comparison clears those three fields on clones
+/// and compares the rest, so a field added to `LockedItem` later is
+/// compared too. `required_by` is provenance: the reinstall of a
+/// dependency's own source computes it differently from the reinstall of
+/// the source that requires the dependency, so it does not count as a
+/// change here.
+fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
+    let strip = |item: &LockedItem| LockedItem {
+        files: Vec::new(),
+        pending: Vec::new(),
+        required_by: Vec::new(),
+        ..item.clone()
+    };
+    strip(a) == strip(b)
 }
 
 /// Writes `bytes` to a new stage file `.upskill-stage-<16 hex digits>` in
@@ -902,7 +1040,7 @@ mod tests {
                 (".claude/skills/s/SKILL.md", b"body"),
             ],
         )];
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap();
         let files = &rec.recorded[&(ItemKind::Skill, "s".to_string())];
         assert_eq!(files[0].path, ".claude/skills/s/SKILL.md");
         assert_eq!(files[0].sha256, sha256_hex(b"body"));
@@ -929,7 +1067,7 @@ mod tests {
             }],
         ));
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut lock, &plan, true, None).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, true, None, false).unwrap();
         assert!(!stale.exists());
         assert!(!tmp.path().join(".claude/skills/s/old").exists());
         assert!(tmp.path().join(".claude/skills/s/SKILL.md").exists());
@@ -952,7 +1090,15 @@ mod tests {
                 sha256: sha256_hex(b"x"),
             }],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true, None).unwrap();
+        apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[])],
+            true,
+            None,
+            false,
+        )
+        .unwrap();
         assert!(!tmp.path().join(".claude/skills/s").exists());
         assert!(tmp.path().join(".claude/skills").is_dir());
     }
@@ -973,7 +1119,7 @@ mod tests {
                 sha256: sha256_hex(b"keep"),
             }],
         ));
-        apply_plan(&target, &mut lock, &[planned("s", &[])], true, None).unwrap();
+        apply_plan(&target, &mut lock, &[planned("s", &[])], true, None, false).unwrap();
         assert!(outside.exists());
     }
 
@@ -987,7 +1133,8 @@ mod tests {
         fs::create_dir_all(link.parent().unwrap()).unwrap();
         std::os::unix::fs::symlink(&outside, &link).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         assert!(format!("{err:#}").contains("symbolic link"), "{err:#}");
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
@@ -999,7 +1146,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut item = planned("s", &[(".claude/skills/s/run.sh", b"#!/bin/sh\n")]);
         item.files[0].mode = Some(0o755);
-        apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None, false).unwrap();
         let mode = fs::metadata(tmp.path().join(".claude/skills/s/run.sh"))
             .unwrap()
             .permissions()
@@ -1037,6 +1184,7 @@ mod tests {
             &plan,
             true,
             None,
+            false,
         )
         .unwrap_err();
         assert!(format!("{err:#}").contains(".claude/skills/s"), "{err:#}");
@@ -1053,7 +1201,7 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".claude")).unwrap();
         std::os::unix::fs::symlink(&real, tmp.path().join(".claude/skills")).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap();
         assert_eq!(fs::read(real.join("s/SKILL.md")).unwrap(), b"body");
     }
 
@@ -1070,7 +1218,7 @@ mod tests {
         let mut lock = Lockfile::new();
         lock.items
             .push(locked("s", vec![record(".claude/skills/s/old.md")]));
-        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])], true, None).is_err());
+        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])], true, None, false).is_err());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"keep");
     }
 
@@ -1088,7 +1236,15 @@ mod tests {
             "s",
             vec![record("src/main.rs"), record(".claude/x.md")],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true, None).unwrap();
+        apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[])],
+            true,
+            None,
+            false,
+        )
+        .unwrap();
         assert!(main.exists());
         assert!(shallow.exists());
     }
@@ -1100,15 +1256,85 @@ mod tests {
             planned("s", &[(".claude/skills/s/SKILL.md", b"a")]),
             planned("s", &[(".claude/skills/s/OTHER.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name, true, None).unwrap_err();
+        let err = apply_plan(
+            tmp.path(),
+            &mut Lockfile::new(),
+            &same_name,
+            true,
+            None,
+            false,
+        )
+        .unwrap_err();
         assert!(format!("{err}").contains("`s`"), "{err}");
         let same_path = [
             planned("a", &[(".claude/skills/x/SKILL.md", b"a")]),
             planned("b", &[(".claude/skills/x/SKILL.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path, true, None).unwrap_err();
+        let err = apply_plan(
+            tmp.path(),
+            &mut Lockfile::new(),
+            &same_path,
+            true,
+            None,
+            false,
+        )
+        .unwrap_err();
         assert!(format!("{err}").contains("`a` and `b`"), "{err}");
         assert!(!tmp.path().join(".claude").exists());
+    }
+
+    /// Every path under `root` (directories with `None`, files with their
+    /// bytes), sorted by path.
+    fn tree(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+        let mut out = BTreeMap::new();
+        let mut dirs = vec![root.to_path_buf()];
+        while let Some(dir) = dirs.pop() {
+            for entry in fs::read_dir(&dir).unwrap() {
+                let path = entry.unwrap().path();
+                let rel = path.strip_prefix(root).unwrap().to_path_buf();
+                if path.is_dir() {
+                    out.insert(rel, None);
+                    dirs.push(path);
+                } else {
+                    out.insert(rel, Some(fs::read(&path).unwrap()));
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn decide_plan_changes_nothing_on_disk_or_in_the_lockfile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rewritten = ".claude/skills/s/SKILL.md";
+        let stale = ".claude/skills/s/old.md";
+        let new = ".claude/skills/s/new.md";
+        for (rel, bytes) in [(rewritten, b"old" as &[u8]), (stale, b"stale")] {
+            let full = tmp.path().join(rel);
+            fs::create_dir_all(full.parent().unwrap()).unwrap();
+            fs::write(full, bytes).unwrap();
+        }
+        let record = |path: &str, bytes: &[u8]| OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        };
+        let mut lock = Lockfile::new();
+        lock.items.push(locked(
+            "s",
+            vec![record(rewritten, b"old"), record(stale, b"stale")],
+        ));
+        let plan = [planned("s", &[(rewritten, b"new body"), (new, b"added")])];
+
+        let tree_before = tree(tmp.path());
+        let lock_before = serde_json::to_string(&lock).unwrap();
+        let decision = decide_plan(tmp.path(), &lock, &plan, false, None, false).unwrap();
+
+        assert_eq!(tree(tmp.path()), tree_before);
+        assert_eq!(serde_json::to_string(&lock).unwrap(), lock_before);
+        assert_eq!(decision.items.len(), 1);
+        assert_eq!(decision.items[0].delete, vec![PathBuf::from(stale)]);
+        assert!(!decision.items[0].unchanged.contains(Path::new(new)));
     }
 }
 
@@ -1141,7 +1367,8 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -1161,7 +1388,8 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/skills/second/SKILL.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/skills/second/SKILL.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -1203,7 +1431,7 @@ mod pre_check_tests {
         fs::write(dir.join("mine.md"), b"user file").unwrap();
         let mut lock = stale_record(".claude/skills/s/notes/a.md", b"old");
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut lock, &plan, true, None).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut lock, &plan, true, None, false).unwrap_err();
         assert!(
             format!("{err:#}").contains(".claude/skills/s/notes"),
             "{err:#}"
@@ -1218,7 +1446,8 @@ mod pre_check_tests {
         fs::create_dir_all(tmp.path().join(".claude/skills/s")).unwrap();
         fs::write(tmp.path().join(".claude/skills/s/notes"), b"user file").unwrap();
         let plan = [planned("s", ".claude/skills/s/notes/a.md")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         assert!(format!("{err:#}").contains("is not a directory"), "{err:#}");
         assert_eq!(
             fs::read(tmp.path().join(".claude/skills/s/notes")).unwrap(),
@@ -1237,7 +1466,8 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("missing target"), "{text}");
@@ -1251,7 +1481,8 @@ mod pre_check_tests {
             planned("first", ".claude/skills/x/notes"),
             planned("second", ".claude/skills/x/notes/a.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         let text = format!("{err:#}");
         assert!(
             text.contains(
@@ -1274,7 +1505,7 @@ mod pre_check_tests {
             files: vec![],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        apply_plan(&target, &mut lock, &[s], true, None).unwrap();
+        apply_plan(&target, &mut lock, &[s], true, None, false).unwrap();
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
 
@@ -1293,7 +1524,7 @@ mod pre_check_tests {
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
         let plan = [planned("first", ".claude/skills/first/SKILL.md"), s];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, None).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, None, false).is_err());
         assert!(!tmp.path().join(".claude/skills/first").exists());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"x");
     }
@@ -1304,7 +1535,8 @@ mod pre_check_tests {
         let dir = tmp.path().join(".claude/skills/s/notes");
         fs::create_dir_all(&dir).unwrap();
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
+        let err =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap_err();
         assert!(
             format!("{err:#}").contains("is not a regular file"),
             "{err:#}"
@@ -1329,7 +1561,7 @@ mod pre_check_tests {
             ],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None).unwrap();
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None, false).unwrap();
         let order: Vec<(&str, &str)> = rec.recorded[&(ItemKind::Skill, "s".to_string())]
             .iter()
             .map(|f| (f.client.as_str(), f.path.as_str()))
@@ -1423,6 +1655,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"body")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1444,6 +1677,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"new")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1461,6 +1695,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"new")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1481,7 +1716,7 @@ mod conflict_tests {
             planned("s", &[(ENTRY, b"v2"), (".claude/skills/s/new.md", b"new")]),
             planned("t", &[(".claude/skills/t/SKILL.md", b"t")]),
         ];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(
             outcome.skipped,
             vec![FileConflict {
@@ -1508,10 +1743,12 @@ mod conflict_tests {
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"manual");
         let plan = [planned("s", &[(ENTRY, b"body")])];
-        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, false, None).unwrap();
+        let outcome =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, false, None, false).unwrap();
         assert_eq!(outcome.skipped[0].state, ConflictState::Unowned);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"manual");
-        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
+        let outcome =
+            apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None, false).unwrap();
         assert!(outcome.skipped.is_empty());
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"body");
     }
@@ -1529,6 +1766,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"e")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(!tmp.path().join(STALE).exists());
@@ -1547,6 +1785,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"e")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert_eq!(fs::read(tmp.path().join(STALE)).unwrap(), b"edited");
@@ -1569,6 +1808,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"e")])],
             true,
             None,
+            false,
         )
         .unwrap();
         assert!(!tmp.path().join(STALE).exists());
@@ -1586,6 +1826,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"e")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.kept.is_empty());
@@ -1622,6 +1863,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"e")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert_eq!(outcome.kept, vec![PathBuf::from(STALE)]);
@@ -1644,6 +1886,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"new")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
@@ -1661,6 +1904,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
@@ -1675,14 +1919,14 @@ mod conflict_tests {
         put(tmp.path(), ENTRY, b"a\nb\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
         let plan = [planned("s", &[(ENTRY, b"a\nb\n")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
 
         // CRLF variant, planned hash recorded: not written.
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"a\r\nb\r\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
 
@@ -1691,7 +1935,7 @@ mod conflict_tests {
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"a\r\nb\r\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\r\nb\r\n")]);
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(outcome.changed, vec![PathBuf::from(ENTRY)]);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\nb\n");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"a\nb\n")]);
@@ -1707,6 +1951,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
@@ -1725,6 +1970,7 @@ mod conflict_tests {
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
             None,
+            false,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
@@ -1741,7 +1987,7 @@ mod conflict_tests {
             planned("first", &[(".claude/skills/first/SKILL.md", b"f")]),
             planned("s", &[(".claude/skills/s/notes", b"file")]),
         ];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
         assert_eq!(outcome.skipped[0].path, PathBuf::from(nested));
         assert_eq!(fs::read(tmp.path().join(nested)).unwrap(), b"edited");
@@ -1755,7 +2001,7 @@ mod conflict_tests {
         put(tmp.path(), notes, b"edited");
         let mut lock = lock_with("s", vec![owned(notes, b"old")]);
         let plan = [planned("s", &[(".claude/skills/s/notes/a.md", b"a")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(outcome.skipped[0].path, PathBuf::from(notes));
         assert_eq!(fs::read(tmp.path().join(notes)).unwrap(), b"edited");
     }
@@ -1769,7 +2015,7 @@ mod conflict_tests {
         let mut writer = planned("t", &[(shared, b"old")]);
         writer.kind = ItemKind::Agent;
         let plan = [writer, planned("s", &[(ENTRY, b"e")])];
-        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"old");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
     }
@@ -1789,8 +2035,15 @@ mod conflict_tests {
                 source_name: Some("orig".into()),
                 ..item
             };
-            let err =
-                apply_plan(tmp.path(), &mut Lockfile::new(), &[aliased], true, None).unwrap_err();
+            let err = apply_plan(
+                tmp.path(),
+                &mut Lockfile::new(),
+                &[aliased],
+                true,
+                None,
+                false,
+            )
+            .unwrap_err();
             assert!(
                 err.to_string()
                     .contains(&format!("the skill `orig` as `{name}`")),
@@ -1894,7 +2147,7 @@ mod repeatable_tests {
         let mut lock = Lockfile::new();
         let new = [entry(vec![], vec![])];
         let plan = [planned(&[(A, b"a")])];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).is_err());
 
         let on_disk = Lockfile::load(tmp.path()).unwrap();
         assert_eq!(on_disk.items.len(), 1);
@@ -1910,7 +2163,7 @@ mod repeatable_tests {
         let mut lock = Lockfile::new();
         let new = [entry(vec![], vec![])];
         let plan = [planned(&[(A, b"a"), (B, b"b")])];
-        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).unwrap();
 
         let on_disk = Lockfile::load(tmp.path()).unwrap();
         let item = &on_disk.items[0];
@@ -1926,7 +2179,7 @@ mod repeatable_tests {
         let mut lock = Lockfile::new();
         let new = [entry(vec![], vec![])];
         let plan = [planned(&[(A, b"a")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).unwrap();
         assert_eq!(outcome.skipped.len(), 1);
         assert!(lock.items.is_empty());
     }
@@ -1944,7 +2197,7 @@ mod repeatable_tests {
         ));
         let new = [entry(vec![], vec![])];
         let plan = [planned(&[(A, b"a2"), (B, b"b2")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).unwrap();
 
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
         assert_eq!(outcome.changed, vec![PathBuf::from(B)]);
@@ -1967,7 +2220,7 @@ mod repeatable_tests {
             vec![owned(A, b"a\nb\n")],
         ));
         let plan = [planned(&[(A, b"a\nb\n")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(outcome.changed, vec![PathBuf::from(A)]);
         assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a\nb\n");
     }
@@ -2067,7 +2320,7 @@ mod repeatable_tests {
         t.name = "t".into();
         let plan = [planned(&[(A, b"a")]), t];
         let new = [entry(vec![], vec![]), named(entry(vec![], vec![]), "t")];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).is_err());
 
         let on_disk = Lockfile::load(tmp.path()).unwrap();
         let s = on_disk.items.iter().find(|i| i.name == "s").unwrap();
@@ -2095,7 +2348,7 @@ mod repeatable_tests {
             .map(|item| named(entry(vec![], vec![]), &item.name))
             .collect();
         new.dedup_by(|a, b| a.name == b.name);
-        assert!(apply_plan(root, &mut lock, &plan, false, Some(&new)).is_err());
+        assert!(apply_plan(root, &mut lock, &plan, false, Some(&new), false).is_err());
         Some(Lockfile::load(root).unwrap())
     }
 
@@ -2171,7 +2424,7 @@ mod repeatable_tests {
         let plan = [planned(&[(B, b"b")])];
         for _ in 0..2 {
             let mut lock = Lockfile::load(tmp.path()).unwrap();
-            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).is_err());
             let on_disk = Lockfile::load(tmp.path()).unwrap();
             assert_eq!(
                 on_disk.items[0].pending,
@@ -2198,7 +2451,7 @@ mod repeatable_tests {
         let plan = [planned(&[(A, b"a3")])];
         {
             let _guard = ReadOnly::set(&tmp.path().join(".claude/skills/s"))?;
-            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).is_err());
             let on_disk = Lockfile::load(tmp.path()).unwrap();
             let pending = &on_disk.items[0].pending;
             for record in [owned(A, b"a2"), owned(A, b"a3"), owned(R, b"r")] {
@@ -2208,7 +2461,7 @@ mod repeatable_tests {
             assert_eq!(on_disk.items[0].files, vec![owned(A, b"a1")]);
         }
         let mut lock = Lockfile::load(tmp.path()).unwrap();
-        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).unwrap();
         let lock = Lockfile::load(tmp.path()).unwrap();
         Some((tmp, lock))
     }
@@ -2252,7 +2505,7 @@ mod repeatable_tests {
         let mut lock = Lockfile::new();
         let new = [entry(vec![], vec![])];
         let plan = [planned(&[(A, b"a"), (sub, b"b")])];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, Some(&new)).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, Some(&new), false).is_err());
         assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a");
         let on_disk = Lockfile::load(tmp.path()).unwrap();
         assert_eq!(on_disk.items.len(), 1);
@@ -2274,7 +2527,7 @@ mod repeatable_tests {
         let new = [entry(vec![], vec![])];
         let below = ".claude/skills/s/SKILL.md/x.md";
         let plan = [planned(&[(A, b"a2"), (below, b"x")])];
-        let err = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new), false).unwrap_err();
         assert!(format!("{err}").contains("conflict"), "{err:#}");
         assert_eq!(
             fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -2288,7 +2541,7 @@ mod repeatable_tests {
         let mut lock = Lockfile::new();
         lock.items.push(entry(vec![], vec![]));
         let plan = [planned(&[(A, b"a")])];
-        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a");
         assert!(!tmp.path().join(".upskill-lock.json").exists());
     }
@@ -2305,7 +2558,7 @@ mod repeatable_tests {
         lock.items.push(entry(vec![owned(A, b"a")], vec![]));
         let mut item = planned(&[(A, b"a")]);
         item.files[0].mode = Some(0o755);
-        let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None, false).unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
         let mode = fs::metadata(&full).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o755);
@@ -2435,7 +2688,7 @@ mod pending_stale_tests {
         put(tmp.path(), R, b"r");
         let mut lock = lock_with(vec![owned(A, b"a1")], vec![owned(A, b"a2"), owned(R, b"r")]);
         let plan = [planned(&[(A, b"a3")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
         assert!(!tmp.path().join(R).exists());
         assert!(!tmp.path().join(".claude/skills/s/scripts").exists());
@@ -2449,7 +2702,7 @@ mod pending_stale_tests {
         put(tmp.path(), R, b"edited");
         let mut lock = lock_with(vec![owned(A, b"a1")], vec![owned(R, b"r")]);
         let plan = [planned(&[(A, b"a3")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(outcome.kept, vec![PathBuf::from(R)]);
         assert_eq!(fs::read(tmp.path().join(R)).unwrap(), b"edited");
         assert_eq!(lock.items[0].files, vec![owned(A, b"a3"), owned(R, b"r")]);
@@ -2464,7 +2717,360 @@ mod pending_stale_tests {
         let mut other = planned(&[(shared, b"r")]);
         other.kind = ItemKind::Agent;
         let plan = [other, planned(&[(A, b"a")])];
-        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"r");
+    }
+}
+
+#[cfg(test)]
+mod disposition_tests {
+    use super::*;
+    use crate::generate::Client;
+    use crate::pipeline::plan::PlannedFile;
+
+    const ENTRY: &str = ".claude/skills/s/SKILL.md";
+    const NOTES: &str = ".claude/skills/s/notes.md";
+
+    fn planned(files: &[(&str, &[u8])]) -> PlannedItem {
+        PlannedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source_name: None,
+            files: files
+                .iter()
+                .map(|(rel, bytes)| PlannedFile {
+                    client: Client::Claude,
+                    rel: PathBuf::from(rel),
+                    bytes: bytes.to_vec(),
+                    mode: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn owned(path: &str, bytes: &[u8]) -> OwnedFile {
+        OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        }
+    }
+
+    fn entry(files: Vec<OwnedFile>) -> LockedItem {
+        LockedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source: "./src".to_string(),
+            git_ref: None,
+            hash: Some("h".to_string()),
+            source_name: None,
+            required_by: vec![],
+            group: None,
+            clients: vec![],
+            files,
+            pending: vec![],
+        }
+    }
+
+    fn put(root: &Path, rel: &str, bytes: &[u8]) {
+        let full = root.join(rel);
+        fs::create_dir_all(full.parent().unwrap()).unwrap();
+        fs::write(full, bytes).unwrap();
+    }
+
+    /// The case where every condition of `KeepEdits` holds: `SKILL.md` is
+    /// modified, `notes.md` is unchanged, and the source hash is unchanged.
+    struct Case {
+        tmp: tempfile::TempDir,
+        lock: Lockfile,
+        plan: Vec<PlannedItem>,
+        new: Vec<LockedItem>,
+    }
+
+    fn case() -> Case {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"my edit");
+        put(tmp.path(), NOTES, b"notes");
+        let mut lock = Lockfile::new();
+        lock.items
+            .push(entry(vec![owned(ENTRY, b"gen"), owned(NOTES, b"notes")]));
+        let new = lock.items.clone();
+        let plan = vec![planned(&[(ENTRY, b"gen"), (NOTES, b"notes")])];
+        Case {
+            tmp,
+            lock,
+            plan,
+            new,
+        }
+    }
+
+    fn decide(case: &Case, overwrite: bool, new: Option<&[LockedItem]>, keep: bool) -> Disposition {
+        let decision = decide_plan(
+            case.tmp.path(),
+            &case.lock,
+            &case.plan,
+            overwrite,
+            new,
+            keep,
+        )
+        .unwrap();
+        decision.items[0].disposition
+    }
+
+    fn decide_default(case: &Case) -> Disposition {
+        decide(case, false, Some(&case.new), true)
+    }
+
+    #[test]
+    fn keeps_the_edits_when_every_condition_holds() {
+        let case = case();
+        assert_eq!(decide_default(&case), Disposition::KeepEdits);
+    }
+
+    #[test]
+    fn skips_without_keep_unwithheld_edits() {
+        let case = case();
+        assert_eq!(
+            decide(&case, false, Some(&case.new), false),
+            Disposition::Skip
+        );
+    }
+
+    #[test]
+    fn writes_with_overwrite() {
+        let case = case();
+        assert_eq!(
+            decide(&case, true, Some(&case.new), true),
+            Disposition::Write
+        );
+    }
+
+    #[test]
+    fn writes_without_a_conflict() {
+        let case = case();
+        put(case.tmp.path(), ENTRY, b"gen");
+        assert_eq!(decide_default(&case), Disposition::Write);
+    }
+
+    #[test]
+    fn skips_with_an_unowned_conflict() {
+        let mut case = case();
+        let extra = ".claude/skills/s/extra.md";
+        put(case.tmp.path(), extra, b"mine");
+        case.plan = vec![planned(&[
+            (ENTRY, b"gen"),
+            (NOTES, b"notes"),
+            (extra, b"generated"),
+        ])];
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_a_conflict_is_a_kept_stale_file() {
+        // `ref` was a recorded file and is modified; the plan now writes
+        // `ref/x.md`, so the kept stale file `ref` is a conflict.
+        let mut case = case();
+        let stale = ".claude/skills/s/ref";
+        put(case.tmp.path(), stale, b"my ref");
+        case.lock.items[0].files.push(owned(stale, b"ref"));
+        case.new = case.lock.items.clone();
+        put(case.tmp.path(), ENTRY, b"gen");
+        case.plan = vec![planned(&[
+            (ENTRY, b"gen"),
+            (NOTES, b"notes"),
+            (".claude/skills/s/ref/x.md", b"x"),
+        ])];
+        let decision = decide_plan(
+            case.tmp.path(),
+            &case.lock,
+            &case.plan,
+            false,
+            Some(&case.new),
+            true,
+        )
+        .unwrap();
+        assert_eq!(decision.items[0].conflicts.len(), 1);
+        assert_eq!(decision.items[0].disposition, Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_with_a_pending_record() {
+        let mut case = case();
+        case.lock.items[0].pending = vec![owned(ENTRY, b"other")];
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_without_a_lockfile_entry() {
+        let mut case = case();
+        case.lock = Lockfile::new();
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_without_new_entries() {
+        let case = case();
+        assert_eq!(decide(&case, false, None, true), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_new_entries_do_not_hold_the_item() {
+        let case = case();
+        assert_eq!(decide(&case, false, Some(&[]), true), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_the_source_hash_changed() {
+        let mut case = case();
+        case.new[0].hash = Some("changed".to_string());
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_no_source_hash_is_recorded() {
+        let mut case = case();
+        case.lock.items[0].hash = None;
+        case.new[0].hash = None;
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_a_stale_file_on_disk_would_be_deleted() {
+        let mut case = case();
+        let stale = ".claude/skills/s/old.md";
+        put(case.tmp.path(), stale, b"old");
+        case.lock.items[0].files.push(owned(stale, b"old"));
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_the_stale_file_to_delete_is_absent() {
+        let mut case = case();
+        case.lock.items[0]
+            .files
+            .push(owned(".claude/skills/s/old.md", b"old"));
+        case.new = case.lock.items.clone();
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_with_a_kept_modified_stale_file_that_is_not_a_conflict() {
+        let mut case = case();
+        let stale = ".claude/skills/s/old.md";
+        put(case.tmp.path(), stale, b"my old");
+        case.lock.items[0].files.push(owned(stale, b"old"));
+        case.new = case.lock.items.clone();
+        let decision = decide_plan(
+            case.tmp.path(),
+            &case.lock,
+            &case.plan,
+            false,
+            Some(&case.new),
+            true,
+        )
+        .unwrap();
+        assert_eq!(decision.items[0].kept.len(), 1);
+        assert!(
+            decision.items[0]
+                .conflicts
+                .iter()
+                .all(|c| c.path != Path::new(stale))
+        );
+        assert_eq!(decision.items[0].disposition, Disposition::Skip);
+    }
+
+    #[test]
+    fn keeps_the_edits_when_the_new_entry_differs_only_in_required_by() {
+        let mut case = case();
+        case.new[0].required_by = vec!["agent:other".to_string()];
+        assert_eq!(decide_default(&case), Disposition::KeepEdits);
+    }
+
+    #[test]
+    fn skips_when_the_new_entry_differs_only_in_clients() {
+        let mut case = case();
+        case.new[0].clients = vec!["claude".to_string()];
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_another_planned_file_would_be_written() {
+        let case = case();
+        fs::remove_file(case.tmp.path().join(NOTES)).unwrap();
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn a_kept_item_is_not_written_and_its_entry_is_unchanged() {
+        let mut case = case();
+        let before = case.lock.items.clone();
+        let outcome = apply_plan(
+            case.tmp.path(),
+            &mut case.lock,
+            &case.plan,
+            false,
+            Some(&case.new.clone()),
+            true,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(outcome.kept_edits.len(), 1);
+        assert_eq!(outcome.kept_edits[0].path, PathBuf::from(ENTRY));
+        assert!(outcome.recorded.is_empty());
+        assert!(outcome.changed.is_empty());
+        assert_eq!(case.lock.items, before);
+        assert_eq!(fs::read(case.tmp.path().join(ENTRY)).unwrap(), b"my edit");
+    }
+
+    #[test]
+    fn an_item_planned_after_a_kept_item_is_still_written() {
+        let mut case = case();
+        let other = ".claude/agents/t.md";
+        let mut second = planned(&[(other, b"agent")]);
+        second.kind = ItemKind::Agent;
+        second.name = "t".to_string();
+        case.plan.push(second);
+        // `t` is a new item: only step 2 of `execute_plan` adds its entry
+        // to the lockfile, with a `pending` record, before the write.
+        let mut agent = entry(vec![]);
+        agent.kind = ItemKind::Agent;
+        agent.name = "t".to_string();
+        case.new.push(agent);
+        let kept_before = case.lock.items[0].clone();
+        let outcome = apply_plan(
+            case.tmp.path(),
+            &mut case.lock,
+            &case.plan,
+            false,
+            Some(&case.new.clone()),
+            true,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(outcome.kept_edits.len(), 1);
+        assert_eq!(outcome.kept_edits[0].path, PathBuf::from(ENTRY));
+        let kept_after = case
+            .lock
+            .items
+            .iter()
+            .find(|i| i.kind == ItemKind::Skill && i.name == "s")
+            .unwrap();
+        assert_eq!(*kept_after, kept_before);
+        let written = case
+            .lock
+            .items
+            .iter()
+            .find(|i| i.kind == ItemKind::Agent && i.name == "t")
+            .expect("the lockfile holds an entry for the agent t");
+        assert_eq!(written.files, vec![owned(other, b"agent")]);
+        assert!(written.pending.is_empty());
+        assert_eq!(fs::read(case.tmp.path().join(ENTRY)).unwrap(), b"my edit");
+        assert_eq!(fs::read(case.tmp.path().join(other)).unwrap(), b"agent");
+        assert_eq!(outcome.changed, vec![PathBuf::from(other)]);
+        assert_eq!(outcome.recorded.len(), 1);
+        assert_eq!(
+            outcome.recorded[&(ItemKind::Agent, "t".to_string())],
+            vec![owned(other, b"agent")]
+        );
     }
 }
