@@ -5,8 +5,8 @@
 //! records each item's source as the bundle file (e.g.
 //! `local:/abs/path/my-bundle.bundle.yaml`). `update` must re-resolve that
 //! bundle source the same way `add` did — through bundle resolution — and
-//! must NOT report the freshly-installed items as "would remove — no
-//! longer in source". These tests use a local-path bundle source so no
+//! must NOT report the freshly-installed items with a `remove` line ("no
+//! longer in source"). These tests use a local-path bundle source so no
 //! network is involved, and pin every command to `--project` scope so the
 //! consumer tempdir is the only lockfile touched (never the real `$HOME`).
 
@@ -75,7 +75,7 @@ fn update_dry_run_does_not_report_bundle_items_as_removed() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
 
     assert!(
-        !out.contains("would remove") && !out.contains("no longer in source"),
+        !out.contains("\n  remove ") && !out.contains("no longer in source"),
         "bundle items must not be scheduled for removal: {out}"
     );
     assert!(
@@ -100,7 +100,7 @@ fn update_dry_run_named_bundle_item_is_not_removed() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
 
     assert!(
-        !out.contains("would remove") && !out.contains("no longer in source"),
+        !out.contains("\n  remove ") && !out.contains("no longer in source"),
         "named bundle item must not be scheduled for removal: {out}"
     );
 }

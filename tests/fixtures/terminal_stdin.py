@@ -37,7 +37,9 @@ try:
         env=env,
         stdin=slave,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        # With "merge", stderr goes to the same pipe as stdout, so that the
+        # order of the two streams is kept.
+        stderr=subprocess.STDOUT if spec.get("merge") else subprocess.PIPE,
         start_new_session=True,
     )
     os.close(slave)
@@ -57,7 +59,7 @@ try:
         "timed_out": timed_out,
         "returncode": child.returncode,
         "stdout": stdout.decode("utf-8", errors="replace"),
-        "stderr": stderr.decode("utf-8", errors="replace"),
+        "stderr": "" if stderr is None else stderr.decode("utf-8", errors="replace"),
     }))
 finally:
     if child is not None and child.poll() is None:

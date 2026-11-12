@@ -146,8 +146,8 @@ fn update_dry_run_reports_change_without_writing() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(out.contains("Dry-run"), "expected dry-run header: {out}");
     assert!(
-        out.contains("would change"),
-        "expected `would change` status: {out}"
+        out.contains("\n  update   skill create-api-endpoint"),
+        "expected an `update` line: {out}"
     );
 
     // Lockfile must not have been touched.
@@ -262,8 +262,8 @@ fn update_dry_run_reports_would_remove_without_deleting() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("would remove"),
-        "expected `would remove` status, got:\n{out}"
+        out.contains("\n  remove   skill create-api-endpoint   no longer in source"),
+        "expected a `remove` line, got:\n{out}"
     );
 
     // Output files should still exist.
@@ -378,7 +378,7 @@ fn update_without_yes_proceeds_in_non_tty() {
 #[test]
 fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
     // Regression for #214: a rule whose frontmatter name diverges from its
-    // folder must not be falsely reported as `would remove` by dry-run (the
+    // folder must not be falsely listed as `remove` by dry-run (the
     // source-side hash map is keyed by folder, the lookup must match).
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -406,8 +406,8 @@ fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        !out.contains("would remove"),
-        "divergent-named rule must not be reported as would-remove:\n{out}"
+        !out.contains("\n  remove "),
+        "divergent-named rule must not be reported as removed:\n{out}"
     );
 }
 
@@ -1263,9 +1263,10 @@ fn update_that_only_adopts_a_schema_1_lockfile_does_not_print_nothing_to_do() {
     assert!(stdout.contains("Updated 0 of 1 item(s)"), "{stdout}");
 }
 
-#[test]
-fn update_reports_an_item_skipped_by_two_sources_once() {
-    // Two sources that both require the skill `sarif` from a third source.
+/// Two sources that both require the skill `sarif` from a third source;
+/// `sarif` is edited and its source changed. Returns the project, the fake
+/// home and the edited file.
+fn two_sources_withholding_sarif() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -1307,6 +1308,12 @@ fn update_reports_an_item_skipped_by_two_sources_once() {
     let text = fs::read_to_string(&sarif_source).unwrap();
     fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
 
+    (tmp, home, sarif)
+}
+
+#[test]
+fn update_reports_an_item_skipped_by_two_sources_once() {
+    let (tmp, home, sarif) = two_sources_withholding_sarif();
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "first", "second", "--project"])
@@ -1323,96 +1330,41 @@ fn update_reports_an_item_skipped_by_two_sources_once() {
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
 }
 
-/// Run `upskill update <args>` with a terminal on stdin and write `input`
-/// to it. Returns the JSON result of `tests/fixtures/terminal_stdin.py`.
-#[cfg(unix)]
-fn update_in_terminal(root: &Path, home: &Path, args: &[&str], input: &str) -> serde_json::Value {
-    let mut update = common::upskill_cmd(home);
-    update
-        .current_dir(root)
-        .arg("update")
-        .args(args)
-        .env("NO_COLOR", "1");
-    let spec = serde_json::json!({
-        "program": update.get_program().to_str().unwrap(),
-        "args": update.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),
-        "cwd": update.get_current_dir().unwrap(),
-        "home": home,
-        "env": update.get_envs().map(|(key, value)| {
-            (key.to_str().unwrap(), value.map(|value| value.to_str().unwrap()))
-        }).collect::<Vec<_>>(),
-        "input": input,
-    });
-    let output = std::process::Command::new("python3")
-        .env("HOME", home)
-        .env("USERPROFILE", home)
-        .args([
-            "-c",
-            include_str!("fixtures/terminal_stdin.py"),
-            &spec.to_string(),
-        ])
-        .output()
-        .expect("Python 3 with stdlib pty is required for the Unix terminal test");
-    assert!(
-        output.status.success(),
-        "terminal fixture failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert!(
-        result["stderr"]
-            .as_str()
-            .unwrap()
-            .contains("terminal stdin verified\n"),
-        "child did not verify terminal stdin: {result}"
-    );
-    assert_eq!(result["timed_out"], false, "{result}");
-    result
+/// The dry run lists `sarif`, which both sources would withhold, once.
+#[test]
+fn update_dry_run_counts_an_item_withheld_by_two_sources_once() {
+    let (tmp, home, sarif) = two_sources_withholding_sarif();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "first", "second", "--project", "--dry-run"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    // `first`, `second` and `sarif`.
+    assert!(stdout.contains("would update 0 of 3 item(s)"), "{stdout}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
 }
 
 #[test]
 #[cfg(unix)]
-#[ignore = "rewritten in the next task"]
-fn update_in_a_terminal_changes_nothing_when_no_source_changed() {
-    let (tmp, home) = res_project(|_| {});
-    let dest = res_skill_md(tmp.path());
-    fs::write(&dest, "my edit\n").unwrap();
-    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
-
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], "");
-    assert_eq!(result["returncode"], 0, "{result}");
-    assert!(
-        result["stdout"].as_str().unwrap().contains("nothing to do"),
-        "{result}"
-    );
-    assert!(
-        !result["stderr"].as_str().unwrap().contains("[y/N]"),
-        "{result}"
-    );
-    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
-    assert_eq!(
-        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
-        lock_before
-    );
-}
-
-#[test]
-#[cfg(unix)]
-#[ignore = "rewritten in the next task"]
 fn update_force_in_a_terminal_changes_nothing_on_no() {
     let (tmp, home) = res_project(|_| {});
     let dest = res_skill_md(tmp.path());
     fs::write(&dest, "my edit\n").unwrap();
     let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "n\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--force"], "n\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
+    // The block names the edited file that `--force` would replace.
     assert!(
-        result["stderr"].as_str().unwrap().contains("aborted."),
+        result["stdout"]
+            .as_str()
+            .unwrap()
+            .contains("replaces .claude/skills/res/SKILL.md (--force)"),
         "{result}"
     );
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
@@ -1430,10 +1382,10 @@ fn update_force_in_a_terminal_replaces_the_file_on_yes() {
     let generated = fs::read(&dest).unwrap();
     fs::write(&dest, "my edit\n").unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
     assert_eq!(fs::read(&dest).unwrap(), generated);
@@ -1441,7 +1393,6 @@ fn update_force_in_a_terminal_replaces_the_file_on_yes() {
 
 #[test]
 #[cfg(unix)]
-#[ignore = "rewritten in the next task"]
 fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
     let (tmp, home) = res_project(|_| {});
     let dest = res_skill_md(tmp.path());
@@ -1449,24 +1400,16 @@ fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
     change_res_source(tmp.path());
     let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
-    assert!(
-        result["stderr"].as_str().unwrap().contains("aborted."),
-        "{result}"
-    );
-    // The plan is printed before the question.
-    assert!(
-        result["stdout"]
-            .as_str()
-            .unwrap()
-            .contains("update:  1 item(s)"),
-        "{result}"
-    );
+    let stdout = result["stdout"].as_str().unwrap();
+    // The block is printed before the question.
+    assert!(stdout.contains("\n  update   skill res"), "{result}");
+    assert!(stdout.contains("1 source(s) not applied."), "{result}");
     assert_eq!(fs::read(&dest).unwrap(), before);
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -1497,17 +1440,16 @@ fn assert_terminal_update_applies_after_a_source_change(answer: &str) {
     let dest = res_skill_md(tmp.path());
     change_res_source(tmp.path());
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], answer);
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], answer);
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
+    let stdout = result["stdout"].as_str().unwrap();
+    assert!(stdout.contains("\n  update   skill res"), "{result}");
     assert!(
-        result["stdout"]
-            .as_str()
-            .unwrap()
-            .contains("update:  1 item(s)"),
+        stdout.contains("Updated 1 of 1 item(s) from 1 of 1 source(s)."),
         "{result}"
     );
     assert!(fs::read_to_string(&dest).unwrap().contains("Changed."));
@@ -1515,14 +1457,12 @@ fn assert_terminal_update_applies_after_a_source_change(answer: &str) {
 
 #[test]
 #[cfg(unix)]
-#[ignore = "rewritten in the next task"]
 fn update_in_a_terminal_applies_on_y_after_a_source_change() {
     assert_terminal_update_applies_after_a_source_change("y\n");
 }
 
 #[test]
 #[cfg(unix)]
-#[ignore = "rewritten in the next task"]
 fn update_in_a_terminal_accepts_yes_in_any_letter_case() {
     assert_terminal_update_applies_after_a_source_change("YeS\n");
 }
@@ -1634,7 +1574,7 @@ fn update_dry_run_writes_nothing_with_a_schema_1_lockfile() {
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(stdout.contains("res"), "{stdout}");
-    assert!(stdout.contains("would change"), "{stdout}");
+    assert!(stdout.contains("\n  update   skill res"), "{stdout}");
     assert_eq!(fs::read(&lock_path).unwrap(), before);
     assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
     assert_eq!(fs::read(res_skill_md(tmp.path())).unwrap(), dest_before);
@@ -1815,7 +1755,7 @@ fn update_reports_a_kept_stale_file_as_a_note_and_not_as_a_change() {
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(stdout.contains("would update 0 of 1"), "{stdout}");
     assert!(stdout.contains("up to date"), "{stdout}");
-    assert!(!stdout.contains("would change"), "{stdout}");
+    assert!(!stdout.contains("\n  update "), "{stdout}");
 
     let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
     let out = common::upskill_cmd(&home)

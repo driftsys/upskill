@@ -254,14 +254,14 @@ other. This resolves the first half of #497.
 
 ### Flags and modes
 
-| Mode                                | Behaviour                                                                                                                                                                                                                                            |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal, no `--yes`                | As described above.                                                                                                                                                                                                                                  |
-| `--yes`, or stdin is not a terminal | Same steps, no question: every source is applied, as today, including one without a change (so its plugin and MCP steps run). Output and exit codes stay as they are today, except for the rule for edited files and the earlier empty-source guard. |
-| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                                                                                           |
-| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                                                                                    |
-| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                                                                                    |
-| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                                                                                            |
+| Mode                                | Behaviour                                                                                                                                                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal, no `--yes`                | As described above.                                                                                                                                                                                                                                                       |
+| `--yes`, or stdin is not a terminal | Same steps, no question: every source is applied, as today, including one without a change (so its plugin and MCP steps run). Output and exit codes stay as they are today, except for the changes listed in [Changes of `--yes` behaviour](#changes-of---yes-behaviour). |
+| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                                                                                                                |
+| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                                                                                                         |
+| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                                                                                                         |
+| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                                                                                                                 |
 
 `--dry-run` note: every block is exact for the current disk. Because nothing is
 applied, a later block does not include the effect of applying an earlier one.
@@ -315,7 +315,8 @@ All deliberate, and the only ones:
   after earlier sources were applied.
 - Any change to `add`, `remove` or `doctor`.
 - A change of the output of `update --yes` or of a run without a terminal, other
-  than the two deliberate changes named in this document.
+  than the changes listed in
+  [Changes of `--yes` behaviour](#changes-of---yes-behaviour).
 
 ## Anti-goals
 
@@ -390,10 +391,9 @@ All deliberate, and the only ones:
 - `--dry-run`: same blocks, nothing written, lockfile bytes unchanged, including
   with a `schema: 1` lockfile.
 - All-platform tests for `--yes` and for a run without a terminal: output and
-  exit codes unchanged from today, except for the two deliberate changes (the
-  rule for edited files and the earlier empty-source guard). Existing tests that
-  expect exit code 1 for an edited file with an unchanged source are rewritten
-  to the new rule.
+  exit codes unchanged from today, except for the changes listed in "Changes of
+  `--yes` behaviour". Existing tests that expect exit code 1 for an edited file
+  with an unchanged source are rewritten to the new rule.
 
 ## Documents to update in the same pull request
 

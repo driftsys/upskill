@@ -1016,11 +1016,16 @@ pub fn update(
         }
         Ok(())
     })();
-    // An item skipped by the reinstall of two sources is reported once.
+    // An item skipped by the reinstall of two sources, or not applied as a
+    // skip in two sources, is reported once.
     let mut seen_skipped = std::collections::BTreeSet::new();
-    report.items.retain(|item| {
-        !matches!(item.status, UpdateStatus::SkippedModified { .. })
-            || seen_skipped.insert((item.kind, item.name.clone()))
+    let mut seen_not_applied = std::collections::BTreeSet::new();
+    report.items.retain(|item| match item.status {
+        UpdateStatus::SkippedModified { .. } => seen_skipped.insert((item.kind, item.name.clone())),
+        UpdateStatus::NotApplied {
+            action: PreviewAction::Skip,
+        } => seen_not_applied.insert((item.kind, item.name.clone())),
+        _ => true,
     });
     // A file kept by the reinstall of two sources (a dependency from
     // another source) is reported once.

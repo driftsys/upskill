@@ -164,7 +164,7 @@ fn update_dry_run_reports_an_interrupted_item_to_complete() {
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(stdout.contains("would update 1 of 1"), "{stdout}");
-    assert!(stdout.contains("would complete"), "{stdout}");
+    assert!(stdout.contains("\n  complete skill "), "{stdout}");
     assert!(!stdout.contains("up to date"), "{stdout}");
 }
 
@@ -249,8 +249,8 @@ fn an_interrupted_item_with_a_changed_source_is_reported_as_changed() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
-    assert!(stdout.contains("would change"), "{stdout}");
-    assert!(!stdout.contains("would complete"), "{stdout}");
+    assert!(stdout.contains("\n  update   skill "), "{stdout}");
+    assert!(!stdout.contains("\n  complete "), "{stdout}");
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "--yes", "--project"])
