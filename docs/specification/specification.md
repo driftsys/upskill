@@ -97,20 +97,29 @@ not inside a git repo. Either flag can be passed explicitly.
 Before any write, `add` classifies every destination of every item against the
 item's `files` record (§4). A destination is a conflict when it is **modified**
 (a recorded regular file with other content) or **unowned** (a regular file that
-is not recorded), unless its content already equals the planned bytes. A
+is not recorded), unless its content already equals the planned bytes. A content
+that differs from the recorded content, or for a recorded file from the planned
+bytes, only by CRLF (`\r\n`) line endings in place of LF (`\n`) counts as equal,
+so a git checkout with `core.autocrlf=true` does not make a file modified. A
 destination that exists and is not a regular file (for example a directory or a
 symbolic link) is not a conflict: it fails the command before any file is
-written. For `update` over several sources, the sources updated before are
-already applied; with a `schema: 1` lockfile, the adoption is already saved.
-Without `--force`, an item with at least one conflict is skipped as a whole:
-none of its files is written or deleted and its lockfile entry is not changed.
-The other items are written. `add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+written. The exception is a directory at the path of a planned file whose files,
+at any depth, are all recorded files of the same item that the plan no longer
+contains; these files are handled as stale files (§2.2). For `update` over
+several sources, the sources updated before are already applied; with a
+`schema: 1` lockfile, the adoption is already saved; when the removal of an item
+that its source no longer contains fails, the install of that source is already
+written and saved. Without `--force`, an item with at least one conflict is
+skipped as a whole: none of its files is written or deleted and its lockfile
+entry is not changed. The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
-files and also replaces items installed from another source. An installed name
-or an `--as` alias that contains `/` or `\` is refused before any change, with
-an error that names the item.
+files, deletes modified files that are no longer produced, and also replaces
+items installed from another source; it then lists these files after
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`. An installed
+name or an `--as` alias that contains `/` or `\` is refused before any change,
+with an error that names the item.
 
 ### 2.2 `update`
 
@@ -144,14 +153,14 @@ regular files that are no longer produced; it then lists these files after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a terminal
 without `--yes`, `update` first runs a dry run. When a source changed or
 `--force` is given, it shows the plan and asks for a confirmation; an answer
-other than `y` changes nothing. When no source changed and `--force` is not
-given, it prints that there is nothing to do and changes nothing: it therefore
-does not report a modified file, does not delete the files of a client that the
-flags no longer select, and does not adopt a `schema: 1` lockfile. A run with
-`--yes`, or without a terminal, applies without a question and does these
-things. When an applied `update` wrote or deleted files without a source change,
-it prints `Changed <n> file(s) written or deleted` instead of the "nothing to
-do" line.
+other than `y` or `yes` (in any letter case) changes nothing. When no source
+changed and `--force` is not given, it prints that there is nothing to do and
+changes nothing: it therefore does not report a modified file, does not delete
+the files of a client that the flags no longer select, and does not adopt a
+`schema: 1` lockfile. A run with `--yes`, or without a terminal, applies without
+a question and does these things. When an applied `update` wrote or deleted
+files without a source change, it prints
+`Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -183,7 +192,8 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 
 `remove` deletes only files listed in the item's `files` record (§4). A recorded
 file is **owned** when it is a regular file with the recorded SHA-256: `remove`
-deletes it. It is **modified** when its content differs or it is no longer a
+deletes it. It is **modified** when its content differs (a difference of CRLF
+line endings in place of LF only is not a difference) or it is no longer a
 regular file: `remove` keeps it and prints `kept modified file: <path>` to
 stderr; `--force` deletes a modified regular file, but never a path that is not
 a regular file. A recorded regular file that cannot be read is handled as
