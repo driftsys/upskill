@@ -1063,6 +1063,37 @@ mod tests {
         assert!(items[0].write.is_empty());
     }
 
+    /// `required_by` is provenance: a change of it only is not a change,
+    /// so the source asks nothing.
+    #[test]
+    fn a_change_of_required_by_only_is_not_a_change() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), ENTRY, b"gen");
+        let lock = lock_of(vec![entry(vec![owned_file(ENTRY, b"gen")])]);
+        let mut changed = entry(vec![owned_file(ENTRY, b"gen")]);
+        changed.required_by = vec!["other".to_string()];
+        for keep in [false, true] {
+            let (items, kept) = map(
+                tmp.path(),
+                &lock,
+                &planned(&[(ENTRY, b"gen")]),
+                std::slice::from_ref(&changed),
+                false,
+                keep,
+            );
+            assert!(items.is_empty(), "keep {keep}: {items:?}");
+            assert!(kept.is_empty());
+            let preview = crate::pipeline::report::SourcePreview {
+                source: "./src".to_string(),
+                items,
+                kept_notes: kept,
+                handshake: Vec::new(),
+                adopted: None,
+            };
+            assert!(!preview.has_changes());
+        }
+    }
+
     #[test]
     fn changed_record_without_file_changes_is_record_only() {
         let tmp = tempfile::tempdir().unwrap();

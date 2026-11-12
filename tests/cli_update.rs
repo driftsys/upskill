@@ -1829,3 +1829,74 @@ fn update_yes_with_an_unsupported_opencode_json_writes_nothing() {
         lock_before
     );
 }
+
+/// Writes the skill `<root>/<name>/SKILL.md` with `body`.
+#[cfg(unix)]
+fn write_named_skill(root: &Path, name: &str, body: &str) {
+    let dir = root.join(name);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        format!("---\nschema: 1\nname: {name}\ndescription: Use for {name}\n---\n{body}\n"),
+    )
+    .unwrap();
+}
+
+/// Every file under `dir`, with its bytes; a symbolic link is not followed.
+#[cfg(unix)]
+fn files_under(dir: &Path) -> std::collections::BTreeMap<std::path::PathBuf, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        for entry in fs::read_dir(&current).unwrap() {
+            let path = entry.unwrap().path();
+            let meta = fs::symlink_metadata(&path).unwrap();
+            if meta.is_dir() {
+                stack.push(path);
+            } else if meta.is_file() {
+                out.insert(path.clone(), fs::read(&path).unwrap());
+            }
+        }
+    }
+    out
+}
+
+#[cfg(unix)]
+#[test]
+fn update_fails_a_source_before_its_install_when_a_removal_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    write_named_skill(&source, "one", "One.");
+    write_named_skill(&source, "gone", "Gone.");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "--claude"])
+        .assert()
+        .success();
+
+    // `one` changes and `gone` leaves the source, so the update both
+    // installs and removes. The output directory of `gone` is replaced by
+    // a symbolic link, which makes the removal plan refuse.
+    write_named_skill(&source, "one", "Changed.");
+    fs::remove_dir_all(source.join("gone")).unwrap();
+    let gone = target.join(".claude/skills/gone");
+    let elsewhere = tmp.path().join("elsewhere");
+    fs::rename(&gone, &elsewhere).unwrap();
+    std::os::unix::fs::symlink(&elsewhere, &gone).unwrap();
+    let before = files_under(&target);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .failure();
+    let err = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(err.contains("symbolic link"), "{err}");
+    // Nothing of the source was written: not the install of `one`, and not
+    // the lockfile.
+    assert_eq!(files_under(&target), before);
+}

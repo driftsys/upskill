@@ -587,3 +587,64 @@ fn a_missing_handshake_file_is_listed_and_asks() {
     assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
     assert!(bridge.is_file());
 }
+
+/// A project with `code-review` from `./reg-a`, which requires the skill
+/// `sarif` from `./reg-b`. The installed `sarif` file is edited and the
+/// source of `sarif` is changed, so a reinstall of `reg-a` skips `sarif`.
+/// Returns the project, the home, the agent source and the `sarif` file.
+fn cross_source_with_a_skipped_dependency() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    let reg_a = tmp.path().join("reg-a").join("code-review");
+    fs::create_dir_all(&reg_a).unwrap();
+    let agent = reg_a.join("AGENT.md");
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review", "--claude", "--project"])
+        .assert()
+        .success();
+    let sarif = claude_skill(tmp.path(), "sarif");
+    fs::write(&sarif, "my edit\n").unwrap();
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed.");
+    (tmp, home, agent, sarif)
+}
+
+#[test]
+fn a_declined_source_with_a_skipped_dependency_exits_0() {
+    let (tmp, home, agent, sarif) = cross_source_with_a_skipped_dependency();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let result =
+        common::update_in_terminal(tmp.path(), &home, &["code-review", "--project"], "n\n");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(!stderr(&result).contains("--force"), "{result}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn a_source_whose_only_outcome_is_a_skipped_dependency_exits_1() {
+    let (tmp, home, _agent, sarif) = cross_source_with_a_skipped_dependency();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["code-review", "--project"], "");
+    assert!(!stderr(&result).contains("Apply?"), "{result}");
+    assert_eq!(result["returncode"], 1, "{result}");
+    assert!(
+        stderr(&result).contains("Use --force to replace."),
+        "{result}"
+    );
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
