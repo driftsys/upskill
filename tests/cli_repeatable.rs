@@ -310,6 +310,31 @@ fn remove_cleans_an_interrupted_install() {
     assert!(!lock.contains(&format!("\"{NAME}\"")), "{lock}");
 }
 
+/// The Claude file written by the failed run is recorded only in
+/// `pending`. When the source changes before the second run, that file
+/// holds other bytes than the plan: it is replaced only because the
+/// `pending` hash makes it owned.
+#[cfg(unix)]
+#[test]
+fn a_file_written_by_a_failed_run_is_owned_through_pending() {
+    let (tmp, home) = project("v1");
+    let Some(guard) = failed_add(tmp.path(), &home) else {
+        return;
+    };
+    drop(guard);
+    write_skill(tmp.path(), "v2");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(ADD)
+        .assert()
+        .success();
+    assert!(
+        fs::read_to_string(claude_skill(tmp.path()))
+            .unwrap()
+            .contains("v2")
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn a_file_edited_after_a_failed_run_is_a_conflict() {
@@ -319,6 +344,8 @@ fn a_file_edited_after_a_failed_run_is_a_conflict() {
     };
     drop(guard);
     fs::write(claude_skill(tmp.path()), "my edit\n").unwrap();
+    let lock_path = tmp.path().join(".upskill-lock.json");
+    let before = fs::read(&lock_path).unwrap();
     common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(ADD)
@@ -328,4 +355,136 @@ fn a_file_edited_after_a_failed_run_is_a_conflict() {
         fs::read_to_string(claude_skill(tmp.path())).unwrap(),
         "my edit\n"
     );
+    // The skipped item keeps its record, `pending` included.
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_refused_command_after_a_failed_run_does_not_change_the_lockfile() {
+    let (tmp, home) = project("v1");
+    let Some(guard) = failed_add(tmp.path(), &home) else {
+        return;
+    };
+    drop(guard);
+    let lock_path = tmp.path().join(".upskill-lock.json");
+    let before = fs::read(&lock_path).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--as", "a/b", "--claude", "--project"])
+        .assert()
+        .failure();
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+}
+
+#[cfg(unix)]
+#[test]
+fn doctor_json_lists_an_interrupted_item() {
+    let (tmp, home) = project("v1");
+    let Some(guard) = failed_add(tmp.path(), &home) else {
+        return;
+    };
+    drop(guard);
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["doctor", "--json", "--project"])
+        .assert()
+        .code(1);
+    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(
+        v["interrupted"],
+        serde_json::json!([{ "kind": "skill", "name": NAME }]),
+        "{v}"
+    );
+}
+
+/// Runs `add`, changes the source to v2, and runs an `update` that fails
+/// on the Copilot item directory. Returns `None` when running as root.
+#[cfg(unix)]
+fn failed_update(root: &Path, home: &Path) -> Option<()> {
+    common::upskill_cmd(home)
+        .current_dir(root)
+        .args(ADD)
+        .assert()
+        .success();
+    write_skill(root, "v2");
+    let item_dir = root.join(".github").join("skills").join(NAME);
+    let guard = Mode::set(item_dir.clone(), 0o555);
+    if permissions_are_ignored(&item_dir) {
+        return None;
+    }
+    common::upskill_cmd(home)
+        .current_dir(root)
+        .args(["update", "--project"])
+        .assert()
+        .failure();
+    drop(guard);
+    Some(())
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_cleans_an_interrupted_update() {
+    let (tmp, home) = project("v1");
+    if failed_update(tmp.path(), &home).is_none() {
+        return;
+    }
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["remove", NAME, "--project"])
+        .assert()
+        .success();
+    assert!(!claude_skill(tmp.path()).exists());
+    assert!(!copilot_skill(tmp.path()).exists());
+    let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(!lock.contains(&format!("\"{NAME}\"")), "{lock}");
+}
+
+#[cfg(unix)]
+#[test]
+fn update_force_lists_a_forced_file_of_an_interrupted_item_once() {
+    let (tmp, home) = project("v1");
+    // A second item keeps the source from being empty.
+    let other = tmp.path().join("tools").join("other");
+    fs::create_dir_all(&other).unwrap();
+    fs::write(
+        other.join("SKILL.md"),
+        "---\nschema: 1\nname: other\ndescription: d\n---\nother\n",
+    )
+    .unwrap();
+    if failed_update(tmp.path(), &home).is_none() {
+        return;
+    }
+    fs::write(claude_skill(tmp.path()), "my edit\n").unwrap();
+    fs::remove_dir_all(tmp.path().join("tools").join(NAME)).unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--force", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    let line = format!("  .claude/skills/{NAME}/SKILL.md\n");
+    assert_eq!(stdout.matches(&line).count(), 1, "{stdout}");
+    assert!(!claude_skill(tmp.path()).exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_file_of_a_failed_run_is_deleted_when_the_next_run_no_longer_plans_it() {
+    let (tmp, home) = project("v1");
+    let Some(guard) = failed_add(tmp.path(), &home) else {
+        return;
+    };
+    drop(guard);
+    assert!(claude_skill(tmp.path()).is_file());
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--copilot", "--project"])
+        .assert()
+        .success();
+    assert!(!claude_skill(tmp.path()).exists());
+    assert!(copilot_skill(tmp.path()).is_file());
+    let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(!lock.contains(".claude/skills"), "{lock}");
+    assert!(!lock.contains("\"pending\""), "{lock}");
 }
