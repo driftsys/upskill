@@ -29,7 +29,7 @@
 
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::model::bundle::{McpLocal, McpRemote};
 use crate::plugin::PluginOutcome;
@@ -75,6 +75,78 @@ pub enum AncillaryAction {
     Preserved,
 }
 
+/// A hand-shake file write that has been computed but not yet performed.
+///
+/// The `ensure_*` functions and `pending_handshake_changes` both build their
+/// result from this type, so the files they write and the files they report
+/// are always the same.
+struct PendingWrite {
+    /// Path of the file, including `target`.
+    path: PathBuf,
+    /// Full new content of the file.
+    content: String,
+    /// `Created` when the file is absent, `Updated` when it exists.
+    action: AncillaryAction,
+}
+
+impl PendingWrite {
+    fn json(path: PathBuf, value: &Value, action: AncillaryAction) -> Result<Self> {
+        let json = serde_json::to_string_pretty(value).context("serialize JSON")?;
+        Ok(Self {
+            path,
+            content: format!("{json}\n"),
+            action,
+        })
+    }
+
+    /// Create the parent directory when needed, then write the content.
+    fn apply(&self) -> Result<AncillaryAction> {
+        if let Some(parent) = self.path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create dir {}", parent.display()))?;
+        }
+        std::fs::write(&self.path, &self.content)
+            .with_context(|| format!("write {}", self.path.display()))?;
+        Ok(self.action)
+    }
+}
+
+/// Apply a computed write, or report `Preserved` when nothing changes.
+fn apply_pending(pending: Option<PendingWrite>) -> Result<AncillaryAction> {
+    match pending {
+        Some(write) => write.apply(),
+        None => Ok(AncillaryAction::Preserved),
+    }
+}
+
+/// The hand-shake files that `ensure_claude_bridge`,
+/// `ensure_opencode_rules_registered` and
+/// `ensure_vscode_instructions_registered` would create or change, as paths
+/// relative to `target`, sorted. Writes nothing.
+///
+/// Returns the same errors as the `ensure_*` functions when an existing file
+/// cannot be read or has an unsupported shape.
+pub fn pending_handshake_changes(target: &Path, has_rules: bool) -> Result<Vec<PathBuf>> {
+    let pending = [
+        claude_bridge_pending(target),
+        opencode_rules_pending(target, has_rules)?,
+        vscode_instructions_pending(target, has_rules)?,
+    ];
+    let mut paths: Vec<PathBuf> = pending
+        .into_iter()
+        .flatten()
+        .map(|write| {
+            write
+                .path
+                .strip_prefix(target)
+                .map(Path::to_path_buf)
+                .unwrap_or(write.path)
+        })
+        .collect();
+    paths.sort();
+    Ok(paths)
+}
+
 /// Ensure `<target>/CLAUDE.md` exists with the bridge content.
 ///
 /// - Absent → created with `CLAUDE_MD_BRIDGE`.
@@ -82,16 +154,19 @@ pub enum AncillaryAction {
 ///   `upskill` run) may have customised the file; preserving it is part of
 ///   the contract per ADR-0003.
 pub fn ensure_claude_bridge(target: &Path) -> Result<AncillaryAction> {
+    apply_pending(claude_bridge_pending(target))
+}
+
+fn claude_bridge_pending(target: &Path) -> Option<PendingWrite> {
     let path = target.join(CLAUDE_MD);
     if path.exists() {
-        return Ok(AncillaryAction::Preserved);
+        return None;
     }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("create dir {}", parent.display()))?;
-    }
-    std::fs::write(&path, CLAUDE_MD_BRIDGE).with_context(|| format!("write {}", path.display()))?;
-    Ok(AncillaryAction::Created)
+    Some(PendingWrite {
+        path,
+        content: CLAUDE_MD_BRIDGE.to_string(),
+        action: AncillaryAction::Created,
+    })
 }
 
 /// Ensure `<target>/opencode.json` lists `.agents/rules/**/RULE.md` in
@@ -112,16 +187,19 @@ pub fn ensure_claude_bridge(target: &Path) -> Result<AncillaryAction> {
 /// non-array value, this function returns an error rather than clobbering
 /// user data.
 pub fn ensure_opencode_rules_registered(target: &Path, has_rules: bool) -> Result<AncillaryAction> {
+    apply_pending(opencode_rules_pending(target, has_rules)?)
+}
+
+fn opencode_rules_pending(target: &Path, has_rules: bool) -> Result<Option<PendingWrite>> {
     if !has_rules {
-        return Ok(AncillaryAction::Preserved);
+        return Ok(None);
     }
 
     let path = target.join(OPENCODE_JSON);
     match std::fs::read_to_string(&path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             let new_doc = json!({ "instructions": [OPENCODE_RULES_GLOB] });
-            write_pretty_json(&path, &new_doc)?;
-            Ok(AncillaryAction::Created)
+            PendingWrite::json(path, &new_doc, AncillaryAction::Created).map(Some)
         }
         Err(e) => Err(e).with_context(|| format!("read {}", path.display())),
         Ok(raw) => {
@@ -132,25 +210,22 @@ pub fn ensure_opencode_rules_registered(target: &Path, has_rules: bool) -> Resul
             }
 
             let obj = doc.as_object_mut().expect("checked is_object");
-            let entry = match obj.get_mut("instructions") {
+            match obj.get_mut("instructions") {
                 None => {
                     obj.insert("instructions".to_string(), json!([OPENCODE_RULES_GLOB]));
-                    AncillaryAction::Updated
                 }
                 Some(existing) => {
                     let arr = existing.as_array_mut().with_context(|| {
                         format!("{}: `instructions` must be an array", path.display())
                     })?;
                     if arr.iter().any(|v| v.as_str() == Some(OPENCODE_RULES_GLOB)) {
-                        return Ok(AncillaryAction::Preserved);
+                        return Ok(None);
                     }
                     arr.push(json!(OPENCODE_RULES_GLOB));
-                    AncillaryAction::Updated
                 }
-            };
+            }
 
-            write_pretty_json(&path, &doc)?;
-            Ok(entry)
+            PendingWrite::json(path, &doc, AncillaryAction::Updated).map(Some)
         }
     }
 }
@@ -185,8 +260,12 @@ pub fn ensure_vscode_instructions_registered(
     target: &Path,
     has_rules: bool,
 ) -> Result<AncillaryAction> {
+    apply_pending(vscode_instructions_pending(target, has_rules)?)
+}
+
+fn vscode_instructions_pending(target: &Path, has_rules: bool) -> Result<Option<PendingWrite>> {
     if !has_rules {
-        return Ok(AncillaryAction::Preserved);
+        return Ok(None);
     }
 
     let path = target.join(VSCODE_SETTINGS);
@@ -195,8 +274,7 @@ pub fn ensure_vscode_instructions_registered(
             let new_doc = json!({
                 VSCODE_INSTRUCTIONS_KEY: { VSCODE_INSTRUCTIONS_PATH: true },
             });
-            write_pretty_json(&path, &new_doc)?;
-            Ok(AncillaryAction::Created)
+            PendingWrite::json(path, &new_doc, AncillaryAction::Created).map(Some)
         }
         Err(e) => Err(e).with_context(|| format!("read {}", path.display())),
         Ok(raw) => {
@@ -207,13 +285,12 @@ pub fn ensure_vscode_instructions_registered(
             }
 
             let obj = doc.as_object_mut().expect("checked is_object");
-            let action = match obj.get_mut(VSCODE_INSTRUCTIONS_KEY) {
+            match obj.get_mut(VSCODE_INSTRUCTIONS_KEY) {
                 None => {
                     obj.insert(
                         VSCODE_INSTRUCTIONS_KEY.to_string(),
                         json!({ VSCODE_INSTRUCTIONS_PATH: true }),
                     );
-                    AncillaryAction::Updated
                 }
                 Some(existing) => {
                     let map = existing.as_object_mut().with_context(|| {
@@ -224,15 +301,13 @@ pub fn ensure_vscode_instructions_registered(
                         )
                     })?;
                     if map.contains_key(VSCODE_INSTRUCTIONS_PATH) {
-                        return Ok(AncillaryAction::Preserved);
+                        return Ok(None);
                     }
                     map.insert(VSCODE_INSTRUCTIONS_PATH.to_string(), json!(true));
-                    AncillaryAction::Updated
                 }
-            };
+            }
 
-            write_pretty_json(&path, &doc)?;
-            Ok(action)
+            PendingWrite::json(path, &doc, AncillaryAction::Updated).map(Some)
         }
     }
 }
@@ -741,6 +816,112 @@ mod tests {
         let second = ensure_claude_bridge(tmp.path()).expect("ensure 2");
         assert_eq!(first, AncillaryAction::Created);
         assert_eq!(second, AncillaryAction::Preserved);
+    }
+
+    fn snapshot(root: &Path) -> Vec<(PathBuf, Option<String>)> {
+        fn walk(dir: &Path, root: &Path, out: &mut Vec<(PathBuf, Option<String>)>) {
+            let mut entries: Vec<_> = std::fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().path())
+                .collect();
+            entries.sort();
+            for p in entries {
+                let rel = p.strip_prefix(root).unwrap().to_path_buf();
+                if p.is_dir() {
+                    out.push((rel, None));
+                    walk(&p, root, out);
+                } else {
+                    out.push((rel, Some(std::fs::read_to_string(&p).unwrap())));
+                }
+            }
+        }
+        let mut out = Vec::new();
+        walk(root, root, &mut out);
+        out
+    }
+
+    fn all_three() -> Vec<PathBuf> {
+        let mut v = vec![
+            PathBuf::from("CLAUDE.md"),
+            PathBuf::from("opencode.json"),
+            PathBuf::from(".vscode").join("settings.json"),
+        ];
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn pending_handshake_changes_lists_each_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        assert_eq!(got, all_three());
+    }
+
+    #[test]
+    fn pending_handshake_changes_without_rules_lists_only_claude_md() {
+        let tmp = tempfile::tempdir().unwrap();
+        let got = pending_handshake_changes(tmp.path(), false).unwrap();
+        assert_eq!(got, vec![PathBuf::from("CLAUDE.md")]);
+    }
+
+    #[test]
+    fn pending_handshake_changes_is_empty_after_the_ensure_functions_ran() {
+        let tmp = tempfile::tempdir().unwrap();
+        ensure_claude_bridge(tmp.path()).unwrap();
+        ensure_opencode_rules_registered(tmp.path(), true).unwrap();
+        ensure_vscode_instructions_registered(tmp.path(), true).unwrap();
+        assert!(
+            pending_handshake_changes(tmp.path(), true)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn pending_handshake_changes_writes_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(OPENCODE_JSON), "{\"theme\": \"dark\"}\n").unwrap();
+        let before = snapshot(tmp.path());
+        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        assert_eq!(got.len(), 3);
+        assert_eq!(snapshot(tmp.path()), before);
+        assert!(!tmp.path().join(".vscode").exists());
+    }
+
+    #[test]
+    fn pending_handshake_changes_skips_opencode_json_that_holds_the_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(OPENCODE_JSON),
+            r#"{"theme": "dark", "instructions": ["a.md", ".agents/rules/**/RULE.md"]}"#,
+        )
+        .unwrap();
+        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        let mut expected = vec![
+            PathBuf::from("CLAUDE.md"),
+            PathBuf::from(".vscode").join("settings.json"),
+        ];
+        expected.sort();
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn pending_handshake_changes_reports_an_existing_file_that_would_be_updated() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(OPENCODE_JSON),
+            r#"{"instructions": ["a.md"]}"#,
+        )
+        .unwrap();
+        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        assert!(got.contains(&PathBuf::from(OPENCODE_JSON)));
+    }
+
+    #[test]
+    fn pending_handshake_changes_errors_like_the_ensure_function() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(OPENCODE_JSON), r#"{"instructions": "x"}"#).unwrap();
+        assert!(pending_handshake_changes(tmp.path(), true).is_err());
     }
 
     fn read_opencode(target: &Path) -> Value {
