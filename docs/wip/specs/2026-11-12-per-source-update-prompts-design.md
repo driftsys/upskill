@@ -152,22 +152,28 @@ changed. With a hand-edited file, every `update` fails until `--force`.
 
 New rule, without `--force`:
 
-- **The item's source hash equals the recorded hash, and the item has no
-  `pending` record:** nothing is withheld. The item is not written. Each
+- **The item's source hash equals the recorded hash, the item has no `pending`
+  record, and applying the item would write or delete no file other than the
+  modified destinations:** nothing is withheld. The item is not written. Each
   modified destination is reported as `kept modified file: <path>` in the block
   of its source. This is a note, not a change: it asks no question and does not
   affect the exit code. The item has no `skip` line.
-- **The item's source hash changed, or the item has a `pending` record:** an
-  update is withheld. The item has a `skip` line and the run exits with code 1,
-  as today.
+- **Any other case** (the source hash changed, the item has a `pending` record,
+  or another file of the item would be written or deleted, for example the file
+  of a client that the flags no longer select): an update is withheld. The item
+  has a `skip` line and the run exits with code 1, as today.
 
 An unmanaged file at a destination (a file with no record) keeps today's rule in
 both cases: `skip` and exit code 1. The new rule covers only a recorded file
 that the user modified. (Author's call.)
 
+The third condition of the first case is the author's call, made while writing
+the plan: without it, a deletion for a deselected client would be withheld with
+only a note.
+
 Known limit: when a new version of upskill renders an unchanged source to
-different bytes, an item with an edited file keeps the old rendering of its
-other files too, with only the note, until `update --force`. `doctor` remains
+different bytes in the edited file only, the new rendering of that file is not
+applied and only the note is printed, until `update --force`. `doctor` remains
 the command that lists modified files.
 
 With `--force`, both cases replace the edited file, and the block names it.
@@ -236,14 +242,14 @@ other. This resolves the first half of #497.
 
 ### Flags and modes
 
-| Mode                                | Behaviour                                                                                                                                                                              |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal, no `--yes`                | As described above.                                                                                                                                                                    |
-| `--yes`, or stdin is not a terminal | Same steps, no question: every source with a change is applied. Output and exit codes stay as they are today, except for the rule for edited files and the earlier empty-source guard. |
-| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                             |
-| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                      |
-| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                      |
-| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                              |
+| Mode                                | Behaviour                                                                                                                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal, no `--yes`                | As described above.                                                                                                                                                                                                                                  |
+| `--yes`, or stdin is not a terminal | Same steps, no question: every source is applied, as today, including one without a change (so its plugin and MCP steps run). Output and exit codes stay as they are today, except for the rule for edited files and the earlier empty-source guard. |
+| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                                                                                           |
+| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                                                                                    |
+| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                                                                                    |
+| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                                                                                            |
 
 `--dry-run` note: every block is exact for the current disk. Because nothing is
 applied, a later block does not include the effect of applying an earlier one.
