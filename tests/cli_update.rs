@@ -841,6 +841,7 @@ fn update_force_deletes_a_modified_file_of_an_item_the_source_no_longer_contains
         stdout.contains("Replaced or deleted 1 modified or unmanaged file(s)"),
         "{stdout}"
     );
+    assert_forced_paths_are_relative(&stdout, tmp.path());
 }
 
 #[test]
@@ -861,6 +862,7 @@ fn update_force_reports_the_replaced_file_when_no_source_changed() {
         stdout.contains("Replaced or deleted 1 modified or unmanaged file(s)"),
         "{stdout}"
     );
+    assert_forced_paths_are_relative(&stdout, tmp.path());
     assert_eq!(fs::read(&dest).unwrap(), generated);
 }
 
@@ -1228,6 +1230,10 @@ fn update_force_in_a_terminal_changes_nothing_on_no() {
         result["stderr"].as_str().unwrap().contains("[y/N]"),
         "{result}"
     );
+    assert!(
+        result["stderr"].as_str().unwrap().contains("aborted."),
+        "{result}"
+    );
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -1245,6 +1251,10 @@ fn update_force_in_a_terminal_replaces_the_file_on_yes() {
 
     let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
     assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        "{result}"
+    );
     assert_eq!(fs::read(&dest).unwrap(), generated);
 }
 
@@ -1263,9 +1273,120 @@ fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
         result["stderr"].as_str().unwrap().contains("[y/N]"),
         "{result}"
     );
+    assert!(
+        result["stderr"].as_str().unwrap().contains("aborted."),
+        "{result}"
+    );
+    // The plan is printed before the question.
+    assert!(
+        result["stdout"]
+            .as_str()
+            .unwrap()
+            .contains("update:  1 item(s)"),
+        "{result}"
+    );
     assert_eq!(fs::read(&dest).unwrap(), before);
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
         lock_before
     );
+}
+
+/// Every path line after the `--force` summary is relative to the install
+/// root: it holds a file name and not the path of the temporary directory.
+fn assert_forced_paths_are_relative(stdout: &str, root: &Path) {
+    let root = root.display().to_string();
+    let mut lines = stdout
+        .lines()
+        .skip_while(|line| !line.contains("Replaced or deleted"))
+        .skip(1)
+        .take_while(|line| line.starts_with("  "))
+        .peekable();
+    assert!(lines.peek().is_some(), "{stdout}");
+    for line in lines {
+        assert!(line.trim_end().ends_with(".md"), "{stdout}");
+        assert!(!line.contains(&root), "{stdout}");
+    }
+}
+
+#[cfg(unix)]
+fn assert_terminal_update_applies_after_a_source_change(answer: &str) {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    change_res_source(tmp.path());
+
+    let result = update_in_terminal(tmp.path(), &home, &["--project"], answer);
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        "{result}"
+    );
+    assert!(
+        result["stdout"]
+            .as_str()
+            .unwrap()
+            .contains("update:  1 item(s)"),
+        "{result}"
+    );
+    assert!(fs::read_to_string(&dest).unwrap().contains("Changed."));
+}
+
+#[test]
+#[cfg(unix)]
+fn update_in_a_terminal_applies_on_y_after_a_source_change() {
+    assert_terminal_update_applies_after_a_source_change("y\n");
+}
+
+#[test]
+#[cfg(unix)]
+fn update_in_a_terminal_accepts_yes_in_any_letter_case() {
+    assert_terminal_update_applies_after_a_source_change("YeS\n");
+}
+
+fn recorded_hash(root: &Path, path: &str) -> String {
+    let raw = fs::read_to_string(root.join(".upskill-lock.json")).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    v["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|i| i["files"].as_array().unwrap().iter())
+        .find(|f| f["path"] == path)
+        .unwrap()["sha256"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+#[test]
+fn update_leaves_a_crlf_checkout_as_it_is_until_the_content_changes() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    let record = ".claude/skills/res/SKILL.md";
+    let hash_before = recorded_hash(tmp.path(), record);
+    rewrite_with_crlf(&dest);
+    let crlf = fs::read(&dest).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(0);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("everything is up to date — nothing to do"),
+        "{stdout}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), crlf);
+    assert_eq!(recorded_hash(tmp.path(), record), hash_before);
+
+    change_res_source(tmp.path());
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(0);
+    let text = fs::read_to_string(&dest).unwrap();
+    assert!(text.contains("Changed."), "{text}");
+    assert!(!text.contains('\r'), "{text}");
 }

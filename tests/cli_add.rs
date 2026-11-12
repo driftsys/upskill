@@ -777,9 +777,91 @@ fn add_force_prints_the_replaced_file() {
         stdout.contains("Replaced or deleted 1 modified or unmanaged file(s) (--force)"),
         "{stdout}"
     );
-    let listed = stdout
-        .lines()
-        .any(|line| line.starts_with("  ") && line.trim_end().ends_with("SKILL.md"));
+    let root = tmp.path().display().to_string();
+    let listed = stdout.lines().any(|line| {
+        line.starts_with("  ") && line.trim_end().ends_with("SKILL.md") && !line.contains(&root)
+    });
     assert!(listed, "{stdout}");
     assert_ne!(fs::read(&dest).unwrap(), b"not managed\n");
+}
+
+/// A project with the skill `res` (with `scripts/a.sh`) installed for
+/// Claude from `./source`.
+fn res_with_script_project() -> (tempfile::TempDir, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let skill = tmp.path().join("source").join("res");
+    fs::create_dir_all(skill.join("scripts")).unwrap();
+    fs::write(
+        skill.join("SKILL.md"),
+        "---\nschema: 1\nname: res\ndescription: Use for res\n---\nBody.\n",
+    )
+    .unwrap();
+    fs::write(skill.join("scripts").join("a.sh"), "echo a\n").unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "res", "--claude", "--project"])
+        .assert()
+        .success();
+    (tmp, home)
+}
+
+fn installed_script(root: &Path) -> std::path::PathBuf {
+    root.join(".claude")
+        .join("skills")
+        .join("res")
+        .join("scripts")
+        .join("a.sh")
+}
+
+#[test]
+fn add_force_deletes_and_lists_a_modified_file_the_source_no_longer_contains() {
+    let (tmp, home) = res_with_script_project();
+    let script = installed_script(tmp.path());
+    fs::write(&script, "my edit\n").unwrap();
+    fs::remove_dir_all(tmp.path().join("source").join("res").join("scripts")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "res", "--claude", "--project", "--force"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("Replaced or deleted 1 modified or unmanaged file(s) (--force)"),
+        "{stdout}"
+    );
+    assert!(
+        stdout
+            .lines()
+            .any(|line| line.starts_with("  ") && line.trim_end().ends_with("a.sh")),
+        "{stdout}"
+    );
+    assert!(!script.exists());
+}
+
+#[test]
+fn add_force_with_quiet_prints_no_list() {
+    let (tmp, home) = res_with_script_project();
+    fs::write(installed_script(tmp.path()), "my edit\n").unwrap();
+    fs::remove_dir_all(tmp.path().join("source").join("res").join("scripts")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "res",
+            "--claude",
+            "--project",
+            "--force",
+            "--quiet",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("Replaced or deleted"), "{stdout}");
+    assert!(!installed_script(tmp.path()).exists());
 }

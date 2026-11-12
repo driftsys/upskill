@@ -307,8 +307,17 @@ mod tests {
         assert!(matches_recorded(b"a\nb\n", &[&lf]));
         assert!(matches_recorded(b"a\r\nb\r\n", &[&lf]));
         assert!(!matches_recorded(b"a\r\nc\r\n", &[&lf]));
-        assert!(!matches_recorded(b"a\rb\n", &[&lf]));
         assert!(!matches_recorded(b"a\nb\n", &[]));
+        // One direction only: LF bytes do not match a record of CRLF bytes.
+        let crlf = sha256_hex(b"a\r\nb\r\n");
+        assert!(!matches_recorded(b"a\nb\n", &[&crlf]));
+        // A lone `\r` is kept: only `\r\n` pairs are replaced. The input
+        // holds a `\r\n`, so it reaches the comparison.
+        let no_cr = sha256_hex(b"ab\n");
+        assert!(!matches_recorded(b"a\rb\r\n", &[&no_cr]));
+        // Documented limit: a `\r` added before a `\n` of LF content is
+        // read as unchanged.
+        assert!(matches_recorded(b"a\r\nb\n", &[&lf]));
     }
 
     #[test]
