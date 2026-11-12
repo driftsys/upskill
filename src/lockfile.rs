@@ -619,6 +619,7 @@ mod tests {
             adopted: None,
             conflicts: Vec::new(),
             kept_modified: Vec::new(),
+            forced: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,

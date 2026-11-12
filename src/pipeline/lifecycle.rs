@@ -127,6 +127,8 @@ struct RemovalPlan {
     delete: Vec<PathBuf>,
     absent: Vec<PathBuf>,
     kept: Vec<PathBuf>,
+    /// Modified files in `delete`, deleted because `force` is true.
+    forced: Vec<PathBuf>,
 }
 
 /// Classify every recorded file of `entry` and decide its action. Fails on
@@ -142,6 +144,7 @@ fn plan_removal(
         delete: Vec::new(),
         absent: Vec::new(),
         kept: Vec::new(),
+        forced: Vec::new(),
     };
     for file in &entry.files {
         let Some(rel) = deletable(&file.path) else {
@@ -180,6 +183,7 @@ fn plan_removal(
                     .file_type()
                     .is_file();
                 if force && is_file {
+                    plan.forced.push(rel.clone());
                     plan.delete.push(rel);
                 } else {
                     plan.kept.push(rel);
@@ -751,6 +755,7 @@ pub fn update(
                     report
                         .kept_modified
                         .extend(install_report.kept_modified.iter().cloned());
+                    report.forced.extend(install_report.forced.iter().cloned());
                     let mut skipped: std::collections::BTreeMap<(ItemKind, String), Vec<PathBuf>> =
                         std::collections::BTreeMap::new();
                     for conflict in &install_report.conflicts {
@@ -783,6 +788,7 @@ pub fn update(
                         for plan in plans {
                             execute_removal(target, &plan, &mut reported)?;
                             report.kept_modified.extend(plan.kept.iter().cloned());
+                            report.forced.extend(plan.forced.iter().cloned());
                             lock.remove(plan.kind, &plan.name);
                             report.items.push(UpdatedItem {
                                 kind: plan.kind,
@@ -818,6 +824,23 @@ pub fn update(
                             name: entry.name.clone(),
                             source: source_label.clone(),
                             status,
+                        });
+                    }
+                    // A skipped item that is not an entry of this source: a
+                    // dependency from another source that the reinstall
+                    // planned. It is reported here, because its own source
+                    // may not be part of this run.
+                    for ((kind, name), files) in skipped {
+                        let source = lock
+                            .items
+                            .iter()
+                            .find(|i| i.kind == kind && i.name == name)
+                            .map_or_else(|| source_label.clone(), |i| i.source.clone());
+                        report.items.push(UpdatedItem {
+                            kind,
+                            name,
+                            source,
+                            status: UpdateStatus::SkippedModified { files },
                         });
                     }
                 }
@@ -872,6 +895,12 @@ pub fn update(
         }
         Ok(())
     })();
+    // An item skipped by the reinstall of two sources is reported once.
+    let mut seen_skipped = std::collections::BTreeSet::new();
+    report.items.retain(|item| {
+        !matches!(item.status, UpdateStatus::SkippedModified { .. })
+            || seen_skipped.insert((item.kind, item.name.clone()))
+    });
     if let Err(err) = result {
         return Err(match &report.adopted {
             Some(paths)

@@ -912,25 +912,14 @@ fn run_update(args: UpdateArgs) -> i32 {
             }
         };
 
-        let has_changes = plan
-            .items
-            .iter()
-            .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
-
-        if !has_changes {
+        if interactive_step(&plan, force) == InteractiveStep::Confirm {
             if !style::is_quiet() {
-                println!("everything is up to date — nothing to do");
+                print_update_plan(&plan);
             }
-            return EXIT_SUCCESS;
-        }
-
-        if !style::is_quiet() {
-            print_update_plan(&plan);
-        }
-
-        if !confirm_update() {
-            eprintln!("aborted.");
-            return EXIT_SUCCESS;
+            if !confirm_update() {
+                eprintln!("aborted.");
+                return EXIT_SUCCESS;
+            }
         }
 
         match update(
@@ -954,6 +943,33 @@ fn run_update(args: UpdateArgs) -> i32 {
                 EXIT_ERROR
             }
         }
+    }
+}
+
+/// What the interactive `update` does after its dry run.
+#[derive(Debug, PartialEq, Eq)]
+enum InteractiveStep {
+    /// Show the plan and ask before applying.
+    Confirm,
+    /// Apply without a question. The dry run found no source change, and
+    /// without `--force` the apply replaces no modified or unmanaged file.
+    /// It still reports skipped items with exit code 1, as a run without a
+    /// terminal does.
+    ApplyWithoutPrompt,
+}
+
+/// The step after the dry run of an interactive `update`. A source change
+/// or `--force` (which can replace edited files that the dry run does not
+/// inspect) needs a confirmation.
+fn interactive_step(plan: &UpdateReport, force: bool) -> InteractiveStep {
+    let has_changes = plan
+        .items
+        .iter()
+        .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
+    if has_changes || force {
+        InteractiveStep::Confirm
+    } else {
+        InteractiveStep::ApplyWithoutPrompt
     }
 }
 
@@ -1035,7 +1051,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         .items
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
-    if changes == 0 && !dry_run && !skipped {
+    if changes == 0 && !dry_run && !skipped && report.forced.is_empty() {
         println!("everything is up to date — nothing to do");
         return;
     }
@@ -1071,6 +1087,16 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             style::name(&item.name),
             status
         );
+    }
+    if !report.forced.is_empty() {
+        println!(
+            "{} {} modified or unmanaged file(s) (--force)",
+            style::success("Replaced"),
+            report.forced.len()
+        );
+        for path in &report.forced {
+            println!("  {}", path.display());
+        }
     }
 }
 
@@ -1883,4 +1909,49 @@ fn run_index(registry: Option<&str>, clear: bool) -> i32 {
         }
     }
     EXIT_SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn report(status: UpdateStatus) -> UpdateReport {
+        UpdateReport {
+            items: vec![upskill::pipeline::UpdatedItem {
+                kind: ItemKind::Skill,
+                name: "s".into(),
+                source: "local:/s".into(),
+                status,
+            }],
+            ..UpdateReport::default()
+        }
+    }
+
+    #[test]
+    fn interactive_update_applies_without_a_question_when_nothing_changed() {
+        assert_eq!(
+            interactive_step(&report(UpdateStatus::UpToDate), false),
+            InteractiveStep::ApplyWithoutPrompt
+        );
+    }
+
+    #[test]
+    fn interactive_update_with_force_asks_even_when_nothing_changed() {
+        assert_eq!(
+            interactive_step(&report(UpdateStatus::UpToDate), true),
+            InteractiveStep::Confirm
+        );
+    }
+
+    #[test]
+    fn interactive_update_asks_when_a_source_changed() {
+        let changed = UpdateStatus::WouldChange {
+            old_hash: None,
+            new_hash: Some("x".into()),
+        };
+        assert_eq!(
+            interactive_step(&report(changed), false),
+            InteractiveStep::Confirm
+        );
+    }
 }

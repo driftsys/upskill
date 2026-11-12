@@ -34,6 +34,10 @@ pub struct InstalledItem {
 
 #[derive(Debug, Default, Clone)]
 pub struct InstallReport {
+    /// One entry per item and client in the plan. It also includes the
+    /// items listed in `conflicts`, which were not written; `update` relies
+    /// on this so that a skipped item is not removed as no longer in the
+    /// source.
     pub items: Vec<InstalledItem>,
     /// When the install resolved a bundle (entry `source` was a
     /// `.bundle.yaml` file), every reached bundle in dependency order. The
@@ -61,6 +65,10 @@ pub struct InstallReport {
     /// Destinations that stopped the write of an item. Every item listed
     /// here was not written, and its lockfile entry is unchanged.
     pub conflicts: Vec<super::FileConflict>,
+    /// With `--force`: modified or unmanaged files that were replaced, and
+    /// modified files that the new version no longer contains and that were
+    /// deleted.
+    pub forced: Vec<PathBuf>,
     /// Modified files that the new version of an item no longer contains.
     /// They are kept on disk and stay in the item's record.
     pub kept_modified: Vec<PathBuf>,
@@ -394,6 +402,9 @@ pub struct UpdateReport {
     /// item no longer contains, and files of an item that its source no
     /// longer contains.
     pub kept_modified: Vec<PathBuf>,
+    /// With `--force`: modified or unmanaged files that were replaced or
+    /// deleted, including those of items that the source no longer contains.
+    pub forced: Vec<PathBuf>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

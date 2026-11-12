@@ -761,6 +761,13 @@ fn update_with_a_narrower_selection_keeps_a_modified_copilot_file() {
     assert!(stderr.contains("kept modified file: "), "{stderr}");
     assert!(stderr.contains("SKILL.md"), "{stderr}");
     assert_eq!(fs::read(copilot_res_md(tmp.path())).unwrap(), b"my edit\n");
+    assert_eq!(
+        recorded_paths(tmp.path(), "res"),
+        vec![
+            ".claude/skills/res/SKILL.md".to_string(),
+            ".github/skills/res/SKILL.md".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -793,4 +800,116 @@ fn update_keeps_a_modified_file_of_an_item_the_source_no_longer_contains() {
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
     let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
     assert!(!lock.contains("\"name\": \"res\""), "{lock}");
+}
+
+// -- Task 10, fix round 1 --
+
+/// `res_project` plus a second skill `other`, both installed.
+fn two_skill_project() -> (tempfile::TempDir, std::path::PathBuf) {
+    let (tmp, home) = res_project(|_| {});
+    let other = tmp.path().join("source").join("other");
+    fs::create_dir_all(&other).unwrap();
+    fs::write(
+        other.join("SKILL.md"),
+        "---\nschema: 1\nname: other\ndescription: Use for other\n---\nOther.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "other", "--claude", "--project"])
+        .assert()
+        .success();
+    (tmp, home)
+}
+
+#[test]
+fn update_force_deletes_a_modified_file_of_an_item_the_source_no_longer_contains() {
+    let (tmp, home) = two_skill_project();
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    fs::remove_dir_all(tmp.path().join("source").join("res")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force"])
+        .assert()
+        .success();
+    assert!(!dest.exists());
+    assert!(!dest.parent().unwrap().exists());
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("Replaced 1 modified or unmanaged file(s)"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn update_force_reports_the_replaced_file_when_no_source_changed() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    let generated = fs::read(&dest).unwrap();
+    fs::write(&dest, "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+    assert!(
+        stdout.contains("Replaced 1 modified or unmanaged file(s)"),
+        "{stdout}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), generated);
+}
+
+#[test]
+fn update_of_a_name_reports_a_skipped_dependency_from_another_source() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg_b = tmp.path().join("reg-b").join("sarif");
+    fs::create_dir_all(&reg_b).unwrap();
+    fs::write(
+        reg_b.join("SKILL.md"),
+        "---\nschema: 1\nname: sarif\ndescription: Use for sarif\n---\nBody.\n",
+    )
+    .unwrap();
+    let reg_a = tmp.path().join("reg-a").join("code-review");
+    fs::create_dir_all(&reg_a).unwrap();
+    let agent = reg_a.join("AGENT.md");
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review", "--claude", "--project"])
+        .assert()
+        .success();
+    let sarif = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md");
+    fs::write(&sarif, "my edit\n").unwrap();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("skipped skill sarif: "), "{stderr}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
 }

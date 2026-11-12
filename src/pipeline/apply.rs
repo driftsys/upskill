@@ -60,6 +60,9 @@ pub(super) struct ApplyOutcome {
     pub kept: Vec<PathBuf>,
     /// The record of every written item.
     pub recorded: RecordedFiles,
+    /// With `overwrite`: the modified or unowned files that were replaced,
+    /// and the modified stale files that were deleted.
+    pub forced: Vec<PathBuf>,
 }
 
 /// What `apply_plan` does for one item, computed before any change.
@@ -186,6 +189,7 @@ pub(super) fn apply_plan(
 
         let mut delete = Vec::new();
         let mut kept = Vec::new();
+        let mut conflicts = Vec::new();
         for rel in stale {
             let path = rel_to_record(&rel)?;
             let records = recorded_for(&path);
@@ -195,6 +199,13 @@ pub(super) fn apply_plan(
             match state {
                 FileState::Owned | FileState::Absent => delete.push(rel),
                 FileState::Modified | FileState::Unowned if overwrite && is_file => {
+                    // Recorded as a conflict, so that it is reported as forced.
+                    conflicts.push(FileConflict {
+                        kind: item.kind,
+                        name: item.name.clone(),
+                        path: rel.clone(),
+                        state: ConflictState::Modified,
+                    });
                     delete.push(rel);
                 }
                 FileState::Modified | FileState::Unowned => {
@@ -207,7 +218,6 @@ pub(super) fn apply_plan(
             }
         }
 
-        let mut conflicts = Vec::new();
         for file in &item.files {
             let path = rel_to_record(&file.rel)?;
             let records = recorded_for(&path);
@@ -269,6 +279,9 @@ pub(super) fn apply_plan(
             outcome.skipped.extend(conflicts);
             continue;
         }
+        outcome
+            .forced
+            .extend(conflicts.into_iter().map(|conflict| conflict.path));
         for rel in &delete {
             delete_recorded(target, rel)?;
         }

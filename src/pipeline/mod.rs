@@ -388,6 +388,7 @@ pub fn install_with_lockfile(
         let mut recorded = outcome.recorded;
         report.kept_modified = outcome.kept;
         report.conflicts = outcome.skipped;
+        report.forced = outcome.forced;
         // A skipped item keeps its lockfile entry unchanged, or gets none.
         let skipped: std::collections::BTreeSet<(ItemKind, String)> = report
             .conflicts

@@ -1651,3 +1651,140 @@ fn add_refuses_an_item_name_that_contains_a_path_separator() {
     );
     assert!(!tmp.path().join(".claude").exists());
 }
+
+// -- Task 10, fix round 1 --
+
+#[test]
+fn add_reports_a_modified_destination() {
+    let (tmp, home) = project();
+    add_rule(&home, tmp.path(), &[]).success();
+    let dest = claude_rule_path(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let out = add_rule(&home, tmp.path(), &[]).code(1);
+    let stderr = stderr_of(&out);
+    assert!(
+        stderr.contains("skipped rule api-conventions: ") && stderr.contains(" was modified\n"),
+        "{stderr}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+/// A skill `tool` with the resources `old.md` and `z.md`, installed for
+/// Claude. Returns the installed skill directory.
+fn tool_with_resources(root: &Path, home: &Path) -> std::path::PathBuf {
+    let src = root.join("tools");
+    write_skill(&src, "tool", "Body v1.");
+    fs::write(src.join("tool").join("old.md"), "old\n").unwrap();
+    fs::write(src.join("tool").join("z.md"), "z v1\n").unwrap();
+    common::upskill_cmd(home)
+        .current_dir(root)
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .success();
+    root.join(".claude").join("skills").join("tool")
+}
+
+#[test]
+fn a_conflict_on_the_last_destination_skips_the_whole_item() {
+    let (tmp, home) = project();
+    let installed = tool_with_resources(tmp.path(), &home);
+    // The last planned file of the item is edited by hand.
+    fs::write(installed.join("z.md"), "my edit\n").unwrap();
+    let skill_before = fs::read(installed.join("SKILL.md")).unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+    // The new version changes the body, drops `old.md` and adds `new.md`.
+    let src = tmp.path().join("tools").join("tool");
+    write_skill(&tmp.path().join("tools"), "tool", "Body v2.");
+    fs::remove_file(src.join("old.md")).unwrap();
+    fs::write(src.join("new.md"), "new\n").unwrap();
+    fs::write(src.join("z.md"), "z v2\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .code(1);
+    assert!(
+        stderr_of(&out).contains("z.md was modified"),
+        "{}",
+        stderr_of(&out)
+    );
+    assert_eq!(fs::read(installed.join("SKILL.md")).unwrap(), skill_before);
+    assert_eq!(fs::read(installed.join("z.md")).unwrap(), b"my edit\n");
+    assert_eq!(fs::read(installed.join("old.md")).unwrap(), b"old\n");
+    assert!(!installed.join("new.md").exists());
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+#[test]
+fn a_separator_refusal_does_not_adopt_a_schema_1_lockfile() {
+    let (tmp, home) = project();
+    let original = write_schema_1_install(tmp.path());
+    let out = add_rule(&home, tmp.path(), &["--as", "api-conventions=a/b"]).code(1);
+    assert!(
+        stderr_of(&out).contains("an installed name must not contain a path separator"),
+        "{}",
+        stderr_of(&out)
+    );
+    assert!(
+        !stderr_of(&out).contains("note: adopted"),
+        "{}",
+        stderr_of(&out)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        original
+    );
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+}
+
+#[test]
+fn add_counts_only_written_items() {
+    let (tmp, home) = project();
+    let dest = claude_rule_path(tmp.path());
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::write(&dest, "manual\n").unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "api-conventions",
+            "create-api-endpoint",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("Installed 1 files"), "{stdout}");
+    assert!(stdout.contains("create-api-endpoint"), "{stdout}");
+    assert!(!stdout.contains("api-conventions"), "{stdout}");
+}
+
+#[test]
+fn add_reports_a_kept_modified_file_that_the_new_version_drops() {
+    let (tmp, home) = project();
+    let installed = tool_with_resources(tmp.path(), &home);
+    fs::write(installed.join("old.md"), "my edit\n").unwrap();
+    fs::remove_file(tmp.path().join("tools").join("tool").join("old.md")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./tools", "--claude", "--project"])
+        .assert()
+        .success();
+    let stderr = stderr_of(&out);
+    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert!(stderr.contains("old.md"), "{stderr}");
+    assert_eq!(fs::read(installed.join("old.md")).unwrap(), b"my edit\n");
+}
