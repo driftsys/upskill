@@ -399,12 +399,19 @@ impl DoctorReport {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
-    /// Nothing of the item changes: its files and its lockfile record are
-    /// as the source plans them, or the item is kept for its modified
-    /// files (see [`UpdateReport::kept_modified`]).
+    /// The source of the item was applied, and the source hash of the item
+    /// equals the hash recorded in the lockfile entry; the item has no
+    /// `pending` record. The status comes from this hash comparison only:
+    /// an item reported as up to date can have had files written or
+    /// deleted (for example a missing output written again, or the files
+    /// of a client that the selection no longer targets deleted) or its
+    /// lockfile record changed (for example a historical source label
+    /// rewritten). Also the status of an item of a source that was not
+    /// applied and that has no preview item.
     UpToDate,
-    /// The source of the item was applied, and the item was written or its
-    /// record changed.
+    /// The source of the item was applied, and the source hash of the item
+    /// differs from the hash recorded in the lockfile entry (or no hash was
+    /// recorded).
     Updated {
         old_hash: Option<String>,
         new_hash: Option<String>,
@@ -421,12 +428,15 @@ pub enum UpdateStatus {
     Removed,
     /// The item was not written because these destinations (relative to
     /// the install target root) are modified or not managed by upskill.
-    /// The files and the lockfile entry are unchanged.
+    /// The files and the lockfile entry are unchanged. Reported for an
+    /// applied source, and for a source that was not applied because it
+    /// has no changes (see [`SourcePreview::has_changes`]).
     SkippedModified { files: Vec<PathBuf> },
     /// The source of the item has changes, and the source was not applied:
     /// the observer did not return [`SourceDecision::Apply`], or the run is
     /// a dry run. `action` is what applying the source would do to the
-    /// item.
+    /// item; a [`PreviewAction::Skip`] item of such a source is reported
+    /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
 }
 
@@ -474,8 +484,10 @@ pub struct SourcePreview {
     pub source: String,
     /// Items that are not up to date. An up-to-date item has no entry.
     pub items: Vec<PreviewItem>,
-    /// `kept modified file` notes of items kept by the rule for edited files.
-    pub kept_edits: Vec<PathBuf>,
+    /// `kept modified file` notes, not changes: the modified destinations of
+    /// items kept by the rule for edited files, and the kept modified stale
+    /// files of items that have no other change.
+    pub kept_notes: Vec<PathBuf>,
     /// Hand-shake files that applying the source would create or change.
     pub handshake: Vec<PathBuf>,
     /// Paths adopted from a `schema: 1` lockfile just before this preview.
@@ -483,13 +495,19 @@ pub struct SourcePreview {
 }
 
 impl SourcePreview {
-    /// True when a commit would write or delete a file or change an item
-    /// record: an item whose action is not `Skip`, or a hand-shake file.
+    /// True exactly when a commit would write or delete a file or change an
+    /// item record: an item has a non-empty `write`, `delete` or `forced`,
+    /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
+    /// hand-shake file would be created or changed. A `Skip` item and a
+    /// note in `kept_notes` are not changes.
     pub fn has_changes(&self) -> bool {
-        self.items
-            .iter()
-            .any(|item| item.action != PreviewAction::Skip)
-            || !self.handshake.is_empty()
+        self.items.iter().any(|item| {
+            !item.write.is_empty()
+                || !item.delete.is_empty()
+                || !item.forced.is_empty()
+                || matches!(item.action, PreviewAction::Complete | PreviewAction::Remove)
+                || item.record_only
+        }) || !self.handshake.is_empty()
     }
 }
 
@@ -511,7 +529,10 @@ pub struct SourceResult {
     pub updated: usize,
     pub completed: usize,
     pub removed: usize,
-    /// Modified files that were kept.
+    /// Modified files that were kept, counted for this source before the
+    /// report removes the duplicates across sources: the counts of all
+    /// sources can add up to more than [`UpdateReport::kept_modified`]
+    /// holds.
     pub kept_modified: usize,
     pub skipped: usize,
 }

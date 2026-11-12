@@ -255,9 +255,12 @@ a recorded file. These files are handled as described above: an unchanged one is
 deleted, and a modified one is kept and the item is skipped (with `--force`, it
 is deleted). Three cases are not "before any change": an `update` over several
 sources has already applied the sources it updated before, a `schema: 1`
-lockfile has already been adopted and saved, and when the removal of an item
-that its source no longer contains fails, the install of that source has already
-been written and saved. This applies also with `--force`.
+lockfile has already been adopted and saved, and when the deletion of a file of
+an item that its source no longer contains fails, the install of that source has
+already been written and saved. A removal that is refused when it is planned (a
+symbolic link above a recorded path, or a recorded path that cannot be
+inspected) fails before the install of that source is written. This applies also
+with `--force`.
 
 Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.

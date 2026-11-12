@@ -116,12 +116,15 @@ files, at any depth, are all such files (an empty directory, or one that holds
 an empty subdirectory, fails), and such a regular file where a planned file
 needs a directory. These files are handled as stale files (§2.2). For `update`
 over several sources, the sources updated before are already applied; with a
-`schema: 1` lockfile, the adoption is already saved; when the removal of an item
-that its source no longer contains fails, the install of that source is already
-written and saved. Without `--force`, an item with at least one conflict is
-skipped as a whole: none of its files is written or deleted and its lockfile
-entry is not changed. The other items are written. `add` then prints one line
-per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
+`schema: 1` lockfile, the adoption is already saved; when the deletion of a file
+of an item that its source no longer contains fails, the install of that source
+is already written and saved. A removal that is refused when it is planned (a
+symbolic link above a recorded path, or a recorded path that cannot be
+inspected) fails before the install of that source is written. Without
+`--force`, an item with at least one conflict is skipped as a whole: none of its
+files is written or deleted and its lockfile entry is not changed. The other
+items are written. `add` then prints one line per conflict to stderr,
+`skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces

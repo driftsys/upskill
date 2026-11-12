@@ -47,8 +47,10 @@ pub(super) struct PreparedInstall {
 /// change on disk or in the lockfile.
 pub(super) struct InstallPreview {
     pub items: Vec<PreviewItem>,
-    /// Modified destinations of items with `Disposition::KeepEdits`.
-    pub kept_edits: Vec<PathBuf>,
+    /// Notes, not changes: the modified destinations of items with
+    /// `Disposition::KeepEdits`, and the kept modified stale files of
+    /// written items that have no other change.
+    pub kept_notes: Vec<PathBuf>,
     pub handshake: Vec<PathBuf>,
 }
 
@@ -404,12 +406,12 @@ impl PreparedInstall {
             Some(&new_items),
             self.options.keep_unwithheld_edits,
         )?;
-        let (items, kept_edits) =
+        let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
         let handshake = crate::ancillary::pending_handshake_changes(target, self.has_rules())?;
         Ok(InstallPreview {
             items,
-            kept_edits,
+            kept_notes,
             handshake,
         })
     }
@@ -609,9 +611,11 @@ impl PreparedInstall {
 }
 
 /// Maps each item of `decision` to a [`PreviewItem`], and returns the
-/// modified destinations of the items with [`Disposition::KeepEdits`].
+/// notes: the modified destinations of the items with
+/// [`Disposition::KeepEdits`], and the kept modified stale files of the
+/// `Write` items that have no other change.
 ///
-/// - `KeepEdits`: no `PreviewItem`; its conflict paths are returned.
+/// - `KeepEdits`: no `PreviewItem`; its conflict paths are notes.
 /// - `Skip`: action `Skip`, `blocking` is the conflict paths.
 /// - `Write`: `write` and `delete` are the paths that `execute_plan` would
 ///   count in `changed` (see [`apply::writes_new_content`] and
@@ -627,8 +631,9 @@ impl PreparedInstall {
 ///   would save ([`apply::ItemChanges::recorded_files`]: the planned files
 ///   and the records of the kept stale files) differs from the `files`
 ///   record of the entry, compared as a set of (client, path, hash). An
-///   item with nothing to write, delete or keep, that is not `Complete` and
-///   not `record_only`, is up to date and gets no `PreviewItem`.
+///   item whose `write`, `delete` and `forced` are empty, that is not
+///   `Complete` and not `record_only`, gets no `PreviewItem`: its kept
+///   stale files, if any, are notes.
 fn preview_items(
     target: &Path,
     lock: &Lockfile,
@@ -637,13 +642,13 @@ fn preview_items(
     new_items: &[LockedItem],
 ) -> (Vec<PreviewItem>, Vec<PathBuf>) {
     let mut items = Vec::new();
-    let mut kept_edits = Vec::new();
+    let mut kept_notes = Vec::new();
     for (item, changes) in planned.iter().zip(decision.items) {
         let recorded = changes.recorded_files();
         let conflict_paths: Vec<PathBuf> = changes.conflicts.into_iter().map(|c| c.path).collect();
         match changes.disposition {
             Disposition::KeepEdits => {
-                kept_edits.extend(conflict_paths);
+                kept_notes.extend(conflict_paths);
                 continue;
             }
             Disposition::Skip => {
@@ -692,12 +697,15 @@ fn preview_items(
                             != e.files.iter().collect::<BTreeSet<_>>()
                 })
             });
+        // A kept modified stale file of an item with no other change is a
+        // note, not a change.
         if write.is_empty()
             && delete.is_empty()
+            && conflict_paths.is_empty()
             && !complete
-            && kept_modified.is_empty()
             && !record_only
         {
+            kept_notes.extend(kept_modified);
             continue;
         }
         items.push(PreviewItem {
@@ -716,7 +724,7 @@ fn preview_items(
             record_only,
         });
     }
-    (items, kept_edits)
+    (items, kept_notes)
 }
 
 #[cfg(test)]

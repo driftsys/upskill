@@ -102,10 +102,10 @@ fn repo_display_parts(url: &str) -> (&str, &str) {
 /// - `guard` is `Some(TempDir)` for git sources (drop cleans up the
 ///   clone) and `None` for local-path sources.
 ///
-/// Used by `update` (especially `--dry-run`) where we want the SSOT on
-/// disk without committing to an install. For `install_*` the same
-/// fetch happens internally inside `install_from_git_url` — we keep
-/// that path independent so install can stay one tempdir-scoped pass.
+/// Used by `prepare_install`, which fetches the source of every `add`
+/// and of every source of `update`. The library entry point
+/// `install_from_git_url` fetches through its own path, so that it stays
+/// one tempdir-scoped pass.
 pub fn fetch_ssot(source: &InstallSource) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
     match source {
         InstallSource::LocalPath(p) => Ok((p.clone(), None)),

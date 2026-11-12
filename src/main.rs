@@ -963,7 +963,11 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         .items
         .iter()
         .filter(|i| match i.status {
-            UpdateStatus::UpToDate | UpdateStatus::SkippedModified { .. } => false,
+            UpdateStatus::UpToDate
+            | UpdateStatus::SkippedModified { .. }
+            | UpdateStatus::NotApplied {
+                action: PreviewAction::Skip,
+            } => false,
             UpdateStatus::NotApplied { .. } => dry_run,
             _ => true,
         })

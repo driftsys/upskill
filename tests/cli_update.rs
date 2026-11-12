@@ -1786,3 +1786,106 @@ fn update_yes_with_a_kept_edit_does_not_print_nothing_to_do() {
     assert!(stderr.contains("kept modified file: "), "{stderr}");
     assert!(!stdout.contains("nothing to do"), "{stdout}");
 }
+
+#[test]
+fn update_reports_a_kept_stale_file_as_a_note_and_not_as_a_change() {
+    let (tmp, home) = res_project(|skill| {
+        fs::write(skill.join("notes.md"), "notes\n").unwrap();
+    });
+    let notes = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("res")
+        .join("notes.md");
+    fs::write(&notes, "my notes\n").unwrap();
+    fs::remove_file(tmp.path().join("source").join("res").join("notes.md")).unwrap();
+    // The first update writes the new version and keeps the edited file.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("would update 0 of 1"), "{stdout}");
+    assert!(stdout.contains("up to date"), "{stdout}");
+    assert!(!stdout.contains("would change"), "{stdout}");
+
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    let noted: Vec<std::path::PathBuf> = stderr
+        .lines()
+        .filter_map(|line| line.strip_prefix("kept modified file: "))
+        .map(|line| std::path::PathBuf::from(line.trim_end()))
+        .collect();
+    assert_eq!(
+        noted,
+        vec![
+            Path::new(".claude")
+                .join("skills")
+                .join("res")
+                .join("notes.md")
+        ],
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(fs::read(&notes).unwrap(), b"my notes\n");
+}
+
+#[test]
+fn update_yes_with_an_unsupported_opencode_json_writes_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let rule = tmp.path().join("source").join("style").join("RULE.md");
+    fs::create_dir_all(rule.parent().unwrap()).unwrap();
+    fs::write(
+        &rule,
+        "---\nschema: 1\nname: style\ndescription: Use for style\n---\nBody.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "--project"])
+        .assert()
+        .success();
+    fs::write(
+        tmp.path().join("opencode.json"),
+        "{\n  \"instructions\": \"x\"\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        &rule,
+        "---\nschema: 1\nname: style\ndescription: Use for style\n---\nChanged.\n",
+    )
+    .unwrap();
+    let claude_rule = tmp.path().join(".claude").join("rules").join("style.md");
+    let rule_before = fs::read(&claude_rule).unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    assert_eq!(fs::read(&claude_rule).unwrap(), rule_before);
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}

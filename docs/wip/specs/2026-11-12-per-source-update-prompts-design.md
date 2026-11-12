@@ -106,11 +106,20 @@ lockfile.
 
 "An item record" means every field of the `LockedItem` entries that the apply
 would save, compared with the entries in the current lockfile. A difference in
-any field counts, including `git_ref`, `required_by`, `clients` and `files`.
-When an item's record changes and none of its files does, its line says `update`
-with the words `record only`, so that no question is asked without a line that
-explains it. The `plugins`, `mcp` and `bundles` sections of the lockfile are not
-compared; see
+any field counts, including `source`, `git_ref`, `clients` and `files`, with two
+exceptions: `pending`, which is covered by the `complete` action, and
+`required_by`. The reinstall of a dependency's own source computes a different
+`required_by` than the reinstall of the source that requires it, so counting it
+would make a terminal run ask on every run; a change of `required_by` alone is
+saved only when the source is applied for another reason or with `--yes`.
+(Author's call, made during the implementation.)
+
+A modified stale file that is kept is a note (`kept modified file: <path>`), not
+a change: an item whose only preview content is such a file has no item line and
+asks no question. When an item's record changes and none of its files does, its
+line says `update` with the words `record only`, so that no question is asked
+without a line that explains it. The `plugins`, `mcp` and `bundles` sections of
+the lockfile are not compared; see
 [Ancillary files, plugins and MCP servers](#ancillary-files-plugins-and-mcp-servers).
 (Author's call.)
 
@@ -198,7 +207,8 @@ half of #497.
   not change the exit code: declining is a choice, not an error.
 - 1 when an item has a `skip` line, in an applied source or in a source that had
   only `skip` lines. An item that is only noted as `kept modified file` does not
-  cause exit code 1.
+  cause exit code 1. A `skip` line in a source that the user declined does not
+  cause exit code 1 either.
 - 1 when a step fails. Sources applied before the failure stay applied, as
   today.
 
@@ -284,6 +294,19 @@ lockfile.
   apply use the same fetch. A source that is fetched again as a cross-source
   dependency of another source is outside this goal; there is no run-wide cache
   of fetched sources. (Author's call.)
+
+## Changes of `--yes` behaviour
+
+All deliberate, and the only ones:
+
+1. The rule for edited files (see above).
+2. An empty source is refused before any write of that source.
+3. A hand-shake file that cannot be updated (for example an `opencode.json`
+   whose `instructions` is not an array) fails the source before any write of
+   that source. Before, the items were written and the lockfile saved first.
+4. A removal that `plan_removal` refuses (a symbolic link above a recorded path,
+   or a recorded path that cannot be inspected) fails the source before its
+   install. Before, the install of that source was written and saved first.
 
 ## Non-goals
 

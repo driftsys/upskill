@@ -673,12 +673,13 @@ fn reselect_from_entries(
 /// as [`UpdateStatus::CompletedInterrupted`], never as
 /// [`UpdateStatus::UpToDate`].
 ///
-/// In a source that is not applied, an entry with a preview item is
-/// reported as [`UpdateStatus::SkippedModified`] when its action is
-/// [`PreviewAction::Skip`] and as [`UpdateStatus::NotApplied`] otherwise;
-/// an entry without a preview item is [`UpdateStatus::UpToDate`]. The
-/// modified files of items kept by the rule for edited files are listed in
-/// `kept_modified`, whether or not the source is applied.
+/// In a source that is not applied, an entry without a preview item is
+/// [`UpdateStatus::UpToDate`], and an entry with a preview item is
+/// [`UpdateStatus::NotApplied`], except a [`PreviewAction::Skip`] item of a
+/// source without changes ([`SourcePreview::has_changes`] is false, not a
+/// dry run), which is [`UpdateStatus::SkippedModified`]. The notes of
+/// [`SourcePreview::kept_notes`] are listed in `kept_modified`, whether or
+/// not the source is applied.
 ///
 /// An error after an adoption carries the adopted paths as
 /// [`AdoptedBeforeFailure`]. Sources applied before an error stay applied.
@@ -828,7 +829,7 @@ pub fn update(
             let preview = SourcePreview {
                 source: source_label.clone(),
                 items,
-                kept_edits: install_preview.kept_edits,
+                kept_notes: install_preview.kept_notes,
                 handshake: install_preview.handshake,
                 adopted,
             };
@@ -836,19 +837,25 @@ pub fn update(
             let decision = observer.preview(&preview);
 
             if dry_run || decision != SourceDecision::Apply {
+                // A source with changes that is not applied was declined (or
+                // the run is a dry run): its `Skip` items are `NotApplied`
+                // and do not cause exit code 1. A source without changes is
+                // not applied because there is nothing to apply: its `Skip`
+                // items are skipped, as in an applied source.
+                let declined = dry_run || preview.has_changes();
                 if preview.has_changes() {
                     report.sources_not_applied += 1;
                 }
                 report
                     .kept_modified
-                    .extend(preview.kept_edits.iter().cloned());
+                    .extend(preview.kept_notes.iter().cloned());
                 for entry in &source_entries {
                     let status = match preview
                         .items
                         .iter()
                         .find(|i| i.kind == entry.kind && i.name == entry.name)
                     {
-                        Some(item) if item.action == PreviewAction::Skip => {
+                        Some(item) if item.action == PreviewAction::Skip && !declined => {
                             UpdateStatus::SkippedModified {
                                 files: item.blocking.clone(),
                             }
@@ -879,8 +886,14 @@ pub fn update(
                         kind: item.kind,
                         name: item.name.clone(),
                         source: source_of(&lock, item.kind, &item.name, &source_label),
-                        status: UpdateStatus::SkippedModified {
-                            files: item.blocking.clone(),
+                        status: if declined {
+                            UpdateStatus::NotApplied {
+                                action: PreviewAction::Skip,
+                            }
+                        } else {
+                            UpdateStatus::SkippedModified {
+                                files: item.blocking.clone(),
+                            }
                         },
                     });
                 }
@@ -1199,15 +1212,28 @@ mod tests {
     }
 
     fn run(target: &Path, observer: &mut dyn UpdateObserver) -> Result<UpdateReport> {
+        run_with(target, false, false, observer)
+    }
+
+    fn run_with(
+        target: &Path,
+        overwrite: bool,
+        dry_run: bool,
+        observer: &mut dyn UpdateObserver,
+    ) -> Result<UpdateReport> {
         update(
             target,
             &[],
             PluginScope::Project,
             &ClientSelection::all(),
-            false,
-            false,
+            overwrite,
+            dry_run,
             observer,
         )
+    }
+
+    fn lock_bytes(target: &Path) -> Vec<u8> {
+        fs::read(target.join(".upskill-lock.json")).unwrap()
     }
 
     fn status_of<'a>(report: &'a UpdateReport, name: &str) -> &'a UpdateStatus {
@@ -1314,6 +1340,7 @@ mod tests {
         install(&src, &target);
         fs::write(target.join(claude_skill("b")), "my edit\n").unwrap();
         fs::remove_dir_all(src.join("b")).unwrap();
+        let lock_before = lock_bytes(&target);
 
         let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
         let report = run(&target, &mut observer).unwrap();
@@ -1332,6 +1359,7 @@ mod tests {
         );
         assert_eq!(report.sources_not_applied, 1);
         // Nothing was applied.
+        assert_eq!(lock_bytes(&target), lock_before);
         assert_eq!(
             fs::read(target.join(claude_skill("b"))).unwrap(),
             b"my edit\n"
@@ -1366,5 +1394,209 @@ mod tests {
             report.items
         );
         assert_eq!(report.sources_not_applied, 0);
+    }
+
+    fn preview_with(items: Vec<PreviewItem>, notes: Vec<PathBuf>) -> SourcePreview {
+        SourcePreview {
+            source: "s".to_string(),
+            items,
+            kept_notes: notes,
+            handshake: Vec::new(),
+            adopted: None,
+        }
+    }
+
+    fn preview_item(action: PreviewAction) -> PreviewItem {
+        PreviewItem {
+            kind: ItemKind::Skill,
+            name: "a".to_string(),
+            action,
+            write: Vec::new(),
+            delete: Vec::new(),
+            kept_modified: Vec::new(),
+            forced: Vec::new(),
+            blocking: Vec::new(),
+            record_only: false,
+        }
+    }
+
+    #[test]
+    fn has_changes_follows_the_rule() {
+        // A note is not a change.
+        assert!(!preview_with(vec![], vec![claude_skill("a")]).has_changes());
+        // A skip is not a change.
+        assert!(!preview_with(vec![preview_item(PreviewAction::Skip)], vec![]).has_changes());
+        // An update item with only a kept file is not a change.
+        let mut kept_only = preview_item(PreviewAction::Update);
+        kept_only.kept_modified = vec![claude_skill("a")];
+        assert!(!preview_with(vec![kept_only], vec![]).has_changes());
+        let changes: [fn(&mut PreviewItem); 6] = [
+            |i| i.write = vec![claude_skill("a")],
+            |i| i.delete = vec![claude_skill("a")],
+            |i| i.forced = vec![claude_skill("a")],
+            |i| i.record_only = true,
+            |i| i.action = PreviewAction::Complete,
+            |i| i.action = PreviewAction::Remove,
+        ];
+        for change in changes {
+            let mut item = preview_item(PreviewAction::Update);
+            change(&mut item);
+            assert!(preview_with(vec![item], vec![]).has_changes());
+        }
+        let mut handshake = preview_with(vec![], vec![]);
+        handshake.handshake = vec![PathBuf::from("CLAUDE.md")];
+        assert!(handshake.has_changes());
+    }
+
+    #[test]
+    fn a_kept_stale_file_without_another_change_is_a_note() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        write(&src, "a/notes.md", b"notes");
+        install(&src, &target);
+        let notes = Path::new(".claude")
+            .join("skills")
+            .join("a")
+            .join("notes.md");
+        fs::write(target.join(&notes), "my notes\n").unwrap();
+        fs::remove_file(src.join("a/notes.md")).unwrap();
+        skill(&src, "a", "a, changed");
+        // The first update writes the new version and keeps the edited file.
+        run(
+            &target,
+            &mut Recorder::new(|_: &SourcePreview| SourceDecision::Apply),
+        )
+        .unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        let preview = &observer.previews[0];
+        assert!(preview.items.is_empty(), "{:?}", preview.items);
+        assert!(preview.kept_notes.contains(&notes), "{preview:?}");
+        assert!(!preview.has_changes());
+        assert_eq!(status_of(&report, "a"), &UpdateStatus::UpToDate);
+        assert!(report.kept_modified.contains(&notes));
+        assert_eq!(report.sources_not_applied, 0);
+    }
+
+    #[test]
+    fn a_declined_source_reports_a_skip_item_as_not_applied() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        skill(&src, "b", "b");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("a")), "my edit\n").unwrap();
+        skill(&src, "a", "a, changed");
+        skill(&src, "b", "b, changed");
+
+        for decision in [SourceDecision::Skip, SourceDecision::Stop] {
+            let mut observer = Recorder::new(|_: &SourcePreview| decision);
+            let report = run(&target, &mut observer).unwrap();
+            assert!(observer.previews[0].has_changes());
+            assert_eq!(
+                status_of(&report, "a"),
+                &UpdateStatus::NotApplied {
+                    action: PreviewAction::Skip
+                }
+            );
+            assert_eq!(
+                status_of(&report, "b"),
+                &UpdateStatus::NotApplied {
+                    action: PreviewAction::Update
+                }
+            );
+        }
+    }
+
+    /// Two sources `s1` (skill `a`) and `s2` (skill `b`), both changed
+    /// after the install.
+    fn two_changed_sources() -> (tempfile::TempDir, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        for (dir, name) in [("s1", "a"), ("s2", "b")] {
+            let src = tmp.path().join(dir);
+            skill(&src, name, "first");
+            install(&src, &target);
+            skill(&src, name, "second");
+        }
+        (tmp, target)
+    }
+
+    #[test]
+    fn a_dry_run_ignores_the_decision() {
+        // With `dry_run`, the decision is ignored: `Apply` writes nothing,
+        // and `Stop` does not stop, so every source is still previewed.
+        for decision in [SourceDecision::Apply, SourceDecision::Stop] {
+            let (_tmp, target) = two_changed_sources();
+            let lock_before = lock_bytes(&target);
+            let a_before = fs::read(target.join(claude_skill("a"))).unwrap();
+            let mut observer = Recorder::new(|_: &SourcePreview| decision);
+            let report = run_with(&target, false, true, &mut observer).unwrap();
+            assert_eq!(observer.previews.len(), 2, "{decision:?}");
+            assert!(observer.results.is_empty());
+            assert!(!report.stopped);
+            assert_eq!(report.sources_applied, 0);
+            assert_eq!(report.sources_not_applied, 2);
+            assert_eq!(lock_bytes(&target), lock_before);
+            assert_eq!(fs::read(target.join(claude_skill("a"))).unwrap(), a_before);
+        }
+    }
+
+    #[test]
+    fn the_adoption_is_on_the_preview_of_the_first_source_only() {
+        let (_tmp, target) = two_changed_sources();
+        let path = target.join(".upskill-lock.json");
+        let mut lock: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        lock["schema"] = 1.into();
+        for entry in lock["items"].as_array_mut().unwrap() {
+            entry.as_object_mut().unwrap().remove("files");
+        }
+        fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        assert_eq!(observer.previews.len(), 2);
+        assert!(
+            observer.previews[0]
+                .adopted
+                .as_ref()
+                .is_some_and(|paths| !paths.is_empty())
+        );
+        assert!(observer.previews[1].adopted.is_none());
+        assert!(report.adopted.is_some());
+    }
+
+    #[test]
+    fn a_removed_item_with_overwrite_divides_forced_and_delete() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        skill(&src, "b", "b");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("b")), "my edit\n").unwrap();
+        fs::remove_dir_all(src.join("b")).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        run_with(&target, true, false, &mut observer).unwrap();
+        let removed = observer.previews[0]
+            .items
+            .iter()
+            .find(|i| i.name == "b")
+            .unwrap();
+        assert_eq!(removed.action, PreviewAction::Remove);
+        assert_eq!(removed.forced, vec![claude_skill("b")]);
+        assert!(!removed.delete.contains(&claude_skill("b")), "{removed:?}");
+        assert!(!removed.delete.is_empty(), "the files of the other clients");
+        assert!(removed.kept_modified.is_empty());
     }
 }
