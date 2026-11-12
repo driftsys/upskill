@@ -1390,3 +1390,44 @@ fn update_leaves_a_crlf_checkout_as_it_is_until_the_content_changes() {
     assert!(text.contains("Changed."), "{text}");
     assert!(!text.contains('\r'), "{text}");
 }
+
+#[test]
+fn update_writes_a_source_change_from_crlf_to_lf() {
+    let (tmp, home) = res_project(|skill| {
+        fs::create_dir_all(skill.join("scripts")).unwrap();
+        fs::write(skill.join("scripts").join("a.sh"), b"echo a\r\n").unwrap();
+    });
+    let installed = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("res")
+        .join("scripts")
+        .join("a.sh");
+    assert_eq!(fs::read(&installed).unwrap(), b"echo a\r\n");
+    fs::write(
+        tmp.path()
+            .join("source")
+            .join("res")
+            .join("scripts")
+            .join("a.sh"),
+        b"echo a\n",
+    )
+    .unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(0);
+    assert_eq!(fs::read(&installed).unwrap(), b"echo a\n");
+    use sha2::Digest;
+    let lf: String = sha2::Sha256::digest(b"echo a\n")
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    assert_eq!(
+        recorded_hash(tmp.path(), ".claude/skills/res/scripts/a.sh"),
+        lf
+    );
+}

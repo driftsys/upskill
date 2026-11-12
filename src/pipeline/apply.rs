@@ -77,8 +77,8 @@ struct ItemChanges {
     kept: Vec<(PathBuf, Vec<OwnedFile>)>,
     /// Destinations that stop the write of this item.
     conflicts: Vec<FileConflict>,
-    /// `Owned` destinations whose bytes already match the planned bytes
-    /// through [`matches_recorded`]; they are not rewritten.
+    /// `Owned` destinations that are not rewritten: see the rule in the
+    /// rustdoc of [`apply_plan`].
     unchanged: BTreeSet<PathBuf>,
 }
 
@@ -95,9 +95,13 @@ struct ItemChanges {
 /// `overwrite` is false, an item with at least one conflict is skipped as a
 /// whole: none of its files is written or deleted, and its lockfile record
 /// is unchanged. The other items are written. When `overwrite` is true, a
-/// conflicting regular file is replaced. An `Owned` destination whose bytes
-/// match the planned bytes through [`matches_recorded`] is not rewritten and is not counted in `changed`;
-/// its record is the hash of the planned bytes.
+/// conflicting regular file is replaced. An `Owned` destination is not
+/// rewritten and is not counted in `changed` when its bytes equal the
+/// planned bytes, or when they are a CRLF variant of the planned bytes (see
+/// [`matches_recorded`]) and the hash of the planned bytes was already
+/// recorded for the file (current or pending record). Its record is the
+/// hash of the planned bytes. In that case a file with a planned mode has
+/// the mode set again; a file without one keeps its current mode.
 ///
 /// Stale files: the files of an item's previous record that no planned item
 /// of this run writes. Before writing an item, its stale files that are
@@ -233,9 +237,16 @@ pub(super) fn apply_plan(
             let path = rel_to_record(&file.rel)?;
             let records = recorded_for(&path);
             let hashes: Vec<&str> = records.iter().map(|f| f.sha256.as_str()).collect();
+            // Skip the write when the bytes are equal, or are a CRLF variant
+            // of planned bytes whose hash was already recorded (the generated
+            // content did not change since it was recorded).
+            let planned_hash = sha256_hex(&file.bytes);
+            let planned_recorded = hashes.contains(&planned_hash.as_str());
             if state_of(target, &file.rel, &path, &hashes)? == FileState::Owned
-                && fs::read(target.join(&file.rel))
-                    .is_ok_and(|current| matches_recorded(&current, &[&sha256_hex(&file.bytes)]))
+                && fs::read(target.join(&file.rel)).is_ok_and(|current| {
+                    current == file.bytes
+                        || (planned_recorded && matches_recorded(&current, &[&planned_hash]))
+                })
             {
                 unchanged.insert(file.rel.clone());
             }
@@ -1453,6 +1464,35 @@ mod conflict_tests {
         .unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"a\nb\n")]);
+    }
+
+    #[test]
+    fn an_owned_file_is_skipped_only_when_equal_or_a_crlf_variant_of_recorded_bytes() {
+        // Exact equal: not written.
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\nb\n");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
+        let plan = [planned("s", &[(ENTRY, b"a\nb\n")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+
+        // CRLF variant, planned hash recorded: not written.
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\r\nb\r\n");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
+
+        // CRLF variant, planned hash not recorded (the record is the CRLF
+        // bytes, so the generated content changed): written.
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\r\nb\r\n");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"a\r\nb\r\n")]);
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert_eq!(outcome.changed, vec![PathBuf::from(ENTRY)]);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\nb\n");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"a\nb\n")]);
     }
 
