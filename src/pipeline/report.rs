@@ -541,8 +541,7 @@ pub struct SourceResult {
     pub skipped: usize,
     /// Files that the commit and the removals of this source wrote with new
     /// content or deleted: the number of paths that this source added to
-    /// [`UpdateReport::changed`], counted before the report removes the
-    /// duplicates across sources.
+    /// [`UpdateReport::changed`].
     pub changed_files: usize,
 }
 

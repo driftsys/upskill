@@ -1,8 +1,8 @@
 # `update` in a terminal: one exact preview and one question per source
 
-Date: 2026-11-12. Status: **approved by the user on 2026-11-12; not
-implemented**. Code baseline: `origin/main` at `ac0225e`. This document does not
-describe released behaviour.
+Date: 2026-11-12. Status: **approved by the user on 2026-11-12; implemented by
+the branch `feat/per-source-update-prompts`**. Code baseline: `origin/main` at
+`ac0225e`. This document does not describe released behaviour.
 
 Related records:
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283),

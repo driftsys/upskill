@@ -120,11 +120,14 @@ over several sources, the sources updated before are already applied; with a
 of an item that its source no longer contains fails, the install of that source
 is already written and saved. A removal that is refused when it is planned (a
 symbolic link above a recorded path, or a recorded path that cannot be
-inspected) fails before the install of that source is written. Without
-`--force`, an item with at least one conflict is skipped as a whole: none of its
-files is written or deleted and its lockfile entry is not changed. The other
-items are written. `add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+inspected) fails before the install of that source is written. For `update`, a
+source that resolves to no items while the lockfile records items from it, and a
+hand-shake file that cannot be updated (for example an `opencode.json` whose
+`instructions` is not an array), also fail the source before any file of that
+source is written, in every mode. Without `--force`, an item with at least one
+conflict is skipped as a whole: none of its files is written or deleted and its
+lockfile entry is not changed. The other items are written. `add` then prints
+one line per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -157,36 +160,102 @@ record, every such destination is modified (none is unowned), applying the item
 would write or delete no other file, the item has no recorded file that the new
 version no longer produces (present or absent), and its lockfile entry would not
 change in any field other than `files`, `pending` and `required_by` (for example
-`clients`), nothing is withheld: `update` prints `kept modified file: <path>` on
-stderr for each modified destination, and this note does not change the exit
-code. Otherwise the item is reported as skipped with
-`skipped <kind> <name>: <path> was modified or is not managed by upskill` and
-`Use --force to replace.` on stderr, and makes `update` exit with code 1 after
-the other items are written. Known limit: when a new version of upskill renders
-an unchanged source to different bytes in the modified file only, the new
-rendering is not written and only the note is printed, until `update --force`;
-`doctor` lists the modified files. A recorded file that the new version of an
-item no longer produces, for example a file of a client that a narrower
-selection no longer targets, is deleted when it is owned; a modified one is
-kept, stays in the record, and is reported as `kept modified file: <path>`. An
-item that its source no longer contains is removed with the rules of `remove`
-(§2.3). `update --force` replaces modified and unowned destinations and deletes
-modified regular files that are no longer produced; it then lists these files
-after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a
-terminal without `--yes`, `update` first runs a dry run. When a source changed,
-an item has an interrupted operation (a non-empty `pending` record, §4), or
-`--force` is given, it shows the plan (an interrupted item is counted on the
-line `complete: <n> item(s)`) and asks for a confirmation; an answer other than
-`y` or `yes` (in any letter case) changes nothing. When no source changed, no
-item is interrupted and `--force` is not given, it prints that there is nothing
-to do and changes nothing: it therefore does not report a modified file, does
-not delete the files of a client that the flags no longer select, and does not
-adopt a `schema: 1` lockfile. A run with `--yes`, or without a terminal, applies
-without a question and does these things. An applied `update` reports a
-completed interrupted item as `completed — interrupted before` and counts it in
-`Updated <n> of <m> item(s)`. When no item was updated, completed or removed,
-but files were written or deleted, it prints
-`Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
+`clients`), nothing is withheld: `update` reports `kept modified file: <path>`
+for each modified destination (in a terminal and with `--dry-run`, in the block
+of its source; with `--yes` or without a terminal, on stderr), and this note
+does not change the exit code. Otherwise the item is reported as skipped (in a
+terminal and with `--dry-run`, as a `skip` line of its block; with `--yes` or
+without a terminal, as
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` on
+stderr), `Use --force to replace.` is printed on stderr, and `update` exits with
+code 1 after the other items are written. Known limit: when a new version of
+upskill renders an unchanged source to different bytes in the modified file
+only, the new rendering is not written and only the note is printed, until
+`update --force`; `doctor` lists the modified files. A recorded file that the
+new version of an item no longer produces, for example a file of a client that a
+narrower selection no longer targets, is deleted when it is owned; a modified
+one is kept, stays in the record, and is reported (`keeps modified <path>` on
+the item line of a block; `kept modified file: <path>` on stderr with `--yes` or
+without a terminal). An item that its source no longer contains is removed with
+the rules of `remove` (§2.3). `update --force` replaces modified and unowned
+destinations and deletes modified regular files that are no longer produced. A
+block names each of these files as `replaces <path> (--force)` or
+`deletes <path> (--force)`; a run with `--yes` or without a terminal lists them
+after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
+
+`update` handles the sources one at a time, sorted by source label. For each
+source it fetches the source once, runs the checks of §2.1, and computes a
+preview from the fetched content, the files on disk and the lockfile, just
+before the source is applied. A preview **changes something** when applying the
+source writes or deletes a file, changes the lockfile record of an item (any
+field except `pending` and `required_by`), completes an interrupted item (a
+non-empty `pending` record, §4), removes an item, or creates or changes a
+hand-shake file (§3.4). A write of a file that already holds the planned bytes
+is not a change. A `skip` item and a `kept modified file` note are not changes.
+
+- **Terminal, no `--yes`.** For each source, `update` prints a block: the source
+  label; one line per item that the apply changes or skips, with the action
+  `update`, `complete`, `remove` or `skip`; one `write <path>` line per
+  hand-shake file; `up to date` when there is neither; then one
+  `kept modified file: <path>` line per note. An item line counts the files that
+  are written or deleted (`1 file`, `<n> files`) and names each kept modified
+  file (`keeps modified <path>`), each file that `--force` replaces or deletes,
+  and for `skip` each file that causes the skip. An `update` line whose item
+  changes only in its lockfile record ends with `record only`. A `remove` line
+  says `no longer in source`. A cross-source dependency that the reinstall
+  writes has a line in the block of the source that requires it. When the
+  preview changes something, `update` asks `Apply? [y/N/q]` on stderr: `y` or
+  `yes` (any letter case) applies the source; `n`, `no`, an empty line or any
+  other text does not apply it and continues; `q` or `quit` (any letter case),
+  end of input or a read error does not apply it and stops the run, and earlier
+  sources stay applied. A source whose preview changes nothing is not applied
+  and asks nothing. The apply decides again from the disk. After an applied
+  source, `update` prints a result line with the non-zero counts of
+  `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
+  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
+  last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
+  followed by `<k> source(s) not applied.` when a source with changes was not
+  applied, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
+  or end of input; then `Changed <n> file(s) written or deleted` when no item
+  was updated, completed or removed but files were written or deleted. It prints
+  `everything is up to date — nothing to do` instead when no source was applied,
+  no source with changes was declined, no file was kept with a note, no item was
+  skipped and no lockfile was adopted. The exit code is 1 when an item is
+  skipped in an applied source or in a source whose preview changes nothing, or
+  when a step fails; answers `n` and `q` do not change it, and a `skip` line of
+  a source that was not applied does not cause exit code 1. With `--quiet`, the
+  blocks, the notes, the result lines and the closing summary are not printed;
+  the question is `Apply changes from <source>? [y/N/q]`, and the `skipped`
+  lines, `Use --force to replace.` and the adoption notice are printed on
+  stderr.
+- **`--yes`, or stdin is not a terminal.** Every source is applied without a
+  question, also a source whose preview changes nothing, so its plugin and MCP
+  steps run. `update` prints `Updated <n> of <m> item(s)` and one status line
+  per item, and reports a completed interrupted item as
+  `completed — interrupted before`. When no item was updated, completed or
+  removed but files were written or deleted, it prints
+  `Changed <n> file(s) written or deleted`. It prints
+  `everything is up to date — nothing to do` when nothing changed, no item was
+  skipped, no file was kept with a note and no lockfile was adopted.
+- **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
+  and does not adopt a `schema: 1` lockfile (the previews use an adoption held
+  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
+  `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
+  and exits with code 0. Because nothing is applied, a later block does not
+  include the effect of applying an earlier source.
+
+A `schema: 1` lockfile is adopted once per run, without a question, for the
+first source that passes its checks (§4); in a terminal the adoption notice is
+printed before the block of that source. The adoption stays when the run fails
+or is stopped.
+
+Known limits: the plugin and MCP steps of a bundle source run when the source is
+applied, are not part of the preview and are not a reason to ask, so a terminal
+run does not repair a missing plugin or MCP registration of a source whose
+preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
+change of only `required_by` in an item record is not shown and does not cause a
+question; it is saved when the source is applied for another reason, or with
+`--yes`.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -390,12 +459,12 @@ that holds the bytes of a `pending` or `files` record is owned, so running the
 same command again, without `--force`, completes the operation, also after a
 second command that failed; `doctor` reports the item as interrupted, and
 `remove` deletes the files of both records. `update` completes an interrupted
-item also when its source did not change: `--dry-run` reports it as
-`would complete`, and in a terminal without `--yes` the plan is shown and
-confirmed as for a changed source. A path of a `pending` record that the command
-that completes the operation does not plan is a stale recorded path: deleted
-when it matches its `pending` or `files` hash, kept and still recorded when
-modified. A stage file left by a process that was killed is not deleted by
+item also when its source did not change: the block of its source has a
+`complete` line for it, and in a terminal without `--yes` that source is asked
+about as for any other change (§2.2). A path of a `pending` record that the
+command that completes the operation does not plan is a stale recorded path:
+deleted when it matches its `pending` or `files` hash, kept and still recorded
+when modified. A stage file left by a process that was killed is not deleted by
 upskill. Two upskill processes that change one scope at the same time are not
 supported. `add`, `update` and `remove` (not `update --dry-run`, not `doctor`,
 not a `remove` that fails on an unknown name, not an `add`, or an `update` for
