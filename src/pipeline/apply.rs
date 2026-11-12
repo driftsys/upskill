@@ -3030,7 +3030,13 @@ mod disposition_tests {
         second.kind = ItemKind::Agent;
         second.name = "t".to_string();
         case.plan.push(second);
-        let before = case.lock.items.clone();
+        // `t` is a new item: only step 2 of `execute_plan` adds its entry
+        // to the lockfile, with a `pending` record, before the write.
+        let mut agent = entry(vec![]);
+        agent.kind = ItemKind::Agent;
+        agent.name = "t".to_string();
+        case.new.push(agent);
+        let kept_before = case.lock.items[0].clone();
         let outcome = apply_plan(
             case.tmp.path(),
             &mut case.lock,
@@ -3043,7 +3049,21 @@ mod disposition_tests {
         assert!(outcome.skipped.is_empty());
         assert_eq!(outcome.kept_edits.len(), 1);
         assert_eq!(outcome.kept_edits[0].path, PathBuf::from(ENTRY));
-        assert_eq!(case.lock.items, before);
+        let kept_after = case
+            .lock
+            .items
+            .iter()
+            .find(|i| i.kind == ItemKind::Skill && i.name == "s")
+            .unwrap();
+        assert_eq!(*kept_after, kept_before);
+        let written = case
+            .lock
+            .items
+            .iter()
+            .find(|i| i.kind == ItemKind::Agent && i.name == "t")
+            .expect("the lockfile holds an entry for the agent t");
+        assert_eq!(written.files, vec![owned(other, b"agent")]);
+        assert!(written.pending.is_empty());
         assert_eq!(fs::read(case.tmp.path().join(ENTRY)).unwrap(), b"my edit");
         assert_eq!(fs::read(case.tmp.path().join(other)).unwrap(), b"agent");
         assert_eq!(outcome.changed, vec![PathBuf::from(other)]);
