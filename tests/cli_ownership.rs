@@ -1788,3 +1788,34 @@ fn add_reports_a_kept_modified_file_that_the_new_version_drops() {
     assert!(stderr.contains("old.md"), "{stderr}");
     assert_eq!(fs::read(installed.join("old.md")).unwrap(), b"my edit\n");
 }
+
+#[test]
+fn add_again_still_skips_an_edited_item() {
+    let (tmp, home) = project();
+    add_claude(tmp.path(), &home, "create-api-endpoint");
+    let dest = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("create-api-endpoint")
+        .join("SKILL.md");
+    fs::write(&dest, "my edit\n").unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "create-api-endpoint",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .code(1);
+    assert!(
+        stderr_of(&assert).contains("skipped skill create-api-endpoint: "),
+        "{}",
+        stderr_of(&assert)
+    );
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+}

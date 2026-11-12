@@ -201,13 +201,24 @@ is kept, stays in the record, and is reported as `kept modified file: <path>`.
 
 `update` protects files in the same way as `add`. An item with a destination
 that was modified, or that upskill does not manage, is not written and keeps its
-lockfile entry. `update` reports it as skipped, prints
+lockfile entry. When all of these hold, nothing is withheld from the item: the
+source hash of the item equals its recorded hash, the item has no interrupted
+operation (no `pending` record), every such destination is a recorded file that
+was modified (not a file that upskill does not manage), and applying the item
+would write or delete no other file. `update` then prints
+`kept modified file: <path>` on stderr for each modified destination; this note
+does not change the exit code. In every other case (for example the source
+changed, or a file of a client that the flags no longer select would be
+deleted), `update` reports the item as skipped, prints
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` for
 each such file and `Use --force to replace.`, and exits with code 1 after it has
-written the other items. A recorded file that the new version of an item no
-longer contains is deleted when it is unchanged; a modified one is kept, stays
-in the record, and is reported as `kept modified file: <path>` on stderr. An
-item that its source no longer contains is removed with the rules of
+written the other items. The limit of this rule: when a new version of upskill
+renders an unchanged source to different bytes in the edited file only, the new
+rendering is not written and only the note is printed, until `update --force`;
+`upskill doctor` lists the modified files. A recorded file that the new version
+of an item no longer contains is deleted when it is unchanged; a modified one is
+kept, stays in the record, and is reported as `kept modified file: <path>` on
+stderr. An item that its source no longer contains is removed with the rules of
 [`upskill remove`](#upskill-remove-name---source-label---force): unchanged
 recorded files are deleted, modified ones are kept and reported, and the
 lockfile entry is dropped. `update --force` replaces modified and unmanaged
@@ -578,8 +589,9 @@ produces, unless another item installed by the same command writes that path,
 and only when the file is unchanged: a modified recorded file is kept and stays
 in the record. A file that the record does not list is never deleted. A file at
 a path that the new version writes is replaced only when it is unchanged, absent
-or already equal to the new bytes; otherwise the item is skipped (see
-[`upskill add`](#upskill-add-source-items)) unless `--force` is given. An item
+or already equal to the new bytes; otherwise the item is not written (see
+[`upskill add`](#upskill-add-source-items) and
+[`upskill update`](#upskill-update-name)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of
 `remove`. `remove` deletes only recorded files, as described in
 [`upskill remove`](#upskill-remove-name---source-label---force).

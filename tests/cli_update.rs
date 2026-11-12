@@ -905,6 +905,10 @@ fn update_of_a_name_reports_a_skipped_dependency_from_another_source() {
     fs::write(&sarif, "my edit\n").unwrap();
     let text = fs::read_to_string(&agent).unwrap();
     fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+    // The source of `sarif` changes too: an update of `sarif` is withheld.
+    let sarif_source = reg_b.join("SKILL.md");
+    let text = fs::read_to_string(&sarif_source).unwrap();
+    fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
 
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -914,6 +918,66 @@ fn update_of_a_name_reports_a_skipped_dependency_from_another_source() {
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
     assert!(stderr.contains("skipped skill sarif: "), "{stderr}");
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+/// Installs `code-review` from `./reg-a`, which requires the skill `sarif`
+/// from `reg-b`. Returns the agent source file and the installed `sarif` file.
+fn cross_source_project(tmp: &Path, home: &Path) -> (std::path::PathBuf, std::path::PathBuf) {
+    fs::create_dir_all(tmp.join(".git")).unwrap();
+    let reg_b = tmp.join("reg-b").join("sarif");
+    fs::create_dir_all(&reg_b).unwrap();
+    fs::write(
+        reg_b.join("SKILL.md"),
+        "---\nschema: 1\nname: sarif\ndescription: Use for sarif\n---\nBody.\n",
+    )
+    .unwrap();
+    let reg_a = tmp.join("reg-a").join("code-review");
+    fs::create_dir_all(&reg_a).unwrap();
+    let agent = reg_a.join("AGENT.md");
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+            tmp.join("reg-b").display()
+        ),
+    )
+    .unwrap();
+    common::upskill_cmd(home)
+        .current_dir(tmp)
+        .args(["add", "./reg-a", "code-review", "--claude", "--project"])
+        .assert()
+        .success();
+    let sarif = tmp
+        .join(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md");
+    (agent, sarif)
+}
+
+#[test]
+fn update_keeps_an_edited_file_of_a_dependency_from_another_source() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (_agent, sarif) = cross_source_project(tmp.path(), &home);
+    fs::write(&sarif, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--yes", "--project"])
+        .assert()
+        .code(0);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert!(!stderr.contains("skipped"), "{stderr}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
 }
 
 #[test]
@@ -999,7 +1063,7 @@ fn doctor_does_not_report_a_crlf_checkout_as_modified() {
 }
 
 #[test]
-fn update_skips_an_edited_item_when_no_source_changed() {
+fn update_keeps_an_edited_file_with_a_note_when_no_source_changed() {
     let (tmp, home) = res_project(|_| {});
     let dest = res_skill_md(tmp.path());
     fs::write(&dest, "my edit\n").unwrap();
@@ -1007,32 +1071,64 @@ fn update_skips_an_edited_item_when_no_source_changed() {
 
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
-        .args(["update", "--project"])
+        .args(["update", "--yes", "--project"])
         .assert()
-        .code(1);
+        .code(0);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
-    assert!(stderr.contains("skipped skill res: "), "{stderr}");
-    assert!(
-        stderr.contains(" was modified or is not managed by upskill\n"),
-        "{stderr}"
-    );
-    assert!(stderr.contains("Use --force to replace."), "{stderr}");
-    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
-    assert!(!stdout.contains("nothing to do"), "{stdout}");
-    // The item is reported once, as skipped, and not as up to date.
-    assert!(!stdout.contains("up to date"), "{stdout}");
+    let note = stderr
+        .lines()
+        .find_map(|line| line.strip_prefix("kept modified file: "))
+        .unwrap_or_else(|| panic!("no note in {stderr}"));
     assert_eq!(
-        stdout
-            .matches("skipped — modified or unmanaged files kept")
-            .count(),
-        1,
-        "{stdout}"
+        Path::new(note),
+        Path::new(".claude")
+            .join("skills")
+            .join("res")
+            .join("SKILL.md")
     );
+    assert!(!stderr.contains("skipped"), "{stderr}");
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("skipped"), "{stdout}");
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
         lock_before
     );
+}
+
+#[test]
+fn update_skips_an_edited_item_when_a_deselected_client_file_would_be_deleted() {
+    let (tmp, home) = copilot_res_project();
+    fs::write(res_skill_md(tmp.path()), "my edit\n").unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project", "--claude"])
+        .assert()
+        .code(1);
+    assert!(copilot_res_md(tmp.path()).is_file());
+    assert_eq!(fs::read(res_skill_md(tmp.path())).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn update_skips_an_item_with_an_unmanaged_file_when_no_source_changed() {
+    // `res` is installed for Claude only. A file that upskill did not write
+    // is at the Copilot destination, which `--copilot` now plans: the
+    // destination is unmanaged, and the source of `res` did not change.
+    let (tmp, home) = res_project(|_| {});
+    let copilot = copilot_res_md(tmp.path());
+    fs::create_dir_all(copilot.parent().unwrap()).unwrap();
+    fs::write(&copilot, "my own file\n").unwrap();
+    fs::write(res_skill_md(tmp.path()), "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project", "--claude", "--copilot"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("skipped skill res: "), "{stderr}");
+    assert_eq!(fs::read(&copilot).unwrap(), b"my own file\n");
 }
 
 /// Rewrite the lockfile as schema 1 without `files` records.
@@ -1127,6 +1223,10 @@ fn update_reports_an_item_skipped_by_two_sources_once() {
         .join("sarif")
         .join("SKILL.md");
     fs::write(&sarif, "my edit\n").unwrap();
+    // The source of `sarif` changes: both sources withhold its update.
+    let sarif_source = reg_c.join("SKILL.md");
+    let text = fs::read_to_string(&sarif_source).unwrap();
+    fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
 
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())

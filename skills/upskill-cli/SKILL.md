@@ -50,16 +50,16 @@ usage error.
 
 ## When to use upskill vs raw edits
 
-| Operation                                              | Use upskill    | Raw edits OK                                                                                                                                                                              |
-| ------------------------------------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                                                                                                                        |
-| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                                                                                                                        |
-| Updating installed content from its source             | Yes (`update`) | No                                                                                                                                                                                        |
-| Removing installed content                             | Yes (`remove`) | No                                                                                                                                                                                        |
-| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                                                                                                                                  |
-| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                                                                                                                                  |
-| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                                                                                                                        |
-| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` skips the item and exits 1 until `update --force` replaces the edit; in a terminal with no source change and no interrupted item it changes nothing and exits 0 (see below) |
+| Operation                                              | Use upskill    | Raw edits OK                                                                                                                                                                                     |
+| ------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                                                                                                                               |
+| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                                                                                                                               |
+| Updating installed content from its source             | Yes (`update`) | No                                                                                                                                                                                               |
+| Removing installed content                             | Yes (`remove`) | No                                                                                                                                                                                               |
+| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                                                                                                                                         |
+| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                                                                                                                                         |
+| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                                                                                                                               |
+| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` keeps the edit; it exits 0 with a note while the source is unchanged, and skips the item and exits 1 when the source changed, until `update --force` replaces the edit (see below) |
 
 When in doubt, use upskill. Raw edits are a sharp tool — only reach for them on
 content you authored and understand, and always lint after.
@@ -177,7 +177,8 @@ Common findings:
   terminal; in a terminal with no source change and no interrupted item,
   `update` changes nothing) or hash-changed (someone hand-edited it →
   `update --force` replaces the edit; without `--force`, `update` keeps the
-  edit, skips the item and exits 1)
+  edit: with a `kept modified file` note and exit 0 when the source of the item
+  did not change, or skips the item and exits 1 when it did)
 - Lockfile references an item whose source is no longer reachable
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
@@ -201,15 +202,18 @@ plugins are warnings only and do not affect the exit code.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —
-  `upskill update` then skips the item, prints
+  `upskill update` then keeps the edit. When the source of the item did not
+  change and nothing else of the item would be written or deleted, it prints
+  `kept modified file: <path>` and exits 0. Otherwise it skips the item, prints
   `skipped <kind> <name>: <path> was modified or is not managed by upskill`, and
-  exits 1; `upskill update --force` replaces the edit. In a terminal without
-  `--yes`, when no source changed, no item is interrupted and `--force` is not
-  given, `upskill update` changes nothing, reports nothing about the edit, and
-  exits 0. An interrupted item (an `add` or `update` that did not complete) is
-  shown as `complete: <n> item(s)`, and `update` asks and completes it.
-  `upskill add` skips an item in the same way when a destination was edited or
-  was not written by upskill (`add --force` replaces it). For an item with a
+  exits 1. `upskill update --force` replaces the edit. A file at a destination
+  that upskill did not write always makes `update` skip the item. In a terminal
+  without `--yes`, when no source changed, no item is interrupted and `--force`
+  is not given, `upskill update` changes nothing, reports nothing about the
+  edit, and exits 0. An interrupted item (an `add` or `update` that did not
+  complete) is shown as `complete: <n> item(s)`, and `update` asks and completes
+  it. `upskill add` skips an item in the same way when a destination was edited
+  or was not written by upskill (`add --force` replaces it). For an item with a
   `files` record in a `schema: 2` lockfile, `upskill doctor` reports each edited
   file as modified and exits 1. For a `schema: 1` lockfile or an item with an
   empty `files` record, `doctor` only checks that the entry files exist.

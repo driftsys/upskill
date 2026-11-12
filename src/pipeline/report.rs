@@ -73,7 +73,10 @@ pub struct InstallReport {
     /// other bytes) or deleted, with or without `--force`.
     pub changed: Vec<PathBuf>,
     /// Modified files that the new version of an item no longer contains.
-    /// They are kept on disk and stay in the item's record.
+    /// They are kept on disk and stay in the item's record. With
+    /// [`super::AddOptions::keep_unwithheld_edits`], also the modified
+    /// destinations of the items that were not written because nothing is
+    /// withheld from them; their lockfile entries are unchanged.
     pub kept_modified: Vec<PathBuf>,
 }
 
@@ -427,8 +430,10 @@ pub struct UpdateReport {
     /// sorted and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
     /// Modified files that `update` kept: files that the new version of an
-    /// item no longer contains, and files of an item that its source no
-    /// longer contains.
+    /// item no longer contains, files of an item that its source no longer
+    /// contains, and modified destinations of an item whose source did not
+    /// change and from which nothing is withheld (the item is reported as
+    /// [`UpdateStatus::UpToDate`]).
     pub kept_modified: Vec<PathBuf>,
     /// With `--force`: modified or unmanaged files that were replaced or
     /// deleted, including those of items that the source no longer contains.

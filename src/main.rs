@@ -270,6 +270,7 @@ fn run_add(args: AddArgs) -> i32 {
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
+        keep_unwithheld_edits: false,
     };
 
     let scope_label = if is_global { "global" } else { "project" };
