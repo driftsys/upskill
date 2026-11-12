@@ -287,6 +287,15 @@ pub enum McpDoctorStatus {
     ConfigUnreadable { detail: String },
 }
 
+/// An item with a non-empty `pending` record: an `add` or `update` failed
+/// or was stopped between its first and its last write. Running the same
+/// command again completes it.
+#[derive(Debug, Clone, Serialize)]
+pub struct InterruptedItem {
+    pub kind: ItemKind,
+    pub name: String,
+}
+
 /// A dependency-pulled item whose every requirer is no longer installed.
 /// Advisory only — upskill never auto-removes (#196); the user decides.
 #[derive(Debug, Clone, Serialize)]
@@ -325,6 +334,9 @@ pub struct DoctorReport {
     /// so callers can distinguish "checked and fine" from "not checked".
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_entries: Vec<McpDoctorEntry>,
+    /// Items whose last `add` or `update` did not complete. Non-empty →
+    /// `is_clean()` returns false.
+    pub interrupted: Vec<InterruptedItem>,
 }
 
 impl DoctorReport {
@@ -332,8 +344,8 @@ impl DoctorReport {
     /// every recorded file still has its recorded content (as it is, or with
     /// every CRLF replaced by LF) and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
-    /// entry has a recoverable source, and no installed plugin is missing
-    /// from its client.
+    /// entry has a recoverable source, no installed plugin is missing
+    /// from its client, and no item has an interrupted operation.
     ///
     /// `skipped_plugins` (warn-skip outcomes) are informational: the user
     /// never had the CLI at install time, so this is the expected state.
@@ -345,6 +357,7 @@ impl DoctorReport {
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
+            && self.interrupted.is_empty()
             && !self
                 .mcp_entries
                 .iter()
@@ -361,7 +374,8 @@ pub enum UpdateMode {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
-    /// SSOT hash matches the lockfile — nothing to do.
+    /// SSOT hash matches the lockfile and the item has no interrupted
+    /// operation — nothing to do.
     UpToDate,
     /// `Apply` mode: the lockfile hash changed (or was previously unset
     /// and now resolved). Outputs were rewritten.
@@ -375,6 +389,15 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
+    /// `Apply` mode: the item had an interrupted operation (a non-empty
+    /// `pending` record) and its source hash did not change. The operation
+    /// was completed: its planned files were written and its `pending`
+    /// record was cleared.
+    CompletedInterrupted,
+    /// `DryRun` mode: the item has an interrupted operation (a non-empty
+    /// `pending` record) and its source hash did not change; an `update`
+    /// (without `--dry-run`) would complete it.
+    WouldCompleteInterrupted,
     /// `Apply` mode: item no longer exists in the source. Its unchanged
     /// recorded files were deleted (modified ones are kept and listed in
     /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile

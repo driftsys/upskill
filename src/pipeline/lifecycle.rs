@@ -17,8 +17,8 @@ use super::hash::planned_source_hashes;
 use super::output::output_path;
 use super::owned::{FileState, adopt_schema1, classify};
 use super::{
-    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
-    ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
+    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, InterruptedItem, ItemKind,
+    ListReport, ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin,
     StaleHash, UnreadableFile, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
     install_with_lockfile,
@@ -31,17 +31,19 @@ use super::{
 /// `owned::adopt_schema1`), after the unknown-name check, so a
 /// command that fails on an unknown name changes nothing.
 ///
-/// Only the files in an item's `files` record are considered. Before any
-/// change on disk, every recorded path is checked: a path that is not
-/// accepted by `deletable` is skipped, and a symbolic link in the item
-/// part of a path's parent directories is an error. Then, per recorded
-/// file: an unchanged regular file is deleted; a modified file is kept
-/// and reported in `kept_modified`, or deleted when `force` is true and it
-/// is a regular file; an absent file is ignored. A regular file that exists
-/// but cannot be read is handled as a modified file; any other error while
-/// inspecting a recorded path fails the command before any deletion. A file that the record
-/// does not list is never deleted. Directories left empty are removed, up
-/// to and excluding the kind directory (for example `.claude/skills`).
+/// Only the files in an item's `files` and `pending` records are
+/// considered; a file is owned when it matches a hash of either record.
+/// Before any change on disk, every recorded path is checked: a path that
+/// is not accepted by `deletable` is skipped, and a symbolic link in the
+/// item part of a path's parent directories is an error. Then, per
+/// recorded file: an unchanged regular file is deleted; a modified file is
+/// kept and reported in `kept_modified`, or deleted when `force` is true
+/// and it is a regular file; an absent file is ignored. A regular file that
+/// exists but cannot be read is handled as a modified file; any other error
+/// while inspecting a recorded path fails the command before any deletion.
+/// A file that the records do not list is never deleted. Directories left
+/// empty are removed, up to and excluding the kind directory (for example
+/// `.claude/skills`).
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are deliberately left alone — they are
@@ -146,7 +148,9 @@ fn plan_removal(
         kept: Vec::new(),
         forced: Vec::new(),
     };
-    for file in &entry.files {
+    // The `pending` files of an operation that did not complete are
+    // recorded files too: a failed run may have written them.
+    for file in entry.files.iter().chain(&entry.pending) {
         let Some(rel) = deletable(&file.path) else {
             continue;
         };
@@ -195,6 +199,11 @@ fn plan_removal(
     plan.delete.dedup();
     plan.kept.sort();
     plan.kept.dedup();
+    // A path in both `files` and `pending` is classified twice.
+    plan.forced.sort();
+    plan.forced.dedup();
+    plan.absent.sort();
+    plan.absent.dedup();
     Ok(plan)
 }
 
@@ -316,6 +325,9 @@ fn remove_selected(
 /// - **skipped plugins** (advisory) — plugins that were never installed
 ///   because the client CLI was missing.
 /// - **MCP entries** — MCP server reconciliation against each client.
+/// - **interrupted** — items with a non-empty `pending` record: an `add` or
+///   `update` failed or was stopped between its first and its last write.
+///   Running the same command again completes it.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by
@@ -326,6 +338,12 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 
     for entry in &lock.items {
         let kind = entry.kind;
+        if !entry.pending.is_empty() {
+            report.interrupted.push(InterruptedItem {
+                kind,
+                name: entry.name.clone(),
+            });
+        }
 
         let mut missing = Vec::new();
         let mut modified = Vec::new();
@@ -625,6 +643,12 @@ fn reselect_from_entries(
 /// its unchanged recorded files are deleted, its modified files are kept
 /// (deleted with `overwrite` when they are regular files) and listed in
 /// `kept_modified`, and its lockfile entry is dropped.
+///
+/// An item with a non-empty `pending` record (an interrupted `add` or
+/// `update`) whose source hash did not change is reported as
+/// [`UpdateStatus::WouldCompleteInterrupted`] in `DryRun` mode and as
+/// [`UpdateStatus::CompletedInterrupted`] in `Apply` mode, never as
+/// [`UpdateStatus::UpToDate`].
 pub fn update(
     target: &Path,
     names: &[String],
@@ -817,6 +841,8 @@ pub fn update(
                         let status =
                             if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
                                 UpdateStatus::SkippedModified { files }
+                            } else if new_hash == entry.hash && !entry.pending.is_empty() {
+                                UpdateStatus::CompletedInterrupted
                             } else if new_hash == entry.hash {
                                 UpdateStatus::UpToDate
                             } else {
@@ -881,7 +907,9 @@ pub fn update(
                             .get(&(kind, lookup_name.to_string()))
                             .cloned()
                             .flatten();
-                        let status = if new_hash == entry.hash {
+                        let status = if new_hash == entry.hash && !entry.pending.is_empty() {
+                            UpdateStatus::WouldCompleteInterrupted
+                        } else if new_hash == entry.hash {
                             UpdateStatus::UpToDate
                         } else {
                             UpdateStatus::WouldChange {

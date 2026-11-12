@@ -108,7 +108,7 @@ the refusal comes before any change for that source, and an `update` over
 several sources may have updated earlier sources before it stops.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
-destination of every item against the item's `files` record (see
+destination of every item against the item's `files` and `pending` records (see
 [State files](#state-files)). A destination is a conflict when it is a file that
 upskill wrote and that was changed afterwards (modified), or a file that upskill
 has no record of (not managed by upskill, for example a file you wrote by hand).
@@ -213,16 +213,21 @@ recorded files are deleted, modified ones are kept and reported, and the
 lockfile entry is dropped. `update --force` replaces modified and unmanaged
 files and deletes modified regular files that are no longer produced, then lists
 them after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In
-a terminal without `--yes`, `update` first runs a dry run. When a source changed
-or `--force` is given, it shows the plan and asks for a confirmation; an answer
-other than `y` or `yes` (in any letter case) changes nothing. When no source
-changed and `--force` is not given, it prints that there is nothing to do and
-changes nothing: it therefore does not report a modified file, does not delete
-the files of a client that the flags no longer select, and does not adopt a
-`schema: 1` lockfile. A run with `--yes`, or without a terminal, applies without
-a question and does these things. When an applied `update` wrote or deleted
-files without a source change, it prints
-`Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
+a terminal without `--yes`, `update` first runs a dry run. When a source
+changed, an item has an interrupted `add` or `update` (a non-empty `pending`
+record, see [State files](#state-files)), or `--force` is given, it shows the
+plan (an interrupted item is counted on the line `complete: <n> item(s)`) and
+asks for a confirmation; an answer other than `y` or `yes` (in any letter case)
+changes nothing. When no source changed, no item is interrupted and `--force` is
+not given, it prints that there is nothing to do and changes nothing: it
+therefore does not report a modified file, does not delete the files of a client
+that the flags no longer select, and does not adopt a `schema: 1` lockfile. A
+run with `--yes`, or without a terminal, applies without a question and does
+these things. An applied `update` reports a completed interrupted item as
+`completed — interrupted before` and counts it in `Updated <n> of <m> item(s)`.
+When no item was updated, completed or removed, but files were written or
+deleted, it prints `Changed <n> file(s) written or deleted` instead of the
+"nothing to do" line.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -270,8 +275,9 @@ upskill remove --force code-review                 # also delete modified files
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
-`remove` deletes only files listed in the item's `files` record in the lockfile
-(see [State files](#state-files)). Each recorded file is in one of three states:
+`remove` deletes only files listed in the item's `files` or `pending` record in
+the lockfile (see [State files](#state-files)). Each recorded file is in one of
+three states:
 
 - **Owned** — a regular file whose content matches the recorded SHA-256.
   `remove` deletes it.
@@ -292,8 +298,9 @@ client root (such as `.claude`) or a kind directory (such as `.claude/skills`).
 A recorded path outside the client roots `.claude`, `.github`, `.agents` and
 `.opencode` is never deleted. If a directory inside the item part of a recorded
 path (below the kind directory) is a symbolic link, `remove` fails before it
-deletes anything. An item whose record is empty has nothing deleted. The
-lockfile entry of every removed item is dropped, including when files were kept.
+deletes anything. An item whose `files` and `pending` records are both empty has
+nothing deleted. The lockfile entry of every removed item is dropped, including
+when files were kept.
 
 `remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
 described in [State files](#state-files). A name that is not in the lockfile is
@@ -346,7 +353,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 
 ### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports nine independent
+Verify on-disk state matches `.upskill-lock.json`. Reports ten independent
 buckets:
 
 - **Missing per-client output files** — reinstall fixes
@@ -380,12 +387,16 @@ buckets:
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update` reconfigures it). A missing
   `claude` CLI or a failed query is advisory and does **not** cause exit 1.
+- **Interrupted** — items with a non-empty `pending` record: an `add` or
+  `update` failed or was stopped before it completed. Run the same command again
+  to complete it. Causes exit 1.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-or unregistered MCP servers). Skipped plugins and unverifiable MCP entries are
-informational warnings and do not affect the exit code. `doctor` never fetches;
-remote-source drift detection is `update --dry-run`.
+unregistered MCP servers, or interrupted items). Skipped plugins and
+unverifiable MCP entries are informational warnings and do not affect the exit
+code. `doctor` never fetches; remote-source drift detection is
+`update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 
@@ -424,6 +435,9 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "mcp_entries": [
     { "name": "drawio", "client": "claude", "bundle": "baseline",
       "status": "not-registered" }
+  ],
+  "interrupted": [
+    { "kind": "skill", "name": "..." }
   ]
 }
 ```
@@ -567,8 +581,48 @@ a path that the new version writes is replaced only when it is unchanged, absent
 or already equal to the new bytes; otherwise the item is skipped (see
 [`upskill add`](#upskill-add-source-items)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of
-`remove`. No command fills `pending` yet. `remove` deletes only recorded files,
-as described in [`upskill remove`](#upskill-remove-name---source-label---force).
+`remove`. `remove` deletes only recorded files, as described in
+[`upskill remove`](#upskill-remove-name---source-label---force).
+
+`add` and `update` run in this order:
+
+1. Check every destination and decide which items are written. Nothing is
+   changed yet.
+2. For each item that is written and that changes something on disk (it writes
+   at least one file or deletes at least one stale file), add the planned files
+   to `pending` (an item new to the lockfile is added with an empty `files`
+   list), and save the lockfile. The records already in `pending` stay, so a
+   file written by an earlier command that failed stays recorded. An item that
+   writes and deletes nothing gets no `pending` record; when no item gets one,
+   the lockfile is not saved in this step.
+3. For each item, delete the stale recorded files, then write each file to a new
+   file `.upskill-stage-<16 hex digits>` in the destination directory, set the
+   mode of the source resource on it (a generated file, which has no such mode,
+   gets the default mode of a new file), and rename it to the destination. A
+   recorded file that is unchanged and already holds the generated bytes, or a
+   CRLF variant of them as described in
+   [`upskill add`](#upskill-add-source-items), is not written; only the mode of
+   a resource is set on it again. On an error, delete that stage file and stop.
+4. For each written item, set `files` to the planned files and the records of
+   its kept stale files, clear `pending` (so the older `pending` hashes of a
+   planned path are dropped), and save the lockfile.
+
+If the command fails or is stopped between steps 2 and 4, the lockfile keeps the
+`pending` records. A file that holds the bytes of its `pending` record or of its
+`files` record counts as unchanged, so running the same command again, without
+`--force`, completes the operation. If that command fails too, the `pending`
+records of the earlier command stay next to its own, so a file written by either
+command still counts as unchanged. `doctor` reports such an item as interrupted,
+and `remove` deletes the files of both records. `update` also completes an
+interrupted item when its source did not change: `--dry-run` reports it as
+`would complete`, the update reports it as `completed`, and in a terminal
+without `--yes` it shows the plan and asks, as for a changed source. When the
+command that completes the operation no longer plans a file that a failed
+command wrote (for example a narrower client selection, or a source that dropped
+a resource), that file is handled as a stale recorded file: deleted when
+unchanged, kept and still recorded when modified. A stage file left by a process
+that was killed is not deleted by upskill. Two upskill processes that change one
+scope at the same time are not supported.
 
 A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
 adopts it before it changes any file: it keeps a copy of the old lockfile as
