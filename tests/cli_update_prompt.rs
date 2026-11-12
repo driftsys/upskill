@@ -205,6 +205,25 @@ fn end_of_input_stops_like_quit() {
 }
 
 #[test]
+fn interrupt_at_the_question_exits_130_and_changes_nothing() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    change_source(tmp.path(), "a", "one");
+    change_source(tmp.path(), "b", "two");
+    let before = outputs(tmp.path());
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let result =
+        common::update_in_terminal_interrupted(tmp.path(), &home, &["--project"], QUESTION);
+    assert_eq!(result["returncode"], 130, "{result}");
+    assert_eq!(stdout(&result).matches(QUESTION).count(), 1, "{result}");
+    assert_eq!(outputs(tmp.path()), before);
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+#[test]
 fn a_source_without_a_change_asks_nothing() {
     let (tmp, home) = two_sources(&["--claude"]);
     change_source(tmp.path(), "b", "two");

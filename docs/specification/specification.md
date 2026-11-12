@@ -212,10 +212,12 @@ is not a change. A `skip` item and a `kept modified file` note are not changes.
   `yes` (any letter case) applies the source; `n`, `no`, an empty line or any
   other text does not apply it and continues; `q` or `quit` (any letter case),
   end of input or a read error does not apply it and stops the run, and earlier
-  sources stay applied. A source whose preview changes nothing is not applied
-  and asks nothing. The apply decides again from the disk. After an applied
-  source, `update` prints a result line with the non-zero counts of
-  `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
+  sources stay applied. Ctrl-C at the question exits with code 130 at once, and
+  earlier sources stay applied; Ctrl-C during the apply of a source stops the
+  run before the next source, with code 130. A source whose preview changes
+  nothing is not applied and asks nothing. The apply decides again from the
+  disk. After an applied source, `update` prints a result line with the non-zero
+  counts of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
   `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
   last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
   followed by `<k> source(s) not applied.` when a source with changes was not

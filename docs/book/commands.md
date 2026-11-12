@@ -297,12 +297,13 @@ nothing is printed without a question and is not applied.
 
 The answers to `Apply? [y/N/q]`:
 
-| Answer                                   | Effect                                                                |
-| ---------------------------------------- | --------------------------------------------------------------------- |
-| `y` or `yes`, any letter case            | Apply this source, then continue with the next source.                |
-| `n`, `no`, an empty line, any other text | Do not apply this source. Continue with the next source.              |
-| `q` or `quit`, any letter case           | Do not apply this source. Stop the run. Earlier sources stay applied. |
-| End of input, or a read error            | Same as `q`.                                                          |
+| Answer                                   | Effect                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `y` or `yes`, any letter case            | Apply this source, then continue with the next source.                 |
+| `n`, `no`, an empty line, any other text | Do not apply this source. Continue with the next source.               |
+| `q` or `quit`, any letter case           | Do not apply this source. Stop the run. Earlier sources stay applied.  |
+| End of input, or a read error            | Same as `q`.                                                           |
+| Ctrl-C                                   | Stop the run at once with exit code 130. Earlier sources stay applied. |
 
 The apply checks the files on disk again; it does not rely on the preview. After
 an applied source, `update` prints one result line with the non-zero counts of

@@ -33,7 +33,7 @@ pub fn update_in_terminal(
     args: &[&str],
     input: &str,
 ) -> serde_json::Value {
-    run_update_in_terminal(root, home, args, input, false)
+    run_update_in_terminal(root, home, args, input, false, None)
 }
 
 /// As [`update_in_terminal`], with stderr written to the same pipe as
@@ -47,7 +47,20 @@ pub fn update_in_terminal_merged(
     args: &[&str],
     input: &str,
 ) -> serde_json::Value {
-    run_update_in_terminal(root, home, args, input, true)
+    run_update_in_terminal(root, home, args, input, true, None)
+}
+
+/// As [`update_in_terminal_merged`] without input: when the output contains
+/// `at`, the fixture sends SIGINT to the process group of the command.
+#[cfg(unix)]
+#[allow(dead_code)] // Not every test binary that includes this module uses it.
+pub fn update_in_terminal_interrupted(
+    root: &Path,
+    home: &Path,
+    args: &[&str],
+    at: &str,
+) -> serde_json::Value {
+    run_update_in_terminal(root, home, args, "", true, Some(at))
 }
 
 #[cfg(unix)]
@@ -58,6 +71,7 @@ fn run_update_in_terminal(
     args: &[&str],
     input: &str,
     merge: bool,
+    interrupt_at: Option<&str>,
 ) -> serde_json::Value {
     let mut update = upskill_cmd(home);
     update
@@ -75,6 +89,7 @@ fn run_update_in_terminal(
         }).collect::<Vec<_>>(),
         "input": input,
         "merge": merge,
+        "interrupt_at": interrupt_at,
     });
     let output = std::process::Command::new("python3")
         .env("HOME", home)

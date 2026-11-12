@@ -27,6 +27,9 @@ const EXIT_USAGE: i32 = 2;
 const EXIT_INTERRUPTED: i32 = 130;
 
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+/// True only while `update` in a terminal waits for the answer to
+/// `Apply? [y/N/q]`. No write is in progress then, so SIGINT exits at once.
+static WAITING_FOR_ANSWER: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     let cli = match Cli::try_parse() {
@@ -137,6 +140,11 @@ fn install_signal_handlers() -> anyhow::Result<()> {
         // ensures the `was_interrupted()` check in main() sees true even
         // if the eprintln races with process teardown.
         INTERRUPTED.store(true, Ordering::SeqCst);
+        if WAITING_FOR_ANSWER.load(Ordering::SeqCst) {
+            // End the question line; nothing is written, so exit now.
+            eprintln!();
+            std::process::exit(EXIT_INTERRUPTED);
+        }
         eprintln!("\n{} cleaning up", style::warn("interrupted:"));
         eprintln!("  hint: run 'upskill doctor' to check for partial installs");
     })
@@ -916,12 +924,19 @@ const DRY_RUN_LAST_LINE: &str = "Each block is computed for the current state; a
 
 /// The `update` observer for `--yes` and for a run without a terminal:
 /// applies every source, also one without a change, so that its plugin and
-/// MCP steps run. Prints nothing.
+/// MCP steps run. After an interrupt it stops before the next source.
+/// Prints nothing.
 struct ApplyAll;
 
 impl UpdateObserver for ApplyAll {
     fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
-        SourceDecision::Apply
+        // After an interrupt during the apply of a source, apply no other
+        // source.
+        if was_interrupted() {
+            SourceDecision::Stop
+        } else {
+            SourceDecision::Apply
+        }
     }
 
     fn applied(&mut self, _result: &SourceResult) {}
@@ -950,6 +965,11 @@ impl UpdateObserver for DryRunObserver {
 /// A source without changes is not applied and is not asked about. After
 /// an applied source it prints the result line ([`render_result`]).
 ///
+/// Ctrl-C while the question waits exits with code 130 at once. After an
+/// interrupt during the apply of a source, it returns
+/// [`SourceDecision::Stop`] before the next block; the run exits with
+/// code 130.
+///
 /// With `--quiet`, the blocks and the result lines are not printed, and the
 /// question names the source: `Apply changes from <source>? [y/N/q]`. The
 /// adoption notice is printed in both cases.
@@ -964,6 +984,11 @@ impl UpdateObserver for TerminalObserver {
     fn preview(&mut self, preview: &SourcePreview) -> SourceDecision {
         use std::io::{BufRead, Write};
 
+        // After an interrupt during the apply of a source, show and apply no
+        // other source.
+        if was_interrupted() {
+            return SourceDecision::Stop;
+        }
         if let Some(paths) = preview.adopted.as_deref().filter(|p| !p.is_empty()) {
             print_adoption_notice(Some(paths));
             self.notice_printed = true;
@@ -979,7 +1004,18 @@ impl UpdateObserver for TerminalObserver {
         }
         let _ = std::io::stderr().flush();
         let mut line = String::new();
-        let answer = match std::io::stdin().lock().read_line(&mut line) {
+        WAITING_FOR_ANSWER.store(true, Ordering::SeqCst);
+        // An interrupt received before the flag was set did not exit.
+        if was_interrupted() {
+            WAITING_FOR_ANSWER.store(false, Ordering::SeqCst);
+            return SourceDecision::Stop;
+        }
+        let read = std::io::stdin().lock().read_line(&mut line);
+        WAITING_FOR_ANSWER.store(false, Ordering::SeqCst);
+        if was_interrupted() {
+            return SourceDecision::Stop;
+        }
+        let answer = match read {
             Ok(0) | Err(_) => {
                 // End the question line, which the user did not end.
                 eprintln!();

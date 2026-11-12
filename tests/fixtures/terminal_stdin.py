@@ -3,9 +3,11 @@
 import json
 import os
 import pty
+import select
 import signal
 import subprocess
 import sys
+import time
 
 
 spec = json.loads(sys.argv[1])
@@ -49,12 +51,32 @@ try:
     if spec.get("input"):
         os.write(master, spec["input"].encode("utf-8"))
     timed_out = False
+    # With "interrupt_at" (which needs "merge"), read the output until it
+    # contains that text, then send SIGINT to the process group of the
+    # command, then read the rest of the output.
+    interrupt_at = spec.get("interrupt_at")
+    early = b""
+    if interrupt_at:
+        assert spec.get("merge"), "interrupt_at needs merge"
+        deadline = time.monotonic() + 5
+        while interrupt_at.encode("utf-8") not in early:
+            remaining = deadline - time.monotonic()
+            ready, _, _ = select.select([child.stdout], [], [], max(remaining, 0))
+            if not ready:
+                break
+            chunk = os.read(child.stdout.fileno(), 4096)
+            if not chunk:
+                break
+            early += chunk
+        if interrupt_at.encode("utf-8") in early:
+            os.killpg(child.pid, signal.SIGINT)
     try:
         stdout, stderr = child.communicate(timeout=5)
     except subprocess.TimeoutExpired:
         timed_out = True
         os.killpg(child.pid, signal.SIGKILL)
         stdout, stderr = child.communicate(timeout=5)
+    stdout = early + stdout
     print(json.dumps({
         "timed_out": timed_out,
         "returncode": child.returncode,
