@@ -2,6 +2,7 @@
 //! classification, and the one-time adoption of a `schema: 1` lockfile.
 //!
 //! `classify` and the record helpers only read the filesystem;
+//! `adopt_schema1_in_memory` changes only the given `Lockfile`;
 //! `adopt_schema1` also writes the lockfile backup and the lockfile. This
 //! module writes nothing to stdout or stderr.
 
@@ -117,17 +118,18 @@ pub(super) fn rel_to_record(rel: &Path) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-/// One-time step for a schema-1 lockfile. Records for every item each
-/// existing file at the item's layout paths with its current hash, then
-/// copies the lockfile bytes to `SCHEMA1_BACKUP_NAME`, sets `schema` to 2
-/// and saves.
+/// The in-memory part of [`adopt_schema1`]: records for every item each
+/// existing file at the item's layout paths with its current hash, and sets
+/// `schema` to 2. Writes nothing: no backup file and no lockfile save.
 /// Returns `None` and does nothing when `lock.needs_adoption()` is false.
 /// Otherwise returns the recorded paths, sorted, for the adoption notice.
 ///
-/// An existing backup file is kept. An item whose name is empty or is not
-/// a plain relative path records no file. `lock` is changed only after
-/// every item's files were computed.
-pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option<Vec<String>>> {
+/// An item whose name is empty or is not a plain relative path records no
+/// file. `lock` is changed only after every item's files were computed.
+pub(super) fn adopt_schema1_in_memory(
+    target: &Path,
+    lock: &mut Lockfile,
+) -> Result<Option<Vec<String>>> {
     if !lock.needs_adoption() {
         return Ok(None);
     }
@@ -136,6 +138,32 @@ pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option
     for item in &lock.items {
         all_files.push(existing_item_files(target, item)?);
     }
+
+    let mut paths = Vec::new();
+    for (item, files) in lock.items.iter_mut().zip(all_files) {
+        paths.extend(files.iter().map(|f| f.path.clone()));
+        item.files = files;
+    }
+    paths.sort();
+    paths.dedup();
+
+    lock.schema = 2;
+    Ok(Some(paths))
+}
+
+/// One-time step for a schema-1 lockfile. Runs
+/// [`adopt_schema1_in_memory`], then copies the lockfile bytes to
+/// `SCHEMA1_BACKUP_NAME` and saves the adopted lockfile.
+/// Returns `None` and does nothing when `lock.needs_adoption()` is false.
+/// Otherwise returns the recorded paths, sorted, for the adoption notice.
+///
+/// An existing backup file is kept. `lock` is changed only after every
+/// item's files were computed and the backup was written.
+pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option<Vec<String>>> {
+    let mut adopted = lock.clone();
+    let Some(paths) = adopt_schema1_in_memory(target, &mut adopted)? else {
+        return Ok(None);
+    };
 
     // The backup is written only after every item was scanned, so a failed
     // scan leaves the disk unchanged.
@@ -155,15 +183,7 @@ pub(super) fn adopt_schema1(target: &Path, lock: &mut Lockfile) -> Result<Option
         })?;
     }
 
-    let mut paths = Vec::new();
-    for (item, files) in lock.items.iter_mut().zip(all_files) {
-        paths.extend(files.iter().map(|f| f.path.clone()));
-        item.files = files;
-    }
-    paths.sort();
-    paths.dedup();
-
-    lock.schema = 2;
+    *lock = adopted;
     lock.save(target)?;
     Ok(Some(paths))
 }

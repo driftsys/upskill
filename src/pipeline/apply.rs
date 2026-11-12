@@ -17,12 +17,12 @@ use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
 use super::owned::{FileState, classify, matches_recorded, rel_to_record, sha256_hex};
-use super::plan::PlannedItem;
+use super::plan::{PlannedFile, PlannedItem};
 use crate::lockfile::{LockedItem, Lockfile, OwnedFile};
 
 /// The record of written files for each planned `(kind, installed name)`,
-/// sorted by `client`, then `path`. `install_with_lockfile` copies it into
-/// the `LockedItem` it upserts for each installed item.
+/// sorted by `client`, then `path`. `PreparedInstall::commit` copies it
+/// into the `LockedItem` it upserts for each installed item.
 pub(super) type RecordedFiles = BTreeMap<(ItemKind, String), Vec<OwnedFile>>;
 
 /// Client roots under which a recorded path may be deleted.
@@ -411,7 +411,7 @@ pub(super) fn decide_plan(
 /// record.
 ///
 /// With `new_entries` (the lockfile entry of each planned item, given by
-/// `install_with_lockfile`), the operation can be completed by a second
+/// `PreparedInstall::commit`), the operation can be completed by a second
 /// run after a failure. The lockfile is saved in step 2 when at least one
 /// item gets a `pending` record, and always in step 4:
 ///
@@ -468,7 +468,7 @@ pub(super) fn execute_plan(
             let deletes = changes
                 .delete
                 .iter()
-                .any(|rel| fs::symlink_metadata(target.join(rel)).is_ok());
+                .any(|rel| deletes_existing(target, rel));
             if !writes && !deletes {
                 continue;
             }
@@ -540,7 +540,7 @@ pub(super) fn execute_plan(
             .forced
             .extend(conflicts.into_iter().map(|conflict| conflict.path));
         for rel in &delete {
-            if fs::symlink_metadata(target.join(rel)).is_ok() {
+            if deletes_existing(target, rel) {
                 outcome.changed.push(rel.clone());
             }
             delete_recorded(target, rel)?;
@@ -561,7 +561,7 @@ pub(super) fn execute_plan(
                 continue;
             }
             // The pre-check accepted this path.
-            if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
+            if writes_new_content(target, file, &unchanged) {
                 outcome.changed.push(file.rel.clone());
             }
             write_staged(&full, &file.bytes, file.mode)?;
@@ -597,7 +597,7 @@ pub(super) fn execute_plan(
 /// dependency's own source computes it differently from the reinstall of
 /// the source that requires the dependency, so it does not count as a
 /// change here.
-fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
+pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),
         pending: Vec::new(),
@@ -605,6 +605,25 @@ fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
         ..item.clone()
     };
     strip(a) == strip(b)
+}
+
+/// Whether [`execute_plan`] writes `file` with new content, so that it
+/// counts the file in `ApplyOutcome::changed`: the file is not in
+/// `unchanged`, and it is absent or its bytes differ from the planned
+/// bytes. For an item with [`Disposition::Write`] only.
+pub(super) fn writes_new_content(
+    target: &Path,
+    file: &PlannedFile,
+    unchanged: &BTreeSet<PathBuf>,
+) -> bool {
+    !unchanged.contains(&file.rel)
+        && !fs::read(target.join(&file.rel)).is_ok_and(|current| current == file.bytes)
+}
+
+/// Whether [`execute_plan`] deletes an existing path when it deletes the
+/// stale path `rel`, so that it counts `rel` in `ApplyOutcome::changed`.
+pub(super) fn deletes_existing(target: &Path, rel: &Path) -> bool {
+    fs::symlink_metadata(target.join(rel)).is_ok()
 }
 
 /// Writes `bytes` to a new stage file `.upskill-stage-<16 hex digits>` in

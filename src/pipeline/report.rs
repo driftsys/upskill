@@ -56,7 +56,7 @@ pub struct InstallReport {
     /// Surfaced to the user by `main.rs`; never an error.
     pub selection_skipped: Vec<String>,
     /// Every output file of every item, computed before anything is
-    /// written. `install_with_lockfile` writes it with one call.
+    /// written. `PreparedInstall::commit` writes it with one call.
     pub(crate) planned: Vec<super::plan::PlannedItem>,
     /// Paths recorded when this install adopted a `schema: 1` lockfile;
     /// `None` when no adoption happened. `main.rs` prints the adoption
@@ -78,6 +78,35 @@ pub struct InstallReport {
     /// destinations of the items that were not written because nothing is
     /// withheld from them; their lockfile entries are unchanged.
     pub kept_modified: Vec<PathBuf>,
+}
+
+/// What a commit would do to one item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreviewAction {
+    Update,
+    Complete,
+    Remove,
+    Skip,
+}
+
+/// One item of a preview that is not up to date.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreviewItem {
+    pub kind: ItemKind,
+    pub name: String,
+    pub action: PreviewAction,
+    /// Files that would be written with new content.
+    pub write: Vec<PathBuf>,
+    /// Files that would be deleted.
+    pub delete: Vec<PathBuf>,
+    /// Modified files that are kept (stale, or of a removed item).
+    pub kept_modified: Vec<PathBuf>,
+    /// With `--force`: modified or unmanaged files that would be lost.
+    pub forced: Vec<PathBuf>,
+    /// For `Skip`: the files that cause the skip.
+    pub blocking: Vec<PathBuf>,
+    /// True when only the lockfile record of the item changes.
+    pub record_only: bool,
 }
 
 /// Error context attached when a command fails after it saved the
