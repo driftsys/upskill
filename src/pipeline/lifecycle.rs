@@ -756,6 +756,9 @@ pub fn update(
                         .kept_modified
                         .extend(install_report.kept_modified.iter().cloned());
                     report.forced.extend(install_report.forced.iter().cloned());
+                    report
+                        .changed
+                        .extend(install_report.changed.iter().cloned());
                     let mut skipped: std::collections::BTreeMap<(ItemKind, String), Vec<PathBuf>> =
                         std::collections::BTreeMap::new();
                     for conflict in &install_report.conflicts {
@@ -786,7 +789,9 @@ pub fn update(
                         }
                         let mut reported = std::collections::BTreeSet::new();
                         for plan in plans {
-                            execute_removal(target, &plan, &mut reported)?;
+                            report
+                                .changed
+                                .extend(execute_removal(target, &plan, &mut reported)?);
                             report.kept_modified.extend(plan.kept.iter().cloned());
                             report.forced.extend(plan.forced.iter().cloned());
                             lock.remove(plan.kind, &plan.name);

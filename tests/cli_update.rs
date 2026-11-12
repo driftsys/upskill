@@ -838,7 +838,7 @@ fn update_force_deletes_a_modified_file_of_an_item_the_source_no_longer_contains
     assert!(!dest.parent().unwrap().exists());
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(
-        stdout.contains("Replaced 1 modified or unmanaged file(s)"),
+        stdout.contains("Replaced or deleted 1 modified or unmanaged file(s)"),
         "{stdout}"
     );
 }
@@ -858,7 +858,7 @@ fn update_force_reports_the_replaced_file_when_no_source_changed() {
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(!stdout.contains("nothing to do"), "{stdout}");
     assert!(
-        stdout.contains("Replaced 1 modified or unmanaged file(s)"),
+        stdout.contains("Replaced or deleted 1 modified or unmanaged file(s)"),
         "{stdout}"
     );
     assert_eq!(fs::read(&dest).unwrap(), generated);
@@ -912,4 +912,21 @@ fn update_of_a_name_reports_a_skipped_dependency_from_another_source() {
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
     assert!(stderr.contains("skipped skill sarif: "), "{stderr}");
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn update_summary_names_the_deleted_file_of_a_deselected_client() {
+    let (tmp, home) = copilot_res_project();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--claude"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+    assert!(
+        stdout.contains("Changed 1 file(s) written or deleted"),
+        "{stdout}"
+    );
+    assert!(!copilot_res_md(tmp.path()).exists());
 }

@@ -69,6 +69,9 @@ pub struct InstallReport {
     /// modified files that the new version no longer contains and that were
     /// deleted.
     pub forced: Vec<PathBuf>,
+    /// Every file that was written with new content (it was absent or held
+    /// other bytes) or deleted, with or without `--force`.
+    pub changed: Vec<PathBuf>,
     /// Modified files that the new version of an item no longer contains.
     /// They are kept on disk and stay in the item's record.
     pub kept_modified: Vec<PathBuf>,
@@ -405,6 +408,9 @@ pub struct UpdateReport {
     /// With `--force`: modified or unmanaged files that were replaced or
     /// deleted, including those of items that the source no longer contains.
     pub forced: Vec<PathBuf>,
+    /// Every file that was written with new content (it was absent or held
+    /// other bytes) or deleted, with or without `--force`.
+    pub changed: Vec<PathBuf>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

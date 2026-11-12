@@ -869,7 +869,12 @@ fn run_update(args: UpdateArgs) -> i32 {
                 EXIT_ERROR
             }
         }
-    } else if yes || !std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+    } else if update_step(
+        !yes && std::io::IsTerminal::is_terminal(&std::io::stdin()),
+        false,
+        force,
+    ) == UpdateStep::ApplyWithoutPrompt
+    {
         // No confirmation needed — apply directly (single fetch).
         match update(
             &target,
@@ -912,14 +917,27 @@ fn run_update(args: UpdateArgs) -> i32 {
             }
         };
 
-        if interactive_step(&plan, force) == InteractiveStep::Confirm {
-            if !style::is_quiet() {
-                print_update_plan(&plan);
-            }
-            if !confirm_update() {
-                eprintln!("aborted.");
+        let source_changed = plan
+            .items
+            .iter()
+            .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
+        match update_step(true, source_changed, force) {
+            UpdateStep::NothingToDo => {
+                if !style::is_quiet() {
+                    println!("everything is up to date — nothing to do");
+                }
                 return EXIT_SUCCESS;
             }
+            UpdateStep::Confirm => {
+                if !style::is_quiet() {
+                    print_update_plan(&plan);
+                }
+                if !confirm_update() {
+                    eprintln!("aborted.");
+                    return EXIT_SUCCESS;
+                }
+            }
+            UpdateStep::ApplyWithoutPrompt => {}
         }
 
         match update(
@@ -946,30 +964,31 @@ fn run_update(args: UpdateArgs) -> i32 {
     }
 }
 
-/// What the interactive `update` does after its dry run.
+/// What `update` does before it applies.
 #[derive(Debug, PartialEq, Eq)]
-enum InteractiveStep {
-    /// Show the plan and ask before applying.
-    Confirm,
-    /// Apply without a question. The dry run found no source change, and
-    /// without `--force` the apply replaces no modified or unmanaged file.
-    /// It still reports skipped items with exit code 1, as a run without a
-    /// terminal does.
+enum UpdateStep {
+    /// Apply without a question: a run with `--yes` or without a terminal.
     ApplyWithoutPrompt,
+    /// Show the plan of the dry run and ask before applying.
+    Confirm,
+    /// Change nothing and print that there is nothing to do. In a terminal
+    /// without `--yes`, when no source changed and `--force` is not given,
+    /// `update` does not apply: it does not report a modified file, does
+    /// not delete the files of a client that the flags no longer select,
+    /// and does not adopt a `schema: 1` lockfile.
+    NothingToDo,
 }
 
-/// The step after the dry run of an interactive `update`. A source change
-/// or `--force` (which can replace edited files that the dry run does not
-/// inspect) needs a confirmation.
-fn interactive_step(plan: &UpdateReport, force: bool) -> InteractiveStep {
-    let has_changes = plan
-        .items
-        .iter()
-        .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
-    if has_changes || force {
-        InteractiveStep::Confirm
+/// The step before the apply. `prompting` is true in a terminal without
+/// `--yes`. There, a source change or `--force` needs a confirmation, and
+/// otherwise nothing is applied.
+fn update_step(prompting: bool, source_changed: bool, force: bool) -> UpdateStep {
+    if !prompting {
+        UpdateStep::ApplyWithoutPrompt
+    } else if source_changed || force {
+        UpdateStep::Confirm
     } else {
-        InteractiveStep::ApplyWithoutPrompt
+        UpdateStep::NothingToDo
     }
 }
 
@@ -1051,7 +1070,8 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         .items
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
-    if changes == 0 && !dry_run && !skipped && report.forced.is_empty() {
+    if changes == 0 && !dry_run && !skipped && report.changed.is_empty() && report.adopted.is_none()
+    {
         println!("everything is up to date — nothing to do");
         return;
     }
@@ -1088,10 +1108,17 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             status
         );
     }
+    if !report.changed.is_empty() && changes == 0 && !dry_run {
+        println!(
+            "{} {} file(s) written or deleted",
+            style::success("Changed"),
+            report.changed.len()
+        );
+    }
     if !report.forced.is_empty() {
         println!(
             "{} {} modified or unmanaged file(s) (--force)",
-            style::success("Replaced"),
+            style::success("Replaced or deleted"),
             report.forced.len()
         );
         for path in &report.forced {
@@ -1915,43 +1942,26 @@ fn run_index(registry: Option<&str>, clear: bool) -> i32 {
 mod tests {
     use super::*;
 
-    fn report(status: UpdateStatus) -> UpdateReport {
-        UpdateReport {
-            items: vec![upskill::pipeline::UpdatedItem {
-                kind: ItemKind::Skill,
-                name: "s".into(),
-                source: "local:/s".into(),
-                status,
-            }],
-            ..UpdateReport::default()
+    #[test]
+    fn update_step_covers_every_input() {
+        use UpdateStep::*;
+        // (prompting, source changed, force) -> step
+        let table = [
+            ((false, false, false), ApplyWithoutPrompt),
+            ((false, false, true), ApplyWithoutPrompt),
+            ((false, true, false), ApplyWithoutPrompt),
+            ((false, true, true), ApplyWithoutPrompt),
+            ((true, false, false), NothingToDo),
+            ((true, false, true), Confirm),
+            ((true, true, false), Confirm),
+            ((true, true, true), Confirm),
+        ];
+        for ((prompting, changed, force), expected) in table {
+            assert_eq!(
+                update_step(prompting, changed, force),
+                expected,
+                "prompting={prompting} changed={changed} force={force}"
+            );
         }
-    }
-
-    #[test]
-    fn interactive_update_applies_without_a_question_when_nothing_changed() {
-        assert_eq!(
-            interactive_step(&report(UpdateStatus::UpToDate), false),
-            InteractiveStep::ApplyWithoutPrompt
-        );
-    }
-
-    #[test]
-    fn interactive_update_with_force_asks_even_when_nothing_changed() {
-        assert_eq!(
-            interactive_step(&report(UpdateStatus::UpToDate), true),
-            InteractiveStep::Confirm
-        );
-    }
-
-    #[test]
-    fn interactive_update_asks_when_a_source_changed() {
-        let changed = UpdateStatus::WouldChange {
-            old_hash: None,
-            new_hash: Some("x".into()),
-        };
-        assert_eq!(
-            interactive_step(&report(changed), false),
-            InteractiveStep::Confirm
-        );
     }
 }

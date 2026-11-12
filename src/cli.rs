@@ -165,8 +165,12 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Skip the confirmation prompt. Already implicit when stdin is
-        /// not a terminal (CI / pipes) or when `--dry-run` is used.
+        /// Apply without a question. In a terminal without `--yes`, `update`
+        /// asks before it applies when a source changed or `--force` is
+        /// given, and otherwise changes nothing: it then does not report
+        /// modified files, delete files of deselected clients or adopt a
+        /// `schema: 1` lockfile. Implicit when stdin is not a terminal
+        /// (CI / pipes); not used with `--dry-run`.
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Replace files that were modified after upskill wrote them or

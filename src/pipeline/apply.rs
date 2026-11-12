@@ -63,6 +63,9 @@ pub(super) struct ApplyOutcome {
     /// With `overwrite`: the modified or unowned files that were replaced,
     /// and the modified stale files that were deleted.
     pub forced: Vec<PathBuf>,
+    /// Every file that was written with new content (it was absent or held
+    /// other bytes) or deleted.
+    pub changed: Vec<PathBuf>,
 }
 
 /// What `apply_plan` does for one item, computed before any change.
@@ -283,6 +286,9 @@ pub(super) fn apply_plan(
             .forced
             .extend(conflicts.into_iter().map(|conflict| conflict.path));
         for rel in &delete {
+            if fs::symlink_metadata(target.join(rel)).is_ok() {
+                outcome.changed.push(rel.clone());
+            }
             delete_recorded(target, rel)?;
         }
 
@@ -294,6 +300,9 @@ pub(super) fn apply_plan(
             }
             // The pre-check accepted this path. An existing regular file is
             // removed first, so that a read-only file is replaced too.
+            if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
+                outcome.changed.push(file.rel.clone());
+            }
             if fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file()) {
                 fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
             }
