@@ -90,26 +90,33 @@ struct ItemChanges {
 /// run after a failure, and the lockfile is saved twice, in this order:
 ///
 /// 1. The checks below run; nothing is changed on disk yet.
-/// 2. For each item that is written (no conflict, or `overwrite`), the
-///    `pending` record of its lockfile entry is set to the planned files.
-///    An item that has no entry yet is inserted from `new_entries`, with
-///    an empty `files` record. The lockfile is saved.
+/// 2. For each item that is written (no conflict, or `overwrite`) and that
+///    writes at least one file or deletes at least one existing stale file,
+///    the planned files are added to the `pending` record of its lockfile
+///    entry. The old `pending` records that the plan does not repeat stay,
+///    so a path and hash of a previous failed run stay recorded until the
+///    promotion of step 4. An item that has no entry yet is inserted from
+///    `new_entries`, with an empty `files` record. The lockfile is saved
+///    when at least one item got a `pending` record.
 /// 3. For each item, after the save of step 2: its stale files are deleted
 ///    first (the checks of step 1 judge each planned path against the state
-///    after that deletion), then each file is
-///    written to a stage file `.upskill-stage-<16 hex digits>` in the
-///    destination directory, which gets the planned mode, and is renamed to
-///    the destination. On an error the stage file is deleted and the error
-///    is returned; files already renamed stay, and the lockfile keeps the
-///    `pending` record of step 2.
-/// 4. The `pending` record of each written item becomes its `files`
-///    record and is cleared. The lockfile is saved.
+///    after that deletion), then each file that is not `unchanged` (see
+///    below) is written to a stage file `.upskill-stage-<16 hex digits>` in
+///    the destination directory, which gets the planned mode (a file
+///    without a planned mode gets the default mode of a new file), and is
+///    renamed to the destination. On an error the stage file is deleted and
+///    the error is returned; files already renamed stay, and the lockfile
+///    keeps the `pending` record of step 2.
+/// 4. The `files` record of each written item is set to the planned files
+///    and the records of its kept stale files, and its `pending` record is
+///    cleared. The lockfile is saved.
 ///
-/// A second run finds the files written by the failed run `Owned` through
+/// A second run finds the files written by a failed run `Owned` through
 /// their `pending` hash, and the files not yet written `Owned` through
-/// their `files` hash, so neither is a conflict. Without `new_entries` (the
-/// library entry points), no `pending` record is set and the lockfile is
-/// not saved.
+/// their `files` hash, so neither is a conflict. This holds after several
+/// failed runs, because step 2 keeps the old `pending` records. Without
+/// `new_entries` (the library entry points), no `pending` record is set and
+/// the lockfile is not saved.
 ///
 /// Conflicts: every destination of every item is classified with
 /// [`classify`] before anything is written. A destination whose content
@@ -120,21 +127,21 @@ struct ItemChanges {
 /// `overwrite` is false, an item with at least one conflict is skipped as a
 /// whole: none of its files is written or deleted, and its lockfile record
 /// is unchanged. The other items are written. When `overwrite` is true, a
-/// conflicting regular file is replaced. An `Owned` destination is not
-/// rewritten and is not counted in `changed` when its bytes equal the
-/// planned bytes, or when they are a CRLF variant of the planned bytes (see
-/// [`matches_recorded`]) and the hash of the planned bytes was already
-/// recorded for the file in its `files` record (a `pending` hash does not
-/// count here). Its record is the
-/// hash of the planned bytes. In that case a file with a planned mode has
-/// the mode set again; a file without one keeps its current mode.
+/// conflicting regular file is replaced. An `Owned` destination is
+/// `unchanged`: it is not rewritten and is not counted in `changed` when
+/// its bytes equal the planned bytes, or when they are a CRLF variant of
+/// the planned bytes (see [`matches_recorded`]) and the hash of the planned
+/// bytes was already recorded for the file in its `files` record (a
+/// `pending` hash does not count here). Its record is the hash of the
+/// planned bytes. In that case a file with a planned mode has the mode set
+/// again; a file without one keeps its current mode.
 ///
 /// Stale files: the files of an item's previous `files` or `pending` record
 /// that no planned item of this run writes. So a file that a failed run
-/// wrote and that this run no longer plans is deleted when it is unchanged,
-/// or kept and recorded when it was modified. Before writing an item, its stale files that are
-/// unchanged (`Owned`) or absent are deleted, and directories left empty
-/// are removed. A stale file that is `Modified`, or that cannot be read, is
+/// wrote and that the run that completes the item no longer plans is
+/// deleted when it is unchanged, or kept and recorded when it was modified.
+/// Before writing an item, its stale files that are unchanged (`Owned`) or
+/// absent are deleted, and directories left empty are removed. A stale file that is `Modified`, or that cannot be read, is
 /// kept and stays in the record; with `overwrite` it is deleted when it is
 /// a regular file. A kept stale file that is a planned path, or a directory
 /// on the way to one, is a conflict of the item.
@@ -330,20 +337,47 @@ pub(super) fn apply_plan(
         }
     }
 
-    // Record the planned files of every item that is written as `pending`,
-    // and save, before the first change on disk.
+    // Record the planned files of every item that this run changes on disk
+    // as `pending`, and save, before the first change on disk.
     if let Some(new_entries) = new_entries {
+        let mut any_pending = false;
         for (item, changes) in planned.iter().zip(&changes) {
             if !overwrite && !changes.conflicts.is_empty() {
                 continue;
             }
+            // An item that writes no file and deletes no existing file
+            // changes nothing on disk, and gets no `pending` record.
+            let writes = item
+                .files
+                .iter()
+                .any(|file| !changes.unchanged.contains(&file.rel));
+            let deletes = changes
+                .delete
+                .iter()
+                .any(|rel| fs::symlink_metadata(target.join(rel)).is_ok());
+            if !writes && !deletes {
+                continue;
+            }
+            any_pending = true;
             let pending = changes.files.clone();
             match lock
                 .items
                 .iter_mut()
                 .find(|i| i.kind == item.kind && i.name == item.name)
             {
-                Some(entry) => entry.pending = pending,
+                // The old `pending` records that the new plan does not
+                // repeat stay: a failed run may have written those files,
+                // and they stay owned until the item is promoted.
+                Some(entry) => {
+                    let mut merged = pending;
+                    for old in &entry.pending {
+                        if !merged.contains(old) {
+                            merged.push(old.clone());
+                        }
+                    }
+                    merged.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
+                    entry.pending = merged;
+                }
                 // An item without an entry in `new_entries` (for example
                 // one with no file for the selected clients) is not
                 // recorded in the lockfile, as before this step.
@@ -360,7 +394,9 @@ pub(super) fn apply_plan(
                 }
             }
         }
-        lock.save(target)?;
+        if any_pending {
+            lock.save(target)?;
+        }
     }
 
     let mut outcome = ApplyOutcome::default();
@@ -485,8 +521,13 @@ fn create_stage_file(dir: &Path) -> Result<(PathBuf, fs::File)> {
 
 /// Renames `stage` to `full`. On Unix, a rename replaces a read-only file.
 /// On Windows it fails on a read-only destination, so the read-only
-/// attribute of an existing regular file is cleared first.
+/// attribute of an existing regular file is cleared first, and set again
+/// when the rename fails.
 fn replace_with(stage: &Path, full: &Path) -> Result<()> {
+    let rename = || {
+        fs::rename(stage, full)
+            .with_context(|| format!("rename {} to {}", stage.display(), full.display()))
+    };
     #[cfg(not(unix))]
     if let Ok(meta) = fs::symlink_metadata(full) {
         if meta.file_type().is_file() && meta.permissions().readonly() {
@@ -496,10 +537,16 @@ fn replace_with(stage: &Path, full: &Path) -> Result<()> {
             permissions.set_readonly(false);
             fs::set_permissions(full, permissions)
                 .with_context(|| format!("set permissions of {}", full.display()))?;
+            let result = rename();
+            if result.is_err() {
+                // The destination was not replaced: set its read-only
+                // attribute again.
+                let _ = fs::set_permissions(full, meta.permissions());
+            }
+            return result;
         }
     }
-    fs::rename(stage, full)
-        .with_context(|| format!("rename {} to {}", stage.display(), full.display()))
+    rename()
 }
 
 /// State of the recorded or planned path `rel` (`path` is its record form).
@@ -1964,6 +2011,241 @@ mod repeatable_tests {
         write_staged(&dest, b"new", Some(0o755)).unwrap();
         let mode = fs::metadata(&dest).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o755);
+    }
+
+    /// Sets `dir` to mode 0o555 and restores 0o755 when dropped, also when
+    /// an assertion fails. `None` when the process can still write into
+    /// `dir` (running as root).
+    #[cfg(unix)]
+    struct ReadOnly(PathBuf);
+
+    #[cfg(unix)]
+    impl ReadOnly {
+        fn set(dir: &Path) -> Option<Self> {
+            use std::os::unix::fs::PermissionsExt;
+            fs::create_dir_all(dir).unwrap();
+            fs::set_permissions(dir, fs::Permissions::from_mode(0o555)).unwrap();
+            let guard = ReadOnly(dir.to_path_buf());
+            let probe = dir.join(".probe");
+            if fs::write(&probe, b"x").is_ok() {
+                let _ = fs::remove_file(&probe);
+                return None;
+            }
+            Some(guard)
+        }
+    }
+
+    #[cfg(unix)]
+    impl Drop for ReadOnly {
+        fn drop(&mut self) {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    fn named(mut item: LockedItem, name: &str) -> LockedItem {
+        item.name = name.to_string();
+        item
+    }
+
+    /// Item `s` holds its planned bytes; item `t` fails on its first write.
+    /// Only `t` is changed by the run, so only `t` gets a `pending` record.
+    #[cfg(unix)]
+    #[test]
+    fn an_item_that_changes_nothing_gets_no_pending_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a");
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(vec![owned(A, b"a")], vec![]));
+        lock.save(tmp.path()).unwrap();
+        let t_rel = ".claude/skills/t/SKILL.md";
+        let Some(_guard) = ReadOnly::set(&tmp.path().join(".claude/skills/t")) else {
+            return;
+        };
+        let mut t = planned(&[(t_rel, b"t")]);
+        t.name = "t".into();
+        let plan = [planned(&[(A, b"a")]), t];
+        let new = [entry(vec![], vec![]), named(entry(vec![], vec![]), "t")];
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+
+        let on_disk = Lockfile::load(tmp.path()).unwrap();
+        let s = on_disk.items.iter().find(|i| i.name == "s").unwrap();
+        assert!(s.pending.is_empty(), "{s:?}");
+        let t = on_disk.items.iter().find(|i| i.name == "t").unwrap();
+        assert_eq!(t.pending, vec![owned(t_rel, b"t")]);
+    }
+
+    /// The pending save of a run that fails keeps the old `pending` records
+    /// that the new plan does not repeat: R (no longer planned) and the
+    /// older hash of A.
+    #[cfg(unix)]
+    fn second_failed_run(r_bytes: &[u8]) -> Option<(tempfile::TempDir, Lockfile)> {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a2");
+        put(tmp.path(), R, r_bytes);
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(
+            vec![owned(A, b"a1")],
+            vec![owned(A, b"a2"), owned(R, b"r")],
+        ));
+        lock.save(tmp.path()).unwrap();
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a3")])];
+        {
+            let _guard = ReadOnly::set(&tmp.path().join(".claude/skills/s"))?;
+            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+            let on_disk = Lockfile::load(tmp.path()).unwrap();
+            let pending = &on_disk.items[0].pending;
+            for record in [owned(A, b"a2"), owned(A, b"a3"), owned(R, b"r")] {
+                assert!(pending.contains(&record), "{pending:?}");
+            }
+            assert_eq!(pending.len(), 3, "{pending:?}");
+            assert_eq!(on_disk.items[0].files, vec![owned(A, b"a1")]);
+        }
+        let mut lock = Lockfile::load(tmp.path()).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        let lock = Lockfile::load(tmp.path()).unwrap();
+        Some((tmp, lock))
+    }
+
+    const R: &str = ".claude/skills/s/scripts/run.sh";
+
+    #[cfg(unix)]
+    #[test]
+    fn an_owned_pending_path_survives_a_second_failed_run_and_is_then_deleted() {
+        let Some((tmp, lock)) = second_failed_run(b"r") else {
+            return;
+        };
+        assert!(!tmp.path().join(R).exists());
+        assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a3");
+        assert!(lock.items[0].pending.is_empty());
+        assert_eq!(lock.items[0].files, vec![owned(A, b"a3")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_modified_pending_path_survives_a_second_failed_run_and_is_then_kept() {
+        let Some((tmp, lock)) = second_failed_run(b"edited") else {
+            return;
+        };
+        assert_eq!(fs::read(tmp.path().join(R)).unwrap(), b"edited");
+        assert!(lock.items[0].pending.is_empty());
+        assert_eq!(lock.items[0].files, vec![owned(A, b"a3"), owned(R, b"r")]);
+    }
+
+    /// With `overwrite`, an item with a conflict is written, so it gets a
+    /// `pending` record before the first write.
+    #[cfg(unix)]
+    #[test]
+    fn an_item_forced_over_a_conflict_gets_a_pending_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"manual");
+        let sub = ".claude/skills/s/sub/b.md";
+        let Some(_guard) = ReadOnly::set(&tmp.path().join(".claude/skills/s/sub")) else {
+            return;
+        };
+        let mut lock = Lockfile::new();
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a"), (sub, b"b")])];
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, Some(&new)).is_err());
+        assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a");
+        let on_disk = Lockfile::load(tmp.path()).unwrap();
+        assert_eq!(on_disk.items.len(), 1);
+        assert_eq!(
+            on_disk.items[0].pending,
+            vec![owned(A, b"a"), owned(sub, b"b")]
+        );
+    }
+
+    /// A refusal raised inside `apply_plan`, after the classification and
+    /// before the pending save, leaves the lockfile bytes unchanged.
+    #[test]
+    fn a_refusal_inside_apply_plan_saves_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(vec![owned(A, b"a")], vec![]));
+        lock.save(tmp.path()).unwrap();
+        let before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+        let new = [entry(vec![], vec![])];
+        let below = ".claude/skills/s/SKILL.md/x.md";
+        let plan = [planned(&[(A, b"a2"), (below, b"x")])];
+        let err = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap_err();
+        assert!(format!("{err}").contains("conflict"), "{err:#}");
+        assert_eq!(
+            fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+            before
+        );
+    }
+
+    #[test]
+    fn library_mode_does_not_save_the_lockfile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(vec![], vec![]));
+        let plan = [planned(&[(A, b"a")])];
+        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a");
+        assert!(!tmp.path().join(".upskill-lock.json").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unchanged_file_gets_its_planned_mode_again() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a");
+        let full = tmp.path().join(A);
+        fs::set_permissions(&full, fs::Permissions::from_mode(0o644)).unwrap();
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(vec![owned(A, b"a")], vec![]));
+        let mut item = planned(&[(A, b"a")]);
+        item.files[0].mode = Some(0o755);
+        let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None).unwrap();
+        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+        let mode = fs::metadata(&full).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o755);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_staged_without_a_mode_gives_the_default_mode_of_a_new_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let fresh = tmp.path().join("fresh");
+        fs::write(&fresh, b"x").unwrap();
+        let default = fs::metadata(&fresh).unwrap().permissions().mode() & 0o777;
+        let dest = tmp.path().join("run.sh");
+        fs::write(&dest, b"old").unwrap();
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o700)).unwrap();
+        assert_ne!(default, 0o700);
+        write_staged(&dest, b"new", None).unwrap();
+        let mode = fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, default);
+    }
+
+    /// The names after the one just created exist already: the next stage
+    /// file gets a name that does not exist, and no existing file changes.
+    #[test]
+    fn create_stage_file_does_not_open_an_existing_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (first, f1) = create_stage_file(tmp.path()).unwrap();
+        drop(f1);
+        let name = first.file_name().unwrap().to_str().unwrap();
+        let digits = name.strip_prefix(".upskill-stage-").unwrap();
+        let (pid, n) = digits.split_at(8);
+        let n = u32::from_str_radix(n, 16).unwrap();
+        let mut existing = Vec::new();
+        for next in n + 1..n + 65 {
+            let path = tmp.path().join(format!(".upskill-stage-{pid}{next:08x}"));
+            fs::write(&path, b"keep").unwrap();
+            existing.push(path);
+        }
+        let (second, f2) = create_stage_file(tmp.path()).unwrap();
+        drop(f2);
+        assert!(!existing.contains(&second), "{second:?}");
+        for path in &existing {
+            assert_eq!(fs::read(path).unwrap(), b"keep", "{path:?}");
+        }
     }
 
     #[test]
