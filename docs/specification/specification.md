@@ -101,23 +101,26 @@ is not recorded), unless its content already equals the planned bytes. A file is
 compared with its record, and a recorded file with the planned bytes, as it is
 and again with every CRLF (`\r\n`) replaced by LF (`\n`); it is equal when one
 comparison matches. So a git checkout with `core.autocrlf=true` does not make a
-file modified; a carriage return added by hand before a line feed is also read
-as unchanged. An owned file that is equal to the planned bytes in this way is
-not rewritten, so a CRLF file is left as it is until its content changes. A
-destination that exists and is not a regular file (for example a directory or a
-symbolic link) is not a conflict: it fails the command before any file is
-written. Two exceptions concern recorded files of the same item that the plan no
-longer contains: a directory at the path of a planned file that holds at least
-one file and whose files, at any depth, are all such files (an empty directory
-fails), and such a regular file where a planned file needs a directory. These
-files are handled as stale files (§2.2). For `update` over several sources, the
-sources updated before are already applied; with a `schema: 1` lockfile, the
-adoption is already saved; when the removal of an item that its source no longer
-contains fails, the install of that source is already written and saved. Without
-`--force`, an item with at least one conflict is skipped as a whole: none of its
-files is written or deleted and its lockfile entry is not changed. The other
-items are written. `add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+file modified; where the recorded content has a LF, a carriage return added by
+hand before it is also read as unchanged. An owned file is not rewritten when it
+equals the planned bytes exactly, or when it is a CRLF variant of the planned
+bytes and the hash of the planned bytes is already recorded for it. So a CRLF
+file is left as it is until its generated content changes, and a change of the
+line endings of the generated content is written. A destination that exists and
+is not a regular file (for example a directory or a symbolic link) is not a
+conflict: it fails the command before any file is written. Two exceptions
+concern recorded files of the same item that the plan no longer contains: a
+directory at the path of a planned file that holds at least one file and whose
+files, at any depth, are all such files (an empty directory, or one that holds
+an empty subdirectory, fails), and such a regular file where a planned file
+needs a directory. These files are handled as stale files (§2.2). For `update`
+over several sources, the sources updated before are already applied; with a
+`schema: 1` lockfile, the adoption is already saved; when the removal of an item
+that its source no longer contains fails, the install of that source is already
+written and saved. Without `--force`, an item with at least one conflict is
+skipped as a whole: none of its files is written or deleted and its lockfile
+entry is not changed. The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
