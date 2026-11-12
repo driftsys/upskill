@@ -1001,3 +1001,22 @@ with only its relative links updated for this location. It is superseded by the
 [re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11, which replaces its four-client MVP sequencing and its proposed
 qualification gates.
+
+## Per-source update prompts
+
+Source paths: `docs/wip/specs/2026-11-12-per-source-update-prompts-design.md`
+and `docs/wip/plans/2026-11-12-per-source-update-prompts.md`. The archived
+[spec](specs/2026-11-12-per-source-update-prompts-design.md) and
+[plan](plans/2026-11-12-per-source-update-prompts.md) retain the working
+material; the spec's link to the re-steer design follows its active WIP
+destination.
+
+Delivered by PR #502 (commit `dbb6504`, keep an edited file of an unchanged item
+on update) and PR #503 (commit `b727999`, one question per source in a terminal
+update). Completion evidence: tests passed on Linux, macOS and Windows. Open
+debt is tracked in issues #504 to #514.
+
+Durable successors: [AD-0043](../adr/0043-per-source-update-prompts.md),
+[specification §2.2](../specification/specification.md#22-update) and the
+[command guide](../book/commands.md#upskill-update-name). The archived spec
+records the review decisions made during implementation as "Author's call".

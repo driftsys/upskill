@@ -51,7 +51,10 @@ failed until `update --force`.
    `required_by`), completes an interrupted item, removes an item, or creates or
    changes a hand-shake file. `y` applies the source. `n` or any other text
    continues without it. `q`, end of input or a read error stops the run;
-   earlier sources stay applied.
+   earlier sources stay applied. Ctrl-C while the question waits exits at once
+   with code 130 and changes nothing for that source. An interrupt during the
+   apply of a source stops the run before the next source is shown or applied,
+   with code 130.
 3. **The rule for edited files.** Without `--force`, an item whose only
    difference is a modified recorded file is not skipped. This holds when the
    source hash of the item equals the recorded hash, the item has no `pending`
