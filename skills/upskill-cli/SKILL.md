@@ -124,9 +124,10 @@ install.
    remove every item installed from one source — use the label shown in
    `upskill list` or the lockfile).
 2. `remove` deletes only the files recorded for the item with their recorded
-   hash. It keeps each recorded file that you edited, prints
-   `kept modified file: <path>`, and still drops the item from the lockfile. To
-   delete edited files as well, run the command with `--force`.
+   hash (a copy with CRLF line endings in place of LF also counts). It keeps
+   each recorded file that you edited, prints `kept modified file: <path>`, and
+   still drops the item from the lockfile. To delete edited files as well, run
+   the command with `--force`.
 3. Verify with `upskill list` that the item is gone and `upskill doctor` that
    nothing else depended on it.
 4. Commit the changed lockfile and the deleted per-client files. For each kept
@@ -172,9 +173,10 @@ Verifies the installed state of a consumer project against its
 `.upskill-lock.json`. Pure consistency check — no judgment on content shape.
 Common findings:
 
-- Generated per-client file missing (→ re-run `update`) or hash-changed (someone
-  hand-edited it → `update --force` replaces the edit; without `--force`,
-  `update` keeps the edit, skips the item and exits 1)
+- Generated per-client file missing (→ run `update --yes`, or `update` without a
+  terminal; in a terminal with no source change, `update` changes nothing) or
+  hash-changed (someone hand-edited it → `update --force` replaces the edit;
+  without `--force`, `update` keeps the edit, skips the item and exits 1)
 - Lockfile references an item whose source is no longer reachable
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)

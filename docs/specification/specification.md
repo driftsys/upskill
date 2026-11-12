@@ -97,29 +97,34 @@ not inside a git repo. Either flag can be passed explicitly.
 Before any write, `add` classifies every destination of every item against the
 item's `files` record (§4). A destination is a conflict when it is **modified**
 (a recorded regular file with other content) or **unowned** (a regular file that
-is not recorded), unless its content already equals the planned bytes. A content
-that differs from the recorded content, or for a recorded file from the planned
-bytes, only by CRLF (`\r\n`) line endings in place of LF (`\n`) counts as equal,
-so a git checkout with `core.autocrlf=true` does not make a file modified. A
+is not recorded), unless its content already equals the planned bytes. A file is
+compared with its record, and a recorded file with the planned bytes, as it is
+and again with every CRLF (`\r\n`) replaced by LF (`\n`); it is equal when one
+comparison matches. So a git checkout with `core.autocrlf=true` does not make a
+file modified; a carriage return added by hand before a line feed is also read
+as unchanged. An owned file that is equal to the planned bytes in this way is
+not rewritten, so a CRLF file is left as it is until its content changes. A
 destination that exists and is not a regular file (for example a directory or a
 symbolic link) is not a conflict: it fails the command before any file is
-written. The exception is a directory at the path of a planned file whose files,
-at any depth, are all recorded files of the same item that the plan no longer
-contains; these files are handled as stale files (§2.2). For `update` over
-several sources, the sources updated before are already applied; with a
-`schema: 1` lockfile, the adoption is already saved; when the removal of an item
-that its source no longer contains fails, the install of that source is already
-written and saved. Without `--force`, an item with at least one conflict is
-skipped as a whole: none of its files is written or deleted and its lockfile
-entry is not changed. The other items are written. `add` then prints one line
-per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
+written. Two exceptions concern recorded files of the same item that the plan no
+longer contains: a directory at the path of a planned file that holds at least
+one file and whose files, at any depth, are all such files (an empty directory
+fails), and such a regular file where a planned file needs a directory. These
+files are handled as stale files (§2.2). For `update` over several sources, the
+sources updated before are already applied; with a `schema: 1` lockfile, the
+adoption is already saved; when the removal of an item that its source no longer
+contains fails, the install of that source is already written and saved. Without
+`--force`, an item with at least one conflict is skipped as a whole: none of its
+files is written or deleted and its lockfile entry is not changed. The other
+items are written. `add` then prints one line per conflict to stderr,
+`skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
 items installed from another source; it then lists these files after
-`Replaced or deleted <n> modified or unmanaged file(s) (--force)`. An installed
-name or an `--as` alias that contains `/` or `\` is refused before any change,
-with an error that names the item.
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`, unless
+`-q/--quiet` is given. An installed name or an `--as` alias that contains `/` or
+`\` is refused before any change, with an error that names the item.
 
 ### 2.2 `update`
 
@@ -192,20 +197,20 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 
 `remove` deletes only files listed in the item's `files` record (§4). A recorded
 file is **owned** when it is a regular file with the recorded SHA-256: `remove`
-deletes it. It is **modified** when its content differs (a difference of CRLF
-line endings in place of LF only is not a difference) or it is no longer a
-regular file: `remove` keeps it and prints `kept modified file: <path>` to
-stderr; `--force` deletes a modified regular file, but never a path that is not
-a regular file. A recorded regular file that cannot be read is handled as
-modified. An absent recorded file is ignored. A file that the record does not
-list is **unowned** and is never deleted. Empty item directories are then
-deleted; client roots and kind directories are kept. A recorded path outside the
-client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
-and a symbolic link in the item part of a recorded path's parent directories
-makes `remove` fail before any deletion. An item with an empty record has no
-file deleted. The lockfile entry of each removed item is dropped. `remove`
-adopts a `schema: 1` lockfile and prints the adoption notice, except when a name
-is not in the lockfile, which is an error.
+deletes it. It is **modified** when its content differs, compared as it is and
+again with every CRLF replaced by LF (§2.1), or it is no longer a regular file:
+`remove` keeps it and prints `kept modified file: <path>` to stderr; `--force`
+deletes a modified regular file, but never a path that is not a regular file. A
+recorded regular file that cannot be read is handled as modified. An absent
+recorded file is ignored. A file that the record does not list is **unowned**
+and is never deleted. Empty item directories are then deleted; client roots and
+kind directories are kept. A recorded path outside the client roots (`.claude`,
+`.github`, `.agents`, `.opencode`) is never deleted, and a symbolic link in the
+item part of a recorded path's parent directories makes `remove` fail before any
+deletion. An item with an empty record has no file deleted. The lockfile entry
+of each removed item is dropped. `remove` adopts a `schema: 1` lockfile and
+prints the adoption notice, except when a name is not in the lockfile, which is
+an error.
 
 ### 2.4 `list` / `doctor`
 
@@ -214,19 +219,20 @@ is not in the lockfile, which is an error.
   discoverable from configured sources) is deferred for a future release.
 - `doctor` — verify on-disk state matches the lock file. Nine independent
   buckets: missing per-client outputs (reinstall fixes), modified recorded files
-  (content differs from the recorded SHA-256), recorded files that could not be
-  inspected (`doctor` continues with the others), SSOT hash drift on `local:`
-  sources (`update` fixes), lockfile entries with no recoverable source
-  (`remove` fixes), installed plugins missing from the client (`update`
-  reinstalls), skipped plugins (informational — CLI was absent at install time),
-  orphaned dependencies (informational), and MCP server reconciliation. Exit 0
-  when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
-  and do not affect the exit code. Missing, modified and unreadable files are
-  checked against the `files` record; a recorded path that `remove` would never
-  delete (outside the client roots, fewer than three components, or with a `..`
-  component) is skipped without a report. For an item with an empty or missing
-  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
-  list), `doctor` checks each per-client entry file instead.
+  (content differs from the recorded SHA-256, compared as in §2.1), recorded
+  files that could not be inspected (`doctor` continues with the others), SSOT
+  hash drift on `local:` sources (`update` fixes), lockfile entries with no
+  recoverable source (`remove` fixes), installed plugins missing from the client
+  (`update` reinstalls), skipped plugins (informational — CLI was absent at
+  install time), orphaned dependencies (informational), and MCP server
+  reconciliation. Exit 0 when clean, 1 when any drift bucket is non-empty.
+  Skipped plugins are warnings and do not affect the exit code. Missing,
+  modified and unreadable files are checked against the `files` record; a
+  recorded path that `remove` would never delete (outside the client roots,
+  fewer than three components, or with a `..` component) is skipped without a
+  report. For an item with an empty or missing `files` record (a `schema: 1`
+  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
+  per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

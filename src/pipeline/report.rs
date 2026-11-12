@@ -175,8 +175,9 @@ pub struct MissingOutput {
     pub missing_files: Vec<PathBuf>,
 }
 
-/// Recorded files of one item whose content differs from the recorded
-/// hash, or that are no longer regular files.
+/// Recorded files of one item whose content does not match the recorded
+/// hash, as it is or with every CRLF replaced by LF, or that are no longer
+/// regular files.
 #[derive(Debug, Clone, Serialize)]
 pub struct ModifiedFile {
     pub kind: ItemKind,
@@ -328,7 +329,8 @@ pub struct DoctorReport {
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
-    /// every recorded file still has its recorded content and can be read,
+    /// every recorded file still has its recorded content (as it is, or with
+    /// every CRLF replaced by LF) and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, and no installed plugin is missing
     /// from its client.

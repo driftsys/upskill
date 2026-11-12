@@ -298,8 +298,9 @@ fn remove_selected(
 ///   absent. A recorded path that `deletable` rejects is skipped without
 ///   a report, here and in the modified and unreadable files.
 ///   Reinstall (`upskill add <source>`) fixes it.
-/// - **modified files** — recorded files whose content differs from the
-///   recorded hash, or that are no longer regular files.
+/// - **modified files** — recorded files whose content does not match the
+///   recorded hash through `matches_recorded` (as it is, or with every CRLF
+///   replaced by LF), or that are no longer regular files.
 /// - **unreadable files** — recorded files that could not be inspected.
 ///   `doctor` continues with the other files and items.
 /// - **stale hashes** — for `local:` sources still on disk, the SSOT
