@@ -617,6 +617,10 @@ mod tests {
             selection_skipped: Vec::new(),
             planned: Vec::new(),
             adopted: None,
+            conflicts: Vec::new(),
+            kept_modified: Vec::new(),
+            forced: Vec::new(),
+            changed: Vec::new(),
             items: vec![
                 InstalledItem {
                     kind: ItemKind::Skill,

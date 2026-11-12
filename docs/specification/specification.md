@@ -94,10 +94,45 @@ Default scope is `--project` (write into the current repo's `.agents/...`),
 falling back to `--global` (`$HOME/.agents/...`) when the current directory is
 not inside a git repo. Either flag can be passed explicitly.
 
+Before any write, `add` classifies every destination of every item against the
+item's `files` record (§4). A destination is a conflict when it is **modified**
+(a recorded regular file with other content) or **unowned** (a regular file that
+is not recorded), unless its content already equals the planned bytes. A file is
+compared with its record, and a recorded file with the planned bytes, as it is
+and again with every CRLF (`\r\n`) replaced by LF (`\n`); it is equal when one
+comparison matches. So a git checkout with `core.autocrlf=true` does not make a
+file modified; where the recorded content has a LF, a carriage return added by
+hand before it is also read as unchanged. An owned file is not rewritten when it
+equals the planned bytes exactly, or when it is a CRLF variant of the planned
+bytes and the hash of the planned bytes is already recorded for it. So a CRLF
+file is left as it is until its generated content changes, and a change of the
+line endings of the generated content is written. A destination that exists and
+is not a regular file (for example a directory or a symbolic link) is not a
+conflict: it fails the command before any file is written. Two exceptions
+concern recorded files of the same item that the plan no longer contains: a
+directory at the path of a planned file that holds at least one file and whose
+files, at any depth, are all such files (an empty directory, or one that holds
+an empty subdirectory, fails), and such a regular file where a planned file
+needs a directory. These files are handled as stale files (§2.2). For `update`
+over several sources, the sources updated before are already applied; with a
+`schema: 1` lockfile, the adoption is already saved; when the removal of an item
+that its source no longer contains fails, the install of that source is already
+written and saved. Without `--force`, an item with at least one conflict is
+skipped as a whole: none of its files is written or deleted and its lockfile
+entry is not changed. The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
+`skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
+by `Use --force to replace.`, and exits with code 1. `--force` replaces these
+files, deletes modified files that are no longer produced, and also replaces
+items installed from another source; it then lists these files after
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`, unless
+`-q/--quiet` is given. An installed name or an `--as` alias that contains `/` or
+`\` is refused before any change, with an error that names the item.
+
 ### 2.2 `update`
 
 ```text
-upskill update [name...] [--global|--project] [--dry-run]
+upskill update [name...] [--global|--project] [--dry-run] [--force]
 ```
 
 Always fetches the latest source before regenerating. Absorbs the role of a
@@ -110,6 +145,30 @@ covered by passing local paths to `add` / `update`.
   frontmatter field, `update` regenerates outputs from the same SSOT.
 - **Track upstream evolution.** `update` git-pulls source repos and regenerates
   items whose source hash changed.
+
+`update` applies the conflict rules of `add` (§2.1). An item with a modified or
+unowned destination is not written, keeps its lockfile entry, is reported as
+skipped with
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` and
+`Use --force to replace.` on stderr, and makes `update` exit with code 1 after
+the other items are written. A recorded file that the new version of an item no
+longer produces, for example a file of a client that a narrower selection no
+longer targets, is deleted when it is owned; a modified one is kept, stays in
+the record, and is reported as `kept modified file: <path>`. An item that its
+source no longer contains is removed with the rules of `remove` (§2.3).
+`update --force` replaces modified and unowned destinations and deletes modified
+regular files that are no longer produced; it then lists these files after
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a terminal
+without `--yes`, `update` first runs a dry run. When a source changed or
+`--force` is given, it shows the plan and asks for a confirmation; an answer
+other than `y` or `yes` (in any letter case) changes nothing. When no source
+changed and `--force` is not given, it prints that there is nothing to do and
+changes nothing: it therefore does not report a modified file, does not delete
+the files of a client that the flags no longer select, and does not adopt a
+`schema: 1` lockfile. A run with `--yes`, or without a terminal, applies without
+a question and does these things. When an applied `update` wrote or deleted
+files without a source change, it prints
+`Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -141,19 +200,20 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 
 `remove` deletes only files listed in the item's `files` record (§4). A recorded
 file is **owned** when it is a regular file with the recorded SHA-256: `remove`
-deletes it. It is **modified** when its content differs or it is no longer a
-regular file: `remove` keeps it and prints `kept modified file: <path>` to
-stderr; `--force` deletes a modified regular file, but never a path that is not
-a regular file. A recorded regular file that cannot be read is handled as
-modified. An absent recorded file is ignored. A file that the record does not
-list is **unowned** and is never deleted. Empty item directories are then
-deleted; client roots and kind directories are kept. A recorded path outside the
-client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
-and a symbolic link in the item part of a recorded path's parent directories
-makes `remove` fail before any deletion. An item with an empty record has no
-file deleted. The lockfile entry of each removed item is dropped. `remove`
-adopts a `schema: 1` lockfile and prints the adoption notice, except when a name
-is not in the lockfile, which is an error.
+deletes it. It is **modified** when its content differs, compared as it is and
+again with every CRLF replaced by LF (§2.1), or it is no longer a regular file:
+`remove` keeps it and prints `kept modified file: <path>` to stderr; `--force`
+deletes a modified regular file, but never a path that is not a regular file. A
+recorded regular file that cannot be read is handled as modified. An absent
+recorded file is ignored. A file that the record does not list is **unowned**
+and is never deleted. Empty item directories are then deleted; client roots and
+kind directories are kept. A recorded path outside the client roots (`.claude`,
+`.github`, `.agents`, `.opencode`) is never deleted, and a symbolic link in the
+item part of a recorded path's parent directories makes `remove` fail before any
+deletion. An item with an empty record has no file deleted. The lockfile entry
+of each removed item is dropped. `remove` adopts a `schema: 1` lockfile and
+prints the adoption notice, except when a name is not in the lockfile, which is
+an error.
 
 ### 2.4 `list` / `doctor`
 
@@ -162,19 +222,20 @@ is not in the lockfile, which is an error.
   discoverable from configured sources) is deferred for a future release.
 - `doctor` — verify on-disk state matches the lock file. Nine independent
   buckets: missing per-client outputs (reinstall fixes), modified recorded files
-  (content differs from the recorded SHA-256), recorded files that could not be
-  inspected (`doctor` continues with the others), SSOT hash drift on `local:`
-  sources (`update` fixes), lockfile entries with no recoverable source
-  (`remove` fixes), installed plugins missing from the client (`update`
-  reinstalls), skipped plugins (informational — CLI was absent at install time),
-  orphaned dependencies (informational), and MCP server reconciliation. Exit 0
-  when clean, 1 when any drift bucket is non-empty. Skipped plugins are warnings
-  and do not affect the exit code. Missing, modified and unreadable files are
-  checked against the `files` record; a recorded path that `remove` would never
-  delete (outside the client roots, fewer than three components, or with a `..`
-  component) is skipped without a report. For an item with an empty or missing
-  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
-  list), `doctor` checks each per-client entry file instead.
+  (content differs from the recorded SHA-256, compared as in §2.1), recorded
+  files that could not be inspected (`doctor` continues with the others), SSOT
+  hash drift on `local:` sources (`update` fixes), lockfile entries with no
+  recoverable source (`remove` fixes), installed plugins missing from the client
+  (`update` reinstalls), skipped plugins (informational — CLI was absent at
+  install time), orphaned dependencies (informational), and MCP server
+  reconciliation. Exit 0 when clean, 1 when any drift bucket is non-empty.
+  Skipped plugins are warnings and do not affect the exit code. Missing,
+  modified and unreadable files are checked against the `files` record; a
+  recorded path that `remove` would never delete (outside the client roots,
+  fewer than three components, or with a `..` component) is skipped without a
+  report. For an item with an empty or missing `files` record (a `schema: 1`
+  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
+  per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -285,17 +346,19 @@ git ref, with what content hashes. Same schema in both locations. A new lockfile
 is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
 entry may carry `files` and `pending` lists of records with `client`, `path` and
 `sha256` fields. `add` and `update` fill `files` with every file they write for
-the item and delete the recorded files that a reinstall no longer produces,
-unless another item installed by the same command writes that path; no command
-fills `pending` yet. `remove` deletes only recorded files (§2.3). `add`,
-`update` and `remove` (not `update --dry-run`, not `doctor`, not a `remove` that
-fails on an unknown name, not an `add`, or an `update` for its first source,
-that is refused for a source item that overlaps its own output paths, for a
-conflict with another source, or for two items with one installed name) adopt a
-`schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an
-existing `.upskill-lock.json.v1` is kept and not replaced), record each existing
-file at the items' output paths with its current hash, save `schema: 2`, and
-print the adopted paths to stderr.
+the item and delete the recorded files that a reinstall no longer produces and
+that are unchanged, unless another item installed by the same command writes
+that path; a modified recorded file is kept and stays in `files`, unless
+`--force` deletes it (§2.1, §2.2). No command fills `pending` yet. `remove`
+deletes only recorded files (§2.3). `add`, `update` and `remove` (not
+`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
+not an `add`, or an `update` for its first source, that is refused for a source
+item that overlaps its own output paths, for a conflict with another source, for
+two items with one installed name, or for an installed name with a path
+separator) adopt a `schema: 1` lockfile: they keep the old bytes as
+`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
+replaced), record each existing file at the items' output paths with its current
+hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 
@@ -518,12 +581,12 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.1 Exit codes
 
-| Code  | Meaning                              |
-| ----- | ------------------------------------ |
-| `0`   | Success.                             |
-| `1`   | General error (network, parse, I/O). |
-| `2`   | Usage error (invalid args or flags). |
-| `130` | Interrupted (Ctrl+C / SIGINT).       |
+| Code  | Meaning                                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| `0`   | Success.                                                                                                               |
+| `1`   | General error (network, parse, I/O), or `add` / `update` skipped an item because of a modified or unowned file (§2.1). |
+| `2`   | Usage error (invalid args or flags).                                                                                   |
+| `130` | Interrupted (Ctrl+C / SIGINT).                                                                                         |
 
 ### 6.2 Conventions
 

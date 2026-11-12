@@ -34,6 +34,10 @@ pub struct InstalledItem {
 
 #[derive(Debug, Default, Clone)]
 pub struct InstallReport {
+    /// One entry per item and client in the plan. It also includes the
+    /// items listed in `conflicts`, which were not written; `update` relies
+    /// on this so that a skipped item is not removed as no longer in the
+    /// source.
     pub items: Vec<InstalledItem>,
     /// When the install resolved a bundle (entry `source` was a
     /// `.bundle.yaml` file), every reached bundle in dependency order. The
@@ -58,6 +62,19 @@ pub struct InstallReport {
     /// `None` when no adoption happened. `main.rs` prints the adoption
     /// notice when it is `Some` and not empty.
     pub adopted: Option<Vec<String>>,
+    /// Destinations that stopped the write of an item. Every item listed
+    /// here was not written, and its lockfile entry is unchanged.
+    pub conflicts: Vec<super::FileConflict>,
+    /// With `--force`: modified or unmanaged files that were replaced, and
+    /// modified files that the new version no longer contains and that were
+    /// deleted.
+    pub forced: Vec<PathBuf>,
+    /// Every file that was written with new content (it was absent or held
+    /// other bytes) or deleted, with or without `--force`.
+    pub changed: Vec<PathBuf>,
+    /// Modified files that the new version of an item no longer contains.
+    /// They are kept on disk and stay in the item's record.
+    pub kept_modified: Vec<PathBuf>,
 }
 
 /// Error context attached when a command fails after it saved the
@@ -158,8 +175,9 @@ pub struct MissingOutput {
     pub missing_files: Vec<PathBuf>,
 }
 
-/// Recorded files of one item whose content differs from the recorded
-/// hash, or that are no longer regular files.
+/// Recorded files of one item whose content does not match the recorded
+/// hash, as it is or with every CRLF replaced by LF, or that are no longer
+/// regular files.
 #[derive(Debug, Clone, Serialize)]
 pub struct ModifiedFile {
     pub kind: ItemKind,
@@ -311,7 +329,8 @@ pub struct DoctorReport {
 
 impl DoctorReport {
     /// True when nothing is wrong — every per-client output is on disk,
-    /// every recorded file still has its recorded content and can be read,
+    /// every recorded file still has its recorded content (as it is, or with
+    /// every CRLF replaced by LF) and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, and no installed plugin is missing
     /// from its client.
@@ -356,12 +375,18 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
-    /// `Apply` mode: item no longer exists in the source. Outputs deleted
-    /// and lockfile entry removed.
+    /// `Apply` mode: item no longer exists in the source. Its unchanged
+    /// recorded files were deleted (modified ones are kept and listed in
+    /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile
+    /// entry was removed.
     Removed,
     /// `DryRun` mode: item no longer exists in the source; an `update`
     /// (without `--dry-run`) would remove it.
     WouldRemove,
+    /// `Apply` mode: the item was not written because these destinations
+    /// (relative to the install target root) are modified or not managed
+    /// by upskill. The files and the lockfile entry are unchanged.
+    SkippedModified { files: Vec<PathBuf> },
 }
 
 #[derive(Debug, Clone)]
@@ -378,6 +403,16 @@ pub struct UpdateReport {
     /// Paths recorded when a reinstall adopted a `schema: 1` lockfile,
     /// sorted and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
+    /// Modified files that `update` kept: files that the new version of an
+    /// item no longer contains, and files of an item that its source no
+    /// longer contains.
+    pub kept_modified: Vec<PathBuf>,
+    /// With `--force`: modified or unmanaged files that were replaced or
+    /// deleted, including those of items that the source no longer contains.
+    pub forced: Vec<PathBuf>,
+    /// Every file that was written with new content (it was absent or held
+    /// other bytes) or deleted, with or without `--force`.
+    pub changed: Vec<PathBuf>,
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

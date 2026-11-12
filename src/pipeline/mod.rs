@@ -39,6 +39,7 @@ mod owned;
 pub(crate) mod plan;
 mod report;
 
+pub use apply::{ConflictState, FileConflict};
 use discovery::scan_source_items;
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
@@ -100,6 +101,11 @@ impl ItemKind {
 pub struct AddOptions {
     /// When true, replace items from different sources without error.
     pub force: bool,
+    /// Replace modified and unowned files. Set by `--force` on `add` and
+    /// `update`. When false, an item with such a file at one of its
+    /// destinations is not written and is reported in
+    /// [`InstallReport::conflicts`].
+    pub overwrite: bool,
     /// Alias mappings. For direct `--as alt-name`: vec contains `("", "alt-name")`.
     /// For bundle `--as original=alias`: vec contains `("original", "alias")`.
     pub aliases: Vec<(String, String)>,
@@ -134,6 +140,12 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// [`crate::lockfile`], with each item's written files in `files`. Existing
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
+///
+/// Unless `options.overwrite` is true, an item with a modified or unowned
+/// file at one of its destinations is not written, its lockfile entry is
+/// unchanged, and its conflicts are in [`InstallReport::conflicts`]; the
+/// other items are written (see `apply::apply_plan`). An installed name
+/// that contains a path separator fails before any change.
 ///
 /// Before the adoption and before `apply_plan`, the overlap check refuses
 /// a source item directory that is, is inside, or contains one of its own
@@ -365,14 +377,25 @@ pub fn install_with_lockfile(
     // and also a member of a named bundle) is kept once. Two items with one
     // installed name fail here, before the adoption.
     plan::merge_duplicates(&mut report.planned);
-    apply::check_unique_names(&report.planned)?;
+    apply::check_installed_names(&report.planned)?;
     // The adoption is saved before any file is written. Every later error
     // carries the adopted paths, so that `main.rs` can still print the
     // adoption notice.
     let adopted = owned::adopt_schema1(target, &mut lock)?;
     report.adopted = adopted.clone();
     let result = (|| -> Result<InstallReport> {
-        let mut recorded = apply::apply_plan(target, &mut lock, &report.planned)?;
+        let outcome = apply::apply_plan(target, &mut lock, &report.planned, options.overwrite)?;
+        let mut recorded = outcome.recorded;
+        report.kept_modified = outcome.kept;
+        report.conflicts = outcome.skipped;
+        report.forced = outcome.forced;
+        report.changed = outcome.changed;
+        // A skipped item keeps its lockfile entry unchanged, or gets none.
+        let skipped: std::collections::BTreeSet<(ItemKind, String)> = report
+            .conflicts
+            .iter()
+            .map(|c| (c.kind, c.name.clone()))
+            .collect();
 
         // A bundle-shaped install resolves its items per source above (no bundles
         // in the per-source reports); attach the resolved bundles so plugin/MCP
@@ -466,6 +489,9 @@ pub fn install_with_lockfile(
             });
 
         for mut item in new_items {
+            if skipped.contains(&(item.kind, item.name.clone())) {
+                continue;
+            }
             if let Some(original) = aliased_names.get(&item.name) {
                 item.source_name = Some(original.clone());
             }

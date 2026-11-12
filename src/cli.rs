@@ -69,7 +69,10 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Replace existing items from a different source without error.
+        /// Replace existing items from a different source without error,
+        /// and replace files at the destinations that were modified after
+        /// upskill wrote them or that upskill does not manage. Also deletes
+        /// a modified file that the source no longer contains.
         #[arg(long = "force")]
         force: bool,
         /// Install under an alternate name to avoid conflicts.
@@ -163,10 +166,21 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Skip the confirmation prompt. Already implicit when stdin is
-        /// not a terminal (CI / pipes) or when `--dry-run` is used.
+        /// Apply without a question. In a terminal without `--yes`, `update`
+        /// asks before it applies when a source changed or `--force` is
+        /// given, and otherwise changes nothing: it then does not report
+        /// modified files, delete files of deselected clients or adopt a
+        /// `schema: 1` lockfile. Implicit when stdin is not a terminal
+        /// (CI / pipes); not used with `--dry-run`.
         #[arg(short = 'y', long = "yes")]
         yes: bool,
+        /// Replace files that were modified after upskill wrote them or
+        /// that upskill does not manage, and delete modified files that the
+        /// new version no longer contains. Without it, an item with a
+        /// modified or unmanaged destination is skipped and the command exits
+        /// with code 1; a modified file that is no longer produced is kept.
+        #[arg(long = "force")]
+        force: bool,
         /// Restrict regenerated output to Claude Code. Combine client flags to
         /// target several; no client flag regenerates for all clients.
         #[arg(long = "claude", help_heading = "Client selection")]

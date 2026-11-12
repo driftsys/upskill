@@ -42,10 +42,10 @@ use crate::source::{InstallSource, parse_install_source};
 ///
 /// Plans every output, then writes the plan with no previous ownership
 /// record (a new empty [`crate::lockfile::Lockfile`]); the computed record
-/// is discarded. A reinstall through this function therefore does not
-/// delete the recorded files that the new version no longer produces. It
-/// still deletes the entrypoint file of each client that the item's
-/// `audience:` excludes (the plan's `deselected_entries`).
+/// is discarded. Existing files at the planned paths are replaced
+/// (`overwrite` is true). A reinstall through this function deletes no
+/// file: not the files that the new version no longer produces, and not
+/// the output of a client that the item's `audience:` excludes.
 pub fn install_from_local_path(
     source: &Path,
     target: &Path,
@@ -61,6 +61,7 @@ pub fn install_from_local_path(
         target,
         &mut crate::lockfile::Lockfile::new(),
         &report.planned,
+        true,
     )?;
     Ok(report)
 }
@@ -1171,7 +1172,6 @@ struct ParsedItem {
     /// frontmatter `name` (else folder) for rules/agents. Drives output
     /// paths, link-rewrite namespace, and lockfile identity.
     name: String,
-    audience: Option<Vec<Audience>>,
     ignore: Vec<String>,
     renders: Vec<(Client, String)>,
 }
@@ -1203,7 +1203,6 @@ fn install_items_of_kind(
         // model type, so we dispatch here.
         let ParsedItem {
             name,
-            audience,
             ignore,
             renders,
         } = match kind {
@@ -1224,7 +1223,6 @@ fn install_items_of_kind(
                 }
                 ParsedItem {
                     name,
-                    audience: aud,
                     ignore,
                     renders: out,
                 }
@@ -1246,7 +1244,6 @@ fn install_items_of_kind(
                 }
                 ParsedItem {
                     name,
-                    audience: aud,
                     ignore,
                     renders: out,
                 }
@@ -1268,7 +1265,6 @@ fn install_items_of_kind(
                 }
                 ParsedItem {
                     name,
-                    audience: aud,
                     ignore,
                     renders: out,
                 }
@@ -1352,22 +1348,11 @@ fn install_items_of_kind(
             });
         }
 
-        // Outputs for clients no longer targeted — by author audience or by
-        // the consumer selection (ADR-0012) — are deleted at apply time.
-        let deselected_entries = ALL_CLIENTS
-            .into_iter()
-            .filter(|client| {
-                !(targets(*client, audience.as_deref()) && selection.targets_generation(*client))
-            })
-            .map(|client| output_path(kind, client, &installed))
-            .collect();
-
         report.planned.push(PlannedItem {
             kind,
             name: installed,
             source_name,
             files,
-            deselected_entries,
         });
     }
     Ok(())

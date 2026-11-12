@@ -26,10 +26,6 @@ pub(crate) struct PlannedItem {
     /// Name in the source when `name` is an alias; `None` otherwise.
     pub source_name: Option<String>,
     pub files: Vec<PlannedFile>,
-    /// Entrypoint paths of the clients that this item no longer targets
-    /// (author `audience:` or consumer selection). `apply_plan` deletes
-    /// each of them, and the item directory that holds it when empty.
-    pub deselected_entries: Vec<PathBuf>,
 }
 
 /// Consumer naming choices applied at plan time.
@@ -53,7 +49,7 @@ impl PlanNames {
 /// under the same installed name, for example an item that is named on
 /// the command line and is also a member of a named bundle. Two items are
 /// such copies when they are equal: same kind, installed name, source
-/// name, planned files and deselected entries. The first copy keeps its
+/// name and planned files. The first copy keeps its
 /// position.
 pub(crate) fn merge_duplicates(planned: &mut Vec<PlannedItem>) {
     let mut kept: Vec<PlannedItem> = Vec::with_capacity(planned.len());
@@ -80,7 +76,6 @@ mod tests {
                 bytes: body.to_vec(),
                 mode: None,
             }],
-            deselected_entries: vec![],
         }
     }
 
@@ -104,6 +99,6 @@ mod tests {
         let mut planned = vec![item("a", None, b"one"), item("a", None, b"two")];
         merge_duplicates(&mut planned);
         assert_eq!(planned.len(), 2);
-        assert!(super::super::apply::check_unique_names(&planned).is_err());
+        assert!(super::super::apply::check_installed_names(&planned).is_err());
     }
 }

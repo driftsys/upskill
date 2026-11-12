@@ -50,16 +50,16 @@ usage error.
 
 ## When to use upskill vs raw edits
 
-| Operation                                              | Use upskill    | Raw edits OK                                                                           |
-| ------------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------- |
-| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                     |
-| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                     |
-| Updating installed content from its source             | Yes (`update`) | No                                                                                     |
-| Removing installed content                             | Yes (`remove`) | No                                                                                     |
-| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                               |
-| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                               |
-| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                     |
-| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` overwrites them; `doctor` reports recorded files as modified (see below) |
+| Operation                                              | Use upskill    | Raw edits OK                                                                                                                                                      |
+| ------------------------------------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authoring a new item in a source registry              | Yes (`new`)    | No                                                                                                                                                                |
+| Adding installable content to a consumer project       | Yes (`add`)    | No                                                                                                                                                                |
+| Updating installed content from its source             | Yes (`update`) | No                                                                                                                                                                |
+| Removing installed content                             | Yes (`remove`) | No                                                                                                                                                                |
+| Fixing a typo in a source SSOT body                    | Optional       | Yes, then `upskill lint`                                                                                                                                          |
+| Editing frontmatter in source SSOT                     | Yes (`fmt`)    | No — manual edits break canonicalization                                                                                                                          |
+| Auditing installed content for drift                   | Yes (`doctor`) | No                                                                                                                                                                |
+| Hand-editing a generated `.claude/` or `.github/` file | Never          | No — `update` skips the item and exits 1 until `update --force` replaces the edit; in a terminal with no source change it changes nothing and exits 0 (see below) |
 
 When in doubt, use upskill. Raw edits are a sharp tool — only reach for them on
 content you authored and understand, and always lint after.
@@ -124,9 +124,10 @@ install.
    remove every item installed from one source — use the label shown in
    `upskill list` or the lockfile).
 2. `remove` deletes only the files recorded for the item with their recorded
-   hash. It keeps each recorded file that you edited, prints
-   `kept modified file: <path>`, and still drops the item from the lockfile. To
-   delete edited files as well, run the command with `--force`.
+   hash (a copy with CRLF line endings in place of LF also counts). It keeps
+   each recorded file that you edited, prints `kept modified file: <path>`, and
+   still drops the item from the lockfile. To delete edited files as well, run
+   the command with `--force`.
 3. Verify with `upskill list` that the item is gone and `upskill doctor` that
    nothing else depended on it.
 4. Commit the changed lockfile and the deleted per-client files. For each kept
@@ -137,8 +138,8 @@ install.
 1. Run `upskill doctor`. It verifies the installed state matches the lockfile
    (per-client files present, hashes consistent, no orphans).
 2. For each finding, decide whether the drift is in the consumer project
-   (someone hand-edited generated output → re-run `upskill update`) or in the
-   source registry (an item changed shape upstream → review and
+   (someone hand-edited generated output → re-run `upskill update --force`) or
+   in the source registry (an item changed shape upstream → review and
    `upskill update`).
 3. If `doctor` surfaces a content-shape concern (vague description, oversized
    rule), the fix lives in the source registry — hand off to
@@ -172,8 +173,10 @@ Verifies the installed state of a consumer project against its
 `.upskill-lock.json`. Pure consistency check — no judgment on content shape.
 Common findings:
 
-- Generated per-client file missing or hash-changed (someone hand-edited it →
-  re-run `update`)
+- Generated per-client file missing (→ run `update --yes`, or `update` without a
+  terminal; in a terminal with no source change, `update` changes nothing) or
+  hash-changed (someone hand-edited it → `update --force` replaces the edit;
+  without `--force`, `update` keeps the edit, skips the item and exits 1)
 - Lockfile references an item whose source is no longer reachable
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
@@ -196,7 +199,13 @@ affect the exit code.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —
-  `upskill update` overwrites them. For an item with a `files` record in a
+  `upskill update` then skips the item, prints
+  `skipped <kind> <name>: <path> was modified or is not managed by upskill`, and
+  exits 1; `upskill update --force` replaces the edit. In a terminal without
+  `--yes`, when no source changed and `--force` is not given, `upskill update`
+  changes nothing, reports nothing about the edit, and exits 0. `upskill add`
+  skips an item in the same way when a destination was edited or was not written
+  by upskill (`add --force` replaces it). For an item with a `files` record in a
   `schema: 2` lockfile, `upskill doctor` reports each edited file as modified
   and exits 1. For a `schema: 1` lockfile or an item with an empty `files`
   record, `doctor` only checks that the entry files exist.

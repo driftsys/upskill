@@ -34,8 +34,8 @@ and installed through a command.
 1. **Ownership record in the lockfile.** Each installed item will record the
    files written for it, with the client, the path relative to the scope root
    and the SHA-256 of the bytes written. `update` and `remove` will replace or
-   delete only files whose current hash equals the recorded hash, unless the
-   user passes `--force`.
+   delete only files whose current hash equals the recorded hash (or whose hash
+   with every CRLF replaced by LF equals it), unless the user passes `--force`.
 2. **Repeatable operations.** An install or update will record its intended
    files as pending in the lockfile before it writes, will write each file
    through a temporary file and a rename, and will then promote the pending
