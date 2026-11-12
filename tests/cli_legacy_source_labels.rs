@@ -242,7 +242,7 @@ fn legacy_item_update_preserves_alias_subfolder_and_preview_bytes() {
             .args(["update", "installed", "--dry-run"])
             .assert()
             .success()
-            .stdout(predicate::str::contains("would change"));
+            .stdout(predicate::str::contains("\n  update   skill "));
         assert_eq!(
             snapshot(&f.target),
             before,
@@ -317,7 +317,7 @@ fn reported_legacy_bundle_updates_and_preserves_unrelated_metadata() {
         .args(["update", "original", "--dry-run"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("would change"));
+        .stdout(predicate::str::contains("\n  update   skill "));
     assert_eq!(snapshot(&f.target), before);
     f.cmd().args(["update", "original"]).assert().success();
     assert!(
@@ -378,7 +378,8 @@ fn legacy_pinned_ref_stays_selected_when_default_branch_advances() {
         .args(["update", "--dry-run"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("would update 0 of 1"));
+        .stdout(predicate::str::contains("would update 1 of 1"))
+        .stdout(predicate::str::contains("\n  update   skill "));
     assert_eq!(snapshot(&f.target), before);
     f.cmd().args(["update"]).assert().success();
     assert_eq!(

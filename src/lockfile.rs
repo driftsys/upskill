@@ -174,7 +174,7 @@ pub enum PluginInstallStatus {
     Installed,
     /// Plugin was not installed because the client CLI was not on PATH at
     /// install time (warn-skip outcome).  `upskill doctor` surfaces these
-    /// so the user can install the CLI and re-run `upskill update`.
+    /// so the user can install the CLI and re-run `upskill update --yes`.
     Skipped,
     /// Plugin has manual installation instructions — user must follow a URL.
     Instructions,

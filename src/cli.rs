@@ -28,8 +28,8 @@ pub struct Cli {
     #[arg(long = "no-color", global = true)]
     pub no_color: bool,
     /// Suppress informational stdout. Errors on stderr and exit codes
-    /// are unaffected. Useful for CI use of `lint`, `update --dry-run`,
-    /// etc.
+    /// are unaffected. Useful for CI use of `lint`, `update`, etc.
+    /// `update --dry-run --quiet` prints nothing.
     #[arg(short = 'q', long = "quiet", global = true)]
     pub quiet: bool,
     #[command(subcommand)]
@@ -142,8 +142,10 @@ pub enum Commands {
     /// Pull latest sources and regenerate changed items.
     ///
     /// Re-fetches the source for every (or just the named) lockfile
-    /// entries and reinstalls those sources. With `--dry-run`, hashes
-    /// the new SSOT and reports what would change without writing.
+    /// entries and reinstalls those sources, one source at a time. With
+    /// `--dry-run`, prints for each source the block of what applying it
+    /// would change, computed from the files on disk and the lockfile,
+    /// without writing.
     /// `update` always fetches.
     #[command(
         display_order = 3,
@@ -166,12 +168,11 @@ pub enum Commands {
         /// fallback to global when `cwd` is not inside a git repo.
         #[arg(short = 'p', long = "project")]
         project: bool,
-        /// Apply without a question. In a terminal without `--yes`, `update`
-        /// asks before it applies when a source changed, an item has an
-        /// interrupted `add` or `update`, or `--force` is given, and
-        /// otherwise changes nothing: it then does not report
-        /// modified files, delete files of deselected clients or adopt a
-        /// `schema: 1` lockfile. Implicit when stdin is not a terminal
+        /// Apply every source without a question. In a terminal without
+        /// `--yes`, `update` prints one block per source and asks
+        /// `Apply? [y/N/q]` for each source that would change a file, an
+        /// item record or a hand-shake file; a source that would change
+        /// nothing is not applied. Implicit when stdin is not a terminal
         /// (CI / pipes); not used with `--dry-run`.
         #[arg(short = 'y', long = "yes")]
         yes: bool,

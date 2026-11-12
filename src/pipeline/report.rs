@@ -35,7 +35,9 @@ pub struct InstalledItem {
 #[derive(Debug, Default, Clone)]
 pub struct InstallReport {
     /// One entry per item and client in the plan. It also includes the
-    /// items listed in `conflicts`, which were not written; `update` relies
+    /// items listed in `conflicts` and the items whose modified files were
+    /// kept because nothing is withheld from them, none of which were
+    /// written; `update` relies
     /// on this so that a skipped item is not removed as no longer in the
     /// source.
     pub items: Vec<InstalledItem>,
@@ -56,7 +58,7 @@ pub struct InstallReport {
     /// Surfaced to the user by `main.rs`; never an error.
     pub selection_skipped: Vec<String>,
     /// Every output file of every item, computed before anything is
-    /// written. `install_with_lockfile` writes it with one call.
+    /// written. `PreparedInstall::commit` writes it with one call.
     pub(crate) planned: Vec<super::plan::PlannedItem>,
     /// Paths recorded when this install adopted a `schema: 1` lockfile;
     /// `None` when no adoption happened. `main.rs` prints the adoption
@@ -70,7 +72,8 @@ pub struct InstallReport {
     /// deleted.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted, with or without `--force`.
+    /// other bytes), that got a different planned mode, or that was deleted,
+    /// with or without `--force`.
     pub changed: Vec<PathBuf>,
     /// Modified files that the new version of an item no longer contains.
     /// They are kept on disk and stay in the item's record. With
@@ -78,6 +81,36 @@ pub struct InstallReport {
     /// destinations of the items that were not written because nothing is
     /// withheld from them; their lockfile entries are unchanged.
     pub kept_modified: Vec<PathBuf>,
+}
+
+/// What a commit would do to one item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreviewAction {
+    Update,
+    Complete,
+    Remove,
+    Skip,
+}
+
+/// One item of a preview that is not up to date.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreviewItem {
+    pub kind: ItemKind,
+    pub name: String,
+    pub action: PreviewAction,
+    /// Files that would be written with new content, or that would get a
+    /// different planned mode.
+    pub write: Vec<PathBuf>,
+    /// Files that would be deleted.
+    pub delete: Vec<PathBuf>,
+    /// Modified files that are kept (stale, or of a removed item).
+    pub kept_modified: Vec<PathBuf>,
+    /// With `--force`: modified or unmanaged files that would be lost.
+    pub forced: Vec<PathBuf>,
+    /// For `Skip`: the files that cause the skip.
+    pub blocking: Vec<PathBuf>,
+    /// True when only the lockfile record of the item changes.
+    pub record_only: bool,
 }
 
 /// Error context attached when a command fails after it saved the
@@ -329,7 +362,7 @@ pub struct DoctorReport {
     pub missing_plugins: Vec<MissingPlugin>,
     /// Plugins recorded in the lockfile as `skipped` (warn-skip at install
     /// time). Informational only — does NOT cause `is_clean()` to return
-    /// false or trigger exit 1. Run `upskill update` after installing the
+    /// false or trigger exit 1. Run `upskill update --yes` after installing the
     /// missing CLI to install them.
     pub skipped_plugins: Vec<SkippedPlugin>,
     /// MCP server reconciliation results. Entries are present for every MCP
@@ -368,51 +401,50 @@ impl DoctorReport {
     }
 }
 
-/// Whether `update` writes or just reports.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UpdateMode {
-    Apply,
-    DryRun,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
-    /// SSOT hash matches the lockfile and the item has no interrupted
-    /// operation — nothing to do.
+    /// The source of the item was applied, and the source hash of the item
+    /// equals the hash recorded in the lockfile entry; the item has no
+    /// `pending` record. The status comes from this hash comparison only:
+    /// an item reported as up to date can have had files written or
+    /// deleted (for example a missing output written again, or the files
+    /// of a client that the selection no longer targets deleted) or its
+    /// lockfile record changed (for example a historical source label
+    /// rewritten). It also covers an item whose modified destinations were
+    /// kept (listed in [`UpdateReport::kept_modified`]): nothing of it was
+    /// written, and those files differ from what the source renders. Also
+    /// the status of an item of a source that was not applied and that has
+    /// no preview item.
     UpToDate,
-    /// `Apply` mode: the lockfile hash changed (or was previously unset
-    /// and now resolved). Outputs were rewritten.
+    /// The source of the item was applied, and the source hash of the item
+    /// differs from the hash recorded in the lockfile entry (or no hash was
+    /// recorded).
     Updated {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
-    /// `DryRun` mode: SSOT hash differs from the lockfile entry; an
-    /// `update` (without `--dry-run`) would rewrite outputs.
-    WouldChange {
-        old_hash: Option<String>,
-        new_hash: Option<String>,
-    },
-    /// `Apply` mode: the item had an interrupted operation (a non-empty
-    /// `pending` record) and its source hash did not change. The operation
-    /// was completed: its planned files were written and its `pending`
-    /// record was cleared.
+    /// The item had an interrupted operation (a non-empty `pending`
+    /// record) and its source hash did not change. The operation was
+    /// completed: its planned files were written and its `pending` record
+    /// was cleared.
     CompletedInterrupted,
-    /// `DryRun` mode: the item has an interrupted operation (a non-empty
-    /// `pending` record) and its source hash did not change; an `update`
-    /// (without `--dry-run`) would complete it.
-    WouldCompleteInterrupted,
-    /// `Apply` mode: item no longer exists in the source. Its unchanged
-    /// recorded files were deleted (modified ones are kept and listed in
+    /// The item no longer exists in the source. Its unchanged recorded
+    /// files were deleted (modified ones are kept and listed in
     /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile
     /// entry was removed.
     Removed,
-    /// `DryRun` mode: item no longer exists in the source; an `update`
-    /// (without `--dry-run`) would remove it.
-    WouldRemove,
-    /// `Apply` mode: the item was not written because these destinations
-    /// (relative to the install target root) are modified or not managed
-    /// by upskill. The files and the lockfile entry are unchanged.
+    /// The item was not written because these destinations (relative to
+    /// the install target root) are modified or not managed by upskill.
+    /// The files and the lockfile entry are unchanged. Reported for an
+    /// applied source, and for a source that was not applied because it
+    /// has no changes (see [`SourcePreview::has_changes`]).
     SkippedModified { files: Vec<PathBuf> },
+    /// The source of the item has changes, and the source was not applied:
+    /// the observer did not return [`SourceDecision::Apply`], or the run is
+    /// a dry run. `action` is what applying the source would do to the
+    /// item; a [`PreviewAction::Skip`] item of such a source is reported
+    /// here and does not cause exit code 1.
+    NotApplied { action: PreviewAction },
 }
 
 #[derive(Debug, Clone)]
@@ -426,21 +458,112 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
-    /// Paths recorded when a reinstall adopted a `schema: 1` lockfile,
-    /// sorted and without duplicates; `None` when no adoption happened.
+    /// Paths recorded when `update` adopted a `schema: 1` lockfile, sorted
+    /// and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
     /// Modified files that `update` kept: files that the new version of an
     /// item no longer contains, files of an item that its source no longer
     /// contains, and modified destinations of an item whose source did not
-    /// change and from which nothing is withheld (the item is reported as
-    /// [`UpdateStatus::UpToDate`]).
+    /// change and from which nothing is withheld (an entry of the run is
+    /// reported as [`UpdateStatus::UpToDate`]; a dependency from another
+    /// source that is not an entry of the run, for example with
+    /// `update <name>`, has no [`UpdatedItem`]).
     pub kept_modified: Vec<PathBuf>,
     /// With `--force`: modified or unmanaged files that were replaced or
     /// deleted, including those of items that the source no longer contains.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted, with or without `--force`.
+    /// other bytes), that got a different planned mode, or that was deleted,
+    /// with or without `--force`.
     pub changed: Vec<PathBuf>,
+    /// Sources that were previewed.
+    pub sources_considered: usize,
+    /// Sources that were applied.
+    pub sources_applied: usize,
+    /// Sources with changes that were not applied (answer no, quit, dry run).
+    pub sources_not_applied: usize,
+    /// True when the observer returned [`SourceDecision::Stop`].
+    pub stopped: bool,
+    /// Sources of the run that were not previewed because the observer
+    /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
+    /// run did not stop.
+    pub sources_remaining: usize,
+}
+
+/// What applying one source of `update` would do now, computed after the
+/// fetch of the source and before any write of it.
+#[derive(Debug, Clone)]
+pub struct SourcePreview {
+    /// The source label, as recorded in the lockfile.
+    pub source: String,
+    /// Items that are not up to date. An up-to-date item has no entry.
+    pub items: Vec<PreviewItem>,
+    /// `kept modified file` notes, not changes: the modified destinations of
+    /// items kept by the rule for edited files, and the kept modified stale
+    /// files of items that have no other change.
+    pub kept_notes: Vec<PathBuf>,
+    /// Hand-shake files that applying the source would create or change.
+    pub handshake: Vec<PathBuf>,
+    /// Paths adopted from a `schema: 1` lockfile just before this preview.
+    pub adopted: Option<Vec<String>>,
+}
+
+impl SourcePreview {
+    /// True exactly when a commit would write or delete a file or change an
+    /// item record: an item has a non-empty `write`, `delete` or `forced`,
+    /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
+    /// hand-shake file would be created or changed. A `Skip` item and a
+    /// note in `kept_notes` are not changes.
+    pub fn has_changes(&self) -> bool {
+        self.items.iter().any(|item| {
+            !item.write.is_empty()
+                || !item.delete.is_empty()
+                || !item.forced.is_empty()
+                || matches!(item.action, PreviewAction::Complete | PreviewAction::Remove)
+                || item.record_only
+        }) || !self.handshake.is_empty()
+    }
+}
+
+/// What `update` does with one previewed source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceDecision {
+    /// Apply the source, then continue with the next source.
+    Apply,
+    /// Do not apply the source; continue with the next source.
+    Skip,
+    /// Do not apply the source and stop the run.
+    Stop,
+}
+
+/// What the apply of one source did, counted per item status.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceResult {
+    pub source: String,
+    pub updated: usize,
+    pub completed: usize,
+    pub removed: usize,
+    /// Modified files that were kept, counted for this source before the
+    /// report removes the duplicates across sources: the counts of all
+    /// sources can add up to more than [`UpdateReport::kept_modified`]
+    /// holds.
+    pub kept_modified: usize,
+    pub skipped: usize,
+    /// Files that the commit and the removals of this source wrote with new
+    /// content or deleted: the number of paths that this source added to
+    /// [`UpdateReport::changed`].
+    pub changed_files: usize,
+}
+
+/// The caller of `update`: it receives each source preview and decides,
+/// and it receives the result of each applied source. `update` never reads
+/// input and never prints; the observer does.
+pub trait UpdateObserver {
+    /// Called once per source, after its preview and before any write of
+    /// it. With a dry run, the decision is ignored.
+    fn preview(&mut self, preview: &SourcePreview) -> SourceDecision;
+    /// Called after a source was applied.
+    fn applied(&mut self, result: &SourceResult);
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

@@ -17,12 +17,12 @@ use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
 use super::owned::{FileState, classify, matches_recorded, rel_to_record, sha256_hex};
-use super::plan::PlannedItem;
+use super::plan::{PlannedFile, PlannedItem};
 use crate::lockfile::{LockedItem, Lockfile, OwnedFile};
 
 /// The record of written files for each planned `(kind, installed name)`,
-/// sorted by `client`, then `path`. `install_with_lockfile` copies it into
-/// the `LockedItem` it upserts for each installed item.
+/// sorted by `client`, then `path`. `PreparedInstall::commit` copies it
+/// into the `LockedItem` it upserts for each installed item.
 pub(super) type RecordedFiles = BTreeMap<(ItemKind, String), Vec<OwnedFile>>;
 
 /// Client roots under which a recorded path may be deleted.
@@ -68,7 +68,8 @@ pub(super) struct ApplyOutcome {
     /// and the modified stale files that were deleted.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted.
+    /// other bytes), that got a different planned mode, or that was deleted;
+    /// see [`changes_file`].
     pub changed: Vec<PathBuf>,
 }
 
@@ -97,6 +98,21 @@ pub(super) struct ItemChanges {
     pub unchanged: BTreeSet<PathBuf>,
     /// What [`execute_plan`] does with the item.
     pub disposition: Disposition,
+}
+
+impl ItemChanges {
+    /// The `files` record that [`execute_plan`] saves for this item when it
+    /// writes it: the planned files and the records of the kept stale
+    /// files, sorted by `client`, then `path`, without duplicates.
+    pub fn recorded_files(&self) -> Vec<OwnedFile> {
+        let mut files = self.files.clone();
+        for (_, old) in &self.kept {
+            files.extend(old.iter().cloned());
+        }
+        files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
+        files.dedup();
+        files
+    }
 }
 
 /// What [`execute_plan`] does with one item. See the rule in the rustdoc
@@ -161,13 +177,15 @@ pub(super) fn apply_plan(
 /// - the item has no stale file, to delete or to keep;
 /// - every planned file that is not a conflict is `unchanged`.
 ///
-/// An `Owned` destination is `unchanged`: it is not rewritten and is not
-/// counted in `changed` when its bytes equal the planned bytes, or when
+/// An `Owned` destination is `unchanged`: it is not rewritten when its
+/// bytes equal the planned bytes, or when
 /// they are a CRLF variant of the planned bytes (see [`matches_recorded`]) and the hash of the planned
 /// bytes was already recorded for the file in its `files` record (a
 /// `pending` hash does not count here). Its record is the hash of the
 /// planned bytes. In that case a file with a planned mode has the mode set
-/// again; a file without one keeps its current mode.
+/// again, and is counted in `changed` only when its mode differed from the
+/// planned mode; a file without one keeps its current mode and is not
+/// counted.
 ///
 /// Stale files: the files of an item's previous `files` or `pending` record
 /// that no planned item of this run writes. So a file that a failed run
@@ -411,7 +429,7 @@ pub(super) fn decide_plan(
 /// record.
 ///
 /// With `new_entries` (the lockfile entry of each planned item, given by
-/// `install_with_lockfile`), the operation can be completed by a second
+/// `PreparedInstall::commit`), the operation can be completed by a second
 /// run after a failure. The lockfile is saved in step 2 when at least one
 /// item gets a `pending` record, and always in step 4:
 ///
@@ -468,7 +486,7 @@ pub(super) fn execute_plan(
             let deletes = changes
                 .delete
                 .iter()
-                .any(|rel| fs::symlink_metadata(target.join(rel)).is_ok());
+                .any(|rel| deletes_existing(target, rel));
             if !writes && !deletes {
                 continue;
             }
@@ -515,10 +533,11 @@ pub(super) fn execute_plan(
 
     let mut outcome = ApplyOutcome::default();
     for (item, changes) in planned.iter().zip(changes) {
+        let files = changes.recorded_files();
         let ItemChanges {
             kind,
             name,
-            mut files,
+            files: _,
             delete,
             kept,
             conflicts,
@@ -540,7 +559,7 @@ pub(super) fn execute_plan(
             .forced
             .extend(conflicts.into_iter().map(|conflict| conflict.path));
         for rel in &delete {
-            if fs::symlink_metadata(target.join(rel)).is_ok() {
+            if deletes_existing(target, rel) {
                 outcome.changed.push(rel.clone());
             }
             delete_recorded(target, rel)?;
@@ -552,6 +571,9 @@ pub(super) fn execute_plan(
                 fs::create_dir_all(parent)
                     .with_context(|| format!("create dir {}", parent.display()))?;
             }
+            if changes_file(target, file, &unchanged) {
+                outcome.changed.push(file.rel.clone());
+            }
             // An `Owned` destination that already holds the planned bytes, or
             // a CRLF variant of them, is left as it is.
             if unchanged.contains(&file.rel) {
@@ -561,18 +583,10 @@ pub(super) fn execute_plan(
                 continue;
             }
             // The pre-check accepted this path.
-            if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
-                outcome.changed.push(file.rel.clone());
-            }
             write_staged(&full, &file.bytes, file.mode)?;
         }
 
-        for (rel, old) in kept {
-            files.extend(old);
-            outcome.kept.push(rel);
-        }
-        files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
-        files.dedup();
+        outcome.kept.extend(kept.into_iter().map(|(rel, _)| rel));
 
         if let Some(entry) = lock
             .items
@@ -597,7 +611,7 @@ pub(super) fn execute_plan(
 /// dependency's own source computes it differently from the reinstall of
 /// the source that requires the dependency, so it does not count as a
 /// change here.
-fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
+pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),
         pending: Vec::new(),
@@ -605,6 +619,41 @@ fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
         ..item.clone()
     };
     strip(a) == strip(b)
+}
+
+/// Whether [`execute_plan`] changes `file`, so that it counts the file in
+/// `ApplyOutcome::changed`: the file is not in `unchanged` and is absent or
+/// its bytes differ from the planned bytes, or the file has a planned mode
+/// and its current mode differs from it (Unix only). For an item with
+/// [`Disposition::Write`] only. The preview of an update uses the same
+/// predicate, so that it lists exactly the files that the commit changes.
+pub(super) fn changes_file(
+    target: &Path,
+    file: &PlannedFile,
+    unchanged: &BTreeSet<PathBuf>,
+) -> bool {
+    let full = target.join(&file.rel);
+    let new_content = !unchanged.contains(&file.rel)
+        && !fs::read(&full).is_ok_and(|current| current == file.bytes);
+    new_content || file.mode.is_some_and(|mode| mode_differs(&full, mode))
+}
+
+/// Whether the file at `path` exists and its mode differs from `mode`.
+#[cfg(unix)]
+fn mode_differs(path: &Path, mode: u32) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & 0o7777 != mode & 0o7777)
+}
+
+#[cfg(not(unix))]
+fn mode_differs(_path: &Path, _mode: u32) -> bool {
+    false
+}
+
+/// Whether [`execute_plan`] deletes an existing path when it deletes the
+/// stale path `rel`, so that it counts `rel` in `ApplyOutcome::changed`.
+pub(super) fn deletes_existing(target: &Path, rel: &Path) -> bool {
+    fs::symlink_metadata(target.join(rel)).is_ok()
 }
 
 /// Writes `bytes` to a new stage file `.upskill-stage-<16 hex digits>` in
@@ -2548,7 +2597,7 @@ mod repeatable_tests {
 
     #[cfg(unix)]
     #[test]
-    fn an_unchanged_file_gets_its_planned_mode_again() {
+    fn an_unchanged_file_gets_its_planned_mode_again_and_is_counted() {
         use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), A, b"a");
@@ -2559,7 +2608,8 @@ mod repeatable_tests {
         let mut item = planned(&[(A, b"a")]);
         item.files[0].mode = Some(0o755);
         let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None, false).unwrap();
-        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+        // The mode changed, so the file is counted as changed.
+        assert_eq!(outcome.changed, vec![PathBuf::from(A)]);
         let mode = fs::metadata(&full).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o755);
     }

@@ -10,8 +10,9 @@ use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
-    PluginResult, RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
-    install_with_lockfile, list, remove, update,
+    PluginResult, PreviewAction, RemoveFilter, RemoveReport, SourceDecision, SourcePreview,
+    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile, list,
+    remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -26,6 +27,9 @@ const EXIT_USAGE: i32 = 2;
 const EXIT_INTERRUPTED: i32 = 130;
 
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+/// True only while `update` in a terminal waits for the answer to
+/// `Apply? [y/N/q]`. No write is in progress then, so SIGINT exits at once.
+static WAITING_FOR_ANSWER: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     let cli = match Cli::try_parse() {
@@ -136,6 +140,11 @@ fn install_signal_handlers() -> anyhow::Result<()> {
         // ensures the `was_interrupted()` check in main() sees true even
         // if the eprintln races with process teardown.
         INTERRUPTED.store(true, Ordering::SeqCst);
+        if WAITING_FOR_ANSWER.load(Ordering::SeqCst) {
+            // End the question line; nothing is written, so exit now.
+            eprintln!();
+            std::process::exit(EXIT_INTERRUPTED);
+        }
         eprintln!("\n{} cleaning up", style::warn("interrupted:"));
         eprintln!("  hint: run 'upskill doctor' to check for partial installs");
     })
@@ -805,6 +814,18 @@ struct UpdateArgs<'a> {
 /// skipped files to stderr.
 fn finish_update(report: &UpdateReport) -> i32 {
     print_kept_modified(&report.kept_modified);
+    if print_skipped(report) {
+        eprintln!("Use --force to replace.");
+        EXIT_ERROR
+    } else {
+        EXIT_SUCCESS
+    }
+}
+
+/// Print to stderr one `skipped` line per file of each item with status
+/// [`UpdateStatus::SkippedModified`]. Returns true when there is such an
+/// item.
+fn print_skipped(report: &UpdateReport) -> bool {
     let mut skipped = false;
     for item in &report.items {
         if let UpdateStatus::SkippedModified { files } = &item.status {
@@ -819,12 +840,16 @@ fn finish_update(report: &UpdateReport) -> i32 {
             }
         }
     }
-    if skipped {
-        eprintln!("Use --force to replace.");
-        EXIT_ERROR
-    } else {
-        EXIT_SUCCESS
-    }
+    skipped
+}
+
+/// Print `Changed <n> file(s) written or deleted`.
+fn print_changed_files(count: usize) {
+    println!(
+        "{} {} file(s) written or deleted",
+        style::success("Changed"),
+        count
+    );
 }
 
 fn run_update(args: UpdateArgs) -> i32 {
@@ -849,217 +874,414 @@ fn run_update(args: UpdateArgs) -> i32 {
     let is_global = global || (!project && !is_inside_git_repo());
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
 
-    if dry_run {
-        // Explicit --dry-run: compute and report without applying.
-        match update(
-            &target,
-            names,
-            UpdateMode::DryRun,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, true);
-                EXIT_SUCCESS
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
-        }
-    } else if update_step(
-        !yes && std::io::IsTerminal::is_terminal(&std::io::stdin()),
-        false,
+    let terminal = !dry_run && !yes && std::io::IsTerminal::is_terminal(&std::io::stdin());
+    let mut apply_all = ApplyAll;
+    let mut dry = DryRunObserver::default();
+    let mut ask = TerminalObserver::default();
+    let observer: &mut dyn UpdateObserver = if dry_run {
+        &mut dry
+    } else if terminal {
+        &mut ask
+    } else {
+        &mut apply_all
+    };
+    let result = update(
+        &target,
+        names,
+        plugin_scope,
+        &selection,
         force,
-    ) == UpdateStep::ApplyWithoutPrompt
-    {
-        // No confirmation needed — apply directly (single fetch).
-        match update(
-            &target,
-            names,
-            UpdateMode::Apply,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, false);
-                print_adoption_notice(report.adopted.as_deref());
-                finish_update(&report)
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
+        dry_run,
+        observer,
+    );
+    match result {
+        Ok(report) if dry_run => {
+            print_update_report(&report, true);
+            EXIT_SUCCESS
         }
-    } else {
-        // Interactive: dry-run first to show plan, then apply if confirmed.
-        let plan = match update(
-            &target,
-            names,
-            UpdateMode::DryRun,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(r) => r,
-            Err(err) => {
+        Ok(report) if terminal => finish_terminal_update(&report),
+        Ok(report) => {
+            print_update_report(&report, false);
+            print_adoption_notice(report.adopted.as_deref());
+            finish_update(&report)
+        }
+        Err(err) => {
+            // A terminal run prints the adoption notice before the block of
+            // the source that adopted; it is not printed a second time.
+            if !ask.notice_printed {
                 print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                return EXIT_ERROR;
             }
+            print_error_chain(&err);
+            eprintln!();
+            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            EXIT_ERROR
+        }
+    }
+}
+
+/// The last line of `update --dry-run`.
+const DRY_RUN_LAST_LINE: &str = "Each block is computed for the current state; a later block does not include the effect of an earlier one.";
+
+/// The `update` observer for `--yes` and for a run without a terminal:
+/// applies every source, also one without a change, so that its plugin and
+/// MCP steps run. After an interrupt it stops before the next source.
+/// Prints nothing.
+struct ApplyAll;
+
+impl UpdateObserver for ApplyAll {
+    fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+        // After an interrupt during the apply of a source, apply no other
+        // source.
+        if was_interrupted() {
+            SourceDecision::Stop
+        } else {
+            SourceDecision::Apply
+        }
+    }
+
+    fn applied(&mut self, _result: &SourceResult) {}
+}
+
+/// The `update` observer for `--dry-run`: prints the block of each source
+/// and applies nothing. The totals are printed after the run.
+#[derive(Default)]
+struct DryRunObserver {
+    blocks: usize,
+}
+
+impl UpdateObserver for DryRunObserver {
+    fn preview(&mut self, preview: &SourcePreview) -> SourceDecision {
+        print_block(preview, &mut self.blocks);
+        SourceDecision::Skip
+    }
+
+    fn applied(&mut self, _result: &SourceResult) {}
+}
+
+/// The `update` observer for a terminal without `--yes`. For each source it
+/// prints the adoption notice when the source adopted a `schema: 1`
+/// lockfile, then the block of the source. For a source with changes it
+/// asks `Apply? [y/N/q]` on stderr and reads one line; see [`parse_answer`].
+/// A source without changes is not applied and is not asked about. After
+/// an applied source it prints the result line ([`render_result`]).
+///
+/// Ctrl-C while the question waits exits with code 130 at once. After an
+/// interrupt during the apply of a source, it returns
+/// [`SourceDecision::Stop`] before the next block; the run exits with
+/// code 130.
+///
+/// With `--quiet`, the blocks and the result lines are not printed, and the
+/// question names the source: `Apply changes from <source>? [y/N/q]`. The
+/// adoption notice is printed in both cases.
+#[derive(Default)]
+struct TerminalObserver {
+    blocks: usize,
+    /// True after the adoption notice was printed.
+    notice_printed: bool,
+}
+
+impl UpdateObserver for TerminalObserver {
+    fn preview(&mut self, preview: &SourcePreview) -> SourceDecision {
+        use std::io::{BufRead, Write};
+
+        // After an interrupt during the apply of a source, show and apply no
+        // other source.
+        if was_interrupted() {
+            return SourceDecision::Stop;
+        }
+        if let Some(paths) = preview.adopted.as_deref().filter(|p| !p.is_empty()) {
+            print_adoption_notice(Some(paths));
+            self.notice_printed = true;
+        }
+        print_block(preview, &mut self.blocks);
+        if !preview.has_changes() {
+            return SourceDecision::Skip;
+        }
+        if style::is_quiet() {
+            eprint!("Apply changes from {}? [y/N/q] ", preview.source);
+        } else {
+            eprint!("Apply? [y/N/q] ");
+        }
+        let _ = std::io::stderr().flush();
+        let mut line = String::new();
+        WAITING_FOR_ANSWER.store(true, Ordering::SeqCst);
+        // An interrupt received before the flag was set did not exit.
+        if was_interrupted() {
+            WAITING_FOR_ANSWER.store(false, Ordering::SeqCst);
+            return SourceDecision::Stop;
+        }
+        let read = std::io::stdin().lock().read_line(&mut line);
+        WAITING_FOR_ANSWER.store(false, Ordering::SeqCst);
+        if was_interrupted() {
+            return SourceDecision::Stop;
+        }
+        let answer = match read {
+            Ok(0) | Err(_) => {
+                // End the question line, which the user did not end.
+                eprintln!();
+                None
+            }
+            Ok(_) => Some(line.as_str()),
         };
+        parse_answer(answer)
+    }
 
-        // An item with an interrupted operation counts as changed: its
-        // status is `WouldCompleteInterrupted`, not `UpToDate`.
-        let source_changed = plan
-            .items
-            .iter()
-            .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
-        // With `prompting` true, the step is `Confirm` or `NothingToDo`.
-        if update_step(true, source_changed, force) == UpdateStep::NothingToDo {
-            if !style::is_quiet() {
-                println!("everything is up to date — nothing to do");
-            }
-            return EXIT_SUCCESS;
-        }
+    fn applied(&mut self, result: &SourceResult) {
         if !style::is_quiet() {
-            print_update_plan(&plan);
-        }
-        if !confirm_update() {
-            eprintln!("aborted.");
-            return EXIT_SUCCESS;
-        }
-
-        match update(
-            &target,
-            names,
-            UpdateMode::Apply,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, false);
-                print_adoption_notice(report.adopted.as_deref());
-                finish_update(&report)
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
+            println!("{}", render_result(result));
         }
     }
 }
 
-/// What `update` does before it applies.
-#[derive(Debug, PartialEq, Eq)]
-enum UpdateStep {
-    /// Apply without a question: a run with `--yes` or without a terminal.
-    ApplyWithoutPrompt,
-    /// Show the plan of the dry run and ask before applying.
-    Confirm,
-    /// Change nothing and print that there is nothing to do. In a terminal
-    /// without `--yes`, when no source changed, no item has an interrupted
-    /// operation and `--force` is not given,
-    /// `update` does not apply: it does not report a modified file, does
-    /// not delete the files of a client that the flags no longer select,
-    /// and does not adopt a `schema: 1` lockfile.
-    NothingToDo,
+/// The decision for one answer to `Apply? [y/N/q]`. `None` is end of
+/// input or a read error. Letter case and surrounding white space are
+/// ignored.
+fn parse_answer(line: Option<&str>) -> SourceDecision {
+    let Some(line) = line else {
+        return SourceDecision::Stop;
+    };
+    match line.trim().to_lowercase().as_str() {
+        "y" | "yes" => SourceDecision::Apply,
+        "q" | "quit" => SourceDecision::Stop,
+        _ => SourceDecision::Skip,
+    }
 }
 
-/// The step before the apply. `prompting` is true in a terminal without
-/// `--yes`. There, a source change, an item with an interrupted operation
-/// (both given as `source_changed`) or `--force` needs a confirmation, and
-/// otherwise nothing is applied.
-fn update_step(prompting: bool, source_changed: bool, force: bool) -> UpdateStep {
-    if !prompting {
-        UpdateStep::ApplyWithoutPrompt
-    } else if source_changed || force {
-        UpdateStep::Confirm
+/// Print the block of one source to stdout, after an empty line when it is
+/// not the first block. Nothing is printed with `--quiet`.
+fn print_block(preview: &SourcePreview, blocks: &mut usize) {
+    if style::is_quiet() {
+        return;
+    }
+    if *blocks > 0 {
+        println!();
+    }
+    *blocks += 1;
+    for (i, line) in render_block(preview).iter().enumerate() {
+        if i == 0 {
+            println!("{}", style::name(line));
+        } else if line.starts_with("  skip ") {
+            println!("{}", style::warn(line));
+        } else if line == "  up to date" {
+            println!("{}", style::dim(line));
+        } else {
+            println!("{line}");
+        }
+    }
+}
+
+/// The lines of the block of one source, without colour: the source label,
+/// one line per item that is not up to date, one `write` line per
+/// hand-shake file, `up to date` when there is no such line, then one
+/// `kept modified file` line per note.
+///
+/// An item line names each modified file that is kept, each file that
+/// `--force` replaces or deletes, and for `skip` each file that causes the
+/// skip. Other files that are written or deleted are counted, not named.
+fn render_block(preview: &SourcePreview) -> Vec<String> {
+    let mut lines = vec![preview.source.clone()];
+    lines.extend(preview.items.iter().map(render_item));
+    for path in &preview.handshake {
+        lines.push(format!("  {:<8} {}", "write", path.display()));
+    }
+    if preview.items.is_empty() && preview.handshake.is_empty() {
+        lines.push("  up to date".to_string());
+    }
+    for path in &preview.kept_notes {
+        lines.push(format!("  kept modified file: {}", path.display()));
+    }
+    lines
+}
+
+/// One item line of a block; see [`render_block`].
+fn render_item(item: &upskill::pipeline::PreviewItem) -> String {
+    let word = match item.action {
+        PreviewAction::Update => "update",
+        PreviewAction::Complete => "complete",
+        PreviewAction::Remove => "remove",
+        PreviewAction::Skip => "skip",
+    };
+    let mut details: Vec<String> = Vec::new();
+    match item.action {
+        PreviewAction::Remove => details.push("no longer in source".to_string()),
+        PreviewAction::Skip => details.push(format!(
+            "modified or not managed by upskill: {}",
+            item.blocking
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+        PreviewAction::Update | PreviewAction::Complete => {}
+    }
+    let counted: std::collections::BTreeSet<&PathBuf> = item
+        .write
+        .iter()
+        .chain(&item.delete)
+        .filter(|path| !item.forced.contains(path))
+        .collect();
+    match counted.len() {
+        0 => {}
+        1 => details.push("1 file".to_string()),
+        n => details.push(format!("{n} files")),
+    }
+    for path in &item.kept_modified {
+        if item.action == PreviewAction::Remove {
+            details.push(format!("keeps modified {}", path.display()));
+        } else {
+            details.push(format!(
+                "keeps modified {} (no longer produced)",
+                path.display()
+            ));
+        }
+    }
+    for path in &item.forced {
+        // A forced path of a removed item, or one that the update deletes,
+        // is deleted; any other forced path is replaced.
+        let lost = if item.action == PreviewAction::Remove || item.delete.contains(path) {
+            "deletes"
+        } else {
+            "replaces"
+        };
+        details.push(format!("{lost} {} (--force)", path.display()));
+    }
+    if item.record_only {
+        details.push("record only".to_string());
+    }
+    let line = format!(
+        "  {word:<8} {} {}   {}",
+        item.kind,
+        item.name,
+        details.join(", ")
+    );
+    line.trim_end().to_string()
+}
+
+/// The result line printed after a source was applied: the non-zero counts
+/// of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
+/// `<n> modified file(s) kept` and `<n> file(s) changed`, separated by
+/// `, `, or `applied` when every count is 0.
+fn render_result(result: &SourceResult) -> String {
+    let mut parts = Vec::new();
+    for (n, what) in [
+        (result.updated, "updated"),
+        (result.completed, "completed"),
+        (result.removed, "removed"),
+        (result.skipped, "skipped"),
+    ] {
+        if n > 0 {
+            parts.push(format!("{n} {what}"));
+        }
+    }
+    if result.kept_modified > 0 {
+        parts.push(format!("{} modified file(s) kept", result.kept_modified));
+    }
+    if result.changed_files > 0 {
+        parts.push(format!("{} file(s) changed", result.changed_files));
+    }
+    if parts.is_empty() {
+        "  applied".to_string()
     } else {
-        UpdateStep::NothingToDo
+        format!("  {}", parts.join(", "))
     }
 }
 
-/// Show a summary plan of what an update would do.
-fn print_update_plan(report: &UpdateReport) {
-    let update_count = report
+/// The closing summary of a terminal run: the items updated, completed or
+/// removed out of the items considered, and the sources applied out of the
+/// sources considered, then ` <k> source(s) not applied.` when a source with
+/// changes was not applied, then ` Stopped; <r> source(s) not examined.`
+/// (or ` Stopped.` when no source remained) after `q` or end of input.
+fn closing_summary(report: &UpdateReport) -> String {
+    let changed = report
         .items
         .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldChange { .. }))
+        .filter(|i| {
+            matches!(
+                i.status,
+                UpdateStatus::Updated { .. }
+                    | UpdateStatus::CompletedInterrupted
+                    | UpdateStatus::Removed
+            )
+        })
         .count();
-    let remove_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldRemove))
-        .count();
-    let complete_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldCompleteInterrupted))
-        .count();
-    let unchanged_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::UpToDate))
-        .count();
-
-    if update_count > 0 {
-        println!("  {}  {} item(s)", style::success("update:"), update_count);
+    let mut line = format!(
+        "Updated {changed} of {} item(s) from {} of {} source(s).",
+        report.items.len(),
+        report.sources_applied,
+        report.sources_considered
+    );
+    if report.sources_not_applied > 0 {
+        line.push_str(&format!(
+            " {} source(s) not applied.",
+            report.sources_not_applied
+        ));
     }
-    if complete_count > 0 {
-        println!(
-            "  {}  {} item(s) (interrupted before)",
-            style::success("complete:"),
-            complete_count
-        );
+    if report.stopped {
+        if report.sources_remaining > 0 {
+            line.push_str(&format!(
+                " Stopped; {} source(s) not examined.",
+                report.sources_remaining
+            ));
+        } else {
+            line.push_str(" Stopped.");
+        }
     }
-    if remove_count > 0 {
-        println!(
-            "  {}  {} item(s) (no longer in source)",
-            style::error_label("remove:"),
-            remove_count
-        );
-    }
-    if unchanged_count > 0 {
-        println!(
-            "  {}  {} item(s)",
-            style::dim("unchanged:"),
-            unchanged_count
-        );
-    }
+    line
 }
 
-/// Interactive confirmation for update. Auto-proceeds in non-TTY (CI/pipes).
-fn confirm_update() -> bool {
-    use std::io::{BufRead, IsTerminal, Write};
-
-    if !std::io::stdin().is_terminal() {
-        return true;
+/// Exit code of a terminal run: 1 when an item was skipped because of
+/// modified or unowned files, 0 otherwise.
+///
+/// Without `--quiet` it prints to stdout one of:
+/// `nothing to update — lockfile is empty` when the run has no item,
+/// without an empty line before it; after an empty line,
+/// `everything is up to date — nothing to do` when no source was applied,
+/// no source with changes was declined, no file was kept as a note, no item
+/// was skipped and no lockfile was adopted; otherwise the closing summary
+/// ([`closing_summary`]), followed by `Changed <n> file(s) written or
+/// deleted` when files changed but no item was updated, completed or
+/// removed. Without `--quiet` the blocks named the kept and the skipped
+/// files; with `--quiet` it prints the `skipped` lines of
+/// [`print_skipped`] to stderr. With a skipped item it then prints
+/// `Use --force to replace.` to stderr.
+fn finish_terminal_update(report: &UpdateReport) -> i32 {
+    let skipped = report
+        .items
+        .iter()
+        .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
+    if style::is_quiet() {
+        print_skipped(report);
+    } else if report.items.is_empty() {
+        println!("nothing to update — lockfile is empty");
+    } else if report.sources_applied == 0
+        && report.sources_not_applied == 0
+        && report.kept_modified.is_empty()
+        && !skipped
+        && report.adopted.is_none()
+    {
+        println!();
+        println!("everything is up to date — nothing to do");
+    } else {
+        println!();
+        println!("{}", closing_summary(report));
+        let changed_items = report.items.iter().any(|i| {
+            matches!(
+                i.status,
+                UpdateStatus::Updated { .. }
+                    | UpdateStatus::CompletedInterrupted
+                    | UpdateStatus::Removed
+            )
+        });
+        if !changed_items && !report.changed.is_empty() {
+            print_changed_files(report.changed.len());
+        }
     }
-
-    eprint!("Apply? [y/N] ");
-    let _ = std::io::stderr().flush();
-
-    let stdin = std::io::stdin();
-    let mut line = String::new();
-    if stdin.lock().read_line(&mut line).is_err() {
-        return false;
+    if skipped {
+        eprintln!("Use --force to replace.");
+        EXIT_ERROR
+    } else {
+        EXIT_SUCCESS
     }
-    matches!(line.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 fn print_update_report(report: &UpdateReport, dry_run: bool) {
@@ -1070,13 +1292,36 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         println!("nothing to update — lockfile is empty");
         return;
     }
+    if dry_run {
+        // The blocks named the items; count the items that would change.
+        let changes = report
+            .items
+            .iter()
+            .filter(|i| match i.status {
+                UpdateStatus::NotApplied { action } => action != PreviewAction::Skip,
+                _ => false,
+            })
+            .count();
+        println!();
+        println!(
+            "{} {} of {} item(s)",
+            style::warn("Dry-run: would update"),
+            changes,
+            report.items.len()
+        );
+        println!("{DRY_RUN_LAST_LINE}");
+        return;
+    }
+    // An applied run counts the items it changed.
     let changes = report
         .items
         .iter()
         .filter(|i| {
             !matches!(
                 i.status,
-                UpdateStatus::UpToDate | UpdateStatus::SkippedModified { .. }
+                UpdateStatus::UpToDate
+                    | UpdateStatus::SkippedModified { .. }
+                    | UpdateStatus::NotApplied { .. }
             )
         })
         .count();
@@ -1084,17 +1329,25 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         .items
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
-    if changes == 0 && !dry_run && !skipped && report.changed.is_empty() && report.adopted.is_none()
+    if changes == 0
+        && !skipped
+        && report.changed.is_empty()
+        && report.adopted.is_none()
+        && report.sources_not_applied == 0
     {
-        println!("everything is up to date — nothing to do");
+        // The `kept modified file` notes are printed by `finish_update`; a
+        // run that prints them does not say that there was nothing to do.
+        if report.kept_modified.is_empty() {
+            println!("everything is up to date — nothing to do");
+        }
         return;
     }
-    let header: colored::ColoredString = if dry_run {
-        style::warn("Dry-run: would update")
-    } else {
-        style::success("Updated")
-    };
-    println!("{header} {} of {} item(s)", changes, report.items.len());
+    println!(
+        "{} {} of {} item(s)",
+        style::success("Updated"),
+        changes,
+        report.items.len()
+    );
     for item in &report.items {
         let kind_label = match item.kind {
             ItemKind::Rule => "rule ",
@@ -1106,18 +1359,12 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             UpdateStatus::Updated { new_hash, .. } => {
                 style::success(&format!("updated → {}", short(new_hash)))
             }
-            UpdateStatus::WouldChange { new_hash, .. } => {
-                style::warn(&format!("would change → {}", short(new_hash)))
-            }
             UpdateStatus::Removed => style::error_label("removed — no longer in source"),
-            UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
             UpdateStatus::CompletedInterrupted => style::success("completed — interrupted before"),
-            UpdateStatus::WouldCompleteInterrupted => {
-                style::warn("would complete — interrupted before")
-            }
             UpdateStatus::SkippedModified { .. } => {
                 style::warn("skipped — modified or unmanaged files kept")
             }
+            UpdateStatus::NotApplied { .. } => style::dim("not applied"),
         };
         println!(
             "  {} {:<32} {}",
@@ -1126,12 +1373,8 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             status
         );
     }
-    if !report.changed.is_empty() && changes == 0 && !dry_run {
-        println!(
-            "{} {} file(s) written or deleted",
-            style::success("Changed"),
-            report.changed.len()
-        );
+    if !report.changed.is_empty() && changes == 0 {
+        print_changed_files(report.changed.len());
     }
     print_forced(&report.forced);
 }
@@ -1301,7 +1544,7 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.missing_plugins.is_empty() {
         println!(
-            "{} {} plugin(s) recorded as installed but missing from client — `upskill update` to fix",
+            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` to fix",
             style::error_label("doctor:"),
             report.missing_plugins.len()
         );
@@ -1380,7 +1623,7 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
     }
     println!(
         "  {}",
-        style::dim("install the missing CLI then run `upskill update` to install them")
+        style::dim("install the missing CLI then run `upskill update --yes` to install them")
     );
 }
 
@@ -1415,7 +1658,7 @@ fn print_doctor_mcps(report: &DoctorReport) {
         );
         for entry in &drifted {
             println!(
-                "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update`.",
+                "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update --yes`.",
                 entry.name, entry.client
             );
         }
@@ -1449,7 +1692,7 @@ fn print_doctor_mcps(report: &DoctorReport) {
                 }
                 McpDoctorStatus::ConfigUnreadable { detail } => {
                     println!(
-                        "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update`.",
+                        "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update --yes`.",
                         entry.name, entry.client, detail
                     );
                 }
@@ -1980,27 +2223,216 @@ fn run_index(registry: Option<&str>, clear: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use upskill::pipeline::PreviewItem;
+
+    fn item(action: PreviewAction) -> PreviewItem {
+        PreviewItem {
+            kind: ItemKind::Skill,
+            name: "tool".into(),
+            action,
+            write: Vec::new(),
+            delete: Vec::new(),
+            kept_modified: Vec::new(),
+            forced: Vec::new(),
+            blocking: Vec::new(),
+            record_only: false,
+        }
+    }
+
+    fn preview(items: Vec<PreviewItem>) -> SourcePreview {
+        SourcePreview {
+            source: "local:/src".into(),
+            items,
+            kept_notes: Vec::new(),
+            handshake: Vec::new(),
+            adopted: None,
+        }
+    }
+
+    fn p(path: &str) -> PathBuf {
+        PathBuf::from(path)
+    }
 
     #[test]
-    fn update_step_covers_every_input() {
-        use UpdateStep::*;
-        // (prompting, source changed, force) -> step
-        let table = [
-            ((false, false, false), ApplyWithoutPrompt),
-            ((false, false, true), ApplyWithoutPrompt),
-            ((false, true, false), ApplyWithoutPrompt),
-            ((false, true, true), ApplyWithoutPrompt),
-            ((true, false, false), NothingToDo),
-            ((true, false, true), Confirm),
-            ((true, true, false), Confirm),
-            ((true, true, true), Confirm),
-        ];
-        for ((prompting, changed, force), expected) in table {
-            assert_eq!(
-                update_step(prompting, changed, force),
-                expected,
-                "prompting={prompting} changed={changed} force={force}"
-            );
+    fn parse_answer_follows_the_table() {
+        for line in ["y", "yes", "Y", "YeS", "  y \n", "yes\r\n"] {
+            assert_eq!(parse_answer(Some(line)), SourceDecision::Apply, "{line:?}");
         }
+        for line in ["q", "quit", "Q", " QUIT \n"] {
+            assert_eq!(parse_answer(Some(line)), SourceDecision::Stop, "{line:?}");
+        }
+        for line in ["n", "no", "N", "", "\n", "maybe", "yy"] {
+            assert_eq!(parse_answer(Some(line)), SourceDecision::Skip, "{line:?}");
+        }
+        assert_eq!(parse_answer(None), SourceDecision::Stop);
+    }
+
+    #[test]
+    fn render_block_of_a_source_without_changes_says_up_to_date() {
+        assert_eq!(
+            render_block(&preview(Vec::new())),
+            vec!["local:/src", "  up to date"]
+        );
+    }
+
+    #[test]
+    fn render_block_counts_unchanged_files_and_names_kept_ones() {
+        let mut update = item(PreviewAction::Update);
+        update.write = vec![p("a.md"), p("b.md")];
+        update.delete = vec![p("c.md")];
+        update.kept_modified = vec![p("notes.md")];
+        assert_eq!(
+            render_block(&preview(vec![update]))[1],
+            "  update   skill tool   3 files, keeps modified notes.md (no longer produced)"
+        );
+    }
+
+    #[test]
+    fn render_block_names_a_forced_file_and_does_not_count_it() {
+        let mut update = item(PreviewAction::Update);
+        update.write = vec![p("a.md"), p("b.md")];
+        update.forced = vec![p("a.md")];
+        assert_eq!(
+            render_block(&preview(vec![update]))[1],
+            "  update   skill tool   1 file, replaces a.md (--force)"
+        );
+    }
+
+    #[test]
+    fn render_item_says_deletes_for_a_forced_file_that_the_update_deletes() {
+        let mut update = item(PreviewAction::Update);
+        update.write = vec![p("a.md")];
+        update.delete = vec![p("b.md")];
+        update.forced = vec![p("b.md")];
+        assert_eq!(
+            render_item(&update),
+            "  update   skill tool   1 file, deletes b.md (--force)"
+        );
+    }
+
+    #[test]
+    fn render_block_of_complete_remove_skip_and_record_only() {
+        let mut complete = item(PreviewAction::Complete);
+        complete.write = vec![p("a.md")];
+        let mut remove = item(PreviewAction::Remove);
+        remove.delete = vec![p("a.md")];
+        remove.kept_modified = vec![p("b.md")];
+        remove.forced = vec![p("c.md")];
+        let mut skip = item(PreviewAction::Skip);
+        skip.blocking = vec![p("a.md"), p("b.md")];
+        let mut record = item(PreviewAction::Update);
+        record.record_only = true;
+        let lines = render_block(&preview(vec![complete, remove, skip, record]));
+        assert_eq!(
+            lines[1..],
+            [
+                "  complete skill tool   1 file",
+                "  remove   skill tool   no longer in source, 1 file, keeps modified b.md, \
+                 deletes c.md (--force)",
+                "  skip     skill tool   modified or not managed by upskill: a.md, b.md",
+                "  update   skill tool   record only",
+            ]
+        );
+    }
+
+    #[test]
+    fn render_block_lists_handshake_files_then_notes() {
+        let mut source = preview(Vec::new());
+        source.handshake = vec![p("CLAUDE.md")];
+        source.kept_notes = vec![p("style.md")];
+        assert_eq!(
+            render_block(&source),
+            vec![
+                "local:/src",
+                "  write    CLAUDE.md",
+                "  kept modified file: style.md",
+            ]
+        );
+    }
+
+    #[test]
+    fn render_block_of_a_note_only_source_says_up_to_date_first() {
+        let mut source = preview(Vec::new());
+        source.kept_notes = vec![p("style.md")];
+        assert_eq!(
+            render_block(&source),
+            vec![
+                "local:/src",
+                "  up to date",
+                "  kept modified file: style.md"
+            ]
+        );
+    }
+
+    #[test]
+    fn render_result_lists_the_non_zero_counts() {
+        let result = SourceResult {
+            source: "s".into(),
+            updated: 2,
+            removed: 1,
+            kept_modified: 1,
+            ..SourceResult::default()
+        };
+        assert_eq!(
+            render_result(&result),
+            "  2 updated, 1 removed, 1 modified file(s) kept"
+        );
+        assert_eq!(render_result(&SourceResult::default()), "  applied");
+        let files_only = SourceResult {
+            changed_files: 2,
+            ..SourceResult::default()
+        };
+        assert_eq!(render_result(&files_only), "  2 file(s) changed");
+        let both = SourceResult {
+            updated: 1,
+            changed_files: 1,
+            ..SourceResult::default()
+        };
+        assert_eq!(render_result(&both), "  1 updated, 1 file(s) changed");
+    }
+
+    #[test]
+    fn closing_summary_counts_items_and_sources() {
+        let mut report = UpdateReport {
+            sources_considered: 2,
+            sources_applied: 1,
+            ..UpdateReport::default()
+        };
+        for status in [
+            UpdateStatus::Updated {
+                old_hash: None,
+                new_hash: None,
+            },
+            UpdateStatus::NotApplied {
+                action: PreviewAction::Update,
+            },
+        ] {
+            report.items.push(upskill::pipeline::UpdatedItem {
+                kind: ItemKind::Skill,
+                name: "x".into(),
+                source: "s".into(),
+                status,
+            });
+        }
+        assert_eq!(
+            closing_summary(&report),
+            "Updated 1 of 2 item(s) from 1 of 2 source(s)."
+        );
+        report.sources_not_applied = 1;
+        assert_eq!(
+            closing_summary(&report),
+            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied."
+        );
+        report.stopped = true;
+        assert_eq!(
+            closing_summary(&report),
+            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
+        );
+        report.sources_remaining = 3;
+        assert_eq!(
+            closing_summary(&report),
+            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+             Stopped; 3 source(s) not examined."
+        );
     }
 }

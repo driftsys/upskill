@@ -3,25 +3,24 @@
 //!
 //! These commands consult the lockfile to know what is installed and
 //! what to act on. They orchestrate the leaf modules (`output`,
-//! `hash`, `git`, `apply`, `owned`) and the top-level install coordinator
-//! ([`super::install_with_lockfile`]) — they own no parsing or render
-//! logic themselves.
+//! `hash`, `apply`, `owned`) and the prepared install of one source
+//! (`prepared::prepare_install`) — they own no parsing or render logic
+//! themselves.
 
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
-use super::git::fetch_ssot;
-use super::hash::planned_source_hashes;
 use super::output::output_path;
-use super::owned::{FileState, adopt_schema1, classify};
+use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
+use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, InterruptedItem, ItemKind,
     ListReport, ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
-    OrphanReason, OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin,
-    StaleHash, UnreadableFile, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
-    install_with_lockfile,
+    OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
+    RemovedItem, SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash,
+    UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -596,15 +595,6 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
     Ok(report)
 }
 
-/// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
-/// either reinstall (`Apply`) or report what would change (`DryRun`).
-///
-/// `names` selects which lockfile entries to update; empty means "all".
-/// When names are given, the entries' source labels are used to fetch
-/// — so `update foo` may also re-render other items installed from the
-/// same source (the pipeline always reinstalls a source as a unit).
-/// Names that match no lockfile entry are an error.
-///
 /// Rebuild the client selection a bare `update` should reuse for one source:
 /// the union of its entries' recorded generation clients. An entry with an
 /// empty `clients` list was installed for all clients, so it widens the result
@@ -632,13 +622,49 @@ fn reselect_from_entries(
     }
 }
 
-/// `update` always fetches per ADR-0004 — there is no `--offline`.
+/// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
+/// handle the sources one at a time, sorted by source label. `update`
+/// always fetches per ADR-0004 — there is no `--offline`.
 ///
-/// In `Apply` mode, `overwrite` (`update --force`) replaces modified and
-/// unowned files. Without it, an item with such a file at one of its
-/// destinations is not written. When its source hash did not change, it
-/// has no `pending` record, every such file is modified (none is unowned)
-/// and nothing else of the item would be written or deleted, the modified
+/// `names` selects which lockfile entries to update; empty means "all".
+/// When names are given, the entries' source labels are used to fetch
+/// — so `update foo` may also re-render other items installed from the
+/// same source (the pipeline always reinstalls a source as a unit).
+/// Names that match no lockfile entry are an error.
+///
+/// For each source, in this order:
+///
+/// 1. The source is fetched once (a source of a cross-source dependency is
+///    fetched again when the reinstall of this source resolves it), resolved, checked (conflict check and
+///    overlap check) and planned, without any write (`prepare_install`).
+/// 2. A source that resolves to no items while the lockfile records items
+///    from it is an error (`guard_against_empty_source`), before any write
+///    of the source.
+/// 3. A `schema: 1` lockfile is adopted (`adopt_schema1`) and the adopted
+///    paths are in [`SourcePreview::adopted`] of this source. With
+///    `dry_run`, the adoption is done on a copy of the lockfile in memory,
+///    which is never saved, and no backup file is written.
+/// 4. The [`SourcePreview`] is computed from the disk and the lockfile:
+///    the planned items through `PreparedInstall::preview`, and each
+///    lockfile entry of the source that the source no longer contains
+///    through `plan_removal`, as a [`PreviewAction::Remove`] item.
+/// 5. `observer.preview` decides. With `dry_run`, the decision is ignored
+///    and nothing is applied.
+/// 6. On [`SourceDecision::Apply`]: `PreparedInstall::commit` decides the
+///    plan again from the disk and writes it, then the removed items are
+///    planned again from the saved lockfile and deleted with the rules of
+///    [`remove`], then `observer.applied` receives the counts. On
+///    [`SourceDecision::Stop`]: [`UpdateReport::stopped`] is set and no
+///    later source is fetched.
+///
+/// In an applied source, `overwrite` (`update --force`) replaces modified
+/// and unowned files. Without it, an item with such a file at one of its
+/// destinations is not written. When a source hash is recorded for it and
+/// its source hash equals it, it has no `pending` record, every such file
+/// is modified (none is unowned), nothing else of the item would be
+/// written or deleted, no stale file of the item would be deleted or kept,
+/// and no field of its lockfile record other than `files`, `pending` and
+/// `required_by` would change (`apply::same_record`), the modified
 /// files are listed in `kept_modified` and the item is reported as
 /// [`UpdateStatus::UpToDate`]; otherwise it is reported as
 /// [`UpdateStatus::SkippedModified`]. A modified file that the new version
@@ -646,20 +672,29 @@ fn reselect_from_entries(
 /// its source no longer contains is removed with the rules of [`remove`]:
 /// its unchanged recorded files are deleted, its modified files are kept
 /// (deleted with `overwrite` when they are regular files) and listed in
-/// `kept_modified`, and its lockfile entry is dropped.
-///
-/// An item with a non-empty `pending` record (an interrupted `add` or
-/// `update`) whose source hash did not change is reported as
-/// [`UpdateStatus::WouldCompleteInterrupted`] in `DryRun` mode and as
-/// [`UpdateStatus::CompletedInterrupted`] in `Apply` mode, never as
+/// `kept_modified`, and its lockfile entry is dropped. An item with a
+/// non-empty `pending` record whose source hash did not change is reported
+/// as [`UpdateStatus::CompletedInterrupted`], never as
 /// [`UpdateStatus::UpToDate`].
+///
+/// In a source that is not applied, an entry without a preview item is
+/// [`UpdateStatus::UpToDate`], and an entry with a preview item is
+/// [`UpdateStatus::NotApplied`], except a [`PreviewAction::Skip`] item of a
+/// source without changes ([`SourcePreview::has_changes`] is false, not a
+/// dry run), which is [`UpdateStatus::SkippedModified`]. The notes of
+/// [`SourcePreview::kept_notes`] are listed in `kept_modified`, whether or
+/// not the source is applied.
+///
+/// An error after an adoption carries the adopted paths as
+/// [`AdoptedBeforeFailure`]. Sources applied before an error stay applied.
 pub fn update(
     target: &Path,
     names: &[String],
-    mode: UpdateMode,
     plugin_scope: crate::plugin::PluginScope,
     selection: &crate::select::ClientSelection,
     overwrite: bool,
+    dry_run: bool,
+    observer: &mut dyn UpdateObserver,
 ) -> Result<UpdateReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
 
@@ -685,8 +720,8 @@ pub fn update(
         matched
     };
 
-    // Group by source: installing or hashing once per source covers every
-    // matching entry sharing it.
+    // Group by source: installing once per source covers every matching
+    // entry sharing it.
     let mut by_source: std::collections::BTreeMap<String, Vec<crate::lockfile::LockedItem>> =
         std::collections::BTreeMap::new();
     for entry in entries {
@@ -697,248 +732,308 @@ pub fn update(
     }
 
     let mut report = UpdateReport::default();
-    // A reinstall may adopt a `schema: 1` lockfile and save it. A later
-    // error must still carry the adopted paths for the adoption notice.
+    // The adoption of a `schema: 1` lockfile is saved. A later error must
+    // still carry the adopted paths for the adoption notice.
     let result = (|| -> Result<()> {
-        for (source_label, source_entries) in by_source {
+        let total_sources = by_source.len();
+        for (index, (source_label, source_entries)) in by_source.into_iter().enumerate() {
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
-            match mode {
-                UpdateMode::Apply => {
-                    // Build aliases from lockfile entries that have source_name
-                    let aliases: Vec<(String, String)> = source_entries
-                        .iter()
-                        .filter_map(|e| {
-                            e.source_name
-                                .as_ref()
-                                .map(|sn| (sn.clone(), e.name.clone()))
-                        })
-                        .collect();
-                    // Preserve each source's recorded client selection so a bare
-                    // `update` (no flags, no config → `is_all`) does not silently
-                    // re-expand a flag-narrowed install and overwrite its lockfile
-                    // `clients` record (ADR-0012). An explicit flag/config
-                    // selection still overrides. Note: recorded `clients` are
-                    // generation clients, so a `--vscode`-only install reconstructs
-                    // to Copilot on the MCP axis; MCP config is additive and never
-                    // auto-removed (see the MCP fan-out note in install.rs), so
-                    // this widens rather than loses.
-                    let effective_selection = if selection.is_all() {
-                        reselect_from_entries(&source_entries)
-                    } else {
-                        selection.clone()
-                    };
-                    let options = AddOptions {
-                        force: true,
-                        overwrite,
-                        aliases,
-                        excludes: vec![],
-                        selection: effective_selection,
-                        keep_unwithheld_edits: true,
-                    };
-                    // Scope the reinstall to exactly the items this source already
-                    // contributes to the lockfile (by their in-source name), rather
-                    // than reinstalling every item the source vends. Without this, a
-                    // source that only contributed a single cross-source dependency
-                    // would pull in all of its unrelated siblings on `update`
-                    // (issue #211). An item's cross-source `requires` are still
-                    // resolved and refreshed because `install_with_lockfile`
-                    // re-expands the closure for each requested item.
-                    //
-                    // Bundle sources are exempt: a bundle is its own unit and must
-                    // be reinstalled as a whole (an empty filter routes it through
-                    // the bundle-resolution path), so scoping to item names there
-                    // would mis-route a `.bundle.yaml` source into name resolution.
-                    let is_bundle_source = source_label
-                        .ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
-                        || lock.bundles.iter().any(|b| b.source == source_label);
-                    let item_filter: Vec<String> = if is_bundle_source {
-                        Vec::new()
-                    } else {
-                        source_entries
-                            .iter()
-                            .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
-                            .collect()
-                    };
-                    let install_report = install_with_lockfile(
-                        &source,
-                        target,
-                        &item_filter,
-                        plugin_scope,
-                        &options,
-                    )?;
-                    if let Some(paths) = &install_report.adopted {
-                        let all = report.adopted.get_or_insert_with(Vec::new);
-                        all.extend(paths.iter().cloned());
-                        all.sort();
-                        all.dedup();
-                    }
-                    let mut new_hashes: std::collections::BTreeMap<
-                        (ItemKind, String),
-                        Option<String>,
-                    > = std::collections::BTreeMap::new();
-                    for it in &install_report.items {
-                        new_hashes.insert((it.kind, it.name.clone()), it.source_hash.clone());
-                    }
-                    guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
-                    report
-                        .kept_modified
-                        .extend(install_report.kept_modified.iter().cloned());
-                    report.forced.extend(install_report.forced.iter().cloned());
-                    report
-                        .changed
-                        .extend(install_report.changed.iter().cloned());
-                    let mut skipped: std::collections::BTreeMap<(ItemKind, String), Vec<PathBuf>> =
-                        std::collections::BTreeMap::new();
-                    for conflict in &install_report.conflicts {
-                        skipped
-                            .entry((conflict.kind, conflict.name.clone()))
-                            .or_default()
-                            .push(conflict.path.clone());
-                    }
-                    // An item that the source no longer contains is removed
-                    // as `remove` does: plan every orphan from the saved
-                    // lockfile (it holds the adopted record, if any), then
-                    // delete.
-                    let orphans: Vec<&crate::lockfile::LockedItem> = source_entries
-                        .iter()
-                        .filter(|e| !new_hashes.contains_key(&(e.kind, e.name.clone())))
-                        .collect();
-                    if !orphans.is_empty() {
-                        let mut lock = crate::lockfile::Lockfile::load(target)?;
-                        let mut plans = Vec::with_capacity(orphans.len());
-                        for orphan in &orphans {
-                            if let Some(entry) = lock
-                                .items
-                                .iter()
-                                .find(|i| i.kind == orphan.kind && i.name == orphan.name)
-                            {
-                                plans.push(plan_removal(target, entry, overwrite)?);
-                            }
-                        }
-                        let mut reported = std::collections::BTreeSet::new();
-                        for plan in plans {
-                            report
-                                .changed
-                                .extend(execute_removal(target, &plan, &mut reported)?);
-                            report.kept_modified.extend(plan.kept.iter().cloned());
-                            report.forced.extend(plan.forced.iter().cloned());
-                            lock.remove(plan.kind, &plan.name);
-                            report.items.push(UpdatedItem {
-                                kind: plan.kind,
-                                name: plan.name,
-                                source: source_label.clone(),
-                                status: UpdateStatus::Removed,
-                            });
-                        }
-                        lock.save(target)?;
-                    }
-                    for entry in &source_entries {
-                        let kind = entry.kind;
-                        if !new_hashes.contains_key(&(kind, entry.name.clone())) {
-                            continue; // already handled as orphan
-                        }
-                        let new_hash = new_hashes
-                            .get(&(kind, entry.name.clone()))
-                            .cloned()
-                            .flatten();
-                        let status =
-                            if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
-                                UpdateStatus::SkippedModified { files }
-                            } else if new_hash == entry.hash && !entry.pending.is_empty() {
-                                UpdateStatus::CompletedInterrupted
-                            } else if new_hash == entry.hash {
-                                UpdateStatus::UpToDate
-                            } else {
-                                UpdateStatus::Updated {
-                                    old_hash: entry.hash.clone(),
-                                    new_hash,
-                                }
-                            };
-                        report.items.push(UpdatedItem {
-                            kind,
-                            name: entry.name.clone(),
-                            source: source_label.clone(),
-                            status,
-                        });
-                    }
-                    // A skipped item that is not an entry of this source: a
-                    // dependency from another source that the reinstall
-                    // planned. It is reported here, because its own source
-                    // may not be part of this run.
-                    for ((kind, name), files) in skipped {
-                        let source = lock
-                            .items
-                            .iter()
-                            .find(|i| i.kind == kind && i.name == name)
-                            .map_or_else(|| source_label.clone(), |i| i.source.clone());
-                        report.items.push(UpdatedItem {
-                            kind,
-                            name,
-                            source,
-                            status: UpdateStatus::SkippedModified { files },
-                        });
-                    }
-                }
-                UpdateMode::DryRun => {
-                    let (root, _guard) = fetch_ssot(&source)?;
-                    let new_hashes = planned_source_hashes(&root)
-                        .with_context(|| format!("resolve items for source `{source_label}`"))?;
-                    guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
-                    for entry in &source_entries {
-                        let kind = entry.kind;
-                        // The source-side hash map is keyed by the item's FOLDER
-                        // (see `hash_items` / `iter_item_dirs`), which is the
-                        // co-location group. A rule/agent whose frontmatter name
-                        // diverges from its folder must be looked up by that folder,
-                        // not its effective name, or it is falsely reported as
-                        // `WouldRemove` (issue #214; mirrors the #208 doctor fix).
-                        let lookup_name = entry
-                            .group
-                            .as_deref()
-                            .or(entry.source_name.as_deref())
-                            .unwrap_or(&entry.name);
-                        if !new_hashes.contains_key(&(kind, lookup_name.to_string())) {
-                            report.items.push(UpdatedItem {
-                                kind,
-                                name: entry.name.clone(),
-                                source: source_label.clone(),
-                                status: UpdateStatus::WouldRemove,
-                            });
-                            continue;
-                        }
-                        let new_hash = new_hashes
-                            .get(&(kind, lookup_name.to_string()))
-                            .cloned()
-                            .flatten();
-                        let status = if new_hash == entry.hash && !entry.pending.is_empty() {
-                            UpdateStatus::WouldCompleteInterrupted
-                        } else if new_hash == entry.hash {
-                            UpdateStatus::UpToDate
-                        } else {
-                            UpdateStatus::WouldChange {
-                                old_hash: entry.hash.clone(),
-                                new_hash,
-                            }
-                        };
-                        report.items.push(UpdatedItem {
-                            kind,
-                            name: entry.name.clone(),
-                            source: source_label.clone(),
-                            status,
-                        });
-                    }
+            // Build aliases from lockfile entries that have source_name
+            let aliases: Vec<(String, String)> = source_entries
+                .iter()
+                .filter_map(|e| {
+                    e.source_name
+                        .as_ref()
+                        .map(|sn| (sn.clone(), e.name.clone()))
+                })
+                .collect();
+            // Preserve each source's recorded client selection so a bare
+            // `update` (no flags, no config → `is_all`) does not silently
+            // re-expand a flag-narrowed install and overwrite its lockfile
+            // `clients` record (ADR-0012). An explicit flag/config
+            // selection still overrides. Note: recorded `clients` are
+            // generation clients, so a `--vscode`-only install reconstructs
+            // to Copilot on the MCP axis; MCP config is additive and never
+            // auto-removed (see the MCP fan-out note in install.rs), so
+            // this widens rather than loses.
+            let effective_selection = if selection.is_all() {
+                reselect_from_entries(&source_entries)
+            } else {
+                selection.clone()
+            };
+            let options = AddOptions {
+                force: true,
+                overwrite,
+                aliases,
+                excludes: vec![],
+                selection: effective_selection,
+                keep_unwithheld_edits: true,
+            };
+            // Scope the reinstall to exactly the items this source already
+            // contributes to the lockfile (by their in-source name), rather
+            // than reinstalling every item the source vends. Without this, a
+            // source that only contributed a single cross-source dependency
+            // would pull in all of its unrelated siblings on `update`
+            // (issue #211). An item's cross-source `requires` are still
+            // resolved and refreshed because `prepare_install` re-expands
+            // the closure for each requested item.
+            //
+            // Bundle sources are exempt: a bundle is its own unit and must
+            // be reinstalled as a whole (an empty filter routes it through
+            // the bundle-resolution path), so scoping to item names there
+            // would mis-route a `.bundle.yaml` source into name resolution.
+            let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
+                || lock.bundles.iter().any(|b| b.source == source_label);
+            let item_filter: Vec<String> = if is_bundle_source {
+                Vec::new()
+            } else {
+                source_entries
+                    .iter()
+                    .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                    .collect()
+            };
+
+            // Fetch, resolve, check and plan. A failure here (for example
+            // the overlap check) happens before the adoption.
+            let prepared = prepare_install(&source, target, &item_filter, &options)?;
+            let new_hashes = prepared.planned_hashes();
+            guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+
+            let mut current = crate::lockfile::Lockfile::load(target)?;
+            let adopted = if dry_run {
+                adopt_schema1_in_memory(target, &mut current)?;
+                None
+            } else {
+                adopt_schema1(target, &mut current)?
+            };
+            if let Some(paths) = &adopted {
+                let all = report.adopted.get_or_insert_with(Vec::new);
+                all.extend(paths.iter().cloned());
+                all.sort();
+                all.dedup();
+            }
+
+            // An entry that the source no longer contains is removed. The
+            // key is the installed `(kind, name)`, as in the plan.
+            let is_orphan = |e: &crate::lockfile::LockedItem| {
+                !new_hashes.contains_key(&(e.kind, e.name.clone()))
+            };
+            let install_preview = prepared.preview(target, &current)?;
+            let mut items = install_preview.items;
+            for orphan in source_entries.iter().filter(|e| is_orphan(e)) {
+                if let Some(entry) = current
+                    .items
+                    .iter()
+                    .find(|i| i.kind == orphan.kind && i.name == orphan.name)
+                {
+                    items.push(removal_preview(plan_removal(target, entry, overwrite)?));
                 }
             }
+            let preview = SourcePreview {
+                source: source_label.clone(),
+                items,
+                kept_notes: install_preview.kept_notes,
+                handshake: install_preview.handshake,
+                adopted,
+            };
+            report.sources_considered += 1;
+            let decision = observer.preview(&preview);
+
+            if dry_run || decision != SourceDecision::Apply {
+                // A source with changes that is not applied was declined (or
+                // the run is a dry run): its `Skip` items are `NotApplied`
+                // and do not cause exit code 1. A source without changes is
+                // not applied because there is nothing to apply: its `Skip`
+                // items are skipped, as in an applied source.
+                let declined = dry_run || preview.has_changes();
+                if preview.has_changes() {
+                    report.sources_not_applied += 1;
+                }
+                report
+                    .kept_modified
+                    .extend(preview.kept_notes.iter().cloned());
+                for entry in &source_entries {
+                    let status = match preview
+                        .items
+                        .iter()
+                        .find(|i| i.kind == entry.kind && i.name == entry.name)
+                    {
+                        Some(item) if item.action == PreviewAction::Skip && !declined => {
+                            UpdateStatus::SkippedModified {
+                                files: item.blocking.clone(),
+                            }
+                        }
+                        Some(item) => UpdateStatus::NotApplied {
+                            action: item.action,
+                        },
+                        None => UpdateStatus::UpToDate,
+                    };
+                    report.items.push(UpdatedItem {
+                        kind: entry.kind,
+                        name: entry.name.clone(),
+                        source: source_label.clone(),
+                        status,
+                    });
+                }
+                // A skipped item that is not an entry of this source: a
+                // dependency from another source that the reinstall plans.
+                for item in &preview.items {
+                    if item.action != PreviewAction::Skip
+                        || source_entries
+                            .iter()
+                            .any(|e| e.kind == item.kind && e.name == item.name)
+                    {
+                        continue;
+                    }
+                    report.items.push(UpdatedItem {
+                        kind: item.kind,
+                        name: item.name.clone(),
+                        source: source_of(&lock, item.kind, &item.name, &source_label),
+                        status: if declined {
+                            UpdateStatus::NotApplied {
+                                action: PreviewAction::Skip,
+                            }
+                        } else {
+                            UpdateStatus::SkippedModified {
+                                files: item.blocking.clone(),
+                            }
+                        },
+                    });
+                }
+                if !dry_run && decision == SourceDecision::Stop {
+                    report.stopped = true;
+                    report.sources_remaining = total_sources - index - 1;
+                    break;
+                }
+                continue;
+            }
+
+            let first_item = report.items.len();
+            let kept_before = report.kept_modified.len();
+            let changed_before = report.changed.len();
+            let install_report = prepared.commit(target, plugin_scope)?;
+            report
+                .kept_modified
+                .extend(install_report.kept_modified.iter().cloned());
+            report.forced.extend(install_report.forced.iter().cloned());
+            report
+                .changed
+                .extend(install_report.changed.iter().cloned());
+            let mut skipped: std::collections::BTreeMap<(ItemKind, String), Vec<PathBuf>> =
+                std::collections::BTreeMap::new();
+            for conflict in &install_report.conflicts {
+                skipped
+                    .entry((conflict.kind, conflict.name.clone()))
+                    .or_default()
+                    .push(conflict.path.clone());
+            }
+            // An item that the source no longer contains is removed as
+            // `remove` does: plan every orphan again from the saved
+            // lockfile, then delete.
+            let orphans: Vec<&crate::lockfile::LockedItem> =
+                source_entries.iter().filter(|e| is_orphan(e)).collect();
+            if !orphans.is_empty() {
+                let mut lock = crate::lockfile::Lockfile::load(target)?;
+                let mut plans = Vec::with_capacity(orphans.len());
+                for orphan in &orphans {
+                    if let Some(entry) = lock
+                        .items
+                        .iter()
+                        .find(|i| i.kind == orphan.kind && i.name == orphan.name)
+                    {
+                        plans.push(plan_removal(target, entry, overwrite)?);
+                    }
+                }
+                let mut reported = std::collections::BTreeSet::new();
+                for plan in plans {
+                    report
+                        .changed
+                        .extend(execute_removal(target, &plan, &mut reported)?);
+                    report.kept_modified.extend(plan.kept.iter().cloned());
+                    report.forced.extend(plan.forced.iter().cloned());
+                    lock.remove(plan.kind, &plan.name);
+                    report.items.push(UpdatedItem {
+                        kind: plan.kind,
+                        name: plan.name,
+                        source: source_label.clone(),
+                        status: UpdateStatus::Removed,
+                    });
+                }
+                lock.save(target)?;
+            }
+            for entry in &source_entries {
+                let kind = entry.kind;
+                if is_orphan(entry) {
+                    continue; // already handled as orphan
+                }
+                let new_hash = new_hashes
+                    .get(&(kind, entry.name.clone()))
+                    .cloned()
+                    .flatten();
+                let status = if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
+                    UpdateStatus::SkippedModified { files }
+                } else if new_hash == entry.hash && !entry.pending.is_empty() {
+                    UpdateStatus::CompletedInterrupted
+                } else if new_hash == entry.hash {
+                    UpdateStatus::UpToDate
+                } else {
+                    UpdateStatus::Updated {
+                        old_hash: entry.hash.clone(),
+                        new_hash,
+                    }
+                };
+                report.items.push(UpdatedItem {
+                    kind,
+                    name: entry.name.clone(),
+                    source: source_label.clone(),
+                    status,
+                });
+            }
+            // A skipped item that is not an entry of this source: a
+            // dependency from another source that the reinstall
+            // planned. It is reported here, because its own source
+            // may not be part of this run.
+            for ((kind, name), files) in skipped {
+                let source = source_of(&lock, kind, &name, &source_label);
+                report.items.push(UpdatedItem {
+                    kind,
+                    name,
+                    source,
+                    status: UpdateStatus::SkippedModified { files },
+                });
+            }
+            report.sources_applied += 1;
+            let mut result = SourceResult {
+                source: source_label.clone(),
+                kept_modified: report.kept_modified.len() - kept_before,
+                changed_files: report.changed.len() - changed_before,
+                ..SourceResult::default()
+            };
+            for item in &report.items[first_item..] {
+                match item.status {
+                    UpdateStatus::Updated { .. } => result.updated += 1,
+                    UpdateStatus::CompletedInterrupted => result.completed += 1,
+                    UpdateStatus::Removed => result.removed += 1,
+                    UpdateStatus::SkippedModified { .. } => result.skipped += 1,
+                    UpdateStatus::UpToDate | UpdateStatus::NotApplied { .. } => {}
+                }
+            }
+            observer.applied(&result);
         }
         Ok(())
     })();
-    // An item skipped by the reinstall of two sources is reported once.
+    // An item skipped by the reinstall of two sources, or not applied as a
+    // skip in two sources, is reported once.
     let mut seen_skipped = std::collections::BTreeSet::new();
-    report.items.retain(|item| {
-        !matches!(item.status, UpdateStatus::SkippedModified { .. })
-            || seen_skipped.insert((item.kind, item.name.clone()))
+    let mut seen_not_applied = std::collections::BTreeSet::new();
+    report.items.retain(|item| match item.status {
+        UpdateStatus::SkippedModified { .. } => seen_skipped.insert((item.kind, item.name.clone())),
+        UpdateStatus::NotApplied {
+            action: PreviewAction::Skip,
+        } => seen_not_applied.insert((item.kind, item.name.clone())),
+        _ => true,
     });
     // A file kept by the reinstall of two sources (a dependency from
     // another source) is reported once.
@@ -958,6 +1053,43 @@ pub fn update(
     }
 
     Ok(report)
+}
+
+/// The source label of the lockfile entry `(kind, name)`, or `fallback`
+/// when the lockfile has no such entry.
+fn source_of(
+    lock: &crate::lockfile::Lockfile,
+    kind: ItemKind,
+    name: &str,
+    fallback: &str,
+) -> String {
+    lock.items
+        .iter()
+        .find(|i| i.kind == kind && i.name == name)
+        .map_or_else(|| fallback.to_string(), |i| i.source.clone())
+}
+
+/// The preview line of an item that its source no longer contains:
+/// `delete` is the files to delete that are unchanged, `forced` the
+/// modified files that `overwrite` deletes, and `kept_modified` the
+/// modified files that are kept.
+fn removal_preview(plan: RemovalPlan) -> PreviewItem {
+    let delete = plan
+        .delete
+        .into_iter()
+        .filter(|rel| !plan.forced.contains(rel))
+        .collect();
+    PreviewItem {
+        kind: plan.kind,
+        name: plan.name,
+        action: PreviewAction::Remove,
+        write: Vec::new(),
+        delete,
+        kept_modified: plan.kept,
+        forced: plan.forced,
+        blocking: Vec::new(),
+        record_only: false,
+    }
 }
 
 /// Guard against the data-loss footgun in issue #196: when re-resolving a
@@ -1020,4 +1152,464 @@ pub fn list(target: &Path) -> Result<ListReport> {
     }
     report.bundles.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::plugin::PluginScope;
+    use crate::select::ClientSelection;
+    use crate::source::InstallSource;
+
+    fn write(root: &Path, rel: &str, bytes: &[u8]) {
+        let full = root.join(rel);
+        fs::create_dir_all(full.parent().unwrap()).unwrap();
+        fs::write(full, bytes).unwrap();
+    }
+
+    fn skill(src: &Path, name: &str, body: &str) {
+        write(
+            src,
+            &format!("{name}/SKILL.md"),
+            format!("---\nschema: 1\nname: {name}\ndescription: test {name}\n---\n{body}\n")
+                .as_bytes(),
+        );
+    }
+
+    fn install(src: &Path, target: &Path) {
+        super::super::prepared::prepare_install(
+            &InstallSource::LocalPath(src.to_path_buf()),
+            target,
+            &[],
+            &AddOptions::default(),
+        )
+        .unwrap()
+        .commit(target, PluginScope::Project)
+        .unwrap();
+    }
+
+    /// The installed Claude file of the skill `name`.
+    fn claude_skill(name: &str) -> PathBuf {
+        Path::new(".claude")
+            .join("skills")
+            .join(name)
+            .join("SKILL.md")
+    }
+
+    /// Records every preview and every result; `decide` gives the decision.
+    struct Recorder<F: FnMut(&SourcePreview) -> SourceDecision> {
+        previews: Vec<SourcePreview>,
+        results: Vec<SourceResult>,
+        decide: F,
+    }
+
+    impl<F: FnMut(&SourcePreview) -> SourceDecision> Recorder<F> {
+        fn new(decide: F) -> Self {
+            Recorder {
+                previews: Vec::new(),
+                results: Vec::new(),
+                decide,
+            }
+        }
+    }
+
+    impl<F: FnMut(&SourcePreview) -> SourceDecision> UpdateObserver for Recorder<F> {
+        fn preview(&mut self, preview: &SourcePreview) -> SourceDecision {
+            self.previews.push(preview.clone());
+            (self.decide)(preview)
+        }
+
+        fn applied(&mut self, result: &SourceResult) {
+            self.results.push(result.clone());
+        }
+    }
+
+    fn run(target: &Path, observer: &mut dyn UpdateObserver) -> Result<UpdateReport> {
+        run_with(target, false, false, observer)
+    }
+
+    fn run_with(
+        target: &Path,
+        overwrite: bool,
+        dry_run: bool,
+        observer: &mut dyn UpdateObserver,
+    ) -> Result<UpdateReport> {
+        update(
+            target,
+            &[],
+            PluginScope::Project,
+            &ClientSelection::all(),
+            overwrite,
+            dry_run,
+            observer,
+        )
+    }
+
+    fn lock_bytes(target: &Path) -> Vec<u8> {
+        fs::read(target.join(".upskill-lock.json")).unwrap()
+    }
+
+    fn status_of<'a>(report: &'a UpdateReport, name: &str) -> &'a UpdateStatus {
+        &report
+            .items
+            .iter()
+            .find(|i| i.name == name)
+            .unwrap_or_else(|| panic!("no item {name} in {:?}", report.items))
+            .status
+    }
+
+    #[test]
+    fn the_commit_decides_again_after_the_preview() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "first");
+        install(&src, &target);
+        skill(&src, "a", "second");
+
+        let edited = target.join(claude_skill("a"));
+        let mut observer = Recorder::new(|preview: &SourcePreview| {
+            let item = preview.items.iter().find(|i| i.name == "a").unwrap();
+            assert!(item.write.contains(&claude_skill("a")), "{item:?}");
+            fs::write(&edited, "my edit\n").unwrap();
+            SourceDecision::Apply
+        });
+        let report = run(&target, &mut observer).unwrap();
+        assert!(
+            matches!(
+                status_of(&report, "a"),
+                UpdateStatus::SkippedModified { .. }
+            ),
+            "{:?}",
+            report.items
+        );
+        assert_eq!(
+            fs::read(target.join(claude_skill("a"))).unwrap(),
+            b"my edit\n"
+        );
+        assert_eq!(observer.results.len(), 1);
+        assert_eq!(observer.results[0].skipped, 1);
+    }
+
+    #[test]
+    fn stop_does_not_fetch_later_sources() {
+        let tmp = tempfile::tempdir().unwrap();
+        let first = tmp.path().join("s1");
+        let second = tmp.path().join("s2");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&first, "a", "a");
+        skill(&second, "b", "b");
+        install(&first, &target);
+        install(&second, &target);
+        fs::remove_dir_all(&second).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Stop);
+        let report = run(&target, &mut observer).unwrap();
+        assert!(report.stopped);
+        assert_eq!(observer.previews.len(), 1);
+        assert!(observer.results.is_empty());
+        assert_eq!(report.sources_considered, 1);
+        assert_eq!(report.sources_applied, 0);
+    }
+
+    #[test]
+    fn a_source_is_fetched_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "first");
+        install(&src, &target);
+        skill(&src, "a", "second");
+
+        // A second fetch of the source would fail: the directory is gone.
+        let mut observer = Recorder::new(|_: &SourcePreview| {
+            fs::remove_dir_all(&src).unwrap();
+            SourceDecision::Apply
+        });
+        let report = run(&target, &mut observer).unwrap();
+        assert!(
+            matches!(status_of(&report, "a"), UpdateStatus::Updated { .. }),
+            "{:?}",
+            report.items
+        );
+        let text = fs::read_to_string(target.join(claude_skill("a"))).unwrap();
+        assert!(text.contains("second"), "{text}");
+        assert_eq!(observer.previews.len(), 1);
+        assert_eq!(observer.results[0].updated, 1);
+        assert_eq!(report.sources_applied, 1);
+    }
+
+    #[test]
+    fn preview_lists_a_removed_item_and_its_kept_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        skill(&src, "b", "b");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("b")), "my edit\n").unwrap();
+        fs::remove_dir_all(src.join("b")).unwrap();
+        let lock_before = lock_bytes(&target);
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        let preview = &observer.previews[0];
+        let removed = preview.items.iter().find(|i| i.name == "b").unwrap();
+        assert_eq!(removed.action, PreviewAction::Remove);
+        assert_eq!(removed.kept_modified, vec![claude_skill("b")]);
+        assert!(!removed.delete.contains(&claude_skill("b")), "{removed:?}");
+        assert!(removed.forced.is_empty());
+        assert!(preview.has_changes());
+        assert_eq!(
+            status_of(&report, "b"),
+            &UpdateStatus::NotApplied {
+                action: PreviewAction::Remove
+            }
+        );
+        assert_eq!(report.sources_not_applied, 1);
+        // Nothing was applied.
+        assert_eq!(lock_bytes(&target), lock_before);
+        assert_eq!(
+            fs::read(target.join(claude_skill("b"))).unwrap(),
+            b"my edit\n"
+        );
+        assert!(target.join(".claude/skills/b").is_dir());
+    }
+
+    #[test]
+    fn skip_only_source_has_no_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "first");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("a")), "my edit\n").unwrap();
+        skill(&src, "a", "second");
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        let preview = &observer.previews[0];
+        assert_eq!(preview.items.len(), 1, "{:?}", preview.items);
+        assert_eq!(preview.items[0].action, PreviewAction::Skip);
+        assert_eq!(preview.items[0].blocking, vec![claude_skill("a")]);
+        assert!(!preview.has_changes());
+        assert!(
+            matches!(
+                status_of(&report, "a"),
+                UpdateStatus::SkippedModified { .. }
+            ),
+            "{:?}",
+            report.items
+        );
+        assert_eq!(report.sources_not_applied, 0);
+    }
+
+    fn preview_with(items: Vec<PreviewItem>, notes: Vec<PathBuf>) -> SourcePreview {
+        SourcePreview {
+            source: "s".to_string(),
+            items,
+            kept_notes: notes,
+            handshake: Vec::new(),
+            adopted: None,
+        }
+    }
+
+    fn preview_item(action: PreviewAction) -> PreviewItem {
+        PreviewItem {
+            kind: ItemKind::Skill,
+            name: "a".to_string(),
+            action,
+            write: Vec::new(),
+            delete: Vec::new(),
+            kept_modified: Vec::new(),
+            forced: Vec::new(),
+            blocking: Vec::new(),
+            record_only: false,
+        }
+    }
+
+    #[test]
+    fn has_changes_follows_the_rule() {
+        // A note is not a change.
+        assert!(!preview_with(vec![], vec![claude_skill("a")]).has_changes());
+        // A skip is not a change.
+        assert!(!preview_with(vec![preview_item(PreviewAction::Skip)], vec![]).has_changes());
+        // An update item with only a kept file is not a change.
+        let mut kept_only = preview_item(PreviewAction::Update);
+        kept_only.kept_modified = vec![claude_skill("a")];
+        assert!(!preview_with(vec![kept_only], vec![]).has_changes());
+        let changes: [fn(&mut PreviewItem); 6] = [
+            |i| i.write = vec![claude_skill("a")],
+            |i| i.delete = vec![claude_skill("a")],
+            |i| i.forced = vec![claude_skill("a")],
+            |i| i.record_only = true,
+            |i| i.action = PreviewAction::Complete,
+            |i| i.action = PreviewAction::Remove,
+        ];
+        for change in changes {
+            let mut item = preview_item(PreviewAction::Update);
+            change(&mut item);
+            assert!(preview_with(vec![item], vec![]).has_changes());
+        }
+        let mut handshake = preview_with(vec![], vec![]);
+        handshake.handshake = vec![PathBuf::from("CLAUDE.md")];
+        assert!(handshake.has_changes());
+    }
+
+    #[test]
+    fn a_kept_stale_file_without_another_change_is_a_note() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        write(&src, "a/notes.md", b"notes");
+        install(&src, &target);
+        let notes = Path::new(".claude")
+            .join("skills")
+            .join("a")
+            .join("notes.md");
+        fs::write(target.join(&notes), "my notes\n").unwrap();
+        fs::remove_file(src.join("a/notes.md")).unwrap();
+        skill(&src, "a", "a, changed");
+        // The first update writes the new version and keeps the edited file.
+        run(
+            &target,
+            &mut Recorder::new(|_: &SourcePreview| SourceDecision::Apply),
+        )
+        .unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        let preview = &observer.previews[0];
+        assert!(preview.items.is_empty(), "{:?}", preview.items);
+        assert!(preview.kept_notes.contains(&notes), "{preview:?}");
+        assert!(!preview.has_changes());
+        assert_eq!(status_of(&report, "a"), &UpdateStatus::UpToDate);
+        assert!(report.kept_modified.contains(&notes));
+        assert_eq!(report.sources_not_applied, 0);
+    }
+
+    #[test]
+    fn a_declined_source_reports_a_skip_item_as_not_applied() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        skill(&src, "b", "b");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("a")), "my edit\n").unwrap();
+        skill(&src, "a", "a, changed");
+        skill(&src, "b", "b, changed");
+
+        for decision in [SourceDecision::Skip, SourceDecision::Stop] {
+            let mut observer = Recorder::new(|_: &SourcePreview| decision);
+            let report = run(&target, &mut observer).unwrap();
+            assert!(observer.previews[0].has_changes());
+            assert_eq!(
+                status_of(&report, "a"),
+                &UpdateStatus::NotApplied {
+                    action: PreviewAction::Skip
+                }
+            );
+            assert_eq!(
+                status_of(&report, "b"),
+                &UpdateStatus::NotApplied {
+                    action: PreviewAction::Update
+                }
+            );
+        }
+    }
+
+    /// Two sources `s1` (skill `a`) and `s2` (skill `b`), both changed
+    /// after the install.
+    fn two_changed_sources() -> (tempfile::TempDir, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        for (dir, name) in [("s1", "a"), ("s2", "b")] {
+            let src = tmp.path().join(dir);
+            skill(&src, name, "first");
+            install(&src, &target);
+            skill(&src, name, "second");
+        }
+        (tmp, target)
+    }
+
+    #[test]
+    fn a_dry_run_ignores_the_decision() {
+        // With `dry_run`, the decision is ignored: `Apply` writes nothing,
+        // and `Stop` does not stop, so every source is still previewed.
+        for decision in [SourceDecision::Apply, SourceDecision::Stop] {
+            let (_tmp, target) = two_changed_sources();
+            let lock_before = lock_bytes(&target);
+            let a_before = fs::read(target.join(claude_skill("a"))).unwrap();
+            let mut observer = Recorder::new(|_: &SourcePreview| decision);
+            let report = run_with(&target, false, true, &mut observer).unwrap();
+            assert_eq!(observer.previews.len(), 2, "{decision:?}");
+            assert!(observer.results.is_empty());
+            assert!(!report.stopped);
+            assert_eq!(report.sources_applied, 0);
+            assert_eq!(report.sources_not_applied, 2);
+            assert_eq!(lock_bytes(&target), lock_before);
+            assert_eq!(fs::read(target.join(claude_skill("a"))).unwrap(), a_before);
+        }
+    }
+
+    #[test]
+    fn the_adoption_is_on_the_preview_of_the_first_source_only() {
+        let (_tmp, target) = two_changed_sources();
+        let path = target.join(".upskill-lock.json");
+        let mut lock: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        lock["schema"] = 1.into();
+        for entry in lock["items"].as_array_mut().unwrap() {
+            entry.as_object_mut().unwrap().remove("files");
+        }
+        fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        let report = run(&target, &mut observer).unwrap();
+        assert_eq!(observer.previews.len(), 2);
+        assert!(
+            observer.previews[0]
+                .adopted
+                .as_ref()
+                .is_some_and(|paths| !paths.is_empty())
+        );
+        assert!(observer.previews[1].adopted.is_none());
+        assert!(report.adopted.is_some());
+    }
+
+    #[test]
+    fn a_removed_item_with_overwrite_divides_forced_and_delete() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "a");
+        skill(&src, "b", "b");
+        install(&src, &target);
+        fs::write(target.join(claude_skill("b")), "my edit\n").unwrap();
+        fs::remove_dir_all(src.join("b")).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        run_with(&target, true, false, &mut observer).unwrap();
+        let removed = observer.previews[0]
+            .items
+            .iter()
+            .find(|i| i.name == "b")
+            .unwrap();
+        assert_eq!(removed.action, PreviewAction::Remove);
+        assert_eq!(removed.forced, vec![claude_skill("b")]);
+        assert!(!removed.delete.contains(&claude_skill("b")), "{removed:?}");
+        assert!(!removed.delete.is_empty(), "the files of the other clients");
+        assert!(removed.kept_modified.is_empty());
+    }
 }

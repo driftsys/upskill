@@ -146,8 +146,8 @@ fn update_dry_run_reports_change_without_writing() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(out.contains("Dry-run"), "expected dry-run header: {out}");
     assert!(
-        out.contains("would change"),
-        "expected `would change` status: {out}"
+        out.contains("\n  update   skill create-api-endpoint"),
+        "expected an `update` line: {out}"
     );
 
     // Lockfile must not have been touched.
@@ -262,8 +262,8 @@ fn update_dry_run_reports_would_remove_without_deleting() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("would remove"),
-        "expected `would remove` status, got:\n{out}"
+        out.contains("\n  remove   skill create-api-endpoint   no longer in source"),
+        "expected a `remove` line, got:\n{out}"
     );
 
     // Output files should still exist.
@@ -378,7 +378,7 @@ fn update_without_yes_proceeds_in_non_tty() {
 #[test]
 fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
     // Regression for #214: a rule whose frontmatter name diverges from its
-    // folder must not be falsely reported as `would remove` by dry-run (the
+    // folder must not be falsely listed as `remove` by dry-run (the
     // source-side hash map is keyed by folder, the lookup must match).
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -406,8 +406,8 @@ fn update_dry_run_reports_up_to_date_for_divergent_named_rule() {
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        !out.contains("would remove"),
-        "divergent-named rule must not be reported as would-remove:\n{out}"
+        !out.contains("\n  remove "),
+        "divergent-named rule must not be reported as removed:\n{out}"
     );
 }
 
@@ -1263,9 +1263,10 @@ fn update_that_only_adopts_a_schema_1_lockfile_does_not_print_nothing_to_do() {
     assert!(stdout.contains("Updated 0 of 1 item(s)"), "{stdout}");
 }
 
-#[test]
-fn update_reports_an_item_skipped_by_two_sources_once() {
-    // Two sources that both require the skill `sarif` from a third source.
+/// Two sources that both require the skill `sarif` from a third source;
+/// `sarif` is edited and its source changed. Returns the project, the fake
+/// home and the edited file.
+fn two_sources_withholding_sarif() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -1307,6 +1308,12 @@ fn update_reports_an_item_skipped_by_two_sources_once() {
     let text = fs::read_to_string(&sarif_source).unwrap();
     fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
 
+    (tmp, home, sarif)
+}
+
+#[test]
+fn update_reports_an_item_skipped_by_two_sources_once() {
+    let (tmp, home, sarif) = two_sources_withholding_sarif();
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "first", "second", "--project"])
@@ -1323,76 +1330,19 @@ fn update_reports_an_item_skipped_by_two_sources_once() {
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
 }
 
-/// Run `upskill update <args>` with a terminal on stdin and write `input`
-/// to it. Returns the JSON result of `tests/fixtures/terminal_stdin.py`.
-#[cfg(unix)]
-fn update_in_terminal(root: &Path, home: &Path, args: &[&str], input: &str) -> serde_json::Value {
-    let mut update = common::upskill_cmd(home);
-    update
-        .current_dir(root)
-        .arg("update")
-        .args(args)
-        .env("NO_COLOR", "1");
-    let spec = serde_json::json!({
-        "program": update.get_program().to_str().unwrap(),
-        "args": update.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),
-        "cwd": update.get_current_dir().unwrap(),
-        "home": home,
-        "env": update.get_envs().map(|(key, value)| {
-            (key.to_str().unwrap(), value.map(|value| value.to_str().unwrap()))
-        }).collect::<Vec<_>>(),
-        "input": input,
-    });
-    let output = std::process::Command::new("python3")
-        .env("HOME", home)
-        .env("USERPROFILE", home)
-        .args([
-            "-c",
-            include_str!("fixtures/terminal_stdin.py"),
-            &spec.to_string(),
-        ])
-        .output()
-        .expect("Python 3 with stdlib pty is required for the Unix terminal test");
-    assert!(
-        output.status.success(),
-        "terminal fixture failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert!(
-        result["stderr"]
-            .as_str()
-            .unwrap()
-            .contains("terminal stdin verified\n"),
-        "child did not verify terminal stdin: {result}"
-    );
-    assert_eq!(result["timed_out"], false, "{result}");
-    result
-}
-
+/// The dry run lists `sarif`, which both sources would withhold, once.
 #[test]
-#[cfg(unix)]
-fn update_in_a_terminal_changes_nothing_when_no_source_changed() {
-    let (tmp, home) = res_project(|_| {});
-    let dest = res_skill_md(tmp.path());
-    fs::write(&dest, "my edit\n").unwrap();
-    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
-
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], "");
-    assert_eq!(result["returncode"], 0, "{result}");
-    assert!(
-        result["stdout"].as_str().unwrap().contains("nothing to do"),
-        "{result}"
-    );
-    assert!(
-        !result["stderr"].as_str().unwrap().contains("[y/N]"),
-        "{result}"
-    );
-    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
-    assert_eq!(
-        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
-        lock_before
-    );
+fn update_dry_run_counts_an_item_withheld_by_two_sources_once() {
+    let (tmp, home, sarif) = two_sources_withholding_sarif();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "first", "second", "--project", "--dry-run"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    // `first`, `second` and `sarif`.
+    assert!(stdout.contains("would update 0 of 3 item(s)"), "{stdout}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
 }
 
 #[test]
@@ -1403,14 +1353,18 @@ fn update_force_in_a_terminal_changes_nothing_on_no() {
     fs::write(&dest, "my edit\n").unwrap();
     let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "n\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--force"], "n\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
+    // The block names the edited file that `--force` would replace.
     assert!(
-        result["stderr"].as_str().unwrap().contains("aborted."),
+        result["stdout"]
+            .as_str()
+            .unwrap()
+            .contains("replaces .claude/skills/res/SKILL.md (--force)"),
         "{result}"
     );
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
@@ -1428,10 +1382,10 @@ fn update_force_in_a_terminal_replaces_the_file_on_yes() {
     let generated = fs::read(&dest).unwrap();
     fs::write(&dest, "my edit\n").unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
     assert_eq!(fs::read(&dest).unwrap(), generated);
@@ -1446,24 +1400,16 @@ fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
     change_res_source(tmp.path());
     let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
-    assert!(
-        result["stderr"].as_str().unwrap().contains("aborted."),
-        "{result}"
-    );
-    // The plan is printed before the question.
-    assert!(
-        result["stdout"]
-            .as_str()
-            .unwrap()
-            .contains("update:  1 item(s)"),
-        "{result}"
-    );
+    let stdout = result["stdout"].as_str().unwrap();
+    // The block of the source holds an `update` line for `res`.
+    assert!(stdout.contains("\n  update   skill res"), "{result}");
+    assert!(stdout.contains("1 source(s) not applied."), "{result}");
     assert_eq!(fs::read(&dest).unwrap(), before);
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -1494,17 +1440,16 @@ fn assert_terminal_update_applies_after_a_source_change(answer: &str) {
     let dest = res_skill_md(tmp.path());
     change_res_source(tmp.path());
 
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], answer);
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], answer);
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        result["stderr"].as_str().unwrap().contains("[y/N/q]"),
         "{result}"
     );
+    let stdout = result["stdout"].as_str().unwrap();
+    assert!(stdout.contains("\n  update   skill res"), "{result}");
     assert!(
-        result["stdout"]
-            .as_str()
-            .unwrap()
-            .contains("update:  1 item(s)"),
+        stdout.contains("Updated 1 of 1 item(s) from 1 of 1 source(s)."),
         "{result}"
     );
     assert!(fs::read_to_string(&dest).unwrap().contains("Changed."));
@@ -1609,4 +1554,349 @@ fn update_writes_a_source_change_from_crlf_to_lf() {
         recorded_hash(tmp.path(), ".claude/skills/res/scripts/a.sh"),
         lf
     );
+}
+
+// -- `update` source by source --
+
+#[test]
+fn update_dry_run_writes_nothing_with_a_schema_1_lockfile() {
+    let (tmp, home) = res_project(|_| {});
+    downgrade_to_schema_1(tmp.path());
+    change_res_source(tmp.path());
+    let lock_path = tmp.path().join(".upskill-lock.json");
+    let before = fs::read(&lock_path).unwrap();
+    let dest_before = fs::read(res_skill_md(tmp.path())).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("res"), "{stdout}");
+    assert!(stdout.contains("\n  update   skill res"), "{stdout}");
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+    assert!(!tmp.path().join(".upskill-lock.json.v1").exists());
+    assert_eq!(fs::read(res_skill_md(tmp.path())).unwrap(), dest_before);
+}
+
+/// Writes `<root>/<dir>/<name>/SKILL.md` with `body`.
+fn write_skill_in(root: &Path, dir: &str, name: &str, body: &str) {
+    let path = root.join(dir).join(name);
+    fs::create_dir_all(&path).unwrap();
+    fs::write(
+        path.join("SKILL.md"),
+        format!("---\nschema: 1\nname: {name}\ndescription: Use for {name}\n---\n{body}\n"),
+    )
+    .unwrap();
+}
+
+#[test]
+fn update_refuses_an_empty_source_before_any_write() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    // The first source is a directory, the second a bundle. The labels
+    // sort `a-src` before `b-src`.
+    write_skill_in(tmp.path(), "a-src", "first", "First.");
+    write_skill_in(tmp.path(), "b-src", "second", "Second.");
+    let bundle = tmp.path().join("b-src").join("b.bundle.yaml");
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: bundle b\nitems:\n  skills:\n    - second\n",
+    )
+    .unwrap();
+    for source in ["./a-src", "./b-src/b.bundle.yaml"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", source, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    write_skill_in(tmp.path(), "a-src", "first", "First, changed.");
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: bundle b\nitems:\n  skills: []\n",
+    )
+    .unwrap();
+    let second = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("second")
+        .join("SKILL.md");
+    let second_before = fs::read(&second).unwrap();
+    let lock_path = tmp.path().join(".upskill-lock.json");
+    let bundles_before =
+        serde_json::from_str::<serde_json::Value>(&fs::read_to_string(&lock_path).unwrap())
+            .unwrap()["bundles"]
+            .clone();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("resolved to no items"), "{stderr}");
+    // The first source was applied.
+    let first = fs::read_to_string(
+        tmp.path()
+            .join(".claude")
+            .join("skills")
+            .join("first")
+            .join("SKILL.md"),
+    )
+    .unwrap();
+    assert!(first.contains("First, changed."), "{first}");
+    // The second source was not: its file and its bundle record are as before.
+    assert_eq!(fs::read(&second).unwrap(), second_before);
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    assert_eq!(lock["bundles"], bundles_before, "{lock}");
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["name"] == "second"),
+        "{lock}"
+    );
+}
+
+#[test]
+fn update_yes_applies_a_source_without_a_change() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    // No client CLI on PATH: every plugin is recorded as skipped.
+    let empty_path = tmp.path().join("empty-path");
+    fs::create_dir_all(&empty_path).unwrap();
+    let registry = tmp.path().join("registry");
+    copy_dir_all(&Path::new(FIXTURES).join("items"), &registry).unwrap();
+    copy_dir_all(
+        &Path::new(FIXTURES).join("bundles"),
+        &registry.join("bundles"),
+    )
+    .unwrap();
+    let project = tmp.path().join("project");
+    fs::create_dir_all(project.join(".git")).unwrap();
+    let bundle = registry.join("bundles").join("with-plugins.bundle.yaml");
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &empty_path)
+        .args(["add", bundle.to_str().unwrap(), "--project"])
+        .assert()
+        .success();
+    // Drop the plugin records: only an apply of the source writes them again.
+    let lock_path = project.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    assert!(!lock["plugins"].as_array().unwrap().is_empty(), "{lock}");
+    lock.as_object_mut().unwrap().remove("plugins");
+    fs::write(&lock_path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &empty_path)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    assert!(
+        !lock["plugins"].as_array().is_none_or(Vec::is_empty),
+        "{lock}"
+    );
+}
+
+#[test]
+fn update_yes_with_a_kept_edit_does_not_print_nothing_to_do() {
+    let (tmp, home) = res_project(|_| {});
+    fs::write(res_skill_md(tmp.path()), "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+}
+
+#[test]
+fn update_reports_a_kept_stale_file_as_a_note_and_not_as_a_change() {
+    let (tmp, home) = res_project(|skill| {
+        fs::write(skill.join("notes.md"), "notes\n").unwrap();
+    });
+    let notes = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("res")
+        .join("notes.md");
+    fs::write(&notes, "my notes\n").unwrap();
+    fs::remove_file(tmp.path().join("source").join("res").join("notes.md")).unwrap();
+    // The first update writes the new version and keeps the edited file.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("would update 0 of 1"), "{stdout}");
+    assert!(stdout.contains("up to date"), "{stdout}");
+    assert!(!stdout.contains("\n  update "), "{stdout}");
+
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(0);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    let noted: Vec<std::path::PathBuf> = stderr
+        .lines()
+        .filter_map(|line| line.strip_prefix("kept modified file: "))
+        .map(|line| std::path::PathBuf::from(line.trim_end()))
+        .collect();
+    assert_eq!(
+        noted,
+        vec![
+            Path::new(".claude")
+                .join("skills")
+                .join("res")
+                .join("notes.md")
+        ],
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(fs::read(&notes).unwrap(), b"my notes\n");
+}
+
+#[test]
+fn update_yes_with_an_unsupported_opencode_json_writes_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let rule = tmp.path().join("source").join("style").join("RULE.md");
+    fs::create_dir_all(rule.parent().unwrap()).unwrap();
+    fs::write(
+        &rule,
+        "---\nschema: 1\nname: style\ndescription: Use for style\n---\nBody.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "--project"])
+        .assert()
+        .success();
+    fs::write(
+        tmp.path().join("opencode.json"),
+        "{\n  \"instructions\": \"x\"\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        &rule,
+        "---\nschema: 1\nname: style\ndescription: Use for style\n---\nChanged.\n",
+    )
+    .unwrap();
+    let claude_rule = tmp.path().join(".claude").join("rules").join("style.md");
+    let rule_before = fs::read(&claude_rule).unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    assert_eq!(fs::read(&claude_rule).unwrap(), rule_before);
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+/// Writes the skill `<root>/<name>/SKILL.md` with `body`.
+#[cfg(unix)]
+fn write_named_skill(root: &Path, name: &str, body: &str) {
+    let dir = root.join(name);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        format!("---\nschema: 1\nname: {name}\ndescription: Use for {name}\n---\n{body}\n"),
+    )
+    .unwrap();
+}
+
+/// Every file under `dir`, with its bytes; a symbolic link is not followed.
+#[cfg(unix)]
+fn files_under(dir: &Path) -> std::collections::BTreeMap<std::path::PathBuf, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        for entry in fs::read_dir(&current).unwrap() {
+            let path = entry.unwrap().path();
+            let meta = fs::symlink_metadata(&path).unwrap();
+            if meta.is_dir() {
+                stack.push(path);
+            } else if meta.is_file() {
+                out.insert(path.clone(), fs::read(&path).unwrap());
+            }
+        }
+    }
+    out
+}
+
+#[cfg(unix)]
+#[test]
+fn update_fails_a_source_before_its_install_when_a_removal_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    write_named_skill(&source, "one", "One.");
+    write_named_skill(&source, "gone", "Gone.");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "--claude"])
+        .assert()
+        .success();
+
+    // `one` changes and `gone` leaves the source, so the update both
+    // installs and removes. The output directory of `gone` is replaced by
+    // a symbolic link, which makes the removal plan refuse.
+    write_named_skill(&source, "one", "Changed.");
+    fs::remove_dir_all(source.join("gone")).unwrap();
+    let gone = target.join(".claude/skills/gone");
+    let elsewhere = tmp.path().join("elsewhere");
+    fs::rename(&gone, &elsewhere).unwrap();
+    std::os::unix::fs::symlink(&elsewhere, &gone).unwrap();
+    let before = files_under(&target);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--yes"])
+        .assert()
+        .failure();
+    let err = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(err.contains("symbolic link"), "{err}");
+    // Nothing of the source was written: not the install of `one`, and not
+    // the lockfile.
+    assert_eq!(files_under(&target), before);
 }

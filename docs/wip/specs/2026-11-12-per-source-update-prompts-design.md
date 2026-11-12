@@ -1,8 +1,8 @@
 # `update` in a terminal: one exact preview and one question per source
 
-Date: 2026-11-12. Status: **approved by the user on 2026-11-12; not
-implemented**. Code baseline: `origin/main` at `ac0225e`. This document does not
-describe released behaviour.
+Date: 2026-11-12. Status: **approved by the user on 2026-11-12; implemented by
+the branch `feat/per-source-update-prompts`**. Code baseline: `origin/main` at
+`ac0225e`. This document does not describe released behaviour.
 
 Related records:
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283),
@@ -100,17 +100,27 @@ For each source it does these steps in order:
 A preview **changes something on disk** when applying it would write, replace or
 delete at least one file under the target, or would change an item record of the
 lockfile. A write that the skip-write rule of `apply_plan` suppresses (the file
-on disk already equals the planned bytes) is not a change. An interrupted item
-(a non-empty `pending` record) is a change, because completing it changes the
-lockfile.
+on disk already equals the planned bytes) is not a change, unless the mode of
+the file differs from the mode of the source resource (Unix only): the apply
+sets that mode, so the file is a change. An interrupted item (a non-empty
+`pending` record) is a change, because completing it changes the lockfile.
 
 "An item record" means every field of the `LockedItem` entries that the apply
 would save, compared with the entries in the current lockfile. A difference in
-any field counts, including `git_ref`, `required_by`, `clients` and `files`.
-When an item's record changes and none of its files does, its line says `update`
-with the words `record only`, so that no question is asked without a line that
-explains it. The `plugins`, `mcp` and `bundles` sections of the lockfile are not
-compared; see
+any field counts, including `source`, `git_ref`, `clients` and `files`, with two
+exceptions: `pending`, which is covered by the `complete` action, and
+`required_by`. The reinstall of a dependency's own source computes a different
+`required_by` than the reinstall of the source that requires it, so counting it
+would make a terminal run ask on every run; a change of `required_by` alone is
+saved only when the source is applied for another reason or with `--yes`.
+(Author's call, made during the implementation.)
+
+A modified stale file that is kept is a note (`kept modified file: <path>`), not
+a change: an item whose only preview content is such a file has no item line and
+asks no question. When an item's record changes and none of its files does, its
+line says `update` with the words `record only`, so that no question is asked
+without a line that explains it. The `plugins`, `mcp` and `bundles` sections of
+the lockfile are not compared; see
 [Ancillary files, plugins and MCP servers](#ancillary-files-plugins-and-mcp-servers).
 (Author's call.)
 
@@ -198,7 +208,8 @@ half of #497.
   not change the exit code: declining is a choice, not an error.
 - 1 when an item has a `skip` line, in an applied source or in a source that had
   only `skip` lines. An item that is only noted as `kept modified file` does not
-  cause exit code 1.
+  cause exit code 1. A `skip` line in a source that the user declined does not
+  cause exit code 1 either.
 - 1 when a step fails. Sources applied before the failure stay applied, as
   today.
 
@@ -207,9 +218,16 @@ half of #497.
 After the last source, `update` prints one line that counts the items updated,
 completed and removed, the total number of items considered, and the number of
 sources applied out of the sources considered. When the user declined or quit,
-the summary says how many sources were not applied. The line "everything is up
-to date — nothing to do" is printed only when no source had a change, no source
-had a note, and nothing was applied.
+the summary says how many sources were not applied. When the run stopped (`q` or
+end of input), the summary ends with `Stopped; <r> source(s) not examined.`, or
+`Stopped.` when no source remained. When no item was updated, completed or
+removed but files were written or deleted (for example the files of a client
+that the flags no longer select), the summary is followed by the line
+`Changed <n> file(s) written or deleted`. The result line of an applied source
+ends with `, <n> file(s) changed` when files were written or deleted. The line
+"everything is up to date — nothing to do" is printed only when no source had a
+change, no source had a note, nothing was applied, no item was skipped, and the
+lockfile was not adopted. (Author's call, after review.)
 
 ### A run without a source change
 
@@ -244,14 +262,14 @@ other. This resolves the first half of #497.
 
 ### Flags and modes
 
-| Mode                                | Behaviour                                                                                                                                                                                                                                            |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal, no `--yes`                | As described above.                                                                                                                                                                                                                                  |
-| `--yes`, or stdin is not a terminal | Same steps, no question: every source is applied, as today, including one without a change (so its plugin and MCP steps run). Output and exit codes stay as they are today, except for the rule for edited files and the earlier empty-source guard. |
-| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                                                                                           |
-| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                                                                                    |
-| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                                                                                    |
-| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                                                                                            |
+| Mode                                | Behaviour                                                                                                                                                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal, no `--yes`                | As described above.                                                                                                                                                                                                                                                       |
+| `--yes`, or stdin is not a terminal | Same steps, no question: every source is applied, as today, including one without a change (so its plugin and MCP steps run). Output and exit codes stay as they are today, except for the changes listed in [Changes of `--yes` behaviour](#changes-of---yes-behaviour). |
+| `--dry-run`                         | Prints the same blocks, asks nothing, applies nothing, adopts nothing. See the note below.                                                                                                                                                                                |
+| `--force`                           | The preview is computed with overwrite. Each modified or unmanaged file that would be lost is named in the block.                                                                                                                                                         |
+| `update <name>...`                  | Unchanged selection: the sources of the named items are handled, each as a whole.                                                                                                                                                                                         |
+| `--quiet`                           | Blocks and the closing summary are not printed. A question is still printed, with the source label in it.                                                                                                                                                                 |
 
 `--dry-run` note: every block is exact for the current disk. Because nothing is
 applied, a later block does not include the effect of applying an earlier one.
@@ -285,6 +303,19 @@ lockfile.
   dependency of another source is outside this goal; there is no run-wide cache
   of fetched sources. (Author's call.)
 
+## Changes of `--yes` behaviour
+
+All deliberate, and the only ones:
+
+1. The rule for edited files (see above).
+2. An empty source is refused before any write of that source.
+3. A hand-shake file that cannot be updated (for example an `opencode.json`
+   whose `instructions` is not an array) fails the source before any write of
+   that source. Before, the items were written and the lockfile saved first.
+4. A removal that `plan_removal` refuses (a symbolic link above a recorded path,
+   or a recorded path that cannot be inspected) fails the source before its
+   install. Before, the install of that source was written and saved first.
+
 ## Non-goals
 
 - A question per item or per file.
@@ -292,7 +323,8 @@ lockfile.
   after earlier sources were applied.
 - Any change to `add`, `remove` or `doctor`.
 - A change of the output of `update --yes` or of a run without a terminal, other
-  than the two deliberate changes named in this document.
+  than the changes listed in
+  [Changes of `--yes` behaviour](#changes-of---yes-behaviour).
 
 ## Anti-goals
 
@@ -367,10 +399,9 @@ lockfile.
 - `--dry-run`: same blocks, nothing written, lockfile bytes unchanged, including
   with a `schema: 1` lockfile.
 - All-platform tests for `--yes` and for a run without a terminal: output and
-  exit codes unchanged from today, except for the two deliberate changes (the
-  rule for edited files and the earlier empty-source guard). Existing tests that
-  expect exit code 1 for an edited file with an unchanged source are rewritten
-  to the new rule.
+  exit codes unchanged from today, except for the changes listed in "Changes of
+  `--yes` behaviour". Existing tests that expect exit code 1 for an edited file
+  with an unchanged source are rewritten to the new rule.
 
 ## Documents to update in the same pull request
 

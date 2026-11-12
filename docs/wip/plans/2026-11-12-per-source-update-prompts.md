@@ -540,9 +540,16 @@ Fixed texts:
 - Dry-run last line:
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
 - Closing summary: `Updated <n> of <m> item(s) from <a> of <s> source(s).`; when
-  `sources_not_applied > 0`, append `<k> source(s) not applied.`; the line
+  `sources_not_applied > 0`, append `<k> source(s) not applied.`; when the run
+  stopped (`q` or end of input), append `Stopped; <r> source(s) not examined.`,
+  or `Stopped.` when no source remained. When no item was updated, completed or
+  removed and files were written or deleted, the next line is
+  `Changed <n> file(s) written or deleted`. The line
   `everything is up to date — nothing to do` only when no source had a change or
-  a note.
+  a note, nothing was applied, no item was skipped and no lockfile was adopted.
+- Result line after an applied source: the non-zero counts `<n> updated`,
+  `<n> completed`, `<n> removed`, `<n> skipped`, `<n> modified file(s) kept` and
+  `<n> file(s) changed`, separated by `,`; `applied` when every count is 0.
 
 `parse_answer`: `y`/`yes` → `Apply`; `q`/`quit` → `Stop`; `None` → `Stop`;
 anything else, including an empty line → `Skip`. Letter case and surrounding

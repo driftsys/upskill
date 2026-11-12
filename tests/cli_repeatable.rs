@@ -594,7 +594,10 @@ fn update_dry_run_after_a_failed_add_reports_the_item_to_complete() {
         .success();
     let stdout = stdout_of(&out);
     assert!(stdout.contains("would update 1 of 1"), "{stdout}");
-    assert!(stdout.contains("would complete"), "{stdout}");
+    assert!(
+        stdout.contains(&format!("\n  complete skill {NAME}")),
+        "{stdout}"
+    );
     assert!(!stdout.contains("up to date"), "{stdout}");
     assert!(!copilot_skill(tmp.path()).exists());
 }
@@ -619,70 +622,34 @@ fn update_after_a_failed_add_completes_the_item() {
     assert!(item(tmp.path()).get("pending").is_none());
 }
 
-/// Run `upskill update <args>` with a terminal on stdin and write `input`
-/// to it. Returns the JSON result of `tests/fixtures/terminal_stdin.py`.
-/// The same helper as in `tests/cli_update.rs`.
-fn update_in_terminal(root: &Path, home: &Path, args: &[&str], input: &str) -> serde_json::Value {
-    let mut update = common::upskill_cmd(home);
-    update
-        .current_dir(root)
-        .arg("update")
-        .args(args)
-        .env("NO_COLOR", "1");
-    let spec = serde_json::json!({
-        "program": update.get_program().to_str().unwrap(),
-        "args": update.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),
-        "cwd": update.get_current_dir().unwrap(),
-        "home": home,
-        "env": update.get_envs().map(|(key, value)| {
-            (key.to_str().unwrap(), value.map(|value| value.to_str().unwrap()))
-        }).collect::<Vec<_>>(),
-        "input": input,
-    });
-    let output = std::process::Command::new("python3")
-        .env("HOME", home)
-        .env("USERPROFILE", home)
-        .args([
-            "-c",
-            include_str!("fixtures/terminal_stdin.py"),
-            &spec.to_string(),
-        ])
-        .output()
-        .expect("Python 3 with stdlib pty is required for the Unix terminal test");
-    assert!(
-        output.status.success(),
-        "terminal fixture failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert!(
-        result["stderr"]
-            .as_str()
-            .unwrap()
-            .contains("terminal stdin verified\n"),
-        "child did not verify terminal stdin: {result}"
-    );
-    assert_eq!(result["timed_out"], false, "{result}");
-    result
-}
-
 /// In a terminal without `--yes`, an interrupted item is a change: `update`
-/// shows the plan, asks, and completes the item on "y".
+/// lists it as `complete` in the block of its source, asks, and completes
+/// the item on "y".
 #[test]
-fn update_in_a_terminal_after_a_failed_add_asks_and_completes_on_yes() {
+fn an_interrupted_item_is_listed_as_complete_and_asks() {
     let (tmp, home) = project("v1");
     let Some(guard) = failed_add(tmp.path(), &home) else {
         return;
     };
     drop(guard);
-    let result = update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
     assert_eq!(result["returncode"], 0, "{result}");
-    assert!(
-        result["stderr"].as_str().unwrap().contains("[y/N]"),
+    assert_eq!(
+        result["stderr"]
+            .as_str()
+            .unwrap()
+            .matches("Apply? [y/N/q]")
+            .count(),
+        1,
         "{result}"
     );
     let stdout = result["stdout"].as_str().unwrap();
-    assert!(stdout.contains("complete:  1 item(s)"), "{result}");
+    assert!(
+        stdout
+            .lines()
+            .any(|line| line.trim_start().starts_with("complete ") && line.contains(NAME)),
+        "{result}"
+    );
     assert!(!stdout.contains("nothing to do"), "{result}");
     assert!(copilot_skill(tmp.path()).is_file());
     assert!(item(tmp.path()).get("pending").is_none());
