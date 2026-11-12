@@ -96,12 +96,14 @@ not inside a git repo. Either flag can be passed explicitly.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` record (§4). A destination is a conflict when it is **modified**
-(recorded, with other content or no longer a regular file) or **unowned** (it
-exists and is not recorded), unless its content already equals the planned
-bytes. Without `--force`, an item with at least one conflict is skipped as a
-whole: none of its files is written or deleted and its lockfile entry is not
-changed. The other items are written. `add` then prints one line per conflict to
-stderr, `skipped <kind> <name>: <path> was modified` or
+(a recorded regular file with other content) or **unowned** (a regular file that
+is not recorded), unless its content already equals the planned bytes. A
+destination that exists and is not a regular file (for example a directory or a
+symbolic link) is not a conflict: it fails the whole command before any change.
+Without `--force`, an item with at least one conflict is skipped as a whole:
+none of its files is written or deleted and its lockfile entry is not changed.
+The other items are written. `add` then prints one line per conflict to stderr,
+`skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files and also replaces items installed from another source. An installed name
@@ -136,7 +138,11 @@ longer targets, is deleted when it is owned; a modified one is kept, stays in
 the record, and is reported as `kept modified file: <path>`. An item that its
 source no longer contains is removed with the rules of `remove` (§2.3).
 `update --force` replaces modified and unowned destinations and deletes modified
-regular files that are no longer produced.
+regular files that are no longer produced; it then lists these files after
+`Replaced <n> modified or unmanaged file(s) (--force)`. In a terminal without
+`--yes`, `update` asks for a confirmation when a source changed or when
+`--force` is given; otherwise it applies without a question, so that a skipped
+item is reported with exit code 1 as in a run without a terminal.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -319,11 +325,12 @@ that path; a modified recorded file is kept and stays in `files`, unless
 deletes only recorded files (§2.3). `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
 not an `add`, or an `update` for its first source, that is refused for a source
-item that overlaps its own output paths, for a conflict with another source, or
-for two items with one installed name) adopt a `schema: 1` lockfile: they keep
-the old bytes as `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is
-kept and not replaced), record each existing file at the items' output paths
-with its current hash, save `schema: 2`, and print the adopted paths to stderr.
+item that overlaps its own output paths, for a conflict with another source, for
+two items with one installed name, or for an installed name with a path
+separator) adopt a `schema: 1` lockfile: they keep the old bytes as
+`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
+replaced), record each existing file at the items' output paths with its current
+hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 

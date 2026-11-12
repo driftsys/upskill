@@ -123,8 +123,9 @@ skipped skill review: .claude/skills/review/SKILL.md exists and is not managed b
 Use --force to replace.
 ```
 
-and exits with code 1. `add --force` replaces these files, and also replaces an
-item installed from another source.
+and exits with code 1. Paths are printed with the path separator of the platform
+(`\` on Windows). `add --force` replaces these files, and also replaces an item
+installed from another source.
 
 An installed name, or an `--as` alias, must not contain a path separator (`/` or
 `\`). `add` refuses such a name before it changes any file and names the item in
@@ -196,7 +197,13 @@ item that its source no longer contains is removed with the rules of
 [`upskill remove`](#upskill-remove-name---source-label---force): unchanged
 recorded files are deleted, modified ones are kept and reported, and the
 lockfile entry is dropped. `update --force` replaces modified and unmanaged
-files and deletes modified regular files that are no longer produced.
+files and deletes modified regular files that are no longer produced, then lists
+them after `Replaced <n> modified or unmanaged file(s) (--force)`. In a terminal
+without `--yes`, `update` asks for a confirmation when a source changed or when
+`--force` is given; otherwise it applies without a question, so that a skipped
+item is reported with exit code 1 as in a run without a terminal. A destination
+that exists and is not a regular file (for example a directory or a symbolic
+link) fails the whole command before any change, also with `--force`.
 
 Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.
@@ -544,9 +551,10 @@ also when the command fails after the adoption was saved. `update --dry-run` and
 `doctor` do not adopt, and neither does a `remove` that fails because a name is
 not in the lockfile. An `add` does not adopt when it is refused because a source
 item overlaps its own output paths, because an item conflicts with an item
-installed from another source, or because two items would install under one
-name. An `update` refused for one of these reasons does not adopt when the
-refused source is the first source it updates.
+installed from another source, because two items would install under one name,
+or because an installed name contains a path separator. An `update` refused for
+one of these reasons does not adopt when the refused source is the first source
+it updates.
 
 ## Per-client output paths
 
