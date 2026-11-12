@@ -99,6 +99,21 @@ pub(super) struct ItemChanges {
     pub disposition: Disposition,
 }
 
+impl ItemChanges {
+    /// The `files` record that [`execute_plan`] saves for this item when it
+    /// writes it: the planned files and the records of the kept stale
+    /// files, sorted by `client`, then `path`, without duplicates.
+    pub fn recorded_files(&self) -> Vec<OwnedFile> {
+        let mut files = self.files.clone();
+        for (_, old) in &self.kept {
+            files.extend(old.iter().cloned());
+        }
+        files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
+        files.dedup();
+        files
+    }
+}
+
 /// What [`execute_plan`] does with one item. See the rule in the rustdoc
 /// of [`decide_plan`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -515,10 +530,11 @@ pub(super) fn execute_plan(
 
     let mut outcome = ApplyOutcome::default();
     for (item, changes) in planned.iter().zip(changes) {
+        let files = changes.recorded_files();
         let ItemChanges {
             kind,
             name,
-            mut files,
+            files: _,
             delete,
             kept,
             conflicts,
@@ -567,12 +583,7 @@ pub(super) fn execute_plan(
             write_staged(&full, &file.bytes, file.mode)?;
         }
 
-        for (rel, old) in kept {
-            files.extend(old);
-            outcome.kept.push(rel);
-        }
-        files.sort_by(|a, b| (&a.client, &a.path).cmp(&(&b.client, &b.path)));
-        files.dedup();
+        outcome.kept.extend(kept.into_iter().map(|(rel, _)| rel));
 
         if let Some(entry) = lock
             .items

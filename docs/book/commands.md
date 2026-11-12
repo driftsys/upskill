@@ -660,7 +660,8 @@ item overlaps its own output paths, because an item conflicts with an item
 installed from another source, because two items would install under one name,
 or because an installed name contains a path separator. An `update` refused for
 one of these reasons does not adopt when the refused source is the first source
-it updates.
+it updates, and neither does an `update` whose first source resolves to no items
+while the lockfile records items from it.
 
 ## Per-client output paths
 

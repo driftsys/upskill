@@ -398,11 +398,12 @@ supported. `add`, `update` and `remove` (not `update --dry-run`, not `doctor`,
 not a `remove` that fails on an unknown name, not an `add`, or an `update` for
 its first source, that is refused for a source item that overlaps its own output
 paths, for a conflict with another source, for two items with one installed
-name, or for an installed name with a path separator) adopt a `schema: 1`
-lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
-`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
-the items' output paths with its current hash, save `schema: 2`, and print the
-adopted paths to stderr.
+name, or for an installed name with a path separator, and not an `update` whose
+first source resolves to no items while the lockfile records items from it)
+adopt a `schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1`
+(an existing `.upskill-lock.json.v1` is kept and not replaced), record each
+existing file at the items' output paths with its current hash, save
+`schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 

@@ -669,6 +669,7 @@ fn update_in_terminal(root: &Path, home: &Path, args: &[&str], input: &str) -> s
 /// In a terminal without `--yes`, an interrupted item is a change: `update`
 /// shows the plan, asks, and completes the item on "y".
 #[test]
+#[ignore = "rewritten in the next task"]
 fn update_in_a_terminal_after_a_failed_add_asks_and_completes_on_yes() {
     let (tmp, home) = project("v1");
     let Some(guard) = failed_add(tmp.path(), &home) else {

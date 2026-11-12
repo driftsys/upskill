@@ -45,8 +45,6 @@ pub(super) struct PreparedInstall {
 
 /// What [`PreparedInstall::commit`] would do now. Computed without any
 /// change on disk or in the lockfile.
-// Used by `lifecycle::update` from the next commit.
-#[allow(dead_code)]
 pub(super) struct InstallPreview {
     pub items: Vec<PreviewItem>,
     /// Modified destinations of items with `Disposition::KeepEdits`.
@@ -57,7 +55,7 @@ pub(super) struct InstallPreview {
 /// Fetches `source`, resolves its items and dependencies, runs the
 /// cross-source conflict check and the overlap check, plans every output
 /// file, merges duplicate planned items and checks the installed names.
-/// Writes nothing: no file, no directory and no lockfile. The conflict
+/// Writes nothing in `target`: no file, no directory and no lockfile. The conflict
 /// check reads the lockfile and does not keep it.
 pub(super) fn prepare_install(
     source: &InstallSource,
@@ -396,8 +394,6 @@ impl PreparedInstall {
     /// lockfile, the caller passes it after `owned::adopt_schema1_in_memory`.
     /// The preview is computed by [`apply::decide_plan`], as `commit` does;
     /// see [`preview_items`] for how each item is reported.
-    // Used by `lifecycle::update` from the next commit.
-    #[allow(dead_code)]
     pub fn preview(&self, target: &Path, lock: &Lockfile) -> Result<InstallPreview> {
         let new_items = self.new_items();
         let decision = apply::decide_plan(
@@ -418,9 +414,9 @@ impl PreparedInstall {
         })
     }
 
-    /// Adopts if needed, executes, runs the plugin and MCP steps, saves the
-    /// lockfile and writes the hand-shake files: the second half of today's
-    /// `install_with_lockfile`.
+    /// Writes the prepared install: adopts a `schema: 1` lockfile if
+    /// needed, writes the plan, runs the plugin and MCP steps, saves the
+    /// lockfile and writes the hand-shake files.
     ///
     /// Loads the lockfile, adopts a `schema: 1` lockfile (the adoption is
     /// saved before any file is written), decides the plan again from the
@@ -623,12 +619,16 @@ impl PreparedInstall {
 ///   `forced` is the conflict paths (there are some only with `overwrite`).
 ///   The action is `Complete` when the lockfile entry has a `pending` record
 ///   and the planned source hash equals the recorded hash, and `Update`
-///   otherwise. `record_only` is true when nothing is written or deleted and
-///   the lockfile record of the item would change (no entry yet, or a field
-///   other than `files`, `pending` and `required_by` differs; see
-///   [`apply::same_record`]). An item with nothing to write, delete or keep,
-///   that is not `Complete` and not `record_only`, is up to date and gets no
-///   `PreviewItem`.
+///   otherwise. `record_only` is true when nothing is written or deleted,
+///   `new_items` holds an entry for the item, and the lockfile record of
+///   the item would change: the lockfile has no entry for the item yet, a
+///   field other than `files`, `pending` and `required_by` differs (see
+///   [`apply::same_record`]), or the `files` record that `execute_plan`
+///   would save ([`apply::ItemChanges::recorded_files`]: the planned files
+///   and the records of the kept stale files) differs from the `files`
+///   record of the entry, compared as a set of (client, path, hash). An
+///   item with nothing to write, delete or keep, that is not `Complete` and
+///   not `record_only`, is up to date and gets no `PreviewItem`.
 fn preview_items(
     target: &Path,
     lock: &Lockfile,
@@ -639,6 +639,7 @@ fn preview_items(
     let mut items = Vec::new();
     let mut kept_edits = Vec::new();
     for (item, changes) in planned.iter().zip(decision.items) {
+        let recorded = changes.recorded_files();
         let conflict_paths: Vec<PathBuf> = changes.conflicts.into_iter().map(|c| c.path).collect();
         match changes.disposition {
             Disposition::KeepEdits => {
@@ -684,7 +685,13 @@ fn preview_items(
             .is_some_and(|e| !e.pending.is_empty() && new_entry.is_some_and(|n| n.hash == e.hash));
         let record_only = write.is_empty()
             && delete.is_empty()
-            && new_entry.is_some_and(|n| entry.is_none_or(|e| !apply::same_record(n, e)));
+            && new_entry.is_some_and(|n| {
+                entry.is_none_or(|e| {
+                    !apply::same_record(n, e)
+                        || recorded.iter().collect::<BTreeSet<_>>()
+                            != e.files.iter().collect::<BTreeSet<_>>()
+                })
+            });
         if write.is_empty()
             && delete.is_empty()
             && !complete
@@ -1017,6 +1024,52 @@ mod tests {
             false,
         );
         assert_eq!(items.len(), 1);
+        assert_eq!(items[0].action, PreviewAction::Update);
+        assert!(items[0].record_only);
+        assert!(items[0].write.is_empty() && items[0].delete.is_empty());
+    }
+
+    #[test]
+    fn an_unowned_file_with_the_planned_bytes_is_record_only() {
+        // `commit` records the file, although it writes no new content.
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), ENTRY, b"gen");
+        let lock = lock_of(vec![entry(vec![])]);
+        let new = lock.items.clone();
+        let (items, kept) = map(
+            tmp.path(),
+            &lock,
+            &planned(&[(ENTRY, b"gen")]),
+            &new,
+            false,
+            false,
+        );
+        assert!(kept.is_empty());
+        assert_eq!(items.len(), 1, "{items:?}");
+        assert_eq!(items[0].action, PreviewAction::Update);
+        assert!(items[0].record_only);
+        assert!(items[0].write.is_empty() && items[0].delete.is_empty());
+    }
+
+    #[test]
+    fn absent_stale_files_are_record_only() {
+        // `commit` drops the absent stale file from the `files` record.
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), ENTRY, b"gen");
+        let lock = lock_of(vec![entry(vec![
+            owned_file(ENTRY, b"gen"),
+            owned_file(NOTES, b"notes"),
+        ])]);
+        let new = lock.items.clone();
+        let (items, _) = map(
+            tmp.path(),
+            &lock,
+            &planned(&[(ENTRY, b"gen")]),
+            &new,
+            false,
+            false,
+        );
+        assert_eq!(items.len(), 1, "{items:?}");
         assert_eq!(items[0].action, PreviewAction::Update);
         assert!(items[0].record_only);
         assert!(items[0].write.is_empty() && items[0].delete.is_empty());

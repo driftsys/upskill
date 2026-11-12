@@ -142,8 +142,9 @@ pub enum Commands {
     /// Pull latest sources and regenerate changed items.
     ///
     /// Re-fetches the source for every (or just the named) lockfile
-    /// entries and reinstalls those sources. With `--dry-run`, hashes
-    /// the new SSOT and reports what would change without writing.
+    /// entries and reinstalls those sources. With `--dry-run`, plans each
+    /// source against the files on disk and the lockfile, and reports what
+    /// would change without writing.
     /// `update` always fetches.
     #[command(
         display_order = 3,

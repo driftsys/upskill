@@ -10,8 +10,9 @@ use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
     DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
-    PluginResult, RemoveFilter, RemoveReport, UpdateMode, UpdateReport, UpdateStatus, doctor,
-    install_with_lockfile, list, remove, update,
+    PluginResult, PreviewAction, RemoveFilter, RemoveReport, SourceDecision, SourcePreview,
+    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile, list,
+    remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -849,217 +850,102 @@ fn run_update(args: UpdateArgs) -> i32 {
     let is_global = global || (!project && !is_inside_git_repo());
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
 
-    if dry_run {
-        // Explicit --dry-run: compute and report without applying.
-        match update(
-            &target,
-            names,
-            UpdateMode::DryRun,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, true);
-                EXIT_SUCCESS
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
-        }
-    } else if update_step(
-        !yes && std::io::IsTerminal::is_terminal(&std::io::stdin()),
-        false,
+    let mut apply_all = ApplyAll;
+    let mut dry = DryRunObserver;
+    let mut ask = AskEachSource;
+    let observer: &mut dyn UpdateObserver = if dry_run {
+        &mut dry
+    } else if !yes && std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+        &mut ask
+    } else {
+        &mut apply_all
+    };
+    match update(
+        &target,
+        names,
+        plugin_scope,
+        &selection,
         force,
-    ) == UpdateStep::ApplyWithoutPrompt
-    {
-        // No confirmation needed — apply directly (single fetch).
-        match update(
-            &target,
-            names,
-            UpdateMode::Apply,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, false);
-                print_adoption_notice(report.adopted.as_deref());
-                finish_update(&report)
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
+        dry_run,
+        observer,
+    ) {
+        Ok(report) if dry_run => {
+            print_update_report(&report, true);
+            EXIT_SUCCESS
         }
-    } else {
-        // Interactive: dry-run first to show plan, then apply if confirmed.
-        let plan = match update(
-            &target,
-            names,
-            UpdateMode::DryRun,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(r) => r,
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                return EXIT_ERROR;
-            }
-        };
+        Ok(report) => {
+            print_update_report(&report, false);
+            print_adoption_notice(report.adopted.as_deref());
+            finish_update(&report)
+        }
+        Err(err) => {
+            print_adoption_after_error(&err);
+            print_error_chain(&err);
+            eprintln!();
+            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            EXIT_ERROR
+        }
+    }
+}
 
-        // An item with an interrupted operation counts as changed: its
-        // status is `WouldCompleteInterrupted`, not `UpToDate`.
-        let source_changed = plan
-            .items
-            .iter()
-            .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
-        // With `prompting` true, the step is `Confirm` or `NothingToDo`.
-        if update_step(true, source_changed, force) == UpdateStep::NothingToDo {
-            if !style::is_quiet() {
-                println!("everything is up to date — nothing to do");
-            }
-            return EXIT_SUCCESS;
-        }
+/// The `update` observer for `--yes` and for a run without a terminal:
+/// applies every source, also one without a change, so that its plugin and
+/// MCP steps run. Prints nothing.
+struct ApplyAll;
+
+impl UpdateObserver for ApplyAll {
+    fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+        SourceDecision::Apply
+    }
+
+    fn applied(&mut self, _result: &SourceResult) {}
+}
+
+/// The `update` observer for `--dry-run`: applies nothing. Prints nothing;
+/// the report is printed after the run.
+struct DryRunObserver;
+
+impl UpdateObserver for DryRunObserver {
+    fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+        SourceDecision::Skip
+    }
+
+    fn applied(&mut self, _result: &SourceResult) {}
+}
+
+/// The `update` observer for a terminal without `--yes`: prints the source
+/// label, and asks `Apply? [y/N]` for a source with changes. `y` or `yes`,
+/// in any letter case, applies the source; any other answer, end of input
+/// or a read error does not. A source without changes is not applied and
+/// is not asked about.
+struct AskEachSource;
+
+impl UpdateObserver for AskEachSource {
+    fn preview(&mut self, preview: &SourcePreview) -> SourceDecision {
+        use std::io::{BufRead, Write};
+
         if !style::is_quiet() {
-            print_update_plan(&plan);
+            println!("{}", preview.source);
         }
-        if !confirm_update() {
-            eprintln!("aborted.");
-            return EXIT_SUCCESS;
+        if !preview.has_changes() {
+            return SourceDecision::Skip;
         }
-
-        match update(
-            &target,
-            names,
-            UpdateMode::Apply,
-            plugin_scope,
-            &selection,
-            force,
-        ) {
-            Ok(report) => {
-                print_update_report(&report, false);
-                print_adoption_notice(report.adopted.as_deref());
-                finish_update(&report)
-            }
-            Err(err) => {
-                print_adoption_after_error(&err);
-                print_error_chain(&err);
-                eprintln!();
-                eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
-                EXIT_ERROR
-            }
+        eprint!("{}: Apply? [y/N] ", preview.source);
+        let _ = std::io::stderr().flush();
+        let mut line = String::new();
+        // End of input and a read error count as "no" here. Task 6 replaces
+        // this observer, and end of input then stops the run.
+        if std::io::stdin().lock().read_line(&mut line).is_err() {
+            return SourceDecision::Skip;
+        }
+        if matches!(line.trim().to_lowercase().as_str(), "y" | "yes") {
+            SourceDecision::Apply
+        } else {
+            SourceDecision::Skip
         }
     }
-}
 
-/// What `update` does before it applies.
-#[derive(Debug, PartialEq, Eq)]
-enum UpdateStep {
-    /// Apply without a question: a run with `--yes` or without a terminal.
-    ApplyWithoutPrompt,
-    /// Show the plan of the dry run and ask before applying.
-    Confirm,
-    /// Change nothing and print that there is nothing to do. In a terminal
-    /// without `--yes`, when no source changed, no item has an interrupted
-    /// operation and `--force` is not given,
-    /// `update` does not apply: it does not report a modified file, does
-    /// not delete the files of a client that the flags no longer select,
-    /// and does not adopt a `schema: 1` lockfile.
-    NothingToDo,
-}
-
-/// The step before the apply. `prompting` is true in a terminal without
-/// `--yes`. There, a source change, an item with an interrupted operation
-/// (both given as `source_changed`) or `--force` needs a confirmation, and
-/// otherwise nothing is applied.
-fn update_step(prompting: bool, source_changed: bool, force: bool) -> UpdateStep {
-    if !prompting {
-        UpdateStep::ApplyWithoutPrompt
-    } else if source_changed || force {
-        UpdateStep::Confirm
-    } else {
-        UpdateStep::NothingToDo
-    }
-}
-
-/// Show a summary plan of what an update would do.
-fn print_update_plan(report: &UpdateReport) {
-    let update_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldChange { .. }))
-        .count();
-    let remove_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldRemove))
-        .count();
-    let complete_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::WouldCompleteInterrupted))
-        .count();
-    let unchanged_count = report
-        .items
-        .iter()
-        .filter(|i| matches!(i.status, UpdateStatus::UpToDate))
-        .count();
-
-    if update_count > 0 {
-        println!("  {}  {} item(s)", style::success("update:"), update_count);
-    }
-    if complete_count > 0 {
-        println!(
-            "  {}  {} item(s) (interrupted before)",
-            style::success("complete:"),
-            complete_count
-        );
-    }
-    if remove_count > 0 {
-        println!(
-            "  {}  {} item(s) (no longer in source)",
-            style::error_label("remove:"),
-            remove_count
-        );
-    }
-    if unchanged_count > 0 {
-        println!(
-            "  {}  {} item(s)",
-            style::dim("unchanged:"),
-            unchanged_count
-        );
-    }
-}
-
-/// Interactive confirmation for update. Auto-proceeds in non-TTY (CI/pipes).
-fn confirm_update() -> bool {
-    use std::io::{BufRead, IsTerminal, Write};
-
-    if !std::io::stdin().is_terminal() {
-        return true;
-    }
-
-    eprint!("Apply? [y/N] ");
-    let _ = std::io::stderr().flush();
-
-    let stdin = std::io::stdin();
-    let mut line = String::new();
-    if stdin.lock().read_line(&mut line).is_err() {
-        return false;
-    }
-    matches!(line.trim().to_lowercase().as_str(), "y" | "yes")
+    fn applied(&mut self, _result: &SourceResult) {}
 }
 
 fn print_update_report(report: &UpdateReport, dry_run: bool) {
@@ -1070,23 +956,34 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         println!("nothing to update — lockfile is empty");
         return;
     }
+    // A dry run counts the items it would change. An applied run counts
+    // the items it changed; an item of a source that was not applied is
+    // not counted.
     let changes = report
         .items
         .iter()
-        .filter(|i| {
-            !matches!(
-                i.status,
-                UpdateStatus::UpToDate | UpdateStatus::SkippedModified { .. }
-            )
+        .filter(|i| match i.status {
+            UpdateStatus::UpToDate | UpdateStatus::SkippedModified { .. } => false,
+            UpdateStatus::NotApplied { .. } => dry_run,
+            _ => true,
         })
         .count();
     let skipped = report
         .items
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
-    if changes == 0 && !dry_run && !skipped && report.changed.is_empty() && report.adopted.is_none()
+    if changes == 0
+        && !dry_run
+        && !skipped
+        && report.changed.is_empty()
+        && report.adopted.is_none()
+        && report.sources_not_applied == 0
     {
-        println!("everything is up to date — nothing to do");
+        // The `kept modified file` notes are printed by `finish_update`; a
+        // run that prints them does not say that there was nothing to do.
+        if report.kept_modified.is_empty() {
+            println!("everything is up to date — nothing to do");
+        }
         return;
     }
     let header: colored::ColoredString = if dry_run {
@@ -1106,18 +1003,21 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             UpdateStatus::Updated { new_hash, .. } => {
                 style::success(&format!("updated → {}", short(new_hash)))
             }
-            UpdateStatus::WouldChange { new_hash, .. } => {
-                style::warn(&format!("would change → {}", short(new_hash)))
-            }
             UpdateStatus::Removed => style::error_label("removed — no longer in source"),
-            UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
             UpdateStatus::CompletedInterrupted => style::success("completed — interrupted before"),
-            UpdateStatus::WouldCompleteInterrupted => {
-                style::warn("would complete — interrupted before")
+            UpdateStatus::SkippedModified { .. } if dry_run => {
+                style::warn("would skip — modified or unmanaged files kept")
             }
             UpdateStatus::SkippedModified { .. } => {
                 style::warn("skipped — modified or unmanaged files kept")
             }
+            UpdateStatus::NotApplied { .. } if !dry_run => style::dim("not applied"),
+            UpdateStatus::NotApplied { action } => match action {
+                PreviewAction::Update => style::warn("would change"),
+                PreviewAction::Complete => style::warn("would complete — interrupted before"),
+                PreviewAction::Remove => style::warn("would remove — no longer in source"),
+                PreviewAction::Skip => style::warn("would skip — modified or unmanaged files kept"),
+            },
         };
         println!(
             "  {} {:<32} {}",
@@ -1975,32 +1875,4 @@ fn run_index(registry: Option<&str>, clear: bool) -> i32 {
         }
     }
     EXIT_SUCCESS
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn update_step_covers_every_input() {
-        use UpdateStep::*;
-        // (prompting, source changed, force) -> step
-        let table = [
-            ((false, false, false), ApplyWithoutPrompt),
-            ((false, false, true), ApplyWithoutPrompt),
-            ((false, true, false), ApplyWithoutPrompt),
-            ((false, true, true), ApplyWithoutPrompt),
-            ((true, false, false), NothingToDo),
-            ((true, false, true), Confirm),
-            ((true, true, false), Confirm),
-            ((true, true, true), Confirm),
-        ];
-        for ((prompting, changed, force), expected) in table {
-            assert_eq!(
-                update_step(prompting, changed, force),
-                expected,
-                "prompting={prompting} changed={changed} force={force}"
-            );
-        }
-    }
 }

@@ -207,9 +207,9 @@ pub(super) fn check_name_resolution_outside_outputs(
     check_sources_outside_outputs(local_source, target, Some(&filter), plan_names)
 }
 
-/// Like [`super::install_with_lockfile`]'s name-resolution branch but
-/// operates on an already-fetched local source path (avoids double-fetch
-/// when `prepared::prepare_install` has already called `fetch_ssot`).
+/// The name-resolution branch of `prepared::prepare_install`: resolves
+/// `items` as item or bundle names in an already-fetched local source path
+/// (`prepare_install` has already called `fetch_ssot`).
 /// Writes nothing: the outputs are in [`InstallReport::planned`].
 pub(super) fn install_with_name_resolution_from_local(
     local_source: &Path,

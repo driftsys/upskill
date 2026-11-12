@@ -97,8 +97,9 @@ content you authored and understand, and always lint after.
 
 1. Run `upskill update` to refresh everything, or `upskill update item-a` to
    refresh one item. The command always re-fetches the source.
-2. Use `upskill update --dry-run` first if you want a preview. It hashes what
-   the new install would produce and reports what would change without writing.
+2. Use `upskill update --dry-run` first if you want a preview. It plans each
+   source against the files on disk and reports what would change without
+   writing.
 3. Review the diff. Pay attention to:
    - Changed `description` fields — these affect skill activation behavior and
      may need eval before accepting.

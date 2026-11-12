@@ -378,7 +378,8 @@ fn legacy_pinned_ref_stays_selected_when_default_branch_advances() {
         .args(["update", "--dry-run"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("would update 0 of 1"));
+        .stdout(predicate::str::contains("would update 1 of 1"))
+        .stdout(predicate::str::contains("would change"));
     assert_eq!(snapshot(&f.target), before);
     f.cmd().args(["update"]).assert().success();
     assert_eq!(
