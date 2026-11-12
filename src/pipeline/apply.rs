@@ -5,9 +5,9 @@
 //! client root and the kind directory, for example `.claude/skills`) may be
 //! symbolic links. Every existing component from the third one to the last
 //! one (the item directory, resource subdirectories and the file) must not
-//! be a symbolic link. The checks that `apply_plan` runs before any change
-//! on disk, and the conflict rules for modified and unowned files, are
-//! described in the rustdoc of `apply_plan` and `check_writable`.
+//! be a symbolic link. The checks that `decide_plan` runs before any
+//! change on disk, and the conflict rules for modified and unowned files,
+//! are described in the rustdoc of `decide_plan` and `check_writable`.
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
@@ -68,56 +68,46 @@ pub(super) struct ApplyOutcome {
     pub changed: Vec<PathBuf>,
 }
 
-/// What `apply_plan` does for one item, computed before any change.
-struct ItemChanges {
-    files: Vec<OwnedFile>,
-    /// Stale files to delete.
-    delete: Vec<PathBuf>,
-    /// Stale files that are kept, with their previous records.
-    kept: Vec<(PathBuf, Vec<OwnedFile>)>,
-    /// Destinations that stop the write of this item.
-    conflicts: Vec<FileConflict>,
-    /// `Owned` destinations that are not rewritten: see the rule in the
-    /// rustdoc of [`apply_plan`].
-    unchanged: BTreeSet<PathBuf>,
+/// What `execute_plan` will do, computed without any change on disk or
+/// in `lock`. One entry per planned item, in the order of `planned`.
+pub(super) struct PlanDecision {
+    pub items: Vec<ItemChanges>,
 }
 
-/// Writes every planned item that has no conflict and updates
-/// `lock.items[..].files` for the written items that have a lockfile entry.
-///
-/// With `new_entries` (the lockfile entry of each planned item, given by
-/// `install_with_lockfile`), the operation can be completed by a second
-/// run after a failure. The lockfile is saved in step 2 when at least one
-/// item gets a `pending` record, and always in step 4:
-///
-/// 1. The checks below run; nothing is changed on disk yet.
-/// 2. For each item that is written (no conflict, or `overwrite`) and that
-///    writes at least one file or deletes at least one existing stale file,
-///    the planned files are added to the `pending` record of its lockfile
-///    entry. The old `pending` records that the plan does not repeat stay,
-///    so a path and hash of a previous failed run stay recorded until the
-///    promotion of step 4. An item that has no entry yet is inserted from
-///    `new_entries`, with an empty `files` record. The lockfile is saved
-///    when at least one item got a `pending` record.
-/// 3. For each item, after the save of step 2: its stale files are deleted
-///    first (the checks of step 1 judge each planned path against the state
-///    after that deletion), then each file that is not `unchanged` (see
-///    below) is written to a stage file `.upskill-stage-<16 hex digits>` in
-///    the destination directory, which gets the planned mode (a file
-///    without a planned mode gets the default mode of a new file), and is
-///    renamed to the destination. On an error the stage file is deleted and
-///    the error is returned; files already renamed stay, and the lockfile
-///    keeps the `pending` record of step 2.
-/// 4. The `files` record of each written item is set to the planned files
-///    and the records of its kept stale files, and its `pending` record is
-///    cleared. The lockfile is saved.
-///
-/// A second run finds the files written by a failed run `Owned` through
-/// their `pending` hash, and the files not yet written `Owned` through
-/// their `files` hash, so neither is a conflict. This holds after several
-/// failed runs, because step 2 keeps the old `pending` records. Without
-/// `new_entries` (the library entry points), no `pending` record is set and
-/// the lockfile is not saved.
+/// What `execute_plan` does for one item, computed by `decide_plan`
+/// before any change.
+pub(super) struct ItemChanges {
+    pub kind: ItemKind,
+    /// Installed name of the item.
+    pub name: String,
+    /// The record of the planned files, sorted by `client`, then `path`.
+    pub files: Vec<OwnedFile>,
+    /// Stale files to delete.
+    pub delete: Vec<PathBuf>,
+    /// Stale files that are kept, with their previous records.
+    pub kept: Vec<(PathBuf, Vec<OwnedFile>)>,
+    /// Destinations that stop the write of this item.
+    pub conflicts: Vec<FileConflict>,
+    /// `Owned` destinations that are not rewritten: see the rule in the
+    /// rustdoc of [`decide_plan`].
+    pub unchanged: BTreeSet<PathBuf>,
+}
+
+/// Writes an install plan: [`decide_plan`] followed by [`execute_plan`].
+/// See the rustdoc of both functions for the rules.
+pub(super) fn apply_plan(
+    target: &Path,
+    lock: &mut Lockfile,
+    planned: &[PlannedItem],
+    overwrite: bool,
+    new_entries: Option<&[LockedItem]>,
+) -> Result<ApplyOutcome> {
+    let decision = decide_plan(target, lock, planned, overwrite)?;
+    execute_plan(target, lock, planned, decision, overwrite, new_entries)
+}
+
+/// Computes what [`execute_plan`] does for each planned item, without any
+/// change on disk or in `lock`.
 ///
 /// Conflicts: every destination of every item is classified with
 /// [`classify`] before anything is written. A destination whose content
@@ -147,7 +137,7 @@ struct ItemChanges {
 /// record; with `overwrite` it is deleted when it is a regular file. A kept stale file that is a planned path, or a directory
 /// on the way to one, is a conflict of the item.
 ///
-/// Before any change on disk it fails when two planned items have the same
+/// It fails when two planned items have the same
 /// `(kind, name)` or an installed name contains a path separator, when two
 /// planned files have the same path, when one planned file is a directory
 /// on the way to another, when a path to write or delete breaks the
@@ -158,13 +148,12 @@ struct ItemChanges {
 /// regular file, or a directory that holds only regular files, is accepted
 /// when those files are stale recorded files of the same item. See
 /// `check_writable`.
-pub(super) fn apply_plan(
+pub(super) fn decide_plan(
     target: &Path,
-    lock: &mut Lockfile,
+    lock: &Lockfile,
     planned: &[PlannedItem],
     overwrite: bool,
-    new_entries: Option<&[LockedItem]>,
-) -> Result<ApplyOutcome> {
+) -> Result<PlanDecision> {
     check_installed_names(planned)?;
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
     let mut changes = Vec::with_capacity(planned.len());
@@ -318,6 +307,8 @@ pub(super) fn apply_plan(
         conflicts.sort_by(|a, b| a.path.cmp(&b.path));
         conflicts.dedup();
         changes.push(ItemChanges {
+            kind: item.kind,
+            name: item.name.clone(),
             files,
             delete,
             kept,
@@ -337,7 +328,57 @@ pub(super) fn apply_plan(
             );
         }
     }
+    Ok(PlanDecision { items: changes })
+}
 
+/// Writes every planned item that has no conflict in `decision` (or every
+/// item, with `overwrite`) and updates `lock.items[..].files` for the
+/// written items that have a lockfile entry. `decision` is the result of
+/// [`decide_plan`] for the same `target`, `lock`, `planned` and
+/// `overwrite`.
+///
+/// With `new_entries` (the lockfile entry of each planned item, given by
+/// `install_with_lockfile`), the operation can be completed by a second
+/// run after a failure. The lockfile is saved in step 2 when at least one
+/// item gets a `pending` record, and always in step 4:
+///
+/// 1. [`decide_plan`] ran its checks; nothing is changed on disk yet.
+/// 2. For each item that is written (no conflict, or `overwrite`) and that
+///    writes at least one file or deletes at least one existing stale file,
+///    the planned files are added to the `pending` record of its lockfile
+///    entry. The old `pending` records that the plan does not repeat stay,
+///    so a path and hash of a previous failed run stay recorded until the
+///    promotion of step 4. An item that has no entry yet is inserted from
+///    `new_entries`, with an empty `files` record. The lockfile is saved
+///    when at least one item got a `pending` record.
+/// 3. For each item, after the save of step 2: its stale files are deleted
+///    first (the checks of step 1 judge each planned path against the state
+///    after that deletion), then each file that is not `unchanged` (see
+///    below) is written to a stage file `.upskill-stage-<16 hex digits>` in
+///    the destination directory, which gets the planned mode (a file
+///    without a planned mode gets the default mode of a new file), and is
+///    renamed to the destination. On an error the stage file is deleted and
+///    the error is returned; files already renamed stay, and the lockfile
+///    keeps the `pending` record of step 2.
+/// 4. The `files` record of each written item is set to the planned files
+///    and the records of its kept stale files, and its `pending` record is
+///    cleared. The lockfile is saved.
+///
+/// A second run finds the files written by a failed run `Owned` through
+/// their `pending` hash, and the files not yet written `Owned` through
+/// their `files` hash, so neither is a conflict. This holds after several
+/// failed runs, because step 2 keeps the old `pending` records. Without
+/// `new_entries` (the library entry points), no `pending` record is set and
+/// the lockfile is not saved.
+pub(super) fn execute_plan(
+    target: &Path,
+    lock: &mut Lockfile,
+    planned: &[PlannedItem],
+    decision: PlanDecision,
+    overwrite: bool,
+    new_entries: Option<&[LockedItem]>,
+) -> Result<ApplyOutcome> {
+    let changes = decision.items;
     // Record the planned files of every item that this run changes on disk
     // as `pending`, and save, before the first change on disk.
     if let Some(new_entries) = new_entries {
@@ -403,6 +444,8 @@ pub(super) fn apply_plan(
     let mut outcome = ApplyOutcome::default();
     for (item, changes) in planned.iter().zip(changes) {
         let ItemChanges {
+            kind,
+            name,
             mut files,
             delete,
             kept,
@@ -454,14 +497,12 @@ pub(super) fn apply_plan(
         if let Some(entry) = lock
             .items
             .iter_mut()
-            .find(|i| i.kind == item.kind && i.name == item.name)
+            .find(|i| i.kind == kind && i.name == name)
         {
             entry.files = files.clone();
             entry.pending.clear();
         }
-        outcome
-            .recorded
-            .insert((item.kind, item.name.clone()), files);
+        outcome.recorded.insert((kind, name), files);
     }
     if new_entries.is_some() {
         lock.save(target)?;
@@ -1109,6 +1150,60 @@ mod tests {
         let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path, true, None).unwrap_err();
         assert!(format!("{err}").contains("`a` and `b`"), "{err}");
         assert!(!tmp.path().join(".claude").exists());
+    }
+
+    /// Every path under `root` (directories with `None`, files with their
+    /// bytes), sorted by path.
+    fn tree(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+        let mut out = BTreeMap::new();
+        let mut dirs = vec![root.to_path_buf()];
+        while let Some(dir) = dirs.pop() {
+            for entry in fs::read_dir(&dir).unwrap() {
+                let path = entry.unwrap().path();
+                let rel = path.strip_prefix(root).unwrap().to_path_buf();
+                if path.is_dir() {
+                    out.insert(rel, None);
+                    dirs.push(path);
+                } else {
+                    out.insert(rel, Some(fs::read(&path).unwrap()));
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn decide_plan_changes_nothing_on_disk_or_in_the_lockfile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rewritten = ".claude/skills/s/SKILL.md";
+        let stale = ".claude/skills/s/old.md";
+        let new = ".claude/skills/s/new.md";
+        for (rel, bytes) in [(rewritten, b"old" as &[u8]), (stale, b"stale")] {
+            let full = tmp.path().join(rel);
+            fs::create_dir_all(full.parent().unwrap()).unwrap();
+            fs::write(full, bytes).unwrap();
+        }
+        let record = |path: &str, bytes: &[u8]| OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        };
+        let mut lock = Lockfile::new();
+        lock.items.push(locked(
+            "s",
+            vec![record(rewritten, b"old"), record(stale, b"stale")],
+        ));
+        let plan = [planned("s", &[(rewritten, b"new body"), (new, b"added")])];
+
+        let tree_before = tree(tmp.path());
+        let lock_before = serde_json::to_string(&lock).unwrap();
+        let decision = decide_plan(tmp.path(), &lock, &plan, false).unwrap();
+
+        assert_eq!(tree(tmp.path()), tree_before);
+        assert_eq!(serde_json::to_string(&lock).unwrap(), lock_before);
+        assert_eq!(decision.items.len(), 1);
+        assert_eq!(decision.items[0].delete, vec![PathBuf::from(stale)]);
+        assert!(!decision.items[0].unchanged.contains(Path::new(new)));
     }
 }
 
