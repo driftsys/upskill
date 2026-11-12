@@ -357,7 +357,7 @@ An `add` or `update` runs in this order. (1) It checks every destination and
 decides which items are written; nothing is changed yet. (2) For each item that
 is written, it sets `pending` to the planned files (an item new to the lockfile
 is added with an empty `files` list) and saves the lockfile. (3) For each item,
-it deletes the stale recorded files, then writes each file to a new file
+it first deletes the stale recorded files, then writes each file to a new file
 `.upskill-stage-<16 hex digits>` in the destination directory, sets its mode,
 and renames it to the destination; on an error it deletes that stage file and
 stops. (4) It moves `pending` to `files` for each written item and saves the
@@ -365,17 +365,20 @@ lockfile. If the command fails or is stopped between (2) and (4), the lockfile
 keeps the `pending` records: a file that holds the bytes of its `pending` or of
 its `files` record is owned, so running the same command again, without
 `--force`, completes the operation; `doctor` reports the item as interrupted,
-and `remove` deletes the files of both records. A stage file left by a process
-that was killed is not deleted by upskill. Two upskill processes that change one
-scope at the same time are not supported. `add`, `update` and `remove` (not
-`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
-not an `add`, or an `update` for its first source, that is refused for a source
-item that overlaps its own output paths, for a conflict with another source, for
-two items with one installed name, or for an installed name with a path
-separator) adopt a `schema: 1` lockfile: they keep the old bytes as
-`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
-replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 2`, and print the adopted paths to stderr.
+and `remove` deletes the files of both records. A path of a `pending` record
+that the next command does not plan is a stale recorded path: deleted when it
+matches its `pending` or `files` hash, kept and still recorded when modified. A
+stage file left by a process that was killed is not deleted by upskill. Two
+upskill processes that change one scope at the same time are not supported.
+`add`, `update` and `remove` (not `update --dry-run`, not `doctor`, not a
+`remove` that fails on an unknown name, not an `add`, or an `update` for its
+first source, that is refused for a source item that overlaps its own output
+paths, for a conflict with another source, for two items with one installed
+name, or for an installed name with a path separator) adopt a `schema: 1`
+lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 2`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 

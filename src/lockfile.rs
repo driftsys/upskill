@@ -16,7 +16,8 @@
 //!   install step sets `pending` before its first write and moves it to
 //!   `files` after its last write.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
-//!   is written after a successful install.
+//!   is written before the first write of an install (with `pending`) and
+//!   after its last write.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
 //!   bundle slice).
 

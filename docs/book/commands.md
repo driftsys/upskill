@@ -595,9 +595,13 @@ If the command fails or is stopped between steps 2 and 4, the lockfile keeps the
 `pending` records. A file that holds the bytes of its `pending` record or of its
 `files` record counts as unchanged, so running the same command again, without
 `--force`, completes the operation. `doctor` reports such an item as
-interrupted, and `remove` deletes the files of both records. A stage file left
-by a process that was killed is not deleted by upskill. Two upskill processes
-that change one scope at the same time are not supported.
+interrupted, and `remove` deletes the files of both records. When the next
+command no longer plans a file that the failed command wrote (for example a
+narrower client selection, or a source that dropped a resource), that file is
+handled as a stale recorded file: deleted when unchanged, kept and still
+recorded when modified. A stage file left by a process that was killed is not
+deleted by upskill. Two upskill processes that change one scope at the same time
+are not supported.
 
 A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
 adopts it before it changes any file: it keeps a copy of the old lockfile as
