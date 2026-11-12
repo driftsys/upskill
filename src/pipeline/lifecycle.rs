@@ -197,6 +197,11 @@ fn plan_removal(
     plan.delete.dedup();
     plan.kept.sort();
     plan.kept.dedup();
+    // A path in both `files` and `pending` is classified twice.
+    plan.forced.sort();
+    plan.forced.dedup();
+    plan.absent.sort();
+    plan.absent.dedup();
     Ok(plan)
 }
 

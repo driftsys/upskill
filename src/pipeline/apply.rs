@@ -94,7 +94,9 @@ struct ItemChanges {
 ///    `pending` record of its lockfile entry is set to the planned files.
 ///    An item that has no entry yet is inserted from `new_entries`, with
 ///    an empty `files` record. The lockfile is saved.
-/// 3. For each item: its stale files are deleted, then each file is
+/// 3. For each item, after the save of step 2: its stale files are deleted
+///    first (the checks of step 1 judge each planned path against the state
+///    after that deletion), then each file is
 ///    written to a stage file `.upskill-stage-<16 hex digits>` in the
 ///    destination directory, which gets the planned mode, and is renamed to
 ///    the destination. On an error the stage file is deleted and the error
@@ -127,8 +129,10 @@ struct ItemChanges {
 /// hash of the planned bytes. In that case a file with a planned mode has
 /// the mode set again; a file without one keeps its current mode.
 ///
-/// Stale files: the files of an item's previous record that no planned item
-/// of this run writes. Before writing an item, its stale files that are
+/// Stale files: the files of an item's previous `files` or `pending` record
+/// that no planned item of this run writes. So a file that a failed run
+/// wrote and that this run no longer plans is deleted when it is unchanged,
+/// or kept and recorded when it was modified. Before writing an item, its stale files that are
 /// unchanged (`Owned`) or absent are deleted, and directories left empty
 /// are removed. A stale file that is `Modified`, or that cannot be read, is
 /// kept and stays in the record; with `overwrite` it is deleted when it is
@@ -200,7 +204,9 @@ pub(super) fn apply_plan(
         let kept_paths: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
         let mut stale = Vec::new();
         if let Some(entry) = entry {
-            for old in &entry.files {
+            // A `pending` path is a recorded path too: a failed run may have
+            // written it, and this plan may no longer contain it.
+            for old in entry.files.iter().chain(&entry.pending) {
                 if kept_paths.contains(old.path.as_str()) {
                     continue;
                 }
@@ -249,11 +255,8 @@ pub(super) fn apply_plan(
                     delete.push(rel);
                 }
                 FileState::Modified | FileState::Unowned => {
-                    let old: Vec<OwnedFile> = records
-                        .into_iter()
-                        .filter(|f| entry.is_some_and(|e| e.files.contains(f)))
-                        .collect();
-                    kept.push((rel, old));
+                    // Every record of the path, `files` and `pending`, stays.
+                    kept.push((rel, records));
                 }
             }
         }
@@ -438,7 +441,8 @@ fn write_staged(full: &Path, bytes: &[u8], mode: Option<u32>) -> Result<()> {
     let dir = full
         .parent()
         .with_context(|| format!("no parent directory for {}", full.display()))?;
-    let (stage, mut file) = create_stage_file(dir)?;
+    let (stage, mut file) =
+        create_stage_file(dir).with_context(|| format!("write {}", full.display()))?;
     let result = file
         .write_all(bytes)
         .with_context(|| format!("write {}", stage.display()))
@@ -454,7 +458,7 @@ fn write_staged(full: &Path, bytes: &[u8], mode: Option<u32>) -> Result<()> {
     if result.is_err() {
         let _ = fs::remove_file(&stage);
     }
-    result
+    result.with_context(|| format!("write {}", full.display()))
 }
 
 /// Creates a new stage file in `dir`. The name holds the process id and a
@@ -1926,9 +1930,40 @@ mod repeatable_tests {
         // A destination that is a directory with an entry: the rename fails.
         let dest = tmp.path().join("dest");
         fs::create_dir_all(dest.join("inner")).unwrap();
-        assert!(write_staged(&dest, b"x", None).is_err());
+        let err = write_staged(&dest, b"x", None).unwrap_err();
+        assert!(
+            format!("{err}").contains(&format!("write {}", dest.display())),
+            "{err:#}"
+        );
         assert!(stage_files(tmp.path()).is_empty());
         assert!(dest.join("inner").is_dir());
+    }
+
+    #[test]
+    fn stage_file_names_have_16_hex_digits_and_differ() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (first, _f1) = create_stage_file(tmp.path()).unwrap();
+        let (second, _f2) = create_stage_file(tmp.path()).unwrap();
+        assert_ne!(first, second);
+        for path in [&first, &second] {
+            let name = path.file_name().unwrap().to_str().unwrap();
+            let digits = name.strip_prefix(".upskill-stage-").unwrap();
+            assert_eq!(digits.len(), 16, "{name}");
+            assert!(digits.chars().all(|c| c.is_ascii_hexdigit()), "{name}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_staged_sets_the_mode_on_a_replaced_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("run.sh");
+        fs::write(&dest, b"old").unwrap();
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o644)).unwrap();
+        write_staged(&dest, b"new", Some(0o755)).unwrap();
+        let mode = fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o755);
     }
 
     #[test]
@@ -1942,5 +1977,106 @@ mod repeatable_tests {
         write_staged(&dest, b"new", None).unwrap();
         assert_eq!(fs::read(&dest).unwrap(), b"new");
         assert!(stage_files(tmp.path()).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod pending_stale_tests {
+    use super::*;
+    use crate::generate::Client;
+    use crate::pipeline::plan::PlannedFile;
+
+    const A: &str = ".claude/skills/s/SKILL.md";
+    const R: &str = ".claude/skills/s/scripts/run.sh";
+
+    fn planned(files: &[(&str, &[u8])]) -> PlannedItem {
+        PlannedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source_name: None,
+            files: files
+                .iter()
+                .map(|(rel, bytes)| PlannedFile {
+                    client: Client::Claude,
+                    rel: PathBuf::from(rel),
+                    bytes: bytes.to_vec(),
+                    mode: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn owned(path: &str, bytes: &[u8]) -> OwnedFile {
+        OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        }
+    }
+
+    fn lock_with(files: Vec<OwnedFile>, pending: Vec<OwnedFile>) -> Lockfile {
+        let mut lock = Lockfile::new();
+        lock.items.push(LockedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source: "./src".to_string(),
+            git_ref: None,
+            hash: None,
+            source_name: None,
+            required_by: vec![],
+            group: None,
+            clients: vec![],
+            files,
+            pending,
+        });
+        lock
+    }
+
+    fn put(root: &Path, rel: &str, bytes: &[u8]) {
+        let full = root.join(rel);
+        fs::create_dir_all(full.parent().unwrap()).unwrap();
+        fs::write(full, bytes).unwrap();
+    }
+
+    /// The failed run wrote the resource R (only in `pending`); the source
+    /// dropped R before the next run.
+    #[test]
+    fn an_owned_pending_path_that_is_no_longer_planned_is_deleted() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a1");
+        put(tmp.path(), R, b"r");
+        let mut lock = lock_with(vec![owned(A, b"a1")], vec![owned(A, b"a2"), owned(R, b"r")]);
+        let plan = [planned(&[(A, b"a3")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
+        assert!(!tmp.path().join(R).exists());
+        assert!(!tmp.path().join(".claude/skills/s/scripts").exists());
+        assert_eq!(lock.items[0].files, vec![owned(A, b"a3")]);
+    }
+
+    #[test]
+    fn a_modified_pending_path_that_is_no_longer_planned_is_kept_and_recorded() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a1");
+        put(tmp.path(), R, b"edited");
+        let mut lock = lock_with(vec![owned(A, b"a1")], vec![owned(R, b"r")]);
+        let plan = [planned(&[(A, b"a3")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        assert_eq!(outcome.kept, vec![PathBuf::from(R)]);
+        assert_eq!(fs::read(tmp.path().join(R)).unwrap(), b"edited");
+        assert_eq!(lock.items[0].files, vec![owned(A, b"a3"), owned(R, b"r")]);
+    }
+
+    #[test]
+    fn a_pending_path_that_another_item_plans_is_not_deleted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared = ".claude/skills/x/SKILL.md";
+        put(tmp.path(), shared, b"r");
+        let mut lock = lock_with(vec![], vec![owned(shared, b"r")]);
+        let mut other = planned(&[(shared, b"r")]);
+        other.kind = ItemKind::Agent;
+        let plan = [other, planned(&[(A, b"a")])];
+        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"r");
     }
 }
