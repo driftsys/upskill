@@ -105,23 +105,23 @@ planned bytes, as it is and again with every CRLF (`\r\n`) replaced by LF
 has a LF, a carriage return added by hand before it is also read as unchanged.
 An owned file is not rewritten when it equals the planned bytes exactly, or when
 it is a CRLF variant of the planned bytes and the hash of the planned bytes is
-already recorded for it. So a CRLF file is left as it is until its generated
-content changes, and a change of the line endings of the generated content is
-written. A destination that exists and is not a regular file (for example a
-directory or a symbolic link) is not a conflict: it fails the command before any
-file is written. Two exceptions concern recorded files of the same item that the
-plan no longer contains: a directory at the path of a planned file that holds at
-least one file and whose files, at any depth, are all such files (an empty
-directory, or one that holds an empty subdirectory, fails), and such a regular
-file where a planned file needs a directory. These files are handled as stale
-files (§2.2). For `update` over several sources, the sources updated before are
-already applied; with a `schema: 1` lockfile, the adoption is already saved;
-when the removal of an item that its source no longer contains fails, the
-install of that source is already written and saved. Without `--force`, an item
-with at least one conflict is skipped as a whole: none of its files is written
-or deleted and its lockfile entry is not changed. The other items are written.
-`add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+already in its `files` record (a `pending` hash does not count). So a CRLF file
+is left as it is until its generated content changes, and a change of the line
+endings of the generated content is written. A destination that exists and is
+not a regular file (for example a directory or a symbolic link) is not a
+conflict: it fails the command before any file is written. Two exceptions
+concern recorded files of the same item that the plan no longer contains: a
+directory at the path of a planned file that holds at least one file and whose
+files, at any depth, are all such files (an empty directory, or one that holds
+an empty subdirectory, fails), and such a regular file where a planned file
+needs a directory. These files are handled as stale files (§2.2). For `update`
+over several sources, the sources updated before are already applied; with a
+`schema: 1` lockfile, the adoption is already saved; when the removal of an item
+that its source no longer contains fails, the install of that source is already
+written and saved. Without `--force`, an item with at least one conflict is
+skipped as a whole: none of its files is written or deleted and its lockfile
+entry is not changed. The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -211,10 +211,10 @@ list is **unowned** and is never deleted. Empty item directories are then
 deleted; client roots and kind directories are kept. A recorded path outside the
 client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
 and a symbolic link in the item part of a recorded path's parent directories
-makes `remove` fail before any deletion. An item with an empty record has no
-file deleted. The lockfile entry of each removed item is dropped. `remove`
-adopts a `schema: 1` lockfile and prints the adoption notice, except when a name
-is not in the lockfile, which is an error.
+makes `remove` fail before any deletion. An item whose `files` and `pending`
+records are both empty has no file deleted. The lockfile entry of each removed
+item is dropped. `remove` adopts a `schema: 1` lockfile and prints the adoption
+notice, except when a name is not in the lockfile, which is an error.
 
 ### 2.4 `list` / `doctor`
 
@@ -355,30 +355,38 @@ that path; a modified recorded file is kept and stays in `files`, unless
 
 An `add` or `update` runs in this order. (1) It checks every destination and
 decides which items are written; nothing is changed yet. (2) For each item that
-is written, it sets `pending` to the planned files (an item new to the lockfile
-is added with an empty `files` list) and saves the lockfile. (3) For each item,
-it first deletes the stale recorded files, then writes each file to a new file
-`.upskill-stage-<16 hex digits>` in the destination directory, sets its mode,
-and renames it to the destination; on an error it deletes that stage file and
-stops. (4) It moves `pending` to `files` for each written item and saves the
-lockfile. If the command fails or is stopped between (2) and (4), the lockfile
-keeps the `pending` records: a file that holds the bytes of its `pending` or of
-its `files` record is owned, so running the same command again, without
-`--force`, completes the operation; `doctor` reports the item as interrupted,
-and `remove` deletes the files of both records. A path of a `pending` record
-that the next command does not plan is a stale recorded path: deleted when it
-matches its `pending` or `files` hash, kept and still recorded when modified. A
-stage file left by a process that was killed is not deleted by upskill. Two
-upskill processes that change one scope at the same time are not supported.
-`add`, `update` and `remove` (not `update --dry-run`, not `doctor`, not a
-`remove` that fails on an unknown name, not an `add`, or an `update` for its
-first source, that is refused for a source item that overlaps its own output
-paths, for a conflict with another source, for two items with one installed
-name, or for an installed name with a path separator) adopt a `schema: 1`
-lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
-`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
-the items' output paths with its current hash, save `schema: 2`, and print the
-adopted paths to stderr.
+is written and that writes at least one file or deletes at least one stale file,
+it adds the planned files to `pending` (an item new to the lockfile is added
+with an empty `files` list); the records already in `pending` stay. It saves the
+lockfile when at least one item got a `pending` record. (3) For each item, it
+first deletes the stale recorded files, then writes each file to a new file
+`.upskill-stage-<16 hex digits>` in the destination directory, sets the mode of
+the source resource on it (a generated file gets the default mode of a new
+file), and renames it to the destination; on an error it deletes that stage file
+and stops. An owned file that already holds the planned bytes, or a CRLF variant
+of them as described in §2.1, is not written; only the mode of a resource is set
+on it again. (4) It moves `pending` to `files` for each written item and saves
+the lockfile. If the command fails or is stopped between (2) and (4), the
+lockfile keeps the `pending` records: a file that holds the bytes of a `pending`
+or `files` record is owned, so running the same command again, without
+`--force`, completes the operation, also after a second command that failed;
+`doctor` reports the item as interrupted, and `remove` deletes the files of both
+records. `update` completes an interrupted item also when its source did not
+change: `--dry-run` reports it as `would complete`, and in a terminal without
+`--yes` the plan is shown and confirmed as for a changed source. A path of a
+`pending` record that the command that completes the operation does not plan is
+a stale recorded path: deleted when it matches its `pending` or `files` hash,
+kept and still recorded when modified. A stage file left by a process that was
+killed is not deleted by upskill. Two upskill processes that change one scope at
+the same time are not supported. `add`, `update` and `remove` (not
+`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
+not an `add`, or an `update` for its first source, that is refused for a source
+item that overlaps its own output paths, for a conflict with another source, for
+two items with one installed name, or for an installed name with a path
+separator) adopt a `schema: 1` lockfile: they keep the old bytes as
+`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
+replaced), record each existing file at the items' output paths with its current
+hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 
