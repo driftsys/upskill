@@ -135,8 +135,8 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 }
 
 /// Install + write lockfile. Consumer-facing entry point:
-/// [`prepared::prepare_install`] followed by
-/// [`prepared::PreparedInstall::commit`].
+/// `prepared::prepare_install` followed by
+/// `prepared::PreparedInstall::commit`.
 ///
 /// Fetches the source, plans every output file, adopts a `schema: 1`
 /// lockfile, writes the plan with one call, then merges the resulting

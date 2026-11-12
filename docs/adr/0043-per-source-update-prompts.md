@@ -38,9 +38,11 @@ failed until `update --force`.
 1. **One preview per source, computed just before the source is applied.**
    `update` handles the sources one at a time, sorted by source label. It
    fetches each source once and computes its preview from the fetched content,
-   the files on disk and the lockfile. The preview and the apply come from the
-   same planning and classification code. The apply classifies the files again
-   and does not rely on the preview.
+   the files on disk and the lockfile. A source of a cross-source dependency
+   (named in `requires` of an item of another source) is fetched again when the
+   reinstall of that other source resolves the dependency. The preview and the
+   apply come from the same planning and classification code. The apply
+   classifies the files again and does not rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
@@ -77,9 +79,10 @@ failed until `update --force`.
 ## Consequences
 
 - A terminal run and an `update --yes` run reach the same end state when every
-  answer is `y`, with two exceptions: the plugin and MCP steps of a source whose
-  preview changes nothing, and a change of only `required_by` in an item record
-  of such a source.
+  answer is `y`, with three exceptions, each for a source whose preview changes
+  nothing: its plugin and MCP steps, a change of only `required_by` in an item
+  record of the source, and a change confined to a `bundles` record of the
+  lockfile (the preview does not compare `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.

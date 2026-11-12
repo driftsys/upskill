@@ -202,8 +202,9 @@ is skipped, nothing of it changes).
 
 `update` protects files in the same way as `add`. An item with a destination
 that was modified, or that upskill does not manage, is not written and keeps its
-lockfile entry. When all of these hold, nothing is withheld from the item: the
-source hash of the item equals its recorded hash, the item has no interrupted
+lockfile entry. When all of these hold, nothing is withheld from the item: a
+source hash is recorded for the item and the source hash of the item equals it
+(an item with no recorded hash is skipped), the item has no interrupted
 operation (no `pending` record), every such destination is a recorded file that
 was modified (not a file that upskill does not manage), applying the item would
 write or delete no other file, the item has no recorded file that the new
@@ -240,11 +241,12 @@ run names each of these files in the block, as `replaces <path> (--force)` or
 after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
 `update` handles the sources one at a time, sorted by source label. For each
-source it fetches the source once, checks it, and computes a preview: what
-applying this source now does to the files on disk and to the lockfile. The
-preview is computed just before the source is applied, so it includes the effect
-of the sources applied before it. The modes differ in what they do with the
-preview:
+source it fetches the source once (a source of a cross-source dependency is
+fetched again when the source that requires it is reinstalled), checks it, and
+computes a preview: what applying this source now does to the files on disk and
+to the lockfile. The preview is computed just before the source is applied, so
+it includes the effect of the sources applied before it. The modes differ in
+what they do with the preview:
 
 | Mode                                | Behaviour                                                                                                                                    |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |

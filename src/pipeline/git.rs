@@ -103,7 +103,10 @@ fn repo_display_parts(url: &str) -> (&str, &str) {
 ///   clone) and `None` for local-path sources.
 ///
 /// Used by `prepare_install`, which fetches the source of every `add`
-/// and of every source of `update`. The library entry point
+/// and of every source of `update`, and by the dependency resolvers of
+/// `install.rs`, which fetch the source of a cross-source dependency
+/// again when the install of the source that requires it resolves the
+/// dependency. The library entry point
 /// `install_from_git_url` fetches through its own path, so that it stays
 /// one tempdir-scoped pass.
 pub fn fetch_ssot(source: &InstallSource) -> Result<(PathBuf, Option<tempfile::TempDir>)> {

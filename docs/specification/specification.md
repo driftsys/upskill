@@ -154,12 +154,13 @@ covered by passing local paths to `add` / `update`.
   items whose source hash changed.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
-unowned destination is not written and keeps its lockfile entry. When the source
-hash of the item equals its recorded hash, the item has an empty `pending`
-record, every such destination is modified (none is unowned), applying the item
-would write or delete no other file, the item has no recorded file that the new
-version no longer produces (present or absent), and its lockfile entry would not
-change in any field other than `files`, `pending` and `required_by` (for example
+unowned destination is not written and keeps its lockfile entry. When a source
+hash is recorded for the item and equals the source hash of the item (an item
+with no recorded hash is skipped), the item has an empty `pending` record, every
+such destination is modified (none is unowned), applying the item would write or
+delete no other file, the item has no recorded file that the new version no
+longer produces (present or absent), and its lockfile entry would not change in
+any field other than `files`, `pending` and `required_by` (for example
 `clients`), nothing is withheld: `update` reports `kept modified file: <path>`
 for each modified destination (in a terminal and with `--dry-run`, in the block
 of its source; with `--yes` or without a terminal, on stderr), and this note
@@ -188,16 +189,17 @@ files as `replaces <path> (--force)` or `deletes <path> (--force)`; a run with
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
 `update` handles the sources one at a time, sorted by source label. For each
-source it fetches the source once, runs the checks of §2.1, and computes a
-preview from the fetched content, the files on disk and the lockfile, just
-before the source is applied. A preview **changes something** when applying the
-source writes or deletes a file, changes the lockfile record of an item (any
-field except `pending` and `required_by`), completes an interrupted item (a
-non-empty `pending` record, §4), removes an item, or creates or changes a
-hand-shake file (§3.4). A write of a file that already holds the planned bytes
-is not a change, unless the file has a different mode than the source resource
-(Unix only): the apply sets that mode, so the file is a change. A `skip` item
-and a `kept modified file` note are not changes.
+source it fetches the source once (a source of a cross-source dependency is
+fetched again when the source that requires it is reinstalled), runs the checks
+of §2.1, and computes a preview from the fetched content, the files on disk and
+the lockfile, just before the source is applied. A preview **changes something**
+when applying the source writes or deletes a file, changes the lockfile record
+of an item (any field except `pending` and `required_by`), completes an
+interrupted item (a non-empty `pending` record, §4), removes an item, or creates
+or changes a hand-shake file (§3.4). A write of a file that already holds the
+planned bytes is not a change, unless the file has a different mode than the
+source resource (Unix only): the apply sets that mode, so the file is a change.
+A `skip` item and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action

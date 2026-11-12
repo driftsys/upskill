@@ -1232,8 +1232,9 @@ fn closing_summary(report: &UpdateReport) -> String {
 /// Exit code of a terminal run: 1 when an item was skipped because of
 /// modified or unowned files, 0 otherwise.
 ///
-/// Without `--quiet` it prints to stdout, after an empty line, one of:
-/// `nothing to update — lockfile is empty` when the run has no item;
+/// Without `--quiet` it prints to stdout one of:
+/// `nothing to update — lockfile is empty` when the run has no item,
+/// without an empty line before it; after an empty line,
 /// `everything is up to date — nothing to do` when no source was applied,
 /// no source with changes was declined, no file was kept as a note, no item
 /// was skipped and no lockfile was adopted; otherwise the closing summary

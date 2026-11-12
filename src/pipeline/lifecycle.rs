@@ -634,7 +634,8 @@ fn reselect_from_entries(
 ///
 /// For each source, in this order:
 ///
-/// 1. The source is fetched once, resolved, checked (conflict check and
+/// 1. The source is fetched once (a source of a cross-source dependency is
+///    fetched again when the reinstall of this source resolves it), resolved, checked (conflict check and
 ///    overlap check) and planned, without any write (`prepare_install`).
 /// 2. A source that resolves to no items while the lockfile records items
 ///    from it is an error (`guard_against_empty_source`), before any write
@@ -658,9 +659,12 @@ fn reselect_from_entries(
 ///
 /// In an applied source, `overwrite` (`update --force`) replaces modified
 /// and unowned files. Without it, an item with such a file at one of its
-/// destinations is not written. When its source hash did not change, it
-/// has no `pending` record, every such file is modified (none is unowned)
-/// and nothing else of the item would be written or deleted, the modified
+/// destinations is not written. When a source hash is recorded for it and
+/// its source hash equals it, it has no `pending` record, every such file
+/// is modified (none is unowned), nothing else of the item would be
+/// written or deleted, no stale file of the item would be deleted or kept,
+/// and no field of its lockfile record other than `files`, `pending` and
+/// `required_by` would change (`apply::same_record`), the modified
 /// files are listed in `kept_modified` and the item is reported as
 /// [`UpdateStatus::UpToDate`]; otherwise it is reported as
 /// [`UpdateStatus::SkippedModified`]. A modified file that the new version

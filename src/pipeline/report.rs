@@ -35,7 +35,9 @@ pub struct InstalledItem {
 #[derive(Debug, Default, Clone)]
 pub struct InstallReport {
     /// One entry per item and client in the plan. It also includes the
-    /// items listed in `conflicts`, which were not written; `update` relies
+    /// items listed in `conflicts` and the items whose modified files were
+    /// kept because nothing is withheld from them, none of which were
+    /// written; `update` relies
     /// on this so that a skipped item is not removed as no longer in the
     /// source.
     pub items: Vec<InstalledItem>,
@@ -408,8 +410,11 @@ pub enum UpdateStatus {
     /// deleted (for example a missing output written again, or the files
     /// of a client that the selection no longer targets deleted) or its
     /// lockfile record changed (for example a historical source label
-    /// rewritten). Also the status of an item of a source that was not
-    /// applied and that has no preview item.
+    /// rewritten). It also covers an item whose modified destinations were
+    /// kept (listed in [`UpdateReport::kept_modified`]): nothing of it was
+    /// written, and those files differ from what the source renders. Also
+    /// the status of an item of a source that was not applied and that has
+    /// no preview item.
     UpToDate,
     /// The source of the item was applied, and the source hash of the item
     /// differs from the hash recorded in the lockfile entry (or no hash was
@@ -459,8 +464,10 @@ pub struct UpdateReport {
     /// Modified files that `update` kept: files that the new version of an
     /// item no longer contains, files of an item that its source no longer
     /// contains, and modified destinations of an item whose source did not
-    /// change and from which nothing is withheld (the item is reported as
-    /// [`UpdateStatus::UpToDate`]).
+    /// change and from which nothing is withheld (an entry of the run is
+    /// reported as [`UpdateStatus::UpToDate`]; a dependency from another
+    /// source that is not an entry of the run, for example with
+    /// `update <name>`, has no [`UpdatedItem`]).
     pub kept_modified: Vec<PathBuf>,
     /// With `--force`: modified or unmanaged files that were replaced or
     /// deleted, including those of items that the source no longer contains.
