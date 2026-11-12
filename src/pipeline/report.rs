@@ -287,6 +287,15 @@ pub enum McpDoctorStatus {
     ConfigUnreadable { detail: String },
 }
 
+/// An item with a non-empty `pending` record: an `add` or `update` failed
+/// or was stopped between its first and its last write. Running the same
+/// command again completes it.
+#[derive(Debug, Clone, Serialize)]
+pub struct InterruptedItem {
+    pub kind: ItemKind,
+    pub name: String,
+}
+
 /// A dependency-pulled item whose every requirer is no longer installed.
 /// Advisory only — upskill never auto-removes (#196); the user decides.
 #[derive(Debug, Clone, Serialize)]
@@ -325,6 +334,9 @@ pub struct DoctorReport {
     /// so callers can distinguish "checked and fine" from "not checked".
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_entries: Vec<McpDoctorEntry>,
+    /// Items whose last `add` or `update` did not complete. Non-empty →
+    /// `is_clean()` returns false.
+    pub interrupted: Vec<InterruptedItem>,
 }
 
 impl DoctorReport {
@@ -332,8 +344,8 @@ impl DoctorReport {
     /// every recorded file still has its recorded content (as it is, or with
     /// every CRLF replaced by LF) and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
-    /// entry has a recoverable source, and no installed plugin is missing
-    /// from its client.
+    /// entry has a recoverable source, no installed plugin is missing
+    /// from its client, and no item has an interrupted operation.
     ///
     /// `skipped_plugins` (warn-skip outcomes) are informational: the user
     /// never had the CLI at install time, so this is the expected state.
@@ -345,6 +357,7 @@ impl DoctorReport {
             && self.stale_hashes.is_empty()
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
+            && self.interrupted.is_empty()
             && !self
                 .mcp_entries
                 .iter()

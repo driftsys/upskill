@@ -225,7 +225,8 @@ pub enum Commands {
     /// Reports missing and modified recorded files, recorded files that
     /// cannot be inspected, SSOT hash drift on `local:` sources, lockfile
     /// entries with no recoverable source, orphaned dependencies, missing
-    /// and skipped plugins, and MCP server state.
+    /// and skipped plugins, MCP server state, and items whose last `add` or
+    /// `update` did not complete.
     ///
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.

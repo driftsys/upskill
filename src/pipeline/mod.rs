@@ -137,7 +137,12 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// Fetches the source, plans every output file, adopts a `schema: 1`
 /// lockfile, writes the plan with one call, then merges the resulting
 /// [`InstallReport`] into `<target>/.upskill-lock.json` via
-/// [`crate::lockfile`], with each item's written files in `files`. Existing
+/// [`crate::lockfile`], with each item's written files in `files`. The
+/// write saves the lockfile with each written item's `pending` record
+/// before its first change on disk, and again after its last one, so that
+/// running the same command again completes a failed install (see
+/// `apply::apply_plan`); the bundles, plugins and MCP servers are saved
+/// after that. Existing
 /// lockfile entries for the same `(kind, name)` are replaced; entries
 /// installed from a different source are left in place.
 ///
@@ -384,38 +389,6 @@ pub fn install_with_lockfile(
     let adopted = owned::adopt_schema1(target, &mut lock)?;
     report.adopted = adopted.clone();
     let result = (|| -> Result<InstallReport> {
-        let outcome = apply::apply_plan(target, &mut lock, &report.planned, options.overwrite)?;
-        let mut recorded = outcome.recorded;
-        report.kept_modified = outcome.kept;
-        report.conflicts = outcome.skipped;
-        report.forced = outcome.forced;
-        report.changed = outcome.changed;
-        // A skipped item keeps its lockfile entry unchanged, or gets none.
-        let skipped: std::collections::BTreeSet<(ItemKind, String)> = report
-            .conflicts
-            .iter()
-            .map(|c| (c.kind, c.name.clone()))
-            .collect();
-
-        // A bundle-shaped install resolves its items per source above (no bundles
-        // in the per-source reports); attach the resolved bundles so plugin/MCP
-        // install and the lockfile see them with their own sources.
-        if !resolved_bundles.is_empty() {
-            report.bundles = resolved_bundles
-                .iter()
-                .map(|rb| rb.bundle.clone())
-                .collect();
-        }
-
-        // -- Plugin installation (ADR-0008) --
-        let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
-        report.plugin_results = plugin_results;
-
-        // -- MCP server configuration (ADR-0010), restricted to the selection --
-        let mcp_results =
-            install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
-        report.mcp_results = mcp_results;
-
         // -- Aliases were applied at plan time; map each alias to its source
         // name for the lockfile `source_name` and the provenance below --
         let mut aliased_names: std::collections::HashMap<String, String> =
@@ -483,17 +456,60 @@ pub fn install_with_lockfile(
             }
             (label.clone(), git_ref.map(str::to_string))
         };
-        let new_items =
+        // The lockfile entry of each item, computed before the write:
+        // `apply_plan` inserts the entry of an item new to the lockfile
+        // with its `pending` record before the first write.
+        let mut new_items =
             crate::lockfile::items_from_report(&report, item_source_lookup, &provenance, |k, n| {
                 hashes.get(&(k, n.to_string())).cloned().flatten()
             });
+        for item in &mut new_items {
+            if let Some(original) = aliased_names.get(&item.name) {
+                item.source_name = Some(original.clone());
+            }
+        }
+
+        let outcome = apply::apply_plan(
+            target,
+            &mut lock,
+            &report.planned,
+            options.overwrite,
+            Some(&new_items),
+        )?;
+        let mut recorded = outcome.recorded;
+        report.kept_modified = outcome.kept;
+        report.conflicts = outcome.skipped;
+        report.forced = outcome.forced;
+        report.changed = outcome.changed;
+        // A skipped item keeps its lockfile entry unchanged, or gets none.
+        let skipped: std::collections::BTreeSet<(ItemKind, String)> = report
+            .conflicts
+            .iter()
+            .map(|c| (c.kind, c.name.clone()))
+            .collect();
+
+        // A bundle-shaped install resolves its items per source above (no bundles
+        // in the per-source reports); attach the resolved bundles so plugin/MCP
+        // install and the lockfile see them with their own sources.
+        if !resolved_bundles.is_empty() {
+            report.bundles = resolved_bundles
+                .iter()
+                .map(|rb| rb.bundle.clone())
+                .collect();
+        }
+
+        // -- Plugin installation (ADR-0008) --
+        let plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
+        report.plugin_results = plugin_results;
+
+        // -- MCP server configuration (ADR-0010), restricted to the selection --
+        let mcp_results =
+            install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
+        report.mcp_results = mcp_results;
 
         for mut item in new_items {
             if skipped.contains(&(item.kind, item.name.clone())) {
                 continue;
-            }
-            if let Some(original) = aliased_names.get(&item.name) {
-                item.source_name = Some(original.clone());
             }
             item.files = recorded
                 .remove(&(item.kind, item.name.clone()))

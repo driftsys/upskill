@@ -17,8 +17,8 @@ use super::hash::planned_source_hashes;
 use super::output::output_path;
 use super::owned::{FileState, adopt_schema1, classify};
 use super::{
-    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, ItemKind, ListReport,
-    ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
+    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, InterruptedItem, ItemKind,
+    ListReport, ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, RemoveFilter, RemoveReport, RemovedItem, SkippedPlugin,
     StaleHash, UnreadableFile, UpdateMode, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
     install_with_lockfile,
@@ -146,7 +146,9 @@ fn plan_removal(
         kept: Vec::new(),
         forced: Vec::new(),
     };
-    for file in &entry.files {
+    // The `pending` files of an operation that did not complete are
+    // recorded files too: a failed run may have written them.
+    for file in entry.files.iter().chain(&entry.pending) {
         let Some(rel) = deletable(&file.path) else {
             continue;
         };
@@ -316,6 +318,9 @@ fn remove_selected(
 /// - **skipped plugins** (advisory) — plugins that were never installed
 ///   because the client CLI was missing.
 /// - **MCP entries** — MCP server reconciliation against each client.
+/// - **interrupted** — items with a non-empty `pending` record: an `add` or
+///   `update` failed or was stopped between its first and its last write.
+///   Running the same command again completes it.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by
@@ -326,6 +331,12 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
 
     for entry in &lock.items {
         let kind = entry.kind;
+        if !entry.pending.is_empty() {
+            report.interrupted.push(InterruptedItem {
+                kind,
+                name: entry.name.clone(),
+            });
+        }
 
         let mut missing = Vec::new();
         let mut modified = Vec::new();

@@ -95,32 +95,33 @@ falling back to `--global` (`$HOME/.agents/...`) when the current directory is
 not inside a git repo. Either flag can be passed explicitly.
 
 Before any write, `add` classifies every destination of every item against the
-item's `files` record (§4). A destination is a conflict when it is **modified**
-(a recorded regular file with other content) or **unowned** (a regular file that
-is not recorded), unless its content already equals the planned bytes. A file is
-compared with its record, and a recorded file with the planned bytes, as it is
-and again with every CRLF (`\r\n`) replaced by LF (`\n`); it is equal when one
-comparison matches. So a git checkout with `core.autocrlf=true` does not make a
-file modified; where the recorded content has a LF, a carriage return added by
-hand before it is also read as unchanged. An owned file is not rewritten when it
-equals the planned bytes exactly, or when it is a CRLF variant of the planned
-bytes and the hash of the planned bytes is already recorded for it. So a CRLF
-file is left as it is until its generated content changes, and a change of the
-line endings of the generated content is written. A destination that exists and
-is not a regular file (for example a directory or a symbolic link) is not a
-conflict: it fails the command before any file is written. Two exceptions
-concern recorded files of the same item that the plan no longer contains: a
-directory at the path of a planned file that holds at least one file and whose
-files, at any depth, are all such files (an empty directory, or one that holds
-an empty subdirectory, fails), and such a regular file where a planned file
-needs a directory. These files are handled as stale files (§2.2). For `update`
-over several sources, the sources updated before are already applied; with a
-`schema: 1` lockfile, the adoption is already saved; when the removal of an item
-that its source no longer contains fails, the install of that source is already
-written and saved. Without `--force`, an item with at least one conflict is
-skipped as a whole: none of its files is written or deleted and its lockfile
-entry is not changed. The other items are written. `add` then prints one line
-per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
+item's `files` and `pending` records (§4). A destination is a conflict when it
+is **modified** (a recorded regular file with other content) or **unowned** (a
+regular file that is not recorded), unless its content already equals the
+planned bytes. A file is compared with its record, and a recorded file with the
+planned bytes, as it is and again with every CRLF (`\r\n`) replaced by LF
+(`\n`); it is equal when one comparison matches. So a git checkout with
+`core.autocrlf=true` does not make a file modified; where the recorded content
+has a LF, a carriage return added by hand before it is also read as unchanged.
+An owned file is not rewritten when it equals the planned bytes exactly, or when
+it is a CRLF variant of the planned bytes and the hash of the planned bytes is
+already recorded for it. So a CRLF file is left as it is until its generated
+content changes, and a change of the line endings of the generated content is
+written. A destination that exists and is not a regular file (for example a
+directory or a symbolic link) is not a conflict: it fails the command before any
+file is written. Two exceptions concern recorded files of the same item that the
+plan no longer contains: a directory at the path of a planned file that holds at
+least one file and whose files, at any depth, are all such files (an empty
+directory, or one that holds an empty subdirectory, fails), and such a regular
+file where a planned file needs a directory. These files are handled as stale
+files (§2.2). For `update` over several sources, the sources updated before are
+already applied; with a `schema: 1` lockfile, the adoption is already saved;
+when the removal of an item that its source no longer contains fails, the
+install of that source is already written and saved. Without `--force`, an item
+with at least one conflict is skipped as a whole: none of its files is written
+or deleted and its lockfile entry is not changed. The other items are written.
+`add` then prints one line per conflict to stderr,
+`skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -198,44 +199,45 @@ or pass `--source <label>` to remove every item that came from a single source.
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
-`remove` deletes only files listed in the item's `files` record (§4). A recorded
-file is **owned** when it is a regular file with the recorded SHA-256: `remove`
-deletes it. It is **modified** when its content differs, compared as it is and
-again with every CRLF replaced by LF (§2.1), or it is no longer a regular file:
-`remove` keeps it and prints `kept modified file: <path>` to stderr; `--force`
-deletes a modified regular file, but never a path that is not a regular file. A
-recorded regular file that cannot be read is handled as modified. An absent
-recorded file is ignored. A file that the record does not list is **unowned**
-and is never deleted. Empty item directories are then deleted; client roots and
-kind directories are kept. A recorded path outside the client roots (`.claude`,
-`.github`, `.agents`, `.opencode`) is never deleted, and a symbolic link in the
-item part of a recorded path's parent directories makes `remove` fail before any
-deletion. An item with an empty record has no file deleted. The lockfile entry
-of each removed item is dropped. `remove` adopts a `schema: 1` lockfile and
-prints the adoption notice, except when a name is not in the lockfile, which is
-an error.
+`remove` deletes only files listed in the item's `files` or `pending` record
+(§4). A recorded file is **owned** when it is a regular file with the recorded
+SHA-256: `remove` deletes it. It is **modified** when its content differs,
+compared as it is and again with every CRLF replaced by LF (§2.1), or it is no
+longer a regular file: `remove` keeps it and prints `kept modified file: <path>`
+to stderr; `--force` deletes a modified regular file, but never a path that is
+not a regular file. A recorded regular file that cannot be read is handled as
+modified. An absent recorded file is ignored. A file that the record does not
+list is **unowned** and is never deleted. Empty item directories are then
+deleted; client roots and kind directories are kept. A recorded path outside the
+client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
+and a symbolic link in the item part of a recorded path's parent directories
+makes `remove` fail before any deletion. An item with an empty record has no
+file deleted. The lockfile entry of each removed item is dropped. `remove`
+adopts a `schema: 1` lockfile and prints the adoption notice, except when a name
+is not in the lockfile, which is an error.
 
 ### 2.4 `list` / `doctor`
 
 - `list` — show installed content from `.upskill-lock.json`, grouped by kind.
   Bundles are surfaced in a separate section. The `--available` view (items
   discoverable from configured sources) is deferred for a future release.
-- `doctor` — verify on-disk state matches the lock file. Nine independent
+- `doctor` — verify on-disk state matches the lock file. Ten independent
   buckets: missing per-client outputs (reinstall fixes), modified recorded files
   (content differs from the recorded SHA-256, compared as in §2.1), recorded
   files that could not be inspected (`doctor` continues with the others), SSOT
   hash drift on `local:` sources (`update` fixes), lockfile entries with no
   recoverable source (`remove` fixes), installed plugins missing from the client
   (`update` reinstalls), skipped plugins (informational — CLI was absent at
-  install time), orphaned dependencies (informational), and MCP server
-  reconciliation. Exit 0 when clean, 1 when any drift bucket is non-empty.
-  Skipped plugins are warnings and do not affect the exit code. Missing,
-  modified and unreadable files are checked against the `files` record; a
-  recorded path that `remove` would never delete (outside the client roots,
-  fewer than three components, or with a `..` component) is skipped without a
-  report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
-  per-client entry file instead.
+  install time), orphaned dependencies (informational), MCP server
+  reconciliation, and interrupted items (an item with a non-empty `pending`
+  record: run the same command again to complete it). Exit 0 when clean, 1 when
+  any drift bucket is non-empty. Skipped plugins are warnings and do not affect
+  the exit code. Missing, modified and unreadable files are checked against the
+  `files` record; a recorded path that `remove` would never delete (outside the
+  client roots, fewer than three components, or with a `..` component) is
+  skipped without a report. For an item with an empty or missing `files` record
+  (a `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -349,8 +351,23 @@ entry may carry `files` and `pending` lists of records with `client`, `path` and
 the item and delete the recorded files that a reinstall no longer produces and
 that are unchanged, unless another item installed by the same command writes
 that path; a modified recorded file is kept and stays in `files`, unless
-`--force` deletes it (§2.1, §2.2). No command fills `pending` yet. `remove`
-deletes only recorded files (§2.3). `add`, `update` and `remove` (not
+`--force` deletes it (§2.1, §2.2). `remove` deletes only recorded files (§2.3).
+
+An `add` or `update` runs in this order. (1) It checks every destination and
+decides which items are written; nothing is changed yet. (2) For each item that
+is written, it sets `pending` to the planned files (an item new to the lockfile
+is added with an empty `files` list) and saves the lockfile. (3) For each item,
+it deletes the stale recorded files, then writes each file to a new file
+`.upskill-stage-<16 hex digits>` in the destination directory, sets its mode,
+and renames it to the destination; on an error it deletes that stage file and
+stops. (4) It moves `pending` to `files` for each written item and saves the
+lockfile. If the command fails or is stopped between (2) and (4), the lockfile
+keeps the `pending` records: a file that holds the bytes of its `pending` or of
+its `files` record is owned, so running the same command again, without
+`--force`, completes the operation; `doctor` reports the item as interrupted,
+and `remove` deletes the files of both records. A stage file left by a process
+that was killed is not deleted by upskill. Two upskill processes that change one
+scope at the same time are not supported. `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
 not an `add`, or an `update` for its first source, that is refused for a source
 item that overlaps its own output paths, for a conflict with another source, for

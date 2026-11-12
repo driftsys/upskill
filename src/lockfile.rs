@@ -12,8 +12,9 @@
 //!   and `update`, and `remove`, convert it to `schema: 2` by adoption.
 //! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
 //!   records. The install step of `add` and `update` fills `files` with
-//!   every file it writes, and `remove` deletes only recorded files; no
-//!   command fills `pending` yet.
+//!   every file it writes, and `remove` deletes only recorded files. The
+//!   install step sets `pending` before its first write and moves it to
+//!   `files` after its last write.
 //! - Wiring into [`crate::pipeline::install_with_lockfile`] so the lockfile
 //!   is written after a successful install.
 //! - Bundle entries are part of the schema but not yet populated (Phase 3
@@ -105,7 +106,8 @@ pub struct LockedItem {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<OwnedFile>,
     /// Files of an operation on this item that has not completed. Omitted
-    /// from JSON when empty. No command fills this list yet.
+    /// from JSON when empty. Set by `add` and `update` before their first
+    /// write, and cleared when the files are moved to `files`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pending: Vec<OwnedFile>,
 }

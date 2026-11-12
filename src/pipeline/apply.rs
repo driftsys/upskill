@@ -12,13 +12,13 @@
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write};
 use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
 use super::owned::{FileState, classify, matches_recorded, rel_to_record, sha256_hex};
 use super::plan::PlannedItem;
-use crate::lockfile::{Lockfile, OwnedFile};
+use crate::lockfile::{LockedItem, Lockfile, OwnedFile};
 
 /// The record of written files for each planned `(kind, installed name)`,
 /// sorted by `client`, then `path`. `install_with_lockfile` copies it into
@@ -83,8 +83,31 @@ struct ItemChanges {
 }
 
 /// Writes every planned item that has no conflict and updates
-/// `lock.items[..].files` for the written items that already have a
-/// lockfile entry. It does not save the lockfile.
+/// `lock.items[..].files` for the written items that have a lockfile entry.
+///
+/// With `new_entries` (the lockfile entry of each planned item, given by
+/// `install_with_lockfile`), the operation can be completed by a second
+/// run after a failure, and the lockfile is saved twice, in this order:
+///
+/// 1. The checks below run; nothing is changed on disk yet.
+/// 2. For each item that is written (no conflict, or `overwrite`), the
+///    `pending` record of its lockfile entry is set to the planned files.
+///    An item that has no entry yet is inserted from `new_entries`, with
+///    an empty `files` record. The lockfile is saved.
+/// 3. For each item: its stale files are deleted, then each file is
+///    written to a stage file `.upskill-stage-<16 hex digits>` in the
+///    destination directory, which gets the planned mode, and is renamed to
+///    the destination. On an error the stage file is deleted and the error
+///    is returned; files already renamed stay, and the lockfile keeps the
+///    `pending` record of step 2.
+/// 4. The `pending` record of each written item becomes its `files`
+///    record and is cleared. The lockfile is saved.
+///
+/// A second run finds the files written by the failed run `Owned` through
+/// their `pending` hash, and the files not yet written `Owned` through
+/// their `files` hash, so neither is a conflict. Without `new_entries` (the
+/// library entry points), no `pending` record is set and the lockfile is
+/// not saved.
 ///
 /// Conflicts: every destination of every item is classified with
 /// [`classify`] before anything is written. A destination whose content
@@ -99,7 +122,8 @@ struct ItemChanges {
 /// rewritten and is not counted in `changed` when its bytes equal the
 /// planned bytes, or when they are a CRLF variant of the planned bytes (see
 /// [`matches_recorded`]) and the hash of the planned bytes was already
-/// recorded for the file (current or pending record). Its record is the
+/// recorded for the file in its `files` record (a `pending` hash does not
+/// count here). Its record is the
 /// hash of the planned bytes. In that case a file with a planned mode has
 /// the mode set again; a file without one keeps its current mode.
 ///
@@ -127,6 +151,7 @@ pub(super) fn apply_plan(
     lock: &mut Lockfile,
     planned: &[PlannedItem],
     overwrite: bool,
+    new_entries: Option<&[LockedItem]>,
 ) -> Result<ApplyOutcome> {
     check_installed_names(planned)?;
     let mut paths_seen: BTreeMap<&Path, &str> = BTreeMap::new();
@@ -238,10 +263,16 @@ pub(super) fn apply_plan(
             let records = recorded_for(&path);
             let hashes: Vec<&str> = records.iter().map(|f| f.sha256.as_str()).collect();
             // Skip the write when the bytes are equal, or are a CRLF variant
-            // of planned bytes whose hash was already recorded (the generated
-            // content did not change since it was recorded).
+            // of planned bytes whose hash is in the `files` record (the
+            // generated content did not change since it was recorded). A
+            // `pending` hash does not count: the run that set it may have
+            // failed before it wrote this file.
             let planned_hash = sha256_hex(&file.bytes);
-            let planned_recorded = hashes.contains(&planned_hash.as_str());
+            let planned_recorded = entry.is_some_and(|e| {
+                e.files
+                    .iter()
+                    .any(|f| f.path == path && f.sha256 == planned_hash)
+            });
             if state_of(target, &file.rel, &path, &hashes)? == FileState::Owned
                 && fs::read(target.join(&file.rel)).is_ok_and(|current| {
                     current == file.bytes
@@ -296,6 +327,39 @@ pub(super) fn apply_plan(
         }
     }
 
+    // Record the planned files of every item that is written as `pending`,
+    // and save, before the first change on disk.
+    if let Some(new_entries) = new_entries {
+        for (item, changes) in planned.iter().zip(&changes) {
+            if !overwrite && !changes.conflicts.is_empty() {
+                continue;
+            }
+            let pending = changes.files.clone();
+            match lock
+                .items
+                .iter_mut()
+                .find(|i| i.kind == item.kind && i.name == item.name)
+            {
+                Some(entry) => entry.pending = pending,
+                // An item without an entry in `new_entries` (for example
+                // one with no file for the selected clients) is not
+                // recorded in the lockfile, as before this step.
+                None => {
+                    if let Some(entry) = new_entries
+                        .iter()
+                        .find(|i| i.kind == item.kind && i.name == item.name)
+                    {
+                        let mut entry = entry.clone();
+                        entry.files = Vec::new();
+                        entry.pending = pending;
+                        lock.upsert(entry);
+                    }
+                }
+            }
+        }
+        lock.save(target)?;
+    }
+
     let mut outcome = ApplyOutcome::default();
     for (item, changes) in planned.iter().zip(changes) {
         let ItemChanges {
@@ -327,22 +391,17 @@ pub(super) fn apply_plan(
             }
             // An `Owned` destination that already holds the planned bytes, or
             // a CRLF variant of them, is left as it is.
-            let is_file = fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file());
-            if !unchanged.contains(&file.rel) {
-                // The pre-check accepted this path. An existing regular file
-                // is removed first, so that a read-only file is replaced too.
-                if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
-                    outcome.changed.push(file.rel.clone());
+            if unchanged.contains(&file.rel) {
+                if let Some(mode) = file.mode {
+                    set_mode(&full, mode)?;
                 }
-                if is_file {
-                    fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
-                }
-                fs::write(&full, &file.bytes)
-                    .with_context(|| format!("write {}", full.display()))?;
+                continue;
             }
-            if let Some(mode) = file.mode {
-                set_mode(&full, mode)?;
+            // The pre-check accepted this path.
+            if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
+                outcome.changed.push(file.rel.clone());
             }
+            write_staged(&full, &file.bytes, file.mode)?;
         }
 
         for (rel, old) in kept {
@@ -358,12 +417,85 @@ pub(super) fn apply_plan(
             .find(|i| i.kind == item.kind && i.name == item.name)
         {
             entry.files = files.clone();
+            entry.pending.clear();
         }
         outcome
             .recorded
             .insert((item.kind, item.name.clone()), files);
     }
+    if new_entries.is_some() {
+        lock.save(target)?;
+    }
     Ok(outcome)
+}
+
+/// Writes `bytes` to a new stage file `.upskill-stage-<16 hex digits>` in
+/// the directory of `full`, sets `mode` on it when it is `Some` (a new file
+/// otherwise has the default mode), and renames it to `full`, which
+/// replaces an existing file, also a read-only one. On an error the stage
+/// file is deleted. The parent directory of `full` must exist.
+fn write_staged(full: &Path, bytes: &[u8], mode: Option<u32>) -> Result<()> {
+    let dir = full
+        .parent()
+        .with_context(|| format!("no parent directory for {}", full.display()))?;
+    let (stage, mut file) = create_stage_file(dir)?;
+    let result = file
+        .write_all(bytes)
+        .with_context(|| format!("write {}", stage.display()))
+        .and_then(|()| {
+            // Closed before the rename, which Windows requires.
+            drop(file);
+            match mode {
+                Some(mode) => set_mode(&stage, mode),
+                None => Ok(()),
+            }
+        })
+        .and_then(|()| replace_with(&stage, full));
+    if result.is_err() {
+        let _ = fs::remove_file(&stage);
+    }
+    result
+}
+
+/// Creates a new stage file in `dir`. The name holds the process id and a
+/// counter of this process, as 16 hex digits. A name that exists already
+/// (left by a process that was stopped) is not opened; the next counter
+/// value is used.
+fn create_stage_file(dir: &Path) -> Result<(PathBuf, fs::File)> {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+    loop {
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path = dir.join(format!(".upskill-stage-{:08x}{n:08x}", std::process::id()));
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(file) => return Ok((path, file)),
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            Err(err) => return Err(err).with_context(|| format!("create {}", path.display())),
+        }
+    }
+}
+
+/// Renames `stage` to `full`. On Unix, a rename replaces a read-only file.
+/// On Windows it fails on a read-only destination, so the read-only
+/// attribute of an existing regular file is cleared first.
+fn replace_with(stage: &Path, full: &Path) -> Result<()> {
+    #[cfg(not(unix))]
+    if let Ok(meta) = fs::symlink_metadata(full) {
+        if meta.file_type().is_file() && meta.permissions().readonly() {
+            let mut permissions = meta.permissions();
+            // On Windows this clears the read-only attribute only.
+            #[allow(clippy::permissions_set_readonly_false)]
+            permissions.set_readonly(false);
+            fs::set_permissions(full, permissions)
+                .with_context(|| format!("set permissions of {}", full.display()))?;
+        }
+    }
+    fs::rename(stage, full)
+        .with_context(|| format!("rename {} to {}", stage.display(), full.display()))
 }
 
 /// State of the recorded or planned path `rel` (`path` is its record form).
@@ -718,7 +850,7 @@ mod tests {
                 (".claude/skills/s/SKILL.md", b"body"),
             ],
         )];
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
         let files = &rec.recorded[&(ItemKind::Skill, "s".to_string())];
         assert_eq!(files[0].path, ".claude/skills/s/SKILL.md");
         assert_eq!(files[0].sha256, sha256_hex(b"body"));
@@ -745,7 +877,7 @@ mod tests {
             }],
         ));
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut lock, &plan, true).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, true, None).unwrap();
         assert!(!stale.exists());
         assert!(!tmp.path().join(".claude/skills/s/old").exists());
         assert!(tmp.path().join(".claude/skills/s/SKILL.md").exists());
@@ -768,7 +900,7 @@ mod tests {
                 sha256: sha256_hex(b"x"),
             }],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true).unwrap();
+        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true, None).unwrap();
         assert!(!tmp.path().join(".claude/skills/s").exists());
         assert!(tmp.path().join(".claude/skills").is_dir());
     }
@@ -789,7 +921,7 @@ mod tests {
                 sha256: sha256_hex(b"keep"),
             }],
         ));
-        apply_plan(&target, &mut lock, &[planned("s", &[])], true).unwrap();
+        apply_plan(&target, &mut lock, &[planned("s", &[])], true, None).unwrap();
         assert!(outside.exists());
     }
 
@@ -803,7 +935,7 @@ mod tests {
         fs::create_dir_all(link.parent().unwrap()).unwrap();
         std::os::unix::fs::symlink(&outside, &link).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         assert!(format!("{err:#}").contains("symbolic link"), "{err:#}");
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
@@ -815,7 +947,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut item = planned("s", &[(".claude/skills/s/run.sh", b"#!/bin/sh\n")]);
         item.files[0].mode = Some(0o755);
-        apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None).unwrap();
         let mode = fs::metadata(tmp.path().join(".claude/skills/s/run.sh"))
             .unwrap()
             .permissions()
@@ -847,7 +979,14 @@ mod tests {
                 (".claude/skills/s/new.md", b"new"),
             ],
         )];
-        let err = apply_plan(&tmp.path().join("t"), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(
+            &tmp.path().join("t"),
+            &mut Lockfile::new(),
+            &plan,
+            true,
+            None,
+        )
+        .unwrap_err();
         assert!(format!("{err:#}").contains(".claude/skills/s"), "{err:#}");
         assert_eq!(fs::read(outside.join("SKILL.md")).unwrap(), b"keep");
         assert!(!outside.join("new.md").exists());
@@ -862,7 +1001,7 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".claude")).unwrap();
         std::os::unix::fs::symlink(&real, tmp.path().join(".claude/skills")).unwrap();
         let plan = [planned("s", &[(".claude/skills/s/SKILL.md", b"body")])];
-        apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
+        apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
         assert_eq!(fs::read(real.join("s/SKILL.md")).unwrap(), b"body");
     }
 
@@ -879,7 +1018,7 @@ mod tests {
         let mut lock = Lockfile::new();
         lock.items
             .push(locked("s", vec![record(".claude/skills/s/old.md")]));
-        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])], true).is_err());
+        assert!(apply_plan(&target, &mut lock, &[planned("s", &[])], true, None).is_err());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"keep");
     }
 
@@ -897,7 +1036,7 @@ mod tests {
             "s",
             vec![record("src/main.rs"), record(".claude/x.md")],
         ));
-        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true).unwrap();
+        apply_plan(tmp.path(), &mut lock, &[planned("s", &[])], true, None).unwrap();
         assert!(main.exists());
         assert!(shallow.exists());
     }
@@ -909,13 +1048,13 @@ mod tests {
             planned("s", &[(".claude/skills/s/SKILL.md", b"a")]),
             planned("s", &[(".claude/skills/s/OTHER.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_name, true, None).unwrap_err();
         assert!(format!("{err}").contains("`s`"), "{err}");
         let same_path = [
             planned("a", &[(".claude/skills/x/SKILL.md", b"a")]),
             planned("b", &[(".claude/skills/x/SKILL.md", b"b")]),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &same_path, true, None).unwrap_err();
         assert!(format!("{err}").contains("`a` and `b`"), "{err}");
         assert!(!tmp.path().join(".claude").exists());
     }
@@ -950,7 +1089,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -970,7 +1109,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/skills/second/SKILL.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/skills/second/SKILL.md"), "{text}");
         assert!(text.contains("is not a directory"), "{text}");
@@ -1012,7 +1151,7 @@ mod pre_check_tests {
         fs::write(dir.join("mine.md"), b"user file").unwrap();
         let mut lock = stale_record(".claude/skills/s/notes/a.md", b"old");
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut lock, &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut lock, &plan, true, None).unwrap_err();
         assert!(
             format!("{err:#}").contains(".claude/skills/s/notes"),
             "{err:#}"
@@ -1027,7 +1166,7 @@ mod pre_check_tests {
         fs::create_dir_all(tmp.path().join(".claude/skills/s")).unwrap();
         fs::write(tmp.path().join(".claude/skills/s/notes"), b"user file").unwrap();
         let plan = [planned("s", ".claude/skills/s/notes/a.md")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         assert!(format!("{err:#}").contains("is not a directory"), "{err:#}");
         assert_eq!(
             fs::read(tmp.path().join(".claude/skills/s/notes")).unwrap(),
@@ -1046,7 +1185,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/first/SKILL.md"),
             planned("second", ".claude/rules/second.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         let text = format!("{err:#}");
         assert!(text.contains(".claude/rules/second.md"), "{text}");
         assert!(text.contains("missing target"), "{text}");
@@ -1060,7 +1199,7 @@ mod pre_check_tests {
             planned("first", ".claude/skills/x/notes"),
             planned("second", ".claude/skills/x/notes/a.md"),
         ];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         let text = format!("{err:#}");
         assert!(
             text.contains(
@@ -1083,7 +1222,7 @@ mod pre_check_tests {
             files: vec![],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        apply_plan(&target, &mut lock, &[s], true).unwrap();
+        apply_plan(&target, &mut lock, &[s], true, None).unwrap();
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
 
@@ -1102,7 +1241,7 @@ mod pre_check_tests {
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
         let plan = [planned("first", ".claude/skills/first/SKILL.md"), s];
-        assert!(apply_plan(tmp.path(), &mut lock, &plan, true).is_err());
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, true, None).is_err());
         assert!(!tmp.path().join(".claude/skills/first").exists());
         assert_eq!(fs::read(outside.join("old.md")).unwrap(), b"x");
     }
@@ -1113,7 +1252,7 @@ mod pre_check_tests {
         let dir = tmp.path().join(".claude/skills/s/notes");
         fs::create_dir_all(&dir).unwrap();
         let plan = [planned("s", ".claude/skills/s/notes")];
-        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap_err();
+        let err = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap_err();
         assert!(
             format!("{err:#}").contains("is not a regular file"),
             "{err:#}"
@@ -1138,7 +1277,7 @@ mod pre_check_tests {
             ],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true).unwrap();
+        let rec = apply_plan(tmp.path(), &mut Lockfile::new(), &[item], true, None).unwrap();
         let order: Vec<(&str, &str)> = rec.recorded[&(ItemKind::Skill, "s".to_string())]
             .iter()
             .map(|f| (f.client.as_str(), f.path.as_str()))
@@ -1231,6 +1370,7 @@ mod conflict_tests {
             &mut Lockfile::new(),
             &[planned("s", &[(ENTRY, b"body")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1251,6 +1391,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"new")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1267,6 +1408,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"new")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty());
@@ -1287,7 +1429,7 @@ mod conflict_tests {
             planned("s", &[(ENTRY, b"v2"), (".claude/skills/s/new.md", b"new")]),
             planned("t", &[(".claude/skills/t/SKILL.md", b"t")]),
         ];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert_eq!(
             outcome.skipped,
             vec![FileConflict {
@@ -1314,10 +1456,10 @@ mod conflict_tests {
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"manual");
         let plan = [planned("s", &[(ENTRY, b"body")])];
-        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, false, None).unwrap();
         assert_eq!(outcome.skipped[0].state, ConflictState::Unowned);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"manual");
-        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut Lockfile::new(), &plan, true, None).unwrap();
         assert!(outcome.skipped.is_empty());
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"body");
     }
@@ -1334,6 +1476,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"e")])],
             false,
+            None,
         )
         .unwrap();
         assert!(!tmp.path().join(STALE).exists());
@@ -1351,6 +1494,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"e")])],
             false,
+            None,
         )
         .unwrap();
         assert_eq!(fs::read(tmp.path().join(STALE)).unwrap(), b"edited");
@@ -1372,6 +1516,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"e")])],
             true,
+            None,
         )
         .unwrap();
         assert!(!tmp.path().join(STALE).exists());
@@ -1388,6 +1533,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"e")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.kept.is_empty());
@@ -1423,6 +1569,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"e")])],
             false,
+            None,
         )
         .unwrap();
         assert_eq!(outcome.kept, vec![PathBuf::from(STALE)]);
@@ -1444,6 +1591,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"new")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
@@ -1460,6 +1608,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
@@ -1474,14 +1623,14 @@ mod conflict_tests {
         put(tmp.path(), ENTRY, b"a\nb\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
         let plan = [planned("s", &[(ENTRY, b"a\nb\n")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
 
         // CRLF variant, planned hash recorded: not written.
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"a\r\nb\r\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
 
@@ -1490,7 +1639,7 @@ mod conflict_tests {
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), ENTRY, b"a\r\nb\r\n");
         let mut lock = lock_with("s", vec![owned(ENTRY, b"a\r\nb\r\n")]);
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert_eq!(outcome.changed, vec![PathBuf::from(ENTRY)]);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\nb\n");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"a\nb\n")]);
@@ -1505,6 +1654,7 @@ mod conflict_tests {
             &mut Lockfile::new(),
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
+            None,
         )
         .unwrap();
         assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
@@ -1522,6 +1672,7 @@ mod conflict_tests {
             &mut lock,
             &[planned("s", &[(ENTRY, b"a\nb\n")])],
             false,
+            None,
         )
         .unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
@@ -1538,7 +1689,7 @@ mod conflict_tests {
             planned("first", &[(".claude/skills/first/SKILL.md", b"f")]),
             planned("s", &[(".claude/skills/s/notes", b"file")]),
         ];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
         assert_eq!(outcome.skipped[0].path, PathBuf::from(nested));
         assert_eq!(fs::read(tmp.path().join(nested)).unwrap(), b"edited");
@@ -1552,7 +1703,7 @@ mod conflict_tests {
         put(tmp.path(), notes, b"edited");
         let mut lock = lock_with("s", vec![owned(notes, b"old")]);
         let plan = [planned("s", &[(".claude/skills/s/notes/a.md", b"a")])];
-        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert_eq!(outcome.skipped[0].path, PathBuf::from(notes));
         assert_eq!(fs::read(tmp.path().join(notes)).unwrap(), b"edited");
     }
@@ -1566,7 +1717,7 @@ mod conflict_tests {
         let mut writer = planned("t", &[(shared, b"old")]);
         writer.kind = ItemKind::Agent;
         let plan = [writer, planned("s", &[(ENTRY, b"e")])];
-        apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
         assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"old");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
     }
@@ -1586,7 +1737,8 @@ mod conflict_tests {
                 source_name: Some("orig".into()),
                 ..item
             };
-            let err = apply_plan(tmp.path(), &mut Lockfile::new(), &[aliased], true).unwrap_err();
+            let err =
+                apply_plan(tmp.path(), &mut Lockfile::new(), &[aliased], true, None).unwrap_err();
             assert!(
                 err.to_string()
                     .contains(&format!("the skill `orig` as `{name}`")),
@@ -1594,5 +1746,201 @@ mod conflict_tests {
             );
         }
         assert!(!tmp.path().join(".claude").exists());
+    }
+}
+
+#[cfg(test)]
+mod repeatable_tests {
+    use super::*;
+    use crate::generate::Client;
+    use crate::pipeline::plan::PlannedFile;
+
+    const A: &str = ".claude/skills/s/SKILL.md";
+    const B: &str = ".claude/skills/s/b.md";
+
+    fn planned(files: &[(&str, &[u8])]) -> PlannedItem {
+        PlannedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source_name: None,
+            files: files
+                .iter()
+                .map(|(rel, bytes)| PlannedFile {
+                    client: Client::Claude,
+                    rel: PathBuf::from(rel),
+                    bytes: bytes.to_vec(),
+                    mode: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn owned(path: &str, bytes: &[u8]) -> OwnedFile {
+        OwnedFile {
+            client: "claude".into(),
+            path: path.into(),
+            sha256: sha256_hex(bytes),
+        }
+    }
+
+    fn entry(files: Vec<OwnedFile>, pending: Vec<OwnedFile>) -> LockedItem {
+        LockedItem {
+            kind: ItemKind::Skill,
+            name: "s".to_string(),
+            source: "./src".to_string(),
+            git_ref: None,
+            hash: Some("new-hash".into()),
+            source_name: None,
+            required_by: vec![],
+            group: None,
+            clients: vec![],
+            files,
+            pending,
+        }
+    }
+
+    fn put(root: &Path, rel: &str, bytes: &[u8]) {
+        let full = root.join(rel);
+        fs::create_dir_all(full.parent().unwrap()).unwrap();
+        fs::write(full, bytes).unwrap();
+    }
+
+    fn stage_files(dir: &Path) -> Vec<PathBuf> {
+        fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|p| {
+                p.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with(".upskill-stage-")
+            })
+            .collect()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pending_is_saved_before_the_first_write() {
+        use std::os::unix::fs::PermissionsExt;
+        /// Restores the mode when the test ends, also when an assertion
+        /// fails.
+        struct Restore(PathBuf);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                let _ = fs::set_permissions(&self.0, fs::Permissions::from_mode(0o755));
+            }
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let skills = tmp.path().join(".claude/skills");
+        fs::create_dir_all(&skills).unwrap();
+        fs::set_permissions(&skills, fs::Permissions::from_mode(0o555)).unwrap();
+        let _restore = Restore(skills.clone());
+        if fs::create_dir(skills.join("probe")).is_ok() {
+            // Running as root: permissions do not block the write.
+            return;
+        }
+        let mut lock = Lockfile::new();
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a")])];
+        assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+
+        let on_disk = Lockfile::load(tmp.path()).unwrap();
+        assert_eq!(on_disk.items.len(), 1);
+        let item = &on_disk.items[0];
+        assert!(item.files.is_empty());
+        assert_eq!(item.pending, vec![owned(A, b"a")]);
+        assert_eq!(item.hash.as_deref(), Some("new-hash"));
+    }
+
+    #[test]
+    fn promotion_clears_pending_and_saves() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a"), (B, b"b")])];
+        apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+
+        let on_disk = Lockfile::load(tmp.path()).unwrap();
+        let item = &on_disk.items[0];
+        assert!(item.pending.is_empty());
+        assert_eq!(item.files, vec![owned(A, b"a"), owned(B, b"b")]);
+        assert_eq!(lock, on_disk);
+    }
+
+    #[test]
+    fn a_skipped_item_gets_no_pending_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"manual");
+        let mut lock = Lockfile::new();
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+        assert_eq!(outcome.skipped.len(), 1);
+        assert!(lock.items.is_empty());
+    }
+
+    #[test]
+    fn a_second_run_completes_with_one_file_new_and_one_file_old() {
+        let tmp = tempfile::tempdir().unwrap();
+        // The failed run wrote A with the new bytes; B still holds the old.
+        put(tmp.path(), A, b"a2");
+        put(tmp.path(), B, b"b1");
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(
+            vec![owned(A, b"a1"), owned(B, b"b1")],
+            vec![owned(A, b"a2"), owned(B, b"b2")],
+        ));
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(A, b"a2"), (B, b"b2")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).unwrap();
+
+        assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
+        assert_eq!(outcome.changed, vec![PathBuf::from(B)]);
+        assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a2");
+        assert_eq!(fs::read(tmp.path().join(B)).unwrap(), b"b2");
+        let item = &Lockfile::load(tmp.path()).unwrap().items[0];
+        assert!(item.pending.is_empty());
+        assert_eq!(item.files, vec![owned(A, b"a2"), owned(B, b"b2")]);
+    }
+
+    #[test]
+    fn a_pending_hash_does_not_skip_the_write_of_a_crlf_variant() {
+        let tmp = tempfile::tempdir().unwrap();
+        // `files` holds the CRLF bytes X, `pending` the LF bytes X', and the
+        // disk holds X: the failed run did not write this file.
+        put(tmp.path(), A, b"a\r\nb\r\n");
+        let mut lock = Lockfile::new();
+        lock.items.push(entry(
+            vec![owned(A, b"a\r\nb\r\n")],
+            vec![owned(A, b"a\nb\n")],
+        ));
+        let plan = [planned(&[(A, b"a\nb\n")])];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false, None).unwrap();
+        assert_eq!(outcome.changed, vec![PathBuf::from(A)]);
+        assert_eq!(fs::read(tmp.path().join(A)).unwrap(), b"a\nb\n");
+    }
+
+    #[test]
+    fn a_failed_write_leaves_no_stage_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        // A destination that is a directory with an entry: the rename fails.
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(dest.join("inner")).unwrap();
+        assert!(write_staged(&dest, b"x", None).is_err());
+        assert!(stage_files(tmp.path()).is_empty());
+        assert!(dest.join("inner").is_dir());
+    }
+
+    #[test]
+    fn write_staged_replaces_an_existing_file_and_leaves_no_stage_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("f.md");
+        fs::write(&dest, b"old").unwrap();
+        let mut permissions = fs::metadata(&dest).unwrap().permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&dest, permissions).unwrap();
+        write_staged(&dest, b"new", None).unwrap();
+        assert_eq!(fs::read(&dest).unwrap(), b"new");
+        assert!(stage_files(tmp.path()).is_empty());
     }
 }

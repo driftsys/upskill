@@ -62,6 +62,7 @@ pub fn install_from_local_path(
         &mut crate::lockfile::Lockfile::new(),
         &report.planned,
         true,
+        None,
     )?;
     Ok(report)
 }

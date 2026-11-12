@@ -108,7 +108,7 @@ the refusal comes before any change for that source, and an `update` over
 several sources may have updated earlier sources before it stops.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
-destination of every item against the item's `files` record (see
+destination of every item against the item's `files` and `pending` records (see
 [State files](#state-files)). A destination is a conflict when it is a file that
 upskill wrote and that was changed afterwards (modified), or a file that upskill
 has no record of (not managed by upskill, for example a file you wrote by hand).
@@ -270,8 +270,9 @@ upskill remove --force code-review                 # also delete modified files
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
-`remove` deletes only files listed in the item's `files` record in the lockfile
-(see [State files](#state-files)). Each recorded file is in one of three states:
+`remove` deletes only files listed in the item's `files` or `pending` record in
+the lockfile (see [State files](#state-files)). Each recorded file is in one of
+three states:
 
 - **Owned** — a regular file whose content matches the recorded SHA-256.
   `remove` deletes it.
@@ -346,7 +347,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 
 ### `upskill doctor`
 
-Verify on-disk state matches `.upskill-lock.json`. Reports nine independent
+Verify on-disk state matches `.upskill-lock.json`. Reports ten independent
 buckets:
 
 - **Missing per-client output files** — reinstall fixes
@@ -380,12 +381,16 @@ buckets:
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update` reconfigures it). A missing
   `claude` CLI or a failed query is advisory and does **not** cause exit 1.
+- **Interrupted** — items with a non-empty `pending` record: an `add` or
+  `update` failed or was stopped before it completed. Run the same command again
+  to complete it. Causes exit 1.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-or unregistered MCP servers). Skipped plugins and unverifiable MCP entries are
-informational warnings and do not affect the exit code. `doctor` never fetches;
-remote-source drift detection is `update --dry-run`.
+unregistered MCP servers, or interrupted items). Skipped plugins and
+unverifiable MCP entries are informational warnings and do not affect the exit
+code. `doctor` never fetches; remote-source drift detection is
+`update --dry-run`.
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 
@@ -424,6 +429,9 @@ Pass `--json` for a stable machine-readable document. Exit code is unchanged.
   "mcp_entries": [
     { "name": "drawio", "client": "claude", "bundle": "baseline",
       "status": "not-registered" }
+  ],
+  "interrupted": [
+    { "kind": "skill", "name": "..." }
   ]
 }
 ```
@@ -567,8 +575,29 @@ a path that the new version writes is replaced only when it is unchanged, absent
 or already equal to the new bytes; otherwise the item is skipped (see
 [`upskill add`](#upskill-add-source-items)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of
-`remove`. No command fills `pending` yet. `remove` deletes only recorded files,
-as described in [`upskill remove`](#upskill-remove-name---source-label---force).
+`remove`. `remove` deletes only recorded files, as described in
+[`upskill remove`](#upskill-remove-name---source-label---force).
+
+`add` and `update` run in this order:
+
+1. Check every destination and decide which items are written. Nothing is
+   changed yet.
+2. For each item that is written, set `pending` to the planned files (an item
+   new to the lockfile is added with an empty `files` list), and save the
+   lockfile.
+3. For each item, delete the stale recorded files, then write each file to a new
+   file `.upskill-stage-<16 hex digits>` in the destination directory, set its
+   mode, and rename it to the destination. On an error, delete that stage file
+   and stop.
+4. Move `pending` to `files` for each written item, and save the lockfile.
+
+If the command fails or is stopped between steps 2 and 4, the lockfile keeps the
+`pending` records. A file that holds the bytes of its `pending` record or of its
+`files` record counts as unchanged, so running the same command again, without
+`--force`, completes the operation. `doctor` reports such an item as
+interrupted, and `remove` deletes the files of both records. A stage file left
+by a process that was killed is not deleted by upskill. Two upskill processes
+that change one scope at the same time are not supported.
 
 A `schema: 1` lockfile is still read. The first `add`, `update` or `remove`
 adopts it before it changes any file: it keeps a copy of the old lockfile as

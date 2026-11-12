@@ -186,9 +186,10 @@ Common findings:
   (informational warning — install the CLI then run `update`)
 
 Exits 0 when clean. Exits 1 when drift is found (missing outputs, modified
-files, unreadable files, stale hashes, orphan entries, missing plugins, or MCP
-servers that are not registered). Skipped plugins are warnings only and do not
-affect the exit code.
+files, unreadable files, stale hashes, orphan entries, missing plugins, MCP
+servers that are not registered, or interrupted items: an `add` or `update` that
+did not complete, which running the same command again completes). Skipped
+plugins are warnings only and do not affect the exit code.
 
 ## Conventions to remember
 

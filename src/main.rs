@@ -1294,6 +1294,21 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
+    if !report.interrupted.is_empty() {
+        println!(
+            "{} interrupted add or update ({} item(s)) — run the same command again to complete it",
+            style::error_label("doctor:"),
+            report.interrupted.len()
+        );
+        for i in &report.interrupted {
+            println!(
+                "  {} {}",
+                style::dim(kind_label(i.kind)),
+                style::name(&i.name)
+            );
+        }
+    }
+
     print_doctor_orphaned_dependencies(report);
     print_doctor_skipped_plugins(report);
     print_doctor_mcps(report);
