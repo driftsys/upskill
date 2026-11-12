@@ -1,4 +1,4 @@
-"""Run a harness-built command with terminal stdin and no supplied input."""
+"""Run a harness-built command with terminal stdin and an optional answer."""
 
 import json
 import os
@@ -42,7 +42,10 @@ try:
     )
     os.close(slave)
     slave = None
-    # Keep the master open without writing input: a confirmation read must wait.
+    # Write the optional answer. Without one, keep the master open without
+    # writing input: a confirmation read must wait.
+    if spec.get("input"):
+        os.write(master, spec["input"].encode("utf-8"))
     timed_out = False
     try:
         stdout, stderr = child.communicate(timeout=5)

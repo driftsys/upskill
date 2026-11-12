@@ -915,7 +915,7 @@ fn update_of_a_name_reports_a_skipped_dependency_from_another_source() {
 }
 
 #[test]
-fn update_summary_names_the_deleted_file_of_a_deselected_client() {
+fn update_summary_counts_the_deleted_file_of_a_deselected_client() {
     let (tmp, home) = copilot_res_project();
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -929,4 +929,334 @@ fn update_summary_names_the_deleted_file_of_a_deselected_client() {
         "{stdout}"
     );
     assert!(!copilot_res_md(tmp.path()).exists());
+}
+
+// -- Fix wave after review pass 1 --
+
+/// Rewrite the installed file at `path` with CRLF line endings, as a git
+/// checkout with `core.autocrlf=true` does.
+fn rewrite_with_crlf(path: &Path) {
+    let lf = fs::read(path).unwrap();
+    assert!(!lf.contains(&b'\r'));
+    let mut crlf = Vec::new();
+    for &b in &lf {
+        if b == b'\n' {
+            crlf.extend_from_slice(b"\r\n");
+        } else {
+            crlf.push(b);
+        }
+    }
+    fs::write(path, crlf).unwrap();
+}
+
+#[test]
+fn update_treats_a_crlf_checkout_as_unmodified() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    rewrite_with_crlf(&dest);
+    change_res_source(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(0);
+    let text = fs::read_to_string(&dest).unwrap();
+    assert!(text.contains("Changed."), "{text}");
+    assert!(!text.contains('\r'), "{text}");
+}
+
+#[test]
+fn remove_deletes_a_crlf_checkout_of_an_installed_file() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    rewrite_with_crlf(&dest);
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["remove", "res", "--project"])
+        .assert()
+        .success();
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(!stderr.contains("kept modified file"), "{stderr}");
+    assert!(!dest.exists());
+}
+
+#[test]
+fn doctor_does_not_report_a_crlf_checkout_as_modified() {
+    let (tmp, home) = res_project(|_| {});
+    rewrite_with_crlf(&res_skill_md(tmp.path()));
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["doctor", "--json", "--project"])
+        .assert()
+        .success();
+    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["modified_files"].as_array().unwrap().is_empty(), "{v}");
+}
+
+#[test]
+fn update_skips_an_edited_item_when_no_source_changed() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("skipped skill res: "), "{stderr}");
+    assert!(
+        stderr.contains(" was modified or is not managed by upskill\n"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Use --force to replace."), "{stderr}");
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+/// Rewrite the lockfile as schema 1 without `files` records.
+fn downgrade_to_schema_1(root: &Path) {
+    let path = root.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        let entry = entry.as_object_mut().unwrap();
+        entry.remove("files");
+        entry.remove("pending");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+}
+
+#[test]
+fn update_that_adopts_a_schema_1_lockfile_deletes_the_files_of_an_orphan() {
+    let (tmp, home) = two_skill_project();
+    let dest = res_skill_md(tmp.path());
+    assert!(dest.is_file());
+    downgrade_to_schema_1(tmp.path());
+    fs::remove_dir_all(tmp.path().join("source").join("res")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stdout.contains("removed"), "{stdout}");
+    assert!(!stderr.contains("kept modified file"), "{stderr}");
+    assert!(!dest.exists());
+    assert!(!dest.parent().unwrap().exists());
+    let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    assert!(!lock.contains("\"name\": \"res\""), "{lock}");
+    assert!(lock.contains("\"schema\": 2"), "{lock}");
+}
+
+#[test]
+fn update_that_only_adopts_a_schema_1_lockfile_does_not_print_nothing_to_do() {
+    let (tmp, home) = res_project(|_| {});
+    downgrade_to_schema_1(tmp.path());
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+    assert!(stdout.contains("Updated 0 of 1 item(s)"), "{stdout}");
+}
+
+#[test]
+fn update_reports_an_item_skipped_by_two_sources_once() {
+    // Two sources that both require the skill `sarif` from a third source.
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg_c = tmp.path().join("reg-c").join("sarif");
+    fs::create_dir_all(&reg_c).unwrap();
+    fs::write(
+        reg_c.join("SKILL.md"),
+        "---\nschema: 1\nname: sarif\ndescription: Use for sarif\n---\nBody.\n",
+    )
+    .unwrap();
+    for (reg, name) in [("reg-a", "first"), ("reg-b", "second")] {
+        let dir = tmp.path().join(reg).join(name);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("AGENT.md"),
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
+                 skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+                tmp.path().join("reg-c").display()
+            ),
+        )
+        .unwrap();
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", &format!("./{reg}"), name, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    let sarif = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md");
+    fs::write(&sarif, "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "first", "second", "--project"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert_eq!(
+        stdout
+            .matches("skipped — modified or unmanaged files kept")
+            .count(),
+        1,
+        "{stdout}"
+    );
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+/// Run `upskill update <args>` with a terminal on stdin and write `input`
+/// to it. Returns the JSON result of `tests/fixtures/terminal_stdin.py`.
+#[cfg(unix)]
+fn update_in_terminal(root: &Path, home: &Path, args: &[&str], input: &str) -> serde_json::Value {
+    let mut update = common::upskill_cmd(home);
+    update
+        .current_dir(root)
+        .arg("update")
+        .args(args)
+        .env("NO_COLOR", "1");
+    let spec = serde_json::json!({
+        "program": update.get_program().to_str().unwrap(),
+        "args": update.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),
+        "cwd": update.get_current_dir().unwrap(),
+        "home": home,
+        "env": update.get_envs().map(|(key, value)| {
+            (key.to_str().unwrap(), value.map(|value| value.to_str().unwrap()))
+        }).collect::<Vec<_>>(),
+        "input": input,
+    });
+    let output = std::process::Command::new("python3")
+        .env("HOME", home)
+        .env("USERPROFILE", home)
+        .args([
+            "-c",
+            include_str!("fixtures/terminal_stdin.py"),
+            &spec.to_string(),
+        ])
+        .output()
+        .expect("Python 3 with stdlib pty is required for the Unix terminal test");
+    assert!(
+        output.status.success(),
+        "terminal fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(
+        result["stderr"]
+            .as_str()
+            .unwrap()
+            .contains("terminal stdin verified\n"),
+        "child did not verify terminal stdin: {result}"
+    );
+    assert_eq!(result["timed_out"], false, "{result}");
+    result
+}
+
+#[test]
+#[cfg(unix)]
+fn update_in_a_terminal_changes_nothing_when_no_source_changed() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let result = update_in_terminal(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stdout"].as_str().unwrap().contains("nothing to do"),
+        "{result}"
+    );
+    assert!(
+        !result["stderr"].as_str().unwrap().contains("[y/N]"),
+        "{result}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn update_force_in_a_terminal_changes_nothing_on_no() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    fs::write(&dest, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "n\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        "{result}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn update_force_in_a_terminal_replaces_the_file_on_yes() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    let generated = fs::read(&dest).unwrap();
+    fs::write(&dest, "my edit\n").unwrap();
+
+    let result = update_in_terminal(tmp.path(), &home, &["--project", "--force"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(fs::read(&dest).unwrap(), generated);
+}
+
+#[test]
+#[cfg(unix)]
+fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
+    let (tmp, home) = res_project(|_| {});
+    let dest = res_skill_md(tmp.path());
+    let before = fs::read(&dest).unwrap();
+    change_res_source(tmp.path());
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
+
+    let result = update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stderr"].as_str().unwrap().contains("[y/N]"),
+        "{result}"
+    );
+    assert_eq!(fs::read(&dest).unwrap(), before);
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
 }

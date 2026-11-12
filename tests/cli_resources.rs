@@ -284,7 +284,7 @@ fn update_removes_stale_resource_after_source_deletes_it() {
 
     assert!(
         !copied.exists(),
-        "stale resource must be cleaned (remove_item_outputs runs before re-copy)"
+        "stale resource must be deleted (apply_plan deletes recorded files that the plan no longer contains)"
     );
 }
 
