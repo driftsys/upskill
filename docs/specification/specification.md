@@ -160,15 +160,19 @@ source no longer contains is removed with the rules of `remove` (§2.3).
 `update --force` replaces modified and unowned destinations and deletes modified
 regular files that are no longer produced; it then lists these files after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a terminal
-without `--yes`, `update` first runs a dry run. When a source changed or
-`--force` is given, it shows the plan and asks for a confirmation; an answer
-other than `y` or `yes` (in any letter case) changes nothing. When no source
-changed and `--force` is not given, it prints that there is nothing to do and
-changes nothing: it therefore does not report a modified file, does not delete
-the files of a client that the flags no longer select, and does not adopt a
-`schema: 1` lockfile. A run with `--yes`, or without a terminal, applies without
-a question and does these things. When an applied `update` wrote or deleted
-files without a source change, it prints
+without `--yes`, `update` first runs a dry run. When a source changed, an item
+has an interrupted operation (a non-empty `pending` record, §4), or `--force` is
+given, it shows the plan (an interrupted item is counted on the line
+`complete: <n> item(s)`) and asks for a confirmation; an answer other than `y`
+or `yes` (in any letter case) changes nothing. When no source changed, no item
+is interrupted and `--force` is not given, it prints that there is nothing to do
+and changes nothing: it therefore does not report a modified file, does not
+delete the files of a client that the flags no longer select, and does not adopt
+a `schema: 1` lockfile. A run with `--yes`, or without a terminal, applies
+without a question and does these things. An applied `update` reports a
+completed interrupted item as `completed — interrupted before` and counts it in
+`Updated <n> of <m> item(s)`. When no item was updated, completed or removed,
+but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
@@ -365,28 +369,30 @@ the source resource on it (a generated file gets the default mode of a new
 file), and renames it to the destination; on an error it deletes that stage file
 and stops. An owned file that already holds the planned bytes, or a CRLF variant
 of them as described in §2.1, is not written; only the mode of a resource is set
-on it again. (4) It moves `pending` to `files` for each written item and saves
-the lockfile. If the command fails or is stopped between (2) and (4), the
-lockfile keeps the `pending` records: a file that holds the bytes of a `pending`
-or `files` record is owned, so running the same command again, without
-`--force`, completes the operation, also after a second command that failed;
-`doctor` reports the item as interrupted, and `remove` deletes the files of both
-records. `update` completes an interrupted item also when its source did not
-change: `--dry-run` reports it as `would complete`, and in a terminal without
-`--yes` the plan is shown and confirmed as for a changed source. A path of a
-`pending` record that the command that completes the operation does not plan is
-a stale recorded path: deleted when it matches its `pending` or `files` hash,
-kept and still recorded when modified. A stage file left by a process that was
-killed is not deleted by upskill. Two upskill processes that change one scope at
-the same time are not supported. `add`, `update` and `remove` (not
-`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
-not an `add`, or an `update` for its first source, that is refused for a source
-item that overlaps its own output paths, for a conflict with another source, for
-two items with one installed name, or for an installed name with a path
-separator) adopt a `schema: 1` lockfile: they keep the old bytes as
-`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
-replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 2`, and print the adopted paths to stderr.
+on it again. (4) For each written item it sets `files` to the planned files and
+the records of its kept stale files, clears `pending` (older `pending` hashes of
+a planned path are dropped), and saves the lockfile. If the command fails or is
+stopped between (2) and (4), the lockfile keeps the `pending` records: a file
+that holds the bytes of a `pending` or `files` record is owned, so running the
+same command again, without `--force`, completes the operation, also after a
+second command that failed; `doctor` reports the item as interrupted, and
+`remove` deletes the files of both records. `update` completes an interrupted
+item also when its source did not change: `--dry-run` reports it as
+`would complete`, and in a terminal without `--yes` the plan is shown and
+confirmed as for a changed source. A path of a `pending` record that the command
+that completes the operation does not plan is a stale recorded path: deleted
+when it matches its `pending` or `files` hash, kept and still recorded when
+modified. A stage file left by a process that was killed is not deleted by
+upskill. Two upskill processes that change one scope at the same time are not
+supported. `add`, `update` and `remove` (not `update --dry-run`, not `doctor`,
+not a `remove` that fails on an unknown name, not an `add`, or an `update` for
+its first source, that is refused for a source item that overlaps its own output
+paths, for a conflict with another source, for two items with one installed
+name, or for an installed name with a path separator) adopt a `schema: 1`
+lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 2`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 

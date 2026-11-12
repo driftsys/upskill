@@ -167,8 +167,9 @@ pub enum Commands {
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Apply without a question. In a terminal without `--yes`, `update`
-        /// asks before it applies when a source changed or `--force` is
-        /// given, and otherwise changes nothing: it then does not report
+        /// asks before it applies when a source changed, an item has an
+        /// interrupted `add` or `update`, or `--force` is given, and
+        /// otherwise changes nothing: it then does not report
         /// modified files, delete files of deselected clients or adopt a
         /// `schema: 1` lockfile. Implicit when stdin is not a terminal
         /// (CI / pipes); not used with `--dry-run`.

@@ -213,16 +213,21 @@ recorded files are deleted, modified ones are kept and reported, and the
 lockfile entry is dropped. `update --force` replaces modified and unmanaged
 files and deletes modified regular files that are no longer produced, then lists
 them after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In
-a terminal without `--yes`, `update` first runs a dry run. When a source changed
-or `--force` is given, it shows the plan and asks for a confirmation; an answer
-other than `y` or `yes` (in any letter case) changes nothing. When no source
-changed and `--force` is not given, it prints that there is nothing to do and
-changes nothing: it therefore does not report a modified file, does not delete
-the files of a client that the flags no longer select, and does not adopt a
-`schema: 1` lockfile. A run with `--yes`, or without a terminal, applies without
-a question and does these things. When an applied `update` wrote or deleted
-files without a source change, it prints
-`Changed <n> file(s) written or deleted` instead of the "nothing to do" line.
+a terminal without `--yes`, `update` first runs a dry run. When a source
+changed, an item has an interrupted `add` or `update` (a non-empty `pending`
+record, see [State files](#state-files)), or `--force` is given, it shows the
+plan (an interrupted item is counted on the line `complete: <n> item(s)`) and
+asks for a confirmation; an answer other than `y` or `yes` (in any letter case)
+changes nothing. When no source changed, no item is interrupted and `--force` is
+not given, it prints that there is nothing to do and changes nothing: it
+therefore does not report a modified file, does not delete the files of a client
+that the flags no longer select, and does not adopt a `schema: 1` lockfile. A
+run with `--yes`, or without a terminal, applies without a question and does
+these things. An applied `update` reports a completed interrupted item as
+`completed — interrupted before` and counts it in `Updated <n> of <m> item(s)`.
+When no item was updated, completed or removed, but files were written or
+deleted, it prints `Changed <n> file(s) written or deleted` instead of the
+"nothing to do" line.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -598,7 +603,9 @@ that its source no longer contains is removed by `update` with the rules of
    CRLF variant of them as described in
    [`upskill add`](#upskill-add-source-items), is not written; only the mode of
    a resource is set on it again. On an error, delete that stage file and stop.
-4. Move `pending` to `files` for each written item, and save the lockfile.
+4. For each written item, set `files` to the planned files and the records of
+   its kept stale files, clear `pending` (so the older `pending` hashes of a
+   planned path are dropped), and save the lockfile.
 
 If the command fails or is stopped between steps 2 and 4, the lockfile keeps the
 `pending` records. A file that holds the bytes of its `pending` record or of its

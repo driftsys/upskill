@@ -138,8 +138,9 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// lockfile, writes the plan with one call, then merges the resulting
 /// [`InstallReport`] into `<target>/.upskill-lock.json` via
 /// [`crate::lockfile`], with each item's written files in `files`. The
-/// write saves the lockfile with each written item's `pending` record
-/// before its first change on disk, and again after its last one, so that
+/// write saves the lockfile with a `pending` record for each item that it
+/// changes on disk before its first change on disk (when there is such an
+/// item), and again after its last one, so that
 /// running the same command again completes a failed install (see
 /// `apply::apply_plan`); the bundles, plugins and MCP servers are saved
 /// after that. Existing

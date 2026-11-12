@@ -41,8 +41,9 @@ use super::{
 /// and it is a regular file; an absent file is ignored. A regular file that
 /// exists but cannot be read is handled as a modified file; any other error
 /// while inspecting a recorded path fails the command before any deletion.
-/// A file that the records do not list is never deleted. Directories left empty are removed, up
-/// to and excluding the kind directory (for example `.claude/skills`).
+/// A file that the records do not list is never deleted. Directories left
+/// empty are removed, up to and excluding the kind directory (for example
+/// `.claude/skills`).
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are deliberately left alone — they are
