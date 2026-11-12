@@ -31,16 +31,17 @@ use super::{
 /// `owned::adopt_schema1`), after the unknown-name check, so a
 /// command that fails on an unknown name changes nothing.
 ///
-/// Only the files in an item's `files` record are considered. Before any
-/// change on disk, every recorded path is checked: a path that is not
-/// accepted by `deletable` is skipped, and a symbolic link in the item
-/// part of a path's parent directories is an error. Then, per recorded
-/// file: an unchanged regular file is deleted; a modified file is kept
-/// and reported in `kept_modified`, or deleted when `force` is true and it
-/// is a regular file; an absent file is ignored. A regular file that exists
-/// but cannot be read is handled as a modified file; any other error while
-/// inspecting a recorded path fails the command before any deletion. A file that the record
-/// does not list is never deleted. Directories left empty are removed, up
+/// Only the files in an item's `files` and `pending` records are
+/// considered; a file is owned when it matches a hash of either record.
+/// Before any change on disk, every recorded path is checked: a path that
+/// is not accepted by `deletable` is skipped, and a symbolic link in the
+/// item part of a path's parent directories is an error. Then, per
+/// recorded file: an unchanged regular file is deleted; a modified file is
+/// kept and reported in `kept_modified`, or deleted when `force` is true
+/// and it is a regular file; an absent file is ignored. A regular file that
+/// exists but cannot be read is handled as a modified file; any other error
+/// while inspecting a recorded path fails the command before any deletion.
+/// A file that the records do not list is never deleted. Directories left empty are removed, up
 /// to and excluding the kind directory (for example `.claude/skills`).
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
@@ -641,6 +642,12 @@ fn reselect_from_entries(
 /// its unchanged recorded files are deleted, its modified files are kept
 /// (deleted with `overwrite` when they are regular files) and listed in
 /// `kept_modified`, and its lockfile entry is dropped.
+///
+/// An item with a non-empty `pending` record (an interrupted `add` or
+/// `update`) whose source hash did not change is reported as
+/// [`UpdateStatus::WouldCompleteInterrupted`] in `DryRun` mode and as
+/// [`UpdateStatus::CompletedInterrupted`] in `Apply` mode, never as
+/// [`UpdateStatus::UpToDate`].
 pub fn update(
     target: &Path,
     names: &[String],
@@ -833,6 +840,8 @@ pub fn update(
                         let status =
                             if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
                                 UpdateStatus::SkippedModified { files }
+                            } else if new_hash == entry.hash && !entry.pending.is_empty() {
+                                UpdateStatus::CompletedInterrupted
                             } else if new_hash == entry.hash {
                                 UpdateStatus::UpToDate
                             } else {
@@ -897,7 +906,9 @@ pub fn update(
                             .get(&(kind, lookup_name.to_string()))
                             .cloned()
                             .flatten();
-                        let status = if new_hash == entry.hash {
+                        let status = if new_hash == entry.hash && !entry.pending.is_empty() {
+                            UpdateStatus::WouldCompleteInterrupted
+                        } else if new_hash == entry.hash {
                             UpdateStatus::UpToDate
                         } else {
                             UpdateStatus::WouldChange {

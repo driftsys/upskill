@@ -374,7 +374,8 @@ pub enum UpdateMode {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
-    /// SSOT hash matches the lockfile — nothing to do.
+    /// SSOT hash matches the lockfile and the item has no interrupted
+    /// operation — nothing to do.
     UpToDate,
     /// `Apply` mode: the lockfile hash changed (or was previously unset
     /// and now resolved). Outputs were rewritten.
@@ -388,6 +389,15 @@ pub enum UpdateStatus {
         old_hash: Option<String>,
         new_hash: Option<String>,
     },
+    /// `Apply` mode: the item had an interrupted operation (a non-empty
+    /// `pending` record) and its source hash did not change. The operation
+    /// was completed: its planned files were written and its `pending`
+    /// record was cleared.
+    CompletedInterrupted,
+    /// `DryRun` mode: the item has an interrupted operation (a non-empty
+    /// `pending` record) and its source hash did not change; an `update`
+    /// (without `--dry-run`) would complete it.
+    WouldCompleteInterrupted,
     /// `Apply` mode: item no longer exists in the source. Its unchanged
     /// recorded files were deleted (modified ones are kept and listed in
     /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile

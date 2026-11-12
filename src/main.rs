@@ -918,6 +918,8 @@ fn run_update(args: UpdateArgs) -> i32 {
             }
         };
 
+        // An item with an interrupted operation counts as changed: its
+        // status is `WouldCompleteInterrupted`, not `UpToDate`.
         let source_changed = plan
             .items
             .iter()
@@ -969,7 +971,8 @@ enum UpdateStep {
     /// Show the plan of the dry run and ask before applying.
     Confirm,
     /// Change nothing and print that there is nothing to do. In a terminal
-    /// without `--yes`, when no source changed and `--force` is not given,
+    /// without `--yes`, when no source changed, no item has an interrupted
+    /// operation and `--force` is not given,
     /// `update` does not apply: it does not report a modified file, does
     /// not delete the files of a client that the flags no longer select,
     /// and does not adopt a `schema: 1` lockfile.
@@ -977,7 +980,8 @@ enum UpdateStep {
 }
 
 /// The step before the apply. `prompting` is true in a terminal without
-/// `--yes`. There, a source change or `--force` needs a confirmation, and
+/// `--yes`. There, a source change, an item with an interrupted operation
+/// (both given as `source_changed`) or `--force` needs a confirmation, and
 /// otherwise nothing is applied.
 fn update_step(prompting: bool, source_changed: bool, force: bool) -> UpdateStep {
     if !prompting {
@@ -1001,6 +1005,11 @@ fn print_update_plan(report: &UpdateReport) {
         .iter()
         .filter(|i| matches!(i.status, UpdateStatus::WouldRemove))
         .count();
+    let complete_count = report
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, UpdateStatus::WouldCompleteInterrupted))
+        .count();
     let unchanged_count = report
         .items
         .iter()
@@ -1009,6 +1018,13 @@ fn print_update_plan(report: &UpdateReport) {
 
     if update_count > 0 {
         println!("  {}  {} item(s)", style::success("update:"), update_count);
+    }
+    if complete_count > 0 {
+        println!(
+            "  {}  {} item(s) (interrupted before)",
+            style::success("complete:"),
+            complete_count
+        );
     }
     if remove_count > 0 {
         println!(
@@ -1094,6 +1110,10 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             }
             UpdateStatus::Removed => style::error_label("removed — no longer in source"),
             UpdateStatus::WouldRemove => style::warn("would remove — no longer in source"),
+            UpdateStatus::CompletedInterrupted => style::success("completed — interrupted before"),
+            UpdateStatus::WouldCompleteInterrupted => {
+                style::warn("would complete — interrupted before")
+            }
             UpdateStatus::SkippedModified { .. } => {
                 style::warn("skipped — modified or unmanaged files kept")
             }
