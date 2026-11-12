@@ -77,6 +77,9 @@ struct ItemChanges {
     kept: Vec<(PathBuf, Vec<OwnedFile>)>,
     /// Destinations that stop the write of this item.
     conflicts: Vec<FileConflict>,
+    /// `Owned` destinations whose bytes already match the planned bytes
+    /// through [`matches_recorded`]; they are not rewritten.
+    unchanged: BTreeSet<PathBuf>,
 }
 
 /// Writes every planned item that has no conflict and updates
@@ -85,12 +88,16 @@ struct ItemChanges {
 ///
 /// Conflicts: every destination of every item is classified with
 /// [`classify`] before anything is written. A destination whose content
-/// already equals the planned bytes is not a conflict, in any state. A
-/// destination that is `Modified` or `Unowned` is a conflict. When
+/// already equals the planned bytes is not a conflict, in any state; at a
+/// `Modified` destination, a CRLF variant of the planned bytes (see
+/// [`matches_recorded`]) also counts as equal. A destination that is
+/// `Modified` or `Unowned` is a conflict. When
 /// `overwrite` is false, an item with at least one conflict is skipped as a
 /// whole: none of its files is written or deleted, and its lockfile record
 /// is unchanged. The other items are written. When `overwrite` is true, a
-/// conflicting regular file is replaced.
+/// conflicting regular file is replaced. An `Owned` destination whose bytes
+/// match the planned bytes through [`matches_recorded`] is not rewritten and is not counted in `changed`;
+/// its record is the hash of the planned bytes.
 ///
 /// Stale files: the files of an item's previous record that no planned item
 /// of this run writes. Before writing an item, its stale files that are
@@ -193,6 +200,7 @@ pub(super) fn apply_plan(
         let mut delete = Vec::new();
         let mut kept = Vec::new();
         let mut conflicts = Vec::new();
+        let mut unchanged = BTreeSet::new();
         for rel in stale {
             let path = rel_to_record(&rel)?;
             let records = recorded_for(&path);
@@ -225,6 +233,12 @@ pub(super) fn apply_plan(
             let path = rel_to_record(&file.rel)?;
             let records = recorded_for(&path);
             let hashes: Vec<&str> = records.iter().map(|f| f.sha256.as_str()).collect();
+            if state_of(target, &file.rel, &path, &hashes)? == FileState::Owned
+                && fs::read(target.join(&file.rel))
+                    .is_ok_and(|current| matches_recorded(&current, &[&sha256_hex(&file.bytes)]))
+            {
+                unchanged.insert(file.rel.clone());
+            }
             if let Some(state) =
                 destination_conflict(target, &file.rel, &path, &hashes, &file.bytes)?
             {
@@ -255,6 +269,7 @@ pub(super) fn apply_plan(
             delete,
             kept,
             conflicts,
+            unchanged,
         });
     }
 
@@ -277,6 +292,7 @@ pub(super) fn apply_plan(
             delete,
             kept,
             conflicts,
+            unchanged,
         } = changes;
         if !overwrite && !conflicts.is_empty() {
             outcome.skipped.extend(conflicts);
@@ -298,15 +314,21 @@ pub(super) fn apply_plan(
                 fs::create_dir_all(parent)
                     .with_context(|| format!("create dir {}", parent.display()))?;
             }
-            // The pre-check accepted this path. An existing regular file is
-            // removed first, so that a read-only file is replaced too.
-            if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
-                outcome.changed.push(file.rel.clone());
+            // An `Owned` destination that already holds the planned bytes, or
+            // a CRLF variant of them, is left as it is.
+            let is_file = fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file());
+            if !unchanged.contains(&file.rel) {
+                // The pre-check accepted this path. An existing regular file
+                // is removed first, so that a read-only file is replaced too.
+                if !fs::read(&full).is_ok_and(|current| current == file.bytes) {
+                    outcome.changed.push(file.rel.clone());
+                }
+                if is_file {
+                    fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
+                }
+                fs::write(&full, &file.bytes)
+                    .with_context(|| format!("write {}", full.display()))?;
             }
-            if fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file()) {
-                fs::remove_file(&full).with_context(|| format!("remove {}", full.display()))?;
-            }
-            fs::write(&full, &file.bytes).with_context(|| format!("write {}", full.display()))?;
             if let Some(mode) = file.mode {
                 set_mode(&full, mode)?;
             }
@@ -354,9 +376,9 @@ fn state_of(target: &Path, rel: &Path, path: &str, recorded: &[&str]) -> Result<
 /// The conflict at the planned destination `rel`, if any. An absent path,
 /// an `Owned` file, and a regular file whose content equals `bytes` are not
 /// conflicts. For a `Modified` file, "equals" uses [`matches_recorded`], so
-/// a CRLF variant of `bytes` is equal. A directory is not classified here: `check_writable` accepts
-/// it only when it holds stale files of the same item, and those are judged
-/// as stale files.
+/// a CRLF variant of `bytes` is equal. A directory is not classified here:
+/// `check_writable` accepts it only when it holds stale files of the same
+/// item, and those are judged as stale files.
 fn destination_conflict(
     target: &Path,
     rel: &Path,
@@ -1364,7 +1386,7 @@ mod conflict_tests {
 
     #[cfg(unix)]
     #[test]
-    fn an_unreadable_stale_file_is_kept_as_modified() {
+    fn an_unreadable_stale_file_is_kept_with_its_record() {
         use std::os::unix::fs::PermissionsExt;
         /// Restores the mode of the file when the test ends, also when an
         /// assertion fails.
@@ -1380,7 +1402,8 @@ mod conflict_tests {
         fs::set_permissions(&stale, fs::Permissions::from_mode(0o000)).unwrap();
         let _restore = Restore(stale.clone());
         if fs::read(&stale).is_ok() {
-            // Running as root: permissions do not block the read.
+            // Running as root: permissions do not block the read, so the
+            // test checks nothing and returns.
             return;
         }
         let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
@@ -1393,6 +1416,10 @@ mod conflict_tests {
         .unwrap();
         assert_eq!(outcome.kept, vec![PathBuf::from(STALE)]);
         assert!(stale.exists());
+        assert_eq!(
+            lock.items[0].files,
+            vec![owned(ENTRY, b"e"), owned(STALE, b"old")]
+        );
     }
 
     #[test]
@@ -1410,6 +1437,39 @@ mod conflict_tests {
         .unwrap();
         assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
         assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"new");
+    }
+
+    #[test]
+    fn an_owned_crlf_variant_of_the_planned_bytes_is_not_rewritten() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\r\nb\r\n");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"a\nb\n")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"a\nb\n")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"a\nb\n")]);
+    }
+
+    #[test]
+    fn an_unmanaged_crlf_variant_of_the_planned_bytes_is_a_conflict() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\r\nb\r\n");
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut Lockfile::new(),
+            &[planned("s", &[(ENTRY, b"a\nb\n")])],
+            false,
+        )
+        .unwrap();
+        assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
+        assert_eq!(outcome.skipped[0].state, ConflictState::Unowned);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\r\nb\r\n");
     }
 
     #[test]
