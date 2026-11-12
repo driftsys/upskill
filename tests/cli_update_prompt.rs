@@ -179,6 +179,13 @@ fn assert_stops_at_the_first_source(input: &str) {
     assert_eq!(result["returncode"], 0, "{result}");
     assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
     assert!(!stdout(&result).contains(&label_b), "{result}");
+    assert!(
+        stdout(&result).contains(
+            "Updated 0 of 1 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
+             Stopped; 1 source(s) not examined.\n"
+        ),
+        "{result}"
+    );
     assert_eq!(outputs(tmp.path()), before);
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
@@ -274,6 +281,21 @@ fn a_narrowed_selection_lists_the_deletion_and_asks() {
     assert!(line.contains("1 file"), "{line}");
     assert!(!copilot_skill(tmp.path(), "one").exists());
     assert!(claude_skill(tmp.path(), "one").is_file());
+    // The source hashes did not change: no item is counted as updated, and
+    // the result lines and the summary report the deleted files.
+    let out = stdout(&result);
+    assert_eq!(
+        out.matches("\n  1 file(s) changed\n").count(),
+        2,
+        "{result}"
+    );
+    assert!(
+        out.contains(
+            "\nUpdated 0 of 2 item(s) from 2 of 2 source(s).\n\
+             Changed 2 file(s) written or deleted\n"
+        ),
+        "{result}"
+    );
 }
 
 #[test]
@@ -416,14 +438,101 @@ fn quiet_prints_only_the_question() {
     change_source(tmp.path(), "b", "two");
     let label_a = label(tmp.path(), "one");
 
-    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--quiet"], "n\nn\n");
+    let label_b = label(tmp.path(), "two");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--quiet"], "y\ny\n");
     assert_eq!(result["returncode"], 0, "{result}");
-    assert!(
-        stderr(&result).contains(&format!("Apply changes from {label_a}? [y/N/q] ")),
+    assert_eq!(stdout(&result), "", "{result}");
+    assert_eq!(
+        stderr(&result),
+        format!(
+            "terminal stdin verified\nApply changes from {label_a}? [y/N/q] \
+             Apply changes from {label_b}? [y/N/q] "
+        ),
         "{result}"
     );
-    assert!(!stdout(&result).contains("  update"), "{result}");
-    assert!(!stdout(&result).contains("Updated"), "{result}");
+    assert!(
+        fs::read_to_string(claude_skill(tmp.path(), "two"))
+            .unwrap()
+            .contains("Changed.")
+    );
+}
+
+#[test]
+fn quiet_names_a_skipped_file_on_stderr_and_exits_1() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    fs::write(claude_skill(tmp.path(), "one"), "my edit\n").unwrap();
+    change_source(tmp.path(), "a", "one");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--quiet"], "");
+    assert_eq!(result["returncode"], 1, "{result}");
+    assert!(
+        stderr(&result).contains(
+            "skipped skill one: .claude/skills/one/SKILL.md was modified or is not managed by upskill"
+        ),
+        "{result}"
+    );
+    assert!(!stderr(&result).contains("Apply"), "{result}");
+}
+
+#[test]
+fn force_says_deletes_for_an_edited_file_of_a_deselected_client() {
+    let (tmp, home) = two_sources(&["--claude", "--copilot"]);
+    let copilot = copilot_skill(tmp.path(), "one");
+    fs::write(&copilot, "my edit\n").unwrap();
+
+    let result = common::update_in_terminal_merged(
+        tmp.path(),
+        &home,
+        &["--project", "--claude", "--force"],
+        "n\nn\n",
+    );
+    assert_eq!(result["returncode"], 0, "{result}");
+    let out = stdout(&result);
+    let named = out
+        .find("deletes .github/skills/one/SKILL.md (--force)")
+        .unwrap_or_else(|| panic!("no deletes part: {result}"));
+    assert!(named < out.find(QUESTION).unwrap(), "{result}");
+    assert_eq!(fs::read(&copilot).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn every_source_up_to_date_prints_nothing_to_do() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        stdout(&result).ends_with("\neverything is up to date — nothing to do\n"),
+        "{result}"
+    );
+    assert!(!stderr(&result).contains("Apply"), "{result}");
+}
+
+#[test]
+fn a_run_that_only_adopts_does_not_print_nothing_to_do() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    downgrade_to_schema_1(tmp.path());
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(stderr(&result).contains("note: adopted"), "{result}");
+    assert!(!stdout(&result).contains("nothing to do"), "{result}");
+    assert!(!stderr(&result).contains("Apply"), "{result}");
+    assert_eq!(lockfile(tmp.path())["schema"], 2);
+}
+
+#[test]
+fn an_error_after_a_printed_adoption_notice_prints_the_notice_once() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    downgrade_to_schema_1(tmp.path());
+    // The source `b` cannot be fetched: the run fails after `a` adopted.
+    fs::remove_dir_all(tmp.path().join("b")).unwrap();
+    let result = common::update_in_terminal_merged(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 1, "{result}");
+    assert_eq!(
+        stdout(&result).matches("note: adopted").count(),
+        1,
+        "{result}"
+    );
 }
 
 #[test]

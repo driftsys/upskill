@@ -217,9 +217,16 @@ half of #497.
 After the last source, `update` prints one line that counts the items updated,
 completed and removed, the total number of items considered, and the number of
 sources applied out of the sources considered. When the user declined or quit,
-the summary says how many sources were not applied. The line "everything is up
-to date — nothing to do" is printed only when no source had a change, no source
-had a note, and nothing was applied.
+the summary says how many sources were not applied. When the run stopped (`q` or
+end of input), the summary ends with `Stopped; <r> source(s) not examined.`, or
+`Stopped.` when no source remained. When no item was updated, completed or
+removed but files were written or deleted (for example the files of a client
+that the flags no longer select), the summary is followed by the line
+`Changed <n> file(s) written or deleted`. The result line of an applied source
+ends with `, <n> file(s) changed` when files were written or deleted. The line
+"everything is up to date — nothing to do" is printed only when no source had a
+change, no source had a note, nothing was applied, no item was skipped, and the
+lockfile was not adopted. (Author's call, after review.)
 
 ### A run without a source change
 

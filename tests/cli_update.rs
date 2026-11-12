@@ -1407,7 +1407,7 @@ fn update_in_a_terminal_changes_nothing_on_no_after_a_source_change() {
         "{result}"
     );
     let stdout = result["stdout"].as_str().unwrap();
-    // The block is printed before the question.
+    // The block of the source holds an `update` line for `res`.
     assert!(stdout.contains("\n  update   skill res"), "{result}");
     assert!(stdout.contains("1 source(s) not applied."), "{result}");
     assert_eq!(fs::read(&dest).unwrap(), before);

@@ -731,7 +731,8 @@ pub fn update(
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
     let result = (|| -> Result<()> {
-        for (source_label, source_entries) in by_source {
+        let total_sources = by_source.len();
+        for (index, (source_label, source_entries)) in by_source.into_iter().enumerate() {
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
@@ -899,6 +900,7 @@ pub fn update(
                 }
                 if !dry_run && decision == SourceDecision::Stop {
                     report.stopped = true;
+                    report.sources_remaining = total_sources - index - 1;
                     break;
                 }
                 continue;
@@ -906,6 +908,7 @@ pub fn update(
 
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
+            let changed_before = report.changed.len();
             let install_report = prepared.commit(target, plugin_scope)?;
             report
                 .kept_modified
@@ -1001,6 +1004,7 @@ pub fn update(
             let mut result = SourceResult {
                 source: source_label.clone(),
                 kept_modified: report.kept_modified.len() - kept_before,
+                changed_files: report.changed.len() - changed_before,
                 ..SourceResult::default()
             };
             for item in &report.items[first_item..] {

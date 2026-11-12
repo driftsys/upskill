@@ -474,6 +474,10 @@ pub struct UpdateReport {
     pub sources_not_applied: usize,
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
+    /// Sources of the run that were not previewed because the observer
+    /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
+    /// run did not stop.
+    pub sources_remaining: usize,
 }
 
 /// What applying one source of `update` would do now, computed after the
@@ -535,6 +539,11 @@ pub struct SourceResult {
     /// holds.
     pub kept_modified: usize,
     pub skipped: usize,
+    /// Files that the commit and the removals of this source wrote with new
+    /// content or deleted: the number of paths that this source added to
+    /// [`UpdateReport::changed`], counted before the report removes the
+    /// duplicates across sources.
+    pub changed_files: usize,
 }
 
 /// The caller of `update`: it receives each source preview and decides,
