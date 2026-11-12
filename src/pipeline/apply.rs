@@ -68,7 +68,8 @@ pub(super) struct ApplyOutcome {
     /// and the modified stale files that were deleted.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted.
+    /// other bytes), that got a different planned mode, or that was deleted;
+    /// see [`changes_file`].
     pub changed: Vec<PathBuf>,
 }
 
@@ -176,13 +177,15 @@ pub(super) fn apply_plan(
 /// - the item has no stale file, to delete or to keep;
 /// - every planned file that is not a conflict is `unchanged`.
 ///
-/// An `Owned` destination is `unchanged`: it is not rewritten and is not
-/// counted in `changed` when its bytes equal the planned bytes, or when
+/// An `Owned` destination is `unchanged`: it is not rewritten when its
+/// bytes equal the planned bytes, or when
 /// they are a CRLF variant of the planned bytes (see [`matches_recorded`]) and the hash of the planned
 /// bytes was already recorded for the file in its `files` record (a
 /// `pending` hash does not count here). Its record is the hash of the
 /// planned bytes. In that case a file with a planned mode has the mode set
-/// again; a file without one keeps its current mode.
+/// again, and is counted in `changed` only when its mode differed from the
+/// planned mode; a file without one keeps its current mode and is not
+/// counted.
 ///
 /// Stale files: the files of an item's previous `files` or `pending` record
 /// that no planned item of this run writes. So a file that a failed run
@@ -568,6 +571,9 @@ pub(super) fn execute_plan(
                 fs::create_dir_all(parent)
                     .with_context(|| format!("create dir {}", parent.display()))?;
             }
+            if changes_file(target, file, &unchanged) {
+                outcome.changed.push(file.rel.clone());
+            }
             // An `Owned` destination that already holds the planned bytes, or
             // a CRLF variant of them, is left as it is.
             if unchanged.contains(&file.rel) {
@@ -577,9 +583,6 @@ pub(super) fn execute_plan(
                 continue;
             }
             // The pre-check accepted this path.
-            if writes_new_content(target, file, &unchanged) {
-                outcome.changed.push(file.rel.clone());
-            }
             write_staged(&full, &file.bytes, file.mode)?;
         }
 
@@ -618,17 +621,33 @@ pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     strip(a) == strip(b)
 }
 
-/// Whether [`execute_plan`] writes `file` with new content, so that it
-/// counts the file in `ApplyOutcome::changed`: the file is not in
-/// `unchanged`, and it is absent or its bytes differ from the planned
-/// bytes. For an item with [`Disposition::Write`] only.
-pub(super) fn writes_new_content(
+/// Whether [`execute_plan`] changes `file`, so that it counts the file in
+/// `ApplyOutcome::changed`: the file is not in `unchanged` and is absent or
+/// its bytes differ from the planned bytes, or the file has a planned mode
+/// and its current mode differs from it (Unix only). For an item with
+/// [`Disposition::Write`] only. The preview of an update uses the same
+/// predicate, so that it lists exactly the files that the commit changes.
+pub(super) fn changes_file(
     target: &Path,
     file: &PlannedFile,
     unchanged: &BTreeSet<PathBuf>,
 ) -> bool {
-    !unchanged.contains(&file.rel)
-        && !fs::read(target.join(&file.rel)).is_ok_and(|current| current == file.bytes)
+    let full = target.join(&file.rel);
+    let new_content = !unchanged.contains(&file.rel)
+        && !fs::read(&full).is_ok_and(|current| current == file.bytes);
+    new_content || file.mode.is_some_and(|mode| mode_differs(&full, mode))
+}
+
+/// Whether the file at `path` exists and its mode differs from `mode`.
+#[cfg(unix)]
+fn mode_differs(path: &Path, mode: u32) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & 0o7777 != mode & 0o7777)
+}
+
+#[cfg(not(unix))]
+fn mode_differs(_path: &Path, _mode: u32) -> bool {
+    false
 }
 
 /// Whether [`execute_plan`] deletes an existing path when it deletes the
@@ -2578,7 +2597,7 @@ mod repeatable_tests {
 
     #[cfg(unix)]
     #[test]
-    fn an_unchanged_file_gets_its_planned_mode_again() {
+    fn an_unchanged_file_gets_its_planned_mode_again_and_is_counted() {
         use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), A, b"a");
@@ -2589,7 +2608,8 @@ mod repeatable_tests {
         let mut item = planned(&[(A, b"a")]);
         item.files[0].mode = Some(0o755);
         let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None, false).unwrap();
-        assert!(outcome.changed.is_empty(), "{:?}", outcome.changed);
+        // The mode changed, so the file is counted as changed.
+        assert_eq!(outcome.changed, vec![PathBuf::from(A)]);
         let mode = fs::metadata(&full).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o755);
     }

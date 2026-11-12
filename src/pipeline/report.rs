@@ -70,7 +70,8 @@ pub struct InstallReport {
     /// deleted.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted, with or without `--force`.
+    /// other bytes), that got a different planned mode, or that was deleted,
+    /// with or without `--force`.
     pub changed: Vec<PathBuf>,
     /// Modified files that the new version of an item no longer contains.
     /// They are kept on disk and stay in the item's record. With
@@ -95,7 +96,8 @@ pub struct PreviewItem {
     pub kind: ItemKind,
     pub name: String,
     pub action: PreviewAction,
-    /// Files that would be written with new content.
+    /// Files that would be written with new content, or that would get a
+    /// different planned mode.
     pub write: Vec<PathBuf>,
     /// Files that would be deleted.
     pub delete: Vec<PathBuf>,
@@ -464,7 +466,8 @@ pub struct UpdateReport {
     /// deleted, including those of items that the source no longer contains.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes) or deleted, with or without `--force`.
+    /// other bytes), that got a different planned mode, or that was deleted,
+    /// with or without `--force`.
     pub changed: Vec<PathBuf>,
     /// Sources that were previewed.
     pub sources_considered: usize,

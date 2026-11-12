@@ -43,11 +43,13 @@ failed until `update --force`.
    and does not rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
-   when applying the source writes or deletes a file, changes an item record of
-   the lockfile (any field except `pending` and `required_by`), completes an
-   interrupted item, removes an item, or creates or changes a hand-shake file.
-   `y` applies the source. `n` or any other text continues without it. `q`, end
-   of input or a read error stops the run; earlier sources stay applied.
+   when applying the source writes or deletes a file (also a file whose bytes
+   are unchanged and whose mode differs from the mode of its source resource),
+   changes an item record of the lockfile (any field except `pending` and
+   `required_by`), completes an interrupted item, removes an item, or creates or
+   changes a hand-shake file. `y` applies the source. `n` or any other text
+   continues without it. `q`, end of input or a read error stops the run;
+   earlier sources stay applied.
 3. **The rule for edited files.** Without `--force`, an item whose only
    difference is a modified recorded file is not skipped. This holds when the
    source hash of the item equals the recorded hash, the item has no `pending`

@@ -195,7 +195,9 @@ source writes or deletes a file, changes the lockfile record of an item (any
 field except `pending` and `required_by`), completes an interrupted item (a
 non-empty `pending` record, §4), removes an item, or creates or changes a
 hand-shake file (§3.4). A write of a file that already holds the planned bytes
-is not a change. A `skip` item and a `kept modified file` note are not changes.
+is not a change, unless the file has a different mode than the source resource
+(Unix only): the apply sets that mode, so the file is a change. A `skip` item
+and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action

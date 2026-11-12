@@ -289,11 +289,12 @@ line in the block of that source. After the item lines, the block has one
 block has no item line and no `write` line, it says `up to date`. The block ends
 with one `kept modified file: <path>` line for each note.
 
-A preview changes something when applying the source writes or deletes a file,
-changes the lockfile record of an item, completes an interrupted item, removes
-an item, or creates or changes a hand-shake file. A `skip` line and a
-`kept modified file` note are not changes. A source whose preview changes
-nothing is printed without a question and is not applied.
+A preview changes something when applying the source writes or deletes a file
+(also a file with the same bytes whose mode differs from the mode of its source
+resource, on Unix), changes the lockfile record of an item, completes an
+interrupted item, removes an item, or creates or changes a hand-shake file. A
+`skip` line and a `kept modified file` note are not changes. A source whose
+preview changes nothing is printed without a question and is not applied.
 
 The answers to `Apply? [y/N/q]`:
 

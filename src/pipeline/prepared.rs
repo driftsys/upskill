@@ -618,7 +618,7 @@ impl PreparedInstall {
 /// - `KeepEdits`: no `PreviewItem`; its conflict paths are notes.
 /// - `Skip`: action `Skip`, `blocking` is the conflict paths.
 /// - `Write`: `write` and `delete` are the paths that `execute_plan` would
-///   count in `changed` (see [`apply::writes_new_content`] and
+///   count in `changed` (see [`apply::changes_file`] and
 ///   [`apply::deletes_existing`]); `kept_modified` is the kept stale files;
 ///   `forced` is the conflict paths (there are some only with `overwrite`).
 ///   The action is `Complete` when the lockfile entry has a `pending` record
@@ -670,7 +670,7 @@ fn preview_items(
         let write: Vec<PathBuf> = item
             .files
             .iter()
-            .filter(|file| apply::writes_new_content(target, file, &changes.unchanged))
+            .filter(|file| apply::changes_file(target, file, &changes.unchanged))
             .map(|file| file.rel.clone())
             .collect();
         let delete: Vec<PathBuf> = changes
@@ -811,6 +811,53 @@ mod tests {
         let report = prepared.commit(&target, PluginScope::Project).unwrap();
         let changed: BTreeSet<PathBuf> = report.changed.into_iter().collect();
         assert_eq!(previewed, changed);
+    }
+
+    /// A source that only adds the executable bit to a resource: the
+    /// bytes and the source hash are unchanged, and commit sets the mode,
+    /// so the preview lists the file as a change.
+    #[cfg(unix)]
+    #[test]
+    fn a_mode_only_change_is_in_the_preview_and_in_the_commit() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "same");
+        write(&src, "a/run.sh", b"echo run\n");
+        let script = src.join("a/run.sh");
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o644)).unwrap();
+        let source = InstallSource::LocalPath(src.clone());
+        prepare_install(&source, &target, &[], &AddOptions::default())
+            .unwrap()
+            .commit(&target, PluginScope::Project)
+            .unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
+        let preview = prepared
+            .preview(&target, &Lockfile::load(&target).unwrap())
+            .unwrap();
+        assert_eq!(preview.items.len(), 1, "{:?}", preview.items);
+        let previewed: BTreeSet<PathBuf> = preview
+            .items
+            .iter()
+            .flat_map(|i| i.write.iter().chain(&i.delete).cloned())
+            .collect();
+        assert!(!previewed.is_empty());
+        assert!(
+            previewed.iter().all(|p| p.ends_with("skills/a/run.sh")),
+            "{previewed:?}"
+        );
+        let report = prepared.commit(&target, PluginScope::Project).unwrap();
+        let changed: BTreeSet<PathBuf> = report.changed.into_iter().collect();
+        assert_eq!(previewed, changed);
+        let mode = fs::metadata(target.join(".claude/skills/a/run.sh"))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o755);
     }
 
     #[test]

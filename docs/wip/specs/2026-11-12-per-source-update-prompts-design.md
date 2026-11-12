@@ -100,9 +100,10 @@ For each source it does these steps in order:
 A preview **changes something on disk** when applying it would write, replace or
 delete at least one file under the target, or would change an item record of the
 lockfile. A write that the skip-write rule of `apply_plan` suppresses (the file
-on disk already equals the planned bytes) is not a change. An interrupted item
-(a non-empty `pending` record) is a change, because completing it changes the
-lockfile.
+on disk already equals the planned bytes) is not a change, unless the mode of
+the file differs from the mode of the source resource (Unix only): the apply
+sets that mode, so the file is a change. An interrupted item (a non-empty
+`pending` record) is a change, because completing it changes the lockfile.
 
 "An item record" means every field of the `LockedItem` entries that the apply
 would save, compared with the entries in the current lockfile. A difference in
