@@ -176,19 +176,21 @@ Verifies the installed state of a consumer project against its
 `.upskill-lock.json`. Pure consistency check — no judgment on content shape.
 Common findings:
 
-- Generated per-client file missing (→ run `update`; in a terminal it shows the
-  file in the block of its source and asks `Apply? [y/N/q]`) or hash-changed
-  (someone hand-edited it → `update --force` replaces the edit; without
-  `--force`, `update` keeps the edit: with a `kept modified file` note when
-  nothing else of the item would change (see below), otherwise it skips the item
-  and exits 1)
+- Generated per-client file missing (→ run `update`; in a terminal the block of
+  its source shows the item as `update ... 1 file` and asks `Apply? [y/N/q]`) or
+  hash-changed (someone hand-edited it → `update --force` replaces the edit;
+  without `--force`, `update` keeps the edit: with a `kept modified file` note
+  when nothing else of the item would change (see below), otherwise it skips the
+  item and exits 1)
 - Lockfile references an item whose source is no longer reachable
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
 - Plugin recorded as installed but missing from the client (uninstalled
-  out-of-band → `update` reinstalls)
+  out-of-band → `update --yes` reinstalls; a run in a terminal applies a source
+  only when its preview changes something, and the plugin and MCP steps are not
+  part of the preview)
 - Plugin skipped at install time because the client CLI was not on PATH
-  (informational warning — install the CLI then run `update`)
+  (informational warning — install the CLI then run `update --yes`)
 
 Exits 0 when clean. Exits 1 when drift is found (missing outputs, modified
 files, unreadable files, stale hashes, orphan entries, missing plugins, MCP

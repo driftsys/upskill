@@ -167,21 +167,25 @@ does not change the exit code. Otherwise the item is reported as skipped (in a
 terminal and with `--dry-run`, as a `skip` line of its block; with `--yes` or
 without a terminal, as
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` on
-stderr), `Use --force to replace.` is printed on stderr, and `update` exits with
-code 1 after the other items are written. Known limit: when a new version of
-upskill renders an unchanged source to different bytes in the modified file
-only, the new rendering is not written and only the note is printed, until
-`update --force`; `doctor` lists the modified files. A recorded file that the
-new version of an item no longer produces, for example a file of a client that a
-narrower selection no longer targets, is deleted when it is owned; a modified
-one is kept, stays in the record, and is reported (`keeps modified <path>` on
-the item line of a block; `kept modified file: <path>` on stderr with `--yes` or
-without a terminal). An item that its source no longer contains is removed with
-the rules of `remove` (§2.3). `update --force` replaces modified and unowned
-destinations and deletes modified regular files that are no longer produced. A
-block names each of these files as `replaces <path> (--force)` or
-`deletes <path> (--force)`; a run with `--yes` or without a terminal lists them
-after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
+stderr). A skipped item of an applied source, or of a source whose preview
+changes nothing, makes `update` print `Use --force to replace.` on stderr and
+exit with code 1 after the other items are written; a `skip` line of
+`--dry-run`, or of a source that the user declined, does neither. Known limit:
+when a new version of upskill renders an unchanged source to different bytes in
+the modified file only, the new rendering is not written and only the note is
+printed, until `update --force`; `doctor` lists the modified files. A recorded
+file that the new version of an item no longer produces, for example a file of a
+client that a narrower selection no longer targets, is deleted when it is owned;
+a modified one is kept, stays in the record, and is reported
+(`keeps modified <path>` on the item line of a block when the item has another
+change, otherwise a `kept modified file: <path>` note of the block;
+`kept modified file: <path>` on stderr with `--yes` or without a terminal). An
+item that its source no longer contains is removed with the rules of `remove`
+(§2.3). `update --force` replaces modified and unowned destinations and deletes
+modified regular files that are no longer produced. A block names each of these
+files as `replaces <path> (--force)` or `deletes <path> (--force)`; a run with
+`--yes` or without a terminal lists them after
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
 `update` handles the sources one at a time, sorted by source label. For each
 source it fetches the source once, runs the checks of §2.1, and computes a
@@ -226,12 +230,15 @@ is not a change. A `skip` item and a `kept modified file` note are not changes.
   a source that was not applied does not cause exit code 1. With `--quiet`, the
   blocks, the notes, the result lines and the closing summary are not printed;
   the question is `Apply changes from <source>? [y/N/q]`, and the `skipped`
-  lines, `Use --force to replace.` and the adoption notice are printed on
-  stderr.
+  lines of the skipped items that cause exit code 1, `Use --force to replace.`
+  and the adoption notice are printed on stderr. Without `--quiet`, a terminal
+  run prints no `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
   steps run. `update` prints `Updated <n> of <m> item(s)` and one status line
-  per item, and reports a completed interrupted item as
+  per item when an item changed or was skipped, files were written or deleted,
+  or a lockfile was adopted (a run whose only output is `kept modified file`
+  notes prints nothing on stdout), and reports a completed interrupted item as
   `completed — interrupted before`. When no item was updated, completed or
   removed but files were written or deleted, it prints
   `Changed <n> file(s) written or deleted`. It prints
@@ -241,8 +248,9 @@ is not a change. A `skip` item and a `kept modified file` note are not changes.
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
-  and exits with code 0. Because nothing is applied, a later block does not
-  include the effect of applying an earlier source.
+  and exits with code 0 when no step fails. `update --dry-run --quiet` prints
+  nothing. Because nothing is applied, a later block does not include the effect
+  of applying an earlier source.
 
 A `schema: 1` lockfile is adopted once per run, without a question, for the
 first source that passes its checks (§4); in a terminal the adoption notice is
@@ -313,17 +321,19 @@ notice, except when a name is not in the lockfile, which is an error.
   files that could not be inspected (`doctor` continues with the others), SSOT
   hash drift on `local:` sources (`update` fixes), lockfile entries with no
   recoverable source (`remove` fixes), installed plugins missing from the client
-  (`update` reinstalls), skipped plugins (informational — CLI was absent at
-  install time), orphaned dependencies (informational), MCP server
-  reconciliation, and interrupted items (an item with a non-empty `pending`
-  record: run the same command again to complete it). Exit 0 when clean, 1 when
-  any drift bucket is non-empty. Skipped plugins are warnings and do not affect
-  the exit code. Missing, modified and unreadable files are checked against the
-  `files` record; a recorded path that `remove` would never delete (outside the
-  client roots, fewer than three components, or with a `..` component) is
-  skipped without a report. For an item with an empty or missing `files` record
-  (a `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
-  checks each per-client entry file instead.
+  (`update --yes` reinstalls: a run in a terminal applies a source only when its
+  preview changes something, and the plugin and MCP steps are not part of the
+  preview), skipped plugins (informational — CLI was absent at install time),
+  orphaned dependencies (informational), MCP server reconciliation, and
+  interrupted items (an item with a non-empty `pending` record: run the same
+  command again to complete it). Exit 0 when clean, 1 when any drift bucket is
+  non-empty. Skipped plugins are warnings and do not affect the exit code.
+  Missing, modified and unreadable files are checked against the `files` record;
+  a recorded path that `remove` would never delete (outside the client roots,
+  fewer than three components, or with a `..` component) is skipped without a
+  report. For an item with an empty or missing `files` record (a `schema: 1`
+  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
+  per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

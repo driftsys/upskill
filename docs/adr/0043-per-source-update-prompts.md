@@ -56,8 +56,10 @@ failed until `update --force`.
    other than `files`, `pending` and `required_by`. The file is kept and
    reported as `kept modified file: <path>`. The note is not a change and does
    not affect the exit code. In every other case, and for a file that upskill
-   does not manage, the item is skipped and the run exits with code 1. The rule
-   applies in every mode.
+   does not manage, the item is skipped. The rule applies in every mode. A
+   skipped item of an applied source, or of a source whose preview changes
+   nothing, makes the run exit with code 1; a skipped item of `--dry-run`, or of
+   a source that the user declined, does not.
 4. **Hand-shake files are previewed; plugin and MCP steps are not.** A
    `CLAUDE.md`, `opencode.json` or `.vscode/settings.json` change is listed in
    the block and is a reason to ask. The plugin and MCP steps of a bundle source
@@ -73,8 +75,9 @@ failed until `update --force`.
 ## Consequences
 
 - A terminal run and an `update --yes` run reach the same end state when every
-  answer is `y`, except for the plugin and MCP steps of a source whose preview
-  changes nothing.
+  answer is `y`, with two exceptions: the plugin and MCP steps of a source whose
+  preview changes nothing, and a change of only `required_by` in an item record
+  of such a source.
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.

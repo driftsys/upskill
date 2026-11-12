@@ -197,9 +197,8 @@ recorded selection** — a bare `update` of a `--claude`-only install stays
 Claude-only rather than re-expanding to all clients. Pass a flag (or set
 `clients:`) to change the selection on update. The files that a narrower
 selection no longer writes are deleted when they are unchanged; a modified one
-is kept, stays in the record, and is reported as `kept modified file: <path>`
-when the item is written (when the item is skipped, see below, nothing of it
-changes).
+is kept, stays in the record, and is reported as described below (when the item
+is skipped, nothing of it changes).
 
 `update` protects files in the same way as `add`. An item with a destination
 that was modified, or that upskill does not manage, is not written and keeps its
@@ -214,19 +213,22 @@ change in any field other than its file records and `required_by` (for example
 destination: in a terminal and with `--dry-run`, in the block of its source (see
 below); with `--yes` or without a terminal, on stderr. This note does not change
 the exit code. In every other case (for example the source changed, or the flags
-no longer select a client of the item), `update` reports the item as skipped and
-prints `Use --force to replace.` on stderr. In a terminal and with `--dry-run`,
-the block of the source has a `skip` line for the item that names each such
-file. With `--yes` or without a terminal, `update` prints
-`skipped <kind> <name>: <path> was modified or is not managed by upskill` on
-stderr for each such file. A skipped item makes `update` exit with code 1 after
-it has written the other items. The limit of this rule: when a new version of
-upskill renders an unchanged source to different bytes in the edited file only,
-the new rendering is not written and only the note is printed, until
-`update --force`; `upskill doctor` lists the modified files. A recorded file
-that the new version of an item no longer contains is deleted when it is
-unchanged; a modified one is kept and stays in the record. A terminal run names
-it on the item line as `keeps modified <path> (no longer produced)`; a run with
+no longer select a client of the item), `update` reports the item as skipped. In
+a terminal and with `--dry-run`, the block of the source has a `skip` line for
+the item that names each such file. With `--yes` or without a terminal, `update`
+prints `skipped <kind> <name>: <path> was modified or is not managed by upskill`
+on stderr for each such file. A skipped item of a source that is applied, or of
+a source whose preview changes nothing, makes `update` print
+`Use --force to replace.` on stderr and exit with code 1 after it has written
+the other items. A `skip` line of `--dry-run`, or of a source that the user
+declined, does neither. The limit of this rule: when a new version of upskill
+renders an unchanged source to different bytes in the edited file only, the new
+rendering is not written and only the note is printed, until `update --force`;
+`upskill doctor` lists the modified files. A recorded file that the new version
+of an item no longer contains is deleted when it is unchanged; a modified one is
+kept and stays in the record. When the item has another change, a block names
+the file on the item line as `keeps modified <path> (no longer produced)`; when
+it has none, the block has a `kept modified file: <path>` note. A run with
 `--yes` or without a terminal reports it as `kept modified file: <path>` on
 stderr. An item that its source no longer contains is removed with the rules of
 [`upskill remove`](#upskill-remove-name---source-label---force): unchanged
@@ -248,19 +250,19 @@ preview:
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Terminal, no `--yes`                | Prints one block per source. Asks `Apply? [y/N/q]` for each source whose preview changes something. Applies the source only on `y` or `yes`. |
 | `--yes`, or stdin is not a terminal | Prints no block and asks nothing. Applies every source, also a source whose preview changes nothing.                                         |
-| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0.                    |
+| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0 when no step fails. |
 
 A terminal run looks like this:
 
 ```text
 $ upskill update
-https://github.com/driftsys/skills
+github:driftsys/skills
   update   skill tech-diagramming   4 files
   remove   skill old-skill   no longer in source, 1 file
 Apply? [y/N/q] y
   1 updated, 1 removed, 5 file(s) changed
 
-./local-rules
+local:/home/me/local-rules
   up to date
   kept modified file: .claude/rules/style.md
 
@@ -325,14 +327,19 @@ that was not applied does not cause exit code 1. Sources applied before a
 failure stay applied. With `--quiet`, a terminal run does not print the blocks,
 the `kept modified file` notes, the result lines or the closing summary. The
 question names the source (`Apply changes from <source>? [y/N/q]`). The
-`skipped` lines, `Use --force to replace.` and the adoption notice of a
-`schema: 1` lockfile are still printed on stderr. A terminal run prints the
-adoption notice before the block of the source that adopted the lockfile.
+`skipped` lines of the skipped items that cause exit code 1,
+`Use --force to replace.` and the adoption notice of a `schema: 1` lockfile are
+printed on stderr; without `--quiet`, a terminal run prints no `skipped` line,
+because the blocks name these files. `update --dry-run --quiet` prints nothing.
+A terminal run prints the adoption notice before the block of the source that
+adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
-and one status line per item. It reports a completed interrupted item as
-`completed — interrupted before` and counts it. When no item was updated,
-completed or removed, but files were written or deleted, it prints
+and one status line per item when an item changed or was skipped, files were
+written or deleted, or a lockfile was adopted. A run whose only output is
+`kept modified file` notes prints nothing on stdout. It reports a completed
+interrupted item as `completed — interrupted before` and counts it. When no item
+was updated, completed or removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no file was kept with a note and no lockfile was adopted.
@@ -507,16 +514,21 @@ buckets:
 - **Orphaned dependencies** (informational) — items installed only as a
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
-  found in the client. Likely uninstalled out-of-band; `upskill
-  update`
-  reinstalls them. Causes exit 1.
+  found in the client. Likely uninstalled out-of-band; `upskill update --yes`
+  reinstalls them. A run in a terminal applies a source only when its preview
+  changes something, and the plugin and MCP steps are not part of the preview.
+  Causes exit 1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
-  CLI was not on PATH at install time. Install the CLI then run `upskill update`
-  to install them. Does **not** cause exit 1.
+  CLI was not on PATH at install time. Install the CLI then run
+  `upskill update --yes` to install them. A run in a terminal applies a source
+  only when its preview changes something, and the plugin and MCP steps are not
+  part of the preview. Does **not** cause exit 1.
 - **MCP servers** — each Claude-client MCP entry in the lockfile is checked
   against `claude mcp list`. A server in the lockfile but **not registered** in
-  the client causes exit 1 (`upskill update` reconfigures it). A missing
-  `claude` CLI or a failed query is advisory and does **not** cause exit 1.
+  the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a
+  terminal applies a source only when its preview changes something, and the
+  plugin and MCP steps are not part of the preview). A missing `claude` CLI or a
+  failed query is advisory and does **not** cause exit 1.
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.

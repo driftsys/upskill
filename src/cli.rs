@@ -28,8 +28,8 @@ pub struct Cli {
     #[arg(long = "no-color", global = true)]
     pub no_color: bool,
     /// Suppress informational stdout. Errors on stderr and exit codes
-    /// are unaffected. Useful for CI use of `lint`, `update --dry-run`,
-    /// etc.
+    /// are unaffected. Useful for CI use of `lint`, `update`, etc.
+    /// `update --dry-run --quiet` prints nothing.
     #[arg(short = 'q', long = "quiet", global = true)]
     pub quiet: bool,
     #[command(subcommand)]
