@@ -3021,4 +3021,36 @@ mod disposition_tests {
         assert_eq!(case.lock.items, before);
         assert_eq!(fs::read(case.tmp.path().join(ENTRY)).unwrap(), b"my edit");
     }
+
+    #[test]
+    fn an_item_planned_after_a_kept_item_is_still_written() {
+        let mut case = case();
+        let other = ".claude/agents/t.md";
+        let mut second = planned(&[(other, b"agent")]);
+        second.kind = ItemKind::Agent;
+        second.name = "t".to_string();
+        case.plan.push(second);
+        let before = case.lock.items.clone();
+        let outcome = apply_plan(
+            case.tmp.path(),
+            &mut case.lock,
+            &case.plan,
+            false,
+            Some(&case.new.clone()),
+            true,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(outcome.kept_edits.len(), 1);
+        assert_eq!(outcome.kept_edits[0].path, PathBuf::from(ENTRY));
+        assert_eq!(case.lock.items, before);
+        assert_eq!(fs::read(case.tmp.path().join(ENTRY)).unwrap(), b"my edit");
+        assert_eq!(fs::read(case.tmp.path().join(other)).unwrap(), b"agent");
+        assert_eq!(outcome.changed, vec![PathBuf::from(other)]);
+        assert_eq!(outcome.recorded.len(), 1);
+        assert_eq!(
+            outcome.recorded[&(ItemKind::Agent, "t".to_string())],
+            vec![owned(other, b"agent")]
+        );
+    }
 }
