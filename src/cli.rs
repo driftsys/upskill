@@ -71,7 +71,8 @@ pub enum Commands {
         project: bool,
         /// Replace existing items from a different source without error,
         /// and replace files at the destinations that were modified after
-        /// upskill wrote them or that upskill does not manage.
+        /// upskill wrote them or that upskill does not manage. Also deletes
+        /// a modified file that the source no longer contains.
         #[arg(long = "force")]
         force: bool,
         /// Install under an alternate name to avoid conflicts.

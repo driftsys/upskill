@@ -375,8 +375,10 @@ fn add_refuses_source_inside_claude_output_dir() {
 
 #[test]
 fn add_refuses_source_inside_unselected_client_output_dir() {
-    // `remove_item_outputs` cleans every client, so an `.agents/skills`
-    // source is deleted even when only Claude is selected.
+    // `check_source_outside_outputs` checks the output paths of every
+    // client, because an install can delete recorded files of a client that
+    // it does not write. An `.agents/skills` source is refused even when
+    // only Claude is selected.
     assert_source_overlap_refused(".agents/skills", &["--claude", "--project"]);
 }
 
@@ -741,4 +743,43 @@ fn add_applies_an_alias_only_to_the_item_it_names() {
     assert!(proj.join(".claude/skills/bar/SKILL.md").exists());
     assert!(proj.join(".claude/rules/baz.md").exists());
     assert!(proj.join(".claude/rules/bar/RULE.md").exists());
+}
+
+#[test]
+fn add_force_prints_the_replaced_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let skill = tmp.path().join("source").join("res");
+    fs::create_dir_all(&skill).unwrap();
+    fs::write(
+        skill.join("SKILL.md"),
+        "---\nschema: 1\nname: res\ndescription: Use for res\n---\nBody.\n",
+    )
+    .unwrap();
+    let dest = tmp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("res")
+        .join("SKILL.md");
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::write(&dest, "not managed\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", "res", "--claude", "--project", "--force"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("Replaced or deleted 1 modified or unmanaged file(s) (--force)"),
+        "{stdout}"
+    );
+    let listed = stdout
+        .lines()
+        .any(|line| line.starts_with("  ") && line.trim_end().ends_with("SKILL.md"));
+    assert!(listed, "{stdout}");
+    assert_ne!(fs::read(&dest).unwrap(), b"not managed\n");
 }

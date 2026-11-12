@@ -286,6 +286,7 @@ fn run_add(args: AddArgs) -> i32 {
             print_plugin_results(&report);
             print_mcp_results(&report);
             print_kept_modified(&report.kept_modified);
+            print_forced(&report.forced);
             if report.conflicts.is_empty() {
                 EXIT_SUCCESS
             } else {
@@ -921,23 +922,19 @@ fn run_update(args: UpdateArgs) -> i32 {
             .items
             .iter()
             .any(|i| !matches!(i.status, UpdateStatus::UpToDate));
-        match update_step(true, source_changed, force) {
-            UpdateStep::NothingToDo => {
-                if !style::is_quiet() {
-                    println!("everything is up to date — nothing to do");
-                }
-                return EXIT_SUCCESS;
+        // With `prompting` true, the step is `Confirm` or `NothingToDo`.
+        if update_step(true, source_changed, force) == UpdateStep::NothingToDo {
+            if !style::is_quiet() {
+                println!("everything is up to date — nothing to do");
             }
-            UpdateStep::Confirm => {
-                if !style::is_quiet() {
-                    print_update_plan(&plan);
-                }
-                if !confirm_update() {
-                    eprintln!("aborted.");
-                    return EXIT_SUCCESS;
-                }
-            }
-            UpdateStep::ApplyWithoutPrompt => {}
+            return EXIT_SUCCESS;
+        }
+        if !style::is_quiet() {
+            print_update_plan(&plan);
+        }
+        if !confirm_update() {
+            eprintln!("aborted.");
+            return EXIT_SUCCESS;
         }
 
         match update(
@@ -1115,15 +1112,21 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             report.changed.len()
         );
     }
-    if !report.forced.is_empty() {
-        println!(
-            "{} {} modified or unmanaged file(s) (--force)",
-            style::success("Replaced or deleted"),
-            report.forced.len()
-        );
-        for path in &report.forced {
-            println!("  {}", path.display());
-        }
+    print_forced(&report.forced);
+}
+
+/// The modified or unmanaged files that `--force` replaced or deleted.
+fn print_forced(forced: &[PathBuf]) {
+    if style::is_quiet() || forced.is_empty() {
+        return;
+    }
+    println!(
+        "{} {} modified or unmanaged file(s) (--force)",
+        style::success("Replaced or deleted"),
+        forced.len()
+    );
+    for path in forced {
+        println!("  {}", path.display());
     }
 }
 
