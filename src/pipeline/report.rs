@@ -358,7 +358,7 @@ pub struct DoctorReport {
     pub missing_plugins: Vec<MissingPlugin>,
     /// Plugins recorded in the lockfile as `skipped` (warn-skip at install
     /// time). Informational only — does NOT cause `is_clean()` to return
-    /// false or trigger exit 1. Run `upskill update` after installing the
+    /// false or trigger exit 1. Run `upskill update --yes` after installing the
     /// missing CLI to install them.
     pub skipped_plugins: Vec<SkippedPlugin>,
     /// MCP server reconciliation results. Entries are present for every MCP
