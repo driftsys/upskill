@@ -24,6 +24,29 @@ pub(super) fn sha256_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
+/// True when `bytes` match one of the `recorded` hashes, either as they
+/// are or with every CRLF (`\r\n`) replaced by LF (`\n`). A checkout with
+/// `core.autocrlf=true` writes a file that upskill wrote with LF line
+/// endings with CRLF line endings; that difference alone is not a
+/// modification. A lone `\r` is not changed.
+pub(super) fn matches_recorded(bytes: &[u8], recorded: &[&str]) -> bool {
+    if recorded.contains(&sha256_hex(bytes).as_str()) {
+        return true;
+    }
+    if !bytes.windows(2).any(|w| w == b"\r\n") {
+        return false;
+    }
+    let mut lf = Vec::with_capacity(bytes.len());
+    let mut iter = bytes.iter().peekable();
+    while let Some(&b) = iter.next() {
+        if b == b'\r' && iter.peek() == Some(&&b'\n') {
+            continue;
+        }
+        lf.push(b);
+    }
+    recorded.contains(&sha256_hex(&lf).as_str())
+}
+
 /// State of one path at an item's output location, relative to the
 /// lockfile. Only a regular file can be `Owned`; a directory, a symbolic
 /// link of any kind, or another file type is never read.
@@ -50,8 +73,8 @@ pub(super) enum FileState {
 /// parent component is a regular file); any other lookup error is
 /// returned. A present path is `Unowned` when `recorded` is empty. A path
 /// that is not a regular file is `Modified` when `recorded` is not empty.
-/// A regular file is `Owned` when its hash is in `recorded`, and
-/// `Modified` otherwise.
+/// A regular file is `Owned` when its content matches a hash in
+/// `recorded` (see [`matches_recorded`]), and `Modified` otherwise.
 pub(super) fn classify(target: &Path, rel: &str, recorded: &[&str]) -> Result<FileState> {
     let path = target.join(rel);
     let meta = match fs::symlink_metadata(&path) {
@@ -70,8 +93,7 @@ pub(super) fn classify(target: &Path, rel: &str, recorded: &[&str]) -> Result<Fi
         return Ok(FileState::Modified);
     }
     let bytes = fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-    let hash = sha256_hex(&bytes);
-    if recorded.contains(&hash.as_str()) {
+    if matches_recorded(&bytes, recorded) {
         Ok(FileState::Owned)
     } else {
         Ok(FileState::Modified)
@@ -277,6 +299,25 @@ mod tests {
         lock.items = items;
         lock.save(target).unwrap();
         Lockfile::load(target).unwrap()
+    }
+
+    #[test]
+    fn matches_recorded_accepts_crlf_for_lf_only() {
+        let lf = sha256_hex(b"a\nb\n");
+        assert!(matches_recorded(b"a\nb\n", &[&lf]));
+        assert!(matches_recorded(b"a\r\nb\r\n", &[&lf]));
+        assert!(!matches_recorded(b"a\r\nc\r\n", &[&lf]));
+        assert!(!matches_recorded(b"a\rb\n", &[&lf]));
+        assert!(!matches_recorded(b"a\nb\n", &[]));
+    }
+
+    #[test]
+    fn classify_owned_on_crlf_variant() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), Path::new("a/b.md"), b"x\r\ny\r\n");
+        let hash = sha256_hex(b"x\ny\n");
+        let state = classify(tmp.path(), "a/b.md", &[&hash]).unwrap();
+        assert_eq!(state, FileState::Owned);
     }
 
     #[test]

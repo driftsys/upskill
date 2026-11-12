@@ -16,7 +16,7 @@ use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
-use super::owned::{FileState, classify, rel_to_record, sha256_hex};
+use super::owned::{FileState, classify, matches_recorded, rel_to_record, sha256_hex};
 use super::plan::PlannedItem;
 use crate::lockfile::{Lockfile, OwnedFile};
 
@@ -353,7 +353,8 @@ fn state_of(target: &Path, rel: &Path, path: &str, recorded: &[&str]) -> Result<
 
 /// The conflict at the planned destination `rel`, if any. An absent path,
 /// an `Owned` file, and a regular file whose content equals `bytes` are not
-/// conflicts. A directory is not classified here: `check_writable` accepts
+/// conflicts. For a `Modified` file, "equals" uses [`matches_recorded`], so
+/// a CRLF variant of `bytes` is equal. A directory is not classified here: `check_writable` accepts
 /// it only when it holds stale files of the same item, and those are judged
 /// as stale files.
 fn destination_conflict(
@@ -372,8 +373,12 @@ fn destination_conflict(
         FileState::Modified => ConflictState::Modified,
         FileState::Unowned => ConflictState::Unowned,
     };
+    let planned = sha256_hex(bytes);
     let same = fs::symlink_metadata(&full).is_ok_and(|m| m.file_type().is_file())
-        && fs::read(&full).is_ok_and(|current| current == bytes);
+        && fs::read(&full).is_ok_and(|current| match state {
+            ConflictState::Modified => matches_recorded(&current, &[&planned]),
+            ConflictState::Unowned => current == bytes,
+        });
     Ok((!same).then_some(state))
 }
 
@@ -1338,6 +1343,106 @@ mod conflict_tests {
         .unwrap();
         assert!(!tmp.path().join(STALE).exists());
         assert!(outcome.kept.is_empty());
+        assert_eq!(outcome.forced, vec![PathBuf::from(STALE)]);
+    }
+
+    #[test]
+    fn an_absent_stale_file_is_dropped_from_the_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"e")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.kept.is_empty());
+        assert!(outcome.skipped.is_empty());
+        assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_stale_file_is_kept_as_modified() {
+        use std::os::unix::fs::PermissionsExt;
+        /// Restores the mode of the file when the test ends, also when an
+        /// assertion fails.
+        struct Restore(PathBuf);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                let _ = fs::set_permissions(&self.0, fs::Permissions::from_mode(0o644));
+            }
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), STALE, b"old");
+        let stale = tmp.path().join(STALE);
+        fs::set_permissions(&stale, fs::Permissions::from_mode(0o000)).unwrap();
+        let _restore = Restore(stale.clone());
+        if fs::read(&stale).is_ok() {
+            // Running as root: permissions do not block the read.
+            return;
+        }
+        let mut lock = lock_with("s", vec![owned(STALE, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"e")])],
+            false,
+        )
+        .unwrap();
+        assert_eq!(outcome.kept, vec![PathBuf::from(STALE)]);
+        assert!(stale.exists());
+    }
+
+    #[test]
+    fn a_pending_hash_counts_as_owned() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"mid");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"old")]);
+        lock.items[0].pending = vec![owned(ENTRY, b"mid")];
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"new")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"new");
+    }
+
+    #[test]
+    fn a_crlf_variant_of_the_planned_bytes_is_not_a_conflict_when_modified() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), ENTRY, b"a\r\nb\r\n");
+        let mut lock = lock_with("s", vec![owned(ENTRY, b"old")]);
+        let outcome = apply_plan(
+            tmp.path(),
+            &mut lock,
+            &[planned("s", &[(ENTRY, b"a\nb\n")])],
+            false,
+        )
+        .unwrap();
+        assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
+        assert_eq!(fs::read(tmp.path().join(ENTRY)).unwrap(), b"a\nb\n");
+    }
+
+    #[test]
+    fn a_kept_stale_file_below_a_planned_file_is_a_conflict_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let nested = ".claude/skills/s/notes/a.md";
+        put(tmp.path(), nested, b"edited");
+        let mut lock = lock_with("s", vec![owned(nested, b"old")]);
+        let plan = [
+            planned("first", &[(".claude/skills/first/SKILL.md", b"f")]),
+            planned("s", &[(".claude/skills/s/notes", b"file")]),
+        ];
+        let outcome = apply_plan(tmp.path(), &mut lock, &plan, false).unwrap();
+        assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
+        assert_eq!(outcome.skipped[0].path, PathBuf::from(nested));
+        assert_eq!(fs::read(tmp.path().join(nested)).unwrap(), b"edited");
+        assert!(tmp.path().join(".claude/skills/first/SKILL.md").is_file());
     }
 
     #[test]
