@@ -1507,7 +1507,7 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.missing_plugins.is_empty() {
         println!(
-            "{} {} plugin(s) recorded as installed but missing from client — `upskill update` to fix",
+            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` to fix",
             style::error_label("doctor:"),
             report.missing_plugins.len()
         );
@@ -1586,7 +1586,7 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
     }
     println!(
         "  {}",
-        style::dim("install the missing CLI then run `upskill update` to install them")
+        style::dim("install the missing CLI then run `upskill update --yes` to install them")
     );
 }
 
@@ -1621,7 +1621,7 @@ fn print_doctor_mcps(report: &DoctorReport) {
         );
         for entry in &drifted {
             println!(
-                "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update`.",
+                "  MCP '{}' is in the lockfile but not registered in {}; re-run `upskill update --yes`.",
                 entry.name, entry.client
             );
         }
@@ -1655,7 +1655,7 @@ fn print_doctor_mcps(report: &DoctorReport) {
                 }
                 McpDoctorStatus::ConfigUnreadable { detail } => {
                     println!(
-                        "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update`.",
+                        "  MCP '{}' for {}: config file could not be read ({}); fix or re-run `upskill update --yes`.",
                         entry.name, entry.client, detail
                     );
                 }
