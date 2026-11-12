@@ -99,7 +99,9 @@ item's `files` record (§4). A destination is a conflict when it is **modified**
 (a recorded regular file with other content) or **unowned** (a regular file that
 is not recorded), unless its content already equals the planned bytes. A
 destination that exists and is not a regular file (for example a directory or a
-symbolic link) is not a conflict: it fails the whole command before any change.
+symbolic link) is not a conflict: it fails the command before any file is
+written. For `update` over several sources, the sources updated before are
+already applied; with a `schema: 1` lockfile, the adoption is already saved.
 Without `--force`, an item with at least one conflict is skipped as a whole:
 none of its files is written or deleted and its lockfile entry is not changed.
 The other items are written. `add` then prints one line per conflict to stderr,
@@ -139,10 +141,17 @@ the record, and is reported as `kept modified file: <path>`. An item that its
 source no longer contains is removed with the rules of `remove` (§2.3).
 `update --force` replaces modified and unowned destinations and deletes modified
 regular files that are no longer produced; it then lists these files after
-`Replaced <n> modified or unmanaged file(s) (--force)`. In a terminal without
-`--yes`, `update` asks for a confirmation when a source changed or when
-`--force` is given; otherwise it applies without a question, so that a skipped
-item is reported with exit code 1 as in a run without a terminal.
+`Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a terminal
+without `--yes`, `update` first runs a dry run. When a source changed or
+`--force` is given, it shows the plan and asks for a confirmation; an answer
+other than `y` changes nothing. When no source changed and `--force` is not
+given, it prints that there is nothing to do and changes nothing: it therefore
+does not report a modified file, does not delete the files of a client that the
+flags no longer select, and does not adopt a `schema: 1` lockfile. A run with
+`--yes`, or without a terminal, applies without a question and does these
+things. When an applied `update` wrote or deleted files without a source change,
+it prints `Changed <n> file(s) written or deleted` instead of the "nothing to
+do" line.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,

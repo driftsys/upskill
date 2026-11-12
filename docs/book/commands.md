@@ -198,12 +198,23 @@ item that its source no longer contains is removed with the rules of
 recorded files are deleted, modified ones are kept and reported, and the
 lockfile entry is dropped. `update --force` replaces modified and unmanaged
 files and deletes modified regular files that are no longer produced, then lists
-them after `Replaced <n> modified or unmanaged file(s) (--force)`. In a terminal
-without `--yes`, `update` asks for a confirmation when a source changed or when
-`--force` is given; otherwise it applies without a question, so that a skipped
-item is reported with exit code 1 as in a run without a terminal. A destination
-that exists and is not a regular file (for example a directory or a symbolic
-link) fails the whole command before any change, also with `--force`.
+them after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In
+a terminal without `--yes`, `update` first runs a dry run. When a source changed
+or `--force` is given, it shows the plan and asks for a confirmation; an answer
+other than `y` changes nothing. When no source changed and `--force` is not
+given, it prints that there is nothing to do and changes nothing: it therefore
+does not report a modified file, does not delete the files of a client that the
+flags no longer select, and does not adopt a `schema: 1` lockfile. A run with
+`--yes`, or without a terminal, applies without a question and does these
+things. When an applied `update` wrote or deleted files without a source change,
+it prints `Changed <n> file(s) written or deleted` instead of the "nothing to
+do" line.
+
+A destination that exists and is not a regular file (for example a directory or
+a symbolic link) fails the command before any file of that source is written.
+Two cases are not "before any change": an `update` over several sources has
+already applied the sources it updated before, and a `schema: 1` lockfile has
+already been adopted and saved. This applies also with `--force`.
 
 Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.
